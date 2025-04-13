@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:name=".MyApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TeamnovaPersonalProjectProjectingKotlin"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.TeamnovaPersonalProjectProjectingKotlin">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Auth Feature -->
+        <activity
+            android:name=".feature_auth.ui.SplashActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_auth.ui.LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_auth.ui.JoinActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_auth.ui.FindPasswordActivity"
+            android:exported="false" />
+
+        <!-- Project Feature -->
+        <activity
+            android:name=".feature_project.ui.AddProjectActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_project.ui.JoinNewProjectActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_project.ui.SetProjectNameActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_project.ui.ProjectSettingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_project.ui.category.CreateCategoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_project.ui.category.EditCategoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_project.ui.channel.CreateChannelActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_project.ui.channel.EditChannelActivity"
+            android:exported="false" />
+
+        <!-- Calendar Feature -->
+        <activity
+            android:name=".feature_calendar.ui.Calendar24HourActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_calendar.ui.CalendarDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_calendar.ui.AddScheduleActivity"
+            android:exported="false" />
+
+        <!-- Chat Feature -->
+        <activity
+            android:name=".feature_chat.ui.ChatActivity"
+            android:exported="false" />
+
+        <!-- Friends Feature -->
+        <activity
+            android:name=".feature_friends.ui.FriendsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_friends.ui.AcceptFriendsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_friends.ui.SearchActivity"
+            android:exported="false" />
+
+        <!-- Profile Feature -->
+        <activity
+            android:name=".feature_profile.ui.EditProfileActivity"
+            android:exported="false" />
+
+        <!-- Settings Feature -->
+        <activity
+            android:name=".feature_settings.ui.PersonalSettingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_settings.ui.ChangePasswordActivity"
+            android:exported="false" />
+
+        <!-- Member Feature -->
+        <activity
+            android:name=".feature_member.ui.EditMemberActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_member.ui.EditMemberListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_member.ui.RoleListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature_member.ui.EditRoleActivity"
+            android:exported="false" />
+
+    </application>
+
+</manifest>
