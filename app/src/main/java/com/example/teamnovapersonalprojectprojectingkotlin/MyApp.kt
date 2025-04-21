@@ -1,6 +1,8 @@
-package com.example.teamnovapersonalprojectprojectingkotlin;
+package com.example.teamnovapersonalprojectprojectingkotlin
 
-import android.app.Application;
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
 
-public class MyApp extends Application {
+@HiltAndroidApp
+class MyApp: Application() {
 }

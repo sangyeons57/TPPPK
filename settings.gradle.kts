@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "TeamnovaPersonalProjectProjectingKotlin"
 include(":app")
- 
+include(":feature_auth")
+include(":testsetting")

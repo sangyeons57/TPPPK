@@ -1,0 +1,125 @@
+package com.example.teamnovapersonalprojectprojectingkotlin.feature_search.viewmodel
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.MessageResult
+// Domain 요소 Import
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchScope
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchResultItem
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserResult
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.SearchRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+// --- UI 상태 ---
+data class SearchUiState(
+    val query: String = "",
+    val selectedScope: SearchScope = SearchScope.ALL,
+    val searchResults: List<SearchResultItem> = emptyList(), // ★ Domain 모델 직접 사용
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val searchPerformed: Boolean = false // 검색을 한 번이라도 수행했는지 여부
+)
+
+// --- 이벤트 ---
+sealed class SearchEvent {
+    data class NavigateToMessage(val channelId: String, val messageId: Int) : SearchEvent()
+    data class NavigateToUserProfile(val userId: String) : SearchEvent()
+    data class ShowSnackbar(val message: String) : SearchEvent()
+}
+
+// --- ViewModel ---
+@HiltViewModel
+class SearchViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
+    private val searchRepository: SearchRepository // ★ Domain Repository 주입
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(SearchUiState())
+    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+
+    private val _eventFlow = MutableSharedFlow<SearchEvent>()
+    val eventFlow = _eventFlow.asSharedFlow()
+
+    // 검색 디바운스를 위한 Job
+    private var searchJob: Job? = null
+
+    /** 검색어 변경 시 호출 */
+    fun onQueryChange(newQuery: String) {
+        _uiState.update { it.copy(query = newQuery, error = null) }
+        // 디바운싱: 입력이 멈춘 후 일정 시간(예: 500ms) 뒤에 검색 실행
+        searchJob?.cancel() // 이전 검색 작업 취소
+        if (newQuery.isNotBlank()) { // 검색어가 있을 때만 검색
+            searchJob = viewModelScope.launch {
+                delay(500L) // 500ms 대기
+                performSearch()
+            }
+        } else {
+            // 검색어가 비면 결과 초기화
+            _uiState.update { it.copy(searchResults = emptyList(), searchPerformed = false) }
+        }
+    }
+
+    /** 검색 범위 변경 시 호출 */
+    fun onScopeChange(newScope: SearchScope) {
+        if (newScope != _uiState.value.selectedScope) {
+            _uiState.update { it.copy(selectedScope = newScope, error = null) }
+            // 범위 변경 시 즉시 검색 실행 (또는 검색 버튼 사용 시에는 상태만 변경)
+            if (_uiState.value.query.isNotBlank()) {
+                performSearch()
+            }
+        }
+    }
+
+    /** 검색 실행 (직접 호출 또는 디바운싱 후 호출) */
+    fun performSearch() {
+        val query = _uiState.value.query.trim()
+        val scope = _uiState.value.selectedScope
+
+        if (query.isBlank()) {
+            // 검색어가 없으면 실행 안 함 (또는 에러 표시)
+            // viewModelScope.launch { _eventFlow.emit(SearchEvent.ShowSnackbar("검색어를 입력해주세요.")) }
+            return
+        }
+        if (_uiState.value.isLoading) return // 이미 로딩 중이면 중복 실행 방지
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null, searchPerformed = true) }
+            println("ViewModel: Performing search for '$query' in scope '$scope'")
+
+            val result = searchRepository.search(query, scope) // ★ Repository 호출
+
+            if (result.isSuccess) {
+                _uiState.update { it.copy(isLoading = false, searchResults = result.getOrThrow()) }
+            } else {
+                val errorMsg = "검색 실패: ${result.exceptionOrNull()?.message}"
+                _uiState.update { it.copy(isLoading = false, error = errorMsg, searchResults = emptyList()) }
+                _eventFlow.emit(SearchEvent.ShowSnackbar(errorMsg))
+            }
+        }
+    }
+
+    /** 검색 결과 항목 클릭 시 */
+    fun onResultClick(item: SearchResultItem) {
+        viewModelScope.launch {
+            when (item) {
+                is MessageResult -> {
+                    // 메시지 클릭 시 해당 채팅방 및 메시지 위치로 이동
+                    _eventFlow.emit(SearchEvent.NavigateToMessage(item.channelId, item.messageId))
+                }
+                is UserResult -> {
+                    // 사용자 클릭 시 해당 사용자 프로필로 이동
+                    _eventFlow.emit(SearchEvent.NavigateToUserProfile(item.userId))
+                }
+                // 다른 결과 타입 처리 추가 가능
+            }
+        }
+    }
+
+    // --- 내부 정의들 (SearchScope, SearchResultItem, SearchRepository) 삭제됨 ---
+}

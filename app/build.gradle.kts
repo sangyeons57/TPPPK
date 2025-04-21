@@ -1,8 +1,13 @@
+
 plugins {
     alias(libs.plugins.android.application)
+    id("com.google.gms.google-services")
+
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
+
 }
 
 android {
@@ -41,9 +46,6 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -52,6 +54,14 @@ android {
 }
 
 dependencies {
+
+    // Hilt Core
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    implementation(libs.coil) // View 기반 UI
+    implementation(libs.coil.compose) // Jetpack Compose용
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -81,17 +91,56 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     
-    // Dagger Hilt
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.android.compiler)
-    
     // Coroutines
     implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.androidx.navigation.compose) // 예시 버전, 최신 버전 확인하세요
 
-
-
     implementation(libs.androidx.material.icons.extended)
 
+
+    // Retrofit (HTTP 클라이언트)
+    implementation(libs.retrofit)
+
+    // OkHttp (HTTP 및 WebSocket 클라이언트)
+    implementation(libs.okhttp)
+
+    // Gson (JSON 직렬화/역직렬화)
+    implementation(libs.gson)
+
+    // Retrofit과 Gson 통합을 위한 Converter
+    implementation(libs.converter.gson)
+
+    // Import the Firebase BoM
+    implementation(platform(libs.firebase.bom))
+
+
+    // TODO: Add the dependencies for Firebase products you want to use
+    // When using the BoM, don't specify versions in Firebase dependencies
+    implementation(libs.firebase.analytics)
+
+    // Firebase Cloud Messaging (푸시 알림)
+    implementation(libs.firebase.messaging)
+
+    // Add the dependency for the Firebase Authentication library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation(libs.firebase.auth)
+
+    // Also add the dependency for the Google Play services library and specify its version
+    implementation(libs.play.services.auth)
+
+    // Add the dependencies for any other desired Firebase products
+    // https://firebase.google.com/docs/android/setup#available-libraries
+    // Firebase BoM (Bill of Materials) - Firebase 라이브러리 버전 관리를 위한 BOM
+
+
+
+    //Room 추가
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
