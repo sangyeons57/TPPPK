@@ -12,7 +12,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object FirebaseModule {
-
     @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth {
@@ -20,4 +19,5 @@ object FirebaseModule {
     }
 
     // Firestore 등 다른 Firebase 서비스 필요 시 여기에 추가
+    // test
 }
