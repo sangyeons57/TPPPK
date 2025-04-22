@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.LoginFormFocusTarget
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.Calendar24HourUiState
+import com.example.teamnovapersonalprojectprojectingkotlin.util.SentryUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

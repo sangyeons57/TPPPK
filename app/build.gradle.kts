@@ -47,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
     packaging {
         resources {
@@ -59,7 +60,6 @@ dependencies {
 
     // Hilt Core
     implementation(libs.hilt.android)
-    implementation(libs.firebase.firestore.ktx)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
@@ -90,10 +90,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
 
-    // Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.auth.ktx)
-    
     // Coroutines
     implementation(libs.kotlinx.coroutines.play.services)
 
@@ -117,17 +113,10 @@ dependencies {
     // Import the Firebase BoM
     implementation(platform(libs.firebase.bom))
 
-
-    // TODO: Add the dependencies for Firebase products you want to use
-    // When using the BoM, don't specify versions in Firebase dependencies
-    implementation(libs.firebase.analytics)
-
-    // Firebase Cloud Messaging (푸시 알림)
-    implementation(libs.firebase.messaging)
-
-    // Add the dependency for the Firebase Authentication library
-    // When using the BoM, you don't specify versions in Firebase library dependencies
-    implementation(libs.firebase.auth)
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.storage.ktx)
 
     // Also add the dependency for the Google Play services library and specify its version
     implementation(libs.play.services.auth)

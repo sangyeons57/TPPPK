@@ -167,22 +167,6 @@ fun ProfileContent(
 
         // 프로필 이미지 영역
         Box(contentAlignment = Alignment.BottomEnd) {
-            /**
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(profile?.profileImageUrl ?: R.drawable.default_profile) // Coil 사용
-                    .crossfade(true) // 이미지 로드 시 페이드 효과
-                    .error(R.drawable.default_profile) // 에러 시 기본 이미지
-                    .placeholder(R.drawable.default_profile) // 로딩 중 기본 이미지
-                    .build(),
-                contentDescription = "프로필 이미지",
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape) // 원형으로 자르기
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape), // 테두리
-                contentScale = ContentScale.Crop // 이미지 채우기 방식
-            )
-            **/
             // 이미지 편집 버튼
             IconButton(
                 onClick = onEditProfileImageClick,

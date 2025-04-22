@@ -6,6 +6,7 @@ data class User(
     val name: String = "",
     val email: String = "",
     val profileImageUrl: String? = null,
-    val status: String? = null
+    val status: String? = null,
+    val statusMessage: String? = null,
     // Add other fields stored in Firestore
 )

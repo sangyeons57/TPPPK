@@ -30,8 +30,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
 // ViewModel 및 관련 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserProfile
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.EditProfileEvent
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.EditProfileUiState
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.EditProfileViewModel
@@ -103,13 +103,13 @@ fun EditProfileScreen(
                 }
             }
             // 에러 발생
-            uiState.error != null && uiState.userProfile == null -> {
+            uiState.error != null && uiState.user == null -> {
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
             // 프로필 정보 로드 완료
-            uiState.userProfile != null -> {
+            uiState.user != null -> {
                 EditProfileContent(
                     modifier = Modifier.padding(paddingValues),
                     uiState = uiState,
@@ -163,7 +163,7 @@ fun EditProfileContent(
     onChangeStatusClick: () -> Unit
 ) {
     // UserProfile이 null이 아님을 가정 (호출하는 곳에서 보장)
-    val userProfile = uiState.userProfile!!
+    val user = uiState.user!!
 
     Column(
         modifier = modifier
@@ -177,7 +177,7 @@ fun EditProfileContent(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     // 사용자가 이미지를 선택했으면 그 URI를, 아니면 서버 URL 사용
-                    .data(uiState.selectedImageUri ?: userProfile.profileImageUrl ?: R.drawable.ic_account_circle_24)
+                    .data(uiState.selectedImageUri ?: user.profileImageUrl ?: R.drawable.ic_account_circle_24)
                     .error(R.drawable.ic_account_circle_24)
                     .placeholder(R.drawable.ic_account_circle_24)
                     .crossfade(true)
@@ -212,7 +212,7 @@ fun EditProfileContent(
         // 이미지 제거 버튼 (텍스트 버튼)
         TextButton(
             onClick = onRemoveImageClick,
-            enabled = !uiState.isUploading && userProfile.profileImageUrl != null // 업로드 중이 아니고, 이미지가 있을 때 활성화
+            enabled = !uiState.isUploading && user.profileImageUrl != null // 업로드 중이 아니고, 이미지가 있을 때 활성화
         ) {
             Text("프로필 이미지 제거")
         }
@@ -224,11 +224,11 @@ fun EditProfileContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.Start // 좌측 정렬
         ) {
-            ProfileInfoRow(label = "이메일", value = userProfile.email)
+            ProfileInfoRow(label = "이메일", value = user.email)
             Divider()
-            ProfileInfoRow(label = "이름", value = userProfile.name, onClick = onChangeNameClick) // 클릭 시 이름 변경
+            ProfileInfoRow(label = "이름", value = user.name, onClick = onChangeNameClick) // 클릭 시 이름 변경
             Divider()
-            ProfileInfoRow(label = "상태 메시지", value = userProfile.statusMessage ?: "상태 메시지 없음", onClick = onChangeStatusClick) // 클릭 시 상태 변경
+            ProfileInfoRow(label = "상태 메시지", value = user.statusMessage ?: "상태 메시지 없음", onClick = onChangeStatusClick) // 클릭 시 상태 변경
             Divider()
         }
     }
@@ -282,11 +282,11 @@ fun ProfileInfoRow(
 @Preview(showBackground = true)
 @Composable
 private fun EditProfileContentPreview() {
-    val previewProfile = UserProfile("u1", "test@example.com", "홍길동", null, "상태 메시지입니다.")
+    val previewProfile = User("u1", "test@example.com", "홍길동", null, "상태 메시지입니다.")
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
             EditProfileContent(
-                uiState = EditProfileUiState(userProfile = previewProfile),
+                uiState = EditProfileUiState(user = previewProfile),
                 onSelectImageClick = {},
                 onRemoveImageClick = {},
                 onChangeNameClick = {},
@@ -314,11 +314,11 @@ private fun EditProfileScreenLoadingPreview() {
 @Preview(showBackground = true, name = "Edit Profile Image Uploading")
 @Composable
 private fun EditProfileContentUploadingPreview() {
-    val previewProfile = UserProfile("u1", "test@example.com", "홍길동", null, "상태 메시지입니다.")
+    val previewProfile = User("u1")
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
             EditProfileContent(
-                uiState = EditProfileUiState(userProfile = previewProfile, isUploading = true),
+                uiState = EditProfileUiState(user = previewProfile, isUploading = true),
                 onSelectImageClick = {},
                 onRemoveImageClick = {},
                 onChangeNameClick = {},

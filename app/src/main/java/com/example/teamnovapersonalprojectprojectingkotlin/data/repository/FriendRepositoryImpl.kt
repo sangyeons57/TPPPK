@@ -1,19 +1,26 @@
 package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.toObject
+import androidx.compose.foundation.layout.add
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Friend
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.FriendRequest
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.FriendRepository
+import com.example.teamnovapersonalprojectprojectingkotlin.util.FirestoreConstants as FC
+import com.example.teamnovapersonalprojectprojectingkotlin.util.SentryUtil
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -25,8 +32,8 @@ class FriendRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth
 ) : FriendRepository {
 
-    private val usersCollection = firestore.collection("users")
-    private val requestsCollection = firestore.collection("friendRequests")
+    private val usersCollection = firestore.collection(FC.Collections.USERS)
+    private val requestsCollection = firestore.collection(FC.Collections.FRIEND_REQUESTS)
 
     // Helper function to get current user UID
     private fun getCurrentUserId(): String? = auth.currentUser?.uid
@@ -36,7 +43,7 @@ class FriendRepositoryImpl @Inject constructor(
         val userId = getCurrentUserId() ?: return flowOf(emptyList())
 
         return callbackFlow {
-            val friendsCollection = usersCollection.document(userId).collection("friends")
+            val friendsCollection = usersCollection.document(userId).collection(FC.Users.FriendsSubcollection.NAME)
             val listenerRegistration = friendsCollection.addSnapshotListener { snapshots, error ->
                 if (error != null) {
                     println("Error listening to friends: $error")
@@ -50,8 +57,7 @@ class FriendRepositoryImpl @Inject constructor(
 
                 val friendUids = snapshots.documents.map { it.id }
 
-                val scope = CoroutineScope(Dispatchers.IO)
-                scope.launch {
+                CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val friendsList = fetchFriendProfiles(friendUids)
                         trySend(friendsList)
@@ -74,9 +80,9 @@ class FriendRepositoryImpl @Inject constructor(
         val friends = mutableListOf<Friend>()
         friendUids.chunked(30).forEach { chunk ->
             try {
-                val profileSnapshots = usersCollection.whereIn("userId", chunk).get().await()
+                val profileSnapshots = usersCollection.whereIn(FC.Users.Fields.USER_ID, chunk).get().await()
                 for (doc in profileSnapshots) {
-                    val userProfile = doc.toObject<User>()
+                    val userProfile = doc.toUser()
                     if (userProfile != null) {
                         friends.add(
                             Friend(
@@ -98,7 +104,7 @@ class FriendRepositoryImpl @Inject constructor(
     override suspend fun fetchFriendsList(): Result<Unit> {
         val userId = getCurrentUserId() ?: return Result.failure(IllegalStateException("User not logged in"))
         return try {
-            val friendsSnapshot = usersCollection.document(userId).collection("friends").get().await()
+            val friendsSnapshot = usersCollection.document(userId).collection(FC.Users.FriendsSubcollection.NAME).get().await()
             val friendUids = friendsSnapshot.documents.map { it.id }
             println("Fetched ${friendUids.size} friend UIDs for user $userId")
             Result.success(Unit)
@@ -114,7 +120,7 @@ class FriendRepositoryImpl @Inject constructor(
         return try {
             // 1. Find the user by username
             val querySnapshot = usersCollection
-                .whereEqualTo("name", username)
+                .whereEqualTo(FC.Users.Fields.NAME, username)
                 .limit(1)
                 .get()
                 .await()
@@ -130,15 +136,15 @@ class FriendRepositoryImpl @Inject constructor(
             }
 
             // Check if already friends
-            val areFriends = usersCollection.document(senderUid).collection("friends").document(receiverUid).get().await().exists()
+            val areFriends = usersCollection.document(senderUid).collection(FC.Users.FriendsSubcollection.NAME).document(receiverUid).get().await().exists()
             if (areFriends) {
                 return Result.failure(Exception("You are already friends with $username."))
             }
 
             // Check if request already exists
             val existingRequest = requestsCollection
-                .whereEqualTo("senderUid", senderUid)
-                .whereEqualTo("receiverUid", receiverUid)
+                .whereEqualTo(FC.FriendRequests.Fields.SENDER_UID, senderUid)
+                .whereEqualTo(FC.FriendRequests.Fields.RECEIVER_UID, receiverUid)
                 .get()
                 .await()
 
@@ -148,16 +154,17 @@ class FriendRepositoryImpl @Inject constructor(
 
             // 2. Create friend request document
             val requestData = hashMapOf(
-                "senderUid" to senderUid,
-                "receiverUid" to receiverUid,
-                "status" to "pending",
-                "createdAt" to FieldValue.serverTimestamp()
+                FC.FriendRequests.Fields.SENDER_UID to senderUid,
+                FC.FriendRequests.Fields.RECEIVER_UID to receiverUid,
+                FC.FriendRequests.Fields.STATUS to FC.FriendRequests.StatusValues.PENDING,
+                FC.FriendRequests.Fields.CREATED_AT to FieldValue.serverTimestamp()
             )
             requestsCollection.add(requestData).await()
             Result.success("Friend request sent to $username.")
 
         } catch (e: Exception) {
             println("Error sending friend request: $e")
+            SentryUtil.captureError(e, "Error sending friend request")
             Result.failure(e)
         }
     }
@@ -166,17 +173,17 @@ class FriendRepositoryImpl @Inject constructor(
         val receiverUid = getCurrentUserId() ?: return Result.failure(IllegalStateException("User not logged in"))
         return try {
             val querySnapshot = requestsCollection
-                .whereEqualTo("receiverUid", receiverUid)
-                .whereEqualTo("status", "pending")
+                .whereEqualTo(FC.FriendRequests.Fields.RECEIVER_UID, receiverUid)
+                .whereEqualTo(FC.FriendRequests.Fields.STATUS, FC.FriendRequests.StatusValues.PENDING)
                 .get()
                 .await()
 
             val requests = mutableListOf<FriendRequest>()
             for (doc in querySnapshot.documents) {
-                val senderUid = doc.getString("senderUid") ?: continue
+                val senderUid = doc.getString(FC.FriendRequests.Fields.SENDER_UID) ?: continue
 
                 val senderProfileDoc = usersCollection.document(senderUid).get().await()
-                val senderName = senderProfileDoc.getString("name") ?: "Unknown User"
+                val senderName = senderProfileDoc.getString(FC.Users.Fields.NAME) ?: "Unknown User"
                 val senderProfileImageUrl = senderProfileDoc.getString("profileImageUrl")
 
                 requests.add(
@@ -196,36 +203,72 @@ class FriendRepositoryImpl @Inject constructor(
 
     override suspend fun acceptFriendRequest(senderUserId: String): Result<Unit> {
         val receiverUid = getCurrentUserId() ?: return Result.failure(IllegalStateException("User not logged in"))
+
+        // 트랜잭션 외부에서 처리할 쿼리 객체 생성
+        val requestQuery: Query = requestsCollection
+            .whereEqualTo(FC.FriendRequests.Fields.SENDER_UID, senderUserId)
+            .whereEqualTo(FC.FriendRequests.Fields.RECEIVER_UID, receiverUid)
+            .whereEqualTo(FC.FriendRequests.Fields.STATUS, FC.FriendRequests.StatusValues.PENDING)
+            .limit(1)
+
         return try {
+            // 1. 트랜잭션 외부: 먼저 요청 문서가 있는지 확인하고 DocumentReference 얻기
+            val requestSnapshot = requestQuery.get().await() // QuerySnapshot 가져오기 (await 사용)
+
+            if (requestSnapshot.isEmpty) {
+                // 처리할 요청이 없으면 여기서 실패 처리
+                return Result.failure(Exception("Friend request not found or already handled."))
+            }
+            // 요청 문서의 DocumentReference 가져오기
+            val requestDocRef: DocumentReference = requestSnapshot.documents.first().reference
+
+            // 2. 트랜잭션 시작
             firestore.runTransaction { transaction ->
-                val requestQuery = requestsCollection
-                    .whereEqualTo("senderUid", senderUserId)
-                    .whereEqualTo("receiverUid", receiverUid)
-                    .whereEqualTo("status", "pending")
-                    .limit(1)
-                    .get()
-                    .addOnSuccessListener { result ->
-                        if (result.isEmpty) {
-                            throw Exception("Friend request not found or already handled.")
-                        }
-                        val requestDocRef = result.documents.first().reference
-                        transaction.update(requestDocRef, "status", "accepted")
+                // 2a. 트랜잭션 내부: 외부에서 얻은 참조로 문서를 다시 읽어 최신 상태 확인
+                val freshRequestDoc = transaction.get(requestDocRef) // DocumentReference 사용!
 
-                        val receiverFriendRef = usersCollection.document(receiverUid).collection("friends").document(senderUserId)
-                        val senderFriendRef = usersCollection.document(senderUserId).collection("friends").document(receiverUid)
+                // 2b. 문서 존재 및 상태 재확인
+                if (!freshRequestDoc.exists()) {
+                    // 트랜잭션 도중 문서가 삭제된 경우
+                    throw FirebaseFirestoreException(
+                        "Friend request document disappeared during transaction.",
+                        FirebaseFirestoreException.Code.ABORTED
+                    )
+                }
+                val currentStatus = freshRequestDoc.getString(FC.FriendRequests.Fields.STATUS)
+                if (currentStatus != FC.FriendRequests.StatusValues.PENDING) {
+                    // 트랜잭션 도중 다른 곳에서 이미 처리한 경우
+                    throw FirebaseFirestoreException(
+                        "Friend request was already handled.",
+                        FirebaseFirestoreException.Code.ABORTED
+                    )
+                }
 
-                        transaction.set(receiverFriendRef, mapOf("addedAt" to FieldValue.serverTimestamp()))
-                        transaction.set(senderFriendRef, mapOf("addedAt" to FieldValue.serverTimestamp()))
+                // 3. 요청 문서 상태 업데이트 (transaction 사용)
+                transaction.update(requestDocRef, FC.FriendRequests.Fields.STATUS, FC.FriendRequests.StatusValues.ACCEPTED)
 
-                    }
-                    .addOnFailureListener { exception ->
-                    }
+                // 4. 양쪽 사용자 friends 서브컬렉션에 친구 정보 추가 (transaction 사용)
+                val receiverFriendRef = usersCollection.document(receiverUid)
+                    .collection(FC.Users.FriendsSubcollection.NAME).document(senderUserId)
+                val senderFriendRef = usersCollection.document(senderUserId)
+                    .collection(FC.Users.FriendsSubcollection.NAME).document(receiverUid)
 
-                null // 트랜잭션이 성공적으로 완료되면 null을 반환합니다.
-            }.await() // runTransaction 전체에 await()를 호출하여 트랜잭션의 완료를 기다립니다.
+                val friendData = mapOf(FC.Users.FriendsSubcollection.Fields.ADDED_AT to FieldValue.serverTimestamp())
+
+                transaction.set(receiverFriendRef, friendData)
+                transaction.set(senderFriendRef, friendData)
+
+                // 성공 시 null 반환
+                null
+            }.await() // runTransaction Task 완료 기다림
+
+            // 트랜잭션 성공
             Result.success(Unit)
+
         } catch (e: Exception) {
+            // 트랜잭션 실패 또는 외부 .await() 호출 실패 처리
             println("Error accepting friend request: $e")
+            SentryUtil.captureError(e, "Error accepting friend request")
             Result.failure(e)
         }
     }
@@ -234,9 +277,9 @@ class FriendRepositoryImpl @Inject constructor(
         val receiverUid = getCurrentUserId() ?: return Result.failure(IllegalStateException("User not logged in"))
         return try {
             val requestQuery = requestsCollection
-                .whereEqualTo("senderUid", senderUserId)
-                .whereEqualTo("receiverUid", receiverUid)
-                .whereEqualTo("status", "pending")
+                .whereEqualTo(FC.FriendRequests.Fields.SENDER_UID, senderUserId)
+                .whereEqualTo(FC.FriendRequests.Fields.RECEIVER_UID, receiverUid)
+                .whereEqualTo(FC.FriendRequests.Fields.STATUS, FC.FriendRequests.StatusValues.PENDING)
                 .limit(1)
                 .get()
                 .await()
@@ -263,5 +306,17 @@ class FriendRepositoryImpl @Inject constructor(
         }
         println("Generated DM Channel ID: $channelId")
         return Result.success(channelId)
+    }
+
+    fun DocumentSnapshot.toUser(): User? {
+        return data?.let { data ->
+            User(
+                userId = id,
+                name = data[FC.Users.Fields.NAME] as? String ?: "", // 예시 필드, 실제 필드에 맞게 수정
+                profileImageUrl = data[FC.Users.Fields.PROFILE_IMAGE_URL] as? String,
+                status = data[FC.Users.Fields.STATUS] as? String ?: FC.Users.StatusValues.OFFLINE
+                // ... 기타 필드
+            )
+        }
     }
 }

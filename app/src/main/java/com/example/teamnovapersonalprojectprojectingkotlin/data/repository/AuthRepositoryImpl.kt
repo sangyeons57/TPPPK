@@ -6,11 +6,17 @@ import com.google.firebase.auth.ktx.auth // ktx 임포트
 import com.google.firebase.ktx.Firebase
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.UserRepository
+import com.example.teamnovapersonalprojectprojectingkotlin.util.SentryUtil
+import com.example.teamnovapersonalprojectprojectingkotlin.util.FirestoreConstants as FC
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await // await() 사용 위해 임포트
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
-    private val auth: FirebaseAuth // FirebaseAuth 주입
+    private val auth: FirebaseAuth, // FirebaseAuth 주입
+    private val firestore: FirebaseFirestore, // Firestore 주입
+    private val userRepository: UserRepository, // UserRepository 주입
     // TODO: Firestore 등 다른 서비스 주입 (사용자 정보 저장 시)
 ) : AuthRepository {
 
@@ -23,7 +29,13 @@ class AuthRepositoryImpl @Inject constructor(
             val authResult = auth.signInWithEmailAndPassword(email, pass).await()
             val firebaseUser = authResult.user
             if (firebaseUser != null) {
-                Result.success(firebaseUser.toDomainUser()) // FirebaseUser -> User 모델 매핑
+                // ★ 로그인 성공 후 Firestore 문서 확인 및 생성 ★
+                userRepository.ensureUserProfileExists(firebaseUser).fold(
+                    onSuccess = { userProfile ->
+                        SentryUtil.setUserInfo( userProfile.userId, userProfile.email, userProfile.name )
+                        Result.success(userProfile) }, // 성공 시 User 객체 반환
+                    onFailure = { exception -> Result.failure(exception) }     // 실패 시 에러 반환
+                )
             } else {
                 Result.failure(Exception("로그인 후 사용자 정보를 가져올 수 없습니다."))
             }
@@ -35,6 +47,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(): Result<Unit> {
         return try {
+            SentryUtil.setUserInfo(null)
             auth.signOut()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -86,10 +99,27 @@ class AuthRepositoryImpl @Inject constructor(
                 val profileUpdates = com.google.firebase.auth.userProfileChangeRequest {
                     displayName = name
                 }
-                firebaseUser.updateProfile(profileUpdates).await()
+                try {
+                    firebaseUser.updateProfile(profileUpdates).await()
+                } catch (e: Exception) {
+                    println("Warning: Failed to update Firebase Auth profile display name: ${e.message}")
+                }
 
-                // (선택) Firestore 등에 사용자 정보 저장 로직 추가
-                // firestore.collection("users").document(firebaseUser.uid).set(...)
+                val userDocumentRef = firestore.collection(FC.Collections.USERS).document(firebaseUser.uid) // Auth UID를 문서 ID로 사용
+
+                val newUser = User(
+                    userId = firebaseUser.uid,
+                    email = firebaseUser.email ?: "",
+                    name = name,
+                    profileImageUrl = null,
+                    status = null,
+                )
+
+                try {
+                    userDocumentRef.set(newUser).await()
+                } catch (e: Exception) {
+                    println("Warning: Failed to save user data to Firestore: ${e.message}")
+                }
 
                 // *** 여기서 이메일 확인 메일 발송 ***
                 try {
@@ -110,6 +140,8 @@ class AuthRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+
 
     // FirebaseUser를 Domain User 모델로 변환하는 확장 함수 (AuthRepositoryImpl 내부 또는 별도 파일)
     private fun FirebaseUser.toDomainUser(defaultName: String? = null): User {

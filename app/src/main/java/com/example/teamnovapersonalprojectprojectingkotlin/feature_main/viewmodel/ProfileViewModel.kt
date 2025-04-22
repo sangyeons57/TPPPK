@@ -5,6 +5,7 @@ import androidx.compose.foundation.MutatePriority
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,26 +61,39 @@ class ProfileViewModel @Inject constructor(
     // 프로필 정보 로드
     private fun loadUserProfile() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            println("ViewModel: 사용자 프로필 로드 시도")
-            // --- TODO: 실제 프로필 로드 로직 (userRepository.getUserProfile()) ---
-            kotlinx.coroutines.delay(500) // 임시 딜레이
-            val success = true // 임시 성공
-            val profileData = if (success) {
-                UserProfileData(
-                    userId = "user123",
-                    name = "홍길동",
-                    email = "gildong@example.com",
-                    statusMessage = "오늘도 파이팅!",
-                    profileImageUrl = null // "https://example.com/profile.jpg" // null 또는 URL
-                )
-            } else null
-            // ----------------------------------------------------------------
-            if (profileData != null) {
-                _uiState.update { it.copy(isLoading = false, userProfile = profileData, errorMessage = null) }
-            } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "프로필 로드 실패") }
-            }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) } // 로딩 시작 및 이전 에러 메시지 초기화
+            println("ViewModel: 사용자 프로필 로드 시도 (실제 로직)")
+
+            // --- 실제 프로필 로드 로직 ---
+            val profileResult: Result<User> = userRepository.getUser() // Repository 호출
+
+            profileResult.fold(
+                onSuccess = { user ->
+                    // 성공 시: User 모델 -> UserProfileData 모델로 변환
+                    val userProfileData = user.toUserProfileData() // 매핑 함수 사용
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            userProfile = userProfileData, // 로드된 프로필 데이터 업데이트
+                            errorMessage = null // 성공 시 에러 메시지 없음
+                        )
+                    }
+                    println("ViewModel: 프로필 로드 성공 - ${userProfileData.name}")
+                },
+                onFailure = { exception ->
+                    // 실패 시: 에러 처리
+                    println("ViewModel: 프로필 로드 실패 - ${exception.message}")
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            userProfile = null, // 실패 시 프로필 정보 null 처리 (또는 기존 값 유지)
+                            errorMessage = "프로필을 불러오는데 실패했습니다." // 에러 메시지 설정
+                        )
+                    }
+                    // SentryUtil.captureException(exception, "Failed to load user profile") // 에러 로깅 (필요 시)
+                }
+            )
+            // --------------------------
         }
     }
 
@@ -165,5 +179,23 @@ class ProfileViewModel @Inject constructor(
 
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    /**
+     * User(Domain Model) -> UserProfileData(UI Model) 변환 확장 함수
+     * (이 함수는 ViewModel 파일 내부 또는 별도의 Mapper 파일에 위치할 수 있습니다)
+     */
+    private fun User.toUserProfileData(): UserProfileData {
+        // User 모델에는 statusMessage 필드가 없으므로, 임시값 또는 다른 로직 필요
+        // 여기서는 임시로 빈 문자열 또는 기본 메시지 사용
+        val tempStatusMessage = "상태 메시지 없음" // TODO: 상태 메시지 로드/관리 로직 추가 필요
+
+        return UserProfileData(
+            userId = this.userId,
+            name = this.name,
+            email = this.email,
+            statusMessage = tempStatusMessage, // User 모델에 없는 정보 처리
+            profileImageUrl = this.profileImageUrl
+        )
     }
 }

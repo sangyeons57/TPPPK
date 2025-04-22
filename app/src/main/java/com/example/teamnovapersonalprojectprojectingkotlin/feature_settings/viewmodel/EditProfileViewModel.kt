@@ -4,8 +4,8 @@ import android.net.Uri // 이미지 처리를 위해 Uri 사용
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
 // Domain 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserProfile
 import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -14,7 +14,7 @@ import javax.inject.Inject
 
 // --- UI 상태 ---
 data class EditProfileUiState(
-    val userProfile: UserProfile? = null, // 로드된 사용자 프로필 정보
+    val user: User? = null, // 로드된 사용자 프로필 정보
     val selectedImageUri: Uri? = null, // 사용자가 갤러리에서 선택한 이미지 URI (업로드 전 임시 저장)
     val isLoading: Boolean = false,
     val isUploading: Boolean = false, // 이미지 업로드 중 상태
@@ -53,10 +53,10 @@ class EditProfileViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading user profile")
 
-            val result = userRepository.getUserProfile() // ★ Repository 호출
+            val result = userRepository.getUser() // ★ Repository 호출
 
             if (result.isSuccess) {
-                _uiState.update { it.copy(isLoading = false, userProfile = result.getOrThrow()) }
+                _uiState.update { it.copy(isLoading = false, user = result.getOrThrow()) }
             } else {
                 val errorMsg = "프로필 정보를 불러오지 못했습니다: ${result.exceptionOrNull()?.message}"
                 _uiState.update { it.copy(isLoading = false, error = errorMsg) }
@@ -95,7 +95,7 @@ class EditProfileViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isUploading = false,
-                        userProfile = it.userProfile?.copy(profileImageUrl = newImageUrl), // 새 URL 반영
+                        user = it.user?.copy(profileImageUrl = newImageUrl), // 새 URL 반영
                         selectedImageUri = null, // 업로드 완료 후 선택 해제
                         updateSuccess = true // 성공 플래그 (선택적)
                     )
@@ -112,7 +112,7 @@ class EditProfileViewModel @Inject constructor(
     /** 프로필 이미지 제거 버튼 클릭 시 */
     fun onRemoveImageClick() {
         // 이미지가 있을 때만 제거 확인 요청
-        if (uiState.value.userProfile?.profileImageUrl != null) {
+        if (uiState.value.user?.profileImageUrl != null) {
             viewModelScope.launch {
                 _eventFlow.emit(EditProfileEvent.RequestProfileImageRemoveConfirm)
             }
@@ -135,7 +135,7 @@ class EditProfileViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isUploading = false,
-                        userProfile = it.userProfile?.copy(profileImageUrl = null), // 이미지 URL 제거
+                        user = it.user?.copy(profileImageUrl = null), // 이미지 URL 제거
                         updateSuccess = true
                     )
                 }

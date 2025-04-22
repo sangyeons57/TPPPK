@@ -12,7 +12,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class) // 앱 전역에서 사용할 Repository는 SingletonComponent 사용
 abstract class RepositoryModule {
-    // --- 기존 Binds ---
+    // --- 기존 Binds ----
     @Binds @Singleton abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
     @Binds @Singleton abstract fun bindFriendRepository(impl: FriendRepositoryImpl): FriendRepository
     @Binds @Singleton abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository

@@ -27,14 +27,14 @@ fun Friend.toUiModel(): FriendItem {
 data class FriendsListUiState(
     val friends: List<FriendItem> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val showAddFriendDialog: Boolean = false
 )
 
 // --- 이벤트 ---
 sealed class FriendsEvent {
     object NavigateToAcceptFriends : FriendsEvent() // 친구 수락 화면으로 이동
     data class NavigateToChat(val channelId: String) : FriendsEvent() // 친구와의 DM 채팅방으로 이동
-    object ShowAddFriendDialog : FriendsEvent() // 친구 추가 다이얼로그 표시
     data class ShowSnackbar(val message: String) : FriendsEvent()
 }
 
@@ -52,63 +52,61 @@ class FriendViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
-        loadFriendsList()
+        observeFriendsList()
         refreshFriendsList()
     }
 
 
+    /**
+     * 친구 목록 실시간 스트림을 구독하고 UI 상태를 업데이트합니다.
+     */
     private fun observeFriendsList() {
         viewModelScope.launch {
-            friendRepository.getFriendsListStream()
-                .map { domainFriends -> domainFriends.map { it.toUiModel() } } // Domain -> UI 모델 변환
-                .catch { e -> _uiState.update { it.copy(error = "친구 목록 오류: ${e.message}", isLoading = false) } }
-                .collect { uiFriends ->
-                    _uiState.update { it.copy(friends = uiFriends, isLoading = false, error = null) }
+            friendRepository.getFriendsListStream() // ★ Repository의 스트림 함수 호출
+                .map { domainFriends ->
+                    // Domain 모델 리스트 -> UI 모델(FriendItem) 리스트 변환
+                    domainFriends.map { it.toUiModel() }
                 }
-        }
-    }
-
-    fun refreshFriendsList() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = friendRepository.fetchFriendsList() // ★ Repository 호출
-            if (result.isFailure) {
-                _uiState.update { it.copy(error = "친구 목록 새로고침 실패", isLoading = false) }
-            }
-            // 성공 시 Flow가 처리, 로딩 상태만 해제
-            _uiState.update { it.copy(isLoading = false) }
+                .onStart {
+                    // 스트림 시작 시 로딩 상태 설정 (선택적, 초기 로딩은 이미 true)
+                    _uiState.update { it.copy(isLoading = true, error = null) }
+                }
+                .catch { e ->
+                    // 스트림 처리 중 에러 발생 시
+                    println("Error observing friends list: $e")
+                    _uiState.update { it.copy(error = "친구 목록을 불러오는 중 오류가 발생했습니다.", isLoading = false) }
+                    _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 목록 로딩 실패"))
+                }
+                .collect { uiFriends ->
+                    // 새 친구 목록 데이터 수신 시 UI 상태 업데이트
+                    _uiState.update {
+                        it.copy(
+                            friends = uiFriends,
+                            isLoading = false, // 데이터 수신 완료 시 로딩 해제
+                            error = null // 성공 시 에러 메시지 초기화
+                        )
+                    }
+                }
         }
     }
 
     /**
-     * 친구 목록 로드
+     * 친구 목록을 수동으로 새로고침합니다. (선택적 기능)
+     * Firestore 리스너가 실시간 업데이트를 제공하므로 필수는 아닐 수 있습니다.
      */
-    fun loadFriendsList() {
+    fun refreshFriendsList() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Loading friends list")
-            // --- TODO: 실제 친구 목록 로드 (repository.getFriendsList()) ---
-            delay(500) // 임시 딜레이
-            val success = true
-            // val result = repository.getFriendsList()
-            // ---------------------------------------------------------
-            if (success /*result.isSuccess*/) {
-                // 임시 데이터
-                val friends = listOf(
-                    FriendItem("u1", "김친구", "온라인", null),
-                    FriendItem("u2", "이동료", "오프라인", "https://example.com/lee.jpg"),
-                    FriendItem("u3", "박선배", "다른 용무 중", null),
-                    FriendItem("u4", "최후배", "온라인", null)
-                )
-                // val friends = result.getOrThrow()
-                _uiState.update { it.copy(isLoading = false, friends = friends) }
+            // 로딩 상태 표시 (이미 스트림에서 처리 중일 수 있으므로 중복될 수 있음)
+            _uiState.update { it.copy(isLoading = true) }
+            val result = friendRepository.fetchFriendsList() // 백엔드와 동기화 시도
+            if (result.isFailure) {
+                _uiState.update { it.copy(error = "친구 목록 새로고침 실패", isLoading = false) }
+                _eventFlow.emit(FriendsEvent.ShowSnackbar("새로고침 실패"))
             } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "친구 목록을 불러오지 못했습니다." // result.exceptionOrNull()?.message
-                    )
-                }
+                // 성공 시 Firestore 리스너가 자동으로 데이터를 업데이트하므로,
+                // 여기서는 로딩 상태만 해제하거나 별도 처리가 필요 없을 수 있습니다.
+                // 명시적으로 로딩 상태를 해제합니다.
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -140,10 +138,8 @@ class FriendViewModel @Inject constructor(
     /**
      * '친구 추가하기' 버튼 클릭 시 호출 (TopAppBar Action)
      */
-    fun requestAddFriendDialog() {
-        viewModelScope.launch {
-            _eventFlow.emit(FriendsEvent.ShowAddFriendDialog)
-        }
+    fun requestAddFriendToggle() {
+        _uiState.update { it.copy(showAddFriendDialog= !uiState.value.showAddFriendDialog) }
     }
 
     // TODO: 친구 추가 다이얼로그에서 친구 추가 요청 처리 함수

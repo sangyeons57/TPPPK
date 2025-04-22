@@ -27,4 +27,6 @@ interface AuthRepository {
     //suspend fun verifyAuthCode(email: String, code: String): Result<Unit> // 인증번호 확인
     suspend fun signUp(email: String, pass: String, name: String): Result<User?> // 회원가입
 
+
+
 }

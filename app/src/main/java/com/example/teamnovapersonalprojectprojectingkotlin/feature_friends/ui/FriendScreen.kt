@@ -45,7 +45,6 @@ fun FriendsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showAddFriendDialog by remember { mutableStateOf(false) } // Composable 내부에서 Dialog 상태 관리
 
     // 이벤트 처리
     LaunchedEffect(Unit) {
@@ -53,7 +52,6 @@ fun FriendsScreen(
             when (event) {
                 is FriendsEvent.NavigateToAcceptFriends -> onNavigateToAcceptFriends()
                 is FriendsEvent.NavigateToChat -> onNavigateToChat(event.channelId) // 예: channelId로 채팅방 이동
-                is FriendsEvent.ShowAddFriendDialog -> showAddFriendDialog = true // 다이얼로그 표시 상태 변경
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -72,7 +70,7 @@ fun FriendsScreen(
                 },
                 actions = {
                     // 친구 추가하기 텍스트 버튼 (기존 XML의 TextView 역할)
-                    TextButton(onClick = viewModel::requestAddFriendDialog) {
+                    TextButton(onClick = viewModel::requestAddFriendToggle) {
                         Text("친구 추가하기")
                     }
                 }
@@ -119,16 +117,9 @@ fun FriendsScreen(
     }
 
     // 친구 추가 다이얼로그
-    if (showAddFriendDialog) {
-        // TODO: FriendAddDialogFragment.xml을 Compose Dialog로 변환하여 여기에 구현
-        // 예시: AddFriendDialog(onDismiss = { showAddFriendDialog = false }, onAddFriend = { username -> viewModel.addFriend(username) })
-        AlertDialog(
-            onDismissRequest = { showAddFriendDialog = false },
-            title = { Text("친구 추가 (미구현)") },
-            text = { Text("친구 추가 다이얼로그가 여기에 표시됩니다.") },
-            confirmButton = {
-                TextButton(onClick = { showAddFriendDialog = false }) { Text("확인") }
-            }
+    if (uiState.showAddFriendDialog) {
+        AddFriendDialog(
+            onDismissRequest = viewModel::requestAddFriendToggle
         )
     }
 }
