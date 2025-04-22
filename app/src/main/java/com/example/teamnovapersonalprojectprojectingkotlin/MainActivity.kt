@@ -1,5 +1,6 @@
 package com.example.teamnovapersonalprojectprojectingkotlin
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,19 +14,15 @@ import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigat
 import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import dagger.hilt.android.AndroidEntryPoint
 import io.sentry.Sentry
+import io.sentry.android.core.SentryAndroid
+import io.sentry.android.replay.maskAllImages
+import io.sentry.android.replay.maskAllText
 
 @AndroidEntryPoint // Hilt 사용 시 Activity에 추가
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-    // waiting for view to draw to better represent a captured error with a screenshot
-    findViewById<android.view.View>(android.R.id.content).viewTreeObserver.addOnGlobalLayoutListener {
-      try {
-        throw Exception("This app uses Sentry! :)")
-      } catch (e: Exception) {
-        Sentry.captureException(e)
-      }
-    }
+        SentryInit()
 
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
         setContent {
@@ -40,6 +37,19 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(navController);
                 }
             }
+        }
+    }
+
+    private fun SentryInit(context: Context = applicationContext) {
+        SentryAndroid.init(context) { options ->
+            options.dsn = "https://0a3d0d1fe57deb2e7baebd1f244a04de@o4509194335223808.ingest.us.sentry.io/4509194511974400"
+            options.isDebug = true
+
+            options.sessionReplay.onErrorSampleRate = 1.0
+            options.sessionReplay.sessionSampleRate = 0.1
+
+            options.sessionReplay.maskAllText = true
+            options.sessionReplay.maskAllImages = true
         }
     }
 }
