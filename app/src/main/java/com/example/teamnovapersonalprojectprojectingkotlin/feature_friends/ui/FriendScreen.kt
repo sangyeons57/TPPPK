@@ -24,11 +24,11 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지 리소스
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendItem
+import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendViewModel
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendsEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendsListUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendsListViewModel
 import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.layout.navigationBarsPadding
 
 /**
  * FriendsScreen: 친구 목록 표시 및 관리 화면 (Stateful)
@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun FriendsScreen(
     modifier: Modifier = Modifier,
-    viewModel: FriendsListViewModel = hiltViewModel(),
+    viewModel: FriendViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToAcceptFriends: () -> Unit,
     onNavigateToChat: (String) -> Unit, // channelId 또는 userId 전달
@@ -84,7 +84,8 @@ fun FriendsScreen(
                 onClick = viewModel::onAcceptFriendClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp) // 적절한 패딩
+                    .padding(16.dp)
+                    .navigationBarsPadding() // 하단 네비게이션 바 패딩 적용
             ) {
                 Text("친구 요청 수락하기")
             }

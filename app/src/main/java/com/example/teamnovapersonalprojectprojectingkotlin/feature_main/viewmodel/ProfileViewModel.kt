@@ -1,8 +1,12 @@
 package com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel
 
 import android.net.Uri
+import androidx.compose.foundation.MutatePriority
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -28,6 +32,8 @@ data class ProfileUiState(
 // 프로필 화면 이벤트
 sealed class ProfileEvent {
     object NavigateToSettings : ProfileEvent() // 설정 화면으로 이동
+    object NavigateToStatus: ProfileEvent()
+    object NavigateToFriends: ProfileEvent()
     object ShowEditStatusDialog : ProfileEvent() // 상태 메시지 변경 다이얼로그 표시
     object PickProfileImage : ProfileEvent() // 이미지 선택기 실행 요청
     object LogoutCompleted : ProfileEvent() // 로그아웃 완료 알림 -> 화면 전환용
@@ -37,8 +43,8 @@ sealed class ProfileEvent {
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    // TODO: private val userRepository: UserRepository,
-    // TODO: private val authRepository: AuthRepository
+    private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(isLoading = true)) // 초기 로딩 상태
@@ -94,13 +100,13 @@ class ProfileViewModel @Inject constructor(
     // 설정 버튼 클릭
     fun onStatusClick() {
         viewModelScope.launch {
-            _eventFlow.emit(ProfileEvent.NavigateToSettings)
+            _eventFlow.emit(ProfileEvent.NavigateToStatus)
         }
     }
     // 설정 버튼 클릭
     fun onFriendsClick() {
         viewModelScope.launch {
-            _eventFlow.emit(ProfileEvent.NavigateToSettings)
+            _eventFlow.emit(ProfileEvent.NavigateToFriends)
         }
     }
     // 설정 버튼 클릭
@@ -115,15 +121,10 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // 로딩 표시 (선택 사항)
             println("ViewModel: 로그아웃 시도")
-            // --- TODO: 실제 로그아웃 로직 (authRepository.logout(), 로컬 데이터 삭제 등) ---
-            kotlinx.coroutines.delay(500) // 임시 딜레이
-            val success = true // 임시 성공
-            // val result = authRepository.logout()
-            // result.onSuccess { ... }.onFailure { ... }
-            // --------------------------------------------------------------------
-            if (success) {
+            val result = authRepository.logout()
+            result.onSuccess {
                 _eventFlow.emit(ProfileEvent.LogoutCompleted) // 로그아웃 완료 이벤트 발생
-            } else {
+            }.onFailure {
                 _uiState.update { it.copy(isLoading = false) }
                 _eventFlow.emit(ProfileEvent.ShowSnackbar("로그아웃 실패"))
             }

@@ -154,6 +154,7 @@ fun AppNavigation(
 
         // 친구 관련 화면
         composable(route = Friends.route) {
+            println("test")
             FriendsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToAcceptFriends = { navController.navigate(AcceptFriends.route) },
@@ -169,10 +170,8 @@ fun AppNavigation(
         composable(route = EditProfile.route) {
             EditProfileScreen(
                 onNavigateBack = { navController.popBackStack() },
-                modifier = TODO(),
-                viewModel = TODO(),
                 onChangeNameClick = TODO(),
-                onChangeStatusClick = TODO()
+                onChangeStatusClick = TODO(),
             )
         }
         composable(route = ChangePassword.route) {

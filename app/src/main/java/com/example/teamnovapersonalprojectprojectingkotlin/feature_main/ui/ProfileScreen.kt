@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit // 편집 아이콘
 import androidx.compose.material.icons.filled.ExitToApp // 로그아웃 아이콘
 import androidx.compose.material.icons.filled.PhotoCamera // 카메라/갤러리 아이콘
@@ -18,7 +19,6 @@ import androidx.compose.material.icons.filled.Settings // 설정 아이콘
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,15 +37,26 @@ import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Login
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Main
 import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.teamnovapersonalprojectprojectingkotlin.navigation.EditProfile
+import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Friends
+import okhttp3.internal.http2.Settings
 
 /**
  * ProfileScreen: 상태 관리 및 이벤트 처리 (Stateful)
- */
+ **/
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
     onLogout: () -> Unit,
+    onClickSettings: () -> Unit,
+    onClickFriends: () -> Unit,
+    onClickStatus: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,11 +76,9 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProfileEvent.NavigateToSettings -> {
-                    // TODO: 설정 화면 경로로 이동 (AppNavGraph에 정의 필요)
-                    // appNavController.navigate("settings_route")
-                    println("설정 화면 이동 요청 (미구현)")
-                }
+                is ProfileEvent.NavigateToSettings -> onClickSettings()
+                is ProfileEvent.NavigateToFriends -> onClickFriends()
+                is ProfileEvent.NavigateToStatus -> onClickStatus()
                 is ProfileEvent.ShowEditStatusDialog -> {
                     // TODO: 상태 메시지 변경 다이얼로그 표시
                     snackbarHostState.showSnackbar("상태 메시지 변경 다이얼로그 (미구현)")
@@ -122,6 +130,16 @@ fun ProfileScreen(
         }
     }
 }
+
+@Preview
+@Composable
+fun ProfileScreenPreview() {
+    // Dummy NavController for Preview
+    val navController = rememberNavController()
+    ProfileScreen(navController = navController, onLogout = {}, onClickSettings = {}, onClickFriends = {}, onClickStatus = {})
+}
+
+
 
 /**
  * ProfileContent: UI 렌더링 (Stateless)
@@ -240,7 +258,7 @@ fun ProfileContent(
         )
         ProfileMenuItem(
             text = "로그아웃",
-            icon = Icons.Filled.ExitToApp,
+            icon = Icons.AutoMirrored.Filled.ExitToApp,
             onClick = onLogoutClick,
             enabled = !isLoading
         )

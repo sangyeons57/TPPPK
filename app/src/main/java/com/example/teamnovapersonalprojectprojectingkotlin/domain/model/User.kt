@@ -2,8 +2,10 @@
 package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
 
 data class User(
-    val userId: String,
-    val email: String,
-    val name: String
-    // 기타 필요한 사용자 정보
+    val userId: String = "", // Firestore needs default values for toObject()
+    val name: String = "",
+    val email: String = "",
+    val profileImageUrl: String? = null,
+    val status: String? = null
+    // Add other fields stored in Firestore
 )

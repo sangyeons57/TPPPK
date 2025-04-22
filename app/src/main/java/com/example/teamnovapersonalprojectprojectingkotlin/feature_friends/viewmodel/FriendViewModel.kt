@@ -39,7 +39,7 @@ sealed class FriendsEvent {
 }
 
 @HiltViewModel
-class FriendsListViewModel @Inject constructor(
+class FriendViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
     private val friendRepository: FriendRepository
     // TODO: private val repository: FriendRepository

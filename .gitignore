@@ -49,3 +49,6 @@ google-services.json
 # Android Profiling
 *.hprof
 >>>>>>> 6a788da95b5d823998edfa3300b4acddf30a8c0a
+
+# Sentry Config File
+sentry.properties

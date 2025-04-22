@@ -8,6 +8,8 @@ plugins {
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 
+
+    id("io.sentry.android.gradle") version "5.3.0"
 }
 
 android {
@@ -57,6 +59,7 @@ dependencies {
 
     // Hilt Core
     implementation(libs.hilt.android)
+    implementation(libs.firebase.firestore.ktx)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
@@ -143,4 +146,14 @@ dependencies {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+
+sentry {
+    org.set("bamsol")
+    projectName.set("android")
+
+    // this will upload your source code to Sentry to show it as part of the stack traces
+    // disable if you don't want to expose your sources
+    includeSourceContext.set(true)
 }

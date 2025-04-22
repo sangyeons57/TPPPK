@@ -26,6 +26,7 @@ okhttp = "4.12.0"
 playServicesAuth = "21.3.0"
 retrofit = "2.11.0"
 room = "2.7.0"
+firebaseFirestoreKtx = "25.1.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -70,7 +71,8 @@ retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
-androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" } # 테스트용 (선택사항)
+androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" } # 테스트용 (선택사항)
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

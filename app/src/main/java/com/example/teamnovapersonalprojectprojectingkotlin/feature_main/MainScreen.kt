@@ -20,6 +20,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Friend
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui.CalendarScreen
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui.HomeContent
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui.HomeScreen
@@ -29,6 +30,7 @@ import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmode
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.TopSection
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.ui.AddProjectScreen
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AddProject
+import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Friends
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Login
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Main
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.MainBottomNavDestination
@@ -76,6 +78,13 @@ fun MainScreen(
                             launchSingleTop = true // 로그인 화면 중복 생성 방지
                         }
                     },
+                    onClickSettings = { /* 설정 화면으로 이동 */ },
+                    onClickFriends = {
+                        navController.navigate(Friends.route) {
+                            popUpTo(Main.route) { inclusive = true }
+                        }
+                     },
+                    onClickStatus = { /* 상태 메시지 화면으로 이동 */ }
                 )
             }
             // TODO: 필요한 경우 다른 composable 목적지 추가 (설정 화면 등)
