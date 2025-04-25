@@ -1,5 +1,6 @@
 package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth // ktx 임포트
@@ -21,6 +22,7 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
 
     override suspend fun isLoggedIn(): Boolean {
+        Log.d("AuthRepositoryImpl", ""+ auth.currentUser)
         return auth.currentUser != null
     }
 
@@ -31,9 +33,7 @@ class AuthRepositoryImpl @Inject constructor(
             if (firebaseUser != null) {
                 // ★ 로그인 성공 후 Firestore 문서 확인 및 생성 ★
                 userRepository.ensureUserProfileExists(firebaseUser).fold(
-                    onSuccess = { userProfile ->
-                        SentryUtil.setUserInfo( userProfile.userId, userProfile.email, userProfile.name )
-                        Result.success(userProfile) }, // 성공 시 User 객체 반환
+                    onSuccess = { userProfile -> Result.success(userProfile) }, // 성공 시 User 객체 반환
                     onFailure = { exception -> Result.failure(exception) }     // 실패 시 에러 반환
                 )
             } else {
@@ -47,7 +47,6 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(): Result<Unit> {
         return try {
-            SentryUtil.setUserInfo(null)
             auth.signOut()
             Result.success(Unit)
         } catch (e: Exception) {

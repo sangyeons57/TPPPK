@@ -36,6 +36,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.ui.AddScheduleScreen
+import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AddSchedule
+import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppDestination
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -49,6 +52,7 @@ import java.util.Locale
 fun CalendarScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
+    onClickFAB: (route: String) -> Unit,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,7 +67,14 @@ fun CalendarScreen(
                 }
                 is CalendarEvent.ShowAddScheduleDialog -> {
                     // TODO: 일정 추가 다이얼로그 표시 로직
-                    snackbarHostState.showSnackbar("일정 추가 다이얼로그 (미구현)")
+                    //snackbarHostState.showSnackbar("일정 추가 다이얼로그 (미구현)")
+                    onClickFAB(
+                        AddSchedule.createRoute(
+                            uiState.selectedDate.year,
+                            uiState.selectedDate.monthValue,
+                            uiState.selectedDate.dayOfMonth,
+                        )
+                    )
                 }
                 // is CalendarEvent.NavigateToScheduleDetail -> { ... }
                 else -> { snackbarHostState.showSnackbar("기본 (else)") }

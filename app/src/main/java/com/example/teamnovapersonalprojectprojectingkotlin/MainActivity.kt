@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigation
 import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
 import io.sentry.Sentry
 import io.sentry.android.core.SentryAndroid
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SentryInit()
 
+        FirebaseApp.initializeApp(this) // 명시적 초기화
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
         setContent {
             TeamnovaPersonalProjectProjectingKotlinTheme {

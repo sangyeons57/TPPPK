@@ -30,6 +30,7 @@ import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmode
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.TopSection
 import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.ui.AddProjectScreen
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AddProject
+import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AddSchedule
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Friends
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Login
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Main
@@ -68,7 +69,17 @@ fun MainScreen(
                     onNavigateToAddProject= {navController.navigate(AddProject.route)} // AddProject 화면으로 이동
                 )
             }
-            composable(MainBottomNavDestination.Calendar.route) { CalendarScreen(navController= nestedNavController) }
+            composable(MainBottomNavDestination.Calendar.route) {
+                CalendarScreen(
+                    navController = nestedNavController,
+                    onClickFAB = { route: String ->
+                        navController.navigate(route) {
+                            popUpTo(Main.route) { inclusive = true } // Main 그래프까지 스택에서 제거
+                            launchSingleTop = true // 로그인 화면 중복 생성 방지
+                        }
+                    },
+                )
+            }
             composable(MainBottomNavDestination.Profile.route) {
                 ProfileScreen(
                     navController = nestedNavController,

@@ -87,7 +87,10 @@ fun HomeScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::onAddButtonClick) {
+            FloatingActionButton(onClick =
+                viewModel::onProjectAddButtonClick
+                //viewModel::onAddButtonClick
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = "추가")
             }
         }

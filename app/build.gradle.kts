@@ -1,7 +1,9 @@
 
 plugins {
-    alias(libs.plugins.android.application)
+    id("com.android.application")
     id("com.google.gms.google-services")
+    // alias(libs.plugins.android.application)
+    // alias(libs.plugins.google.gms)
 
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -41,6 +43,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -57,6 +60,7 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
     // Hilt Core
     implementation(libs.hilt.android)
@@ -116,10 +120,10 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
-    implementation(libs.firebase.storage.ktx)
 
     // Also add the dependency for the Google Play services library and specify its version
-    implementation(libs.play.services.auth)
+    //implementation(libs.play.services.auth)
+    //implementation(libs.play.services.base)
 
     // Add the dependencies for any other desired Firebase products
     // https://firebase.google.com/docs/android/setup#available-libraries

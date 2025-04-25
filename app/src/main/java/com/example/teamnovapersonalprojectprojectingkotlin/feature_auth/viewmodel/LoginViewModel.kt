@@ -117,7 +117,10 @@ class LoginViewModel @Inject constructor(
                     is com.google.firebase.auth.FirebaseAuthInvalidUserException -> "존재하지 않는 이메일입니다."
                     is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> "잘못된 비밀번호입니다."
                     // TODO: 네트워크 오류 등 다른 Firebase 예외 처리 추가
-                    else -> exception.message ?: "로그인 실패"
+                    else ->{
+                        SentryUtil.captureError(exception)
+                        exception.message ?: "로그인 실패"
+                    }
                 }
                 _uiState.update { it.copy(isLoading = false) } // 로딩 종료
                 _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage)) // 스낵바로 에러 알림
