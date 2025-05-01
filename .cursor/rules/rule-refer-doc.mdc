@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rule File Reference
+
+*This document briefly describes the purpose of each rule file in the `.cursor/rules/` directory. Refer to the relevant file when discussing or implementing changes related to its topic.*
+
+- [architecture.mdc](mdc:.cursor/rules/architecture.mdc): Outlines the project's architectural principles (Clean Architecture, MVVM, etc.) and design patterns.
+- [code-conventions.mdc](mdc:.cursor/rules/code-conventions.mdc): Defines coding standards, naming conventions, formatting, and commenting guidelines. (Mandatory)
+- [firestore-schema.mdc](mdc:.cursor/rules/firestore-schema.mdc): Details the structure, collections, fields, and subcollections of the Firebase Firestore database.
+- [llm-guidelines.mdc](mdc:.cursor/rules/llm-guidelines.mdc): Provides instructions for the LLM's role, behavior, and interaction style within this project.
+- [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc): Describes the organization of modules, directories, and key files.
+- [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc): Explains when and how to update these rule documents.
+- [tasks-rule.mdc](mdc:.cursor/rules/tasks-rule.mdc): Defines how to handle large or complex tasks requiring multiple steps using the `.cursor/tasks/` directory.
+- [tech-stack.mdc](mdc:.cursor/rules/tech-stack.mdc): Lists the core technologies, libraries, and frameworks used in the project.
+- [testing-git-workflow.mdc](mdc:.cursor/rules/testing-git-workflow.mdc): Defines the standard workflow for test creation, validation, and code committing process.
+

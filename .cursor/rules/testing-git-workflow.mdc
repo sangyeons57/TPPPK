@@ -1,0 +1,187 @@
+---
+description: Use when a feature is completed, there is work to be done with git.
+globs: 
+alwaysApply: false
+---
+# Testing and Git Workflow
+
+*This document defines the standard workflow for test creation, validation, and code committing for the Projecting Kotlin project.*
+
+## Workflow Overview
+
+```mermaid
+graph TD
+    A[Create Tests] --> B[Run Tests]
+    B -->|Fail| C[Fix Issues]
+    C --> B
+    B -->|All Tests Pass| D[Git Status & Add]
+    D --> E[Git Commit]
+    E --> F[Git Push]
+    C -->|All Cases Fail| G[Notify User and Break]
+```
+
+## Detailed Steps
+
+### 1. Test Creation
+
+- Create unit tests for all new functionality
+- Include tests for:
+  - Core business logic
+  - UI components (using appropriate test types)
+  - Edge cases and error conditions
+
+### 2. Test Execution
+
+Run tests using Gradle:
+```
+.\gradlew :feature:<module>:test
+```
+
+For more detailed output:
+```
+.\gradlew :feature:<module>:test --info
+```
+
+#### 2.1. Handling Test Failures
+
+If tests fail:
+- Analyze the failure logs and error messages
+- Make necessary code adjustments
+- Run tests again after each fix
+- Continue until all tests pass
+
+#### 2.2. Handling Persistent Failures
+
+If tests fail across all attempted solutions:
+- Document the specific failures in detail
+- Notify the user/team of the unresolved issues
+- Break the current workflow to allow for deeper analysis
+- Consider creating a dedicated issue ticket
+
+#### 2.3. Test Success Handling
+
+When tests pass:
+- Verify all requirements are met
+- Continue to the git workflow stages
+
+### 3. Git Workflow
+
+#### 3.1. Check Status
+
+Always start by checking what files have been changed:
+```bash
+git status
+```
+Review the output to confirm that:
+- Expected files are modified
+- No unexpected files are modified
+- No sensitive files (credentials, local config) are included
+
+#### 3.2. Stage Changes
+
+Add the changes you want to commit:
+```bash
+# Add all changes
+git add .
+
+# Or add specific files
+git add path/to/file1 path/to/file2
+```
+
+#### 3.3. Review Staged Changes
+
+Verify what is about to be committed:
+```bash
+git status
+# OR more detailed diff view
+git diff --staged
+```
+
+#### 3.4. Commit Changes
+
+Commit the staged changes with a descriptive message:
+```bash
+git commit -m "[Feature/Fix/Refactor]: Brief description"
+```
+
+For more detailed commit messages, use:
+```bash
+git commit
+```
+This opens an editor where you can enter a multi-line message following this format:
+```
+[Feature/Fix/Refactor]: Brief description
+
+- Detailed point 1
+- Detailed point 2
+```
+Include the relevant task/issue ID if applicable.
+
+#### 3.5. Push Changes
+
+Push your commits to the remote repository:
+```bash
+# Push to the current branch
+git push
+
+# Or specify the branch
+git push origin <branch-name>
+```
+
+#### 3.6. Verify Push
+
+Ensure your changes have been pushed successfully:
+```bash
+# Check the remote status
+git status
+```
+
+### 4. Post-Push Verification
+
+- Verify CI/CD pipelines run successfully (if configured)
+- Check the remote repository (GitHub/GitLab/etc.) to confirm your changes appear correctly
+- Monitor for any post-push issues
+
+## Command Reference
+
+### Test Commands
+
+```bash
+# Run basic tests
+.\gradlew :feature:<module>:test
+
+# Clean test cache and run tests
+.\gradlew :feature:<module>:cleanTest :feature:<module>:test
+
+# Run tests with detailed output
+.\gradlew :feature:<module>:test --info
+```
+
+### Git Commands
+
+```bash
+# Check the status of your working directory
+git status
+
+# Stage changes
+git add .
+git add <file-path>
+
+# Review staged changes
+git diff --staged
+
+# Commit with message
+git commit -m "[Type]: Description"
+
+# For multi-line commit messages
+git commit
+
+# Push to remote
+git push origin <branch-name>
+
+# Check commit history
+git log
+```
+
+
+
