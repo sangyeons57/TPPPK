@@ -95,28 +95,14 @@ fun CalendarContent(
     onNextMonthClick: () -> Unit,
     onDateClick: (LocalDate) -> Unit
 ) {
-    // 월 변경 방향 추적
-    var monthTransitionDirection by remember { mutableStateOf(0) }
-    
-    // 월 변경 감지
-    LaunchedEffect(uiState.currentYearMonth) {
-        // 아무 값도 설정하지 않았을 때는 방향 설정하지 않음
-        if (monthTransitionDirection == 0) return@LaunchedEffect
-        // 애니메이션 완료 후 방향 초기화
-        delay(400)
-        monthTransitionDirection = 0
-    }
-    
     Column(modifier = modifier.fillMaxWidth()) {
         // 1. 월 이동 헤더
         MonthHeader(
             yearMonthText = uiState.currentYearMonth.format(uiState.monthYearFormatter),
             onPreviousClick = { 
-                monthTransitionDirection = -1
                 onPreviousMonthClick() 
             },
             onNextClick = { 
-                monthTransitionDirection = 1
                 onNextMonthClick() 
             },
             modifier = Modifier.padding(vertical = Dimens.paddingMedium, horizontal = Dimens.paddingXLarge)
@@ -125,47 +111,14 @@ fun CalendarContent(
         // 2. 요일 헤더
         DayOfWeekHeader(modifier = Modifier.padding(horizontal = Dimens.paddingXLarge))
 
-        // 3. 달력 그리드 영역 - 애니메이션 적용
-        key(uiState.currentYearMonth) {
-            AnimatedContent(
-                targetState = uiState.datesInMonth,
-                transitionSpec = {
-                    if (monthTransitionDirection == 0) {
-                        // 초기 로딩 또는 방향없는 변경시 페이드 사용
-                        fadeIn(animationSpec = tween(300)) togetherWith 
-                        fadeOut(animationSpec = tween(300))
-                    } else {
-                        // 이전/다음 달 이동시 슬라이드 사용
-                        slideInHorizontally(
-                            animationSpec = tween(
-                                durationMillis = 400,
-                                easing = FastOutSlowInEasing
-                            ),
-                            initialOffsetX = { fullWidth -> monthTransitionDirection * fullWidth }
-                        ) + fadeIn(
-                            animationSpec = tween(400)
-                        ) togetherWith slideOutHorizontally(
-                            animationSpec = tween(
-                                durationMillis = 400, 
-                                easing = LinearOutSlowInEasing
-                            ),
-                            targetOffsetX = { fullWidth -> -monthTransitionDirection * fullWidth }
-                        ) + fadeOut(
-                            animationSpec = tween(200)
-                        )
-                    }
-                },
-                label = "Calendar Grid Animation"
-            ) { dates ->
-                CalendarGrid(
-                    dates = dates,
-                    selectedDate = uiState.selectedDate,
-                    onDateClick = onDateClick,
-                    datesWithSchedules = uiState.datesWithSchedules,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // 3. 달력 그리드 영역 - 애니메이션 제거하고 직접 표시
+        CalendarGrid(
+            dates = uiState.datesInMonth,
+            selectedDate = uiState.selectedDate,
+            onDateClick = onDateClick,
+            datesWithSchedules = uiState.datesWithSchedules,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -186,86 +139,32 @@ fun MonthHeader(
     onNextClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 버튼 클릭 애니메이션 상태
-    var previousButtonPressed by remember { mutableStateOf(false) }
-    var nextButtonPressed by remember { mutableStateOf(false) }
-    
-    // 버튼 스케일 애니메이션
-    val previousScale by animateFloatAsState(
-        targetValue = if (previousButtonPressed) 0.8f else 1f,
-        animationSpec = tween(150),
-        label = "Previous Button Scale"
-    )
-    
-    val nextScale by animateFloatAsState(
-        targetValue = if (nextButtonPressed) 0.8f else 1f,
-        animationSpec = tween(150), 
-        label = "Next Button Scale"
-    )
-    
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // 이전 달 버튼 - 애니메이션 적용
-        IconButton(
-            onClick = {
-                previousButtonPressed = true
-                onPreviousClick()
-            }
-        ) {
+        // 이전 달 버튼
+        IconButton(onClick = onPreviousClick) {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowLeft, 
-                contentDescription = "이전 달",
-                modifier = Modifier.scale(previousScale)
+                contentDescription = "이전 달"
             )
         }
         
-        // 애니메이션 효과 초기화
-        LaunchedEffect(previousButtonPressed) {
-            if (previousButtonPressed) {
-                delay(150)
-                previousButtonPressed = false
-            }
-        }
+        // 연월 텍스트
+        Text(
+            text = yearMonthText,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
         
-        // 연월 텍스트 - 페이드 애니메이션 적용
-        AnimatedContent(
-            targetState = yearMonthText,
-            transitionSpec = {
-                fadeIn(animationSpec = tween(300)) togetherWith
-                fadeOut(animationSpec = tween(300))
-            },
-            label = "Month Year Text Animation"
-        ) { text ->
-            Text(
-                text = text,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        
-        // 다음 달 버튼 - 애니메이션 적용
-        IconButton(
-            onClick = {
-                nextButtonPressed = true
-                onNextClick()
-            }
-        ) {
+        // 다음 달 버튼
+        IconButton(onClick = onNextClick) {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight, 
-                contentDescription = "다음 달",
-                modifier = Modifier.scale(nextScale)
+                contentDescription = "다음 달"
             )
-        }
-        
-        // 애니메이션 효과 초기화
-        LaunchedEffect(nextButtonPressed) {
-            if (nextButtonPressed) {
-                delay(150)
-                nextButtonPressed = false
-            }
         }
     }
 }
@@ -381,20 +280,6 @@ fun DayCell(
     val today = LocalDate.now()
     val isToday = date == today
     
-    // 선택 애니메이션 (크기 변화)
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.15f else 1f,
-        animationSpec = tween(durationMillis = 200),
-        label = "Day Cell Scale"
-    )
-    
-    // 일정 표시 마커 애니메이션
-    val markerSize by animateDpAsState(
-        targetValue = if (hasSchedule) Dimens.markerSizeSmall else 0.dp,
-        animationSpec = tween(durationMillis = 300),
-        label = "Schedule Marker Size"
-    )
-    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -404,7 +289,6 @@ fun DayCell(
             modifier = Modifier
                 .aspectRatio(1f)
                 .padding(Dimens.paddingSmall)
-                .scale(scale)
                 .clip(CircleShape)
                 .background(
                     when {
@@ -431,11 +315,11 @@ fun DayCell(
             )
         }
         
-        // 일정 표시 마커 - 애니메이션 적용
-        if (markerSize > 0.dp) {
+        // 일정 표시 마커 - 고정 크기 사용
+        if (hasSchedule) {
             Box(
                 modifier = Modifier
-                    .size(markerSize)
+                    .size(Dimens.markerSizeSmall)
                     .background(
                         color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape
@@ -463,14 +347,6 @@ fun ScheduleSection(
     onScheduleClick: (String) -> Unit,
     onDateClick24Hour: (LocalDate) -> Unit
 ) {
-    // 24시간 버튼 애니메이션 상태
-    var buttonPressed by remember { mutableStateOf(false) }
-    val buttonScale by animateFloatAsState(
-        targetValue = if (buttonPressed) 0.95f else 1f,
-        animationSpec = tween(150),
-        label = "24Hour Button Scale"
-    )
-    
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -490,45 +366,23 @@ fun ScheduleSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 날짜와 일정 텍스트 - 애니메이션 적용
-            AnimatedContent(
-                targetState = "${uiState.selectedDate.format(uiState.selectedDateFormatter)} 일정",
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(300)) togetherWith
-                    fadeOut(animationSpec = tween(300))
-                },
-                label = "Selected Date Text Animation"
-            ) { text ->
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            // 날짜와 일정 텍스트
+            Text(
+                text = "${uiState.selectedDate.format(uiState.selectedDateFormatter)} 일정",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
             
-            // 24시간 뷰로 이동 버튼 - 애니메이션 적용
+            // 24시간 뷰로 이동 버튼
             Button(
-                onClick = { 
-                    buttonPressed = true
-                    onDateClick24Hour(uiState.selectedDate) 
-                },
+                onClick = { onDateClick24Hour(uiState.selectedDate) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
-                modifier = Modifier
-                    .height(Dimens.buttonHeightMedium)
-                    .scale(buttonScale)
+                modifier = Modifier.height(Dimens.buttonHeightMedium)
             ) {
                 Text("24시간 보기", style = MaterialTheme.typography.labelMedium)
-            }
-            
-            // 애니메이션 효과 초기화
-            LaunchedEffect(buttonPressed) {
-                if (buttonPressed) {
-                    delay(150)
-                    buttonPressed = false
-                }
             }
         }
         
@@ -570,20 +424,12 @@ fun ScheduleSection(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // 아이콘 회전 애니메이션
-                        val iconRotation by animateFloatAsState(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 1000),
-                            label = "Empty State Icon Scale"
-                        )
-                        
+                        // 아이콘 회전 애니메이션 제거
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier
-                                .size(Dimens.iconSizeXLarge)
-                                .scale(iconRotation)
+                            modifier = Modifier.size(Dimens.iconSizeXLarge)
                         )
                         Spacer(modifier = Modifier.height(Dimens.paddingMedium))
                         Text(
@@ -629,7 +475,6 @@ fun ScheduleSection(
                         items = uiState.schedulesForSelectedDate,
                         key = { it.id }
                     ) { schedule ->
-                        // 아이템별 애니메이션 적용
                         ScheduleListItem(
                             schedule = schedule,
                             onClick = { onScheduleClick(schedule.id) }
@@ -670,25 +515,12 @@ fun ScheduleListItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 카드 애니메이션 상태
-    var isPressed by remember { mutableStateOf(false) }
-    
-    // 카드 엘리베이션 애니메이션
-    val elevation by animateDpAsState(
-        targetValue = if (isPressed) 8.dp else Dimens.elevationSmall,
-        animationSpec = tween(200),
-        label = "Card Elevation Animation"
-    )
-    
-    // 일정 카드 UI - 애니메이션 적용
+    // 일정 카드 UI - 애니메이션 제거
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable {
-                isPressed = true
-                onClick()
-            },
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimens.elevationSmall),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -762,14 +594,6 @@ fun ScheduleListItem(
                 tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
                 modifier = Modifier.size(Dimens.iconSizeMedium)
             )
-        }
-    }
-    
-    // 애니메이션 효과 초기화
-    LaunchedEffect(isPressed) {
-        if (isPressed) {
-            delay(200)
-            isPressed = false
         }
     }
 } 
