@@ -94,6 +94,8 @@
     - ✅ 애니메이션 transition spec 사용으로 부드러운 UI 움직임 구현
     - ✅ 다이얼로그 컨트롤에 애니메이션 효과 적용
     - ✅ 모든 애니메이션이 Material 디자인 가이드라인과 일치하도록 구현
+    - ✅ 하드코딩된 dp 값들을 Dimens 상수로 리팩토링
+    - ✅ 컴파일 에러 수정 및 코드 최적화
 
 - [ ] Step 10: Test all interaction paths and edge cases
   - Test all navigation flows and transitions

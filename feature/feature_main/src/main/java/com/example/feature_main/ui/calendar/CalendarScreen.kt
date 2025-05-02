@@ -116,7 +116,6 @@ fun CalendarScreen(
                 is CalendarEvent.NavigateToScheduleDetail -> {
                     onNavigateToScheduleDetail(event.scheduleId)
                 }
-                else -> { snackbarHostState.showSnackbar("기본 (else)") }
             }
         }
     }

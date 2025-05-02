@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.ScheduleColor1
 import com.example.core_ui.theme.ScheduleColor2
 import com.example.core_ui.theme.ScheduleColor3
@@ -187,7 +188,7 @@ fun Calendar24HourScreen(
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Dimens.paddingXLarge))
                         Text("일정 로딩 중...", modifier = Modifier.alpha(0.7f))
                     }
                 }
@@ -204,14 +205,14 @@ fun Calendar24HourScreen(
                     Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                         Card(
                             modifier = Modifier
-                                .padding(16.dp)
+                                .padding(Dimens.paddingXLarge)
                                 .widthIn(max = 300.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer
                             )
                         ) {
                             Column(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(Dimens.paddingXLarge),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
@@ -219,13 +220,13 @@ fun Calendar24HourScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(Dimens.paddingMedium))
                                 Text(
                                     currentUiState.message,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(Dimens.paddingXLarge))
                                 Button(
                                     onClick = { viewModel.onBackClick() },
                                     colors = ButtonDefaults.buttonColors(
@@ -294,6 +295,9 @@ fun Calendar24HourContent(
     val density = LocalDensity.current
     val scrollState = rememberScrollState()
     
+    // MaterialTheme 색상 미리 추출 (Canvas 내에서 사용할 수 없기 때문)
+    val primaryColor = MaterialTheme.colorScheme.primary
+    
     // 스케줄 블록 탭 감지를 위한 맵
     val scheduleBlocksMap = remember { mutableStateMapOf<String, androidx.compose.ui.geometry.Rect>() }
     
@@ -322,7 +326,7 @@ fun Calendar24HourContent(
         // 현재 시간으로 자동 스크롤
         LaunchedEffect(Unit) {
             val currentHour = LocalTime.now().hour
-            val scrollToPosition = (currentHour * hourHeight.toPx()).toInt()
+            val scrollToPosition = with(density) { (currentHour * hourHeight.toPx()).toInt() }
             scrollState.scrollTo(scrollToPosition.coerceIn(0, scrollState.maxValue))
         }
         
@@ -360,24 +364,27 @@ fun Calendar24HourContent(
                     .fillMaxWidth()
                     .height(totalHeight)
             ) {
-                drawTimeline(hourHeight, textMeasurer)
+                // DrawScope에서는 with(density)를 사용할 수 없으므로 밖에서 필요한 값을 계산
+                val spToPx = with(density) { 14.sp.toPx() }
+                
+                drawTimeline(hourHeight, textMeasurer, density)
                 
                 // 현재 시간 표시선
                 val now = LocalTime.now()
-                val currentTimePosition = now.toSecondOfDay() / 3600f * hourHeight.toPx()
-                val timelineStartPadding = 60.dp.toPx()
+                val currentTimePosition = now.toSecondOfDay() / 3600f * with(density) { hourHeight.toPx() }
+                val timelineStartPadding = with(density) { 60.dp.toPx() }
                 
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = currentTimeOpacity),
+                    color = primaryColor.copy(alpha = currentTimeOpacity),
                     start = Offset(timelineStartPadding, currentTimePosition),
                     end = Offset(size.width, currentTimePosition),
-                    strokeWidth = 2.dp.toPx()
+                    strokeWidth = with(density) { 2.dp.toPx() }
                 )
                 
                 // 현재 시간 원형 마커
                 drawCircle(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = currentTimeOpacity),
-                    radius = 4.dp.toPx(),
+                    color = primaryColor.copy(alpha = currentTimeOpacity),
+                    radius = with(density) { 4.dp.toPx() },
                     center = Offset(timelineStartPadding, currentTimePosition)
                 )
                 
@@ -386,12 +393,11 @@ fun Calendar24HourContent(
                 drawSchedules(
                     schedules = schedules,
                     hourHeight = hourHeight,
-                    onScheduleClick = onScheduleClick,
-                    onScheduleLongClick = onScheduleLongClick,
                     textMeasurer = textMeasurer,
                     selectedId = selectedScheduleId,
                     selectionActive = scheduleSelectionActive,
-                    scheduleBlocksMapUpdater = { id, rect -> scheduleBlocksMap[id] = rect }
+                    scheduleBlocksMapUpdater = { id, rect -> scheduleBlocksMap[id] = rect },
+                    density = density
                 )
             }
         }
@@ -399,9 +405,9 @@ fun Calendar24HourContent(
 }
 
 // 시간선 및 시간 텍스트 그리기
-fun DrawScope.drawTimeline(hourHeight: Dp, textMeasurer: TextMeasurer) {
-    val hourHeightPx = hourHeight.toPx()
-    val timelineStartPadding = 60.dp.toPx() // 시간 텍스트를 위한 시작 패딩
+fun DrawScope.drawTimeline(hourHeight: Dp, textMeasurer: TextMeasurer, density: androidx.compose.ui.unit.Density) {
+    val hourHeightPx = with(density) { hourHeight.toPx() }
+    val timelineStartPadding = with(density) { 60.dp.toPx() } // 시간 텍스트를 위한 시작 패딩
 
     for (hour in 0..24) {
         val y = hour * hourHeightPx
@@ -409,7 +415,7 @@ fun DrawScope.drawTimeline(hourHeight: Dp, textMeasurer: TextMeasurer) {
             color = Color.LightGray,
             start = Offset(timelineStartPadding, y),
             end = Offset(size.width, y),
-            strokeWidth = 1.dp.toPx()
+            strokeWidth = with(density) { 1.dp.toPx() }
         )
         if (hour < 24) {
             val timeText = LocalTime.of(hour, 0).format(DateTimeFormatter.ofPattern("HH:mm"))
@@ -419,7 +425,10 @@ fun DrawScope.drawTimeline(hourHeight: Dp, textMeasurer: TextMeasurer) {
             )
             drawText(
                 textLayoutResult = textLayoutResult,
-                topLeft = Offset(timelineStartPadding - textLayoutResult.size.width - 8.dp.toPx(), y - textLayoutResult.size.height / 2)
+                topLeft = Offset(
+                    timelineStartPadding - textLayoutResult.size.width - with(density) { 8.dp.toPx() }, 
+                    y - textLayoutResult.size.height / 2
+                )
             )
         }
     }
@@ -428,7 +437,7 @@ fun DrawScope.drawTimeline(hourHeight: Dp, textMeasurer: TextMeasurer) {
         color = Color.Gray,
         start = Offset(timelineStartPadding, 0f),
         end = Offset(timelineStartPadding, hourHeightPx * 24),
-        strokeWidth = 2.dp.toPx()
+        strokeWidth = with(density) { 2.dp.toPx() }
     )
 }
 
@@ -436,16 +445,15 @@ fun DrawScope.drawTimeline(hourHeight: Dp, textMeasurer: TextMeasurer) {
 fun DrawScope.drawSchedules(
     schedules: List<ScheduleItem24Hour>,
     hourHeight: Dp,
-    onScheduleClick: (String) -> Unit,
-    onScheduleLongClick: (String) -> Unit,
     textMeasurer: TextMeasurer,
     selectedId: String? = null,
     selectionActive: Boolean = false,
-    scheduleBlocksMapUpdater: (String, androidx.compose.ui.geometry.Rect) -> Unit
+    scheduleBlocksMapUpdater: (String, androidx.compose.ui.geometry.Rect) -> Unit,
+    density: androidx.compose.ui.unit.Density
 ) {
-    val hourHeightPx = hourHeight.toPx()
-    val timelineStartPadding = 60.dp.toPx()
-    val schedulePadding = 4.dp.toPx()
+    val hourHeightPx = with(density) { hourHeight.toPx() }
+    val timelineStartPadding = with(density) { 60.dp.toPx() }
+    val schedulePadding = with(density) { Dimens.paddingSmall.toPx() }
     
     // 알파 값 기반 애니메이션 계산
     val selectionAlpha = if (selectionActive) 0.7f else 1.0f
@@ -460,7 +468,9 @@ fun DrawScope.drawSchedules(
         val isSelected = schedule.id == selectedId
         val scale = if (isSelected && selectionActive) 1.02f else 1f
         val alpha = if (isSelected && selectionActive) selectionAlpha else 1f
-        val shadowElevation = if (isSelected && selectionActive) 8.dp.toPx() else 2.dp.toPx()
+        val shadowElevation = if (isSelected && selectionActive) 
+                              with(density) { Dimens.elevationLarge.toPx() } 
+                              else with(density) { Dimens.elevationSmall.toPx() }
         
         // 스케일 적용
         val scaledWidth = scheduleWidth * scale
@@ -483,7 +493,10 @@ fun DrawScope.drawSchedules(
             // 그림자 효과 (단순화)
             drawRect(
                 color = Color.Black.copy(alpha = 0.2f),
-                topLeft = Offset(rectTopLeft.x + 2.dp.toPx(), rectTopLeft.y + 2.dp.toPx()),
+                topLeft = Offset(
+                    rectTopLeft.x + with(density) { Dimens.paddingSmall.toPx() },
+                    rectTopLeft.y + with(density) { Dimens.paddingSmall.toPx() }
+                ),
                 size = rectSize,
                 alpha = alpha
             )
@@ -503,24 +516,32 @@ fun DrawScope.drawSchedules(
             color = Color.Black.copy(alpha = 0.5f),
             topLeft = rectTopLeft,
             size = rectSize,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = with(density) { Dimens.borderWidth.toPx() }
+            ),
             alpha = alpha
         )
 
         // 스케줄 텍스트
         val textColor = if (isDarkColor(scheduleColor)) Color.White else Color.Black
+        val textPadding = with(density) { Dimens.paddingSmall.toPx() }
+        
+        // 텍스트 계산에 필요한 sp to px 변환
+        val spToPx = with(density) { 14.sp.toPx() }
+        
         val textLayoutResult = textMeasurer.measure(
             text = AnnotatedString(schedule.title),
             style = TextStyle(fontSize = 14.sp, color = textColor),
             constraints = androidx.compose.ui.unit.Constraints(
-                maxWidth = scaledWidth.toInt() - (2 * 4.dp.toPx()).toInt() // 텍스트 좌우 패딩 고려
+                maxWidth = scaledWidth.toInt() - (2 * textPadding).toInt() // 텍스트 좌우 패딩 고려
             ),
-            maxLines = (scaledHeight / (14.sp.toPx() * 1.2f)).toInt().coerceAtLeast(1), // 높이에 따라 최대 줄 수 계산
+            maxLines = (scaledHeight / (spToPx * 1.2f)).toInt().coerceAtLeast(1), // 높이에 따라 최대 줄 수 계산
             overflow = TextOverflow.Ellipsis
         )
+        
         drawText(
             textLayoutResult = textLayoutResult,
-            topLeft = Offset(rectTopLeft.x + 4.dp.toPx(), rectTopLeft.y + 4.dp.toPx()),
+            topLeft = Offset(rectTopLeft.x + textPadding, rectTopLeft.y + textPadding),
             alpha = alpha
         )
     }
