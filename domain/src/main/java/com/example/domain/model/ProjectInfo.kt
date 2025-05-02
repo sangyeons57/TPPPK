@@ -1,5 +1,5 @@
 // 경로: domain/model/ProjectInfo.kt (예시)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 data class ProjectInfo(
     val projectName: String,

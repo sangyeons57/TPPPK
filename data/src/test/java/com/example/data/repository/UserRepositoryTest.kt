@@ -1,15 +1,11 @@
 package com.example.data.repository
 
-import android.net.Uri
 import com.example.domain.model.User
 import com.example.domain.model.UserStatus
-import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
 
 /**
  * UserRepository 기능 테스트
@@ -24,12 +20,13 @@ class UserRepositoryTest {
     
     // 테스트 데이터
     private val testUserId = "test-user-123"
+    private val testEmail = "test@example.com"
+    private val testName = "Test User"
     private val testUser = User(
         userId = testUserId,
-        name = "테스트 사용자",
-        email = "test@example.com",
+        email = testEmail,
+        name = testName,
         profileImageUrl = null,
-        status = null,
         statusMessage = null
     )
     
@@ -85,8 +82,8 @@ class UserRepositoryTest {
      */
     @Test
     fun `updateProfileImage should update user's profile image URL`() = runBlocking {
-        // Given: 가상의 이미지 URI
-        val imageUri = mock(Uri::class.java)
+        // Given: 테스트용 URI 생성
+        val imageUri = TestUri("file://test/image.jpg")
         
         // When: 프로필 이미지 업데이트
         val result = userRepository.updateProfileImage(imageUri)
@@ -223,9 +220,12 @@ class UserRepositoryTest {
      */
     @Test
     fun `ensureUserProfileExists should return existing user if found`() = runBlocking {
-        // Given: 이미 존재하는 사용자와 FirebaseUser 모의 객체
-        val firebaseUser = mock(FirebaseUser::class.java)
-        `when`(firebaseUser.uid).thenReturn(testUserId)
+        // Given: 이미 존재하는 사용자와 테스트용 FirebaseUser
+        val firebaseUser = TestFirebaseUser(
+            uid = testUserId,
+            email = "test@example.com",
+            displayName = "새 사용자"
+        )
         
         // When: 사용자 프로필 존재 확인
         val result = userRepository.ensureUserProfileExists(firebaseUser)
@@ -240,12 +240,13 @@ class UserRepositoryTest {
      */
     @Test
     fun `ensureUserProfileExists should create new user if not found`() = runBlocking {
-        // Given: 존재하지 않는 사용자와 FirebaseUser 모의 객체
+        // Given: 존재하지 않는 사용자와 테스트용 FirebaseUser
         val newUserId = "new-user-456"
-        val firebaseUser = mock(FirebaseUser::class.java)
-        `when`(firebaseUser.uid).thenReturn(newUserId)
-        `when`(firebaseUser.displayName).thenReturn("새 사용자")
-        `when`(firebaseUser.email).thenReturn("new@example.com")
+        val firebaseUser = TestFirebaseUser(
+            uid = newUserId,
+            email = "new@example.com",
+            displayName = "새 사용자"
+        )
         
         // 기존 사용자 지우기
         userRepository.clearUsers()

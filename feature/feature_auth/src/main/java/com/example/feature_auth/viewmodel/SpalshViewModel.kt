@@ -1,9 +1,9 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel
+package com.example.feature_auth.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository
+import com.example.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*

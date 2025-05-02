@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_profile.ui
+package com.example.feature_profile.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -12,12 +12,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.UserStatus
+import com.example.feature_profile.viewmodel.ChangeStatusEvent
+import com.example.feature_profile.viewmodel.ChangeStatusUiState
+import com.example.feature_profile.viewmodel.ChangeStatusViewModel
 // Domain 모델 및 ViewModel 관련 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserStatus
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_profile.viewmodel.ChangeStatusEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_profile.viewmodel.ChangeStatusUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_profile.viewmodel.ChangeStatusViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
 
 /**

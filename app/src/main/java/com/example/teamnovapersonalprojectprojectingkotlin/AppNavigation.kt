@@ -1,4 +1,4 @@
-package com.example.navigation
+package com.example.teamnovapersonalprojectprojectingkotlin
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -32,6 +32,33 @@ import com.example.feature_schedule.ui.ScheduleDetailScreen
 import com.example.feature_search.ui.SearchScreen
 import com.example.feature_settings.ui.ChangePasswordScreen
 import com.example.feature_settings.ui.EditProfileScreen
+import com.example.navigation.AcceptFriends
+import com.example.navigation.AddProject
+import com.example.navigation.AddSchedule
+import com.example.navigation.Calendar24Hour
+import com.example.navigation.ChangePassword
+import com.example.navigation.Chat
+import com.example.navigation.CreateCategory
+import com.example.navigation.CreateChannel
+import com.example.navigation.DevMenu
+import com.example.navigation.EditCategory
+import com.example.navigation.EditChannel
+import com.example.navigation.EditMember
+import com.example.navigation.EditProfile
+import com.example.navigation.EditRole
+import com.example.navigation.FindPassword
+import com.example.navigation.Friends
+import com.example.navigation.JoinProject
+import com.example.navigation.Login
+import com.example.navigation.Main
+import com.example.navigation.MemberList
+import com.example.navigation.ProjectSetting
+import com.example.navigation.RoleList
+import com.example.navigation.ScheduleDetail
+import com.example.navigation.Search
+import com.example.navigation.SetProjectName
+import com.example.navigation.SignUp
+import com.example.navigation.Splash
 
 @Composable
 fun AppNavigation(
@@ -60,9 +87,12 @@ fun AppNavigation(
                 onNavigateToJoinProject = { navController.navigate(JoinProject.route) },
                 onNavigateToProjectSetting = { projectId -> navController.navigate(ProjectSetting.createRoute(projectId)) },
                 onNavigateToCreateCategory = { projectId -> navController.navigate(CreateCategory.createRoute(projectId)) },
-                onNavigateToCreateChannel = { projectId, categoryId -> navController.navigate(CreateChannel.createRoute(projectId, categoryId)) },
-                onNavigateToEditCategory = { projectId, categoryId -> navController.navigate(EditCategory.createRoute(projectId, categoryId)) },
-                onNavigateToEditChannel = { projectId, categoryId, channelId -> navController.navigate(EditChannel.createRoute(projectId, categoryId, channelId)) },
+                onNavigateToCreateChannel = { projectId, categoryId -> navController.navigate(
+                    CreateChannel.createRoute(projectId, categoryId)) },
+                onNavigateToEditCategory = { projectId, categoryId -> navController.navigate(
+                    EditCategory.createRoute(projectId, categoryId)) },
+                onNavigateToEditChannel = { projectId, categoryId, channelId -> navController.navigate(
+                    EditChannel.createRoute(projectId, categoryId, channelId)) },
                 onNavigateToMemberList = { projectId -> navController.navigate(MemberList.createRoute(projectId)) },
                 onNavigateToEditMember = { projectId, userId -> navController.navigate(EditMember.createRoute(projectId, userId)) },
                 onNavigateToRoleList = { projectId -> navController.navigate(RoleList.createRoute(projectId)) },
@@ -73,7 +103,8 @@ fun AppNavigation(
                 onNavigateToEditProfile = { navController.navigate(EditProfile.route) },
                 onNavigateToChangePassword = { navController.navigate(ChangePassword.route) },
                 onNavigateToChat = { channelId -> navController.navigate(Chat.createRoute(channelId)) },
-                onNavigateToCalendar24Hour = { year, month, day -> navController.navigate(Calendar24Hour.createRoute(year, month, day)) },
+                onNavigateToCalendar24Hour = { year, month, day -> navController.navigate(
+                    Calendar24Hour.createRoute(year, month, day)) },
                 onNavigateToAddSchedule = { year, month, day -> navController.navigate(AddSchedule.createRoute(year, month, day)) },
                 onNavigateToScheduleDetail = { scheduleId -> navController.navigate(ScheduleDetail.createRoute(scheduleId)) },
                 onNavigateToSearch = { navController.navigate(Search.route) }
@@ -141,7 +172,10 @@ fun AppNavigation(
                 },
                 onNavigateToAddSchedule = { year, month, day ->
                     navController.navigate(AddSchedule.createRoute(year, month, day))
-                }
+                },
+                onNavigateToCalendar24Hour = { year, month, day ->
+                    navController.navigate(Calendar24Hour.createRoute(year, month, day))
+                },
                 // ... MainScreen이 필요로 하는 다른 외부 네비게이션 람다 ...
             )
         }
@@ -174,10 +208,13 @@ fun AppNavigation(
         composable(route = ProjectSetting.routeWithArgs, arguments = ProjectSetting.arguments) {
             ProjectSettingScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToEditCategory = { projectId, categoryId -> navController.navigate(EditCategory.createRoute(projectId, categoryId)) },
+                onNavigateToEditCategory = { projectId, categoryId -> navController.navigate(
+                    EditCategory.createRoute(projectId, categoryId)) },
                 onNavigateToCreateCategory = { projectId -> navController.navigate(CreateCategory.createRoute(projectId)) },
-                onNavigateToEditChannel = { projectId, categoryId, channelId -> navController.navigate(EditChannel.createRoute(projectId, categoryId, channelId)) },
-                onNavigateToCreateChannel = { projectId, categoryId -> navController.navigate(CreateChannel.createRoute(projectId, categoryId)) },
+                onNavigateToEditChannel = { projectId, categoryId, channelId -> navController.navigate(
+                    EditChannel.createRoute(projectId, categoryId, channelId)) },
+                onNavigateToCreateChannel = { projectId, categoryId -> navController.navigate(
+                    CreateChannel.createRoute(projectId, categoryId)) },
                 onNavigateToMemberList = { projectId -> navController.navigate(MemberList.createRoute(projectId)) },
                 onNavigateToRoleList = { projectId -> navController.navigate(RoleList.createRoute(projectId)) }
             )

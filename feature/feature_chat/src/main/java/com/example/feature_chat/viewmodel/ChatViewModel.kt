@@ -1,53 +1,38 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_chat.viewmodel
+package com.example.feature_chat.viewmodel
 
-import android.R
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ChatMessage
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.MediaImage
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ChatRepository
+import com.example.domain.model.ChatMessage
+import com.example.domain.model.MediaImage
+import com.example.domain.repository.ChatRepository
+import com.example.feature_chat.model.ChatEvent
+import com.example.feature_chat.model.ChatMessageUiModel
+import com.example.feature_chat.model.ChatUiState
+import com.example.feature_chat.model.GalleryImageUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
-import kotlin.random.Random // 임시 ID 생성을 위해 추가
-
-// --- UI 전용 데이터 모델 (ViewModel 내 정의 또는 별도 파일) ---
-// UI에 채팅 메시지를 어떻게 보여줄지 정의
-data class ChatMessageUiModel(
-    val localId: String, // LazyColumn Key 및 임시 ID용 (String으로 변경하여 임시/실제 ID 모두 처리)
-    val chatId: Int, // 서버 ID (아직 없으면 0 또는 음수)
-    val userId: Int,
-    val userName: String,
-    val userProfileUrl: String?,
-    val message: String,
-    val formattedTimestamp: String, // UI 표시용 포맷된 시간
-    val isModified: Boolean,
-    val attachmentImageUrls: List<String> = emptyList(),
-    val isMyMessage: Boolean,
-    val isSending: Boolean = false, // 메시지 전송 중 상태 (UI 피드백용)
-    val sendFailed: Boolean = false // 메시지 전송 실패 상태 (UI 피드백용)
-)
-
-data class GalleryImageUiModel( // GalleryImage 대체
-    val uri: Uri,
-    val id: Long,
-    var isSelected: Boolean = false // 선택 상태 추가 (UI 관리용)
-)
-
 
 // --- Domain 모델 -> UI 모델 변환 함수 ---
 // ViewModel 내부 또는 별도 Mapper 파일에 위치 가능
 private fun ChatMessage.toUiModel(myUserId: Int, tempIdGenerator: () -> String): ChatMessageUiModel {
+    // 시간 포맷팅 (오전/오후 h:mm 형식, 한국어)
     val formatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
     return ChatMessageUiModel(
-        localId = this.chatId.toString(), // 실제 ID 사용
+        localId = tempIdGenerator(), // 실제 ID 또는 임시 ID 사용
         chatId = this.chatId,
         userId = this.userId,
         userName = this.userName,
@@ -59,40 +44,13 @@ private fun ChatMessage.toUiModel(myUserId: Int, tempIdGenerator: () -> String):
         isMyMessage = this.userId == myUserId
     )
 }
+
 private fun MediaImage.toUiModel(): GalleryImageUiModel {
     return GalleryImageUiModel(
-        uri = this.contentUri,
+        uri = Uri.parse(this.contentUri),
         id = this.id,
-        isSelected = false,
-
+        isSelected = false
     )
-}
-
-// --- UI 상태 ---
-data class ChatUiState(
-    val channelId: String = "", // 생성자에서 초기화되므로 non-null
-    val channelName: String = "채팅방",
-    val messages: List<ChatMessageUiModel> = emptyList(), // ★ UI 모델 사용
-    val messageInput: String = "",
-    val isAttachmentAreaVisible: Boolean = false,
-    val galleryImages: List<GalleryImageUiModel> = emptyList(), // ★ UI 모델 사용
-    val selectedImages: Set<Uri> = emptySet(),
-    val isLoadingHistory: Boolean = false, // ★ 이름 명확화: 과거 메시지 로딩
-    val isSendingMessage: Boolean = false, // ★ 이름 명확화: 메시지 전송 중
-    val isEditing: Boolean = false,
-    val editingMessageId: Int? = null,
-    val myUserId: Int = 1, // 실제로는 외부에서 주입 또는 설정 필요
-    val isLastPage: Boolean = false,
-    val error: String? = null
-)
-
-// --- 이벤트 ---
-sealed class ChatEvent {
-    object ScrollToBottom : ChatEvent()
-    data class ShowEditDeleteDialog(val message: ChatMessageUiModel) : ChatEvent()
-    data class ShowUserProfileDialog(val userId: Int) : ChatEvent()
-    data class ShowSnackbar(val message: String) : ChatEvent()
-    object ClearFocus : ChatEvent() // 키보드 숨기기 요청 등
 }
 
 @HiltViewModel
@@ -259,11 +217,7 @@ class ChatViewModel @Inject constructor(
     // --- 갤러리 및 첨부 관련 ---
 
     fun onAttachmentClick() {
-        val shouldLoad = !uiState.value.isAttachmentAreaVisible
         _uiState.update { it.copy(isAttachmentAreaVisible = !it.isAttachmentAreaVisible) }
-        if (shouldLoad && uiState.value.galleryImages.isEmpty()) { // 처음 열 때만 로드 (또는 새로고침 로직 추가)
-            loadGalleryImages()
-        }
     }
 
     // 갤러리 이미지 로드
@@ -291,103 +245,105 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun onImageSelected(uri: Uri) { // 그리드에서 이미지 선택
-        _uiState.update { it.copy(selectedImages = it.selectedImages + uri) }
+    fun onImageSelected(uri: Uri) {
+        // 이미 선택된 이미지는 선택 해제
+        if (uiState.value.selectedImages.contains(uri)) {
+            onImageDeselected(uri)
+            return
+        }
+        
+        _uiState.update { 
+            it.copy(
+                selectedImages = it.selectedImages + uri,
+                galleryImages = it.galleryImages.map { galleryImage -> 
+                    if (galleryImage.uri == uri) galleryImage.copy(isSelected = true) else galleryImage 
+                }
+            )
+        }
     }
 
-    fun onImageDeselected(uri: Uri) { // 그리드 또는 미리보기에서 선택 해제
-        _uiState.update { it.copy(selectedImages = it.selectedImages - uri) }
+    fun onImageDeselected(uri: Uri) {
+        _uiState.update { 
+            it.copy(
+                selectedImages = it.selectedImages - uri,
+                galleryImages = it.galleryImages.map { galleryImage -> 
+                    if (galleryImage.uri == uri) galleryImage.copy(isSelected = false) else galleryImage 
+                }
+            )
+        }
     }
 
 
     // --- 메시지 수정/삭제 관련 ---
 
     fun onMessageLongClick(message: ChatMessageUiModel) {
-        // TODO: 내 메시지인지, 수정/삭제 가능한 상태인지 등 확인 로직 추가 가능
         viewModelScope.launch {
             _eventFlow.emit(ChatEvent.ShowEditDeleteDialog(message))
         }
     }
 
-    fun startEditMessage(chatId: Int, currentText: String) {
-        // TODO: 수정하려는 메시지가 유효한지 추가 확인 가능
-        _uiState.update {
+    fun startEditMessage(messageId: Int, text: String) {
+        _uiState.update { 
             it.copy(
+                messageInput = text,
                 isEditing = true,
-                editingMessageId = chatId,
-                messageInput = currentText // 입력 필드에 수정할 텍스트 설정
+                editingMessageId = messageId
             )
         }
-        // TODO: 키보드 표시 요청 필요 시 이벤트 발생
     }
 
-    // 수정 취소
+    // 메시지 편집 취소
     fun cancelEdit() {
-        _uiState.update {
+        _uiState.update { 
             it.copy(
+                messageInput = "",
                 isEditing = false,
-                editingMessageId = null,
-                messageInput = "" // 입력 필드 초기화
+                editingMessageId = null
             )
         }
     }
 
-    // TODO: 메시지 수정 완료 로직 (별도 함수 또는 onSendMessageClick 재활용)
+    // 메시지 편집 완료
     fun confirmEditMessage() {
-        if (!uiState.value.isEditing || uiState.value.editingMessageId == null) return
-
-        val chatId = uiState.value.editingMessageId!!
+        val editingId = uiState.value.editingMessageId ?: return
         val newMessage = uiState.value.messageInput.trim()
-
+        
         if (newMessage.isBlank()) {
-            viewModelScope.launch { _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 내용을 입력해주세요.")) }
+            viewModelScope.launch {
+                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지를 입력해주세요."))
+            }
             return
         }
-        // TODO: 원본 메시지와 비교하여 변경 여부 확인
-
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(isSendingMessage = true) } // 로딩 표시 (isSendingMessage 재활용)
-            val result = chatRepository.editMessage(channelId, chatId, newMessage)
+            _uiState.update { it.copy(isSendingMessage = true) }
+            
+            val result = chatRepository.editMessage(channelId, editingId, newMessage)
+            
             if (result.isSuccess) {
-                // 성공 시 Flow가 업데이트하거나, 직접 UI 상태 업데이트
                 _uiState.update {
                     it.copy(
+                        messageInput = "",
                         isEditing = false,
                         editingMessageId = null,
-                        messageInput = "",
                         isSendingMessage = false
-                        // messages = it.messages.map { msg -> if(msg.chatId == chatId) msg.copy(message = newMessage, isModified = true) else msg } // 직접 업데이트 예시
                     )
                 }
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지가 수정되었습니다."))
             } else {
-                _uiState.update { it.copy(isSendingMessage = false) }
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 수정 실패"))
+                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 수정에 실패했습니다."))
             }
-            _eventFlow.emit(ChatEvent.ClearFocus)
         }
     }
 
 
-    fun confirmDeleteMessage(chatId: Int) {
-        if (uiState.value.isLoadingHistory) return // 삭제 중복 방지
-
+    fun confirmDeleteMessage(messageId: Int) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingHistory = true) } // 로딩 상태 사용 (이름 변경 고려)
-            println("ViewModel: Deleting message $chatId")
-            val result = chatRepository.deleteMessage(channelId, chatId)
-
-            if (result.isSuccess) {
-                // 성공 시: Flow가 DB 변경을 감지하여 UI 업데이트할 것을 기대.
-                // 또는 여기서 직접 목록 필터링:
-                // _uiState.update { state ->
-                //     state.copy(messages = state.messages.filterNot { it.chatId == chatId })
-                // }
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지가 삭제되었습니다."))
-            } else {
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제 실패"))
+            val result = chatRepository.deleteMessage(channelId, messageId)
+            
+            if (result.isFailure) {
+                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제에 실패했습니다."))
             }
-            _uiState.update { it.copy(isLoadingHistory = false) } // 로딩 해제
+            // 성공 시 Flow가 DB 변경을 감지하여 자동으로 UI 업데이트
         }
     }
 

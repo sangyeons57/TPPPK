@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.ui
+package com.example.feature_project.structure.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -12,7 +12,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 
 /**
  * EditCategoryDialog: 카테고리 편집 및 채널 추가 옵션을 제공하는 다이얼로그 Composable

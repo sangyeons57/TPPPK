@@ -1,9 +1,10 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel
+package com.example.feature_project.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.ProjectItem
+import com.example.domain.repository.ProjectRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,17 +36,10 @@ sealed class AddProjectEvent {
     // 성공 이벤트는 UiState 플래그로 처리
 }
 
-// --- Repository 인터페이스 정의 (기존 ProjectRepository 확장 또는 신규) ---
-interface ProjectRepository {
-    suspend fun getProjectList(): Result<List<ProjectItem>> // Home에서 사용
-    suspend fun joinProject(joinCode: String): Result<Unit> // 프로젝트 참여
-    suspend fun createProject(name: String, description: String): Result<Unit> // 프로젝트 생성
-}
-// -------------------------------------------------------------------
 
 @HiltViewModel
 class AddProjectViewModel @Inject constructor(
-    // TODO: private val projectRepository: ProjectRepository
+    private val projectRepository: ProjectRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddProjectUiState())
@@ -97,21 +91,23 @@ class AddProjectViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "참여 코드를 입력해주세요.") }
             return
         }
-        // TODO: 참여 코드 유효성 검사 추가 가능
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            println("ViewModel: 프로젝트 참여 시도 - 코드: $joinCode")
-            // --- TODO: 실제 프로젝트 참여 로직 (projectRepository.joinProject(joinCode)) ---
-            kotlinx.coroutines.delay(1000) // 임시 딜레이
-            val success = true // 임시 성공
-            // val result = projectRepository.joinProject(joinCode)
-            // ---------------------------------------------------------------------
-            if (success) {
+            
+            // 프로젝트 참여 로직
+            val result = projectRepository.joinProjectWithCode(joinCode)
+            
+            if (result.isSuccess) {
                 _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
-                _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) } // 성공 플래그 설정
+                _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }
             } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "참여 코드 확인 또는 참여 실패") }
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        errorMessage = "참여 코드 확인 또는 참여 실패: ${result.exceptionOrNull()?.message ?: ""}"
+                    ) 
+                }
             }
         }
     }
@@ -127,17 +123,21 @@ class AddProjectViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            println("ViewModel: 프로젝트 생성 시도 - 이름: $name")
-            // --- TODO: 실제 프로젝트 생성 로직 (projectRepository.createProject(name, description)) ---
-            kotlinx.coroutines.delay(1000) // 임시 딜레이
-            val success = true // 임시 성공
-            // val result = projectRepository.createProject(name, description)
-            // ------------------------------------------------------------------------
-            if (success) {
+            
+            // 프로젝트 생성 로직
+            val isPublic = _uiState.value.createMode == CreateProjectMode.OPEN
+            val result = projectRepository.createProject(name, description, isPublic)
+            
+            if (result.isSuccess) {
                 _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트를 생성했습니다!"))
-                _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) } // 성공 플래그 설정
+                _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }
             } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "프로젝트 생성 실패") }
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        errorMessage = "프로젝트 생성 실패: ${result.exceptionOrNull()?.message ?: ""}"
+                    ) 
+                }
             }
         }
     }

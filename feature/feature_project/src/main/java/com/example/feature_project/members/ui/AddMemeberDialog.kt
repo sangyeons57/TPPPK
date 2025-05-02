@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_members.ui
+package com.example.feature_project.members.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog // 기본 Dialog 사용
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지 리소스
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.R
 
 // --- 데이터 모델 (호출하는 쪽에서 정의하고 전달해야 함) ---
 // 이 파일 내에 둘 수도 있지만, 보통 ViewModel과 공유하므로 별도 파일이나 ViewModel 내부에 정의

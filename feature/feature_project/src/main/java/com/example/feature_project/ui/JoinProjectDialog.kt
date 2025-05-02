@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project.ui
+package com.example.feature_project.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -12,10 +12,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.JoinProjectDialogEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.JoinProjectDialogUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.JoinProjectDialogViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.viewmodel.JoinProjectDialogEvent
+import com.example.feature_project.viewmodel.JoinProjectDialogUiState
+import com.example.feature_project.viewmodel.JoinProjectDialogViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

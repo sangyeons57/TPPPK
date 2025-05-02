@@ -1,10 +1,10 @@
 // 경로: data/repository/ProjectStructureRepositoryImpl.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Category
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Channel
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ChannelType
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ProjectStructureRepository
+import com.example.domain.model.Category
+import com.example.domain.model.Channel
+import com.example.domain.model.ChannelType
+import com.example.domain.repository.ProjectStructureRepository
 import javax.inject.Inject
 import kotlin.Result
 

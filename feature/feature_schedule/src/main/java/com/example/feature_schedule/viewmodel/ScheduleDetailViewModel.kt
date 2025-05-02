@@ -1,9 +1,10 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel
+package com.example.feature_schedule.viewmodel
 
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -38,13 +39,6 @@ sealed class ScheduleDetailEvent {
     data class NavigateToEditSchedule(val scheduleId: String) : ScheduleDetailEvent()
     object ShowDeleteConfirmDialog : ScheduleDetailEvent()
     data class ShowSnackbar(val message: String) : ScheduleDetailEvent()
-}
-
-// --- Repository 인터페이스 (가상) ---
-interface ScheduleRepository { // 이전 ViewModel에서 사용한 것 확장 또는 신규
-    suspend fun getScheduleDetail(scheduleId: String): Result<ScheduleDetailItem> // 상세 정보 반환
-    suspend fun deleteSchedule(scheduleId: String): Result<Unit>
-    // ... 기존 함수들 ...
 }
 
 @HiltViewModel

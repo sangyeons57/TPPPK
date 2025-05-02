@@ -1,21 +1,22 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
 import android.net.Uri
+import com.example.domain.model.User
+import com.example.domain.model.UserStatus
+import com.example.domain.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.ktx.storage
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User // User 모델 사용
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserStatus
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.UserRepository
-import com.example.teamnovapersonalprojectprojectingkotlin.util.FirestoreConstants as FC
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.Result
+import com.example.data.util.FirestoreConstants as FC
+import androidx.core.net.toUri
+import com.google.firebase.auth.UserProfileChangeRequest
 
 class UserRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -64,7 +65,9 @@ class UserRepositoryImpl @Inject constructor(
             storageRef.putFile(imageUri).await()
             val downloadUrl = storageRef.downloadUrl.await().toString()
             userDocRef.update(FC.Users.Fields.PROFILE_IMAGE_URL, downloadUrl).await() // User 필드 업데이트
-            val profileUpdates = userProfileChangeRequest { photoUri = Uri.parse(downloadUrl) }
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setPhotoUri(downloadUrl.toUri())
+                .build()
             auth.currentUser?.updateProfile(profileUpdates)?.await()
             Result.success(downloadUrl)
         } catch (e: Exception) { Result.failure(e) }
@@ -89,7 +92,9 @@ class UserRepositoryImpl @Inject constructor(
                 }
             }
             userDocRef.update(FC.Users.Fields.PROFILE_IMAGE_URL, null).await() // User 필드 업데이트
-            val profileUpdates = userProfileChangeRequest { photoUri = null }
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setPhotoUri(null)
+                .build()
             auth.currentUser?.updateProfile(profileUpdates)?.await()
             Result.success(Unit)
         } catch (e: Exception) { Result.failure(e) }
@@ -103,7 +108,9 @@ class UserRepositoryImpl @Inject constructor(
         if (trimmedName.isBlank()) { return Result.failure(IllegalArgumentException("Username cannot be blank.")) }
         return try {
             userDocRef.update(FC.Users.Fields.NAME, trimmedName).await() // User 필드 업데이트
-            val profileUpdates = userProfileChangeRequest { displayName = trimmedName }
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                                .setDisplayName(trimmedName)
+                                .build()
             auth.currentUser?.updateProfile(profileUpdates)?.await()
             Result.success(Unit)
         } catch (e: Exception) { Result.failure(e) }

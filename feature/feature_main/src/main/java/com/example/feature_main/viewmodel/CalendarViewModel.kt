@@ -1,9 +1,9 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel
+package com.example.feature_main.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AddSchedule
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -34,7 +34,9 @@ data class CalendarUiState(
     val firstDayOffset: Int = 0, // 월의 첫 날짜 시작 요일 offset (0=월요일... 6=일요일) -> 여기서는 0=일요일 기준으로 변경
     // --- 달력 그리드 데이터 추가 ---
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    // 일정이 있는 날짜들의 집합 (캘린더 그리드에 표시기를 위해)
+    val datesWithSchedules: Set<LocalDate> = emptySet()
 ) {
     // 현재 연/월 표시용 포맷터
     val monthYearFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)
@@ -65,6 +67,8 @@ class CalendarViewModel @Inject constructor(
         updateCalendarData(YearMonth.now())
         // 초기 데이터 로드 (오늘 날짜 기준)
         loadSchedulesForDate(uiState.value.selectedDate)
+        // 현재 월의 일정 요약 데이터 로드 (점 표시용)
+        loadScheduleSummaryForMonth(uiState.value.currentYearMonth)
     }
 
     // Combined function to update month and calendar grid data
@@ -101,6 +105,7 @@ class CalendarViewModel @Inject constructor(
         val prevMonth = _uiState.value.currentYearMonth.minusMonths(1)
         updateCalendarData(prevMonth)
         loadSchedulesForDate(_uiState.value.selectedDate) // 선택된 날짜 스케줄 로드 (선택 날짜 유지됨)
+        loadScheduleSummaryForMonth(prevMonth) // 이전 달의 일정 요약 데이터 로드
     }
 
     // 다음 달 클릭
@@ -108,6 +113,7 @@ class CalendarViewModel @Inject constructor(
         val nextMonth = _uiState.value.currentYearMonth.plusMonths(1)
         updateCalendarData(nextMonth)
         loadSchedulesForDate(_uiState.value.selectedDate)
+        loadScheduleSummaryForMonth(nextMonth) // 다음 달의 일정 요약 데이터 로드
     }
 
     // 날짜 선택
@@ -123,13 +129,12 @@ class CalendarViewModel @Inject constructor(
         loadSchedulesForDate(date)
     }
 
-    // 특정 날짜의 스케줄 로드 (이전과 동일)
+    // 특정 날짜의 스케줄 로드
     private fun loadSchedulesForDate(date: LocalDate) {
-        // ... (이전 코드와 동일) ...
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 스케줄 로드 시도 - $date")
-            kotlinx.coroutines.delay(500)
+            delay(500)
             val success = true
             if (success) {
                 // --- 샘플 데이터 생성 로직 ---
@@ -191,6 +196,9 @@ class CalendarViewModel @Inject constructor(
                     else -> emptyList() // 일정이 없는 날
                 }
                 _uiState.update { it.copy(schedulesForSelectedDate = schedules, isLoading = false) }
+                
+                // 일정이 로드된 후, 현재 달의 일정 마커를 업데이트 (샘플 데이터의 일관성 유지)
+                refreshScheduleMarkers()
             } else {
                 _uiState.update { it.copy(schedulesForSelectedDate = emptyList(), errorMessage = "스케줄 로드 실패", isLoading = false) }
             }
@@ -230,8 +238,7 @@ class CalendarViewModel @Inject constructor(
     fun onScheduleClick(scheduleId: String) {
         viewModelScope.launch {
             println("ViewModel: 스케줄 클릭 - $scheduleId")
-            // _eventFlow.emit(CalendarEvent.NavigateToScheduleDetail(scheduleId))
-            _eventFlow.emit(CalendarEvent.ShowSnackbar("스케줄 $scheduleId 클릭 (상세보기 구현 필요)"))
+            _eventFlow.emit(CalendarEvent.NavigateToScheduleDetail(scheduleId))
         }
     }
 
@@ -245,5 +252,40 @@ class CalendarViewModel @Inject constructor(
 
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    // 특정 월에 일정이 있는 날짜들의 요약 데이터 로드
+    private fun loadScheduleSummaryForMonth(yearMonth: YearMonth) {
+        viewModelScope.launch {
+            println("ViewModel: 월간 일정 요약 로드 시도 - $yearMonth")
+            // 실제 구현에서는 Repository에서 데이터를 가져와야 함
+            // 샘플 구현에서는 정해진 패턴으로 일정 표시 마커를 생성
+            refreshScheduleMarkers()
+        }
+    }
+
+    // 일정 표시 마커 새로고침 (샘플 데이터와 일관성 유지)
+    private fun refreshScheduleMarkers() {
+        val currentYearMonth = _uiState.value.currentYearMonth
+        val datesWithSchedules = mutableSetOf<LocalDate>()
+        
+        // 현재 달의 모든 날짜 확인
+        val daysInMonth = currentYearMonth.lengthOfMonth()
+        for (day in 1..daysInMonth) {
+            val date = currentYearMonth.atDay(day)
+            
+            // 샘플 데이터 로직과 동일한 패턴 사용
+            val hasSchedule = when (day % 4) {
+                0, 1, 2 -> true // 4로 나눈 나머지가 0, 1, 2인 날에는 일정 있음
+                else -> false   // 나머지 날에는 일정 없음
+            }
+            
+            if (hasSchedule) {
+                datesWithSchedules.add(date)
+            }
+        }
+        
+        // UI 상태 업데이트
+        _uiState.update { it.copy(datesWithSchedules = datesWithSchedules) }
     }
 }

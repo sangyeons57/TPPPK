@@ -1,7 +1,7 @@
 // 경로: domain/repository/DmRepository.kt (신규 생성)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.DmConversation
+import com.example.domain.model.DmConversation
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
 

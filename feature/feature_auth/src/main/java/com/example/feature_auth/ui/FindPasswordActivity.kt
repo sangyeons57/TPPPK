@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.ui
+package com.example.feature_auth.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

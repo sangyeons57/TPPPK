@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project.ui
+package com.example.feature_project.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,11 +17,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.SetProjectNameEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.SetProjectNameNavigationEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.SetProjectNameUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.SetProjectNameViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.viewmodel.SetProjectNameEvent
+import com.example.feature_project.viewmodel.SetProjectNameNavigationEvent
+import com.example.feature_project.viewmodel.SetProjectNameUiState
+import com.example.feature_project.viewmodel.SetProjectNameViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

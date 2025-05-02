@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_setting.ui
+package com.example.feature_project.setting.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,8 +22,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_setting.viewmodel.* // ViewModel과 상태/이벤트 포함
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.setting.viewmodel.ChannelType
+import com.example.feature_project.setting.viewmodel.ProjectCategory
+import com.example.feature_project.setting.viewmodel.ProjectChannel
+import com.example.feature_project.setting.viewmodel.ProjectSettingEvent
+import com.example.feature_project.setting.viewmodel.ProjectSettingUiState
+import com.example.feature_project.setting.viewmodel.ProjectSettingViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -456,15 +461,19 @@ private fun ProjectSettingContentPreview() {
         projectId = "p1",
         projectName = "샘플 프로젝트",
         categories = listOf(
-            ProjectCategory("c1", "일반", listOf(
-                ProjectChannel("ch1", "잡담", ChannelType.TEXT),
-                ProjectChannel("ch2", "공지사항", ChannelType.TEXT)
-            )),
-            ProjectCategory("c2", "개발", listOf(
-                ProjectChannel("ch3", "프론트엔드", ChannelType.TEXT),
-                ProjectChannel("ch4", "백엔드", ChannelType.TEXT),
-                ProjectChannel("ch5", "개발 회의", ChannelType.VOICE)
-            ))
+            ProjectCategory(
+                "c1", "일반", listOf(
+                    ProjectChannel("ch1", "잡담", ChannelType.TEXT),
+                    ProjectChannel("ch2", "공지사항", ChannelType.TEXT)
+                )
+            ),
+            ProjectCategory(
+                "c2", "개발", listOf(
+                    ProjectChannel("ch3", "프론트엔드", ChannelType.TEXT),
+                    ProjectChannel("ch4", "백엔드", ChannelType.TEXT),
+                    ProjectChannel("ch5", "개발 회의", ChannelType.VOICE)
+                )
+            )
         )
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {

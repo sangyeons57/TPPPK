@@ -1,5 +1,5 @@
 // 경로: domain/model/DmConversation.kt (HomeViewModel의 DmItem 기반)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 import java.time.LocalDateTime
 

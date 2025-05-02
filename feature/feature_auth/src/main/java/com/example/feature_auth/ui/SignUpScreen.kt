@@ -1,6 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.ui
-
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+package com.example.feature_auth.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,16 +27,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SignUpFormFocusTarget
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.SignUpEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.SignUpUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.SignUpViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Login
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.SignUpFormFocusTarget
+import com.example.feature_auth.viewmodel.SignUpEvent
+import com.example.feature_auth.viewmodel.SignUpUiState
+import com.example.feature_auth.viewmodel.SignUpViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun SignUpScreen(
-    navController: NavHostController, // 네비게이션 처리를 위해 필요
+    onNavigateToLogin: () -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SignUpViewModel = hiltViewModel(), // ViewModel 주입 (지금은 사용 X)
 ) {
@@ -55,13 +54,7 @@ fun SignUpScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SignUpEvent.NavigateToLogin -> {
-                    // 회원가입 성공 후 로그인 화면으로 이동 (기존 스택 지우기)
-                    navController.navigate(Login.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                }
+                is SignUpEvent.NavigateToLogin -> onNavigateToLogin()
                 is SignUpEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
@@ -102,7 +95,7 @@ fun SignUpScreen(
             onPasswordConfirmFocus = viewModel::onPasswordConfirmFocus,
             onNameFocus = viewModel::onNameFocus,
 
-            onNavigateBack = { navController.popBackStack() },
+            onNavigateBack = { onNavigateBack() },
         )
     }
 }

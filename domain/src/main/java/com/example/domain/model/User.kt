@@ -1,5 +1,5 @@
 // 경로: domain/model/User.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 data class User(
     val userId: String = "", // Firestore needs default values for toObject()

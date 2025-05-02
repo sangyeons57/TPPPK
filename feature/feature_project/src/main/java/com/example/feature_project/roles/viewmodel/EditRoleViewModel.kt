@@ -1,10 +1,10 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.viewmodel
+package com.example.feature_project.roles.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.RolePermission // ★ Domain 모델 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ProjectRoleRepository // ★ Domain Repository Import
+import com.example.domain.model.RolePermission
+import com.example.domain.repository.ProjectRoleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,7 +16,7 @@ import javax.inject.Inject
 data class EditRoleUiState(
     val roleId: String? = null,
     val roleName: String = "",
-    val permissions: Map<RolePermission, Boolean> = RolePermission.values().associateWith { false },
+    val permissions: Map<RolePermission, Boolean> = RolePermission.entries.associateWith { false },
     val originalRoleName: String = "",
     val originalPermissions: Map<RolePermission, Boolean> = emptyMap(),
     val isLoading: Boolean = false,

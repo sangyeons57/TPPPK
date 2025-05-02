@@ -1,8 +1,8 @@
 // 경로: domain/repository/ProjectRepository.kt (기존 파일에 함수 추가)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Project
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ProjectInfo
+import com.example.domain.model.Project
+import com.example.domain.model.ProjectInfo
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
 

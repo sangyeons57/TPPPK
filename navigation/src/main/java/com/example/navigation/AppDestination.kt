@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.navigation
+package com.example.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -188,8 +188,6 @@ object ScheduleDetail : AppDestination {
 // --- 검색 목적지 ---
 object Search : AppDestination { override val route = "search" }
 
-
-// --- 하단 네비게이션 목적지 정의 ---
 sealed class MainBottomNavDestination(
     override val route: String,
     val title: String,

@@ -1,11 +1,10 @@
 // 경로: domain/repository/UserRepository.kt (신규 생성 또는 기존 인터페이스에 함수 추가)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
 import android.net.Uri // ViewModel에서 Uri를 받아 처리
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserStatus
+import com.example.domain.model.User
+import com.example.domain.model.UserStatus
 import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.flow.Flow
 import kotlin.Result
 
 interface UserRepository {

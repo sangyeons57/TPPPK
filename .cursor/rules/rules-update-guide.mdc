@@ -1,0 +1,25 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rule Document Update Guide
+
+*This rule instructs the LLM on maintaining rule document accuracy. Always follow this.*
+
+1.  **Detect Changes:** When project changes related to structure, architecture, data schema, conventions, or tech stack are discussed or implemented:
+2.  **Identify Target(s):** Refer to [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc) to determine which rule file(s) cover the changed topic.
+3.  **Update Proactively:** Automatically suggest or apply the necessary updates to the identified rule file(s) to keep them synchronized with the project's current state.
+
+**Exception for [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc):**
+- If any file within the `.cursor/rules/` directory (excluding [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc) itself) is **added** or **edited**, immediately update [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc) to accurately list and describe all current rule files.
+
+## File Referencing
+
+- When mentioning specific files or rule documents, use the following markdown link format:
+  `[filename](mdc:path/to/file)`
+- **Examples:**
+  1. [tech-stack.mdc](mdc:.cursor/rules/tech-stack.mdc)
+  2. [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc)
+  3. [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc)
+

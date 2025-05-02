@@ -1,12 +1,13 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel
+package com.example.feature_main.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.UserRepository
+import com.example.domain.model.User
+import com.example.domain.repository.AuthRepository
+import com.example.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -151,7 +152,7 @@ class ProfileViewModel @Inject constructor(
             // val result = userRepository.updateStatusMessage(newStatus)
             // result.onSuccess { loadUserProfile() } // 성공 시 프로필 다시 로드
             // .onFailure { _eventFlow.emit(...) }
-            kotlinx.coroutines.delay(300)
+            delay(300)
             _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(statusMessage = newStatus)) } // 임시로 UI만 업데이트
             _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨 (임시)"))
         }
@@ -167,7 +168,7 @@ class ProfileViewModel @Inject constructor(
             // result.onSuccess { newImageUrl -> loadUserProfile() }
             // .onFailure { _eventFlow.emit(...) }
             // ----------------------------------------------
-            kotlinx.coroutines.delay(1000)
+            delay(1000)
             val newImageUrl = "https://picsum.photos/seed/${System.currentTimeMillis()}/100" // 임시 URL
             _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(profileImageUrl = newImageUrl)) } // 임시로 UI만 업데이트
             _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨 (임시)"))

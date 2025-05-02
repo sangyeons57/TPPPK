@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.ui
+package com.example.feature_project.roles.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,10 +16,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.viewmodel.RoleListEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.viewmodel.RoleListViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.viewmodel.RoleItem // 데이터 모델 임포트
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.roles.viewmodel.RoleItem
+import com.example.feature_project.roles.viewmodel.RoleListEvent
+import com.example.feature_project.roles.viewmodel.RoleListViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

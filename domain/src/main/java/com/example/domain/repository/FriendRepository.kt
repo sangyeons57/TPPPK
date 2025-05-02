@@ -1,8 +1,8 @@
 // 경로: domain/repository/FriendRepository.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Friend
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.FriendRequest
+import com.example.domain.model.Friend
+import com.example.domain.model.FriendRequest
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
 

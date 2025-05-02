@@ -1,9 +1,8 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui
+package com.example.feature_main.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.HomeUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_main.viewmodel.HomeUiState
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,12 +22,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.DmItem
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.HomeEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.HomeViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.ProjectItem
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.TopSection
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_main.viewmodel.DmItem
+import com.example.feature_main.viewmodel.HomeEvent
+import com.example.feature_main.viewmodel.HomeViewModel
+import com.example.feature_main.viewmodel.ProjectItem
+import com.example.feature_main.viewmodel.TopSection
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -38,7 +37,6 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-     navController: NavHostController, // 외부 화면 이동 시 필요
     onNavigateToAddProject: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -73,7 +71,7 @@ fun HomeScreen(
 
     // 에러 메시지 스낵바로 표시
     LaunchedEffect(uiState.errorMessage) {
-        snackbarHostState.showSnackbar(uiState.errorMessage!!, duration = SnackbarDuration.Short)
+        snackbarHostState.showSnackbar(uiState.errorMessage, duration = SnackbarDuration.Short)
         viewModel.errorMessageShown()
     }
 
@@ -485,7 +483,14 @@ fun EmptyStateMessage(message: String, modifier: Modifier = Modifier) {
 fun HomeContentProjectsPreview() {
     val previewState = HomeUiState(
         selectedTopSection = TopSection.PROJECTS,
-        projects = List(5) { i -> ProjectItem("p$i", "미리보기 프로젝트 ${i + 1}", "설명 ${i + 1}", "${i}분 전") },
+        projects = List(5) { i ->
+            ProjectItem(
+                "p$i",
+                "미리보기 프로젝트 ${i + 1}",
+                "설명 ${i + 1}",
+                "${i}분 전"
+            )
+        },
         isLoading = false
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -498,7 +503,7 @@ fun HomeContentProjectsPreview() {
 fun HomeContentDmsPreview() {
     val previewState = HomeUiState(
         selectedTopSection = TopSection.DMS,
-        dms = List(3) { i -> DmItem("dm$i", "친구 ${i+1}", "미리보기 메시지 ${i+1}", i, null) },
+        dms = List(3) { i -> DmItem("dm$i", "친구 ${i + 1}", "미리보기 메시지 ${i + 1}", i, null) },
         isLoading = false
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {

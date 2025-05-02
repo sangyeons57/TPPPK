@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.ui
+package com.example.feature_project.roles.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,12 +15,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.RolePermission
 // Domain 모델 및 ViewModel 관련 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.RolePermission // ★ Domain의 Enum 사용
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.viewmodel.EditRoleEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.viewmodel.EditRoleUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_roles.viewmodel.EditRoleViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.roles.viewmodel.EditRoleEvent
+import com.example.feature_project.roles.viewmodel.EditRoleUiState
+import com.example.feature_project.roles.viewmodel.EditRoleViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

@@ -1,9 +1,9 @@
 // 경로: domain/repository/ProjectStructureRepository.kt (신규 생성)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Category
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Channel
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ChannelType
+import com.example.domain.model.Category
+import com.example.domain.model.Channel
+import com.example.domain.model.ChannelType
 import kotlin.Result
 
 interface ProjectStructureRepository {

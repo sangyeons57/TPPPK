@@ -1,11 +1,10 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_chat.ui
+package com.example.feature_chat.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi // combinedClickable 사용
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,9 +18,9 @@ import androidx.compose.foundation.lazy.grid.items // LazyVerticalGrid items
 import androidx.compose.foundation.lazy.items // LazyColumn items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate // 이미지 첨부 아이콘
 import androidx.compose.material.icons.filled.Check // 체크 아이콘 추가
 import androidx.compose.material.icons.filled.Close // 수정 취소, 제거 아이콘
@@ -32,16 +31,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource // drawable 리소스 사용
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -55,18 +50,18 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage // Coil 라이브러리 사용
 import coil.request.ImageRequest
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.R
 // ViewModel 및 관련 모델 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.R // R 클래스 확인 필요
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_chat.viewmodel.ChatEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_chat.viewmodel.ChatUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_chat.viewmodel.ChatViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_chat.viewmodel.ChatMessageUiModel // ★ UI 모델 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_chat.viewmodel.GalleryImageUiModel // ★ UI 모델 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import kotlinx.coroutines.CoroutineScope
+import com.example.feature_chat.model.ChatEvent
+import com.example.feature_chat.model.ChatMessageUiModel
+import com.example.feature_chat.model.ChatUiState
+import com.example.feature_chat.model.GalleryImageUiModel
+import com.example.feature_chat.viewmodel.ChatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
+import androidx.core.net.toUri
+import java.util.Locale
 
 /**
  * ChatScreen: 채팅 화면 (Stateful)
@@ -268,7 +263,6 @@ fun ChatMessageItemComposable(
     onUserProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
 
     // 메시지 행 정렬 (내가 보낸 메시지 vs 다른 사람 메시지) - 예시
@@ -345,19 +339,9 @@ fun ChatMessageItemComposable(
                     }
                 }
 
-                ClickableText( // 메시지 본문 클릭 (링크용)
+                Text(
                     text = annotatedString,
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurfaceVariant), // 텍스트 색상
-                    onClick = { offset ->
-                        annotatedString.getStringAnnotations("URL", offset, offset)
-                            .firstOrNull()?.let { annotation ->
-                                try {
-                                    uriHandler.openUri(annotation.item)
-                                } catch (e: Exception) {
-                                    println("Failed to open URI: ${annotation.item} - ${e.message}")
-                                }
-                            }
-                    }
+                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurfaceVariant) // 기본 텍스트 색상
                 )
 
                 // 첨부 이미지
@@ -524,7 +508,7 @@ fun ChatInputArea(
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     } else {
                         // 수정 중일 때는 체크 아이콘, 아닐 때는 전송 아이콘
-                        val icon = if(uiState.isEditing) Icons.Filled.Check else Icons.Filled.Send
+                        val icon = if(uiState.isEditing) Icons.Filled.Check else Icons.AutoMirrored.Filled.Send
                         Icon(icon, contentDescription = if(uiState.isEditing) "수정 완료" else "전송")
                     }
                 }
@@ -749,7 +733,7 @@ private fun ChatScreenFullPreview() {
                 userName = "사용자 ${if (isMy) 1 else i + 2}",
                 userProfileUrl = null,
                 message = "미리보기 메시지 내용입니다. ${15-i}",
-                formattedTimestamp = "오후 ${ (15-i) % 12 + 1 }:${String.format("%02d", (15-i)*3)}",
+                formattedTimestamp = "오후 ${ (15-i) % 12 + 1 }:${String.format(Locale.KOREAN,"%02d", (15-i)*3)}",
                 isModified = i % 5 == 0,
                 isMyMessage = isMy,
                 isSending = false,
@@ -769,7 +753,7 @@ private fun ChatScreenFullPreview() {
 private fun ImageSelectionGridPreview() {
     val images = List(10) {
         GalleryImageUiModel( // ★ 타입 변경
-            Uri.parse("https://picsum.photos/id/$it/200"), // 가짜 이미지 URL 사용
+            "https://picsum.photos/id/$it/200".toUri(), // 가짜 이미지 URL 사용
             it.toLong()
         )
     }

@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.ui
+package com.example.feature_friends.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,13 +21,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지 리소스
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendItem
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendsEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.R
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_friends.viewmodel.FriendItem
+import com.example.feature_friends.viewmodel.FriendViewModel
+import com.example.feature_friends.viewmodel.FriendsEvent
 import kotlinx.coroutines.flow.collectLatest
-import androidx.compose.foundation.layout.navigationBarsPadding
 
 /**
  * FriendsScreen: 친구 목록 표시 및 관리 화면 (Stateful)

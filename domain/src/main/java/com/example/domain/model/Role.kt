@@ -1,5 +1,5 @@
 // 경로: domain/model/Role.kt (신규 생성)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 /**
  * 프로젝트 내 역할을 나타내는 Domain 모델

@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 import java.time.LocalDateTime // 순수 시간 데이터 사용
 

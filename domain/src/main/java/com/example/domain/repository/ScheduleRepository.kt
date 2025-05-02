@@ -1,11 +1,10 @@
 // 경로: domain/repository/ScheduleRepository.kt (신규 생성)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Schedule
+import com.example.domain.model.Schedule
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.Result
-import kotlinx.coroutines.flow.Flow // 필요시 Flow 사용
 
 interface ScheduleRepository {
     /** 특정 날짜의 일정 목록 가져오기 */

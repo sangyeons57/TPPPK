@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 // SignUpViewModel.kt 파일 상단 또는 domain/model 등에 정의
 
 enum class SignUpFormFocusTarget {

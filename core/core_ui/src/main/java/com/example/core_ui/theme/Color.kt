@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.ui.theme
+package com.example.core_ui.theme
 
 import androidx.compose.ui.graphics.Color
 
@@ -78,6 +78,24 @@ val AppOnErrorContainer = Color(0xFFF9DEDC)            // 오류 컨테이너 �
 val AppOutlineVariant = Color(0xFF404853)             // 보조 외곽선 색상 (SurfaceVariant와 유사)
 
 // Inverse Colors (반전 색상 - 스낵바 등에 사용)
-val AppInversePrimary = Color(0xFF5F8FCL)             // 반전된 주요 색상 (차분한 파란색)
+val AppInversePrimary = Color(0xFF5F8FCA)             // 반전된 주요 색상 (차분한 파란색)
 val AppInverseSurface = Color(0xFFE1E2E9)             // 반전된 표면 색상 (밝은 회색)
 val AppInverseOnSurface = Color(0xFF2A313C)           // 반전된 표면 위의 콘텐츠 색상 (어두운 회색빛 파란색)
+
+// 일정 색상 - 캘린더 일정 표시용
+val ScheduleColor1 = Color(0xFFFF7675) // 연한 빨강 (개인 일정)
+val ScheduleColor2 = Color(0xFF74B9FF) // 연한 파랑 (업무 일정)
+val ScheduleColor3 = Color(0xFF55EFC4) // 민트 (프로젝트 일정)
+val ScheduleColor4 = Color(0xFFFECE61) // 노랑 (미팅 일정)
+val ScheduleColor5 = Color(0xFFA29BFE) // 라벤더 (기타 일정)
+val ScheduleColor6 = Color(0xFFE84393) // 핑크 (중요 일정)
+val ScheduleColor7 = Color(0xFFE17055) // 주황 (마감 일정)
+
+// 고대비 모드용 일정 색상
+val ScheduleHighContrastColor1 = Color(0xFFFF0000) // 선명한 빨강 (개인 일정)
+val ScheduleHighContrastColor2 = Color(0xFF0000FF) // 선명한 파랑 (업무 일정)
+val ScheduleHighContrastColor3 = Color(0xFF00FF00) // 선명한 초록 (프로젝트 일정)
+val ScheduleHighContrastColor4 = Color(0xFFFFFF00) // 선명한 노랑 (미팅 일정)
+val ScheduleHighContrastColor5 = Color(0xFFFFFFFF) // 흰색 (기타 일정)
+val ScheduleHighContrastColor6 = Color(0xFFFF00FF) // 선명한 마젠타 (중요 일정)
+val ScheduleHighContrastColor7 = Color(0xFFFF8000) // 선명한 주황 (마감 일정)

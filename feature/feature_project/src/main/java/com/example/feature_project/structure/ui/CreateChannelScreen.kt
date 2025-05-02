@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.ui
+package com.example.feature_project.structure.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,11 +17,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.ChannelType
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.CreateChannelEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.CreateChannelUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.CreateChannelViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.structure.viewmodel.ChannelType
+import com.example.feature_project.structure.viewmodel.CreateChannelEvent
+import com.example.feature_project.structure.viewmodel.CreateChannelUiState
+import com.example.feature_project.structure.viewmodel.CreateChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -198,7 +198,10 @@ fun CreateChannelContent(
 private fun CreateChannelContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
-            uiState = CreateChannelUiState(channelName = "새로운-채팅방", selectedChannelType = ChannelType.TEXT),
+            uiState = CreateChannelUiState(
+                channelName = "새로운-채팅방",
+                selectedChannelType = ChannelType.TEXT
+            ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
             onCreateClick = {}
@@ -211,7 +214,10 @@ private fun CreateChannelContentPreview() {
 private fun CreateChannelContentVoicePreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
-            uiState = CreateChannelUiState(channelName = "음성 회의 채널", selectedChannelType = ChannelType.VOICE),
+            uiState = CreateChannelUiState(
+                channelName = "음성 회의 채널",
+                selectedChannelType = ChannelType.VOICE
+            ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
             onCreateClick = {}

@@ -1,0 +1,16 @@
+Refactor: Remove schedule animation and update project rules
+
+- Removed animation logic from schedule/calendar components in feature_main.
+- Updated related ViewModels, Repositories, and Models across modules.
+- Modified build configurations and IDE settings.
+- Updated .cursor rules (git-auto-update, rule-refer-doc).
+- Deleted obsolete testing-git-workflow rule.
+
+제목: 커밋 메시지 형식 개선
+
+마크다운 형식의 구조화된 커밋 메시지 형식 추가
+- 제목과 본문 분리
+- 마크다운 포맷팅 적용
+- 리스트 형식의 변경사항 표시
+
+커밋 메시지 가독성 향상과 일관된 커밋 메시지 작성을 위한 가이드라인 업데이트 

@@ -1,0 +1,128 @@
+---
+description: Use when a feature is completed, there is work to be done with git.
+globs: 
+alwaysApply: false
+---
+# Testing Workflow
+
+*This document defines the standard workflow for test creation and validation for the Projecting Kotlin project.*
+
+## Workflow Overview
+
+```mermaid
+graph TD
+    A[Create Tests] --> B[Run Tests]
+    B -->|Fail| C[Fix Issues]
+    C --> B
+    B -->|All Tests Pass| D[Proceed]
+    C -->|All Cases Fail| G[Notify User and Break]
+```
+
+## Detailed Steps
+
+### 1. Test Creation
+
+- Create comprehensive unit tests for **all new features and components**
+- **Each feature must have its own test class(es)**
+- Tests should be created for:
+  - Core business logic (ViewModel tests)
+  - UI components (Composable function tests)
+  - Edge cases and error conditions
+  - Utility functions
+  
+#### 1.1. Test Class Naming Conventions
+- `<Class/Component>Test.kt` for general component tests
+- `<Class/Component>UnitTest.kt` for detailed unit tests
+- `<Class/Component>IntegrationTest.kt` for integration tests
+
+#### 1.2. Required Test Coverage
+Every new feature must include tests for:
+- **Data validation**: Input validation, boundary checks
+- **State management**: State transitions, side effects
+- **UI rendering**: Component rendering in different states
+- **User interactions**: Click handling, input processing
+- **Error handling**: Error states, recovery paths
+
+#### 1.3. Test Implementation Guidelines
+```kotlin
+// Example test structure
+class MyFeatureTest {
+    @Before
+    fun setup() {
+        // Initialize test dependencies
+    }
+    
+    @Test
+    fun `when condition then expected outcome`() {
+        // Arrange: set up test conditions
+        // Act: perform the action being tested
+        // Assert: verify expected outcomes
+    }
+    
+    // Test different scenarios for the same component/function
+    @Test
+    fun `when alternative condition then alternative outcome`() {
+        // Test implementation
+    }
+}
+```
+
+### 2. Test Execution
+
+Run tests using Gradle:
+```
+.\gradlew :feature:<module>:test
+```
+
+For more detailed output:
+```
+.\gradlew :feature:<module>:test --info
+```
+
+#### 2.1. Handling Test Failures
+
+If tests fail:
+- Analyze the failure logs and error messages
+- Make necessary code adjustments
+- Run tests again after each fix
+- Continue until all tests pass
+
+#### 2.2. Handling Persistent Failures
+
+If tests fail across all attempted solutions:
+- Document the specific failures in detail
+- Notify the user/team of the unresolved issues
+- Break the current workflow to allow for deeper analysis
+- Consider creating a dedicated issue ticket
+
+#### 2.3. Test Success Handling
+
+When tests pass:
+- Verify all requirements are met
+- Proceed to the next development steps
+
+### 3. Command Reference
+
+#### Test Commands
+
+```bash
+# Run basic tests
+.\gradlew :feature:<module>:test
+
+# Clean test cache and run tests
+.\gradlew :feature:<module>:cleanTest :feature:<module>:test
+
+# Run tests with detailed output
+.\gradlew :feature:<module>:test --info
+
+# Run a specific test class
+.\gradlew :feature:<module>:test --tests "com.example.MyTest"
+
+# Run a specific test method
+.\gradlew :feature:<module>:test --tests "com.example.MyTest.testMethod"
+```
+
+
+
+
+

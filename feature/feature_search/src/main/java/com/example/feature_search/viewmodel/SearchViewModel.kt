@@ -1,14 +1,14 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_search.viewmodel
+package com.example.feature_search.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.MessageResult
+import com.example.domain.model.MessageResult
+import com.example.domain.model.SearchResultItem
+import com.example.domain.model.SearchScope
+import com.example.domain.model.UserResult
+import com.example.domain.repository.SearchRepository
 // Domain 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchResultItem
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserResult
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.SearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

@@ -1,10 +1,11 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel
+package com.example.feature_auth.viewmodel
 
+import android.util.Patterns
 import androidx.compose.ui.focus.FocusState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SignUpFormFocusTarget
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository // Repository 임포트
+import com.example.domain.model.SignUpFormFocusTarget
+import com.example.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -118,11 +119,7 @@ class SignUpViewModel @Inject constructor(
                 _eventFlow.emit(SignUpEvent.NavigateToLogin)
                 println("회원가입 성공: ${newUser!!.email}")
             }.onFailure { exception ->
-                val errorMessage = when(exception){
-                    is com.google.firebase.auth.FirebaseAuthUserCollisionException -> "이미 사용 중인 이메일입니다."
-                    is com.google.firebase.auth.FirebaseAuthWeakPasswordException -> "비밀번호 보안 강도가 약합니다."
-                    else -> exception.message ?: "회원가입 실패"
-                }
+                val errorMessage = authRepository.getSignUpErrorMessage(exception)
                 // 회원가입 API 실패 시 에러 처리 (여기서는 스낵바로 알림)
                 _uiState.update { it.copy(isLoading = false) }
                 _eventFlow.emit(SignUpEvent.ShowSnackbar(errorMessage))
@@ -131,7 +128,7 @@ class SignUpViewModel @Inject constructor(
     }
 
     fun checkEmail(state: SignUpUiState): Boolean{
-        if (state.email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
+        if (state.email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
             _uiState.update { it.copy(emailError = "올바른 이메일을 입력해주세요.") }
             return true
         }

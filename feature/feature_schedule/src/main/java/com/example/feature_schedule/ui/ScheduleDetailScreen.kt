@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.ui
+package com.example.feature_schedule.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,11 +17,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.ScheduleDetailEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.ScheduleDetailItem
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.ScheduleDetailUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.ScheduleDetailViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_schedule.viewmodel.ScheduleDetailEvent
+import com.example.feature_schedule.viewmodel.ScheduleDetailItem
+import com.example.feature_schedule.viewmodel.ScheduleDetailUiState
+import com.example.feature_schedule.viewmodel.ScheduleDetailViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -240,6 +240,10 @@ private fun ScheduleDetailContentLoadingPreview() {
 @Composable
 private fun ScheduleDetailContentErrorPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        ScheduleDetailContent(uiState = ScheduleDetailUiState(isLoading = false, error = "네트워크 연결 오류"))
+        ScheduleDetailContent(uiState = ScheduleDetailUiState(
+            isLoading = false,
+            error = "네트워크 연결 오류"
+        )
+        )
     }
 }

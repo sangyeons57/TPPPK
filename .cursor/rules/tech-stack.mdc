@@ -1,0 +1,24 @@
+---
+description: Tech Stack Documentation, use when referenceing a tech stack.
+globs: 
+alwaysApply: false
+---
+# Projecting Kotlin: Core Technology Stack
+
+- **Language:** Kotlin
+- **UI:** Jetpack Compose (Material 3)
+- **Architecture:** Clean Architecture (Multi-module), MVVM (Refer to [architecture.mdc](mdc:.cursor/rules/architecture.mdc))
+- **Async:** Kotlin Coroutines & Flow
+- **Navigation:** Jetpack Navigation Compose (Refer to @project-structure.mdc for `:navigation` module)
+- **DI:** Hilt (Refer to [architecture.mdc](mdc:.cursor/rules/architecture.mdc))
+- **Backend/DB:**
+  - Firebase Firestore: Main NoSQL data storage (Refer to [firestore-schema.mdc](mdc:.cursor/rules/firestore-schema.mdc))
+  - Firebase Authentication: User auth.
+  - Firebase Storage: File storage.
+  - Retrofit & OkHttp (Planned): External API communication.
+- **Local DB:** Room (Uses KSP).
+- **Code Generation:** KSP (Hilt, Room).
+- **Logging:** Sentry (Refer to [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc) for `:core:core_logging` Sodule).
+
+
+

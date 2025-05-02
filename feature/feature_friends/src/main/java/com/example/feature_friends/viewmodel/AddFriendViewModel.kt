@@ -1,9 +1,9 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel
+package com.example.feature_friends.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.FriendRepository
+import com.example.domain.repository.FriendRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

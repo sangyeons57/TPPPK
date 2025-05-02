@@ -1,8 +1,9 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel
+package com.example.feature_project.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.repository.ProjectRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -28,7 +29,7 @@ sealed class JoinProjectEvent {
 @HiltViewModel
 class JoinProjectViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    // TODO: private val repository: ProjectRepository
+    private val projectRepository: ProjectRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(JoinProjectUiState())
@@ -68,15 +69,11 @@ class JoinProjectViewModel @Inject constructor(
             _eventFlow.emit(JoinProjectEvent.ClearFocus) // 키보드 숨기기 요청
             println("ViewModel: Attempting to join project with code/link: $codeOrLink")
 
-            // --- TODO: 실제 프로젝트 참여 로직 (repository.joinProjectWithCode) ---
-            delay(1200) // 임시 딜레이
-            val success = codeOrLink != "invalid-code" // 임시 성공 조건
-            val joinedProjectId = if(success) "joined_project_123" else ""
-            // val result = repository.joinProjectWithCode(codeOrLink)
-            // -----------------------------------------------------------------
+            // 프로젝트 참여 로직
+            val result = projectRepository.joinProjectWithCode(codeOrLink)
 
-            if (success /*result.isSuccess*/) {
-                // val joinedProjectId = result.getOrThrow() // 성공 시 ID 가져오기
+            if (result.isSuccess) {
+                val joinedProjectId = result.getOrThrow() // 성공 시 ID 가져오기
                 _eventFlow.emit(JoinProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
                 _eventFlow.emit(JoinProjectEvent.JoinSuccess(joinedProjectId)) // 성공 이벤트 발생
                 _uiState.update { it.copy(isLoading = false) } // 로딩 해제 (네비게이션은 Screen에서 처리)
@@ -84,7 +81,7 @@ class JoinProjectViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "유효하지 않은 초대 코드 또는 링크입니다." // result.exceptionOrNull()?.message ?: "참여 실패"
+                        error = "유효하지 않은 초대 코드 또는 링크입니다: ${result.exceptionOrNull()?.message ?: "참여 실패"}"
                     )
                 }
             }

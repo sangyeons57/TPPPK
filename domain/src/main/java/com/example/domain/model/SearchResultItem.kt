@@ -1,5 +1,5 @@
 // 경로: domain/model/SearchResultItem.kt (신규 생성 또는 이동)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 import java.time.LocalDateTime // 예시: 메시지 시간
 

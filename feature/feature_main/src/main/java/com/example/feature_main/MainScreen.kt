@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_main
+package com.example.feature_main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -19,81 +19,86 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui.CalendarScreen
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui.HomeScreen
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui.ProfileScreen
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AddProject
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Friends
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Login
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Main
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.MainBottomNavDestination
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.mainBottomNavItems
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_main.ui.calendar.CalendarScreen
+import com.example.feature_main.ui.HomeScreen
+import com.example.feature_main.ui.ProfileScreen
+import com.example.navigation.MainBottomNavDestination
+import com.example.navigation.mainBottomNavItems
+import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class) // Scaffold 등 사용
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    navController: NavHostController,
+    // navController 파라미터 제거
     modifier: Modifier = Modifier,
+    // --- 외부 네비게이션을 위한 람다 파라미터 추가 ---
+    onNavigateToAddProject: () -> Unit,
+    onNavigateToFriends: () -> Unit,
+    onNavigateToSettings: () -> Unit, // 예시: 설정 화면 이동
+    onLogout: () -> Unit,
+    onNavigateToScheduleDetail: (String) -> Unit, // 예시: Schedule ID 필요
+    onNavigateToAddSchedule: (Int, Int, Int) -> Unit, // 예시: Year, Month, Day 필요
+    onNavigateToCalendar24Hour: (Int, Int, Int) -> Unit, // 예시: Year, Month, Day 필요
+    // 필요한 다른 외부 네비게이션 람다 추가...
+    // -----------------------------------------
     // TODO: MainViewModel 필요 시 주입
-    // viewModel: MainViewModel = hiltViewModel()
 ) {
-    // 중첩된 NavHost를 위한 별도의 NavController 생성
+    // 중첩된 NavHost를 위한 별도의 NavController 생성 (기존과 동일)
     val nestedNavController = rememberNavController()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0), // 윈도우 인셋 제거
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        // mainScreenBottomBar는 nestedNavController를 사용하므로 변경 없음
         bottomBar = mainScreenBottomBar(nestedNavController),
-    ) { innerPadding -> // Scaffold의 content 람다, innerPadding 전달받음
+    ) { innerPadding ->
 
-        // 중첩된 NavHost: 하단 네비게이션에 따라 화면 전환
+        // 중첩된 NavHost: 하단 네비게이션
         NavHost(
-            navController = nestedNavController,
-            startDestination = MainBottomNavDestination.Home.route, // 시작 화면은 홈
-            modifier = Modifier.padding(
-                bottom = innerPadding.calculateBottomPadding()
-            )
+            navController = nestedNavController, // 중첩 NavController 사용
+            startDestination = MainBottomNavDestination.Home.route,
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()) // 하단 패딩 적용
         ) {
             composable(MainBottomNavDestination.Home.route) {
                 HomeScreen(
-                    navController= nestedNavController,
-                    onNavigateToAddProject= {navController.navigate(AddProject.route)} // AddProject 화면으로 이동
+                    // HomeScreen이 필요로 하는 네비게이션 람다 전달
+                    onNavigateToAddProject = onNavigateToAddProject // MainScreen이 받은 람다 전달
+                    // HomeScreen 내에서 다른 화면으로 이동 필요 시 추가 람다 전달
+                    // navController = nestedNavController 제거
                 )
             }
             composable(MainBottomNavDestination.Calendar.route) {
                 CalendarScreen(
-                    navController = nestedNavController,
-                    onClickFAB = { route: String ->
-                        navController.navigate(route) {
-                            popUpTo(Main.route) { inclusive = true } // Main 그래프까지 스택에서 제거
-                            launchSingleTop = true // 로그인 화면 중복 생성 방지
-                        }
+                    // CalendarScreen이 필요로 하는 네비게이션 람다 전달
+                    onClickFAB = { route ->
+                        // route 분석 또는 직접 람다 전달 방식 수정 필요
+                        // 예: onNavigateToAddSchedule 람다 직접 사용
+                        val today = LocalDate.now() // 예시 날짜
+                        onNavigateToAddSchedule(today.year, today.monthValue, today.dayOfMonth)
                     },
+                    onNavigateToScheduleDetail = onNavigateToScheduleDetail,
+                    onNavigateToCalendar24Hour = { year, month, day -> 
+                        // 24시간 캘린더 뷰로 이동
+                        onNavigateToCalendar24Hour(year, month, day)
+                    }
                 )
             }
             composable(MainBottomNavDestination.Profile.route) {
                 ProfileScreen(
-                    navController = nestedNavController,
-                    onLogout = {
-                        navController.navigate(Login.route) { // Login 경로는 AppDestination에 정의
-                            popUpTo(Main.route) { inclusive = true } // Main 그래프까지 스택에서 제거
-                            launchSingleTop = true // 로그인 화면 중복 생성 방지
-                        }
-                    },
-                    onClickSettings = { /* 설정 화면으로 이동 */ },
-                    onClickFriends = {
-                        navController.navigate(Friends.route) {
-                            popUpTo(Main.route) { inclusive = true }
-                        }
-                     },
-                    onClickStatus = { /* 상태 메시지 화면으로 이동 */ }
+                    // ProfileScreen이 필요로 하는 네비게이션 람다 전달
+                    onLogout = onLogout, // MainScreen이 받은 람다 전달
+                    onClickSettings = onNavigateToSettings, // MainScreen이 받은 람다 전달
+                    onClickFriends = onNavigateToFriends, // MainScreen이 받은 람다 전달
+                    onClickStatus = { /* TODO: 상태 변경 다이얼로그 등 내부 처리 또는 람다 */ }
+                    // navController = nestedNavController 제거
                 )
             }
-            // TODO: 필요한 경우 다른 composable 목적지 추가 (설정 화면 등)
         }
     }
 }
+
 
 @Composable
 fun mainScreenBottomBar(nestedNavController: NavHostController) : @Composable () -> Unit = {

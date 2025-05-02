@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.ui
+package com.example.feature_settings.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,10 +21,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.ChangePasswordEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.ChangePasswordUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.ChangePasswordViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_settings.viewmodel.ChangePasswordEvent
+import com.example.feature_settings.viewmodel.ChangePasswordUiState
+import com.example.feature_settings.viewmodel.ChangePasswordViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

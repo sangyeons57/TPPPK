@@ -1,10 +1,10 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel
+package com.example.feature_auth.viewmodel
 
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.LoginFormFocusTarget
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.AuthRepository
-import com.example.core_common.SentryUtil
+import com.example.domain.model.LoginFormFocusTarget
+import com.example.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +79,7 @@ class LoginViewModel @Inject constructor(
         var isValid = true
         var focusTarget: LoginFormFocusTarget? = null
 
-        if (currentState.email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(currentState.email).matches()) {
+        if (currentState.email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(currentState.email).matches()) {
             _uiState.update { it.copy(emailError = "올바른 이메일 형식이 아닙니다.") }
             if (focusTarget == null) focusTarget = LoginFormFocusTarget.EMAIL
             isValid = false
@@ -112,15 +112,7 @@ class LoginViewModel @Inject constructor(
                 // 성공 시 isLoading은 false로 바꿀 필요 없음 (화면 전환)
             }.onFailure { exception ->
                 // 로그인 실패
-                val errorMessage = when (exception) {
-                    is com.google.firebase.auth.FirebaseAuthInvalidUserException -> "존재하지 않는 이메일입니다."
-                    is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> "잘못된 비밀번호입니다."
-                    // TODO: 네트워크 오류 등 다른 Firebase 예외 처리 추가
-                    else ->{
-                        SentryUtil.captureError(exception)
-                        exception.message ?: "로그인 실패"
-                    }
-                }
+                val errorMessage = authRepository.getLoginErrorMessage(exception)
                 _uiState.update { it.copy(isLoading = false) } // 로딩 종료
                 _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage)) // 스낵바로 에러 알림
             }

@@ -1,5 +1,5 @@
 // 경로: domain/model/Project.kt (HomeViewModel의 ProjectItem 기반)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 data class Project(
     val id: String,

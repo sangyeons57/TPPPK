@@ -1,8 +1,8 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchResultItem
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.SearchRepository
+import com.example.domain.model.SearchResultItem
+import com.example.domain.model.SearchScope
+import com.example.domain.repository.SearchRepository
 import javax.inject.Inject
 import kotlin.Result
 

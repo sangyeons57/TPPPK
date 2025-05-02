@@ -1,8 +1,9 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel
+package com.example.feature_main.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -90,7 +91,7 @@ class HomeViewModel @Inject constructor(
     private suspend fun loadProjects() {
         println("ViewModel: 프로젝트 목록 로드 시도")
         // val result = projectRepository.getProjectList()
-        kotlinx.coroutines.delay(500) // 임시 딜레이
+        delay(500) // 임시 딜레이
         val success = true // 임시 성공
         if (success) {
             _uiState.update {
@@ -107,7 +108,7 @@ class HomeViewModel @Inject constructor(
     private suspend fun loadDms() {
         println("ViewModel: DM 목록 로드 시도")
         // val result = dmRepository.getDmList()
-        kotlinx.coroutines.delay(500) // 임시 딜레이
+        delay(500) // 임시 딜레이
         val success = true // 임시 성공
         if (success) {
             _uiState.update {

@@ -1,11 +1,11 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_profile.viewmodel
+package com.example.feature_profile.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.UserStatus
+import com.example.domain.repository.UserRepository
 // Domain 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserStatus
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

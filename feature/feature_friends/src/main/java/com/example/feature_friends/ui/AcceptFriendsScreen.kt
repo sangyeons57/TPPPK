@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.ui
+package com.example.feature_friends.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,13 +22,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지 리소스 (경로 확인 필요)
+import com.example.feature_friends.viewmodel.AcceptFriendsEvent
+import com.example.feature_friends.viewmodel.AcceptFriendsViewModel
+import com.example.feature_friends.viewmodel.FriendRequestItem
 // ViewModel 및 관련 상태/이벤트/UI 모델 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.AcceptFriendsEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.AcceptFriendsViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.FriendRequestItem // ★ UI 모델 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
+import com.example.core_ui.R
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 
 /**
  * AcceptFriendsScreen: 받은 친구 요청 목록을 보고 수락/거절하는 화면 (Stateful)

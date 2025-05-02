@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.ui
+package com.example.feature_project.structure.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,10 +15,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.EditCategoryEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.EditCategoryUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.EditCategoryViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.structure.viewmodel.EditCategoryEvent
+import com.example.feature_project.structure.viewmodel.EditCategoryUiState
+import com.example.feature_project.structure.viewmodel.EditCategoryViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -197,7 +197,11 @@ private fun EditCategoryContentPreview() {
 private fun EditCategoryContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditCategoryContent(
-            uiState = EditCategoryUiState(categoryId = "1", currentCategoryName = "수정 중...", isLoading = true),
+            uiState = EditCategoryUiState(
+                categoryId = "1",
+                currentCategoryName = "수정 중...",
+                isLoading = true
+            ),
             onCategoryNameChange = {},
             onUpdateClick = {}
         )
@@ -209,7 +213,11 @@ private fun EditCategoryContentLoadingPreview() {
 private fun EditCategoryContentErrorPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditCategoryContent(
-            uiState = EditCategoryUiState(categoryId = "1", currentCategoryName = "", error = "이름은 비워둘 수 없습니다."),
+            uiState = EditCategoryUiState(
+                categoryId = "1",
+                currentCategoryName = "",
+                error = "이름은 비워둘 수 없습니다."
+            ),
             onCategoryNameChange = {},
             onUpdateClick = {}
         )

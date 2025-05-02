@@ -87,10 +87,7 @@ fun CalendarScreen(
         label = "FAB Scale Animation"
     )
     
-    // 일정 섹션 진입 애니메이션 상태
-    val scheduleVisibilityState = remember {
-        MutableTransitionState(false).apply { targetState = true }
-    }
+    // 일정 섹션 진입 애니메이션 상태 제거
 
     // 이벤트 처리
     LaunchedEffect(viewModel) { 
@@ -128,13 +125,7 @@ fun CalendarScreen(
         }
     }
 
-    // 날짜 변경 감지
-    LaunchedEffect(uiState.selectedDate) {
-        // 선택된 날짜가 변경될 때마다 일정 섹션 애니메이션 재시작
-        scheduleVisibilityState.targetState = false
-        kotlinx.coroutines.delay(100)
-        scheduleVisibilityState.targetState = true
-    }
+    // 날짜 변경 감지 LaunchedEffect 제거
 
     Scaffold(
         modifier = modifier,
@@ -163,22 +154,14 @@ fun CalendarScreen(
             // 구분선
             HorizontalDivider()
             
-            // 선택된 날짜의 일정 섹션 (하단) - 애니메이션 적용
-            AnimatedVisibility(
-                visibleState = scheduleVisibilityState,
-                enter = fadeIn(animationSpec = tween(durationMillis = 300)) +
-                        expandVertically(animationSpec = tween(durationMillis = 300)),
-                exit = fadeOut(animationSpec = tween(durationMillis = 200)) +
-                        shrinkVertically(animationSpec = tween(durationMillis = 200))
-            ) {
-                ScheduleSection(
-                    uiState = uiState,
-                    onScheduleClick = viewModel::onScheduleClick,
-                    onDateClick24Hour = { date ->
-                        onNavigateToCalendar24Hour(date.year, date.monthValue, date.dayOfMonth)
-                    }
-                )
-            }
+            // 선택된 날짜의 일정 섹션 (하단) - 애니메이션 제거하고 직접 표시
+            ScheduleSection(
+                uiState = uiState,
+                onScheduleClick = viewModel::onScheduleClick,
+                onDateClick24Hour = { date ->
+                    onNavigateToCalendar24Hour(date.year, date.monthValue, date.dayOfMonth)
+                }
+            )
         }
     }
 }

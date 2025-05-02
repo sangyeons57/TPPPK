@@ -1,5 +1,5 @@
 // 경로: domain/model/ChannelType.kt (ProjectSettingViewModel, EditChannelViewModel 등 기반)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 enum class ChannelType(val displayName: String) {
     TEXT("텍스트 채널"),

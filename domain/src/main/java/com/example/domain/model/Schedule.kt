@@ -1,5 +1,5 @@
 // 경로: domain/model/Schedule.kt (CalendarViewModel, ScheduleDetailViewModel 등 기반)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 import java.time.LocalDateTime
 

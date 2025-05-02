@@ -1,8 +1,30 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.data.di
+package com.example.data.di
 
 // 모든 Repository 인터페이스와 구현체 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.data.repository.*
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.*
+import com.example.data.repository.AuthRepositoryImpl
+import com.example.data.repository.ChatRepositoryImpl
+import com.example.data.repository.DmRepositoryImpl
+import com.example.data.repository.FriendRepositoryImpl
+import com.example.data.repository.ProjectMemberRepositoryImpl
+import com.example.data.repository.ProjectRepositoryImpl
+import com.example.data.repository.ProjectRoleRepositoryImpl
+import com.example.data.repository.ProjectSettingRepositoryImpl
+import com.example.data.repository.ProjectStructureRepositoryImpl
+import com.example.data.repository.ScheduleRepositoryImpl
+import com.example.data.repository.SearchRepositoryImpl
+import com.example.data.repository.UserRepositoryImpl
+import com.example.domain.repository.AuthRepository
+import com.example.domain.repository.ChatRepository
+import com.example.domain.repository.DmRepository
+import com.example.domain.repository.FriendRepository
+import com.example.domain.repository.ProjectMemberRepository
+import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.ProjectRoleRepository
+import com.example.domain.repository.ProjectSettingRepository
+import com.example.domain.repository.ProjectStructureRepository
+import com.example.domain.repository.ScheduleRepository
+import com.example.domain.repository.SearchRepository
+import com.example.domain.repository.UserRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

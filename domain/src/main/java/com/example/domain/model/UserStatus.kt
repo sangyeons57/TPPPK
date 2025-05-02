@@ -1,5 +1,5 @@
 // 경로: domain/model/UserStatus.kt (신규 생성 또는 이동)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 // TODO: 실제 앱 기획에 맞는 상태들로 수정/추가/삭제
 enum class UserStatus(val displayName: String) {

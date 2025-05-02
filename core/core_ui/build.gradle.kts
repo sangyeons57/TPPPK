@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.org.jetbrains.kotlin.android)
 }
 
 android {
@@ -27,6 +29,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    buildFeatures {
+        compose = true // Compose 사용
+    }
     kotlinOptions {
         jvmTarget = "11"
     }
@@ -40,4 +45,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // Jetpack Compose UI
+    implementation(platform(libs.androidx.compose.bom)) // BOM 버전은 프로젝트와 통일
+    implementation(libs.material3)
 }

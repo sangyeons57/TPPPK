@@ -1,8 +1,7 @@
 // 파일 위치: domain/repository/AuthRepository.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
-import com.google.firebase.auth.FirebaseUser
+import com.example.domain.model.User
 import kotlin.Result // Kotlin Result 클래스 import
 
 /**
@@ -27,6 +26,6 @@ interface AuthRepository {
     //suspend fun verifyAuthCode(email: String, code: String): Result<Unit> // 인증번호 확인
     suspend fun signUp(email: String, pass: String, name: String): Result<User?> // 회원가입
 
-
-
+    suspend fun getLoginErrorMessage(exception: Throwable): String
+    suspend fun getSignUpErrorMessage(exception: Throwable): String
 }

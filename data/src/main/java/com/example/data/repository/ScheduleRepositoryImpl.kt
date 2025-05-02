@@ -1,8 +1,8 @@
 // 경로: data/repository/ScheduleRepositoryImpl.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Schedule
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ScheduleRepository
+import com.example.domain.model.Schedule
+import com.example.domain.repository.ScheduleRepository
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject

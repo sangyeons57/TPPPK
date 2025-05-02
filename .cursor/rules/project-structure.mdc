@@ -1,0 +1,52 @@
+---
+description: The overall structure of this project.
+globs: 
+alwaysApply: false
+---
+# Projecting Kotlin: Project Structure
+
+*This document outlines the module/directory structure. Update this document when significant structural changes occur.*
+
+## 1. Module/Directory Structure
+
+- **`:app`:** (Application Layer)
+  - **Role:** Integrates modules, app entry point, global configurations (Hilt, Firebase, Sentry), main navigation graph setup.
+- **`:navigation`:** (Presentation Layer Support)
+  - **Role:** Defines type-safe navigation routes and arguments (Jetpack Navigation Compose).
+- **`:feature:*`:** (Presentation Layer)
+  - **Role:** Individual feature modules. Each encapsulates UI (Compose Screens) and logic (ViewModels) for a specific app feature.
+    - `:feature_auth`: Authentication (Login, Signup).
+    - `:feature_chat`: Direct Messaging and Channel Chat.
+    - `:feature_dev`: Development/Debug utilities.
+    - `:feature_friends`: Friend list and management.
+    - `:feature_main`: Main screen container (hosting bottom nav, etc.).
+    - `:feature_profile`: User profile display and editing.
+    - `:feature_project`: Project/Server creation, settings, management.
+    - `:feature_schedule`: Calendar and schedule management.
+    - `:feature_search`: User/Content search functionality.
+    - `:feature_settings`: Application settings.
+- **`:domain`:** (Domain Layer)
+  - **Role:** Core business logic, data models (Entities), repository interfaces. Framework-independent Kotlin module.
+- **`:data`:** (Data Layer)
+  - **Role:** Implements `:domain` repository interfaces. Manages data interaction with Firebase (Firestore, Auth, Storage).
+- **`:core:*`:** (Core/Utility Modules)
+  - **Role:** Shared functionality and resources.
+    - `:core:core_common`: Common, framework-independent utilities.
+    - `:core:core_ui`: Shared Compose elements (theme, components, resources).
+    - `:core:core_logging`: Logging abstraction (Sentry).
+- **`functions/`:** (Backend)
+  - **Role:** Firebase Cloud Functions (TypeScript) for backend logic.
+- **Root Files:**
+  - `build.gradle.kts`: Project-level Gradle build script (dependencies, plugins).
+  - `settings.gradle.kts`: Defines included Gradle modules.
+  - `gradle/`: Contains Gradle wrapper files (`gradle-wrapper.jar`, `gradle-wrapper.properties`).
+  - `gradle.properties`: Project-wide Gradle settings (JVM args, version codes, etc.).
+  - `local.properties`: Local configuration (SDK path, API keys - **Do not commit**).
+  - `.gitignore`: Specifies intentionally untracked files for Git.
+  - `firebase.json`: Firebase Hosting and Functions deployment configuration.
+  - `.firebaserc`: Firebase project alias definitions.
+  - `firestore.rules`: Security rules for Firestore database access.
+  - `storage.rules`: Security rules for Firebase Storage access.
+  - `firestore.indexes.json`: Custom index definitions for Firestore queries.
+
+  - `sentry.properties`: Configuration for Sentry error reporting.

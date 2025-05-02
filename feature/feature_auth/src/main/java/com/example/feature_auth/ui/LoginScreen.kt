@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.ui
+package com.example.feature_auth.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,16 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.LoginFormFocusTarget
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.LoginEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.LoginUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.LoginViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.FindPassword
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Login
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.Main
-import com.example.teamnovapersonalprojectprojectingkotlin.navigation.SignUp
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.LoginFormFocusTarget
+import com.example.feature_auth.viewmodel.LoginEvent
+import com.example.feature_auth.viewmodel.LoginUiState
+import com.example.feature_auth.viewmodel.LoginViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -47,7 +42,9 @@ import kotlinx.coroutines.flow.collectLatest
  */
 @Composable
 fun LoginScreen(
-    navController: NavHostController, // 네비게이션 처리를 위해 필요
+    onNavigateToSignUp: () -> Unit,
+    onNavigateToFindPassword: () -> Unit,
+    onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
@@ -61,19 +58,13 @@ fun LoginScreen(
     LaunchedEffect(key1 = Unit) { // Unit key: 화면 진입 시 1회 실행
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is LoginEvent.NavigateToSignUp -> navController.navigate(SignUp.route)
-                is LoginEvent.NavigateToFindPassword -> navController.navigate(FindPassword.route)
+                is LoginEvent.NavigateToSignUp -> onNavigateToSignUp()
+                is LoginEvent.NavigateToFindPassword -> onNavigateToFindPassword()
+                is LoginEvent.LoginSuccess -> onNavigateToLogin()
                 is LoginEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
                     event.message,
                     duration = SnackbarDuration.Short
                 )
-                is LoginEvent.LoginSuccess -> {
-                    // 로그인 성공 시 메인 화면으로 이동 및 백스택 정리
-                    navController.navigate(Main.route) {
-                        popUpTo(Login.route) { inclusive = true } // 로그인 화면 포함 이전 스택 모두 제거
-                        launchSingleTop = true
-                    }
-                }
                 is LoginEvent.RequestFocus -> {
                     when (event.target) {
                         LoginFormFocusTarget.EMAIL -> emailFocusRequester.requestFocus()

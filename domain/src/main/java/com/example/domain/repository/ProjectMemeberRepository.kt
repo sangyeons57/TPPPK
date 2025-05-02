@@ -1,7 +1,7 @@
 // 경로: domain/repository/ProjectMemberRepository.kt (신규 생성 또는 기존 파일 수정)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ProjectMember
+import com.example.domain.model.ProjectMember
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
 

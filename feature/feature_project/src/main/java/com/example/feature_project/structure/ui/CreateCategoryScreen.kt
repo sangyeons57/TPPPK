@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.ui
+package com.example.feature_project.structure.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,10 +15,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.CreateCategoryEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.CreateCategoryUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.CreateCategoryViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.structure.viewmodel.CreateCategoryEvent
+import com.example.feature_project.structure.viewmodel.CreateCategoryUiState
+import com.example.feature_project.structure.viewmodel.CreateCategoryViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

@@ -1,0 +1,21 @@
+---
+description: Project Architecture Document
+globs: 
+alwaysApply: false
+---
+# Projecting Kotlin: Architecture & Design Principles
+
+- **Clean Architecture & Multi-module:** Layered architecture using separate Gradle modules for separation of concerns, build speed, and maintainability.
+  - **`:domain` (Domain Layer):** Core business logic, entities (Kotlin data classes), repository interfaces. Framework-independent.
+  - **`:data` (Data Layer):** Implements `:domain` repository interfaces. Handles data source interactions (Firebase Auth, Firestore, Storage). Depends on `:domain`.
+  - **`:feature:*` (Presentation Layer):** Feature-specific UI (Compose) and state management (ViewModel). Depends on `:domain`, optionally `:data` and `:core`.
+  - **`:app` (App Layer):** Integrates all modules. Handles app setup (Hilt, Firebase init), navigation graph, dependency management. Depends on other relevant modules.
+  - **`:core:*` (Core Modules):** Common utilities, UI components, base functionality.
+    - `:core:core_common`: Framework-independent utilities.
+    - `:core:core_ui`: Shared Compose UI elements (theme, colors, shapes, drawables).
+    - `:core:core_logging`: Logging utilities (Sentry).
+  - **`:navigation` (Navigation Module):** Defines app-wide navigation destinations and routes.
+- **MVVM:** Feature screens (View) use a ViewModel for UI state (UiState) management and event handling. ViewModel fetches data via repositories (`:domain` interfaces, `:data` implementation) and updates UiState.
+- **Repository Pattern:** `:domain` interfaces abstract `:data` layer implementations from ViewModels.
+- **Dependency Injection (Hilt):** Manages dependency creation and injection (e.g., repositories into ViewModels) for loose coupling and testability.
+

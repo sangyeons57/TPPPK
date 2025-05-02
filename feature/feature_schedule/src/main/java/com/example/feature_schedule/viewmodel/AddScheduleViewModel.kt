@@ -1,19 +1,25 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel
+package com.example.feature_schedule.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.Project
+import com.example.domain.model.Schedule
+import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.UUID
 import javax.inject.Inject
 
 // --- 데이터 모델 ---
 data class ProjectSelectionItem(
-    val id: Int,
+    val id: String,
     val name: String
 )
 
@@ -43,29 +49,11 @@ sealed class AddScheduleEvent {
     data class ShowSnackbar(val message: String) : AddScheduleEvent()
 }
 
-// --- Repository 인터페이스 (가상) ---
-interface ProjectRepositoryForSchedule { // 이름 변경 또는 기존 Repository 확장
-    suspend fun getAvailableProjects(): Result<List<ProjectSelectionItem>>
-}
-interface ScheduleRepository1_가상 { // 이전 ViewModel에서 사용한 것 재활용
-    suspend fun addSchedule(
-        projectId: Int,
-        date: LocalDate,
-        title: String,
-        content: String?,
-        startTime: LocalTime?,
-        endTime: LocalTime?
-    ): Result<Unit> // Result 래퍼 사용 권장
-    suspend fun getSchedulesForDate(date: LocalDate): Result<List<ScheduleItem24Hour>> // Result 래퍼 사용 권장
-    suspend fun deleteSchedule(scheduleId: String): Result<Unit>
-}
-
-
 @HiltViewModel
 class AddScheduleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    // TODO: private val projectRepository: ProjectRepositoryForSchedule,
-    // TODO: private val scheduleRepository: ScheduleRepository
+    private val projectRepository: ProjectRepository,
+    private val scheduleRepository: ScheduleRepository
 ) : ViewModel() {
 
     private val year: Int? = savedStateHandle["year"]
@@ -82,8 +70,7 @@ class AddScheduleViewModel @Inject constructor(
         val initialDate = if (year != null && month != null && day != null) {
             LocalDate.of(year, month, day)
         } else {
-            // 날짜 정보가 없으면 오늘 날짜 또는 에러 처리
-            // 여기서는 오늘 날짜로 가정, 실제로는 에러 처리 또는 뒤로가기 필요
+            // 날짜 정보가 없으면 오늘 날짜로 설정
             LocalDate.now()
         }
         _uiState.update { it.copy(selectedDate = initialDate) }
@@ -93,22 +80,25 @@ class AddScheduleViewModel @Inject constructor(
     private fun loadAvailableProjects() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            println("ViewModel: Loading available projects")
-            // --- TODO: 실제 프로젝트 목록 로드 (projectRepository.getAvailableProjects()) ---
-            delay(500) // 임시 딜레이
-            val success = true
-            // val result = projectRepository.getAvailableProjects()
-            // --------------------------------------------------------------------
-            if (success) {
-                // 임시 데이터
-                val projects = listOf(
-                    ProjectSelectionItem(1, "개인 프로젝트"),
-                    ProjectSelectionItem(2, "스터디 그룹"),
-                    ProjectSelectionItem(3, "회사 업무")
-                )
+            
+            val result = projectRepository.getAvailableProjectsForScheduling()
+            
+            if (result.isSuccess) {
+                val projects = result.getOrNull()?.map { project ->
+                    ProjectSelectionItem(
+                        id = project.id.toString(),
+                        name = project.name
+                    )
+                } ?: emptyList()
+                
                 _uiState.update { it.copy(isLoading = false, availableProjects = projects) }
             } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "프로젝트 목록 로드 실패") }
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        errorMessage = "프로젝트 목록 로드 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"
+                    ) 
+                }
             }
         }
     }
@@ -126,14 +116,11 @@ class AddScheduleViewModel @Inject constructor(
     }
 
     fun requestStartTimePicker(value: Boolean) {
-        println("requestStartTimePicker: $value")
         _uiState.update { it.copy(isShowStartTimePicker = value) }
-        //viewModelScope.launch { _eventFlow.emit(AddScheduleEvent.ShowStartTimePicker) }
     }
 
     fun requestEndTimePicker(value: Boolean) {
         _uiState.update { it.copy(isShowEndTimePicker = value) }
-        // viewModelScope.launch { _eventFlow.emit(AddScheduleEvent.ShowEndTimePicker) }
     }
 
     fun onStartTimeSelected(hour: Int, minute: Int) {
@@ -165,6 +152,7 @@ class AddScheduleViewModel @Inject constructor(
         val date = currentState.selectedDate
         val project = currentState.selectedProject
         val title = currentState.scheduleTitle.trim()
+        val content = currentState.scheduleContent.trim()
         val start = currentState.startTime
         val end = currentState.endTime
 
@@ -193,24 +181,32 @@ class AddScheduleViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            println("ViewModel: Saving schedule...")
-            // --- TODO: 실제 저장 로직 (scheduleRepository.addSchedule(...)) ---
-            delay(1000)
-            val success = true
-            // val result = scheduleRepository.addSchedule(
-            //     projectId = project.id,
-            //     date = date,
-            //     title = title,
-            //     content = currentState.scheduleContent.trim().takeIf { it.isNotEmpty() }, // 내용 없으면 null
-            //     startTime = start,
-            //     endTime = end
-            // )
-            // -------------------------------------------------------------
-            if (success) {
+            
+            // Schedule 객체 생성
+            val schedule = Schedule(
+                id = UUID.randomUUID().toString(),
+                projectId = project?.id,
+                title = title,
+                content = content.takeIf { it.isNotEmpty() }, // 내용 없으면 null
+                startTime = LocalDateTime.of(date, start),
+                endTime = LocalDateTime.of(date, end),
+                attendees = listOf(), // 초기에는 빈 리스트
+                isAllDay = false // 기본적으로 false
+            )
+            
+            // Repository를 통해 일정 추가
+            val result = scheduleRepository.addSchedule(schedule)
+            
+            if (result.isSuccess) {
                 _eventFlow.emit(AddScheduleEvent.ShowSnackbar("일정이 추가되었습니다."))
                 _uiState.update { it.copy(isLoading = false, saveSuccess = true) }
             } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "일정 저장 실패") }
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        errorMessage = "일정 저장 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"
+                    ) 
+                }
             }
         }
     }

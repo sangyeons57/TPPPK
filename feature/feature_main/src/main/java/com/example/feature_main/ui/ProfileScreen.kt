@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_main.ui
+package com.example.feature_main.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -25,15 +25,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.ProfileEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.ProfileViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_main.viewmodel.UserProfileData
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_main.viewmodel.ProfileEvent
+import com.example.feature_main.viewmodel.ProfileViewModel
+import com.example.feature_main.viewmodel.UserProfileData
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.rememberNavController
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 
 /**
  * ProfileScreen: 상태 관리 및 이벤트 처리 (Stateful)
@@ -41,7 +39,6 @@ import androidx.navigation.compose.rememberNavController
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
-    navController: NavController,
     onLogout: () -> Unit,
     onClickSettings: () -> Unit,
     onClickFriends: () -> Unit,
@@ -124,8 +121,7 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreenPreview() {
     // Dummy NavController for Preview
-    val navController = rememberNavController()
-    ProfileScreen(navController = navController, onLogout = {}, onClickSettings = {}, onClickFriends = {}, onClickStatus = {})
+    ProfileScreen(onLogout = {}, onClickSettings = {}, onClickFriends = {}, onClickStatus = {})
 }
 
 
@@ -246,8 +242,8 @@ fun ProfileMenuItem(
     text: String,
     icon: ImageVector,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier

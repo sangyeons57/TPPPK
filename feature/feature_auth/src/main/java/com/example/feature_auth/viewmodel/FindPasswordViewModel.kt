@@ -1,8 +1,10 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel
+package com.example.feature_auth.viewmodel
 
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -64,7 +66,7 @@ class FindPasswordViewModel @Inject constructor(
     // --- 버튼 클릭 처리 ---
     fun onSendAuthCodeClick() {
         val email = _uiState.value.email
-        if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             _uiState.update { it.copy(errorMessage = "올바른 이메일 주소를 입력해주세요.") }
             return
         }
@@ -73,7 +75,7 @@ class FindPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             println("ViewModel: 인증번호 전송 요청 - $email")
             // --- TODO: 실제 인증번호 전송 로직 (authRepository.requestPasswordResetCode(email)) ---
-            kotlinx.coroutines.delay(1000) // 임시 딜레이
+            delay(1000) // 임시 딜레이
             val success = true // 임시 성공
             // val result = authRepository.requestPasswordResetCode(email)
             // result.onSuccess { ... }.onFailure { ... }
@@ -99,7 +101,7 @@ class FindPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             println("ViewModel: 인증번호 확인 요청 - $code")
             // --- TODO: 실제 인증번호 확인 로직 (authRepository.verifyPasswordResetCode(email, code)) ---
-            kotlinx.coroutines.delay(1000) // 임시 딜레이
+            delay(1000) // 임시 딜레이
             val success = true // 임시 성공
             // val result = authRepository.verifyPasswordResetCode(email, code)
             // result.onSuccess { ... }.onFailure { ... }
@@ -129,7 +131,7 @@ class FindPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             println("ViewModel: 비밀번호 변경 요청")
             // --- TODO: 실제 비밀번호 변경 로직 (authRepository.resetPassword(state.email, state.authCode, state.newPassword)) ---
-            kotlinx.coroutines.delay(1000) // 임시 딜레이
+            delay(1000) // 임시 딜레이
             val success = true // 임시 성공
             // val result = authRepository.resetPassword(state.email, state.authCode, state.newPassword)
             // result.onSuccess { ... }.onFailure { ... }

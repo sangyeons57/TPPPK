@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.ui
+package com.example.feature_auth.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,10 +25,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.FindPasswordEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.FindPasswordUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.FindPasswordViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_auth.viewmodel.FindPasswordEvent
+import com.example.feature_auth.viewmodel.FindPasswordUiState
+import com.example.feature_auth.viewmodel.FindPasswordViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -259,7 +259,11 @@ fun FindPasswordContentPreview() {
 fun FindPasswordContentVerifiedPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         FindPasswordContent(
-            uiState = FindPasswordUiState(isEmailSent = true, isEmailVerified = true, email="test@test.com"), // 인증 완료 상태
+            uiState = FindPasswordUiState(
+                isEmailSent = true,
+                isEmailVerified = true,
+                email = "test@test.com"
+            ), // 인증 완료 상태
             onEmailChange = {}, onAuthCodeChange = {}, onNewPasswordChange = {},
             onNewPasswordConfirmChange = {}, onPasswordVisibilityToggle = {},
             onSendAuthCodeClick = {}, onConfirmAuthCodeClick = {}, onChangePasswordClick = {}

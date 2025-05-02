@@ -1,8 +1,8 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
 import android.net.Uri
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ChatMessage
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.MediaImage
+import com.example.domain.model.ChatMessage
+import com.example.domain.model.MediaImage
 import kotlinx.coroutines.flow.Flow
 
 // --- Repository 인터페이스 (가상) ---

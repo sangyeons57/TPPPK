@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project.ui
+package com.example.feature_project.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,10 +18,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.JoinProjectEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.JoinProjectUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project.viewmodel.JoinProjectViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.viewmodel.JoinProjectEvent
+import com.example.feature_project.viewmodel.JoinProjectUiState
+import com.example.feature_project.viewmodel.JoinProjectViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -201,7 +201,10 @@ private fun JoinProjectContentErrorPreview() {
         Scaffold(topBar = { TopAppBar(title = { Text("프로젝트 참여하기") }) }) { padding ->
             JoinProjectContent(
                 modifier = Modifier.padding(padding),
-                uiState = JoinProjectUiState(inviteCodeOrLink = "invalid-code", error = "유효하지 않은 코드입니다."),
+                uiState = JoinProjectUiState(
+                    inviteCodeOrLink = "invalid-code",
+                    error = "유효하지 않은 코드입니다."
+                ),
                 onCodeOrLinkChange = {},
                 onJoinClick = {}
             )

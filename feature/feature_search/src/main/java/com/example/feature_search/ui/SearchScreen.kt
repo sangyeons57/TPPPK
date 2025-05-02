@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_search.ui
+package com.example.feature_search.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,16 +31,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.R
+import com.example.domain.model.MessageResult
+import com.example.domain.model.SearchResultItem
+import com.example.domain.model.SearchScope
+import com.example.domain.model.UserResult
 // Domain 모델 및 ViewModel 관련 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.MessageResult
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchResultItem
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.UserResult
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_search.viewmodel.SearchEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_search.viewmodel.SearchUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_search.viewmodel.SearchViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_search.viewmodel.SearchEvent
+import com.example.feature_search.viewmodel.SearchUiState
+import com.example.feature_search.viewmodel.SearchViewModel
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -120,7 +120,7 @@ fun SearchScreen(
 
             // 검색 범위 선택 탭
             PrimaryTabRow(selectedTabIndex = uiState.selectedScope.ordinal) {
-                SearchScope.values().forEach { scope ->
+                SearchScope.entries.forEach { scope ->
                     Tab(
                         selected = uiState.selectedScope == scope,
                         onClick = { viewModel.onScopeChange(scope) },
@@ -283,7 +283,7 @@ fun UserResultItem(
             if (userResult.status != null) { // 상태 메시지 표시 (선택적)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = userResult.status,
+                    text = userResult.status!!,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     maxLines = 1,

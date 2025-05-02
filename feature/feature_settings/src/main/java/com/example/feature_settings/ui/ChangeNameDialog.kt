@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.ui
+package com.example.feature_settings.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -8,9 +8,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel // Hilt ViewModel 주입
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // 상태 구독
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.ChangeNameEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.ChangeNameViewModel // ViewModel Import
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_settings.viewmodel.ChangeNameEvent
+import com.example.feature_settings.viewmodel.ChangeNameViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

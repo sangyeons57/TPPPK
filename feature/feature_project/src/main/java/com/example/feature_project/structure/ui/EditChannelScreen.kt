@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.ui
+package com.example.feature_project.structure.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,11 +18,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.ChannelType
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.EditChannelEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.EditChannelUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.EditChannelViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.structure.viewmodel.ChannelType
+import com.example.feature_project.structure.viewmodel.EditChannelEvent
+import com.example.feature_project.structure.viewmodel.EditChannelUiState
+import com.example.feature_project.structure.viewmodel.EditChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -264,7 +264,11 @@ private fun EditChannelContentPreview() {
 private fun EditChannelContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditChannelContent(
-            uiState = EditChannelUiState(channelId = "1", currentChannelName = "수정 중...", isLoading = true),
+            uiState = EditChannelUiState(
+                channelId = "1",
+                currentChannelName = "수정 중...",
+                isLoading = true
+            ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
             onUpdateClick = {}
@@ -277,7 +281,11 @@ private fun EditChannelContentLoadingPreview() {
 private fun EditChannelContentErrorPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditChannelContent(
-            uiState = EditChannelUiState(channelId = "1", currentChannelName = "", error = "이름은 필수입니다."),
+            uiState = EditChannelUiState(
+                channelId = "1",
+                currentChannelName = "",
+                error = "이름은 필수입니다."
+            ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
             onUpdateClick = {}

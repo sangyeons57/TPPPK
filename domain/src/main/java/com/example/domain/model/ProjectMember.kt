@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 data class ProjectMember(
     val userId: String,

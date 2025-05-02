@@ -1,7 +1,7 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ProjectMember
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ProjectMemberRepository
+import com.example.domain.model.ProjectMember
+import com.example.domain.repository.ProjectMemberRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject

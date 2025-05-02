@@ -11,8 +11,24 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/feature_auth" />
-            <option value="$PROJECT_DIR$/testsetting" />
+            <option value="$PROJECT_DIR$/core" />
+            <option value="$PROJECT_DIR$/core/core_common" />
+            <option value="$PROJECT_DIR$/core/core_logging" />
+            <option value="$PROJECT_DIR$/core/core_ui" />
+            <option value="$PROJECT_DIR$/data" />
+            <option value="$PROJECT_DIR$/domain" />
+            <option value="$PROJECT_DIR$/feature" />
+            <option value="$PROJECT_DIR$/feature/feature_auth" />
+            <option value="$PROJECT_DIR$/feature/feature_chat" />
+            <option value="$PROJECT_DIR$/feature/feature_dev" />
+            <option value="$PROJECT_DIR$/feature/feature_friends" />
+            <option value="$PROJECT_DIR$/feature/feature_main" />
+            <option value="$PROJECT_DIR$/feature/feature_profile" />
+            <option value="$PROJECT_DIR$/feature/feature_project" />
+            <option value="$PROJECT_DIR$/feature/feature_schedule" />
+            <option value="$PROJECT_DIR$/feature/feature_search" />
+            <option value="$PROJECT_DIR$/feature/feature_settings" />
+            <option value="$PROJECT_DIR$/navigation" />
           </set>
         </option>
       </GradleProjectSettings>

@@ -1,9 +1,9 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
 import android.net.Uri
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ChatMessage
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.MediaImage
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ChatRepository
+import com.example.domain.model.ChatMessage
+import com.example.domain.model.MediaImage
+import com.example.domain.repository.ChatRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDateTime

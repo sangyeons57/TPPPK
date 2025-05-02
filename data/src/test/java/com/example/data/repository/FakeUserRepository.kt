@@ -78,6 +78,9 @@ class FakeUserRepository : UserRepository {
         } ?: Result.failure(IllegalStateException("User profile not found"))
     }
 
+    /**
+     * 프로필 이미지 업데이트
+     */
     override suspend fun updateProfileImage(imageUri: Uri): Result<String?> {
         // 에러 시뮬레이션 확인
         simulateErrorIfNeeded<String?>()?.let { return it }
@@ -95,6 +98,29 @@ class FakeUserRepository : UserRepository {
         users[userId] = user.copy(profileImageUrl = downloadUrl)
         
         return Result.success(downloadUrl)
+    }
+
+    // 테스트 전용 메서드
+    suspend fun updateProfileImage(imageUri: TestUri): Result<String> {
+        // 에러 시뮬레이션 확인
+        simulateErrorIfNeeded<String>()?.let { return it }
+        
+        // 현재 사용자 가져오기
+        val userId = currentUserId ?: return Result.failure(
+            IllegalStateException("User not logged in")
+        )
+        
+        val user = users[userId] ?: return Result.failure(
+            IllegalStateException("User not found: $userId")
+        )
+        
+        // 이미지 업로드를 시뮬레이션하고 URL 반환
+        val imageUrl = "https://example.com/uploads/${imageUri.toString().substringAfterLast("/")}"
+        
+        // 사용자 정보 업데이트
+        users[userId] = user.copy(profileImageUrl = imageUrl)
+        
+        return Result.success(imageUrl)
     }
 
     override suspend fun removeProfileImage(): Result<Unit> {
@@ -185,6 +211,9 @@ class FakeUserRepository : UserRepository {
         return Result.success(Unit)
     }
 
+    /**
+     * 프로필 존재 확인 및 생성
+     */
     override suspend fun ensureUserProfileExists(firebaseUser: FirebaseUser): Result<User> {
         // 에러 시뮬레이션 확인
         simulateErrorIfNeeded<User>()?.let { return it }
@@ -203,11 +232,39 @@ class FakeUserRepository : UserRepository {
                 ?: "사용자",
             email = firebaseUser.email ?: "",
             profileImageUrl = firebaseUser.photoUrl?.toString(),
-            status = null
+            statusMessage = null
         )
         
         // 사용자 저장
         users[firebaseUser.uid] = newUser
+        
+        return Result.success(newUser)
+    }
+
+    // 테스트 전용 메서드
+    suspend fun ensureUserProfileExists(firebaseUser: TestFirebaseUser): Result<User> {
+        // 에러 시뮬레이션 확인
+        simulateErrorIfNeeded<User>()?.let { return it }
+        
+        // Firebase User ID를 기반으로 사용자 검색
+        val userId = firebaseUser.uid
+        val existingUser = users[userId]
+        
+        if (existingUser != null) {
+            return Result.success(existingUser)
+        }
+        
+        // 존재하지 않으면 새 사용자 생성
+        val newUser = User(
+            userId = userId,
+            name = firebaseUser.displayName ?: "New User",
+            email = firebaseUser.email ?: "",
+            profileImageUrl = null,
+            statusMessage = null
+        )
+        
+        // 사용자 저장
+        users[userId] = newUser
         
         return Result.success(newUser)
     }

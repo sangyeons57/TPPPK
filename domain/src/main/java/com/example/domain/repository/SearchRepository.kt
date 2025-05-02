@@ -1,8 +1,8 @@
 // 경로: domain/repository/SearchRepository.kt (신규 생성)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchScope
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.SearchResultItem
+import com.example.domain.model.SearchResultItem
+import com.example.domain.model.SearchScope
 import kotlin.Result
 
 interface SearchRepository {

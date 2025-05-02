@@ -1,8 +1,8 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Role // 가정
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.RolePermission
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ProjectRoleRepository
+import com.example.domain.model.Role
+import com.example.domain.model.RolePermission
+import com.example.domain.repository.ProjectRoleRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import kotlin.Result

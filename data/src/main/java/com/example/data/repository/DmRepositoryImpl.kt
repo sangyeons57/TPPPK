@@ -1,8 +1,8 @@
 // 경로: data/repository/DmRepositoryImpl.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.DmConversation
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.DmRepository
+import com.example.domain.model.DmConversation
+import com.example.domain.repository.DmRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject

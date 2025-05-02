@@ -1,17 +1,13 @@
-
 plugins {
-    id("com.android.application")
-    id("com.google.gms.google-services")
-    // alias(libs.plugins.android.application)
-    // alias(libs.plugins.google.gms)
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.google.gms)
 
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp")
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.dagger.hilt)
 
-
-    id("io.sentry.android.gradle") version "5.3.0"
+    alias(libs.plugins.sentry)
+    alias(libs.plugins.org.jetbrains.kotlin.android)
 }
 
 android {
@@ -41,12 +37,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_19
+        targetCompatibility = JavaVersion.VERSION_19
         isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "19"
     }
     buildFeatures {
         compose = true
@@ -57,14 +53,38 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
+    }
 }
 
 dependencies {
+
+    implementation(project(":data"))
+    implementation(project(":domain"))
+    implementation(project(":navigation"))
+
+    implementation(project(":core:core_ui"))
+    implementation(project(":core:core_common"))
+    implementation(project(":core:core_logging"))
+
+    // ★ 네비게이션 그래프에서 직접 호출하는 모든 Feature 모듈 의존성 추가
+    implementation(project(":feature:feature_main"))
+    implementation(project(":feature:feature_auth"))
+    implementation(project(":feature:feature_project"))
+    implementation(project(":feature:feature_friends"))
+    implementation(project(":feature:feature_settings"))
+    implementation(project(":feature:feature_chat"))
+    implementation(project(":feature:feature_schedule"))
+    implementation(project(":feature:feature_search"))
+    implementation(project(":feature:feature_dev")) // DevMenuScreen 호출 시
+    implementation(project(":core:core_ui")) // 공통 UI 요소(아이콘 등) 사용 시
+
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
     // Hilt Core
-    implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.coil) // View 기반 UI
@@ -78,6 +98,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.navigation.compose) // Navigation Compose
+    implementation(libs.material.icons.core)
+    implementation(libs.androidx.runtime)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -114,21 +138,6 @@ dependencies {
     // Retrofit과 Gson 통합을 위한 Converter
     implementation(libs.converter.gson)
 
-    // Import the Firebase BoM
-    implementation(platform(libs.firebase.bom))
-
-    implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.storage.ktx)
-
-    // Also add the dependency for the Google Play services library and specify its version
-    //implementation(libs.play.services.auth)
-    //implementation(libs.play.services.base)
-
-    // Add the dependencies for any other desired Firebase products
-    // https://firebase.google.com/docs/android/setup#available-libraries
-    // Firebase BoM (Bill of Materials) - Firebase 라이브러리 버전 관리를 위한 BOM
-
 
 
     //Room 추가
@@ -140,11 +149,6 @@ dependencies {
     implementation(libs.sentry.android)
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
-
-
 sentry {
     org.set("bamsol")
     projectName.set("android")
@@ -153,3 +157,12 @@ sentry {
     // disable if you don't want to expose your sources
     includeSourceContext.set(true)
 }
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+kotlin {
+    jvmToolchain(19)
+}
+

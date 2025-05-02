@@ -1,5 +1,5 @@
 // 경로: domain/model/SearchScope.kt (신규 생성 또는 이동)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 enum class SearchScope(val displayName: String) {
     ALL("전체"),

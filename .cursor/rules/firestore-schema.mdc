@@ -1,0 +1,62 @@
+---
+description: Rules for Firebase schema structure, reference when using Firebase.
+globs: 
+alwaysApply: false
+---
+# Projecting Kotlin: Firestore Schema
+
+*This document outlines the primary Firestore database structure. Logic is implemented in the `:data` module's repositories.*
+
+**Root:**
+└── **`users`** [User information]
+    └── `{userId}` (ID: Firebase Auth UID)
+        ├── **Fields:** `email`, `nickname` (Unique), `profileImageUrl`?, `memo`?, `status`?, `createdAt`, `fcmToken`?, `participatingProjectIds`[]?, `accountStatus`, `activeDmIds`[]?, `isEmailVerified`
+        └── **Subcollections:**
+            └── **`friends`** [Friend relationships/status]
+                └── `{friendId}` (ID: Friend UID)
+                    └── **Fields:** `status` (e.g., `pending_sent`, `accepted`)
+└── **`dms`** [1:1 direct message rooms]
+    └── `{dmId}` (ID: Sorted UIDs `uid1_uid2`)
+        ├── **Fields:** `participants`[], `lastMessage`?, `lastMessageTimestamp`?
+        └── **Subcollections:**
+            └── **`messages`** [DM messages]
+                └── `{messageId}` (ID: Auto)
+                    └── **Fields:** `senderId`, `text`, `timestamp`
+└── **`projects`** [Project/server information]
+    └── `{projectId}` (ID: Auto)
+        ├── **Fields:** `name`, `description`, `ownerId`, `createdAt`
+        └── **Subcollections:**
+            ├── **`members`** [Project members & roles]
+            │   └── `{userId}` (ID: User UID)
+            │       └── **Fields:** `roleIds`[]
+            ├── **`roles`** [Project roles & permissions]
+            │   └── `{roleId}` (ID: Auto)
+            │       └── **Fields:** `name`, `permissions`: Map<String, Boolean>
+            ├── **`categories`** [Channel categories]
+            │   └── `{categoryId}` (ID: Auto)
+            │       ├── **Fields:** `name`, `order`
+            │       └── **Subcollections:**
+            │           └── **`channels`** [Text channels]
+            │               └── `{channelId}` (ID: Auto)
+            │                   ├── **Fields:** `name`, `type`
+            │                   └── **Subcollections:**
+            │                       └── **`messages`** [Channel messages]
+            │                           └── `{messageId}` (ID: Auto)
+            │                               └── **Fields:** `senderId`, `text`, `timestamp`
+            └── **`scheduleChannels`** [Schedule-related channels]
+                └── `{scheduleId}` (ID: Schedule ID)
+                    ├── **Fields:** `name`
+                    └── **Subcollections:**
+                        └── **`messages`** [Schedule channel messages]
+                            └── `{messageId}` (ID: Auto)
+                                └── **Fields:** `senderId`, `text`, `timestamp`
+└── **`schedules`** [Personal & project schedules]
+    └── `{scheduleId}` (ID: Auto)
+        └── **Fields:** `title`, `startTime`, `endTime`, `participants`, `projectId`?
+└── **`invites`** [Temporary invite tokens]
+    └── `{inviteToken}` (ID: Auto unique token)
+        └── **Fields:** `type`, `inviterId`, `projectId`?, `expiresAt`
+└── **`passwordResetTokens`** [Temporary password reset tokens]
+    └── `{tokenId}` (ID: Auto)
+        └── **Fields:** `userId`, `token`, `expiresAt`
+

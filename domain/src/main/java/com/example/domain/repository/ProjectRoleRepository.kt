@@ -1,8 +1,8 @@
 // 경로: domain/repository/ProjectRoleRepository.kt (신규 생성)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Role // 생성한 Role 모델 import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.RolePermission // RolePermission enum import
+import com.example.domain.model.Role
+import com.example.domain.model.RolePermission
 import kotlin.Result
 import kotlinx.coroutines.flow.Flow // 필요시 Flow 사용 가능
 

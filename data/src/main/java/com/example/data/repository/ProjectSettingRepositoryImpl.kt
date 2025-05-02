@@ -1,8 +1,8 @@
 // 경로: data/repository/ProjectSettingRepositoryImpl.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ProjectStructure
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ProjectSettingRepository
+import com.example.domain.model.ProjectStructure
+import com.example.domain.repository.ProjectSettingRepository
 import javax.inject.Inject
 import kotlin.Result
 

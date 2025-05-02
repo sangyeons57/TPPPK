@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.ui
+package com.example.feature_auth.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,10 +14,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.R // 로고 리소스 ID
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.SplashEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_auth.viewmodel.SplashViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.R
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_auth.viewmodel.SplashEvent
+import com.example.feature_auth.viewmodel.SplashViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

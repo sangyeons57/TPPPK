@@ -21,5 +21,21 @@ dependencyResolutionManagement {
 
 rootProject.name = "TeamnovaPersonalProjectProjectingKotlin"
 include(":app")
-include(":feature_auth")
-include(":testsetting")
+include(":navigation")
+include(":data")
+include(":domain")
+
+include(":core:core_common")
+include(":core:core_logging")
+include(":core:core_ui")
+
+include(":feature:feature_chat")
+include(":feature:feature_auth")
+include(":feature:feature_dev")
+include(":feature:feature_friends")
+include(":feature:feature_main")
+include(":feature:feature_profile")
+include(":feature:feature_project")
+include(":feature:feature_schedule")
+include(":feature:feature_search")
+include(":feature:feature_settings")

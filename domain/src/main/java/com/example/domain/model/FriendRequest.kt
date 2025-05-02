@@ -1,5 +1,5 @@
 // 경로: domain/model/FriendRequest.kt
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 data class FriendRequest(
     val userId: String, // 요청 보낸 사람 ID

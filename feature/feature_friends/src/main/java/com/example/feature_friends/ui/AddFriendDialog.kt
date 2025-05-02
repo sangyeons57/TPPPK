@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.ui
+package com.example.feature_friends.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
@@ -16,10 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.AddFriendEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.AddFriendUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_friends.viewmodel.AddFriendViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_friends.viewmodel.AddFriendEvent
+import com.example.feature_friends.viewmodel.AddFriendUiState
+import com.example.feature_friends.viewmodel.AddFriendViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

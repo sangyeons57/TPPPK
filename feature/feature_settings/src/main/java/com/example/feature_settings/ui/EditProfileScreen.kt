@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.ui
+package com.example.feature_settings.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,13 +28,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.R
+import com.example.domain.model.User
+import com.example.feature_settings.viewmodel.EditProfileEvent
+import com.example.feature_settings.viewmodel.EditProfileUiState
+import com.example.feature_settings.viewmodel.EditProfileViewModel
 // ViewModel 및 관련 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.EditProfileEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.EditProfileUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_settings.viewmodel.EditProfileViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -224,11 +224,11 @@ fun EditProfileContent(
             horizontalAlignment = Alignment.Start // 좌측 정렬
         ) {
             ProfileInfoRow(label = "이메일", value = user.email)
-            Divider()
+            HorizontalDivider()
             ProfileInfoRow(label = "이름", value = user.name, onClick = onChangeNameClick) // 클릭 시 이름 변경
-            Divider()
+            HorizontalDivider()
             ProfileInfoRow(label = "상태 메시지", value = user.statusMessage ?: "상태 메시지 없음", onClick = onChangeStatusClick) // 클릭 시 상태 변경
-            Divider()
+            HorizontalDivider()
         }
     }
 }

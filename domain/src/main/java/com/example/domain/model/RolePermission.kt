@@ -1,5 +1,4 @@
-
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 /**
  * 프로젝트 내 역할에 부여될 수 있는 권한 종류를 정의하는 Enum 클래스

@@ -1,7 +1,7 @@
 // 경로: domain/repository/ProjectSettingRepository.kt (신규 생성)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.repository
+package com.example.domain.repository
 
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ProjectStructure // 또는 Category, Channel 리스트
+import com.example.domain.model.ProjectStructure
 import kotlin.Result
 
 interface ProjectSettingRepository {

@@ -1,11 +1,11 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_members.viewmodel // 경로 확인!
+package com.example.feature_project.members.viewmodel // 경로 확인!
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.ProjectMember
+import com.example.domain.repository.ProjectMemberRepository
 // Domain 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.ProjectMember
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.ProjectMemberRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

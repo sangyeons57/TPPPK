@@ -1,5 +1,5 @@
 // 경로: domain/model/Channel.kt (ProjectSettingViewModel, ProjectStructure 관련 기반)
-package com.example.teamnovapersonalprojectprojectingkotlin.domain.model
+package com.example.domain.model
 
 data class Channel(
     val id: String,

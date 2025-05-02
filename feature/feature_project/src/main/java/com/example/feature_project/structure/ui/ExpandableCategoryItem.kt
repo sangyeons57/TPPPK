@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.ui // 또는 공통 ui 패키지
+package com.example.feature_project.structure.ui // 또는 공통 ui 패키지
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -15,8 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_structure.viewmodel.ChannelType
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_project.structure.viewmodel.ChannelType
 
 // 카테고리 및 채널 정보를 담는 데이터 클래스 (호출하는 쪽에서 사용)
 // 예시: feature_project_setting/viewmodel/ProjectSettingViewModel.kt 에 정의된 모델 사용 가능

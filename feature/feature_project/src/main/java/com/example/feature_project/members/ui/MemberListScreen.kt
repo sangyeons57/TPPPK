@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_project_members.ui
+package com.example.feature_project.members.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,12 +23,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.teamnovapersonalprojectprojectingkotlin.R // 기본 이미지 리소스
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.R
+import com.example.feature_project.members.viewmodel.MemberListEvent
+import com.example.feature_project.members.viewmodel.MemberListViewModel
+import com.example.feature_project.members.viewmodel.ProjectMemberItem
 // ViewModel 및 관련 요소 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_members.viewmodel.MemberListEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_members.viewmodel.MemberListViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_project_members.viewmodel.ProjectMemberItem // ★ UI 모델 Import
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
 
 /**

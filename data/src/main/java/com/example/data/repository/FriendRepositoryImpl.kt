@@ -1,21 +1,17 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.data.repository
+package com.example.data.repository
 
-import androidx.compose.foundation.layout.add
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.Friend
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.FriendRequest
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.model.User
-import com.example.teamnovapersonalprojectprojectingkotlin.domain.repository.FriendRepository
-import com.example.teamnovapersonalprojectprojectingkotlin.util.FirestoreConstants as FC
-import com.example.teamnovapersonalprojectprojectingkotlin.util.SentryUtil
+import com.example.core_logging.SentryUtil
+import com.example.domain.model.Friend
+import com.example.domain.model.FriendRequest
+import com.example.domain.model.User
+import com.example.domain.repository.FriendRepository
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import com.example.data.util.FirestoreConstants as FC
 
 class FriendRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,

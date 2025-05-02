@@ -1,0 +1,27 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Projecting Kotlin: Programming Conventions
+
+## Naming Conventions
+
+- **Packages/Modules:** `lower_case_with_underscores`
+- **Files (.kt):** `PascalCase.kt`
+- **Classes/Interfaces/Objects/Enums:** `PascalCase` (Suffixes: `UiState`, `Event`, `ViewModel`, `Impl`)
+- **Composable Functions:** `PascalCase`
+- **Variables/Properties:** `camelCase` (`_` prefix for private mutable flows)
+- **Constants:** `SCREAMING_SNAKE_CASE`
+
+## Formatting
+
+- **Indentation:** 4-space indent.
+- **Line Length:** Standard Kotlin style guide limits.
+
+## Comments
+
+- Use `//` for single-line or KDoc `/** ... */` for documentation.
+- Explain purpose, TODOs.
+- Write comments in Korean.
+
