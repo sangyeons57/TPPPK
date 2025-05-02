@@ -15,5 +15,5 @@ alwaysApply: true
 - [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc): Explains when and how to update these rule documents.
 - [tasks-rule.mdc](mdc:.cursor/rules/tasks-rule.mdc): Defines how to handle large or complex tasks requiring multiple steps using the `.cursor/tasks/` directory.
 - [tech-stack.mdc](mdc:.cursor/rules/tech-stack.mdc): Lists the core technologies, libraries, and frameworks used in the project.
-- [testing-git-workflow.mdc](mdc:.cursor/rules/testing-git-workflow.mdc): Defines the standard workflow for test creation, validation, and code committing process.
+- [testing-git-workflow.mdc](mdc:.cursor/rules/testing-git-workflow.mdc): Defines the standard workflow for test creation, validation, and code committing process with structured markdown commit messages.
 

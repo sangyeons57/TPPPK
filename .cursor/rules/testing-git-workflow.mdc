@@ -24,11 +24,50 @@ graph TD
 
 ### 1. Test Creation
 
-- Create unit tests for all new functionality
-- Include tests for:
-  - Core business logic
-  - UI components (using appropriate test types)
+- Create comprehensive unit tests for **all new features and components**
+- **Each feature must have its own test class(es)**
+- Tests should be created for:
+  - Core business logic (ViewModel tests)
+  - UI components (Composable function tests)
   - Edge cases and error conditions
+  - Utility functions
+  
+#### 1.1. Test Class Naming Conventions
+- `<Class/Component>Test.kt` for general component tests
+- `<Class/Component>UnitTest.kt` for detailed unit tests
+- `<Class/Component>IntegrationTest.kt` for integration tests
+
+#### 1.2. Required Test Coverage
+Every new feature must include tests for:
+- **Data validation**: Input validation, boundary checks
+- **State management**: State transitions, side effects
+- **UI rendering**: Component rendering in different states
+- **User interactions**: Click handling, input processing
+- **Error handling**: Error states, recovery paths
+
+#### 1.3. Test Implementation Guidelines
+```kotlin
+// Example test structure
+class MyFeatureTest {
+    @Before
+    fun setup() {
+        // Initialize test dependencies
+    }
+    
+    @Test
+    fun `when condition then expected outcome`() {
+        // Arrange: set up test conditions
+        // Act: perform the action being tested
+        // Assert: verify expected outcomes
+    }
+    
+    // Test different scenarios for the same component/function
+    @Test
+    fun `when alternative condition then alternative outcome`() {
+        // Test implementation
+    }
+}
+```
 
 ### 2. Test Execution
 
@@ -97,25 +136,56 @@ git status
 git diff --staged
 ```
 
-#### 3.4. Commit Changes
+#### 3.4. Commit Changes with Structured Messages
 
-Commit the staged changes with a descriptive message:
+Commits must follow a structured markdown format with a clear title and detailed content:
+
 ```bash
-git commit -m "[Feature/Fix/Refactor]: Brief description"
+COMMIT_MSG="제목: 요약 내용
+
+상세 설명 (필요한 경우 여러 줄로 작성)
+- 변경 사항 1
+- 변경 사항 2
+- 변경 사항 3
+
+Closes #이슈번호 (해당되는 경우)"
+
+echo "$COMMIT_MSG" | git commit -F -
 ```
 
-For more detailed commit messages, use:
+**커밋 메시지 구조:**
+- **제목:** 간결하고 명확한 요약 (50자 이내)
+- **본문:** 필요한 경우 자세한 설명과 변경 사항 목록 (마크다운 형식 지원)
+- **푸터:** 관련 이슈 참조 (Closes, Fixes, Resolves 등)
+
+**예시 커밋 메시지:**
 ```bash
-git commit
-```
-This opens an editor where you can enter a multi-line message following this format:
-```
-[Feature/Fix/Refactor]: Brief description
+COMMIT_MSG="제목: 월간 캘린더 뷰 구현
 
-- Detailed point 1
-- Detailed point 2
+월간 캘린더 화면 및 기능 구현 완료
+- 월별 그리드 캘린더 표시 추가
+- 일자 선택 처리 기능 구현
+- 이벤트가 있는 날짜 표시 추가
+- 애니메이션과 함께 월 탐색 기능 구현
+- 상태 관리용 CalendarViewModel 연동
+
+Closes #42"
+
+echo "$COMMIT_MSG" | git commit -F -
 ```
-Include the relevant task/issue ID if applicable.
+
+```bash
+COMMIT_MSG="제목: 캘린더 컴포넌트의 날짜 선택 오류 수정
+
+- 월이 변경될 때 잘못된 날짜 하이라이팅 수정
+- 월 경계를 처리하는 날짜 계산 로직 업데이트
+- 경계 날짜 케이스에 대한 테스트 추가
+
+Fixes #57"
+
+echo "$COMMIT_MSG" | git commit -F -
+```
+
 
 #### 3.5. Push Changes
 
@@ -155,6 +225,12 @@ git status
 
 # Run tests with detailed output
 .\gradlew :feature:<module>:test --info
+
+# Run a specific test class
+.\gradlew :feature:<module>:test --tests "com.example.MyTest"
+
+# Run a specific test method
+.\gradlew :feature:<module>:test --tests "com.example.MyTest.testMethod"
 ```
 
 ### Git Commands
@@ -170,8 +246,8 @@ git add <file-path>
 # Review staged changes
 git diff --staged
 
-# Commit with message
-git commit -m "[Type]: Description"
+# Commit with structured message
+git commit -m "[Type]: Summary" -m "- Detailed point 1" -m "- Detailed point 2"
 
 # For multi-line commit messages
 git commit
@@ -182,6 +258,8 @@ git push origin <branch-name>
 # Check commit history
 git log
 ```
+
+
 
 
 
