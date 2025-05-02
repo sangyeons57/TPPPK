@@ -1,9 +1,19 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.ui
+package com.example.feature_schedule.ui
 
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
-import java.time.LocalDate
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,22 +24,36 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.*
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.Calendar24HourEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.Calendar24HourUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.Calendar24HourViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.ScheduleItem24Hour
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.ScheduleColor1
+import com.example.core_ui.theme.ScheduleColor2
+import com.example.core_ui.theme.ScheduleColor3
+import com.example.core_ui.theme.ScheduleColor4
+import com.example.core_ui.theme.ScheduleColor5
+import com.example.core_ui.theme.ScheduleColor6
+import com.example.core_ui.theme.ScheduleColor7
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_schedule.viewmodel.Calendar24HourEvent
+import com.example.feature_schedule.viewmodel.Calendar24HourUiState
+import com.example.feature_schedule.viewmodel.Calendar24HourViewModel
+import com.example.feature_schedule.viewmodel.ScheduleItem24Hour
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -49,6 +73,23 @@ fun Calendar24HourScreen(
     var currentUiState = uiState
     val snackbarHostState = remember { SnackbarHostState() }
     var showEditDialog by remember { mutableStateOf<String?>(null) } // 편집 다이얼로그 표시 상태
+    
+    // 애니메이션 상태
+    var addButtonScale by remember { mutableStateOf(1f) }
+    val addButtonScaleAnim by animateFloatAsState(
+        targetValue = addButtonScale,
+        animationSpec = tween(150),
+        label = "Add Button Scale"
+    )
+    
+    // 로딩 상태 애니메이션
+    var contentVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(currentUiState) {
+        if (currentUiState is Calendar24HourUiState.Success) {
+            delay(100) // 약간의 지연 후 콘텐츠 표시
+            contentVisible = true
+        }
+    }
 
     // 이벤트 처리
     LaunchedEffect(Unit) {
@@ -56,12 +97,19 @@ fun Calendar24HourScreen(
             when (event) {
                 is Calendar24HourEvent.NavigateBack -> onNavigateBack()
                 is Calendar24HourEvent.NavigateToAddSchedule -> {
+                    // 일정 추가 버튼 애니메이션
+                    addButtonScale = 0.8f
+                    delay(150)
+                    
                     if (currentUiState is Calendar24HourUiState.Success) {
                         val date = currentUiState.selectedDate
                         if (date != null) {
                             onNavigateToAddSchedule(date.year, date.monthValue, date.dayOfMonth)
                         }
                     }
+                    
+                    delay(50)
+                    addButtonScale = 1f
                 }
                 is Calendar24HourEvent.NavigateToScheduleDetail -> onNavigateToScheduleDetail(event.scheduleId)
                 is Calendar24HourEvent.ShowScheduleEditDialog -> showEditDialog = event.scheduleId
@@ -76,22 +124,59 @@ fun Calendar24HourScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    val titleText = when (currentUiState) {
-                        is Calendar24HourUiState.Success ->
-                            currentUiState.selectedDate?.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일")) ?: "날짜 정보 없음"
-                        is Calendar24HourUiState.Loading -> "로딩 중..."
-                        is Calendar24HourUiState.Error -> "오류"
+                    AnimatedContent(
+                        targetState = when (currentUiState) {
+                            is Calendar24HourUiState.Success ->
+                                currentUiState.selectedDate?.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일")) ?: "날짜 정보 없음"
+                            is Calendar24HourUiState.Loading -> "로딩 중..."
+                            is Calendar24HourUiState.Error -> "오류"
+                        },
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(300)) togetherWith
+                            fadeOut(animationSpec = tween(300))
+                        },
+                        label = "Top App Bar Title Animation"
+                    ) { text ->
+                        Text(text)
                     }
-                    Text(titleText)
                 },
                 navigationIcon = {
-                    IconButton(onClick = viewModel::onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
+                    var backButtonPressed by remember { mutableStateOf(false) }
+                    val backScale by animateFloatAsState(
+                        targetValue = if (backButtonPressed) 0.8f else 1f,
+                        animationSpec = tween(150),
+                        label = "Back Button Scale"
+                    )
+                    
+                    IconButton(
+                        onClick = {
+                            backButtonPressed = true
+                            viewModel.onBackClick()
+                        }
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = "뒤로 가기",
+                            modifier = Modifier.scale(backScale)
+                        )
+                    }
+                    
+                    LaunchedEffect(backButtonPressed) {
+                        if (backButtonPressed) {
+                            delay(150)
+                            backButtonPressed = false
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = viewModel::onAddScheduleClick) {
-                        Icon(Icons.Filled.Add, contentDescription = "일정 추가")
+                    IconButton(
+                        onClick = viewModel::onAddScheduleClick
+                    ) {
+                        Icon(
+                            Icons.Filled.Add, 
+                            contentDescription = "일정 추가",
+                            modifier = Modifier.scale(addButtonScaleAnim)
+                        )
                     }
                 }
             )
@@ -100,21 +185,76 @@ fun Calendar24HourScreen(
         when (currentUiState) {
             is Calendar24HourUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("일정 로딩 중...", modifier = Modifier.alpha(0.7f))
+                    }
                 }
             }
             is Calendar24HourUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("오류 발생: ${currentUiState.message}")
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(animationSpec = tween(500)) + 
+                            slideInVertically(
+                                animationSpec = tween(500, easing = LinearOutSlowInEasing),
+                                initialOffsetY = { it / 2 }
+                            )
+                ) {
+                    Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                        Card(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .widthIn(max = 300.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    "오류 발생", 
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    currentUiState.message,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = { viewModel.onBackClick() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text("돌아가기")
+                                }
+                            }
+                        }
+                    }
                 }
             }
             is Calendar24HourUiState.Success -> {
-                Calendar24HourContent(
-                    modifier = Modifier.padding(paddingValues),
-                    schedules = currentUiState.schedules,
-                    onScheduleClick = viewModel::onScheduleClick,
-                    onScheduleLongClick = viewModel::onScheduleLongClick
-                )
+                AnimatedVisibility(
+                    visible = contentVisible,
+                    enter = fadeIn(animationSpec = tween(500)) + 
+                            expandVertically(
+                                animationSpec = tween(500),
+                                expandFrom = Alignment.Top
+                            )
+                ) {
+                    Calendar24HourContent(
+                        modifier = Modifier.padding(paddingValues),
+                        schedules = currentUiState.schedules,
+                        onScheduleClick = viewModel::onScheduleClick,
+                        onScheduleLongClick = viewModel::onScheduleLongClick
+                    )
+                }
             }
         }
     }
@@ -152,11 +292,108 @@ fun Calendar24HourContent(
     val totalHeight = hourHeight * 24 // 24시간 전체 높이
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
+    val scrollState = rememberScrollState()
+    
+    // 스케줄 블록 탭 감지를 위한 맵
+    val scheduleBlocksMap = remember { mutableStateMapOf<String, androidx.compose.ui.geometry.Rect>() }
+    
+    // 스케줄 선택 애니메이션 상태
+    var selectedScheduleId by remember { mutableStateOf<String?>(null) }
+    var scheduleSelectionActive by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(selectedScheduleId) {
+        if (selectedScheduleId != null) {
+            scheduleSelectionActive = true
+            delay(200) // 애니메이션 후 초기화
+            scheduleSelectionActive = false
+            delay(50)
+            selectedScheduleId = null
+        }
+    }
+    
+    // 현재 시간 표시 애니메이션
+    val currentTimeOpacity by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 1000),
+        label = "Current Time Indicator"
+    )
 
-    Box(modifier = modifier.verticalScroll(rememberScrollState())) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(totalHeight)) {
-            drawTimeline(hourHeight, textMeasurer)
-            drawSchedules(schedules, hourHeight, onScheduleClick, onScheduleLongClick, textMeasurer)
+    Box(modifier = modifier.verticalScroll(scrollState)) {
+        // 현재 시간으로 자동 스크롤
+        LaunchedEffect(Unit) {
+            val currentHour = LocalTime.now().hour
+            val scrollToPosition = (currentHour * hourHeight.toPx()).toInt()
+            scrollState.scrollTo(scrollToPosition.coerceIn(0, scrollState.maxValue))
+        }
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(totalHeight)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            // 스케줄 블록 클릭 감지
+                            scheduleBlocksMap.forEach { (id, rect) ->
+                                if (rect.contains(offset)) {
+                                    selectedScheduleId = id
+                                    onScheduleClick(id)
+                                    return@detectTapGestures
+                                }
+                            }
+                        },
+                        onLongPress = { offset ->
+                            // 스케줄 블록 길게 누르기 감지
+                            scheduleBlocksMap.forEach { (id, rect) ->
+                                if (rect.contains(offset)) {
+                                    selectedScheduleId = id
+                                    onScheduleLongClick(id)
+                                    return@detectTapGestures
+                                }
+                            }
+                        }
+                    )
+                }
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(totalHeight)
+            ) {
+                drawTimeline(hourHeight, textMeasurer)
+                
+                // 현재 시간 표시선
+                val now = LocalTime.now()
+                val currentTimePosition = now.toSecondOfDay() / 3600f * hourHeight.toPx()
+                val timelineStartPadding = 60.dp.toPx()
+                
+                drawLine(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = currentTimeOpacity),
+                    start = Offset(timelineStartPadding, currentTimePosition),
+                    end = Offset(size.width, currentTimePosition),
+                    strokeWidth = 2.dp.toPx()
+                )
+                
+                // 현재 시간 원형 마커
+                drawCircle(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = currentTimeOpacity),
+                    radius = 4.dp.toPx(),
+                    center = Offset(timelineStartPadding, currentTimePosition)
+                )
+                
+                // 스케줄 블록 그리기
+                scheduleBlocksMap.clear() // 맵 초기화
+                drawSchedules(
+                    schedules = schedules,
+                    hourHeight = hourHeight,
+                    onScheduleClick = onScheduleClick,
+                    onScheduleLongClick = onScheduleLongClick,
+                    textMeasurer = textMeasurer,
+                    selectedId = selectedScheduleId,
+                    selectionActive = scheduleSelectionActive,
+                    scheduleBlocksMapUpdater = { id, rect -> scheduleBlocksMap[id] = rect }
+                )
+            }
         }
     }
 }
@@ -201,11 +438,17 @@ fun DrawScope.drawSchedules(
     hourHeight: Dp,
     onScheduleClick: (String) -> Unit,
     onScheduleLongClick: (String) -> Unit,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    selectedId: String? = null,
+    selectionActive: Boolean = false,
+    scheduleBlocksMapUpdater: (String, androidx.compose.ui.geometry.Rect) -> Unit
 ) {
     val hourHeightPx = hourHeight.toPx()
     val timelineStartPadding = 60.dp.toPx()
     val schedulePadding = 4.dp.toPx()
+    
+    // 알파 값 기반 애니메이션 계산
+    val selectionAlpha = if (selectionActive) 0.7f else 1.0f
 
     schedules.forEach { schedule ->
         val startY = schedule.startTime.toSecondOfDay() / 3600f * hourHeightPx
@@ -213,43 +456,81 @@ fun DrawScope.drawSchedules(
         val scheduleHeight = endY - startY
         val scheduleWidth = size.width - timelineStartPadding - schedulePadding * 2
 
-        val rectTopLeft = Offset(timelineStartPadding + schedulePadding, startY)
-        val rectSize = androidx.compose.ui.geometry.Size(scheduleWidth, scheduleHeight)
+        // 애니메이션 효과 계산
+        val isSelected = schedule.id == selectedId
+        val scale = if (isSelected && selectionActive) 1.02f else 1f
+        val alpha = if (isSelected && selectionActive) selectionAlpha else 1f
+        val shadowElevation = if (isSelected && selectionActive) 8.dp.toPx() else 2.dp.toPx()
+        
+        // 스케일 적용
+        val scaledWidth = scheduleWidth * scale
+        val scaledHeight = scheduleHeight * scale
+        val offsetX = (scheduleWidth - scaledWidth) / 2
+        val offsetY = (scheduleHeight - scaledHeight) / 2
+        
+        val rectTopLeft = Offset(
+            timelineStartPadding + schedulePadding + offsetX,
+            startY + offsetY
+        )
+        val rectSize = androidx.compose.ui.geometry.Size(scaledWidth, scaledHeight)
         val rect = androidx.compose.ui.geometry.Rect(rectTopLeft, rectSize)
+        
+        // 클릭 인식을 위한 히트 영역 기록
+        scheduleBlocksMapUpdater(schedule.id, rect)
+        
+        // 선택된 항목은 그림자 효과 추가
+        if (isSelected && selectionActive) {
+            // 그림자 효과 (단순화)
+            drawRect(
+                color = Color.Black.copy(alpha = 0.2f),
+                topLeft = Offset(rectTopLeft.x + 2.dp.toPx(), rectTopLeft.y + 2.dp.toPx()),
+                size = rectSize,
+                alpha = alpha
+            )
+        }
 
         // 스케줄 블록 배경
+        val scheduleColor = Color(schedule.color)
         drawRect(
-            color = Color(schedule.color),
+            color = scheduleColor,
             topLeft = rectTopLeft,
             size = rectSize,
-            // TODO: Round corners?
+            alpha = alpha
         )
+        
         // 스케줄 테두리
         drawRect(
-            color = Color.Black,
+            color = Color.Black.copy(alpha = 0.5f),
             topLeft = rectTopLeft,
             size = rectSize,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+            alpha = alpha
         )
 
         // 스케줄 텍스트
+        val textColor = if (isDarkColor(scheduleColor)) Color.White else Color.Black
         val textLayoutResult = textMeasurer.measure(
             text = AnnotatedString(schedule.title),
-            style = TextStyle(fontSize = 14.sp, color = Color.Black), // TODO: Color contrast
+            style = TextStyle(fontSize = 14.sp, color = textColor),
             constraints = androidx.compose.ui.unit.Constraints(
-                maxWidth = scheduleWidth.toInt() - (2 * 4.dp.toPx()).toInt() // 텍스트 좌우 패딩 고려
+                maxWidth = scaledWidth.toInt() - (2 * 4.dp.toPx()).toInt() // 텍스트 좌우 패딩 고려
             ),
-            maxLines = (scheduleHeight / (14.sp.toPx() * 1.2f)).toInt().coerceAtLeast(1), // 높이에 따라 최대 줄 수 계산
+            maxLines = (scaledHeight / (14.sp.toPx() * 1.2f)).toInt().coerceAtLeast(1), // 높이에 따라 최대 줄 수 계산
             overflow = TextOverflow.Ellipsis
         )
         drawText(
             textLayoutResult = textLayoutResult,
-            topLeft = Offset(rectTopLeft.x + 4.dp.toPx(), rectTopLeft.y + 4.dp.toPx())
+            topLeft = Offset(rectTopLeft.x + 4.dp.toPx(), rectTopLeft.y + 4.dp.toPx()),
+            alpha = alpha
         )
-
-        // --- 클릭 리스너 추가 (Canvas에서는 직접 추가 불가, Box 위에서 처리 필요) ---
-        // Canvas 외부에서 Modifier.pointerInput 사용하여 영역 감지 및 콜백 호출
     }
+}
+
+// 색상의 명암 판단 (어두운 배경색이면 밝은 텍스트, 밝은 배경색이면 어두운 텍스트 사용)
+fun isDarkColor(color: Color): Boolean {
+    // RGB 값으로 명암 판단 (간단한 휘도 계산)
+    val luminance = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue)
+    return luminance < 0.5
 }
 
 // 일정 수정/삭제 다이얼로그
@@ -260,20 +541,62 @@ fun ScheduleEditDialog(
     onDeleteClick: (String) -> Unit,
     onEditClick: (String) -> Unit
 ) {
+    var deleteButtonPressed by remember { mutableStateOf(false) }
+    var editButtonPressed by remember { mutableStateOf(false) }
+    
+    val deleteScale by animateFloatAsState(
+        targetValue = if (deleteButtonPressed) 0.9f else 1f,
+        animationSpec = tween(150),
+        label = "Delete Button Scale"
+    )
+    
+    val editScale by animateFloatAsState(
+        targetValue = if (editButtonPressed) 0.9f else 1f,
+        animationSpec = tween(150),
+        label = "Edit Button Scale"
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("일정 편집") },
         text = { Text("이 일정을 수정하거나 삭제하시겠습니까?") },
         confirmButton = {
-            TextButton(onClick = { onEditClick(scheduleId) }) {
+            TextButton(
+                onClick = { 
+                    editButtonPressed = true
+                    onEditClick(scheduleId) 
+                },
+                modifier = Modifier.scale(editScale)
+            ) {
                 Text("수정")
+            }
+            
+            LaunchedEffect(editButtonPressed) {
+                if (editButtonPressed) {
+                    delay(150)
+                    editButtonPressed = false
+                }
             }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = { onDeleteClick(scheduleId) }) {
+                TextButton(
+                    onClick = { 
+                        deleteButtonPressed = true
+                        onDeleteClick(scheduleId) 
+                    },
+                    modifier = Modifier.scale(deleteScale)
+                ) {
                     Text("삭제", color = MaterialTheme.colorScheme.error)
                 }
+                
+                LaunchedEffect(deleteButtonPressed) {
+                    if (deleteButtonPressed) {
+                        delay(150)
+                        deleteButtonPressed = false
+                    }
+                }
+                
                 Spacer(Modifier.width(8.dp))
                 TextButton(onClick = onDismiss) {
                     Text("취소")
@@ -290,9 +613,9 @@ fun ScheduleEditDialog(
 @Composable
 private fun Calendar24HourScreenPreview() {
     val sampleSchedules = listOf(
-        ScheduleItem24Hour("1", "팀 회의", LocalTime.of(10, 0), LocalTime.of(11, 30), 0xFFEF5350),
-        ScheduleItem24Hour("2", "점심 약속", LocalTime.of(12, 30), LocalTime.of(13, 30), 0xFF66BB6A),
-        ScheduleItem24Hour("3", "개인 프로젝트", LocalTime.of(15, 0), LocalTime.of(17, 0), 0xFF42A5F5)
+        ScheduleItem24Hour("1", "팀 회의", LocalTime.of(10, 0), LocalTime.of(11, 30), ScheduleColor4.value), // 미팅 일정 (노랑)
+        ScheduleItem24Hour("2", "점심 약속", LocalTime.of(12, 30), LocalTime.of(13, 30), ScheduleColor1.value), // 개인 일정 (연한 빨강)
+        ScheduleItem24Hour("3", "개인 프로젝트", LocalTime.of(15, 0), LocalTime.of(17, 0), ScheduleColor3.value) // 프로젝트 일정 (민트)
     )
     val previewState = Calendar24HourUiState.Success(LocalDate.now(), sampleSchedules)
 

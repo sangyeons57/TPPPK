@@ -1,11 +1,23 @@
 package com.example.feature_main.ui.calendar
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.theme.Dimens
@@ -66,6 +78,19 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    // FAB 애니메이션 상태
+    var isFabVisible by remember { mutableStateOf(true) }
+    val fabScale by animateFloatAsState(
+        targetValue = if (isFabVisible) 1f else 0f,
+        animationSpec = spring(),
+        label = "FAB Scale Animation"
+    )
+    
+    // 일정 섹션 진입 애니메이션 상태
+    val scheduleVisibilityState = remember {
+        MutableTransitionState(false).apply { targetState = true }
+    }
 
     // 이벤트 처리
     LaunchedEffect(viewModel) { 
@@ -75,6 +100,9 @@ fun CalendarScreen(
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
                 is CalendarEvent.ShowAddScheduleDialog -> {
+                    // FAB 클릭 애니메이션
+                    isFabVisible = false
+                    kotlinx.coroutines.delay(150) // 애니메이션 효과 지연
                     onClickFAB(
                         com.example.navigation.AddSchedule.createRoute(
                             uiState.selectedDate.year,
@@ -82,6 +110,8 @@ fun CalendarScreen(
                             uiState.selectedDate.dayOfMonth,
                         )
                     )
+                    kotlinx.coroutines.delay(50) // 애니메이션 효과 지연
+                    isFabVisible = true
                 }
                 is CalendarEvent.NavigateToScheduleDetail -> {
                     onNavigateToScheduleDetail(event.scheduleId)
@@ -99,11 +129,22 @@ fun CalendarScreen(
         }
     }
 
+    // 날짜 변경 감지
+    LaunchedEffect(uiState.selectedDate) {
+        // 선택된 날짜가 변경될 때마다 일정 섹션 애니메이션 재시작
+        scheduleVisibilityState.targetState = false
+        kotlinx.coroutines.delay(100)
+        scheduleVisibilityState.targetState = true
+    }
+
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::onAddScheduleClick) {
+            FloatingActionButton(
+                onClick = viewModel::onAddScheduleClick,
+                modifier = Modifier.scale(fabScale)
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = "일정 추가")
             }
         }
@@ -123,14 +164,22 @@ fun CalendarScreen(
             // 구분선
             HorizontalDivider()
             
-            // 선택된 날짜의 일정 섹션 (하단)
-            ScheduleSection(
-                uiState = uiState,
-                onScheduleClick = viewModel::onScheduleClick,
-                onDateClick24Hour = { date ->
-                    onNavigateToCalendar24Hour(date.year, date.monthValue, date.dayOfMonth)
-                }
-            )
+            // 선택된 날짜의 일정 섹션 (하단) - 애니메이션 적용
+            AnimatedVisibility(
+                visibleState = scheduleVisibilityState,
+                enter = fadeIn(animationSpec = tween(durationMillis = 300)) +
+                        expandVertically(animationSpec = tween(durationMillis = 300)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 200)) +
+                        shrinkVertically(animationSpec = tween(durationMillis = 200))
+            ) {
+                ScheduleSection(
+                    uiState = uiState,
+                    onScheduleClick = viewModel::onScheduleClick,
+                    onDateClick24Hour = { date ->
+                        onNavigateToCalendar24Hour(date.year, date.monthValue, date.dayOfMonth)
+                    }
+                )
+            }
         }
     }
 }
