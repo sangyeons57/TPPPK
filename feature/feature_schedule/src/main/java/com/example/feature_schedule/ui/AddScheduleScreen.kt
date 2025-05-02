@@ -1,4 +1,4 @@
-package com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.ui
+package com.example.feature_schedule.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,17 +17,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.AddScheduleEvent
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.AddScheduleUiState
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.AddScheduleViewModel
-import com.example.teamnovapersonalprojectprojectingkotlin.feature_schedule.viewmodel.ProjectSelectionItem
-import com.example.teamnovapersonalprojectprojectingkotlin.ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_schedule.viewmodel.AddScheduleEvent
+import com.example.feature_schedule.viewmodel.AddScheduleUiState
+import com.example.feature_schedule.viewmodel.AddScheduleViewModel
+import com.example.feature_schedule.viewmodel.ProjectSelectionItem
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar // 초기 시간 설정을 위해 사용
 import java.util.Locale
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 
 /**
  * AddScheduleScreen: 일정 추가 화면 (Stateful)
@@ -144,7 +148,7 @@ fun AddScheduleContent(
                 label = { Text("프로젝트") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectDropdownExpanded) },
                 modifier = Modifier
-                    .menuAnchor() // 메뉴가 TextField 아래에 열리도록 함
+                    .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true) // 메뉴가 TextField 아래에 열리도록 함
                     .fillMaxWidth(),
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
             )
@@ -315,8 +319,8 @@ fun CustomAlertDialogTimePicker(
 @Composable
 private fun AddScheduleContentPreview() {
     val sampleProjects = listOf(
-        ProjectSelectionItem(1, "개인 프로젝트"),
-        ProjectSelectionItem(2, "팀 프로젝트 A")
+        ProjectSelectionItem("1", "개인 프로젝트"),
+        ProjectSelectionItem("2", "팀 프로젝트 A")
     )
     val previewState = AddScheduleUiState(
         availableProjects = sampleProjects,
@@ -338,8 +342,8 @@ private fun AddScheduleContentPreview() {
 @Composable
 private fun AddScheduleContentWithTimePreview() {
     val sampleProjects = listOf(
-        ProjectSelectionItem(1, "개인 프로젝트"),
-        ProjectSelectionItem(2, "팀 프로젝트 A")
+        ProjectSelectionItem("1", "개인 프로젝트"),
+        ProjectSelectionItem("2", "팀 프로젝트 A")
     )
     val previewState = AddScheduleUiState(
         availableProjects = sampleProjects,
