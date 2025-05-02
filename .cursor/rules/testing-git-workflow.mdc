@@ -140,17 +140,35 @@ git diff --staged
 
 Commits must follow a structured markdown format with a clear title and detailed content:
 
-```bash
-COMMIT_MSG="제목: 요약 내용
+```powershell
+# 임시 커밋 메시지 파일 생성
+$message = @"
+제목: 요약 내용
 
 상세 설명 (필요한 경우 여러 줄로 작성)
 - 변경 사항 1
 - 변경 사항 2
 - 변경 사항 3
 
-Closes #이슈번호 (해당되는 경우)"
+Closes #이슈번호 (해당되는 경우)
+"@
 
-echo "$COMMIT_MSG" | git commit -F -
+# 임시 파일에 메시지 저장
+$tempFile = "commit_msg.txt"
+$message | Out-File -FilePath $tempFile -Encoding utf8
+
+# 파일을 사용하여 커밋
+git commit -F $tempFile
+
+# 성공 메시지 (선택사항)
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "커밋이 성공적으로 생성되었습니다." -ForegroundColor Green
+} else {
+    Write-Host "커밋 생성 중 오류가 발생했습니다." -ForegroundColor Red
+}
+
+# 임시 파일 삭제 (선택사항)
+# Remove-Item $tempFile
 ```
 
 **커밋 메시지 구조:**
@@ -159,8 +177,10 @@ echo "$COMMIT_MSG" | git commit -F -
 - **푸터:** 관련 이슈 참조 (Closes, Fixes, Resolves 등)
 
 **예시 커밋 메시지:**
-```bash
-COMMIT_MSG="제목: 월간 캘린더 뷰 구현
+```powershell
+# 임시 커밋 메시지 파일 생성
+$message = @"
+제목: 월간 캘린더 뷰 구현
 
 월간 캘린더 화면 및 기능 구현 완료
 - 월별 그리드 캘린더 표시 추가
@@ -169,23 +189,39 @@ COMMIT_MSG="제목: 월간 캘린더 뷰 구현
 - 애니메이션과 함께 월 탐색 기능 구현
 - 상태 관리용 CalendarViewModel 연동
 
-Closes #42"
+Closes #42
+"@
 
-echo "$COMMIT_MSG" | git commit -F -
+# 임시 파일에 메시지 저장 및 커밋
+$tempFile = "commit_msg.txt"
+$message | Out-File -FilePath $tempFile -Encoding utf8
+git commit -F $tempFile
 ```
 
-```bash
-COMMIT_MSG="제목: 캘린더 컴포넌트의 날짜 선택 오류 수정
+```powershell
+# 임시 커밋 메시지 파일 생성
+$message = @"
+제목: 캘린더 컴포넌트의 날짜 선택 오류 수정
 
 - 월이 변경될 때 잘못된 날짜 하이라이팅 수정
 - 월 경계를 처리하는 날짜 계산 로직 업데이트
 - 경계 날짜 케이스에 대한 테스트 추가
 
-Fixes #57"
+Fixes #57
+"@
 
-echo "$COMMIT_MSG" | git commit -F -
+# 임시 파일에 메시지 저장 및 커밋
+$tempFile = "commit_msg.txt"
+$message | Out-File -FilePath $tempFile -Encoding utf8
+git commit -F $tempFile
 ```
 
+**이 방식의 장점:**
+- PowerShell 환경에서 안정적으로 작동
+- 마크다운 형식을 통한 가독성 향상
+- 제목과 본문의 명확한 분리
+- 구조적이지만 간결한 메시지 작성 가능
+- 변경 내용을 목록 형태로 명확하게 표현
 
 #### 3.5. Push Changes
 
