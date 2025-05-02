@@ -280,6 +280,13 @@ fun DayCell(
     val today = LocalDate.now()
     val isToday = date == today
     
+    // 선택 애니메이션 (크기 변화) 다시 추가
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.15f else 1f,
+        animationSpec = tween(durationMillis = 200),
+        label = "Day Cell Scale"
+    )
+    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -289,6 +296,7 @@ fun DayCell(
             modifier = Modifier
                 .aspectRatio(1f)
                 .padding(Dimens.paddingSmall)
+                .scale(scale) // 크기 변화 애니메이션 적용
                 .clip(CircleShape)
                 .background(
                     when {
@@ -315,7 +323,7 @@ fun DayCell(
             )
         }
         
-        // 일정 표시 마커 - 고정 크기 사용
+        // 일정 표시 마커 - 바닥에 붙어있다가 일정이 생기면 생성되도록 변경
         if (hasSchedule) {
             Box(
                 modifier = Modifier
@@ -326,7 +334,8 @@ fun DayCell(
                     )
             )
         } else {
-            Spacer(modifier = Modifier.height(Dimens.markerSizeSmall))
+            // 일정이 없을 때는 높이만 확보하고 마커는 표시하지 않음
+            Box(modifier = Modifier.size(0.dp))
         }
     }
 }
@@ -424,12 +433,20 @@ fun ScheduleSection(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // 아이콘 회전 애니메이션 제거
+                        // 아이콘 회전 애니메이션 다시 추가
+                        val iconRotation by animateFloatAsState(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 1000),
+                            label = "Empty State Icon Scale"
+                        )
+                        
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(Dimens.iconSizeXLarge)
+                            modifier = Modifier
+                                .size(Dimens.iconSizeXLarge)
+                                .scale(iconRotation)
                         )
                         Spacer(modifier = Modifier.height(Dimens.paddingMedium))
                         Text(
@@ -515,7 +532,6 @@ fun ScheduleListItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 일정 카드 UI - 애니메이션 제거
     Card(
         modifier = modifier
             .fillMaxWidth()
