@@ -94,7 +94,7 @@ REM --- 2. Stage Changes ---
 echo [INFO] Staging all changes ('git add .') ...
 git add .
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Error during git add - Failed
+    echo [ERROR] Error occurred during 'git add .'^^! Aborting script
     goto EndScript
 )
 echo [SUCCESS] Changes staged successfully.
@@ -107,7 +107,7 @@ copy "%ARG_CONTENT_FILE%" "%TEMP_COMMIT_MSG_FILE%" > nul
 
 REM Check for file copy errors
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Error preparing message file - Failed
+    echo [ERROR] Error preparing commit message file^^! Aborting script
     goto ErrorCleanup
 )
 echo [SUCCESS] Commit message file prepared successfully.
@@ -121,7 +121,7 @@ set COMMIT_EXIT_CODE=%ERRORLEVEL%
 
 REM Handle commit failure and cleanup
 if %COMMIT_EXIT_CODE% neq 0 (
-    echo [ERROR] Error during git commit - Failed
+    echo [ERROR] Error occurred during 'git commit' ^(ERRORLEVEL = %%COMMIT_EXIT_CODE%%^)^^! Aborting script
     goto ErrorCleanup
 )
 echo [SUCCESS] Commit created successfully.
@@ -135,7 +135,7 @@ REM Determine the branch to push (try current branch if empty)
 if "%BRANCH_TO_PUSH%"=="" (
     echo [INFO] Push branch name not specified via --branch. Detecting current branch...
     REM 'git rev-parse --abbrev-ref HEAD' works on older Git versions too.
-    for /f "tokens=*" %%a in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "CURRENT_BRANCH=%%a"
+    for /f "tokens=*" %%a in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set CURRENT_BRANCH=%%a
     if defined CURRENT_BRANCH (
         if "%CURRENT_BRANCH%"=="HEAD" (
             echo [ERROR] Currently in detached HEAD state. Cannot detect branch automatically.
@@ -143,7 +143,7 @@ if "%BRANCH_TO_PUSH%"=="" (
             set PUSH_EXIT_CODE=1
         ) else (
             echo [INFO] Pushing to current branch '%CURRENT_BRANCH%' on remote '%REMOTE_NAME%'.
-            git push "%REMOTE_NAME%" "%CURRENT_BRANCH%"
+            git push %REMOTE_NAME% %CURRENT_BRANCH%
             set PUSH_EXIT_CODE=%ERRORLEVEL%
         )
     ) else (
@@ -152,7 +152,7 @@ if "%BRANCH_TO_PUSH%"=="" (
     )
 ) else (
     echo [INFO] Pushing to specified branch '%BRANCH_TO_PUSH%' on remote '%REMOTE_NAME%'.
-    git push "%REMOTE_NAME%" "%BRANCH_TO_PUSH%"
+    git push %REMOTE_NAME% %BRANCH_TO_PUSH%
     set PUSH_EXIT_CODE=%ERRORLEVEL%
 )
 
