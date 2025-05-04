@@ -94,7 +94,7 @@ REM --- 2. Stage Changes ---
 echo [INFO] Staging all changes ('git add .') ...
 git add .
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Error occurred during 'git add .' Aborting script
+    echo [ERROR] Error occurred during 'git add .' Script stopped
     goto EndScript
 )
 echo [SUCCESS] Changes staged successfully.
@@ -107,7 +107,7 @@ copy "%ARG_CONTENT_FILE%" "%TEMP_COMMIT_MSG_FILE%" > nul
 
 REM Check for file copy errors
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Error preparing commit message file Aborting script
+    echo [ERROR] Error preparing commit message file Script stopped
     goto ErrorCleanup
 )
 echo [SUCCESS] Commit message file prepared successfully.
@@ -121,7 +121,7 @@ set COMMIT_EXIT_CODE=%ERRORLEVEL%
 
 REM Handle commit failure and cleanup
 if %COMMIT_EXIT_CODE% neq 0 (
-    echo [ERROR] Error occurred during 'git commit' (ERRORLEVEL = %COMMIT_EXIT_CODE%) Aborting script
+    echo [ERROR] Error occurred during 'git commit' (ERRORLEVEL = %COMMIT_EXIT_CODE%) Script stopped
     goto ErrorCleanup
 )
 echo [SUCCESS] Commit created successfully.
