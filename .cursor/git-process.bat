@@ -137,7 +137,7 @@ if "%BRANCH_TO_PUSH%"=="" (
     REM 'git rev-parse --abbrev-ref HEAD' works on older Git versions too.
     for /f "tokens=*" %%a in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "CURRENT_BRANCH=%%a"
     if defined CURRENT_BRANCH (
-        if "%CURRENT_BRANCH%"=="HEAD" ( 
+        if "%CURRENT_BRANCH%"=="HEAD" (
             echo [ERROR] Currently in detached HEAD state. Cannot detect branch automatically.
             echo [ERROR] Please checkout a branch or use the --branch option.
             set PUSH_EXIT_CODE=1
@@ -158,7 +158,8 @@ if "%BRANCH_TO_PUSH%"=="" (
 
 REM Handle push failure
 if %PUSH_EXIT_CODE% neq 0 (
-    echo [ERROR] Error occurred during 'git push' (ERRORLEVEL = %PUSH_EXIT_CODE%)!
+    REM Removed the trailing '!' from the echo message below to prevent potential parsing errors
+    echo [ERROR] Error occurred during 'git push' (ERRORLEVEL = %PUSH_EXIT_CODE%)
     goto ErrorCleanup
 )
 echo [SUCCESS] Push to remote repository completed successfully.
