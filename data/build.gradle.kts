@@ -13,6 +13,11 @@ android {
         minSdk = 29
 
         consumerProguardFiles("consumer-rules.pro")
+        
+        // Room 스키마 내보내기 위치 설정
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
     }
 
     buildTypes {
@@ -56,10 +61,14 @@ dependencies {
     testImplementation(libs.androidx.arch.core.testing)
     
     // Mockito - Firebase 인증 및 콜백 테스트용
-    testImplementation("org.mockito:mockito-core:5.5.0")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.5.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.junit.jupiter)
+    testImplementation(libs.mockito.kotlin)
     
+    // MockK 테스트 의존성 추가
+    testImplementation(libs.mockk) // 예: libs.versions.toml에 mockk = "1.13.11" 추가 가정
+    // testImplementation(libs.mockk.agent.jvm) // JVM 에이전트, 문제 발생 시 주석 처리 시도
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
@@ -72,6 +81,8 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
+    // Task.await() 사용을 위한 의존성 추가
+    implementation(libs.kotlinx.coroutines.play.services) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
 
     // Also add the dependency for the Google Play services library and specify its version
     //implementation(libs.play.services.auth)
@@ -81,7 +92,16 @@ dependencies {
     // https://firebase.google.com/docs/android/setup#available-libraries
     // Firebase BoM (Bill of Materials) - Firebase 라이브러리 버전 관리를 위한 BOM
 
+    // 테스트 환경에서도 Timestamp 등을 사용하기 위해 추가
+    testImplementation(libs.firebase.firestore.ktx)
+
     // 테스트 전용 의존성
     testImplementation(libs.kotlinx.coroutines.test) // 코루틴 테스트
     testImplementation(libs.androidx.arch.core.testing) // LiveData 테스트
+
+    // Room Database 의존성 추가
+    implementation(libs.androidx.room.runtime) // 또는 implementation "androidx.room:room-runtime:2.6.1"
+    implementation(libs.androidx.room.ktx)      // 또는 implementation "androidx.room:room-ktx:2.6.1"
+    ksp(libs.androidx.room.compiler)            // 또는 ksp "androidx.room:room-compiler:2.6.1"
+    androidTestImplementation(libs.androidx.room.testing) // Room 테스트 의존성 추가
 }

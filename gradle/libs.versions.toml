@@ -1,5 +1,8 @@
 [versions]
 kotlin = "2.1.20"
+mockitoCore = "5.12.0"
+mockitoJunitJupiter = "5.10.0"
+mockitoKotlin = "5.1.0"
 pluginGoogle = "2.1.20-1.0.32"
 pluginAgp = "8.9.2"
 pluginSentry = "5.3.0"
@@ -28,11 +31,12 @@ androidxHiltNavigationCompose = "1.2.0"
 okhttp = "4.12.0"
 retrofit = "2.11.0"
 room = "2.7.1"
-sentryAndroid = "8.8.0"
+sentryAndroid = "8.10.0"
 desugarJdkLibs = "2.1.5"
 appcompat = "1.7.0"
 material = "1.12.0"
 archCoreTesting = "2.2.0"
+mockk = "1.13.11"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -83,12 +87,16 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockitoJunitJupiter" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 #Room 라이브러리
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentryAndroid" }
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -96,6 +104,9 @@ material = { group = "com.google.android.material", name = "material", version.r
 
 # 테스트 의존성
 androidx-arch-core-testing = { module = "androidx.arch.core:core-testing", version.ref = "archCoreTesting" }
+
+# MockK 라이브러리 정의 추가
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

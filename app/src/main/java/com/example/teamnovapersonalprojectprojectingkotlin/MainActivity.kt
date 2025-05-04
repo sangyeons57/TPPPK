@@ -37,6 +37,14 @@ class MainActivity : ComponentActivity() {
         FirebaseUtil.initializeApp(this) // 명시적 초기화
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
         
+        // Sentry 기본 테스트 예외 전송
+        try {
+             throw Exception("Sentry Basic Test Exception from MainActivity onCreate")
+        } catch (e: Exception) {
+             Sentry.captureException(e)
+             println(">>> Sent Sentry test exception") // Logcat 확인용
+        }
+        
         // 앱 시작 이벤트 기록
         SentryUtil.addBreadcrumb("lifecycle", "MainActivity onCreate")
         

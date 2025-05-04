@@ -8,6 +8,8 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.ZoneId
+import java.util.Date
 
 /**
  * ScheduleRepository 기능 테스트
@@ -24,6 +26,8 @@ class ScheduleRepositoryTest {
     private val testScheduleId = "test-schedule-123"
     private val testProjectId = "test-project-456"
     private val today = LocalDate.now()
+    private val zoneId = ZoneId.systemDefault()
+
     private val testSchedule = Schedule(
         id = testScheduleId,
         projectId = testProjectId,
@@ -31,7 +35,7 @@ class ScheduleRepositoryTest {
         content = "테스트 일정 내용",
         startTime = LocalDateTime.of(today.year, today.month, today.dayOfMonth, 10, 0),
         endTime = LocalDateTime.of(today.year, today.month, today.dayOfMonth, 12, 0),
-        attendees = listOf("user-1", "user-2"),
+        participants = listOf("user-1", "user-2"),
         isAllDay = false
     )
     

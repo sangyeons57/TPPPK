@@ -4,7 +4,10 @@ import com.example.domain.model.Schedule
 import com.example.domain.repository.ScheduleRepository
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
+import java.util.Date
 
 /**
  * ScheduleRepository의 가짜(Fake) 구현체
@@ -20,6 +23,15 @@ class FakeScheduleRepository : ScheduleRepository {
     // 에러 시뮬레이션을 위한 설정
     private var shouldSimulateError = false
     private var errorToSimulate: Exception = Exception("Simulated error")
+
+    // 시간 변환 시 UTC 시간대 사용 (구현체와 동일하게)
+    private val zoneId = ZoneId.of("UTC")
+
+    // Date를 LocalDate로 변환하는 확장 함수 (편의용)
+    // Fake 구현체 내부 시간 비교 등에 사용되므로 UTC 기준으로 변환
+    private fun Date.toLocalDate(): LocalDate {
+        return this.toInstant().atZone(zoneId).toLocalDate()
+    }
     
     /**
      * 테스트를 위해 일정 데이터 추가
@@ -60,7 +72,8 @@ class FakeScheduleRepository : ScheduleRepository {
         
         // 해당 날짜에 속하는 일정 필터링
         val filteredSchedules = schedules.values.filter { schedule ->
-            val scheduleStartDate = schedule.startTime.toLocalDate()
+            // Date를 LocalDate로 변환하여 비교
+            val scheduleStartDate = schedule.startTime.toLocalDate() 
             val scheduleEndDate = schedule.endTime.toLocalDate()
             
             // 일정 기간 내에 요청된 날짜가 포함되는지 확인
@@ -71,7 +84,7 @@ class FakeScheduleRepository : ScheduleRepository {
         return Result.success(filteredSchedules)
     }
 
-    override suspend fun getScheduleSummaryForMonth(month: YearMonth): Result<Set<LocalDate>> {
+    override suspend fun getScheduleSummaryForMonth(yearMonth: YearMonth): Result<Set<LocalDate>> {
         // 에러 시뮬레이션 확인
         simulateErrorIfNeeded<Set<LocalDate>>()?.let { return it }
         
@@ -79,19 +92,20 @@ class FakeScheduleRepository : ScheduleRepository {
         val datesWithSchedules = mutableSetOf<LocalDate>()
         
         // 해당 월의 모든 날짜 범위
-        val startDate = month.atDay(1)
-        val endDate = month.atEndOfMonth()
+        val startDateOfMonth = yearMonth.atDay(1)
+        val endDateOfMonth = yearMonth.atEndOfMonth()
         
         // 각 일정에 대해 해당 월에 포함되는 날짜 추가
         schedules.values.forEach { schedule ->
+             // Date를 LocalDate로 변환하여 비교
             val scheduleStartDate = schedule.startTime.toLocalDate()
             val scheduleEndDate = schedule.endTime.toLocalDate()
             
-            // 일정 시작일부터 종료일까지 순회
+            // 일정 시작일부터 종료일까지 순회 (LocalDate 사용)
             var currentDate = scheduleStartDate
             while (!currentDate.isAfter(scheduleEndDate)) {
-                // 요청된 월에 포함되는 날짜만 추가
-                if (!currentDate.isBefore(startDate) && !currentDate.isAfter(endDate)) {
+                // 요청된 월에 포함되는 날짜만 추가 (LocalDate 사용)
+                if (!currentDate.isBefore(startDateOfMonth) && !currentDate.isAfter(endDateOfMonth)) {
                     datesWithSchedules.add(currentDate)
                 }
                 currentDate = currentDate.plusDays(1)
@@ -120,7 +134,8 @@ class FakeScheduleRepository : ScheduleRepository {
             return Result.failure(IllegalArgumentException("Schedule title cannot be blank"))
         }
         
-        if (schedule.endTime.isBefore(schedule.startTime)) {
+        // Instant로 변환하여 비교 (UTC 기준)
+        if (schedule.endTime.atZone(zoneId).toInstant().isBefore(schedule.startTime.atZone(zoneId).toInstant())) { 
             return Result.failure(IllegalArgumentException("End time cannot be before start time"))
         }
         
@@ -159,7 +174,8 @@ class FakeScheduleRepository : ScheduleRepository {
             return Result.failure(IllegalArgumentException("Schedule title cannot be blank"))
         }
         
-        if (schedule.endTime.isBefore(schedule.startTime)) {
+        // Instant로 변환하여 비교 (UTC 기준)
+        if (schedule.endTime.atZone(zoneId).toInstant().isBefore(schedule.startTime.atZone(zoneId).toInstant())) {
             return Result.failure(IllegalArgumentException("End time cannot be before start time"))
         }
         

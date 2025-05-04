@@ -23,24 +23,29 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog // 기본 Dialog 사용
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 
-// --- 데이터 모델 (호출하는 쪽에서 정의하고 전달해야 함) ---
-// 이 파일 내에 둘 수도 있지만, 보통 ViewModel과 공유하므로 별도 파일이나 ViewModel 내부에 정의
+/**
+ * 사용자 검색 결과를 표현하는 데이터 클래스
+ * 
+ * @param userId 사용자 ID
+ * @param userName 사용자 이름
+ * @param userEmail 사용자 이메일 (nullable)
+ * @param profileImageUrl 프로필 이미지 URL (nullable)
+ */
 data class UserSearchResult(
     val userId: String,
     val userName: String,
-    val userEmail: String?, // 또는 다른 식별자
+    val userEmail: String?,
     val profileImageUrl: String?
 )
 
-
 /**
- * AddMemberDialog: 프로젝트에 멤버를 검색하고 추가하는 다이얼로그 Composable
+ * 프로젝트에 멤버를 검색하고 추가하는 다이얼로그 Composable
  *
  * @param onDismissRequest 다이얼로그 닫기 요청 콜백
  * @param onAddMembers 선택된 사용자 목록(ID)으로 멤버 추가 요청 콜백
@@ -55,25 +60,23 @@ data class UserSearchResult(
 @Composable
 fun AddMemberDialog(
     onDismissRequest: () -> Unit,
-    onAddMembers: (Set<String>) -> Unit, // 선택된 사용자 ID Set 전달
+    onAddMembers: (Set<String>) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     searchResults: List<UserSearchResult>,
-    selectedUsers: Set<String>, // userId Set
-    onUserSelectionChange: (String, Boolean) -> Unit, // userId, isSelected
+    selectedUsers: Set<String>,
+    onUserSelectionChange: (String, Boolean) -> Unit,
     isLoading: Boolean,
     error: String?
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
 
-    // Dialog Composable 사용
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            shape = MaterialTheme.shapes.large, // 다이얼로그 모양
+            shape = MaterialTheme.shapes.large,
             modifier = Modifier
                 .fillMaxWidth()
-                // 높이 제한 (화면 크기에 따라 조절 가능)
                 .heightIn(min = 200.dp, max = 600.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
@@ -81,7 +84,6 @@ fun AddMemberDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 사용자 검색 필드
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
@@ -92,7 +94,7 @@ fun AddMemberDialog(
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { onSearchQueryChange("") }) { // 검색어 지우기
+                            IconButton(onClick = { onSearchQueryChange("") }) {
                                 Icon(Icons.Filled.Clear, contentDescription = "지우기")
                             }
                         }
@@ -100,15 +102,13 @@ fun AddMemberDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = {
-                        focusManager.clearFocus() // 검색 실행 시 키보드 숨김
-                        // TODO: ViewModel에서 검색 실행 로직 호출 (현재는 onChange에서 debounce로 처리 가정)
+                        focusManager.clearFocus()
                     })
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 검색 결과 목록 영역
-                Box(modifier = Modifier.weight(1f)) { // 남은 공간 채우기
+                Box(modifier = Modifier.weight(1f)) {
                     when {
                         isLoading -> {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -126,7 +126,6 @@ fun AddMemberDialog(
                             }
                         }
                         else -> {
-                            // 검색 결과 목록 (스크롤 가능)
                             LazyColumn(modifier = Modifier.fillMaxSize()) {
                                 items(
                                     items = searchResults,
@@ -147,10 +146,9 @@ fun AddMemberDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // 하단 버튼 영역
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End // 버튼 오른쪽 정렬
+                    horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismissRequest) {
                         Text("취소")
@@ -158,7 +156,7 @@ fun AddMemberDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { onAddMembers(selectedUsers) },
-                        enabled = selectedUsers.isNotEmpty() // 선택된 사용자가 있을 때만 활성화
+                        enabled = selectedUsers.isNotEmpty()
                     ) {
                         Text("추가")
                     }
@@ -167,14 +165,18 @@ fun AddMemberDialog(
         }
     }
 
-    // 다이얼로그가 처음 표시될 때 검색 필드에 포커스
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
 }
 
 /**
- * UserSearchResultItem: 사용자 검색 결과 목록의 각 항목 UI
+ * 사용자 검색 결과 목록의 각 항목 UI
+ * 
+ * @param user 표시할 사용자 검색 결과 정보
+ * @param isSelected 사용자가 선택되었는지 여부
+ * @param onCheckedChange 선택 상태 변경 콜백
+ * @param modifier 커스텀 모디파이어
  */
 @Composable
 fun UserSearchResultItem(
@@ -186,7 +188,7 @@ fun UserSearchResultItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!isSelected) } // 행 클릭으로 선택/해제
+            .clickable { onCheckedChange(!isSelected) }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -197,98 +199,109 @@ fun UserSearchResultItem(
                 .placeholder(R.drawable.ic_account_circle_24)
                 .build(),
             contentDescription = "${user.userName} 프로필",
-            modifier = Modifier.size(40.dp).clip(CircleShape),
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(user.userName, style = MaterialTheme.typography.bodyLarge)
-            if (user.userEmail != null) {
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = user.userName,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            user.userEmail?.let {
                 Text(
-                    user.userEmail,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+
         Checkbox(
             checked = isSelected,
-            onCheckedChange = null // Row 클릭으로 처리
+            onCheckedChange = onCheckedChange
         )
     }
 }
 
-
-// --- Preview ---
-@Preview(showBackground = true, widthDp = 360)
+/**
+ * 미리보기: 멤버 추가 다이얼로그
+ */
+@Preview(showBackground = true)
 @Composable
-private fun AddMemberDialogPreview_Results() {
-    val searchResults = remember {
-        mutableStateListOf(
-            UserSearchResult("u1", "김철수", "chul@example.com", null),
-            UserSearchResult("u2", "이영희", "young@example.com", "url..."),
-            UserSearchResult("u3", "박민준", "min@example.com", null)
+fun AddMemberDialogPreview() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        AddMemberDialog(
+            onDismissRequest = {},
+            onAddMembers = {},
+            searchQuery = "김",
+            onSearchQueryChange = {},
+            searchResults = listOf(
+                UserSearchResult(
+                    userId = "user1",
+                    userName = "김영희",
+                    userEmail = "kim@example.com",
+                    profileImageUrl = null
+                ),
+                UserSearchResult(
+                    userId = "user2",
+                    userName = "김철수",
+                    userEmail = "kim2@example.com",
+                    profileImageUrl = null
+                )
+            ),
+            selectedUsers = setOf("user1"),
+            onUserSelectionChange = { _, _ -> },
+            isLoading = false,
+            error = null
         )
     }
-    val selectedUsers = remember { mutableStateOf(setOf("u2")) }
-
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        // 다이얼로그 프리뷰를 위해 Box 사용
-        Box(modifier = Modifier.fillMaxSize()) {
-            AddMemberDialog(
-                onDismissRequest = { },
-                onAddMembers = {},
-                searchQuery = "김",
-                onSearchQueryChange = {},
-                searchResults = searchResults,
-                selectedUsers = selectedUsers.value,
-                onUserSelectionChange = { userId, isSelected ->
-                    if (isSelected) selectedUsers.value += userId
-                    else selectedUsers.value -= userId
-                },
-                isLoading = false,
-                error = null
-            )
-        }
-    }
 }
 
-@Preview(showBackground = true, widthDp = 360)
+/**
+ * 미리보기: 로딩 중인 멤버 추가 다이얼로그
+ */
+@Preview(showBackground = true)
 @Composable
-private fun AddMemberDialogPreview_Loading() {
+fun AddMemberDialogLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            AddMemberDialog(
-                onDismissRequest = { },
-                onAddMembers = {},
-                searchQuery = "박",
-                onSearchQueryChange = {},
-                searchResults = emptyList(),
-                selectedUsers = emptySet(),
-                onUserSelectionChange = { _, _ -> },
-                isLoading = true,
-                error = null
-            )
-        }
+        AddMemberDialog(
+            onDismissRequest = {},
+            onAddMembers = {},
+            searchQuery = "김",
+            onSearchQueryChange = {},
+            searchResults = emptyList(),
+            selectedUsers = emptySet(),
+            onUserSelectionChange = { _, _ -> },
+            isLoading = true,
+            error = null
+        )
     }
 }
 
-@Preview(showBackground = true, widthDp = 360)
+/**
+ * 미리보기: 오류가 발생한 멤버 추가 다이얼로그
+ */
+@Preview(showBackground = true)
 @Composable
-private fun AddMemberDialogPreview_Empty() {
+fun AddMemberDialogErrorPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            AddMemberDialog(
-                onDismissRequest = { },
-                onAddMembers = {},
-                searchQuery = "없는사용자",
-                onSearchQueryChange = {},
-                searchResults = emptyList(),
-                selectedUsers = emptySet(),
-                onUserSelectionChange = { _, _ -> },
-                isLoading = false,
-                error = null
-            )
-        }
+        AddMemberDialog(
+            onDismissRequest = {},
+            onAddMembers = {},
+            searchQuery = "김",
+            onSearchQueryChange = {},
+            searchResults = emptyList(),
+            selectedUsers = emptySet(),
+            onUserSelectionChange = { _, _ -> },
+            isLoading = false,
+            error = "사용자 검색 중 오류가 발생했습니다."
+        )
     }
-}
+} 

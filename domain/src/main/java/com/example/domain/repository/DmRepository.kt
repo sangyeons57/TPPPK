@@ -8,5 +8,7 @@ import kotlin.Result
 interface DmRepository {
     fun getDmListStream(): Flow<List<DmConversation>>
     suspend fun fetchDmList(): Result<Unit>
+    suspend fun createDmChannel(otherUserId: String): Result<String>
+    suspend fun deleteDmChannel(dmId: String): Result<Unit>
     // 필요시 DM 생성, 삭제 등 함수 추가
 }

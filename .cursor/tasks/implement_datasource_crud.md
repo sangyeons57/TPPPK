@@ -1,0 +1,60 @@
+# Task: 데이터 소스 CRUD 기능 구현 및 기본 규칙/색인 설정
+
+- [x] 1. Schedule 데이터 소스 CRUD 구현
+    - [x] 1.1. Remote (Firestore) CRUD 구현 (`ScheduleRemoteDataSourceImpl`)
+        - [x] `getSchedulesForDate` 구현
+        - [x] `getSchedulesForMonth` 구현
+        - [x] `getScheduleDetail` 구현
+        - [x] `addSchedule` 구현
+        - [x] `deleteSchedule` 구현
+        - [x] `updateSchedule` 구현
+    - [x] 1.2. Local (Room) 설정 및 CRUD 구현
+        - [x] 1.2.1. `ScheduleEntity` 정의 (`data/model/local`)
+        - [x] 1.2.2. `ScheduleDao` 정의 및 CRUD 메서드 추가 (`data/db/dao`)
+        - [x] 1.2.3. `AppDatabase`에 `ScheduleEntity` 및 `ScheduleDao` 추가 (`data/db`)
+        - [x] 1.2.4. Hilt 모듈에서 `ScheduleDao` 제공 설정 (`data/di`)
+        - [x] 1.2.5. `ScheduleLocalDataSourceImpl`에서 `ScheduleDao` 사용하여 CRUD 구현
+- [x] 2. User 데이터 소스 CRUD 구현
+    - [x] 2.1. Remote (Firestore) CRUD 구현 (`UserRemoteDataSourceImpl`)
+        - [x] `getUserProfile` 구현
+        - [x] `updateUserProfile` 구현
+    - [x] 2.2. Local (Room) 설정 및 CRUD 구현
+        - [x] 2.2.1. `UserEntity` 정의 (`data/model/local`)
+        - [x] 2.2.2. `UserDao` 정의 및 CRUD 메서드 추가 (`data/db/dao`)
+        - [x] 2.2.3. `AppDatabase`에 `UserEntity` 및 `UserDao` 추가 (`data/db`)
+        - [x] 2.2.4. Hilt 모듈에서 `UserDao` 제공 설정 (`data/di`)
+        - [x] 2.2.5. `UserLocalDataSourceImpl`에서 `UserDao` 사용하여 CRUD 구현
+- [x] 3. Project 데이터 소스 CRUD 구현
+    - [x] 3.1. Remote (Firestore) CRUD 구현 (`ProjectRemoteDataSourceImpl`)
+        - [x] `getParticipatingProjects` 구현
+        - [x] `getProjectDetails` 구현
+        - [x] `createProject` 구현
+    - [x] 3.2. Local (Room) 설정 및 CRUD 구현
+        - [x] 3.2.1. `ProjectEntity` 정의 (`data/model/local`)
+        - [x] 3.2.2. `ProjectDao` 정의 및 CRUD 메서드 추가 (`data/db/dao`)
+        - [x] 3.2.3. `AppDatabase`에 `ProjectEntity` 및 `ProjectDao` 추가 (`data/db`)
+        - [x] 3.2.4. Hilt 모듈에서 `ProjectDao` 제공 설정 (`data/di`)
+        - [x] 3.2.5. `ProjectLocalDataSourceImpl`에서 `ProjectDao` 사용하여 CRUD 구현
+- [x] 4. Chat 데이터 소스 CRUD 구현
+    - [x] 4.1. Remote (Firestore) CRUD 구현 (`ChatRemoteDataSourceImpl`)
+        - [x] `getMessages` 구현 (페이징 처리)
+        - [x] `sendMessage` 구현
+        - [x] `editMessage` 구현
+        - [x] `deleteMessage` 구현
+    - [x] 4.2. Local (Room) 설정 및 CRUD 구현
+        - [x] 4.2.1. `ChatMessageEntity` 정의 (`data/model/local`)
+        - [x] 4.2.2. `ChatDao` 정의 및 CRUD 메서드 추가 (`data/db/dao`)
+        - [x] 4.2.3. `AppDatabase`에 `ChatMessageEntity` 및 `ChatDao` 추가 (`data/db`)
+        - [x] 4.2.4. Hilt 모듈에서 `ChatDao` 제공 설정 (`data/di`)
+        - [x] 4.2.5. `ChatLocalDataSourceImpl`에서 `ChatDao` 사용하여 CRUD 구현
+- [x] 5.1. Firestore 기본 보안 규칙 설정 (`firestore.rules`)
+    - [x] 기본 접근 차단 (인증 필수)
+    - [x] `/users/{userId}` 본인 문서 읽기/쓰기 허용
+    - [x] 기타 컬렉션 (schedules, projects 등) 인증된 사용자 읽기/쓰기 허용 (추후 세분화)
+- [x] 5.2. Storage 기본 보안 규칙 설정 (`storage.rules`)
+    - [x] 기본 접근 차단 (인증 필수)
+    - [x] `/users/{userId}/` 경로 하위 파일 본인 읽기/쓰기 허용
+- [x] 6. Firestore 복합 색인 샘플 정의 (`firestore.indexes.json`)
+    - [x] `schedules` 컬렉션: `projectId` 필터링 및 `startTime` 오름차순 정렬 색인 예시 추가
+    - [x] `schedules` 컬렉션: `participants` 배열 포함 필터링 및 `startTime` 내림차순 정렬 색인 예시 추가
+    - [x] (필요 시 추가적인 컬렉션 및 필드 조합 색인 정의) 

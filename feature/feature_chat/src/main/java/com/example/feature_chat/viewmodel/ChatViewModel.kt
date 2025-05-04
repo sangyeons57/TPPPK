@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
@@ -31,6 +32,12 @@ import javax.inject.Inject
 private fun ChatMessage.toUiModel(myUserId: Int, tempIdGenerator: () -> String): ChatMessageUiModel {
     // 시간 포맷팅 (오전/오후 h:mm 형식, 한국어)
     val formatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+
+    // UTC LocalDateTime을 사용자의 로컬 시간대로 변환
+    val localSentAt = this.sentAt.atZone(ZoneId.of("UTC"))
+        .withZoneSameInstant(ZoneId.systemDefault())
+        .toLocalDateTime()
+
     return ChatMessageUiModel(
         localId = tempIdGenerator(), // 실제 ID 또는 임시 ID 사용
         chatId = this.chatId,
@@ -38,7 +45,7 @@ private fun ChatMessage.toUiModel(myUserId: Int, tempIdGenerator: () -> String):
         userName = this.userName,
         userProfileUrl = this.userProfileUrl,
         message = this.message,
-        formattedTimestamp = this.sentAt.format(formatter),
+        formattedTimestamp = localSentAt.format(formatter), // 변환된 로컬 시간 포맷팅
         isModified = this.isModified,
         attachmentImageUrls = this.attachmentImageUrls,
         isMyMessage = this.userId == myUserId

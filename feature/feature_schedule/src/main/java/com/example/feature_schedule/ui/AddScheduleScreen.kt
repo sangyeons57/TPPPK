@@ -32,6 +32,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import kotlinx.coroutines.delay
 
 /**
  * AddScheduleScreen: 일정 추가 화면 (Stateful)
@@ -49,19 +50,23 @@ fun AddScheduleScreen(
 
 
     // 이벤트 처리
-    LaunchedEffect(Unit) {
+    LaunchedEffect(viewModel) { 
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AddScheduleEvent.NavigateBack -> onNavigateBack()
-                is AddScheduleEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is AddScheduleEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
+                }
             }
         }
     }
 
-    // 저장 성공 시 뒤로 가기
+    // 저장 성공 시 자동 뒤로가기
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
-            onNavigateBack()
+            // 스낵바가 보이도록 잠시 대기
+            delay(1000)
+            viewModel.navigateBack()
         }
     }
 
@@ -142,7 +147,7 @@ fun AddScheduleContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = uiState.selectedProject?.name ?: "프로젝트 선택",
+                value = uiState.selectedProject?.name ?: "개인 일정",
                 onValueChange = {}, // 읽기 전용
                 readOnly = true,
                 label = { Text("프로젝트") },

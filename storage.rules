@@ -5,8 +5,17 @@ rules_version = '2';
 //    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // 기본적으로 인증된 사용자만 접근 허용
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
     }
+
+    // 사용자는 자신의 폴더(/users/{userId}/) 하위 파일만 읽고 쓸 수 있음
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 참고: 프로젝트 관련 파일 등 다른 경로에 대한 규칙은 필요에 따라 추가
+    // 예: match /projects/{projectId}/{allPaths=**} { ... }
   }
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
@@ -22,6 +23,7 @@ data class ProjectSelectionItem(
     val id: String,
     val name: String
 )
+const val PERSONAL_SCHEDULE_PROJECT_ID = "-1" // 개인 일정을 나타내는 상수 ID
 
 // --- UI 상태 ---
 data class AddScheduleUiState(
@@ -79,19 +81,27 @@ class AddScheduleViewModel @Inject constructor(
 
     private fun loadAvailableProjects() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            
+            // 개인 일정 옵션 기본 추가
+            val personalScheduleOption = ProjectSelectionItem(id = PERSONAL_SCHEDULE_PROJECT_ID, name = "개인 일정")
+            _uiState.update { it.copy(isLoading = true, availableProjects = listOf(personalScheduleOption), selectedProject = null) } // selectedProject를 null로 초기화 (개인 일정이 기본값)
+
             val result = projectRepository.getAvailableProjectsForScheduling()
-            
+
             if (result.isSuccess) {
-                val projects = result.getOrNull()?.map { project ->
+                val fetchedProjects = result.getOrNull()?.map { project ->
                     ProjectSelectionItem(
                         id = project.id.toString(),
                         name = project.name
                     )
                 } ?: emptyList()
-                
-                _uiState.update { it.copy(isLoading = false, availableProjects = projects) }
+
+                // 개인 일정 옵션과 불러온 프로젝트 목록 합치기
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        availableProjects = listOf(personalScheduleOption) + fetchedProjects
+                    )
+                }
             } else {
                 _uiState.update { 
                     it.copy(
@@ -104,7 +114,12 @@ class AddScheduleViewModel @Inject constructor(
     }
 
     fun onProjectSelected(project: ProjectSelectionItem) {
-        _uiState.update { it.copy(selectedProject = project) }
+        if (project.id == PERSONAL_SCHEDULE_PROJECT_ID) {
+            // "개인 일정" 선택 시 selectedProject를 null로 설정
+            _uiState.update { it.copy(selectedProject = null) }
+        } else {
+            _uiState.update { it.copy(selectedProject = project) }
+        }
     }
 
     fun onTitleChange(title: String) {
@@ -150,7 +165,7 @@ class AddScheduleViewModel @Inject constructor(
     fun onSaveClick() {
         val currentState = _uiState.value
         val date = currentState.selectedDate
-        val project = currentState.selectedProject
+        val project = currentState.selectedProject // null일 수 있음
         val title = currentState.scheduleTitle.trim()
         val content = currentState.scheduleContent.trim()
         val start = currentState.startTime
@@ -158,10 +173,11 @@ class AddScheduleViewModel @Inject constructor(
 
         // 필수 입력 값 유효성 검사
         var hasError = false
-        if (project == null) {
-            _uiState.update { it.copy(errorMessage = "프로젝트를 선택해주세요.") } // 일반 에러로 표시
-            hasError = true
-        }
+        // 프로젝트 선택은 필수가 아니므로 검사 제거
+//        if (project == null) {
+//            _uiState.update { it.copy(errorMessage = "프로젝트를 선택해주세요.") } // 일반 에러로 표시
+//            hasError = true
+//        }
         if (title.isBlank()) {
             _uiState.update { it.copy(titleError = "일정 제목을 입력해주세요.") }
             hasError = true
@@ -181,16 +197,29 @@ class AddScheduleViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            
-            // Schedule 객체 생성
+
+            // 로컬 LocalDateTime 생성
+            val localStartTime = LocalDateTime.of(date, start!!)
+            val localEndTime = LocalDateTime.of(date, end!!)
+
+            // UTC LocalDateTime으로 변환
+            val utcStartTime = localStartTime.atZone(ZoneId.systemDefault())
+                                        .withZoneSameInstant(ZoneId.of("UTC"))
+                                        .toLocalDateTime()
+            val utcEndTime = localEndTime.atZone(ZoneId.systemDefault())
+                                    .withZoneSameInstant(ZoneId.of("UTC"))
+                                    .toLocalDateTime()
+
+            // Schedule 객체 생성 (UTC 시간 사용)
+            // project가 null이면 projectId도 null이 됨
             val schedule = Schedule(
                 id = UUID.randomUUID().toString(),
                 projectId = project?.id,
                 title = title,
                 content = content.takeIf { it.isNotEmpty() }, // 내용 없으면 null
-                startTime = LocalDateTime.of(date, start),
-                endTime = LocalDateTime.of(date, end),
-                attendees = listOf(), // 초기에는 빈 리스트
+                startTime = utcStartTime,
+                endTime = utcEndTime,
+                participants = listOf(), // 초기에는 빈 리스트
                 isAllDay = false // 기본적으로 false
             )
             
@@ -205,7 +234,7 @@ class AddScheduleViewModel @Inject constructor(
                     it.copy(
                         isLoading = false, 
                         errorMessage = "일정 저장 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"
-                    ) 
+                    )
                 }
             }
         }
@@ -213,5 +242,11 @@ class AddScheduleViewModel @Inject constructor(
 
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+    
+    fun navigateBack() {
+        viewModelScope.launch {
+            _eventFlow.emit(AddScheduleEvent.NavigateBack)
+        }
     }
 }

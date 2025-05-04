@@ -33,17 +33,10 @@ import java.time.LocalDate
 fun MainScreen(
     // navController 파라미터 제거
     modifier: Modifier = Modifier,
-    // --- 외부 네비게이션을 위한 람다 파라미터 추가 ---
-    onNavigateToAddProject: () -> Unit,
-    onNavigateToFriends: () -> Unit,
-    onNavigateToSettings: () -> Unit, // 예시: 설정 화면 이동
-    onLogout: () -> Unit,
-    onNavigateToScheduleDetail: (String) -> Unit, // 예시: Schedule ID 필요
-    onNavigateToAddSchedule: (Int, Int, Int) -> Unit, // 예시: Year, Month, Day 필요
-    onNavigateToCalendar24Hour: (Int, Int, Int) -> Unit, // 예시: Year, Month, Day 필요
-    // 필요한 다른 외부 네비게이션 람다 추가...
-    // -----------------------------------------
-    // TODO: MainViewModel 필요 시 주입
+    // 외부 네비게이션을 위한 간소화된 람다들
+    onNavigate: (String) -> Unit,
+    onNavigateWithArgs: (String, androidx.navigation.NavOptions?) -> Unit,
+    shouldRefreshCalendar: Boolean = false
 ) {
     // 중첩된 NavHost를 위한 별도의 NavController 생성 (기존과 동일)
     val nestedNavController = rememberNavController()
@@ -54,45 +47,36 @@ fun MainScreen(
         // mainScreenBottomBar는 nestedNavController를 사용하므로 변경 없음
         bottomBar = mainScreenBottomBar(nestedNavController),
     ) { innerPadding ->
-
-        // 중첩된 NavHost: 하단 네비게이션
         NavHost(
-            navController = nestedNavController, // 중첩 NavController 사용
+            navController = nestedNavController,
             startDestination = MainBottomNavDestination.Home.route,
-            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()) // 하단 패딩 적용
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable(MainBottomNavDestination.Home.route) {
                 HomeScreen(
-                    // HomeScreen이 필요로 하는 네비게이션 람다 전달
-                    onNavigateToAddProject = onNavigateToAddProject // MainScreen이 받은 람다 전달
-                    // HomeScreen 내에서 다른 화면으로 이동 필요 시 추가 람다 전달
-                    // navController = nestedNavController 제거
+                    onNavigateToAddProject = { onNavigate(com.example.navigation.AddProject.route) }
                 )
             }
+            
             composable(MainBottomNavDestination.Calendar.route) {
                 CalendarScreen(
-                    // CalendarScreen이 필요로 하는 네비게이션 람다 전달
-                    onClickFAB = { route ->
-                        // route 분석 또는 직접 람다 전달 방식 수정 필요
-                        // 예: onNavigateToAddSchedule 람다 직접 사용
-                        val today = LocalDate.now() // 예시 날짜
-                        onNavigateToAddSchedule(today.year, today.monthValue, today.dayOfMonth)
+                    onClickFAB = { route -> onNavigate(route) },
+                    onNavigateToScheduleDetail = { scheduleId -> 
+                        onNavigate(com.example.navigation.ScheduleDetail.createRoute(scheduleId))
                     },
-                    onNavigateToScheduleDetail = onNavigateToScheduleDetail,
-                    onNavigateToCalendar24Hour = { year, month, day -> 
-                        // 24시간 캘린더 뷰로 이동
-                        onNavigateToCalendar24Hour(year, month, day)
-                    }
+                    onNavigateToCalendar24Hour = { year, month, day ->
+                        onNavigate(com.example.navigation.Calendar24Hour.createRoute(year, month, day))
+                    },
+                    shouldRefreshCalendar = shouldRefreshCalendar // 일정 추가 후 갱신 플래그 전달
                 )
             }
             composable(MainBottomNavDestination.Profile.route) {
                 ProfileScreen(
                     // ProfileScreen이 필요로 하는 네비게이션 람다 전달
-                    onLogout = onLogout, // MainScreen이 받은 람다 전달
-                    onClickSettings = onNavigateToSettings, // MainScreen이 받은 람다 전달
-                    onClickFriends = onNavigateToFriends, // MainScreen이 받은 람다 전달
-                    onClickStatus = { /* TODO: 상태 변경 다이얼로그 등 내부 처리 또는 람다 */ }
-                    // navController = nestedNavController 제거
+                    onLogout = { /* TODO: Implement logout */ },
+                    onClickSettings = { /* TODO: Implement settings navigation */ },
+                    onClickFriends = { /* TODO: Implement friends navigation */ },
+                    onClickStatus = { /* TODO: Implement status change dialog or lambda */ }
                 )
             }
         }

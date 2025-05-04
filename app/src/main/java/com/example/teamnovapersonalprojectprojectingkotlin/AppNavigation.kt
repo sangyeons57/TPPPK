@@ -157,26 +157,21 @@ fun AppNavigation(
 
         // ★ MainScreen 호출 부분 ★
         composable(route = Main.route) {
-            MainScreen( // MainScreen 호출 및 외부 네비게이션 람다 전달
-                onNavigateToAddProject = { navController.navigate(AddProject.route) },
-                onNavigateToFriends = { navController.navigate(Friends.route) },
-                onNavigateToSettings = { /* navController.navigate(Settings.route) */ },
-                onLogout = {
-                    navController.navigate(Login.route) {
-                        popUpTo(Main.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToScheduleDetail = { scheduleId ->
-                    navController.navigate(ScheduleDetail.createRoute(scheduleId))
-                },
-                onNavigateToAddSchedule = { year, month, day ->
-                    navController.navigate(AddSchedule.createRoute(year, month, day))
-                },
-                onNavigateToCalendar24Hour = { year, month, day ->
-                    navController.navigate(Calendar24Hour.createRoute(year, month, day))
-                },
-                // ... MainScreen이 필요로 하는 다른 외부 네비게이션 람다 ...
+            // MainScreen으로 Calendar refresh를 위한 savedStateHandle 전달
+            val navBackStackEntry = navController.previousBackStackEntry
+            // 일정 추가 후 돌아올 때 캘린더 갱신을 위한 코드
+            val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+            val shouldRefreshCalendar = savedStateHandle?.get<Boolean>("refresh_calendar") == true
+            
+            // refresh_calendar 플래그 확인 후 초기화
+            if (shouldRefreshCalendar) {
+                savedStateHandle["refresh_calendar"] = false
+            }
+            
+            MainScreen(
+                onNavigate = { route -> navController.navigate(route) },
+                onNavigateWithArgs = { route, args -> navController.navigate(route, args) },
+                shouldRefreshCalendar = shouldRefreshCalendar
             )
         }
 
@@ -314,7 +309,11 @@ fun AppNavigation(
             )
         }
         composable(route = AddSchedule.routeWithArgs, arguments = AddSchedule.arguments) {
-            AddScheduleScreen(onNavigateBack = { navController.popBackStack() })
+            // Pass a lambda to notify the previous screen to refresh data
+            AddScheduleScreen(onNavigateBack = { 
+                navController.previousBackStackEntry?.savedStateHandle?.set("refresh_calendar", true)
+                navController.popBackStack() 
+            })
         }
         composable(route = ScheduleDetail.routeWithArgs, arguments = ScheduleDetail.arguments) {
             ScheduleDetailScreen(

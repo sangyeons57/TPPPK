@@ -1,5 +1,7 @@
 package com.example.navigation
 
+import android.os.Bundle
+import androidx.core.os.BundleCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import com.example.core_logging.SentryUtil
@@ -36,7 +38,7 @@ object SentryNavigationTracker {
      * @param destination 현재 네비게이션 목적지
      * @param arguments 네비게이션 인자
      */
-    private fun trackScreenChange(destination: NavDestination, arguments: android.os.Bundle?) {
+    private fun trackScreenChange(destination: NavDestination, arguments: Bundle?) {
         val destinationRoute = destination.route ?: return
         val destinationId = destination.id
         
@@ -73,7 +75,7 @@ object SentryNavigationTracker {
      * @param screenName 화면 이름
      * @param arguments 네비게이션 인자
      */
-    private fun startScreenTransaction(screenName: String, arguments: android.os.Bundle?) {
+    private fun startScreenTransaction(screenName: String, arguments: Bundle?) {
         // 트랜잭션 시작
         currentTransaction = SentryUtil.startTransaction(
             name = "navigation.screen.$screenName",
@@ -81,10 +83,19 @@ object SentryNavigationTracker {
             tags = mapOf("screen_name" to screenName)
         )
         
-        // 인자가 있으면 태그로 추가
+        // 시스템 내부 인자 키 (타입 불일치 경고 및 오류 유발)
+        val deepLinkIntentKey = "android-support-nav:controller:deepLinkIntent"
+
+        // 인자가 있으면 태그로 추가 (deepLinkIntent 제외)
         arguments?.keySet()?.forEach { key ->
-            val value = arguments.get(key)?.toString() ?: "null"
-            SentryUtil.setCustomTag("nav.arg.$key", value)
+            if (key != deepLinkIntentKey) {
+                // deprecated된 get() 대신 타입-안전한 get 함수 사용 시도
+                // BundleCompat을 사용하면 더 안전하게 값을 가져올 수 있음 (타입을 명시적으로 지정)
+                // 예: val intValue = BundleCompat.getInt(arguments, key, 0) - 타입이 확실할 때
+                // 하지만 모든 타입을 알 수 없으므로, 일단 toString()으로 처리 유지
+                val value = arguments.get(key)?.toString() ?: "null"
+                SentryUtil.setCustomTag("nav.arg.$key", value)
+            }
         }
     }
     

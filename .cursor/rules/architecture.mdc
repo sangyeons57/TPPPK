@@ -5,17 +5,176 @@ alwaysApply: false
 ---
 # Projecting Kotlin: Architecture & Design Principles
 
-- **Clean Architecture & Multi-module:** Layered architecture using separate Gradle modules for separation of concerns, build speed, and maintainability.
-  - **`:domain` (Domain Layer):** Core business logic, entities (Kotlin data classes), repository interfaces. Framework-independent.
-  - **`:data` (Data Layer):** Implements `:domain` repository interfaces. Handles data source interactions (Firebase Auth, Firestore, Storage). Depends on `:domain`.
-  - **`:feature:*` (Presentation Layer):** Feature-specific UI (Compose) and state management (ViewModel). Depends on `:domain`, optionally `:data` and `:core`.
-  - **`:app` (App Layer):** Integrates all modules. Handles app setup (Hilt, Firebase init), navigation graph, dependency management. Depends on other relevant modules.
-  - **`:core:*` (Core Modules):** Common utilities, UI components, base functionality.
-    - `:core:core_common`: Framework-independent utilities.
-    - `:core:core_ui`: Shared Compose UI elements (theme, colors, shapes, drawables).
-    - `:core:core_logging`: Logging utilities (Sentry).
-  - **`:navigation` (Navigation Module):** Defines app-wide navigation destinations and routes.
-- **MVVM:** Feature screens (View) use a ViewModel for UI state (UiState) management and event handling. ViewModel fetches data via repositories (`:domain` interfaces, `:data` implementation) and updates UiState.
-- **Repository Pattern:** `:domain` interfaces abstract `:data` layer implementations from ViewModels.
-- **Dependency Injection (Hilt):** Manages dependency creation and injection (e.g., repositories into ViewModels) for loose coupling and testability.
+## 핵심 원칙
+
+- **Clean Architecture**: 계층 간 명확한 책임 분리와 단방향 의존성
+- **모듈화**: 세분화된 모듈로 빌드 성능 최적화 및 코드 관리 용이성 확보
+- **테스트 용이성**: 모든 레이어가 독립적으로 테스트 가능하도록 설계
+- **오프라인 우선**: 오프라인 작업을 위한 효율적인 로컬 캐싱 전략 구현
+
+## 모듈 구조 및 의존성
+
+- **도메인 레이어 (`:domain`)**
+  - **`:domain:model`**: 순수 비즈니스 엔티티/모델 (Kotlin data classes)
+  - **`:domain:repository`**: 데이터 소스 접근을 위한 인터페이스 정의
+  - **`:domain:usecase`**: 비즈니스 로직을 캡슐화한 유스케이스
+  - 특징: 프레임워크 독립적, 외부 레이어에 대한 의존성 없음
+
+- **데이터 레이어 (`:data`)**
+  - **`:data:remote`**: 원격 데이터 소스 구현 (Firebase Firestore, Retrofit)
+  - **`:data:local`**: 로컬 데이터 소스 구현 (Room, DataStore)
+    - 로컬 엔티티 (Room Entity)
+    - DAO (Data Access Object) 인터페이스
+    - `AppTypeConverters`: 커스텀 타입 변환 (Date, LocalDateTime, List<String>)
+  - **`:data:repository`**: 도메인 레이어의 레포지토리 인터페이스 구현
+  - 의존성: `:domain:model`, `:domain:repository`, `:core:network`
+
+- **프레젠테이션 레이어 (`:feature`)**
+  - **`:feature:{feature_name}`**: 개별 기능별 모듈
+  - 각 기능 모듈은 내부적으로 다음과 같은 패키지 구조를 가짐:
+    - `ui`: Composable 컴포넌트, 화면
+    - `viewmodel`: 화면별 ViewModel
+    - `mapper`: 도메인 모델 → UI 모델 변환 로직
+    - `di`: 기능별 의존성 주입 모듈
+  - 의존성: `:domain:usecase`, `:domain:model`, `:core:ui`
+
+- **코어 레이어 (`:core`)**
+  - **`:core:ui`**: 공통 UI 컴포넌트, 테마, 스타일
+  - **`:core:common`**: 프레임워크 독립적 유틸리티
+  - **`:core:logging`**: 로깅 추상화 (Sentry)
+  - **`:core:testing`**: 테스트 관련 공통 코드
+  - **`:core:network`**: 네트워크 공통 구성 요소
+  - **`:core:di`**: 의존성 주입 공통 설정
+  - **`:core:analytics`**: 분석 관련 공통 코드
+
+- **앱 레이어 (`:app`)**
+  - 모든 모듈 통합 지점
+  - 앱 시작점, 글로벌 설정(Hilt, Firebase)
+  - 메인 네비게이션 그래프 설정
+  - 의존성: 모든 필요 모듈
+
+- **네비게이션 레이어 (`:navigation`)**
+  - 앱 전체 네비게이션 정의, 라우트, 인자
+  - 타입 안전한 네비게이션 제공 (Jetpack Navigation Compose)
+  - 의존성: `:core:common`
+
+## 아키텍처 패턴
+
+- **MVVM (Model-View-ViewModel)**
+  - **View (UI)**: Compose 기반 UI 컴포넌트, 단방향 데이터 흐름
+    - UI 상태 변경 감지 및 표시
+    - 사용자 이벤트를 ViewModel에 전달
+  - **ViewModel**: UI 로직 및 상태 관리
+    - UI 상태 (`UiState`) 노출 (StateFlow/SharedFlow)
+    - 이벤트 처리 및 useCase 호출
+    - 도메인 모델 → UI 모델 변환
+  - **Model**: 도메인 레이어 (엔티티, 유스케이스, 레포지토리)
+
+- **단방향 데이터 흐름 (Unidirectional Data Flow)**
+  - ViewModel: 상태 관리 및 이벤트 처리
+  - UI: 상태 소비 및 이벤트 전달
+  - 명확한 상태 흐름으로 예측 가능성 향상
+
+- **레포지토리 패턴**
+  - 데이터 소스 추상화 (로컬/원격)
+  - 오프라인 우선 전략
+    - 로컬 데이터 우선 제공
+    - 백그라운드에서 원격 데이터 동기화
+    - 네트워크 상태에 따른 적응형 동작
+
+- **유스케이스 패턴**
+  - 단일 책임 원칙에 따른 비즈니스 로직 분리
+  - 재사용 가능한 비즈니스 로직 단위
+  - ViewModel과 레포지토리 사이의 중재자
+
+## 데이터 관리 전략
+
+### 시간 처리 전략
+- **시간 저장 방식**:
+  - 서버에는 모든 시간 정보를 **Instant** 형식(UTC 시간)으로 저장
+  - Firebase Timestamp는 내부적으로 UTC 시간 기준으로 처리됨
+  
+- **시간 변환 및 표시**:
+  - 시스템 시간대 정보는 `ZoneId.systemDefault()`를 사용하여 가져옴
+  ```kotlin
+  // 시스템 기본 시간대 정보 획득 (예: Asia/Seoul)
+  val systemZoneId = ZoneId.systemDefault()
+  ```
+  
+- **시간 표현 클래스**:
+  - `LocalTime`: 시간만 표현, 시간대 정보 없음
+  - `LocalDateTime`: 날짜와 시간 표현, 시간대 정보 없음
+  - `ZonedDateTime`: 날짜, 시간, 시간대를 모두 포함
+  
+- **시간대 변환 흐름**:
+  - 네트워크/DB에서 UTC 시간 로드 → 필요시 사용자 시간대로 변환 → UI에 표시
+  - UI 입력 → UTC로 변환 → 네트워크/DB에 저장
+
+### 원격 데이터 관리 (Firebase Firestore)
+- **컬렉션 구조**:
+  - `users`: 사용자 프로필 정보
+  - `projects`: 프로젝트 정보
+    - `members`: 프로젝트 멤버 (서브컬렉션)
+    - `roles`: 역할 정의 (서브컬렉션)
+    - `categories`: 채널 카테고리 (서브컬렉션)
+      - `channels`: 채널 정보 (서브컬렉션)
+        - `messages`: 채널 메시지 (서브컬렉션)
+  - `dms`: DM 대화방
+    - `messages`: DM 메시지 (서브컬렉션)
+  - `invites`: 초대 토큰
+  - `schedules`: 일정 정보
+
+- **보안 규칙**:
+  - 사용자 인증 기반 접근 제어
+  - 역할 기반 권한 관리
+  - 컬렉션/문서별 세분화된 접근 권한
+
+- **복합 색인**:
+  - 친구 관련 필터링 및 정렬
+  - 채팅 관련 필터링 및 정렬
+  - 프로젝트 멤버/역할 관련 필터링 및 정렬
+
+### 로컬 데이터 관리 (Room)
+- **엔티티**:
+  - 사용자 관련: `UserEntity`, `FriendEntity`, `FriendRequestEntity`
+  - 프로젝트 관련: `ProjectEntity`, `ProjectMemberEntity`, `RoleEntity`, `RolePermissionEntity`
+  - 커뮤니케이션 관련: `ChatEntity`, `ChatMessageEntity`, `DmConversationEntity`
+  - 기타: `ScheduleEntity`, `CategoryEntity`, `ChannelEntity`, `InviteEntity`
+
+- **TypeConverters**:
+  - `Date` ↔ `Long` 변환
+  - `LocalDateTime` ↔ `Long` 변환
+  - `List<String>` ↔ `JSON String` 변환
+
+## 의존성 주입
+
+- **Hilt**: 안드로이드 의존성 주입 프레임워크
+  - 모듈 간 결합도 감소
+  - 테스트 용이성 향상
+  - 컴포넌트 생명주기 자동 관리
+
+## 데이터 흐름
+
+1. UI: 사용자 이벤트 발생 → ViewModel에 전달
+2. ViewModel: 이벤트 처리 → 적절한 UseCase 호출
+3. UseCase: 비즈니스 로직 실행 → Repository 호출
+4. Repository: 
+   - 적절한 DataSource 선택 (로컬/원격)
+   - 원격 호출 시 네트워크 오류 처리
+   - 데이터 캐싱 및 동기화
+5. ViewModel: Repository 결과 수신 → UiState 업데이트
+6. UI: 새 UiState 감지 → UI 갱신
+
+## 예외 처리 전략
+
+- 도메인 레이어: Result 타입 사용 → 명시적 성공/실패 처리
+- Repository: Result 반환, 적절한 실패 래핑
+- ViewModel: 예외 처리 및 적절한 UiState 변환
+- UI: 사용자 친화적 오류 메시지 표시
+
+## 테스트 전략
+
+- 유닛 테스트: UseCase, Repository, ViewModel 
+- 통합 테스트: DataSource와 실제 Repository 통합
+- UI 테스트: Compose 컴포넌트 테스트
 

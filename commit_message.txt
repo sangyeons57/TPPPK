@@ -1,0 +1,9 @@
+Feat: 네비게이션 시스템 업그레이드 계획 수립
+
+- Core_Common 모듈로 네비게이션 코드 이전 계획
+- 기존 navigation 모듈 제거 전략
+- NavigationManager 구현 요구사항 정의
+- 모듈별 수정 필요 파일 목록 작성
+- 단계별 이행 계획 수립
+
+Task: #navigation-upgrade

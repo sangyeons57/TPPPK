@@ -3,10 +3,10 @@ package com.example.feature_project.structure.ui // 또는 공통 ui 패키지
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp // AutoMirrored 버전 사용
 import androidx.compose.material.icons.filled.ChatBubbleOutline // 텍스트 채널 아이콘
 import androidx.compose.material.icons.filled.Delete // 삭제 아이콘 (옵션)
 import androidx.compose.material.icons.filled.Edit // 편집 아이콘 (옵션)
-import androidx.compose.material.icons.filled.VolumeUp // 음성 채널 아이콘
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -60,7 +60,7 @@ fun ChannelListItem(
         // 채널 타입 아이콘
         val icon: ImageVector = when (channel.type) {
             ChannelType.TEXT -> Icons.Filled.ChatBubbleOutline // 텍스트 채널 아이콘
-            ChannelType.VOICE -> Icons.Filled.VolumeUp // 음성 채널 아이콘
+            ChannelType.VOICE -> Icons.AutoMirrored.Filled.VolumeUp // AutoMirrored 버전 사용
         }
         Icon(
             imageVector = icon,

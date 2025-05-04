@@ -55,7 +55,8 @@ object Dimens {
     val sectionMinHeight = 100.dp
     val sectionMediumHeight = 200.dp
     val sectionLargeHeight = 300.dp
-    
+    val sectionMaxHeight = 500.dp
+
     // 마커 및 인디케이터
     val indicatorSize = 6.dp
     val markerSizeSmall = 4.dp

@@ -3,9 +3,10 @@ package com.example.feature_settings.viewmodel
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import com.example.data.repository.FakeUserRepository
-import com.example.data.util.CoroutinesTestRule
-import com.example.data.util.FlowTestExtensions.EventCollector
-import com.example.data.util.FlowTestExtensions.getValue
+import com.example.feature_settings.utils.CoroutinesTestRule
+import com.example.feature_settings.utils.FlowTestExtensions.EventCollector
+import com.example.feature_settings.utils.FlowTestExtensions.getValue
+import com.example.feature_settings.utils.TestUri
 import com.example.domain.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
@@ -47,11 +48,6 @@ class EditProfileViewModelTest {
         statusMessage = "안녕하세요!",
         friendCount = 5
     )
-    
-    // Mock URI를 위한 클래스
-    private class TestUri(private val path: String) : Uri() {
-        override fun toString(): String = "content://test/$path"
-    }
 
     /**
      * 테스트 초기화

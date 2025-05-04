@@ -4,6 +4,7 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.Schedule
 import com.example.domain.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -11,6 +12,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
@@ -21,7 +24,7 @@ data class ScheduleDetailItem(
     val title: String,
     val projectName: String?, // 프로젝트 이름 (없을 수도 있음)
     val date: String, // 포맷된 날짜 문자열 (예: "2025년 4월 15일 (화)")
-    val time: String, // 포맷된 시간 범위 문자열 (예: "오후 2:00 ~ 오후 3:30")
+    val time: String, // 포맷된 시간 범위 문자열 (예: "오후 2:00 ~ 오후 3:30", "하루 종일")
     val content: String? // 일정 내용
 )
 
@@ -44,7 +47,7 @@ sealed class ScheduleDetailEvent {
 @HiltViewModel
 class ScheduleDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    // TODO: private val scheduleRepository: ScheduleRepository
+    private val scheduleRepository: ScheduleRepository
 ) : ViewModel() {
 
     private val scheduleId: String = savedStateHandle["scheduleId"] ?: error("scheduleId가 전달되지 않았습니다.")
@@ -55,6 +58,10 @@ class ScheduleDetailViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<ScheduleDetailEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
+    // Date and Time formatters
+    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN)
+    private val timeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+
     init {
         loadScheduleDetail(scheduleId)
     }
@@ -62,28 +69,65 @@ class ScheduleDetailViewModel @Inject constructor(
     private fun loadScheduleDetail(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Loading schedule detail for ID $id")
-            // --- TODO: 실제 데이터 로딩 (scheduleRepository.getScheduleDetail(id)) ---
-            delay(700) // 임시 딜레이
-            val success = true
-            // val result = scheduleRepository.getScheduleDetail(id)
-            // ------------------------------------------------------------------
-            if (success) {
-                // 임시 데이터 (실제로는 Repository 결과 사용)
-                val detail = ScheduleDetailItem(
-                    id = id,
-                    title = "상세 일정 제목 $id",
-                    projectName = if (id.toIntOrNull()?.rem(2) == 0) "연관 프로젝트 ${id}" else null,
-                    date = LocalDate.now().plusDays(id.toLongOrNull() ?: 0)
-                        .format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN)),
-                    time = "${LocalTime.now().minusHours(1).format(DateTimeFormatter.ofPattern("a h:mm"))} ~ ${LocalTime.now().format(DateTimeFormatter.ofPattern("a h:mm"))}",
-                    content = "이것은 일정 ID $id 에 대한 상세 설명입니다.\n여러 줄의 내용이 여기에 표시될 수 있습니다."
-                )
-                _uiState.update { it.copy(isLoading = false, scheduleDetail = detail) }
-            } else {
-                _uiState.update { it.copy(isLoading = false, error = "일정 정보를 불러오지 못했습니다.") }
+            try {
+                val result = scheduleRepository.getScheduleDetail(id)
+                result.onSuccess { schedule ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            scheduleDetail = schedule.toDetailItem() // Map domain to UI item
+                        )
+                    }
+                }.onFailure { exception ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message ?: "일정 정보를 불러오지 못했습니다."
+                        )
+                    }
+                     _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("정보 로드 실패: ${exception.localizedMessage}"))
+                }
+            } catch (e: Exception) {
+                 _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "알 수 없는 오류가 발생했습니다."
+                    )
+                }
+                _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("오류 발생: ${e.localizedMessage}"))
             }
         }
+    }
+
+    // Helper function to map domain Schedule to ScheduleDetailItem
+    private fun Schedule.toDetailItem(): ScheduleDetailItem {
+        // UTC LocalDateTime을 사용자의 로컬 시간대로 변환
+        val localStartTime = this.startTime.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(ZoneId.systemDefault())
+            .toLocalDateTime()
+        val localEndTime = this.endTime.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(ZoneId.systemDefault())
+            .toLocalDateTime()
+
+        val dateString = localStartTime.format(dateFormatter)
+        val timeString = if (this.isAllDay) {
+            "하루 종일"
+        } else {
+            val start = localStartTime.format(timeFormatter)
+            val end = localEndTime.format(timeFormatter)
+            "$start ~ $end"
+        }
+        // TODO: Fetch project name based on this.projectId if necessary
+        val projectName = this.projectId?.let { "Project $it" } // Placeholder
+
+        return ScheduleDetailItem(
+            id = this.id,
+            title = this.title,
+            projectName = projectName,
+            date = dateString,
+            time = timeString,
+            content = this.content
+        )
     }
 
     fun onEditClick() {
@@ -103,19 +147,25 @@ class ScheduleDetailViewModel @Inject constructor(
     fun confirmDelete() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // 삭제 중 로딩 표시
-            println("ViewModel: Deleting schedule ID $scheduleId")
-            // --- TODO: 실제 삭제 로직 (scheduleRepository.deleteSchedule(scheduleId)) ---
-            delay(500)
-            val success = true
-            // val result = scheduleRepository.deleteSchedule(scheduleId)
-            // -----------------------------------------------------------------
-            if (success) {
-                _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정이 삭제되었습니다."))
-                _uiState.update { it.copy(isLoading = false, deleteSuccess = true) } // 삭제 성공 및 네비게이션 트리거
-            } else {
-                _uiState.update { it.copy(isLoading = false, error = "일정 삭제 실패") }
+            try {
+                val result = scheduleRepository.deleteSchedule(scheduleId)
+                result.onSuccess {
+                    _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정이 삭제되었습니다."))
+                    _uiState.update { it.copy(isLoading = false, deleteSuccess = true) } // 삭제 성공 및 네비게이션 트리거
+                }.onFailure { exception ->
+                     _uiState.update { it.copy(isLoading = false, error = "일정 삭제 실패: ${exception.message}") }
+                     _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정 삭제 실패: ${exception.localizedMessage}"))
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "일정 삭제 중 오류 발생: ${e.message}") }
+                _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("오류 발생: ${e.localizedMessage}"))
             }
         }
+    }
+
+    // Add function to clear error message if needed by UI
+    fun errorMessageShown() {
+        _uiState.update { it.copy(error = null) }
     }
 
 }

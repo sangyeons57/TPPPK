@@ -97,39 +97,39 @@
     - ✅ 하드코딩된 dp 값들을 Dimens 상수로 리팩토링
     - ✅ 컴파일 에러 수정 및 코드 최적화
 
-- [ ] Step 10: Test all interaction paths and edge cases
+- [x] Step 10: Test all interaction paths and edge cases
   - Test all navigation flows and transitions
   - Verify behavior with empty schedule lists
   - Check for rendering issues
   - Test on different screen sizes and orientations
 
 ## Part B: Firebase Data Implementation for Calendar Features
-- [ ] Step 11: Analyze the Firestore schema documentation to understand calendar data structure
+- [x] Step 11: Analyze the Firestore schema documentation to understand calendar data structure
   - Review `.cursor/rules/firestore-schema.mdc` to understand Schedule collections and document structures
   - Identify fields, types, and relationships needed for calendar functionality
   - Map data requirements to UI components across all calendar screens
 
-- [ ] Step 12: Update or create the Schedule domain model
+- [x] Step 12: Update or create the Schedule domain model
   - Ensure `domain/src/main/java/com/example/domain/model/Schedule.kt` has all required fields
   - Add any missing properties or methods needed for calendar features
   - Implement proper nullable/non-nullable types for schedule data
 
-- [ ] Step 13: Create/update ScheduleRepository interface in domain layer
+- [x] Step 13: Create/update ScheduleRepository interface in domain layer
   - Update `domain/src/main/java/com/example/domain/repository/ScheduleRepository.kt`
   - Define methods for calendar-specific queries (getSchedulesForDate, getSchedulesForMonth)
   - Ensure return types use Result wrapper for proper error handling
 
-- [ ] Step 14: Implement Firestore data sources for Schedule data
+- [x] Step 14: Implement Firestore data sources for Schedule data
   - Create or update schedule data source interfaces and implementations
   - Implement Firestore queries for retrieving schedules by date/month
   - Set up proper document references and collection queries for schedule data
 
-- [ ] Step 15: Implement ScheduleRepositoryImpl in data layer
+- [x] Step 15: Implement ScheduleRepositoryImpl in data layer
   - Update `data/src/main/java/com/example/data/repository/ScheduleRepositoryImpl.kt`
   - Implement all methods defined in the updated ScheduleRepository interface
   - Handle exceptions and wrap results appropriately
 
-- [ ] Step 16: Update ViewModels to use real data from repositories
+- [x] Step 16: Update ViewModels to use real data from repositories
   - Update `CalendarViewModel`, `Calendar24HourViewModel`, and `ScheduleDetailViewModel`
   - Replace mock/sample schedule data with actual data from repository
   - Implement proper loading, error, and success states

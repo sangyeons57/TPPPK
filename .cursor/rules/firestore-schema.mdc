@@ -14,10 +14,17 @@ alwaysApply: false
         └── **Subcollections:**
             └── **`friends`** [Friend relationships/status]
                 └── `{friendId}` (ID: Friend UID)
-                    └── **Fields:** `status` (e.g., `pending_sent`, `accepted`)
+                    └── **Fields:** 
+                        ├── `status`: String - Relationship status (`accepted`, `pending_sent`, `pending_received`)
+                        ├── `timestamp`: Timestamp - When the relationship was created
+                        ├── `acceptedAt`: Timestamp? - When the relationship was accepted (nullable)
 └── **`dms`** [1:1 direct message rooms]
     └── `{dmId}` (ID: Sorted UIDs `uid1_uid2`)
-        ├── **Fields:** `participants`[], `lastMessage`?, `lastMessageTimestamp`?
+        ├── **Fields:** 
+            ├── `participants`: Array<String> - List of user IDs
+            ├── `lastMessage`: String? - Most recent message text
+            ├── `lastMessageTimestamp`: Timestamp? - When the last message was sent
+            ├── `createdAt`: Timestamp - When the DM channel was created
         └── **Subcollections:**
             └── **`messages`** [DM messages]
                 └── `{messageId}` (ID: Auto)
@@ -55,7 +62,12 @@ alwaysApply: false
         └── **Fields:** `title`, `startTime`, `endTime`, `participants`, `projectId`?
 └── **`invites`** [Temporary invite tokens]
     └── `{inviteToken}` (ID: Auto unique token)
-        └── **Fields:** `type`, `inviterId`, `projectId`?, `expiresAt`
+        └── **Fields:** 
+            ├── `type`: String - Invite type (e.g., `project_invite`)
+            ├── `inviterId`: String - User ID who created the invite
+            ├── `projectId`: String? - Target project ID (for project invites)
+            ├── `expiresAt`: Timestamp - When the invite expires
+            ├── `createdAt`: Timestamp - When the invite was created
 └── **`passwordResetTokens`** [Temporary password reset tokens]
     └── `{tokenId}` (ID: Auto)
         └── **Fields:** `userId`, `token`, `expiresAt`

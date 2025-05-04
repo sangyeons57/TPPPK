@@ -1,16 +1,7 @@
 package com.example.feature_main.ui.calendar
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -27,8 +18,9 @@ import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_main.viewmodel.CalendarUiState
-import com.example.feature_main.viewmodel.ScheduleItem
+import com.example.domain.model.Schedule
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
@@ -66,6 +58,7 @@ import java.time.LocalTime
  * @param onNavigateToScheduleDetail 일정 상세화면으로 이동하는 콜백, 일정 ID를 인자로 받음
  * @param onNavigateToCalendar24Hour 24시간 캘린더 화면으로 이동하는 콜백, 연도,월,일을 인자로 받음
  * @param viewModel 캘린더 화면의 상태와 로직을 관리하는 ViewModel 인스턴스
+ * @param shouldRefreshCalendar 일정 추가 후 데이터 갱신 여부
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +67,8 @@ fun CalendarScreen(
     onClickFAB: (route: String) -> Unit,
     onNavigateToScheduleDetail: (String) -> Unit = {}, 
     onNavigateToCalendar24Hour: (Int, Int, Int) -> Unit = { _, _, _ -> },
-    viewModel: CalendarViewModel = hiltViewModel()
+    viewModel: CalendarViewModel = hiltViewModel(),
+    shouldRefreshCalendar: Boolean = false
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -87,7 +81,12 @@ fun CalendarScreen(
         label = "FAB Scale Animation"
     )
     
-    // 일정 섹션 진입 애니메이션 상태 제거
+    // 일정 추가 후 데이터 갱신 처리
+    LaunchedEffect(shouldRefreshCalendar) {
+        if (shouldRefreshCalendar) {
+            viewModel.refreshSchedules()
+        }
+    }
 
     // 이벤트 처리
     LaunchedEffect(viewModel) { 
@@ -174,34 +173,53 @@ fun CalendarScreen(
 private object PreviewUtils {
     
     /**
-     * 프리뷰용 샘플 일정 생성
+     * 프리뷰용 샘플 일정 생성 (Now returns List<Schedule>)
      */
-    fun getSampleSchedules(): List<ScheduleItem> = listOf(
-        ScheduleItem(
-            "s1",
-            "팀 회의",
-            LocalDate.now(),
-            LocalTime.of(10, 0),
-            LocalTime.of(11, 30),
-            0xFFEF5350
-        ),
-        ScheduleItem(
-            "s2",
-            "점심 약속",
-            LocalDate.now(),
-            LocalTime.of(12, 0),
-            LocalTime.of(13, 0),
-            0xFF66BB6A
-        ),
-        ScheduleItem(
-            "s3",
-            "프로젝트 회의",
-            LocalDate.now(),
-            LocalTime.of(14, 0),
-            LocalTime.of(15, 30),
-            0xFF42A5F5
+    fun getSampleSchedules(): List<Schedule> {
+        val today = LocalDate.now()
+        return listOf(
+            Schedule(
+                id = "s1",
+                projectId = "p1",
+                title = "팀 회의",
+                content = "주간 진행 상황 공유",
+                startTime = LocalDateTime.of(today, LocalTime.of(10, 0)),
+                endTime = LocalDateTime.of(today, LocalTime.of(11, 30)),
+                participants = listOf("user1", "user2"),
+                isAllDay = false
+            ),
+            Schedule(
+                id = "s2",
+                projectId = null,
+                title = "점심 약속",
+                content = "김대표님과 식사",
+                startTime = LocalDateTime.of(today, LocalTime.of(12, 0)),
+                endTime = LocalDateTime.of(today, LocalTime.of(13, 0)),
+                participants = listOf("user1"),
+                isAllDay = false
+            ),
+            Schedule(
+                id = "s3",
+                projectId = "p2",
+                title = "프로젝트 회의",
+                content = "UI 디자인 검토",
+                startTime = LocalDateTime.of(today, LocalTime.of(14, 0)),
+                endTime = LocalDateTime.of(today, LocalTime.of(15, 30)),
+                participants = listOf("user1", "user3", "user4"),
+                isAllDay = false
+            ),
+             Schedule(
+                id = "s4",
+                projectId = "p1",
+                title = "종일 이벤트",
+                content = "워크샵 준비",
+                startTime = LocalDateTime.of(today, LocalTime.MIDNIGHT),
+                endTime = LocalDateTime.of(today, LocalTime.MAX),
+                participants = listOf("user1"),
+                isAllDay = true
+            )
         )
-    )
+    }
     
     /**
      * 미리보기용 UI 상태 생성
@@ -209,7 +227,8 @@ private object PreviewUtils {
     fun getPreviewState(isEmpty: Boolean = false, isLoading: Boolean = false): CalendarUiState {
         return CalendarUiState(
             schedulesForSelectedDate = if (isEmpty) emptyList() else getSampleSchedules(),
-            isLoading = isLoading
+            isLoading = isLoading,
+            datesWithSchedules = if (isEmpty) emptySet() else setOf(LocalDate.now())
         )
     }
 }

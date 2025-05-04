@@ -1,17 +1,7 @@
 package com.example.feature_main.ui.calendar
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,12 +33,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.Dimens
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.Schedule
 import com.example.feature_main.viewmodel.CalendarUiState
-import com.example.feature_main.viewmodel.ScheduleItem
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -402,7 +395,7 @@ fun ScheduleSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Dimens.sectionLargeHeight),
+                        .height(Dimens.sectionMediumHeight),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -425,7 +418,7 @@ fun ScheduleSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Dimens.sectionLargeHeight)
+                        .height(Dimens.sectionMediumHeight)
                         .padding(Dimens.paddingXLarge),
                     contentAlignment = Alignment.Center
                 ) {
@@ -471,7 +464,7 @@ fun ScheduleSection(
                 // 일정 개수에 따른 동적 높이 계산
                 val itemCount = uiState.schedulesForSelectedDate.size
                 val minHeight = Dimens.sectionMinHeight.value.toInt()
-                val maxHeight = Dimens.sectionLargeHeight.value.toInt()
+                val maxHeight = Dimens.sectionMaxHeight.value.toInt()
                 val itemHeight = Dimens.listItemHeightMedium.value.toInt()
                 val calculatedHeight = (itemCount * itemHeight).coerceIn(minHeight, maxHeight)
                 
@@ -522,16 +515,34 @@ fun ScheduleSection(
  * 개별 일정을 카드 형태로 표시합니다. 좌측에 색상 표시 막대, 중앙에 제목과 시간,
  * 우측에 상세보기 화살표를 배치합니다.
  *
- * @param schedule 표시할 일정 아이템 객체
+ * @param schedule 표시할 일정 객체 (Domain Model)
  * @param onClick 아이템 클릭 시 호출될 콜백
  * @param modifier 이 컴포넌트에 적용할 Modifier
  */
 @Composable
 fun ScheduleListItem(
-    schedule: ScheduleItem,
+    schedule: Schedule,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 시간 포맷터
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN) }
+    
+    // 프로젝트 색상 (임시)
+    val projectColor = schedule.projectId?.let { getProjectColor(it) } ?: Color.Transparent
+    
+    // UTC LocalDateTime을 로컬 시간으로 변환
+    val localStartTime = remember(schedule.startTime) {
+        schedule.startTime.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(ZoneId.systemDefault())
+            .toLocalDateTime()
+    }
+    val localEndTime = remember(schedule.endTime) {
+        schedule.endTime.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(ZoneId.systemDefault())
+            .toLocalDateTime()
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -548,13 +559,13 @@ fun ScheduleListItem(
                 .padding(Dimens.paddingLarge),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. 일정 색상 표시 - 세로 막대 형태로 표현
+            // 1. 일정 색상 표시 - 기본 색상 사용
             Box(
                 modifier = Modifier
                     .width(6.dp)
                     .height(36.dp)
                     .background(
-                        color = Color(schedule.color),
+                        color = projectColor,
                         shape = RoundedCornerShape(Dimens.cornerRadiusSmall)
                     )
             )
@@ -575,12 +586,7 @@ fun ScheduleListItem(
                 )
                 
                 // 일정 시간 (시작~종료) - 있을 경우에만 표시
-                if (schedule.startTime != null) {
-                    val timeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
-                    // 시작 시간과 종료 시간을 형식에 맞게 문자열로 변환
-                    val timeText = schedule.startTime.format(timeFormatter) +
-                            (schedule.endTime?.let { " - ${it.format(timeFormatter)}" } ?: "")
-                    
+                if (!schedule.isAllDay) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = Dimens.paddingSmall)
@@ -593,13 +599,24 @@ fun ScheduleListItem(
                             modifier = Modifier.size(Dimens.iconSizeSmall)
                         )
                         Spacer(modifier = Modifier.width(Dimens.paddingSmall))
-                        // 시간 텍스트
+                        // 시간 텍스트 (하루 종일 또는 시간 범위)
                         Text(
-                            text = timeText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            text = if (schedule.isAllDay) {
+                                "하루 종일"
+                            } else {
+                                "${localStartTime.format(timeFormatter)} - ${localEndTime.format(timeFormatter)}"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LocalContentColor.current.copy(alpha = 0.8f)
                         )
                     }
+                } else {
+                    Text(
+                        text = "하루 종일",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(top = Dimens.paddingSmall)
+                    )
                 }
             }
             
@@ -612,4 +629,113 @@ fun ScheduleListItem(
             )
         }
     }
+}
+
+/**
+ * 임시 프로젝트 색상 결정 함수
+ * 
+ * TODO: 실제 프로젝트 데이터와 연동 필요
+ */
+private fun getProjectColor(projectId: String): Color {
+    // 간단한 해시 기반 색상 생성 (실제 앱에서는 더 정교한 방식 필요)
+    val hash = projectId.hashCode()
+    return Color(
+        red = (hash and 0xFF0000 shr 16) / 255f,
+        green = (hash and 0x00FF00 shr 8) / 255f,
+        blue = (hash and 0x0000FF) / 255f,
+        alpha = 0.3f // 약간 투명하게
+    )
+}
+
+/**
+ * ScheduleSection 미리보기
+ */
+@Preview(showBackground = true, name = "일정 섹션 미리보기")
+@Composable
+fun ScheduleSectionPreview() {
+    val previewState = CalendarUiState(
+        selectedDate = LocalDate.now(),
+        schedulesForSelectedDate = getSampleSchedulesForPreview()
+    )
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        ScheduleSection(
+            uiState = previewState,
+            onScheduleClick = {},
+            onDateClick24Hour = {}
+        )
+    }
+}
+
+/**
+ * ScheduleListItem 미리보기 (일반)
+ */
+@Preview(showBackground = true, name = "일반 일정 아이템")
+@Composable
+fun ScheduleListItemPreview() {
+    val sample = getSampleSchedulesForPreview().first()
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        ScheduleListItem(schedule = sample, onClick = {})
+    }
+}
+
+/**
+ * ScheduleListItem 미리보기 (하루 종일)
+ */
+@Preview(showBackground = true, name = "하루 종일 일정 아이템")
+@Composable
+fun ScheduleListItemAllDayPreview() {
+    val sample = getSampleSchedulesForPreview().first { it.isAllDay }
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        ScheduleListItem(schedule = sample, onClick = {})
+    }
+}
+
+/**
+ * 프리뷰용 샘플 일정 데이터 생성 유틸리티
+ */
+private fun getSampleSchedulesForPreview(): List<Schedule> {
+    val today = LocalDate.now()
+    val time1 = java.time.LocalTime.of(10, 0)
+    val time2 = java.time.LocalTime.of(11, 30)
+    val time3 = java.time.LocalTime.of(14, 0)
+    val time4 = java.time.LocalTime.of(15, 0)
+
+    return listOf(
+        Schedule(
+            id = "1", projectId = "projA", title = "팀 회의: 주간 보고", 
+            content = "지난 주 성과 및 이번 주 계획 논의", 
+            startTime = java.time.LocalDateTime.of(today, time1),
+            endTime = java.time.LocalDateTime.of(today, time2),
+            participants = listOf("user1", "user2", "user3")
+        ),
+        Schedule(
+            id = "2", projectId = "projB", title = "디자인 검토", 
+            content = "새로운 랜딩 페이지 시안 검토",
+            startTime = java.time.LocalDateTime.of(today, time3),
+            endTime = java.time.LocalDateTime.of(today, time4),
+            participants = listOf("user1", "user4")
+        ),
+        Schedule(
+            id = "3", projectId = "projA", title = "클라이언트 미팅", 
+            content = null,
+            startTime = java.time.LocalDateTime.of(today.plusDays(1), time1),
+            endTime = java.time.LocalDateTime.of(today.plusDays(1), time1.plusHours(1)),
+            participants = listOf("user1", "user5")
+        ),
+        Schedule(
+            id = "4", projectId = null, title = "개인 약속: 병원", 
+            content = "정기 검진",
+            startTime = java.time.LocalDateTime.of(today, java.time.LocalTime.of(9, 0)),
+            endTime = java.time.LocalDateTime.of(today, java.time.LocalTime.of(9, 30)),
+            participants = listOf("user1")
+        ),
+        Schedule(
+            id = "5", projectId = "projC", title = "프로젝트 킥오프",
+            content = "신규 프로젝트 시작",
+            startTime = java.time.LocalDateTime.of(today, java.time.LocalTime.MIDNIGHT),
+            endTime = java.time.LocalDateTime.of(today, java.time.LocalTime.MAX),
+            isAllDay = true,
+            participants = listOf("user1", "user6")
+        )
+    )
 } 

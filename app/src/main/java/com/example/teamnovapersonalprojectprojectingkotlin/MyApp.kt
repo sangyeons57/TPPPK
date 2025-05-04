@@ -13,6 +13,8 @@ import dagger.hilt.android.HiltAndroidApp
 @HiltAndroidApp
 class MyApp: Application() {
     
+    // Sentry는 AndroidManifest.xml을 통해 자동 초기화되므로 수동 초기화 불필요
+    /*
     companion object {
         private var isSentryInitialized = false
     }
@@ -25,25 +27,28 @@ class MyApp: Application() {
             initSentry()
         }
     }
+    */
     
     override fun onCreate() {
         super.onCreate()
         
+        // Sentry는 AndroidManifest.xml을 통해 자동 초기화됩니다.
         // 만약 attachBaseContext에서 초기화하지 못했다면 여기서 초기화
+        /*
         if (!isSentryInitialized) {
             initSentry()
         }
+        */
         
-        // 앱 시작 로깅
-        SentryUtil.logInfo("앱 시작됨", mapOf("startup_type" to "normal"))
+        // 앱 시작 로깅 (자동 초기화 후 호출되도록 여기에 유지)
+        // 자동 초기화가 완료되었는지 확인하는 로직이 있다면 더 좋지만, 일단 이렇게 둡니다.
+        SentryUtil.logInfo("앱 시작됨", mapOf("startup_type" to "auto_init")) // 태그 변경
         
         // 다른 초기화 코드들...
     }
     
-    /**
-     * Sentry 초기화 함수
-     * 중복 초기화 방지를 위해 별도 함수로 분리
-     */
+    // Sentry는 AndroidManifest.xml을 통해 자동 초기화되므로 수동 초기화 불필요
+    /*
     private fun initSentry() {
         try {
             SentryUtil.SentryInit(this)
@@ -53,4 +58,5 @@ class MyApp: Application() {
             println("Sentry 초기화 실패: ${e.message}")
         }
     }
+    */
 }

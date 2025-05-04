@@ -44,7 +44,7 @@ class ScheduleTest {
         assertEquals(endTime, schedule.endTime)
         
         // 선택적 필드는 기본값으로 초기화되어야 함
-        assertEquals(emptyList<String>(), schedule.attendees)
+        assertEquals(emptyList<String>(), schedule.participants)
         assertFalse(schedule.isAllDay)
     }
     
@@ -60,7 +60,7 @@ class ScheduleTest {
         val content = "추석 연휴"
         val startTime = LocalDateTime.of(2023, 9, 28, 0, 0)
         val endTime = LocalDateTime.of(2023, 10, 1, 23, 59)
-        val attendees = listOf("user1", "user2", "user3")
+        val participants = listOf("user1", "user2", "user3")
         val isAllDay = true
         
         // When: 모든 필드를 지정하여 Schedule 객체 생성
@@ -71,7 +71,7 @@ class ScheduleTest {
             content = content,
             startTime = startTime,
             endTime = endTime,
-            attendees = attendees,
+            participants = participants,
             isAllDay = isAllDay
         )
         
@@ -82,7 +82,7 @@ class ScheduleTest {
         assertEquals(content, schedule.content)
         assertEquals(startTime, schedule.startTime)
         assertEquals(endTime, schedule.endTime)
-        assertEquals(attendees, schedule.attendees)
+        assertEquals(participants, schedule.participants)
         assertTrue(schedule.isAllDay)
     }
     
@@ -172,17 +172,17 @@ class ScheduleTest {
             content = "UI 디자인 논의",
             startTime = startTime,
             endTime = endTime,
-            attendees = listOf("user1", "user2")
+            participants = listOf("user1", "user2")
         )
         
         // When: 일부 필드만 변경하여 복사
         val newEndTime = LocalDateTime.of(2023, 10, 15, 16, 0)
-        val newAttendees = listOf("user1", "user2", "user3")
+        val newParticipants = listOf("user1", "user2", "user3")
         
         val copied = original.copy(
             title = "확장된 디자인 회의",
             endTime = newEndTime,
-            attendees = newAttendees
+            participants = newParticipants
         )
         
         // Then: 지정한 필드만 변경되고 나머지는 유지되어야 함
@@ -192,7 +192,7 @@ class ScheduleTest {
         assertEquals(original.content, copied.content)
         assertEquals(original.startTime, copied.startTime)
         assertEquals(newEndTime, copied.endTime)
-        assertEquals(newAttendees, copied.attendees)
+        assertEquals(newParticipants, copied.participants)
         assertEquals(original.isAllDay, copied.isAllDay)
         
         // Then: 완전히 새로운 객체여야 함
@@ -207,7 +207,7 @@ class ScheduleTest {
         // Given: 모든 필드가 채워진 Schedule 객체
         val startTime = LocalDateTime.of(2023, 10, 15, 14, 0)
         val endTime = LocalDateTime.of(2023, 10, 15, 15, 30)
-        val attendees = listOf("user1", "user2")
+        val participants = listOf("user1", "user2")
         
         val schedule = Schedule(
             id = "schedule123",
@@ -216,7 +216,7 @@ class ScheduleTest {
             content = "UI 디자인 논의",
             startTime = startTime,
             endTime = endTime,
-            attendees = attendees,
+            participants = participants,
             isAllDay = false
         )
         
@@ -230,7 +230,7 @@ class ScheduleTest {
         assertTrue(result.contains("content=UI 디자인 논의"))
         assertTrue(result.contains("startTime=$startTime"))
         assertTrue(result.contains("endTime=$endTime"))
-        assertTrue(result.contains("attendees=$attendees"))
+        assertTrue(result.contains("participants=$participants"))
         assertTrue(result.contains("isAllDay=false"))
     }
 } 

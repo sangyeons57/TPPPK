@@ -2,6 +2,8 @@ package com.example.feature_main.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.Schedule
+import com.example.domain.repository.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -13,27 +15,17 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
-// --- 데이터 모델 (예시) ---
-data class ScheduleItem(
-    val id: String,
-    val title: String,
-    val date: LocalDate,
-    val startTime: LocalTime?,
-    val endTime: LocalTime?,
-    val color: Long = 0xFF03A9F4 // 예시: 기본 색상 (ARGB Long)
-)
-// ------------------------
-
 // 캘린더 UI 상태
 data class CalendarUiState(
     val currentYearMonth: YearMonth = YearMonth.now(), // 현재 표시 중인 연/월
     val selectedDate: LocalDate = LocalDate.now(), // 현재 선택된 날짜
-    val schedulesForSelectedDate: List<ScheduleItem> = emptyList(), // 선택된 날짜의 스케줄
+    val schedulesForSelectedDate: List<Schedule> = emptyList(), // *** Updated to use domain model ***
     // --- 달력 그리드 데이터 추가 ---
     val datesInMonth: List<LocalDate?> = emptyList(), // 해당 월의 날짜 리스트 (null은 빈 칸)
-    val firstDayOffset: Int = 0, // 월의 첫 날짜 시작 요일 offset (0=월요일... 6=일요일) -> 여기서는 0=일요일 기준으로 변경
+    val firstDayOffset: Int = 0, // 월의 첫 날짜 시작 요일 offset (0=일요일)
     // --- 달력 그리드 데이터 추가 ---
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = false, // 로딩 상태 (주로 날짜별 스케줄 로딩 시)
+    val isSummaryLoading: Boolean = false, // 월별 요약 로딩 상태 (선택적)
     val errorMessage: String? = null,
     // 일정이 있는 날짜들의 집합 (캘린더 그리드에 표시기를 위해)
     val datesWithSchedules: Set<LocalDate> = emptySet()
@@ -50,11 +42,9 @@ sealed class CalendarEvent {
     data class ShowSnackbar(val message: String) : CalendarEvent()
 }
 
-
-
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    // TODO: private val scheduleRepository: ScheduleRepository
+    private val scheduleRepository: ScheduleRepository // *** Injected Repository ***
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState())
@@ -64,38 +54,30 @@ class CalendarViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
-        updateCalendarData(YearMonth.now())
-        // 초기 데이터 로드 (오늘 날짜 기준)
+        // Initialize with current month data
+        updateCalendarGridData(YearMonth.now())
+        // Load initial data (today's schedules and current month summary)
         loadSchedulesForDate(uiState.value.selectedDate)
-        // 현재 월의 일정 요약 데이터 로드 (점 표시용)
         loadScheduleSummaryForMonth(uiState.value.currentYearMonth)
     }
 
-    // Combined function to update month and calendar grid data
-    private fun updateCalendarData(yearMonth: YearMonth, newSelectedDate: LocalDate? = null) {
+    // Update calendar grid structure for the given month
+    private fun updateCalendarGridData(yearMonth: YearMonth) {
         val firstDayOfMonth = yearMonth.atDay(1)
+        // Calculate offset based on Sunday (value 7) being the first day (index 0)
         val firstDayOfWeekValue = firstDayOfMonth.dayOfWeek.value % 7
         val daysInMonth = yearMonth.lengthOfMonth()
-        val dates = mutableListOf<LocalDate?>()
-        repeat(firstDayOfWeekValue) { dates.add(null) }
-        (1..daysInMonth).forEach { dates.add(yearMonth.atDay(it)) }
+        val dates = mutableListOf<LocalDate?>().apply {
+            repeat(firstDayOfWeekValue) { add(null) } // Add leading nulls
+            (1..daysInMonth).forEach { add(yearMonth.atDay(it)) } // Add actual dates
+        }
 
-        // Determine selected date: Use newSelectedDate if provided and in the new month,
-        // otherwise try to keep the current selected date's day in the new month,
-        // otherwise default to the 1st of the new month.
-        val currentSelectedDate = _uiState.value.selectedDate
-        val finalSelectedDate = newSelectedDate?.takeIf { YearMonth.from(it) == yearMonth }
-            ?: yearMonth.atDay(currentSelectedDate.dayOfMonth.coerceAtMost(daysInMonth))
-
-        // Update state, preserving existing schedules until new ones load
         _uiState.update {
             it.copy(
                 currentYearMonth = yearMonth,
                 datesInMonth = dates,
-                selectedDate = finalSelectedDate,
-                // *** Do NOT reset schedulesForSelectedDate here ***
-                isLoading = true, // Set loading true for subsequent schedule load
-                errorMessage = null
+                firstDayOffset = firstDayOfWeekValue // Store offset if needed by UI
+                // Selected date is NOT changed here
             )
         }
     }
@@ -103,189 +85,147 @@ class CalendarViewModel @Inject constructor(
     // 이전 달 클릭
     fun onPreviousMonthClick() {
         val prevMonth = _uiState.value.currentYearMonth.minusMonths(1)
-        updateCalendarData(prevMonth)
-        loadSchedulesForDate(_uiState.value.selectedDate) // 선택된 날짜 스케줄 로드 (선택 날짜 유지됨)
-        loadScheduleSummaryForMonth(prevMonth) // 이전 달의 일정 요약 데이터 로드
+        updateCalendarGridData(prevMonth)
+        // Try to select the same day in the previous month, fallback to last day
+        val currentDay = _uiState.value.selectedDate.dayOfMonth
+        val newSelectedDate = prevMonth.atDay(currentDay.coerceAtMost(prevMonth.lengthOfMonth()))
+        selectDateInternal(newSelectedDate) // Update selection and load data
+        loadScheduleSummaryForMonth(prevMonth) // Load summary for the new month
     }
 
     // 다음 달 클릭
     fun onNextMonthClick() {
         val nextMonth = _uiState.value.currentYearMonth.plusMonths(1)
-        updateCalendarData(nextMonth)
-        loadSchedulesForDate(_uiState.value.selectedDate)
-        loadScheduleSummaryForMonth(nextMonth) // 다음 달의 일정 요약 데이터 로드
+        updateCalendarGridData(nextMonth)
+        // Try to select the same day in the next month, fallback to last day
+        val currentDay = _uiState.value.selectedDate.dayOfMonth
+        val newSelectedDate = nextMonth.atDay(currentDay.coerceAtMost(nextMonth.lengthOfMonth()))
+        selectDateInternal(newSelectedDate) // Update selection and load data
+        loadScheduleSummaryForMonth(nextMonth) // Load summary for the new month
     }
 
-    // 날짜 선택
+    // 날짜 선택 (Public function called by UI)
     fun onDateSelected(date: LocalDate) {
-        // 선택된 날짜가 현재 표시된 월과 다르면 월을 변경
-        val selectedYearMonth = YearMonth.from(date)
-        if (selectedYearMonth != _uiState.value.currentYearMonth) {
-            _uiState.update { generateCalendarState(selectedYearMonth, date) }
-        } else {
-            // 같은 월 내에서 날짜만 변경
-            _uiState.update { it.copy(selectedDate = date) }
+        // If the selected date is in a different month, update the grid first
+        if (YearMonth.from(date) != _uiState.value.currentYearMonth) {
+            updateCalendarGridData(YearMonth.from(date))
+            loadScheduleSummaryForMonth(YearMonth.from(date))
         }
+        selectDateInternal(date)
+    }
+
+    // Internal function to update selected date state and load schedules
+    private fun selectDateInternal(date: LocalDate) {
+        _uiState.update { it.copy(selectedDate = date) }
         loadSchedulesForDate(date)
     }
 
     // 특정 날짜의 스케줄 로드
     private fun loadSchedulesForDate(date: LocalDate) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            println("ViewModel: 스케줄 로드 시도 - $date")
-            delay(500)
-            val success = true
-            if (success) {
-                // --- 샘플 데이터 생성 로직 ---
-                val schedules = when (date.dayOfMonth % 4) { // 4로 나눈 나머지 사용 (다양성 증가)
-                    0 -> listOf(
-                        ScheduleItem(
-                            id = "schedule_${date}_1",
-                            title = "팀 전체 회의",
-                            date = date,
-                            startTime = LocalTime.of(10, 0),
-                            endTime = LocalTime.of(11, 30),
-                            color = 0xFFEF5350 // Red 400
-                        ),
-                        ScheduleItem(
-                            id = "schedule_${date}_2",
-                            title = "거래처와 점심 식사",
-                            date = date,
-                            startTime = LocalTime.of(12, 30),
-                            endTime = LocalTime.of(13, 30),
-                            color = 0xFF66BB6A // Green 400
-                        ),
-                        ScheduleItem(
-                            id = "schedule_${date}_3",
-                            title = "개인 운동 (헬스장)",
-                            date = date,
-                            startTime = LocalTime.of(19, 0),
-                            endTime = LocalTime.of(20, 0),
-                            color = 0xFFFFA726 // Orange 400
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) } // Set loading, clear error
+            try {
+                val result = scheduleRepository.getSchedulesForDate(date)
+                result.onSuccess {
+                    _uiState.update { state ->
+                        state.copy(
+                            isLoading = false,
+                            schedulesForSelectedDate = it // Update with fetched schedules
                         )
-                    )
-                    1 -> listOf(
-                        ScheduleItem(
-                            id = "schedule_${date}_4",
-                            title = "프로젝트 A 기획안 작성",
-                            date = date,
-                            startTime = null, // 시간 미지정 (종일)
-                            endTime = null,
-                            color = 0xFF42A5F5 // Blue 400
-                        ),
-                        ScheduleItem(
-                            id = "schedule_${date}_5",
-                            title = "스터디 모임",
-                            date = date,
-                            startTime = LocalTime.of(18, 0),
-                            endTime = LocalTime.of(20, 0),
-                            color = 0xFFAB47BC // Purple 400
+                    }
+                }.onFailure {
+                    _uiState.update { state ->
+                        state.copy(
+                            isLoading = false,
+                            schedulesForSelectedDate = emptyList(), // Clear schedules on error
+                            errorMessage = it.message ?: "일정 로드 중 오류가 발생했습니다."
                         )
-                    )
-                    2 -> listOf(
-                        ScheduleItem(
-                            id = "schedule_${date}_6",
-                            title = "병원 예약 (치과)",
-                            date = date,
-                            startTime = LocalTime.of(14, 30),
-                            endTime = LocalTime.of(15, 0),
-                            color = 0xFF78909C // Blue Grey 400
-                        )
-                    )
-                    else -> emptyList() // 일정이 없는 날
+                    }
+                    _eventFlow.emit(CalendarEvent.ShowSnackbar("일정 로드 실패: ${it.localizedMessage}"))
                 }
-                _uiState.update { it.copy(schedulesForSelectedDate = schedules, isLoading = false) }
-                
-                // 일정이 로드된 후, 현재 달의 일정 마커를 업데이트 (샘플 데이터의 일관성 유지)
-                refreshScheduleMarkers()
-            } else {
-                _uiState.update { it.copy(schedulesForSelectedDate = emptyList(), errorMessage = "스케줄 로드 실패", isLoading = false) }
+            } catch (e: Exception) {
+                // Catch unexpected exceptions during the flow or repository call
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        schedulesForSelectedDate = emptyList(),
+                        errorMessage = e.message ?: "알 수 없는 오류가 발생했습니다."
+                    )
+                }
+                _eventFlow.emit(CalendarEvent.ShowSnackbar("오류 발생: ${e.localizedMessage}"))
             }
         }
     }
 
-    // 달력 상태 생성 함수
-    private fun generateCalendarState(yearMonth: YearMonth, selectedDate: LocalDate? = null): CalendarUiState {
-        val firstDayOfMonth = yearMonth.atDay(1)
-        // 주의 시작을 일요일로 계산 (DayOfWeek.SUNDAY.value는 7)
-        val firstDayOfWeekValue = firstDayOfMonth.dayOfWeek.value % 7 // 일요일(7) -> 0, 월요일(1) -> 1, ... 토요일(6) -> 6
-        val daysInMonth = yearMonth.lengthOfMonth()
-
-        val dates = mutableListOf<LocalDate?>()
-        // 첫 날 앞의 빈 칸 추가
-        repeat(firstDayOfWeekValue) { dates.add(null) }
-        // 해당 월의 날짜 추가
-        for (day in 1..daysInMonth) {
-            dates.add(yearMonth.atDay(day))
+    // 특정 월의 스케줄 요약 로드
+    private fun loadScheduleSummaryForMonth(yearMonth: YearMonth) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSummaryLoading = true) } // Optional: Separate loading state for summary
+            try {
+                val result = scheduleRepository.getScheduleSummaryForMonth(yearMonth)
+                result.onSuccess {
+                    _uiState.update { state ->
+                        state.copy(
+                            isSummaryLoading = false,
+                            datesWithSchedules = it // Update schedule markers
+                        )
+                    }
+                }.onFailure {
+                    // Log error or show a subtle indicator, snackbar might be too intrusive
+                    println("월별 요약 로드 실패: ${it.message}")
+                    _uiState.update { state ->
+                        state.copy(
+                            isSummaryLoading = false,
+                            datesWithSchedules = emptySet() // Clear markers on error
+                        )
+                    }
+                    // Optional: _eventFlow.emit(CalendarEvent.ShowSnackbar("월별 요약 로드 실패"))
+                }
+            } catch (e: Exception) {
+                println("월별 요약 로드 중 예외 발생: ${e.message}")
+                 _uiState.update { state ->
+                    state.copy(
+                        isSummaryLoading = false,
+                        datesWithSchedules = emptySet()
+                    )
+                }
+            }
         }
-
-        // 현재 선택된 날짜가 새 달에도 유효한지 확인, 아니면 새 달의 1일 선택
-        val finalSelectedDate = selectedDate?.takeIf { YearMonth.from(it) == yearMonth } ?: yearMonth.atDay(1)
-
-
-        return CalendarUiState(
-            currentYearMonth = yearMonth,
-            selectedDate = finalSelectedDate, // 이전 선택 유지 또는 1일
-            datesInMonth = dates,
-            firstDayOffset = firstDayOfWeekValue // 이제 사용 안 함 (리스트에 null 포함)
-            // schedulesForSelectedDate는 loadSchedulesForDate에서 업데이트됨
-        )
     }
 
+    // --- Event Handlers ---
 
-    // 스케줄 아이템 클릭 시
+    /**
+     * 스케줄 아이템 클릭 시 호출됩니다.
+     * 상세 화면으로 네비게이션 이벤트를 발생시킵니다.
+     */
     fun onScheduleClick(scheduleId: String) {
         viewModelScope.launch {
-            println("ViewModel: 스케줄 클릭 - $scheduleId")
             _eventFlow.emit(CalendarEvent.NavigateToScheduleDetail(scheduleId))
         }
     }
 
-    // 일정 추가 버튼 클릭 시 (예시)
+    /**
+     * FAB 클릭 시 호출됩니다.
+     * 일정 추가 화면/다이얼로그 표시 이벤트를 발생시킵니다.
+     */
     fun onAddScheduleClick() {
         viewModelScope.launch {
-            println("ViewModel: 일정 추가 버튼 클릭")
             _eventFlow.emit(CalendarEvent.ShowAddScheduleDialog)
         }
     }
 
+    /**
+     * 현재 선택된 날짜의 일정 데이터를 새로 갱신합니다.
+     * 다른 화면에서 돌아왔을 때 변경된 데이터를 반영하기 위해 사용됩니다.
+     */
+    fun refreshSchedules() {
+        val currentSelectedDate = _uiState.value.selectedDate
+        loadSchedulesForDate(currentSelectedDate)
+        loadScheduleSummaryForMonth(YearMonth.from(currentSelectedDate))
+    }
+
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
-    }
-
-    // 특정 월에 일정이 있는 날짜들의 요약 데이터 로드
-    private fun loadScheduleSummaryForMonth(yearMonth: YearMonth) {
-        viewModelScope.launch {
-            println("ViewModel: 월간 일정 요약 로드 시도 - $yearMonth")
-            // 실제 구현에서는 Repository에서 데이터를 가져와야 함
-            // 샘플 구현에서는 정해진 패턴으로 일정 표시 마커를 생성
-            refreshScheduleMarkers()
-        }
-    }
-
-    // 일정 표시 마커 새로고침 (샘플 데이터와 일관성 유지)
-    private fun refreshScheduleMarkers() {
-        val currentYearMonth = _uiState.value.currentYearMonth
-        val datesWithSchedules = mutableSetOf<LocalDate>()
-        
-        // 현재 달의 모든 날짜 확인
-        val daysInMonth = currentYearMonth.lengthOfMonth()
-        for (day in 1..daysInMonth) {
-            val date = currentYearMonth.atDay(day)
-            
-            // 샘플 데이터 로직과 동일한 패턴 사용
-            val hasSchedule = when (day % 4) {
-                0, 1, 2 -> true // 4로 나눈 나머지가 0, 1, 2인 날에는 일정 있음
-                else -> false   // 나머지 날에는 일정 없음
-            }
-            
-            if (hasSchedule) {
-                datesWithSchedules.add(date)
-            }
-        }
-        
-        // UI 상태 업데이트
-        _uiState.update { it.copy(datesWithSchedules = datesWithSchedules) }
     }
 }

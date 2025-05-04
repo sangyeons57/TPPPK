@@ -5,6 +5,7 @@ import com.example.data.repository.AuthRepositoryImpl
 import com.example.data.repository.ChatRepositoryImpl
 import com.example.data.repository.DmRepositoryImpl
 import com.example.data.repository.FriendRepositoryImpl
+import com.example.data.repository.InviteRepositoryImpl
 import com.example.data.repository.ProjectMemberRepositoryImpl
 import com.example.data.repository.ProjectRepositoryImpl
 import com.example.data.repository.ProjectRoleRepositoryImpl
@@ -17,6 +18,7 @@ import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.ChatRepository
 import com.example.domain.repository.DmRepository
 import com.example.domain.repository.FriendRepository
+import com.example.domain.repository.InviteRepository
 import com.example.domain.repository.ProjectMemberRepository
 import com.example.domain.repository.ProjectRepository
 import com.example.domain.repository.ProjectRoleRepository
@@ -25,6 +27,7 @@ import com.example.domain.repository.ProjectStructureRepository
 import com.example.domain.repository.ScheduleRepository
 import com.example.domain.repository.SearchRepository
 import com.example.domain.repository.UserRepository
+import com.example.domain.util.NetworkConnectivityMonitor
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -49,5 +52,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindScheduleRepository(impl: ScheduleRepositoryImpl): ScheduleRepository
     @Binds @Singleton abstract fun bindProjectSettingRepository(impl: ProjectSettingRepositoryImpl): ProjectSettingRepository
     @Binds @Singleton abstract fun bindProjectStructureRepository(impl: ProjectStructureRepositoryImpl): ProjectStructureRepository
-
+    @Binds @Singleton abstract fun bindInviteRepository(impl: InviteRepositoryImpl): InviteRepository
 }
