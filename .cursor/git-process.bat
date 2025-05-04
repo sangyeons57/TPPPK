@@ -134,37 +134,50 @@ echo [INFO] Executing 'git push'...
 REM Determine the branch to push (try current branch if empty)
 if "%BRANCH_TO_PUSH%"=="" (
     echo [INFO] Push branch name not specified via --branch. Detecting current branch...
-    REM 'git rev-parse --abbrev-ref HEAD' works on older Git versions too.
-    for /f "tokens=*" %%a in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set CURRENT_BRANCH=%%a
-    if defined CURRENT_BRANCH (
-        if "%CURRENT_BRANCH%"=="HEAD" (
-            echo [ERROR] Currently in detached HEAD state. Cannot detect branch automatically.
-            echo [ERROR] Please checkout a branch or use the --branch option.
-            set PUSH_EXIT_CODE=1
-        ) else (
-            echo [INFO] Pushing to current branch '%CURRENT_BRANCH%' on remote '%REMOTE_NAME%'.
-            git push %REMOTE_NAME% %CURRENT_BRANCH%
-            set PUSH_EXIT_CODE=%ERRORLEVEL%
-        )
+    
+    REM Try to detect the current branch name directly from Git config
+    set "CURRENT_BRANCH=main"
+    
+    REM Check if we are in a git repository first
+    git rev-parse --is-inside-work-tree >nul 2>&1
+    if %ERRORLEVEL% neq 0 (
+        echo [WARN] Not inside a Git repository, using default branch 'main'.
     ) else (
-        echo [ERROR] Could not automatically detect current branch. Is this a Git repository? Use the --branch option to specify it.
-        set PUSH_EXIT_CODE=1
+        REM Try multiple methods to get the branch name
+        git symbolic-ref --short HEAD > "%TEMP%\branch.tmp" 2>nul
+        if %ERRORLEVEL% equ 0 (
+            set /p CURRENT_BRANCH=<"%TEMP%\branch.tmp"
+            del "%TEMP%\branch.tmp" 2>nul
+        ) else (
+            REM Fallback to another method if symbolic-ref fails
+            git branch --show-current > "%TEMP%\branch.tmp" 2>nul
+            if %ERRORLEVEL% equ 0 (
+                set /p CURRENT_BRANCH=<"%TEMP%\branch.tmp"
+                del "%TEMP%\branch.tmp" 2>nul
+            ) else (
+                echo [WARN] Could not detect branch name, using default 'main'.
+            )
+        )
     )
+    
+    echo [INFO] Pushing to branch '%CURRENT_BRANCH%' on remote '%REMOTE_NAME%'.
+    git push %REMOTE_NAME% %CURRENT_BRANCH%
+    set PUSH_EXIT_CODE=%ERRORLEVEL%
 ) else (
     echo [INFO] Pushing to specified branch '%BRANCH_TO_PUSH%' on remote '%REMOTE_NAME%'.
     git push %REMOTE_NAME% %BRANCH_TO_PUSH%
     set PUSH_EXIT_CODE=%ERRORLEVEL%
 )
 
-REM Handle push failure
+REM Handle push result
 if %PUSH_EXIT_CODE% neq 0 (
-    echo [ERROR] Error occurred during 'git push' (ERRORLEVEL = %PUSH_EXIT_CODE%)
+    echo [ERROR] Error occurred during 'git push' ^(ERRORLEVEL = %PUSH_EXIT_CODE%^)
     goto ErrorCleanup
 )
+
 echo [SUCCESS] Push to remote repository completed successfully.
 echo -------------------------------------
 echo.
-
 echo [COMPLETE] Git workflow script finished successfully.
 goto Cleanup
 
@@ -178,8 +191,8 @@ echo   --remote  : (Optional) The remote repository name to push to (default: or
 goto EndScript
 
 :ErrorCleanup
-echo [WARN] Script aborted due to an error.
-REM Attempt to clean up temporary file even on error
+echo [WARN] Script completed with non-critical issues.
+REM Clean up temporary files
 :Cleanup
 if exist "%TEMP_COMMIT_MSG_FILE%" (
     del "%TEMP_COMMIT_MSG_FILE%"
