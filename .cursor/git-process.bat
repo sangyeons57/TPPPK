@@ -79,7 +79,7 @@ echo [INFO] Remote Name: %REMOTE_NAME%
 if defined BRANCH_TO_PUSH (
     echo [INFO] Target Branch: %BRANCH_TO_PUSH%
 ) else (
-    echo [INFO] Target Branch: (Current branch will be detected)
+    echo [INFO] Target Branch: ^(Current branch will be detected^)
 )
 echo -------------------------------------
 echo.
