@@ -94,7 +94,7 @@ REM --- 2. Stage Changes ---
 echo [INFO] Staging all changes ('git add .') ...
 git add .
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Error occurred during 'git add .'! Aborting script.
+    echo [ERROR] Error occurred during 'git add .' Aborting script.
     goto EndScript
 )
 echo [SUCCESS] Changes staged successfully.
@@ -107,7 +107,7 @@ copy "%ARG_CONTENT_FILE%" "%TEMP_COMMIT_MSG_FILE%" > nul
 
 REM Check for file copy errors
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Error preparing commit message file! Aborting script.
+    echo [ERROR] Error preparing commit message file. Aborting script.
     goto ErrorCleanup
 )
 echo [SUCCESS] Commit message file prepared successfully.
@@ -121,7 +121,7 @@ set COMMIT_EXIT_CODE=%ERRORLEVEL%
 
 REM Handle commit failure and cleanup
 if %COMMIT_EXIT_CODE% neq 0 (
-    echo [ERROR] Error occurred during 'git commit' (ERRORLEVEL = %COMMIT_EXIT_CODE%)! Aborting script.
+    echo [ERROR] Error occurred during 'git commit' (ERRORLEVEL = %COMMIT_EXIT_CODE%). Aborting script.
     goto ErrorCleanup
 )
 echo [SUCCESS] Commit created successfully.
@@ -158,7 +158,6 @@ if "%BRANCH_TO_PUSH%"=="" (
 
 REM Handle push failure
 if %PUSH_EXIT_CODE% neq 0 (
-    REM Removed the trailing '!' from the echo message below to prevent potential parsing errors
     echo [ERROR] Error occurred during 'git push' (ERRORLEVEL = %PUSH_EXIT_CODE%)
     goto ErrorCleanup
 )
@@ -172,7 +171,7 @@ goto Cleanup
 :SyntaxError
 echo.
 REM Usage instructions updated (no --title)
-echo Usage: %~n0 --content "path\to\commit_message_file.txt" [--branch ^<branch_name^>] [--remote ^<remote_name^>]
+echo Usage: %~n0 --content "path\to\commit_message_file.txt" [--branch <branch_name>] [--remote <remote_name>]
 echo   --content : (Required) Path to a text file containing the full commit message (title and body).
 echo   --branch  : (Optional) The branch to push to. If omitted, attempts to use the current branch.
 echo   --remote  : (Optional) The remote repository name to push to (default: origin).
