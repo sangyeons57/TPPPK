@@ -7,6 +7,10 @@ alwaysApply: false
 
 *This rule defines how to handle large or complex tasks that require multiple steps.*
 
+## Note
+References to files must always follow the below format
+- [tasks-rule.mdc](mdc:.cursor/rules/tasks-rule.mdc) 
+
 1.  **Identify Large Task:** If a user request involves significant changes that cannot be reliably completed in a single response, activate this process.
 2.  **Break Down Task:** Decompose the overall task into smaller, logical, sequential steps.
 3.  **Create Task File:**

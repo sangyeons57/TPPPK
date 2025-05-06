@@ -10,6 +10,8 @@ import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSou
 import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSourceImpl
 import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSource
 import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSourceImpl
+import com.example.data.datasource.remote.chat.ChatRemoteDataSource
+import com.example.data.datasource.remote.chat.ChatRemoteDataSourceImpl
 import com.example.data.datasource.remote.dm.DmRemoteDataSource
 import com.example.data.datasource.remote.dm.DmRemoteDataSourceImpl
 import com.example.data.datasource.remote.friend.FriendRemoteDataSource
@@ -64,6 +66,16 @@ abstract class DataSourceModule {
     abstract fun bindProjectRoleLocalDataSource(
         projectRoleLocalDataSourceImpl: ProjectRoleLocalDataSourceImpl
     ): ProjectRoleLocalDataSource
+    
+    /**
+     * ChatRemoteDataSource 인터페이스 요청 시
+     * ChatRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindChatRemoteDataSource(
+        chatRemoteDataSourceImpl: ChatRemoteDataSourceImpl
+    ): ChatRemoteDataSource
 
     /**
      * DmRemoteDataSource 인터페이스 요청 시

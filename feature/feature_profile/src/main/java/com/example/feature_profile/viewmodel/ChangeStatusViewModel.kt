@@ -4,7 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.UserStatus
-import com.example.domain.repository.UserRepository
+import com.example.domain.usecase.user.GetCurrentStatusUseCase
+import com.example.domain.usecase.user.UpdateUserStatusUseCase
 // Domain 요소 Import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -36,7 +37,8 @@ sealed class ChangeStatusEvent {
 @HiltViewModel
 class ChangeStatusViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val userRepository: UserRepository // ★ Domain Repository 주입
+    private val getCurrentStatusUseCase: GetCurrentStatusUseCase,
+    private val updateUserStatusUseCase: UpdateUserStatusUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChangeStatusUiState(isLoading = true))
@@ -55,7 +57,7 @@ class ChangeStatusViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading current user status")
 
-            val result = userRepository.getCurrentStatus() // ★ Repository 호출
+            val result = getCurrentStatusUseCase() // UseCase 호출
 
             result.onSuccess { status -> // 성공 시 람다 실행, status는 Non-null 타입
                 _uiState.update {
@@ -99,7 +101,7 @@ class ChangeStatusViewModel @Inject constructor(
             _uiState.update { it.copy(isUpdating = true, error = null) }
             _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태 변경 중..."))
 
-            val result = userRepository.updateUserStatus(statusToUpdate) // ★ Repository 호출
+            val result = updateUserStatusUseCase(statusToUpdate) // UseCase 호출
 
             if (result.isSuccess) {
                 _uiState.update {

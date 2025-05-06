@@ -39,6 +39,7 @@ android {
 dependencies {
     // --- 모듈 의존성 ---
     implementation(project(":core:core_common")) // 공통 유틸리티 사용
+    implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui")) // 공통 유틸리티 사용
     implementation(project(":core:core_logging")) // Sentry 유틸리티 사용
     implementation(project(":domain")) // Domain 모델, Repository 인터페이스 사용
@@ -62,7 +63,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 
     // Navigation Compose (NavHostController 등을 직접 사용하진 않지만, 화면 구성에 필요할 수 있음)
-    implementation(libs.androidx.navigation.compose)
+    // implementation(libs.androidx.navigation.compose) // Commented out as we're using core_common's navigation now
 
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)

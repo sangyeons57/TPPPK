@@ -3,7 +3,7 @@ package com.example.data.repository
 import com.google.firebase.Timestamp
 import com.example.domain.model.Schedule
 import com.example.data.datasource.remote.schedule.ScheduleRemoteDataSource
-import com.example.data.model.dto.ScheduleDto
+import com.example.data.model.remote.schedule.ScheduleDto
 import com.example.data.model.mapper.toDomain
 import com.example.data.model.mapper.toDto
 import io.mockk.*

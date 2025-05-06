@@ -3,6 +3,8 @@ package com.example.feature_project.roles.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getRequiredString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -38,7 +40,7 @@ class RoleListViewModel @Inject constructor(
     // TODO: private val repository: ProjectRoleRepository
 ) : ViewModel() {
 
-    val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 전달되지 않았습니다.")
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
 
     private val _uiState = MutableStateFlow(RoleListUiState(projectId = projectId, isLoading = true))
     val uiState: StateFlow<RoleListUiState> = _uiState.asStateFlow()

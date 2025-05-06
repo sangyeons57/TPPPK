@@ -1,6 +1,6 @@
 package com.example.data.model.mapper
 
-import com.example.data.model.dto.ScheduleDto
+import com.example.data.model.remote.schedule.ScheduleDto
 import com.example.domain.model.Schedule
 import com.google.firebase.Timestamp
 import java.time.LocalDateTime
@@ -25,7 +25,7 @@ private val zoneId = ZoneId.of("UTC")
  * @throws IllegalArgumentException 필수 필드(id, startTime, endTime)가 DTO에서 null일 경우 발생.
  */
 fun ScheduleDto.toDomain(): Schedule {
-    val documentId = this.id
+    val documentId = this.scheduleId
         ?: throw IllegalArgumentException("Schedule ID cannot be null in DTO")
     val startTimeStamp = this.startTime
         ?: throw IllegalArgumentException("startTime cannot be null in DTO for Schedule ID: $documentId")
@@ -40,10 +40,10 @@ fun ScheduleDto.toDomain(): Schedule {
         id = documentId,
         projectId = this.projectId,
         title = this.title, // DTO의 기본값("") 사용
-        content = this.content,
+        content = this.description,
         startTime = startDateTime,
         endTime = endDateTime,
-        participants = this.participants ?: emptyList(), // null이면 빈 리스트로
+        participants = this.participantIds, // DTO의 participantIds를 domain의 participants로 매핑
         isAllDay = this.isAllDay ?: false // null이면 false로 (스키마에 없는 필드)
     )
 }
@@ -67,10 +67,10 @@ fun Schedule.toDto(): ScheduleDto {
         // id는 Firestore에서 자동 생성되거나 외부에서 설정하므로 여기서는 null로 둠
         projectId = this.projectId,
         title = this.title,
-        content = this.content,
+        description = this.content ?: "",
         startTime = startTimestamp,
         endTime = endTimestamp,
-        participants = this.participants,
+        participantIds = this.participants,
         isAllDay = this.isAllDay
         // createdAt은 DTO에서 @ServerTimestamp로 처리 (필요 시)
     )

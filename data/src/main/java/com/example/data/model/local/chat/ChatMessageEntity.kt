@@ -1,32 +1,40 @@
 package com.example.data.model.local.chat
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.example.data.model.local.ChatEntity // Assuming ChatEntity exists for ForeignKey
-import java.time.LocalDateTime
 
 /**
- * Room 데이터베이스에 저장될 개별 채팅 메시지 엔티티입니다.
+ * 로컬 데이터베이스에 저장되는 채팅 메시지 엔티티
+ * 
+ * @property id 로컬 데이터베이스에서의 자동 생성 ID
+ * @property chatId 서버/원격 메시지 ID
+ * @property channelId 채팅 채널 ID
+ * @property userId 메시지 작성자 ID
+ * @property userName 메시지 작성자 이름
+ * @property userProfileUrl 메시지 작성자 프로필 이미지 URL (nullable)
+ * @property message 메시지 내용
+ * @property sentAt 메시지 전송 시간 (Unix timestamp)
+ * @property isModified 메시지 수정 여부
+ * @property attachmentImageUrls 첨부된 이미지 URL 목록 (콤마로 구분된 문자열)
  */
 @Entity(
     tableName = "chat_messages",
-    // ChatEntity 를 참조하는 외래 키 설정 (ChatEntity 가 정의되었다고 가정)
-    foreignKeys = [ForeignKey(
-        entity = ChatEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["chatId"],
-        onDelete = ForeignKey.CASCADE // 채팅방 삭제 시 관련 메시지도 삭제
-    )],
-    // 빠른 조회를 위해 chatId 와 sentAt 에 인덱스 추가
-    indices = [Index(value = ["chatId"]), Index(value = ["sentAt"])]
+    indices = [
+        Index("channelId"),
+        Index("chatId", "channelId", unique = true)
+    ]
 )
 data class ChatMessageEntity(
-    @PrimaryKey val id: String, // 메시지 ID (UUID 등 고유 값)
-    val chatId: String, // 어떤 채팅방(ChatEntity)에 속하는지 식별
-    val senderId: String, // 발신자 사용자 ID
-    val message: String, // 메시지 내용
-    val sentAt: LocalDateTime, // 메시지 발신 시간 (UTC 저장, TypeConverter 사용)
-    val isRead: Boolean = false // 수신 확인 여부
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val chatId: Int,
+    val channelId: String,
+    val userId: Int,
+    val userName: String,
+    val userProfileUrl: String? = null,
+    val message: String,
+    val sentAt: Long, // Unix timestamp (milliseconds)
+    val isModified: Boolean = false,
+    val attachmentImageUrls: String? = null // 콤마로 구분된 URL 목록 문자열
 ) 

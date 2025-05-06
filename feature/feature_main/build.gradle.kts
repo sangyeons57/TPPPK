@@ -40,7 +40,8 @@ dependencies {
     // --- 모듈 의존성 ---
     implementation(project(":core:core_common")) // 공통 유틸리티 사용
     implementation(project(":core:core_ui")) // 공통 유틸리티 사용
-    implementation(project(":navigation")) // 공통 유틸리티 사용
+    implementation(project(":core:core_navigation"))
+    // implementation(project(":navigation")) // 삭제: 이제 core_common 모듈에서 네비게이션 제공
     implementation(project(":domain")) // Domain 모델, Repository 인터페이스 사용
     // ★ 중요: 현재 ChatViewModel이 Repository 구현체(ChatRepositoryImpl)가 제공하는
     //    ChatRepository 인터페이스를 직접 주입받으므로 :data 모듈 의존성이 필요합니다.

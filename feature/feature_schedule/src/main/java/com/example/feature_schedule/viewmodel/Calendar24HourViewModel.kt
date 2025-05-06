@@ -5,14 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_ui.theme.*
 import com.example.domain.model.Schedule
-import com.example.domain.repository.ScheduleRepository
+import com.example.domain.usecase.schedule.DeleteScheduleUseCase
+import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
+import com.example.core_navigation.destination.AppRoutes
 
 // --- 데이터 모델 ---
 data class ScheduleItem24Hour(
@@ -53,13 +54,14 @@ sealed class Calendar24HourEvent {
 @HiltViewModel
 class Calendar24HourViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val scheduleRepository: ScheduleRepository
+    private val getSchedulesForDateUseCase: GetSchedulesForDateUseCase,
+    private val deleteScheduleUseCase: DeleteScheduleUseCase
 ) : ViewModel() {
 
     // --- 날짜 파라미터 ---
-    private val year: Int = savedStateHandle["year"] ?: LocalDate.now().year
-    private val month: Int = savedStateHandle["month"] ?: LocalDate.now().monthValue
-    private val day: Int = savedStateHandle["day"] ?: LocalDate.now().dayOfMonth
+    private val year: Int = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR) ?: LocalDate.now().year
+    private val month: Int = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_MONTH) ?: LocalDate.now().monthValue
+    private val day: Int = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_DAY) ?: LocalDate.now().dayOfMonth
     
     // --- 색상 관리자 ---
     private val colorManager = ScheduleColorManager()
@@ -88,7 +90,7 @@ class Calendar24HourViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = Calendar24HourUiState.Loading
             
-            val result = scheduleRepository.getSchedulesForDate(date)
+            val result = getSchedulesForDateUseCase(date)
             
             if (result.isSuccess) {
                 val schedules = result.getOrThrow().map { schedule ->
@@ -151,7 +153,7 @@ class Calendar24HourViewModel @Inject constructor(
      */
     fun deleteSchedule(scheduleId: String) {
         viewModelScope.launch {
-            val result = scheduleRepository.deleteSchedule(scheduleId)
+            val result = deleteScheduleUseCase(scheduleId)
             
             if (result.isSuccess) {
                 // 성공 시, 현재 상태가 Success이면 해당 스케줄 제거 후 UI 업데이트

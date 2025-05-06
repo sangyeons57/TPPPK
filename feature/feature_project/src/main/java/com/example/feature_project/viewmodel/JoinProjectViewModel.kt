@@ -3,7 +3,7 @@ package com.example.feature_project.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -29,7 +29,7 @@ sealed class JoinProjectEvent {
 @HiltViewModel
 class JoinProjectViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    private val projectRepository: ProjectRepository
+    private val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(JoinProjectUiState())
@@ -70,7 +70,7 @@ class JoinProjectViewModel @Inject constructor(
             println("ViewModel: Attempting to join project with code/link: $codeOrLink")
 
             // 프로젝트 참여 로직
-            val result = projectRepository.joinProjectWithCode(codeOrLink)
+            val result = joinProjectWithCodeUseCase(codeOrLink)
 
             if (result.isSuccess) {
                 val joinedProjectId = result.getOrThrow() // 성공 시 ID 가져오기

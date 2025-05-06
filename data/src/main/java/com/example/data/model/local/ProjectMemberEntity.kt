@@ -39,9 +39,9 @@ data class ProjectMemberEntity(
     val profileImageUrl: String?,
     
     /**
-     * 역할 이름 목록 (JSON 문자열로 저장)
+     * 역할 ID 목록 (JSON 문자열로 저장)
      */
-    val roleNamesJson: String,
+    val roleIdsJson: String,
     
     /**
      * 로컬 캐시 저장 시간
@@ -54,14 +54,14 @@ data class ProjectMemberEntity(
      * @return ProjectMember 도메인 모델
      */
     fun toDomain(): ProjectMember {
-        // JSON 문자열에서 역할 이름 목록으로 변환 (실제 변환 로직은 추가 필요)
-        val roleNames = roleNamesJson.split(",").filter { it.isNotEmpty() }
+        // JSON 문자열에서 역할 ID 목록으로 변환
+        val roleIds = roleIdsJson.split(",").filter { it.isNotEmpty() }
         
         return ProjectMember(
             userId = userId,
             userName = userName,
             profileImageUrl = profileImageUrl,
-            roleNames = roleNames
+            roleIds = roleIds
         )
     }
 
@@ -74,15 +74,15 @@ data class ProjectMemberEntity(
          * @return ProjectMemberEntity
          */
         fun fromDomain(projectId: String, member: ProjectMember): ProjectMemberEntity {
-            // 역할 이름 목록을 JSON 문자열로 변환 (간단한 구현)
-            val roleNamesJson = member.roleNames.joinToString(",")
+            // 역할 ID 목록을 JSON 문자열로 변환
+            val roleIdsJsonValue = member.roleIds.joinToString(",")
             
             return ProjectMemberEntity(
                 projectId = projectId,
                 userId = member.userId,
                 userName = member.userName,
                 profileImageUrl = member.profileImageUrl,
-                roleNamesJson = roleNamesJson
+                roleIdsJson = roleIdsJsonValue
             )
         }
     }

@@ -3,6 +3,7 @@ package com.example.feature_settings.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.usecase.auth.ChangePasswordUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -32,7 +33,7 @@ sealed class ChangePasswordEvent {
 @HiltViewModel
 class ChangePasswordViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    // TODO: private val authRepository: AuthRepository
+    private val changePasswordUseCase: ChangePasswordUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChangePasswordUiState())
@@ -109,24 +110,19 @@ class ChangePasswordViewModel @Inject constructor(
             _eventFlow.emit(ChangePasswordEvent.ClearFocus)
             println("ViewModel: Attempting to change password")
 
-            // --- TODO: 실제 비밀번호 변경 로직 (authRepository.changePassword) ---
-            delay(1200) // 임시 딜레이
-            // 서버 응답에 따른 결과 처리 (성공, 현재 비밀번호 불일치, 기타 오류)
-            val success = currentPassword == "current" // 임시: 현재 비번이 "current"여야 성공
-            // val result = authRepository.changePassword(currentPassword, newPassword)
-            // --------------------------------------------------------------------
+            // 비밀번호 변경 요청
+            val result = changePasswordUseCase(currentPassword, newPassword)
 
-            if (success /*result.isSuccess*/) {
+            if (result.isSuccess) {
                 _eventFlow.emit(ChangePasswordEvent.ShowSnackbar("비밀번호가 변경되었습니다."))
                 _uiState.update { it.copy(isLoading = false, changeSuccess = true) } // 성공 및 뒤로가기 트리거
             } else {
-                // TODO: result.exceptionOrNull() 등을 분석하여 구체적인 에러 메시지 설정
-                val errorMessage = if (currentPassword != "current") "현재 비밀번호가 일치하지 않습니다." else "비밀번호 변경 실패"
+                val errorMessage = result.exceptionOrNull()?.message ?: "비밀번호 변경 실패"
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         // 특정 필드 에러 또는 일반 에러 표시
-                        currentPasswordError = if (currentPassword != "current") errorMessage else null
+                        currentPasswordError = if (errorMessage.contains("현재 비밀번호")) errorMessage else null
                     )
                 }
                 _eventFlow.emit(ChangePasswordEvent.ShowSnackbar(errorMessage))

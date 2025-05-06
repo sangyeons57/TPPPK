@@ -61,6 +61,7 @@ import com.example.feature_chat.viewmodel.ChatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
+import com.example.core_navigation.core.ComposeNavigationHandler
 import java.util.Locale
 
 /**
@@ -70,9 +71,8 @@ import java.util.Locale
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
-    viewModel: ChatViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    // TODO: onNavigateToUserProfile: (String) -> Unit // userId 타입 확인 필요 (Int?)
+    navigationManager: ComposeNavigationHandler,
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -102,6 +102,7 @@ fun ChatScreen(
                 is ChatEvent.ShowUserProfileDialog -> showUserProfileDialog = event.userId
                 is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ClearFocus -> focusManager.clearFocus()
+                is ChatEvent.NavigateBack -> navigationManager.navigateBack()
             }
         }
     }
@@ -138,7 +139,7 @@ fun ChatScreen(
             TopAppBar(
                 title = { Text(uiState.channelName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { viewModel.onBackClick() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },
@@ -741,7 +742,7 @@ private fun ChatScreenFullPreview() {
             )
         }.reversed(), // 최신 메시지가 아래로 가도록 (LazyColumn reverseLayout=true 이므로)
         myUserId = 1,
-        galleryImages = List(10) { GalleryImageUiModel(Uri.EMPTY, it.toLong()) } // 가짜 갤러리 이미지
+        galleryImages = List(10) { GalleryImageUiModel(Uri.EMPTY, it.toString()) } // 가짜 갤러리 이미지
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ChatContentPreview(uiState = previewUiState)
@@ -754,7 +755,7 @@ private fun ImageSelectionGridPreview() {
     val images = List(10) {
         GalleryImageUiModel( // ★ 타입 변경
             "https://picsum.photos/id/$it/200".toUri(), // 가짜 이미지 URL 사용
-            it.toLong()
+            it.toString()
         )
     }
     val selected = remember { mutableStateOf(setOf<Uri>()) }

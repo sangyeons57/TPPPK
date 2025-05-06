@@ -12,7 +12,7 @@ data class MessageResult(
     override val id: String, // 메시지 ID + 채널 ID 조합 등 고유하게
     val channelId: String,
     val channelName: String,
-    val messageId: Int,
+    val messageId: String,
     val senderName: String,
     val messageContent: String, // 검색어 하이라이팅은 UI 레이어에서 처리
     val timestamp: LocalDateTime

@@ -3,13 +3,16 @@ package com.example.feature_project.structure.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getRequiredString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.domain.model.ChannelType
 
-// ChannelType enum은 CreateChannelViewModel과 공유하거나 별도 파일로 분리 가능
+// ChannelType enum은 CreateChannelViewModel과 공유하거나 별도 파일로 분리 가능 -> domain/model/ChannelType 으로 이동했으므로 제거
 
 // --- UI 상태 ---
 data class EditChannelUiState(
@@ -32,19 +35,6 @@ sealed class EditChannelEvent {
     object ShowDeleteConfirmation : EditChannelEvent()
 }
 
-// --- Repository 인터페이스 (가상 - 이전 ViewModel과 공유 또는 확장) ---
-interface ProjectStructureRepository {
-    suspend fun createCategory(projectId: String, categoryName: String): Result<Unit>
-    suspend fun createChannel(projectId: String, categoryId: String, channelName: String, channelType: ChannelType): Result<Unit>
-    suspend fun getCategoryDetails(categoryId: String): Result<String>
-    suspend fun updateCategory(categoryId: String, newName: String): Result<Unit>
-    suspend fun deleteCategory(categoryId: String): Result<Unit>
-    suspend fun getChannelDetails(channelId: String): Result<Pair<String, ChannelType>> // 이름과 타입 반환 가정
-    suspend fun updateChannel(channelId: String, newName: String, newType: ChannelType): Result<Unit>
-    suspend fun deleteChannel(channelId: String): Result<Unit>
-    // ...
-}
-
 
 @HiltViewModel
 class EditChannelViewModel @Inject constructor(
@@ -52,10 +42,9 @@ class EditChannelViewModel @Inject constructor(
     // TODO: private val repository: ProjectStructureRepository
 ) : ViewModel() {
 
-    // 네비게이션 인자 (실제 앱에서는 이름 확인 필요)
-    private val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 전달되지 않았습니다.")
-    private val categoryId: String = savedStateHandle["categoryId"] ?: error("categoryId가 전달되지 않았습니다.")
-    private val channelId: String = savedStateHandle["channelId"] ?: error("channelId가 전달되지 않았습니다.")
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    private val categoryId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_CATEGORY_ID)
+    private val channelId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_CHANNEL_ID)
 
     private val _uiState = MutableStateFlow(EditChannelUiState(channelId = channelId, isLoading = true))
     val uiState: StateFlow<EditChannelUiState> = _uiState.asStateFlow()

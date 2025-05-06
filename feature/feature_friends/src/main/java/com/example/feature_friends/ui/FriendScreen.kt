@@ -21,12 +21,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.R
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
 import com.example.feature_friends.viewmodel.FriendsEvent
 import kotlinx.coroutines.flow.collectLatest
+import java.util.Date // Preview용 Date 임포트
 
 /**
  * FriendsScreen: 친구 목록 표시 및 관리 화면 (Stateful)
@@ -34,12 +38,9 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendsScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: FriendViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    onNavigateToAcceptFriends: () -> Unit,
-    onNavigateToChat: (String) -> Unit, // channelId 또는 userId 전달
-    onShowAddFriendDialog: () -> Unit // 친구 추가 다이얼로그 표시 요청
+    viewModel: FriendViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -48,8 +49,8 @@ fun FriendsScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FriendsEvent.NavigateToAcceptFriends -> onNavigateToAcceptFriends()
-                is FriendsEvent.NavigateToChat -> onNavigateToChat(event.channelId) // 예: channelId로 채팅방 이동
+                is FriendsEvent.NavigateToAcceptFriends -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.ACCEPT_REQUESTS))
+                is FriendsEvent.NavigateToChat -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.chat(event.channelId)))
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -62,7 +63,7 @@ fun FriendsScreen(
             TopAppBar(
                 title = { Text("친구") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },
@@ -99,7 +100,7 @@ fun FriendsScreen(
                     Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
-            uiState.friends.isEmpty() -> {
+            uiState.friends.isEmpty() && !uiState.isLoading -> { // 로딩 중 아닐 때만 빈 상태 표시
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("친구가 없습니다. 친구를 추가해보세요!")
                 }
@@ -129,7 +130,7 @@ fun FriendsScreen(
 fun FriendsListContent(
     modifier: Modifier = Modifier,
     friends: List<FriendItem>,
-    onFriendClick: (String) -> Unit // userId 전달
+    onFriendClick: (String) -> Unit // friendId 전달
 ) {
     LazyColumn(
         modifier = modifier
@@ -139,11 +140,11 @@ fun FriendsListContent(
     ) {
         items(
             items = friends,
-            key = { it.userId }
+            key = { it.friendId } // 변경
         ) { friend ->
             FriendListItem(
                 friend = friend,
-                onClick = { onFriendClick(friend.userId) }
+                onClick = { onFriendClick(friend.friendId) } // 변경
             )
             HorizontalDivider() // 아이템 사이에 구분선 추가
         }
@@ -168,27 +169,27 @@ fun FriendListItem(
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(friend.profileImageUrl ?: R.drawable.ic_account_circle_24)
+                .data(R.drawable.ic_account_circle_24) // 기본 이미지 사용
                 .error(R.drawable.ic_account_circle_24)
                 .placeholder(R.drawable.ic_account_circle_24)
                 .build(),
-            contentDescription = "${friend.userName} 프로필",
+            contentDescription = "${friend.displayName} 프로필", // 변경
             modifier = Modifier.size(48.dp).clip(CircleShape), // 크기 조절
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = friend.userName,
+                text = friend.displayName, // 변경
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
-            // TODO: 친구 상태 (온라인/오프라인 등) 표시 (선택적)
             Text(
-                text = friend.status, // ViewModel에서 가져온 상태
+                text = "Status: ${friend.status}", // "Status: " 접두사 추가
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
+            // 예시: friend.relationshipTimestamp.toString() 등으로 시간 표시 가능
         }
         // TODO: DM 바로가기 버튼 또는 다른 액션 버튼 추가 가능 (옵션)
         // TextButton(onClick = onClick) { Text("DM") }
@@ -202,9 +203,9 @@ fun FriendListItem(
 @Composable
 private fun FriendsListContentPreview() {
     val previewFriends = listOf(
-        FriendItem("u1", "엘리스", "온라인", null),
-        FriendItem("u2", "밥", "오프라인", "url..."),
-        FriendItem("u3", "찰리", "온라인", null)
+        FriendItem("u1", "accepted", Date(), null, "Friend: u1"),
+        FriendItem("u2", "pending_sent", Date(), null, "Friend: u2"),
+        FriendItem("u3", "accepted", Date(), Date(), "Friend: u3")
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Scaffold(

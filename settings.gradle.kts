@@ -28,6 +28,7 @@ include(":domain")
 include(":core:core_common")
 include(":core:core_logging")
 include(":core:core_ui")
+include(":core:core_navigation")
 
 include(":feature:feature_chat")
 include(":feature:feature_auth")

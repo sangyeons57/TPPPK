@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
@@ -18,8 +19,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_project.structure.viewmodel.ChannelType
+import com.example.domain.model.ChannelType
 import com.example.feature_project.structure.viewmodel.EditChannelEvent
 import com.example.feature_project.structure.viewmodel.EditChannelUiState
 import com.example.feature_project.structure.viewmodel.EditChannelViewModel
@@ -28,12 +30,12 @@ import kotlinx.coroutines.flow.collectLatest
 /**
  * EditChannelScreen: 프로젝트 내 채널 이름 및 유형 수정/삭제 화면 (Stateful)
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun EditChannelScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: EditChannelViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: EditChannelViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -44,7 +46,7 @@ fun EditChannelScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditChannelEvent.NavigateBack -> onNavigateBack()
+                is EditChannelEvent.NavigateBack -> navigationManager.navigateBack()
                 is EditChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditChannelEvent.ClearFocus -> focusManager.clearFocus()
                 is EditChannelEvent.ShowDeleteConfirmation -> showDeleteConfirmationDialog = true
@@ -55,7 +57,7 @@ fun EditChannelScreen(
     // 수정 또는 삭제 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.updateSuccess, uiState.deleteSuccess) {
         if (uiState.updateSuccess || uiState.deleteSuccess) {
-            onNavigateBack()
+            navigationManager.navigateBack()
         }
     }
 
@@ -66,7 +68,7 @@ fun EditChannelScreen(
             TopAppBar(
                 title = { Text("채널 편집") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

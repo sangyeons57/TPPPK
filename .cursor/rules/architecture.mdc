@@ -37,6 +37,7 @@ alwaysApply: false
     - `mapper`: 도메인 모델 → UI 모델 변환 로직
     - `di`: 기능별 의존성 주입 모듈
   - 의존성: `:domain:usecase`, `:domain:model`, `:core:ui`
+  - **중요**: ViewModel은 Repository를 직접 사용할 수 없고, 반드시 UseCase를 통해서만 도메인 로직에 접근해야 함
 
 - **코어 레이어 (`:core`)**
   - **`:core:ui`**: 공통 UI 컴포넌트, 테마, 스타일
@@ -86,6 +87,13 @@ alwaysApply: false
   - 단일 책임 원칙에 따른 비즈니스 로직 분리
   - 재사용 가능한 비즈니스 로직 단위
   - ViewModel과 레포지토리 사이의 중재자
+  - 설계 규칙:
+    - 각 UseCase는 단일 책임을 가짐
+    - `operator fun invoke()` 패턴으로 호출 단순화
+    - Repository 결과를 `Result<T>` 타입으로 래핑
+    - 필요한 경우 추가적인 비즈니스 로직 처리
+    - ViewModel에서는 반드시 UseCase를 통해서만 데이터에 접근
+    - 직접적인 Repository 접근은 허용되지 않음
 
 ## 데이터 관리 전략
 
@@ -162,13 +170,14 @@ alwaysApply: false
    - 적절한 DataSource 선택 (로컬/원격)
    - 원격 호출 시 네트워크 오류 처리
    - 데이터 캐싱 및 동기화
-5. ViewModel: Repository 결과 수신 → UiState 업데이트
+5. ViewModel: UseCase 결과 수신 → UiState 업데이트
 6. UI: 새 UiState 감지 → UI 갱신
 
 ## 예외 처리 전략
 
 - 도메인 레이어: Result 타입 사용 → 명시적 성공/실패 처리
 - Repository: Result 반환, 적절한 실패 래핑
+- UseCase: 필요한 경우 추가적인 예외 처리 및 변환
 - ViewModel: 예외 처리 및 적절한 UiState 변환
 - UI: 사용자 친화적 오류 메시지 표시
 

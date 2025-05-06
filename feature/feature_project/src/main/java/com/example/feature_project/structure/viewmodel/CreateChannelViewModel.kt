@@ -3,14 +3,17 @@ package com.example.feature_project.structure.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getRequiredString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.domain.model.ChannelType
 
-// 채널 유형 정의
-enum class ChannelType { TEXT, VOICE }
+// 채널 유형 정의 -> domain/model/ChannelType 으로 이동했으므로 제거
+// enum class ChannelType { TEXT, VOICE }
 
 // --- UI 상태 ---
 data class CreateChannelUiState(
@@ -43,9 +46,9 @@ class CreateChannelViewModel @Inject constructor(
     // TODO: private val repository: ProjectStructureRepository
 ) : ViewModel() {
 
-    // 네비게이션으로 전달받은 ID (실제 앱에서는 네비게이션 인자 이름 확인 필요)
-    private val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 전달되지 않았습니다.")
-    private val categoryId: String = savedStateHandle["categoryId"] ?: error("categoryId가 전달되지 않았습니다.")
+    // SavedStateHandle 확장 함수와 AppDestination 상수를 사용하여 ID들 가져오기
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    private val categoryId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_CATEGORY_ID)
 
     private val _uiState = MutableStateFlow(CreateChannelUiState())
     val uiState: StateFlow<CreateChannelUiState> = _uiState.asStateFlow()

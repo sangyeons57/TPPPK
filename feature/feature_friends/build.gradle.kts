@@ -39,6 +39,7 @@ android {
 dependencies {
     // --- 모듈 의존성 ---
     implementation(project(":core:core_common")) // 공통 유틸리티 사용
+    implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui")) // 공통 유틸리티 사용
     implementation(project(":domain")) // Domain 모델, Repository 인터페이스 사용
     // ★ 중요: 현재 ChatViewModel이 Repository 구현체(ChatRepositoryImpl)가 제공하는

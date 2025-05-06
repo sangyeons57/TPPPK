@@ -1,6 +1,11 @@
 package com.example.data.di
 
 // 모든 Repository 인터페이스와 구현체 Import
+import com.example.data.datasource.remote.auth.AuthRemoteDataSource
+import com.example.data.datasource.remote.auth.AuthRemoteDataSourceImpl
+import com.example.data.datasource.remote.user.UserRemoteDataSource
+import com.example.data.datasource.remote.user.UserRemoteDataSourceImpl
+import com.example.data.model.mapper.UserMapper
 import com.example.data.repository.AuthRepositoryImpl
 import com.example.data.repository.ChatRepositoryImpl
 import com.example.data.repository.DmRepositoryImpl
@@ -34,6 +39,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/**
+ * 레포지토리 및 데이터 소스 구현체를 제공하는 Hilt 모듈
+ */
 @Module
 @InstallIn(SingletonComponent::class) // 앱 전역에서 사용할 Repository는 SingletonComponent 사용
 abstract class RepositoryModule {
@@ -53,4 +61,28 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindProjectSettingRepository(impl: ProjectSettingRepositoryImpl): ProjectSettingRepository
     @Binds @Singleton abstract fun bindProjectStructureRepository(impl: ProjectStructureRepositoryImpl): ProjectStructureRepository
     @Binds @Singleton abstract fun bindInviteRepository(impl: InviteRepositoryImpl): InviteRepository
+
+    /**
+     * AuthRemoteDataSource 구현체를 주입합니다.
+     *
+     * @param dataSourceImpl AuthRemoteDataSourceImpl 구현체
+     * @return AuthRemoteDataSource 인터페이스
+     */
+    @Binds
+    @Singleton
+    abstract fun bindAuthRemoteDataSource(
+        dataSourceImpl: AuthRemoteDataSourceImpl
+    ): AuthRemoteDataSource
+
+    /**
+     * UserRemoteDataSource 구현체를 주입합니다.
+     *
+     * @param dataSourceImpl UserRemoteDataSourceImpl 구현체
+     * @return UserRemoteDataSource 인터페이스
+     */
+    @Binds
+    @Singleton
+    abstract fun bindUserRemoteDataSource(
+        dataSourceImpl: UserRemoteDataSourceImpl
+    ): UserRemoteDataSource
 }

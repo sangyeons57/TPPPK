@@ -7,7 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PersonAdd // 멤버 추가 아이콘
+import androidx.compose.material.icons.filled.Search // ★ 검색 아이콘 import 추가
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -23,12 +26,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.feature_project.members.viewmodel.MemberListEvent
+import com.example.feature_project.members.viewmodel.MemberListUiState
 import com.example.feature_project.members.viewmodel.MemberListViewModel
+import com.example.domain.model.ProjectMember // Import domain model
 import com.example.feature_project.members.viewmodel.ProjectMemberItem
-// ViewModel 및 관련 요소 Import
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -37,22 +44,30 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberListScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: MemberListViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    onNavigateToEditMember: (projectId: String, userId: String) -> Unit,
-    onShowAddMemberDialog: (projectId: String) -> Unit // 멤버 추가 다이얼로그 표시 콜백
+    viewModel: MemberListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showDeleteConfirmationDialog by remember { mutableStateOf<ProjectMember?>(null) }
+    var showAddMemberDialogState by remember { mutableStateOf(false) }
 
-    // 이벤트 처리 (스낵바, 네비게이션 등)
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is MemberListEvent.NavigateToEditMember -> onNavigateToEditMember(event.projectId, event.userId)
-                is MemberListEvent.ShowAddMemberDialog -> onShowAddMemberDialog(event.projectId)
-                is MemberListEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is MemberListEvent.NavigateToEditMember -> {
+                    navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editMember(event.projectId, event.userId)))
+                }
+                is MemberListEvent.ShowDeleteConfirm -> {
+                    showDeleteConfirmationDialog = event.member
+                }
+                is MemberListEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is MemberListEvent.ShowAddMemberDialog -> {
+                    showAddMemberDialogState = true
+                }
             }
         }
     }
@@ -62,52 +77,60 @@ fun MemberListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("프로젝트 멤버") },
+                title = { Text("멤버 관리") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },
                 actions = {
-                    IconButton(onClick = viewModel::onAddMemberClick) { // 멤버 추가 액션
-                        Icon(Icons.Filled.PersonAdd, contentDescription = "멤버 추가")
+                    IconButton(onClick = { viewModel.onAddMemberClick() }) {
+                        Icon(Icons.Filled.PersonAdd, contentDescription = "멤버 초대")
                     }
                 }
             )
         }
     ) { paddingValues ->
-        // 로딩 및 에러 상태 처리
-        when {
-            uiState.isLoading && uiState.members.isEmpty() -> { // 초기 로딩
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+        MemberListContent(
+            paddingValues = paddingValues,
+            uiState = uiState,
+            onSearchQueryChanged = viewModel::onSearchQueryChanged,
+            onMemberClick = viewModel::onMemberClick,
+            onDeleteMemberClick = viewModel::requestDeleteMember
+        )
+    }
+
+    // 멤버 삭제 확인 다이얼로그
+    showDeleteConfirmationDialog?.let { member ->
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmationDialog = null },
+            title = { Text("멤버 내보내기") },
+            text = { Text("${member.userName}님을 프로젝트에서 내보내시겠습니까?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.confirmDeleteMember(member)
+                        showDeleteConfirmationDialog = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("내보내기") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmationDialog = null }) { Text("취소") }
             }
-            uiState.error != null -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
-                }
+        )
+    }
+
+    // 멤버 추가 다이얼로그
+    if (showAddMemberDialogState) {
+        AddMemberDialog(
+            projectId = uiState.projectId,
+            onDismissRequest = { showAddMemberDialogState = false },
+            onMemberAdded = {
+                showAddMemberDialogState = false
+                viewModel.refreshMembers()
             }
-            uiState.members.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("프로젝트 멤버가 없습니다.")
-                }
-            }
-            else -> {
-                // 멤버 목록 표시
-                MemberListContent(
-                    modifier = Modifier.padding(paddingValues),
-                    members = uiState.members, // ★ UI 모델 리스트 전달
-                    onMemberClick = viewModel::onMemberClick // ViewModel 함수 호출 (userId 전달)
-                )
-            }
-        }
-        // 백그라운드 로딩 인디케이터 (새로고침 시)
-        if (uiState.isLoading && uiState.members.isNotEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(top = 56.dp), contentAlignment = Alignment.TopCenter) { // TopAppBar 아래 중앙
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) // 또는 CircularProgressIndicator
-            }
-        }
+        )
     }
 }
 
@@ -116,23 +139,88 @@ fun MemberListScreen(
  */
 @Composable
 fun MemberListContent(
-    modifier: Modifier = Modifier,
-    members: List<ProjectMemberItem>, // ★ UI 모델 타입 사용
-    onMemberClick: (String) -> Unit // userId 전달
+    paddingValues: PaddingValues,
+    uiState: MemberListUiState,
+    onSearchQueryChanged: (String) -> Unit,
+    onMemberClick: (ProjectMember) -> Unit,
+    onDeleteMemberClick: (ProjectMember) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp)
+        modifier = modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(
-            items = members,
-            key = { it.userId } // ★ userId를 Key로 사용
-        ) { member ->
-            ProjectMemberListItemComposable( // ★ Composable 이름 변경
-                member = member, // ★ UI 모델 전달
-                onClick = { onMemberClick(member.userId) }
+        // 검색 바 (선택 사항)
+        item {
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = onSearchQueryChanged,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                label = { Text("멤버 검색") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true
             )
-            HorizontalDivider(modifier = Modifier.padding(start = 88.dp)) // 프로필 이미지 영역 이후부터 Divider
+        }
+
+        if (uiState.isLoading) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else if (uiState.error != null) {
+            item {
+                Text(
+                    text = "오류: ${uiState.error}",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        } else if (uiState.members.isEmpty()) {
+             item {
+                Text(
+                    text = "프로젝트 멤버가 없습니다.",
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            items(uiState.members, key = { it.userId }) { memberItem ->
+                ProjectMemberListItemComposable(
+                    member = memberItem,
+                    onClick = { item ->
+                        println("WARN: Need originalMembers list from ViewModel to pass full ProjectMember object. Passing dummy for now.")
+                        // Find the original ProjectMember corresponding to the clicked item.userId
+                        // This requires the ViewModel to expose the original list or a lookup function.
+                        // Example lookup (requires originalMembers):
+                        // val originalMember = originalMembers.find { it.userId == item.userId }
+                        // if (originalMember != null) {
+                        //     onMemberClick(originalMember)
+                        // } else {
+                        //     println("Error: Could not find original ProjectMember for clicked item")
+                        // }
+                        // Temporary: Pass a dummy or handle error if original list isn't available
+                         val dummyMember = ProjectMember(item.userId, item.userName, item.profileImageUrl, emptyList()) // DUMMY
+                         onMemberClick(dummyMember)
+                    },
+                    onMoreClick = { item ->
+                        println("WARN: Need originalMembers list from ViewModel to pass full ProjectMember object. Passing dummy for now.")
+                        // Similar lookup as above
+                        // val originalMember = originalMembers.find { it.userId == item.userId }
+                        // if (originalMember != null) {
+                        //     onDeleteMemberClick(originalMember)
+                        // } else {
+                        //     println("Error: Could not find original ProjectMember for delete action")
+                        // }
+                        // Temporary: Pass a dummy or handle error
+                        val dummyMember = ProjectMember(item.userId, item.userName, item.profileImageUrl, emptyList()) // DUMMY
+                        onDeleteMemberClick(dummyMember)
+                    }
+                )
+            }
         }
     }
 }
@@ -141,21 +229,22 @@ fun MemberListContent(
  * ProjectMemberListItemComposable: 개별 프로젝트 멤버 아이템 UI (Stateless)
  */
 @Composable
-fun ProjectMemberListItemComposable( // ★ Composable 이름 변경
-    member: ProjectMemberItem, // ★ UI 모델 타입 사용
-    onClick: () -> Unit,
+fun ProjectMemberListItemComposable(
+    member: ProjectMemberItem,
+    onClick: (ProjectMemberItem) -> Unit,
+    onMoreClick: (ProjectMemberItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick) // 클릭 시 멤버 편집 화면 이동
+            .clickable { onClick(member) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(member.profileImageUrl ?: R.drawable.ic_account_circle_24) // 기본 이미지
+                .data(member.profileImageUrl ?: R.drawable.ic_account_circle_24)
                 .error(R.drawable.ic_account_circle_24)
                 .placeholder(R.drawable.ic_account_circle_24)
                 .build(),
@@ -166,16 +255,16 @@ fun ProjectMemberListItemComposable( // ★ Composable 이름 변경
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = member.userName, // ★ UI 모델 필드 사용
+                text = member.userName,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (member.rolesText.isNotEmpty()) { // 역할이 있을 경우 표시
+            if (member.rolesText.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = member.rolesText, // ★ UI 모델 필드 사용 (포맷된 역할 문자열)
+                    text = member.rolesText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     maxLines = 1,
@@ -183,7 +272,9 @@ fun ProjectMemberListItemComposable( // ★ Composable 이름 변경
                 )
             }
         }
-        // TODO: 필요시 추가 액션 버튼 (예: 추방 - 권한 확인 필요)
+        IconButton(onClick = { onMoreClick(member) }) {
+             Icon(Icons.Default.MoreVert, contentDescription = "더보기")
+        }
     }
 }
 
@@ -200,8 +291,16 @@ private fun MemberListContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
             MemberListContent(
-                members = previewMembers,
-                onMemberClick = {}
+                paddingValues = PaddingValues(),
+                uiState = MemberListUiState(
+                    isLoading = false,
+                    error = null,
+                    members = previewMembers,
+                    searchQuery = ""
+                ),
+                onSearchQueryChanged = {},
+                onMemberClick = {},
+                onDeleteMemberClick = {}
             )
         }
     }

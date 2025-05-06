@@ -2,7 +2,7 @@ package com.example.data.datasource.remote.schedule
 
 import com.example.core_common.constants.FirestoreConstants.Collections
 import com.example.core_common.constants.FirestoreConstants.ScheduleFields
-import com.example.data.model.dto.ScheduleDto
+import com.example.data.model.remote.schedule.ScheduleDto
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore // ktx extension

@@ -26,6 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.LoginFormFocusTarget
 import com.example.feature_auth.viewmodel.LoginEvent
@@ -42,10 +45,8 @@ import kotlinx.coroutines.flow.collectLatest
  */
 @Composable
 fun LoginScreen(
-    onNavigateToSignUp: () -> Unit,
-    onNavigateToFindPassword: () -> Unit,
-    onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier,
+    navigationManager: ComposeNavigationHandler,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,9 +59,9 @@ fun LoginScreen(
     LaunchedEffect(key1 = Unit) { // Unit key: 화면 진입 시 1회 실행
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is LoginEvent.NavigateToSignUp -> onNavigateToSignUp()
-                is LoginEvent.NavigateToFindPassword -> onNavigateToFindPassword()
-                is LoginEvent.LoginSuccess -> onNavigateToLogin()
+                is LoginEvent.NavigateToSignUp -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.SIGN_UP))
+                is LoginEvent.NavigateToFindPassword -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.FIND_PASSWORD))
+                is LoginEvent.LoginSuccess -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.ROOT))
                 is LoginEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
                     event.message,
                     duration = SnackbarDuration.Short

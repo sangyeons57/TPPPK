@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_main.viewmodel.DmItem
 import com.example.feature_main.viewmodel.HomeEvent
@@ -37,7 +40,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    onNavigateToAddProject: () -> Unit,
+    navigationManager: ComposeNavigationHandler,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,11 +61,11 @@ fun HomeScreen(
                     // TODO: 친구 추가 다이얼로그 표시 로직
                     snackbarHostState.showSnackbar("친구 추가 다이얼로그 (미구현)")
                 }
-                is HomeEvent.NavigateToAddProject -> { // 추가된 이벤트 처리
-                    onNavigateToAddProject()
+                is HomeEvent.NavigateToAddProject -> {
+                    navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.ADD))
                 }
-                // is HomeEvent.NavigateToProjectDetails -> navController.navigate(...)
-                // is HomeEvent.NavigateToDmChat -> navController.navigate(...)
+                // is HomeEvent.NavigateToProjectDetails -> navigationManager.navigateToProjectDetails(...)
+                // is HomeEvent.NavigateToDmChat -> navigationManager.navigateToChat(...)
                 else -> {snackbarHostState.showSnackbar("Else")}
             }
         }
@@ -94,7 +97,6 @@ fun HomeScreen(
             viewModel = viewModel,
         )
     }
-
 }
 
 /**

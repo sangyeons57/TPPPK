@@ -6,7 +6,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.ChatMessage
 import com.example.domain.model.MediaImage
-import com.example.domain.repository.ChatRepository
+import com.example.domain.usecase.chat.DeleteMessageUseCase
+import com.example.domain.usecase.chat.EditMessageUseCase
+import com.example.domain.usecase.chat.FetchPastMessagesUseCase
+import com.example.domain.usecase.chat.GetLocalGalleryImagesUseCase
+import com.example.domain.usecase.chat.GetMessagesStreamUseCase
+import com.example.domain.usecase.chat.SendMessageUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
@@ -26,6 +31,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
+import com.example.core_navigation.extension.getRequiredString
+import com.example.core_navigation.destination.AppRoutes
 
 // --- Domain 모델 -> UI 모델 변환 함수 ---
 // ViewModel 내부 또는 별도 Mapper 파일에 위치 가능
@@ -54,7 +61,7 @@ private fun ChatMessage.toUiModel(myUserId: Int, tempIdGenerator: () -> String):
 
 private fun MediaImage.toUiModel(): GalleryImageUiModel {
     return GalleryImageUiModel(
-        uri = Uri.parse(this.contentUri),
+        uri = this.contentPath,
         id = this.id,
         isSelected = false
     )
@@ -63,12 +70,15 @@ private fun MediaImage.toUiModel(): GalleryImageUiModel {
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val chatRepository: ChatRepository,
-    // TODO: private val chatRepository: ChatRepository
+    private val getMessagesStreamUseCase: GetMessagesStreamUseCase,
+    private val fetchPastMessagesUseCase: FetchPastMessagesUseCase,
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val getLocalGalleryImagesUseCase: GetLocalGalleryImagesUseCase,
+    private val editMessageUseCase: EditMessageUseCase,
+    private val deleteMessageUseCase: DeleteMessageUseCase
 ) : ViewModel() {
 
-    private val channelId: String = savedStateHandle["channelId"] ?: error("channelId가 필요합니다.")
-    private val initialLastChatId: Int? = savedStateHandle["lastChatId"] // 처음 진입 시 기준 ID
+    private val channelId: String = savedStateHandle.getRequiredString(AppRoutes.Chat.ARG_CHANNEL_ID) // 변경: 채널 ID
 
     private val _uiState = MutableStateFlow(ChatUiState(channelId = channelId, channelName = "채팅방 $channelId")) // 초기 상태
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -88,7 +98,7 @@ class ChatViewModel @Inject constructor(
     // 메시지 스트림 구독 및 UI 상태 업데이트
     private fun observeMessages() {
         viewModelScope.launch {
-            chatRepository.getMessagesStream(channelId)
+            getMessagesStreamUseCase(channelId)
                 .map { domainMessages ->
                     // Domain 모델 리스트 -> UI 모델 리스트 변환
                     domainMessages.map { it.toUiModel(uiState.value.myUserId) { "temp_${tempMessageLocalIdCounter--}" } }
@@ -114,7 +124,7 @@ class ChatViewModel @Inject constructor(
             println("ViewModel: Fetching initial messages for channel $channelId")
             // 가장 오래된 메시지 ID 또는 시간 기준으로 과거 메시지 요청
             val oldestMessageId = uiState.value.messages.minByOrNull { it.chatId }?.chatId ?: Int.MAX_VALUE // 예시
-            val result = chatRepository.fetchPastMessages(channelId, beforeMessageId = oldestMessageId, limit = 20) // 첫 로드 시 적절한 limit
+            val result = fetchPastMessagesUseCase(channelId, beforeMessageId = oldestMessageId, limit = 20) // 첫 로드 시 적절한 limit
 
             if (result.isFailure) {
                 _uiState.update { it.copy(error = "초기 메시지 로드 실패", isLoadingHistory = false) }
@@ -134,7 +144,7 @@ class ChatViewModel @Inject constructor(
             val oldestMessageId = uiState.value.messages.minByOrNull { it.chatId }?.chatId ?: Int.MAX_VALUE
             println("ViewModel: Loading more messages before $oldestMessageId")
 
-            val result = chatRepository.fetchPastMessages(channelId, beforeMessageId = oldestMessageId, limit = 20) // 추가 로드 limit
+            val result = fetchPastMessagesUseCase(channelId, beforeMessageId = oldestMessageId, limit = 20) // 추가 로드 limit
 
             if (result.isSuccess) {
                 val fetchedMessages = result.getOrThrow()
@@ -197,7 +207,7 @@ class ChatViewModel @Inject constructor(
 
         // 3. 실제 메시지 전송 요청 (Repository 호출)
         viewModelScope.launch {
-            val result = chatRepository.sendMessage(channelId, messageToSend, selectedImages)
+            val result = sendMessageUseCase(channelId, messageToSend, selectedImages)
 
             // 4. 결과 처리
             if (result.isSuccess) {
@@ -231,7 +241,7 @@ class ChatViewModel @Inject constructor(
     fun loadGalleryImages(page: Int = 0) { // 페이징 지원 예시
         viewModelScope.launch {
             // TODO: 갤러리 로딩 상태 관리 (필요시 uiState에 추가)
-            val result = chatRepository.getLocalGalleryImages(page, pageSize = 50) // 페이지 크기 조정
+            val result = getLocalGalleryImagesUseCase(page, pageSize = 50) // 페이지 크기 조정
             if (result.isSuccess) {
                 val newImages = result.getOrThrow().map { it.toUiModel() }
                 _uiState.update { currentState ->
@@ -325,7 +335,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSendingMessage = true) }
             
-            val result = chatRepository.editMessage(channelId, editingId, newMessage)
+            val result = editMessageUseCase(channelId, editingId, newMessage)
             
             if (result.isSuccess) {
                 _uiState.update {
@@ -345,7 +355,7 @@ class ChatViewModel @Inject constructor(
 
     fun confirmDeleteMessage(messageId: Int) {
         viewModelScope.launch {
-            val result = chatRepository.deleteMessage(channelId, messageId)
+            val result = deleteMessageUseCase(channelId, messageId)
             
             if (result.isFailure) {
                 _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제에 실패했습니다."))
@@ -358,6 +368,13 @@ class ChatViewModel @Inject constructor(
     fun onUserProfileClick(userId: Int) {
         viewModelScope.launch {
             _eventFlow.emit(ChatEvent.ShowUserProfileDialog(userId))
+        }
+    }
+    
+    // 뒤로 가기 클릭 처리
+    fun onBackClick() {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.NavigateBack)
         }
     }
 }

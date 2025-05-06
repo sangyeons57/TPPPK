@@ -1,6 +1,6 @@
 package com.example.data.datasource.remote.schedule
 
-import com.example.data.model.dto.ScheduleDto // DTO 위치 가정
+import com.example.data.model.remote.schedule.ScheduleDto // DTO 위치 가정
 import com.google.firebase.Timestamp
 import java.time.LocalDate
 import java.time.YearMonth

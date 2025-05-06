@@ -3,6 +3,8 @@ package com.example.feature_project.structure.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getRequiredString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -38,8 +40,8 @@ class CreateCategoryViewModel @Inject constructor(
     // TODO: private val repository: ProjectStructureRepository
 ) : ViewModel() {
 
-    // 네비게이션으로 전달받은 프로젝트 ID (실제 앱에서는 네비게이션 인자 이름 확인 필요)
-    private val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 전달되지 않았습니다.")
+    // SavedStateHandle 확장 함수와 AppDestination 상수를 사용하여 projectId 가져오기
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
 
     private val _uiState = MutableStateFlow(CreateCategoryUiState())
     val uiState: StateFlow<CreateCategoryUiState> = _uiState.asStateFlow()

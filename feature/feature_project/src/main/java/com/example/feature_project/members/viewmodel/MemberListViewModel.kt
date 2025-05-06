@@ -3,8 +3,12 @@ package com.example.feature_project.members.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.extension.getRequiredString
+import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.ProjectMember
-import com.example.domain.repository.ProjectMemberRepository
+import com.example.domain.usecase.project.DeleteProjectMemberUseCase
+import com.example.domain.usecase.project.FetchProjectMembersUseCase
+import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -32,11 +36,15 @@ data class ProjectMemberItem(
  * @param members 멤버 UI 아이템 목록
  * @param isLoading 로딩 중 여부
  * @param error 오류 메시지 (nullable)
+ * @param searchQuery 검색 쿼리
+ * @param selectedMember 선택된 멤버 (멤버 편집/삭제 등을 위한 상태)
  */
 data class MemberListUiState(
     val members: List<ProjectMemberItem> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val searchQuery: String = "",
+    val selectedMember: ProjectMember? = null
 )
 
 /**
@@ -49,14 +57,19 @@ sealed class MemberListEvent {
     data class NavigateToEditMember(val projectId: String, val userId: String) : MemberListEvent()
     
     /**
-     * 멤버 추가 다이얼로그 표시 이벤트
+     * 멤버 삭제 확인 다이얼로그 표시 이벤트
      */
-    data class ShowAddMemberDialog(val projectId: String) : MemberListEvent()
+    data class ShowDeleteConfirm(val member: ProjectMember) : MemberListEvent()
     
     /**
      * 스낵바 메시지 표시 이벤트
      */
     data class ShowSnackbar(val message: String) : MemberListEvent()
+
+    /**
+     * 멤버 추가 다이얼로그 표시 이벤트
+     */
+    data class ShowAddMemberDialog(val projectId: String) : MemberListEvent()
 }
 
 /**
@@ -68,14 +81,13 @@ sealed class MemberListEvent {
  */
 @HiltViewModel
 class MemberListViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
-    private val projectMemberRepository: ProjectMemberRepository
+    savedStateHandle: SavedStateHandle,
+    private val observeProjectMembersUseCase: ObserveProjectMembersUseCase,
+    private val fetchProjectMembersUseCase: FetchProjectMembersUseCase,
+    private val deleteProjectMemberUseCase: DeleteProjectMemberUseCase
 ) : ViewModel() {
 
-    /**
-     * 현재 보고 있는 프로젝트 ID
-     */
-    val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 필요합니다.")
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
 
     /**
      * UI 상태 (내부 Mutable 버전)
@@ -110,30 +122,27 @@ class MemberListViewModel @Inject constructor(
             userId = this.userId,
             userName = this.userName,
             profileImageUrl = this.profileImageUrl,
-            rolesText = this.roleNames.joinToString(", ") // 예: "관리자, 팀원"
+            rolesText = this.roles.joinToString(", ") { it.name }
         )
     }
 
     /**
-     * 멤버 목록 실시간 관찰 함수
-     * 멤버 목록 변화를 실시간으로 감지하여 UI 상태를 업데이트합니다.
+     * 멤버 목록 실시간 관찰 및 검색 필터링 함수
      */
     private fun observeMembers() {
         viewModelScope.launch {
-            projectMemberRepository.getProjectMembersStream(projectId)
-                .map { domainMembers -> domainMembers.map { it.toUiModel() } }
-                .catch { e -> 
-                    _uiState.update { it.copy(
-                        error = "멤버 목록 스트림 오류: ${e.message}", 
-                        isLoading = false
-                    ) }
+            // Combine search query and member stream
+            uiState.map { it.searchQuery }.distinctUntilChanged()
+                .combine(observeProjectMembersUseCase(projectId)) { query, members ->
+                    members.filter { member ->
+                        member.userName.contains(query, ignoreCase = true)
+                    }.map { it.toUiModel() } // Map to UI model after filtering
                 }
-                .collect { uiMembers ->
-                    _uiState.update { it.copy(
-                        members = uiMembers, 
-                        isLoading = false, 
-                        error = null
-                    ) }
+                .catch { e ->
+                    _uiState.update { it.copy(error = "멤버 목록 스트림 오류: ${e.message}", isLoading = false) }
+                }
+                .collect { filteredUiMembers ->
+                    _uiState.update { it.copy(members = filteredUiMembers, isLoading = false, error = null) }
                 }
         }
     }
@@ -145,27 +154,35 @@ class MemberListViewModel @Inject constructor(
     fun refreshMembers() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = projectMemberRepository.fetchProjectMembers(projectId)
+            val result = fetchProjectMembersUseCase(projectId)
             if (result.isFailure) {
                 _uiState.update { it.copy(
-                    error = "멤버 목록 새로고침 실패", 
+                    error = "멤버 목록 새로고침 실패",
                     isLoading = false
                 ) }
-            } else {
-                _uiState.update { it.copy(isLoading = false) }
             }
+            // If successful, observeMembers will handle the update. Just turn off loading.
+             _uiState.update { it.copy(isLoading = false) }
         }
+    }
+
+    /**
+     * ★ 검색 쿼리 변경 처리 함수 추가
+     */
+    fun onSearchQueryChanged(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        // The combine operator in observeMembers will automatically react to this state change.
     }
 
     /**
      * 멤버 클릭 이벤트 처리 함수
      * 멤버 편집 화면으로 이동하는 이벤트를 발생시킵니다.
      *
-     * @param userId 클릭한 멤버의 사용자 ID
+     * @param member 클릭한 멤버 객체 (Domain 모델)
      */
-    fun onMemberClick(userId: String) {
+    fun onMemberClick(member: ProjectMember) {
         viewModelScope.launch {
-            _eventFlow.emit(MemberListEvent.NavigateToEditMember(projectId, userId))
+            _eventFlow.emit(MemberListEvent.NavigateToEditMember(projectId, member.userId))
         }
     }
 
@@ -176,6 +193,31 @@ class MemberListViewModel @Inject constructor(
     fun onAddMemberClick() {
         viewModelScope.launch {
             _eventFlow.emit(MemberListEvent.ShowAddMemberDialog(projectId))
+        }
+    }
+
+    /**
+     * ★ 멤버 삭제 요청 처리 함수 추가
+     */
+    fun requestDeleteMember(member: ProjectMember) {
+        viewModelScope.launch {
+            _eventFlow.emit(MemberListEvent.ShowDeleteConfirm(member))
+        }
+    }
+
+    /**
+     * ★ 멤버 삭제 확정 처리 함수 추가
+     */
+    fun confirmDeleteMember(member: ProjectMember) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = deleteProjectMemberUseCase(projectId, member.userId)
+            if (result.isSuccess) {
+                _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName}님을 내보냈습니다."))
+            } else {
+                _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 내보내기 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"))
+            }
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 } 

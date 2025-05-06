@@ -3,13 +3,11 @@ package com.example.feature_schedule.ui
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
@@ -39,14 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.ScheduleColor1
-import com.example.core_ui.theme.ScheduleColor2
 import com.example.core_ui.theme.ScheduleColor3
 import com.example.core_ui.theme.ScheduleColor4
-import com.example.core_ui.theme.ScheduleColor5
-import com.example.core_ui.theme.ScheduleColor6
-import com.example.core_ui.theme.ScheduleColor7
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_schedule.viewmodel.Calendar24HourEvent
 import com.example.feature_schedule.viewmodel.Calendar24HourUiState
@@ -64,11 +61,9 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Calendar24HourScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: Calendar24HourViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    onNavigateToAddSchedule: (Int, Int, Int) -> Unit, // year, month, day 전달
-    onNavigateToScheduleDetail: (String) -> Unit // scheduleId 전달
+    viewModel: Calendar24HourViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var currentUiState = uiState
@@ -96,7 +91,7 @@ fun Calendar24HourScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is Calendar24HourEvent.NavigateBack -> onNavigateBack()
+                is Calendar24HourEvent.NavigateBack -> navigationManager.navigateBack()
                 is Calendar24HourEvent.NavigateToAddSchedule -> {
                     // 일정 추가 버튼 애니메이션
                     addButtonScale = 0.8f
@@ -105,14 +100,20 @@ fun Calendar24HourScreen(
                     if (currentUiState is Calendar24HourUiState.Success) {
                         val date = currentUiState.selectedDate
                         if (date != null) {
-                            onNavigateToAddSchedule(date.year, date.monthValue, date.dayOfMonth)
+                            navigationManager.navigate(
+                                NavigationCommand.NavigateToRoute(
+                                    AppRoutes.Main.Calendar.addSchedule(date.year, date.monthValue, date.dayOfMonth)
+                                )
+                            )
                         }
                     }
                     
                     delay(50)
                     addButtonScale = 1f
                 }
-                is Calendar24HourEvent.NavigateToScheduleDetail -> onNavigateToScheduleDetail(event.scheduleId)
+                is Calendar24HourEvent.NavigateToScheduleDetail -> navigationManager.navigate(
+                    NavigationCommand.NavigateToRoute(AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId))
+                )
                 is Calendar24HourEvent.ShowScheduleEditDialog -> showEditDialog = event.scheduleId
                 is Calendar24HourEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }

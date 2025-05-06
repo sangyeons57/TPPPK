@@ -16,6 +16,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.roles.viewmodel.RoleItem
 import com.example.feature_project.roles.viewmodel.RoleListEvent
@@ -28,11 +31,9 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleListScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: RoleListViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    onNavigateToAddRole: (String) -> Unit, // projectId 전달
-    onNavigateToEditRole: (String, String) -> Unit // projectId, roleId 전달
+    viewModel: RoleListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -41,8 +42,8 @@ fun RoleListScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is RoleListEvent.NavigateToAddRole -> onNavigateToAddRole(uiState.projectId)
-                is RoleListEvent.NavigateToEditRole -> onNavigateToEditRole(uiState.projectId, event.roleId)
+                is RoleListEvent.NavigateToAddRole -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.addRole(uiState.projectId)))
+                is RoleListEvent.NavigateToEditRole -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editRole(uiState.projectId, event.roleId)))
                 is RoleListEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -55,7 +56,7 @@ fun RoleListScreen(
             TopAppBar(
                 title = { Text("역할 관리") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }
@@ -179,10 +180,9 @@ private fun RoleListContentPreview() {
 @Composable
 private fun RoleListEmptyPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        RoleListScreen(
-            onNavigateBack = {},
-            onNavigateToAddRole = {},
-            onNavigateToEditRole = { _, _ -> }
-        )
+        // Create a simpler preview without NavigationManager dependency
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("생성된 역할이 없습니다.")
         }
     }
+}

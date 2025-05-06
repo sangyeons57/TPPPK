@@ -1,0 +1,26 @@
+package com.example.domain.usecase.chat
+
+import com.example.domain.model.MediaImage
+import com.example.domain.repository.ChatRepository
+import javax.inject.Inject
+import kotlin.Result
+
+/**
+ * 로컬 갤러리 이미지를 가져오는 UseCase
+ * 
+ * @property chatRepository 채팅 관련 기능을 제공하는 Repository
+ */
+class GetLocalGalleryImagesUseCase @Inject constructor(
+    private val chatRepository: ChatRepository
+) {
+    /**
+     * 로컬 갤러리에서 이미지를 가져옵니다.
+     *
+     * @param page 페이지 번호 (페이징 사용 시)
+     * @param pageSize 페이지당 이미지 수
+     * @return 성공 시 갤러리 이미지 목록이 포함된 Result, 실패 시 에러 정보가 포함된 Result
+     */
+    suspend operator fun invoke(page: Int, pageSize: Int): Result<List<MediaImage>> {
+        return chatRepository.getLocalGalleryImages(page, pageSize)
+    }
+} 

@@ -1,26 +1,19 @@
 package com.example.feature_main.viewmodel
 
 import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.User
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
+import com.example.domain.model.UserProfileData
+import com.example.domain.usecase.user.GetUserProfileUseCase
+import com.example.domain.usecase.auth.LogoutUseCase
+import com.example.domain.usecase.user.UpdateUserProfileImageUseCase
+import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// --- 데이터 모델 (예시) ---
-data class UserProfileData(
-    val userId: String,
-    val name: String,
-    val email: String, // 이전 ProfileViewModel과 병합
-    val statusMessage: String,
-    val profileImageUrl: String?
-)
-// ------------------------
 
 // 프로필 화면 UI 상태
 data class ProfileUiState(
@@ -43,8 +36,11 @@ sealed class ProfileEvent {
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val userRepository: UserRepository,
-    private val authRepository: AuthRepository,
+    savedStateHandle: SavedStateHandle,
+    private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val logoutUseCase: LogoutUseCase,
+    private val updateUserStatusUseCase: UpdateUserStatusUseCase,
+    private val updateUserProfileImageUseCase: UpdateUserProfileImageUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(isLoading = true)) // 초기 로딩 상태
@@ -60,36 +56,33 @@ class ProfileViewModel @Inject constructor(
     // 프로필 정보 로드
     private fun loadUserProfile() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) } // 로딩 시작 및 이전 에러 메시지 초기화
-            println("ViewModel: 사용자 프로필 로드 시도 (실제 로직)")
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            println("ViewModel: 사용자 프로필 로드 시도 (UseCase 사용)")
 
-            // --- 실제 프로필 로드 로직 ---
-            val profileResult: Result<User> = userRepository.getUser() // Repository 호출
+            // --- UseCase 호출 ---
+            val profileResult: Result<UserProfileData> = getUserProfileUseCase() // Call UseCase
 
             profileResult.fold(
-                onSuccess = { user ->
-                    // 성공 시: User 모델 -> UserProfileData 모델로 변환
-                    val userProfileData = user.toUserProfileData() // 매핑 함수 사용
+                onSuccess = { userProfileData ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            userProfile = userProfileData, // 로드된 프로필 데이터 업데이트
-                            errorMessage = null // 성공 시 에러 메시지 없음
+                            userProfile = userProfileData,
+                            errorMessage = null
                         )
                     }
                     println("ViewModel: 프로필 로드 성공 - ${userProfileData.name}")
                 },
                 onFailure = { exception ->
-                    // 실패 시: 에러 처리
                     println("ViewModel: 프로필 로드 실패 - ${exception.message}")
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            userProfile = null, // 실패 시 프로필 정보 null 처리 (또는 기존 값 유지)
-                            errorMessage = "프로필을 불러오는데 실패했습니다." // 에러 메시지 설정
+                            userProfile = null, // Or keep existing value based on policy
+                            errorMessage = "프로필을 불러오는데 실패했습니다."
                         )
                     }
-                    // SentryUtil.captureException(exception, "Failed to load user profile") // 에러 로깅 (필요 시)
+                    // SentryUtil.captureException(exception, "Failed to load user profile") // Error logging
                 }
             )
             // --------------------------
@@ -132,11 +125,12 @@ class ProfileViewModel @Inject constructor(
     // 로그아웃 버튼 클릭
     fun onLogoutClick() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) } // 로딩 표시 (선택 사항)
-            println("ViewModel: 로그아웃 시도")
-            val result = authRepository.logout()
+            _uiState.update { it.copy(isLoading = true) }
+            println("ViewModel: 로그아웃 시도 (UseCase 사용)")
+            // val result = authRepository.logout() // Remove direct repository call
+            val result = logoutUseCase() // Call UseCase
             result.onSuccess {
-                _eventFlow.emit(ProfileEvent.LogoutCompleted) // 로그아웃 완료 이벤트 발생
+                _eventFlow.emit(ProfileEvent.LogoutCompleted)
             }.onFailure {
                 _uiState.update { it.copy(isLoading = false) }
                 _eventFlow.emit(ProfileEvent.ShowSnackbar("로그아웃 실패"))
@@ -144,17 +138,24 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // --- TODO: 상태 메시지 변경, 프로필 이미지 변경 처리 함수 ---
+    // --- 상태 메시지 변경, 프로필 이미지 변경 처리 함수 ---
     fun changeStatusMessage(newStatus: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            println("ViewModel: 상태 메시지 변경 시도 - $newStatus")
-            // val result = userRepository.updateStatusMessage(newStatus)
-            // result.onSuccess { loadUserProfile() } // 성공 시 프로필 다시 로드
-            // .onFailure { _eventFlow.emit(...) }
-            delay(300)
-            _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(statusMessage = newStatus)) } // 임시로 UI만 업데이트
-            _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨 (임시)"))
+            println("ViewModel: 상태 메시지 변경 시도 (UseCase 사용) - $newStatus")
+            // val result = userRepository.updateStatusMessage(newStatus) // Remove direct repository call
+            val result = updateUserStatusUseCase(newStatus) // Call UseCase
+            result.onSuccess {
+                // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
+                loadUserProfile()
+                _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨"))
+            }.onFailure { exception ->
+                 _uiState.update { it.copy(isLoading = false) }
+                _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경 실패: ${exception.message}"))
+            }
+            // delay(300) // Remove temporary delay
+            // _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(statusMessage = newStatus)) } // Remove temporary UI update
+            // _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨 (임시)")) // Remove temporary snackbar
         }
     }
 
@@ -162,16 +163,23 @@ class ProfileViewModel @Inject constructor(
         if (imageUri == null) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            println("ViewModel: 프로필 이미지 변경 시도 - $imageUri")
-            // --- TODO: 실제 이미지 업로드 및 URL 업데이트 로직 ---
-            // val result = userRepository.updateProfileImage(imageUri)
-            // result.onSuccess { newImageUrl -> loadUserProfile() }
-            // .onFailure { _eventFlow.emit(...) }
+            println("ViewModel: 프로필 이미지 변경 시도 (UseCase 사용) - $imageUri")
+            // --- UseCase 호출 ---
+            // val result = userRepository.updateProfileImage(imageUri) // Remove direct repository call
+            val result = updateUserProfileImageUseCase(imageUri) // Call UseCase
+            result.onSuccess { newImageUrl ->
+                // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
+                loadUserProfile()
+                _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨"))
+            }.onFailure { exception ->
+                 _uiState.update { it.copy(isLoading = false) }
+                _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 실패: ${exception.message}"))
+            }
             // ----------------------------------------------
-            delay(1000)
-            val newImageUrl = "https://picsum.photos/seed/${System.currentTimeMillis()}/100" // 임시 URL
-            _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(profileImageUrl = newImageUrl)) } // 임시로 UI만 업데이트
-            _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨 (임시)"))
+            // delay(1000) // Remove temporary delay
+            // val newImageUrl = "https://picsum.photos/seed/${System.currentTimeMillis()}/100" // Remove temporary URL generation
+            // _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(profileImageUrl = newImageUrl)) } // Remove temporary UI update
+            // _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨 (임시)")) // Remove temporary snackbar
         }
     }
     // -----------------------------------------------------
@@ -182,19 +190,7 @@ class ProfileViewModel @Inject constructor(
 
     /**
      * User(Domain Model) -> UserProfileData(UI Model) 변환 확장 함수
-     * (이 함수는 ViewModel 파일 내부 또는 별도의 Mapper 파일에 위치할 수 있습니다)
+     * (이 함수는 UseCase로 이동되었으므로 ViewModel에서 제거합니다)
      */
-    private fun User.toUserProfileData(): UserProfileData {
-        // User 모델에는 statusMessage 필드가 없으므로, 임시값 또는 다른 로직 필요
-        // 여기서는 임시로 빈 문자열 또는 기본 메시지 사용
-        val tempStatusMessage = "상태 메시지 없음" // TODO: 상태 메시지 로드/관리 로직 추가 필요
-
-        return UserProfileData(
-            userId = this.userId,
-            name = this.name,
-            email = this.email,
-            statusMessage = tempStatusMessage, // User 모델에 없는 정보 처리
-            profileImageUrl = this.profileImageUrl
-        )
-    }
+    // private fun User.toUserProfileData(): UserProfileData { ... } // Remove this function
 }

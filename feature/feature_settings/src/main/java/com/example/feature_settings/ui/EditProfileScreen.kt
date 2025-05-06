@@ -28,13 +28,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.User
+import com.example.domain.model.UserProfileData
 import com.example.feature_settings.viewmodel.EditProfileEvent
 import com.example.feature_settings.viewmodel.EditProfileUiState
 import com.example.feature_settings.viewmodel.EditProfileViewModel
-// ViewModel 및 관련 요소 Import
+// 네비게이션 관련 임포트 업데이트
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -43,9 +45,9 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: EditProfileViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
     onChangeNameClick: () -> Unit, // 이름 변경 다이얼로그 표시 콜백
     onChangeStatusClick: () -> Unit // 상태 변경 다이얼로그 표시 콜백
 ) {
@@ -65,7 +67,7 @@ fun EditProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditProfileEvent.NavigateBack -> onNavigateBack() // 현재 사용 안 함
+                is EditProfileEvent.NavigateBack -> navigationManager.navigateBack()
                 is EditProfileEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditProfileEvent.RequestImagePicker -> {
                     // 이미지 선택기 실행
@@ -87,7 +89,7 @@ fun EditProfileScreen(
             TopAppBar(
                 title = { Text("프로필 편집") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }
@@ -102,13 +104,13 @@ fun EditProfileScreen(
                 }
             }
             // 에러 발생
-            uiState.error != null && uiState.user == null -> {
+            uiState.error != null && uiState.userProfile == null -> {
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
             // 프로필 정보 로드 완료
-            uiState.user != null -> {
+            uiState.userProfile != null -> {
                 EditProfileContent(
                     modifier = Modifier.padding(paddingValues),
                     uiState = uiState,
@@ -162,7 +164,7 @@ fun EditProfileContent(
     onChangeStatusClick: () -> Unit
 ) {
     // UserProfile이 null이 아님을 가정 (호출하는 곳에서 보장)
-    val user = uiState.user!!
+    val user = uiState.userProfile!!
 
     Column(
         modifier = modifier
@@ -227,7 +229,7 @@ fun EditProfileContent(
             HorizontalDivider()
             ProfileInfoRow(label = "이름", value = user.name, onClick = onChangeNameClick) // 클릭 시 이름 변경
             HorizontalDivider()
-            ProfileInfoRow(label = "상태 메시지", value = user.statusMessage ?: "상태 메시지 없음", onClick = onChangeStatusClick) // 클릭 시 상태 변경
+            ProfileInfoRow(label = "상태 메시지", value = user.statusMessage.toString(), onClick = onChangeStatusClick) // 클릭 시 상태 변경
             HorizontalDivider()
         }
     }
@@ -277,24 +279,6 @@ fun ProfileInfoRow(
 }
 
 
-// --- Preview ---
-@Preview(showBackground = true)
-@Composable
-private fun EditProfileContentPreview() {
-    val previewProfile = User("u1", "test@example.com", "홍길동", null, "상태 메시지입니다.")
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        Surface {
-            EditProfileContent(
-                uiState = EditProfileUiState(user = previewProfile),
-                onSelectImageClick = {},
-                onRemoveImageClick = {},
-                onChangeNameClick = {},
-                onChangeStatusClick = {}
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, name = "Edit Profile Loading")
 @Composable
@@ -306,23 +290,6 @@ private fun EditProfileScreenLoadingPreview() {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        }
-    }
-}
-
-@Preview(showBackground = true, name = "Edit Profile Image Uploading")
-@Composable
-private fun EditProfileContentUploadingPreview() {
-    val previewProfile = User("u1")
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        Surface {
-            EditProfileContent(
-                uiState = EditProfileUiState(user = previewProfile, isUploading = true),
-                onSelectImageClick = {},
-                onRemoveImageClick = {},
-                onChangeNameClick = {},
-                onChangeStatusClick = {}
-            )
         }
     }
 }

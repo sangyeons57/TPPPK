@@ -1,0 +1,8 @@
+Fix: Repository 구현 함수 추가 및 에러 존재
+
+- AuthRepositoryImpl의 getPasswordResetErrorMessage() 구현 (비밀번호 재설정 오류 메시지)
+- UserRepositoryImpl의 getCurrentStatus() 구현 (동기식 Firestore 쿼리 사용)
+
+에러 상태:
+- UserRepositoryImpl의 getCurrentStatus()에서 Firestore 동기식 호출(.get().result)을 사용하고 있어 
+  메인 스레드 차단 가능성 있음. 추후 비동기 처리로 수정 필요. 

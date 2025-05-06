@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "1d613d755142b4e26856243b6b575e65",
+    "identityHash": "3d972bb6100435dd479bd1c60dd87883",
     "entities": [
       {
         "tableName": "schedules",
@@ -205,25 +205,42 @@
       },
       {
         "tableName": "chat_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `chatId` TEXT NOT NULL, `senderId` TEXT NOT NULL, `message` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `isRead` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`chatId`) REFERENCES `chats`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chatId` INTEGER NOT NULL, `channelId` TEXT NOT NULL, `userId` INTEGER NOT NULL, `userName` TEXT NOT NULL, `userProfileUrl` TEXT, `message` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `isModified` INTEGER NOT NULL, `attachmentImageUrls` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
-            "affinity": "TEXT",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
             "fieldPath": "chatId",
             "columnName": "chatId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "channelId",
+            "columnName": "channelId",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "senderId",
-            "columnName": "senderId",
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userName",
+            "columnName": "userName",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "userProfileUrl",
+            "columnName": "userProfileUrl",
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "message",
@@ -238,49 +255,42 @@
             "notNull": true
           },
           {
-            "fieldPath": "isRead",
-            "columnName": "isRead",
+            "fieldPath": "isModified",
+            "columnName": "isModified",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "attachmentImageUrls",
+            "columnName": "attachmentImageUrls",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
-          "autoGenerate": false,
+          "autoGenerate": true,
           "columnNames": [
             "id"
           ]
         },
         "indices": [
           {
-            "name": "index_chat_messages_chatId",
+            "name": "index_chat_messages_channelId",
             "unique": false,
             "columnNames": [
-              "chatId"
+              "channelId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_chatId` ON `${TABLE_NAME}` (`chatId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_channelId` ON `${TABLE_NAME}` (`channelId`)"
           },
           {
-            "name": "index_chat_messages_sentAt",
-            "unique": false,
+            "name": "index_chat_messages_chatId_channelId",
+            "unique": true,
             "columnNames": [
-              "sentAt"
+              "chatId",
+              "channelId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_sentAt` ON `${TABLE_NAME}` (`sentAt`)"
-          }
-        ],
-        "foreignKeys": [
-          {
-            "table": "chats",
-            "onDelete": "CASCADE",
-            "onUpdate": "NO ACTION",
-            "columns": [
-              "chatId"
-            ],
-            "referencedColumns": [
-              "id"
-            ]
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_chat_messages_chatId_channelId` ON `${TABLE_NAME}` (`chatId`, `channelId`)"
           }
         ]
       },
@@ -530,7 +540,7 @@
       },
       {
         "tableName": "project_members",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`projectId` TEXT NOT NULL, `userId` TEXT NOT NULL, `userName` TEXT NOT NULL, `profileImageUrl` TEXT, `roleNamesJson` TEXT NOT NULL, `cachedAt` INTEGER NOT NULL, PRIMARY KEY(`projectId`, `userId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`projectId` TEXT NOT NULL, `userId` TEXT NOT NULL, `userName` TEXT NOT NULL, `profileImageUrl` TEXT, `roleIdsJson` TEXT NOT NULL, `cachedAt` INTEGER NOT NULL, PRIMARY KEY(`projectId`, `userId`))",
         "fields": [
           {
             "fieldPath": "projectId",
@@ -556,8 +566,8 @@
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "roleNamesJson",
-            "columnName": "roleNamesJson",
+            "fieldPath": "roleIdsJson",
+            "columnName": "roleIdsJson",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -791,7 +801,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1d613d755142b4e26856243b6b575e65')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3d972bb6100435dd479bd1c60dd87883')"
     ]
   }
 }

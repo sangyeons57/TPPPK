@@ -3,6 +3,8 @@ package com.example.feature_project.structure.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getRequiredString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -28,17 +30,6 @@ sealed class EditCategoryEvent {
     object ShowDeleteConfirmation : EditCategoryEvent() // 삭제 확인 다이얼로그 표시 요청
 }
 
-// --- Repository 인터페이스 (가상 - 이전 ViewModel과 공유 또는 확장) ---
-/**
-interface ProjectStructureRepository {
-    suspend fun createCategory(projectId: String, categoryName: String): Result<Unit>
-    suspend fun createChannel(projectId: String, categoryId: String, channelName: String, channelType: ChannelType): Result<Unit>
-    suspend fun getCategoryDetails(categoryId: String): Result<String> // 카테고리 이름 반환 가정
-    suspend fun updateCategory(categoryId: String, newName: String): Result<Unit>
-    suspend fun deleteCategory(categoryId: String): Result<Unit>
-    // ... (채널 수정/삭제 등) ...
-}
-**/
 
 @HiltViewModel
 class EditCategoryViewModel @Inject constructor(
@@ -46,9 +37,8 @@ class EditCategoryViewModel @Inject constructor(
     // TODO: private val repository: ProjectStructureRepository
 ) : ViewModel() {
 
-    // 네비게이션으로 전달받은 ID (실제 앱에서는 네비게이션 인자 이름 확인 필요)
-    private val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 전달되지 않았습니다.")
-    private val categoryId: String = savedStateHandle["categoryId"] ?: error("categoryId가 전달되지 않았습니다.")
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    private val categoryId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_CATEGORY_ID)
 
     private val _uiState = MutableStateFlow(EditCategoryUiState(categoryId = categoryId, isLoading = true)) // 초기 로딩 상태
     val uiState: StateFlow<EditCategoryUiState> = _uiState.asStateFlow()

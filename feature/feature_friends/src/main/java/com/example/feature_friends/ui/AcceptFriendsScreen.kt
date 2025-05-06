@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.feature_friends.viewmodel.AcceptFriendsEvent
 import com.example.feature_friends.viewmodel.AcceptFriendsViewModel
 import com.example.feature_friends.viewmodel.FriendRequestItem
@@ -36,9 +37,9 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AcceptFriendsScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: AcceptFriendsViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: AcceptFriendsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -60,7 +61,7 @@ fun AcceptFriendsScreen(
             TopAppBar(
                 title = { Text("친구 요청 수락하기") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { // 네비게이션 콜백 사용
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

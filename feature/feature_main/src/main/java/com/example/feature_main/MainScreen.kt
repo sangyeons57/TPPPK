@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,65 +19,76 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavOptions
 import androidx.navigation.compose.*
+import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.mainBottomNavItems
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_main.ui.calendar.CalendarScreen
 import com.example.feature_main.ui.HomeScreen
 import com.example.feature_main.ui.ProfileScreen
-import com.example.navigation.MainBottomNavDestination
-import com.example.navigation.mainBottomNavItems
-import java.time.LocalDate
+import com.example.feature_main.ui.calendar.CalendarScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    // navController 파라미터 제거
-    modifier: Modifier = Modifier,
-    // 외부 네비게이션을 위한 간소화된 람다들
-    onNavigate: (String) -> Unit,
-    onNavigateWithArgs: (String, androidx.navigation.NavOptions?) -> Unit,
-    shouldRefreshCalendar: Boolean = false
+    navigationManager: ComposeNavigationHandler,
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
-    // 중첩된 NavHost를 위한 별도의 NavController 생성 (기존과 동일)
+    // 중첩된 NavHost를 위한 별도의 NavController 생성
     val nestedNavController = rememberNavController()
 
+    // DisposableEffect를 사용하여 MainScreen이 컴포지션에 추가/제거될 때
+    // NavigationManager에 activeChildNavController를 등록/해제합니다.
+    DisposableEffect(navigationManager, nestedNavController) {
+        navigationManager.setActiveChildNavController(nestedNavController)
+        onDispose {
+            if (navigationManager.getActiveChildNavController() == nestedNavController) {
+                 navigationManager.setActiveChildNavController(null)
+            }
+        }
+    }
+    
+    // // 일정 추가 후 돌아올 때 캘린더 갱신을 위한 코드 -> CalendarScreen에서 직접 처리하도록 변경
+    // val calendarRefreshKey = "refresh_calendar"
+    // LaunchedEffect(navigationManager, calendarRefreshKey) {
+    //     navigationManager.getResultFlow<Boolean>(calendarRefreshKey).collect { refresh ->
+    //         if (refresh) {
+    //             // CalendarScreen에서 직접 처리
+    //         }
+    //     }
+    // }
+
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        // mainScreenBottomBar는 nestedNavController를 사용하므로 변경 없음
-        bottomBar = mainScreenBottomBar(nestedNavController),
+        // mainScreenBottomBar는 이제 navigationManager와 nestedNavController를 사용
+        bottomBar = mainScreenBottomBar(navigationManager = navigationManager, nestedNavController = nestedNavController),
     ) { innerPadding ->
         NavHost(
             navController = nestedNavController,
-            startDestination = MainBottomNavDestination.Home.route,
+            startDestination = AppRoutes.Main.Home.ROOT,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(MainBottomNavDestination.Home.route) {
+            composable(AppRoutes.Main.Home.ROOT) {
                 HomeScreen(
-                    onNavigateToAddProject = { onNavigate(com.example.navigation.AddProject.route) }
+                    navigationManager = navigationManager
                 )
             }
             
-            composable(MainBottomNavDestination.Calendar.route) {
+            composable(AppRoutes.Main.Calendar.ROOT) {
                 CalendarScreen(
-                    onClickFAB = { route -> onNavigate(route) },
-                    onNavigateToScheduleDetail = { scheduleId -> 
-                        onNavigate(com.example.navigation.ScheduleDetail.createRoute(scheduleId))
-                    },
-                    onNavigateToCalendar24Hour = { year, month, day ->
-                        onNavigate(com.example.navigation.Calendar24Hour.createRoute(year, month, day))
-                    },
-                    shouldRefreshCalendar = shouldRefreshCalendar // 일정 추가 후 갱신 플래그 전달
+                    navigationManager = navigationManager
+                    // shouldRefreshCalendar 파라미터 제거
                 )
             }
-            composable(MainBottomNavDestination.Profile.route) {
+            
+            composable(AppRoutes.Main.Profile.ROOT) {
                 ProfileScreen(
-                    // ProfileScreen이 필요로 하는 네비게이션 람다 전달
-                    onLogout = { /* TODO: Implement logout */ },
-                    onClickSettings = { /* TODO: Implement settings navigation */ },
-                    onClickFriends = { /* TODO: Implement friends navigation */ },
-                    onClickStatus = { /* TODO: Implement status change dialog or lambda */ }
+                    navigationManager = navigationManager
                 )
             }
         }
@@ -85,32 +97,29 @@ fun MainScreen(
 
 
 @Composable
-fun mainScreenBottomBar(nestedNavController: NavHostController) : @Composable () -> Unit = {
+fun mainScreenBottomBar(
+    navigationManager: ComposeNavigationHandler, // NavigationManager 주입
+    nestedNavController: NavHostController // NavOptions 구성에 필요
+) : @Composable () -> Unit = {
     NavigationBar(
         modifier = Modifier.fillMaxWidth(),
     ) {
         val navBackStackEntry by nestedNavController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
-        // 정의된 하단 네비 아이템들로 NavigationBarItem 생성
         mainBottomNavItems.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = screen.title) },
                 label = { Text(screen.title) },
-                // 현재 경로가 해당 아이템의 경로 또는 하위 경로에 포함되는지 확인
                 selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                 onClick = {
-                    // 아이템 클릭 시 해당 경로로 이동
-                    nestedNavController.navigate(screen.route) {
-                        // 백 스택 맨 위까지 pop하여 동일한 목적지 중복 생성 방지
-                        popUpTo(nestedNavController.graph.findStartDestination().id) {
-                            saveState = true // 상태 저장
-                        }
-                        // 이미 스택에 있으면 재생성 대신 상태 복원
-                        launchSingleTop = true
-                        // 이전 상태 복원
-                        restoreState = true
-                    }
+                    val navOptions = NavOptions.Builder()
+                        .setPopUpTo(nestedNavController.graph.findStartDestination().id, inclusive = false, saveState = true)
+                        .setLaunchSingleTop(true)
+                        .setRestoreState(true)
+                        .build()
+                    
+                    navigationManager.navigate(NavigationCommand.NavigateToRoute(screen.route, navOptions))
                 }
             )
         }
@@ -126,7 +135,7 @@ fun HomeContentProjectsPreview() {
             modifier = Modifier.fillMaxSize()
             ,
             contentWindowInsets = WindowInsets(0, 0, 0, 0), // 윈도우 인셋 제거
-            bottomBar = mainScreenBottomBar(nestedNavController)
+            bottomBar = { mainScreenBottomBarPreview(nestedNavController) } // Preview용 별도 bottomBar 또는 수정
         ) { innerPadding -> // Scaffold의 content 람다, innerPadding 전달받음
             Box(modifier = Modifier.padding(innerPadding)
                 .width(100.dp)
@@ -135,6 +144,34 @@ fun HomeContentProjectsPreview() {
             ) {
 
             }
+        }
+    }
+}
+
+// Preview용 mainScreenBottomBar (NavigationManager 없이)
+@Composable
+fun mainScreenBottomBarPreview(nestedNavController: NavHostController) : @Composable () -> Unit = {
+    NavigationBar(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        val navBackStackEntry by nestedNavController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
+
+        mainBottomNavItems.forEach { screen ->
+            NavigationBarItem(
+                icon = { Icon(screen.icon, contentDescription = screen.title) },
+                label = { Text(screen.title) },
+                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                onClick = {
+                    nestedNavController.navigate(screen.route) {
+                        popUpTo(nestedNavController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
         }
     }
 }

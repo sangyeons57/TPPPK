@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_auth.viewmodel.FindPasswordEvent
 import com.example.feature_auth.viewmodel.FindPasswordUiState
@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FindPasswordScreen(
-    navController: NavHostController,
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: FindPasswordViewModel = hiltViewModel()
 ) {
@@ -48,12 +48,11 @@ fun FindPasswordScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FindPasswordEvent.NavigateBack -> {
-                    navController.popBackStack()
-                }
-                is FindPasswordEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
-                }
+                is FindPasswordEvent.NavigateBack -> navigationManager.navigateBack()
+                is FindPasswordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
+                    message = event.message,
+                    duration = SnackbarDuration.Short
+                )
             }
         }
     }
@@ -74,8 +73,11 @@ fun FindPasswordScreen(
             TopAppBar(
                 title = { Text("비밀번호 찾기") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) { // 뒤로가기
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
+                    IconButton(onClick = { viewModel.onBackClick() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "뒤로 가기"
+                        )
                     }
                 }
             )
@@ -90,9 +92,9 @@ fun FindPasswordScreen(
             onNewPasswordChange = viewModel::onNewPasswordChange,
             onNewPasswordConfirmChange = viewModel::onNewPasswordConfirmChange,
             onPasswordVisibilityToggle = viewModel::onPasswordVisibilityToggle,
-            onSendAuthCodeClick = viewModel::onSendAuthCodeClick,
+            onRequestAuthCodeClick = viewModel::onRequestAuthCodeClick,
             onConfirmAuthCodeClick = viewModel::onConfirmAuthCodeClick,
-            onChangePasswordClick = viewModel::onChangePasswordClick
+            onCompletePasswordChangeClick = viewModel::onCompletePasswordChangeClick
         )
     }
 }
@@ -110,9 +112,9 @@ fun FindPasswordContent(
     onNewPasswordChange: (String) -> Unit,
     onNewPasswordConfirmChange: (String) -> Unit,
     onPasswordVisibilityToggle: () -> Unit,
-    onSendAuthCodeClick: () -> Unit,
+    onRequestAuthCodeClick: () -> Unit,
     onConfirmAuthCodeClick: () -> Unit,
-    onChangePasswordClick: () -> Unit
+    onCompletePasswordChangeClick: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
@@ -121,152 +123,229 @@ fun FindPasswordContent(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(horizontal = 32.dp),
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
+        // 안내 텍스트
+        Text(
+            text = "비밀번호를 잊으셨나요?",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        Text(
+            text = "이메일 주소와 인증번호를 이용해 비밀번호를 재설정하세요.",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-        // 1단계: 이메일 입력 및 인증번호 전송
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // 에러 메시지 표시
+        if (uiState.errorMessage != null) {
+            Text(
+                text = uiState.errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        // 단계 1: 이메일 입력 및 인증번호 요청
+        if (!uiState.isEmailSent) {
+            // 이메일 입력 필드
             OutlinedTextField(
                 value = uiState.email,
                 onValueChange = onEmailChange,
-                modifier = Modifier.weight(1f),
-                label = { Text("이메일") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("이메일 주소") },
+                placeholder = { Text("가입한 이메일 주소를 입력하세요") },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                 singleLine = true,
-                enabled = !uiState.isEmailSent && !uiState.isLoading // 코드 전송 전 + 로딩 중 아닐 때
+                enabled = !uiState.isLoading
             )
-            Spacer(modifier = Modifier.width(8.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 인증번호 요청 버튼
             Button(
-                onClick = onSendAuthCodeClick,
-                enabled = uiState.email.isNotBlank() && !uiState.isEmailSent && !uiState.isLoading
+                onClick = onRequestAuthCodeClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading && uiState.email.isNotBlank()
             ) {
-                Text("인증번호\n전송", fontSize = 12.sp, lineHeight = 14.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (uiState.isEmailSent){
-            // 2단계: 인증번호 입력 및 확인
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = uiState.authCode,
-                    onValueChange = onAuthCodeChange,
-                    modifier = Modifier.weight(1f),
-                    label = { Text("인증번호") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                    singleLine = true,
-                    enabled = !uiState.isEmailVerified && !uiState.isLoading, // 전송 후 + 인증 전 + 로딩 중 아닐 때
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = onConfirmAuthCodeClick,
-                    enabled = uiState.authCode.isNotBlank() && !uiState.isEmailVerified && !uiState.isLoading
-                ) {
-                    Text("인증 확인", fontSize = 12.sp)
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("인증번호 받기")
                 }
             }
         }
+        // 단계 2: 인증번호 입력 및 확인
+        else if (!uiState.isEmailVerified) {
+            // 이메일 표시 (수정 불가)
+            OutlinedTextField(
+                value = uiState.email,
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("이메일 주소") },
+                enabled = false,
+                singleLine = true
+            )
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        if (uiState.isEmailVerified){
-            // 3단계: 새 비밀번호 입력
+            // 인증번호 입력
+            OutlinedTextField(
+                value = uiState.authCode,
+                onValueChange = onAuthCodeChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("인증번호") },
+                placeholder = { Text("이메일로 받은 6자리 인증번호 입력") },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                singleLine = true,
+                enabled = !uiState.isLoading
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 인증번호 확인 버튼
+            Button(
+                onClick = onConfirmAuthCodeClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading && uiState.authCode.isNotBlank()
+            ) {
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("인증번호 확인")
+                }
+            }
+        }
+        // 단계 3: 새 비밀번호 입력
+        else if (!uiState.passwordChangeSuccess) {
+            // 새 비밀번호 입력
             OutlinedTextField(
                 value = uiState.newPassword,
                 onValueChange = onNewPasswordChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("새 비밀번호") },
-                visualTransformation = if (uiState.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                singleLine = true,
-                enabled = uiState.isEmailVerified && !uiState.isLoading, // 이메일 인증 후 + 로딩 중 아닐 때
-                trailingIcon = { // 비밀번호 토글 아이콘
-                    val image = if (uiState.isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                    IconButton(onClick = onPasswordVisibilityToggle, enabled = uiState.isEmailVerified && !uiState.isLoading) {
-                        Icon(image, contentDescription = if (uiState.isPasswordVisible) "숨기기" else "보이기")
+                placeholder = { Text("8자 이상의 영문, 숫자, 특수문자 조합") },
+                visualTransformation = 
+                    if (uiState.isPasswordVisible) VisualTransformation.None 
+                    else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                trailingIcon = {
+                    IconButton(onClick = onPasswordVisibilityToggle) {
+                        Icon(
+                            imageVector = if (uiState.isPasswordVisible) {
+                                Icons.Default.Visibility
+                            } else {
+                                Icons.Default.VisibilityOff
+                            },
+                            contentDescription = "비밀번호 보기 전환"
+                        )
                     }
-                }
+                },
+                singleLine = true,
+                enabled = !uiState.isLoading
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            // 새 비밀번호 확인 입력
             OutlinedTextField(
                 value = uiState.newPasswordConfirm,
                 onValueChange = onNewPasswordConfirmChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("새 비밀번호 확인") },
-                visualTransformation = if (uiState.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = {
-                    focusManager.clearFocus()
-                    if(uiState.isEmailVerified) onChangePasswordClick() // 조건 충족 시 바로 변경 시도
-                }),
+                placeholder = { Text("비밀번호를 다시 입력해주세요") },
+                visualTransformation = 
+                    if (uiState.isPasswordVisible) VisualTransformation.None 
+                    else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
                 singleLine = true,
-                enabled = uiState.isEmailVerified && !uiState.isLoading,
-                isError = uiState.newPassword.isNotEmpty() && uiState.newPasswordConfirm.isNotEmpty() && uiState.newPassword != uiState.newPasswordConfirm
+                enabled = !uiState.isLoading
             )
-            // 비밀번호 불일치 에러 메시지 (필요 시 추가)
 
-            Spacer(modifier = Modifier.height(44.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 비밀번호 변경 버튼
+            // 비밀번호 변경 완료 버튼
             Button(
-                onClick = {
-                    focusManager.clearFocus()
-                    onChangePasswordClick()
-                },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = uiState.isEmailVerified && // 이메일 인증됨
-                        uiState.newPassword.isNotBlank() && // 새 비밀번호 입력됨
-                        uiState.newPassword == uiState.newPasswordConfirm && // 비밀번호 일치
-                        !uiState.isLoading // 로딩 중 아님
+                onClick = onCompletePasswordChangeClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading && 
+                         uiState.newPassword.isNotBlank() && 
+                         uiState.newPasswordConfirm.isNotBlank()
             ) {
-                if (uiState.isLoading && uiState.isEmailVerified) { // 변경 로딩 중에만 표시
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 } else {
-                    Text("비밀번호 변경", fontSize = 16.sp)
+                    Text("비밀번호 변경 완료")
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
+        }
+        // 단계 4: 비밀번호 변경 성공
+        else {
+            Text(
+                text = "비밀번호가 성공적으로 변경되었습니다.",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+            Text(
+                text = "새 비밀번호로 로그인해주세요.",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
         }
     }
 }
 
-
-// --- Preview ---
-@Preview(showBackground = true, name = "FindPassword Initial")
+@Preview(showBackground = true)
 @Composable
-fun FindPasswordContentPreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        FindPasswordContent(
-            uiState = FindPasswordUiState(),
-            onEmailChange = {}, onAuthCodeChange = {}, onNewPasswordChange = {},
-            onNewPasswordConfirmChange = {}, onPasswordVisibilityToggle = {},
-            onSendAuthCodeClick = {}, onConfirmAuthCodeClick = {}, onChangePasswordClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "FindPassword Verified")
-@Composable
-fun FindPasswordContentVerifiedPreview() {
+fun FindPasswordScreenPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         FindPasswordContent(
             uiState = FindPasswordUiState(
+                email = "user@example.com",
+                authCode = "123456",
                 isEmailSent = true,
-                isEmailVerified = true,
-                email = "test@test.com"
-            ), // 인증 완료 상태
-            onEmailChange = {}, onAuthCodeChange = {}, onNewPasswordChange = {},
-            onNewPasswordConfirmChange = {}, onPasswordVisibilityToggle = {},
-            onSendAuthCodeClick = {}, onConfirmAuthCodeClick = {}, onChangePasswordClick = {}
+                isEmailVerified = false
+            ),
+            onEmailChange = {},
+            onAuthCodeChange = {},
+            onNewPasswordChange = {},
+            onNewPasswordConfirmChange = {},
+            onPasswordVisibilityToggle = {},
+            onRequestAuthCodeClick = {},
+            onConfirmAuthCodeClick = {},
+            onCompletePasswordChangeClick = {}
         )
     }
 }

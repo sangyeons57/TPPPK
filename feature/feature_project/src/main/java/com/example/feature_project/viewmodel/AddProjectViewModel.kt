@@ -2,7 +2,8 @@ package com.example.feature_project.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.usecase.project.CreateProjectUseCase
+import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -39,7 +40,8 @@ sealed class AddProjectEvent {
 
 @HiltViewModel
 class AddProjectViewModel @Inject constructor(
-    private val projectRepository: ProjectRepository
+    private val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase,
+    private val createProjectUseCase: CreateProjectUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddProjectUiState())
@@ -96,7 +98,7 @@ class AddProjectViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             
             // 프로젝트 참여 로직
-            val result = projectRepository.joinProjectWithCode(joinCode)
+            val result = joinProjectWithCodeUseCase(joinCode)
             
             if (result.isSuccess) {
                 _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
@@ -126,7 +128,7 @@ class AddProjectViewModel @Inject constructor(
             
             // 프로젝트 생성 로직
             val isPublic = _uiState.value.createMode == CreateProjectMode.OPEN
-            val result = projectRepository.createProject(name, description, isPublic)
+            val result = createProjectUseCase(name, description, isPublic)
             
             if (result.isSuccess) {
                 _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트를 생성했습니다!"))

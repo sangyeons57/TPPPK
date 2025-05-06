@@ -1,5 +1,6 @@
 package com.example.data.datasource.remote.friend
 
+import com.example.data.remote.dto.FriendRelationshipDto
 import com.example.core_common.constants.FirestoreConstants.Collections
 import com.example.core_common.constants.FirestoreConstants.DmFields
 import com.example.core_common.constants.FirestoreConstants.FriendFields
@@ -8,9 +9,11 @@ import com.example.core_common.constants.FirestoreConstants.UserFields
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.Friend
 import com.example.domain.model.FriendRequest
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,6 +21,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.Result
 
 /**
  * 친구 관련 원격 데이터 소스 구현
@@ -318,6 +322,93 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             
             Result.success(Unit)
         }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override fun getFriendRelationshipsStream(currentUserId: String): Flow<Result<List<Pair<String, FriendRelationshipDto>>>> = callbackFlow {
+        val userFriendsCollection = firestore.collection(Collections.USERS)
+            .document(currentUserId)
+            .collection(Collections.FRIENDS)
+
+        val listenerRegistration = userFriendsCollection.addSnapshotListener { snapshots, error ->
+            if (error != null) {
+                trySend(Result.failure(error))
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshots != null) {
+                val relationships = snapshots.documents.mapNotNull { doc ->
+                    doc.toObject<FriendRelationshipDto>()?.let { dto ->
+                        Pair(doc.id, dto)
+                    }
+                }
+                trySend(Result.success(relationships))
+            } else {
+                trySend(Result.failure(IllegalStateException("Snapshots and error were both null")))
+            }
+        }
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    override suspend fun sendFriendRequest(currentUserId: String, targetUserId: String): Result<Unit> = try {
+        val now = Timestamp.now()
+        val requestDto = FriendRelationshipDto(status = Status.PENDING_SENT, timestamp = now, acceptedAt = null)
+        val receivedDto = FriendRelationshipDto(status = Status.PENDING_RECEIVED, timestamp = now, acceptedAt = null)
+
+        firestore.batch().apply {
+            set(
+                firestore.collection(Collections.USERS).document(currentUserId)
+                    .collection(Collections.FRIENDS).document(targetUserId),
+                requestDto
+            )
+            set(
+                firestore.collection(Collections.USERS).document(targetUserId)
+                    .collection(Collections.FRIENDS).document(currentUserId),
+                receivedDto
+            )
+        }.commit().await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun acceptFriendRequest(currentUserId: String, requesterId: String): Result<Unit> = try {
+        val now = Timestamp.now()
+        val updates = mapOf(
+            FriendFields.STATUS to Status.ACCEPTED,
+            FriendFields.ACCEPTED_AT to now
+        )
+
+        firestore.batch().apply {
+            update(
+                firestore.collection(Collections.USERS).document(currentUserId)
+                    .collection(Collections.FRIENDS).document(requesterId),
+                updates
+            )
+            update(
+                firestore.collection(Collections.USERS).document(requesterId)
+                    .collection(Collections.FRIENDS).document(currentUserId),
+                updates
+            )
+        }.commit().await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun removeOrDenyFriend(currentUserId: String, friendId: String): Result<Unit> = try {
+        firestore.batch().apply {
+            delete(
+                firestore.collection(Collections.USERS).document(currentUserId)
+                    .collection(Collections.FRIENDS).document(friendId)
+            )
+            delete(
+                firestore.collection(Collections.USERS).document(friendId)
+                    .collection(Collections.FRIENDS).document(currentUserId)
+            )
+        }.commit().await()
+        Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
     }

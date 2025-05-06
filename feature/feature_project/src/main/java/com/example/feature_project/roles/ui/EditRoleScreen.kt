@@ -15,6 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.RolePermission
 // Domain 모델 및 ViewModel 관련 요소 Import
@@ -29,9 +30,9 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditRoleScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: EditRoleViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: EditRoleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -45,7 +46,7 @@ fun EditRoleScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditRoleEvent.NavigateBack -> onNavigateBack()
+                is EditRoleEvent.NavigateBack -> navigationManager.navigateBack()
                 is EditRoleEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditRoleEvent.ClearFocus -> focusManager.clearFocus()
                 is EditRoleEvent.ShowDeleteConfirmation -> showDeleteConfirmationDialog = true // ★ 삭제 확인 요청
@@ -56,7 +57,7 @@ fun EditRoleScreen(
     // 저장 또는 삭제 성공 시 뒤로가기
     LaunchedEffect(uiState.saveSuccess, uiState.deleteSuccess) {
         if (uiState.saveSuccess || uiState.deleteSuccess) {
-            onNavigateBack()
+            navigationManager.navigateBack()
         }
     }
 
@@ -67,7 +68,7 @@ fun EditRoleScreen(
             TopAppBar(
                 title = { Text(if (isCreating) "역할 추가" else "역할 편집") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { // 뒤로가기 콜백 사용
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

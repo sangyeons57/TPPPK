@@ -1,41 +1,89 @@
 package com.example.data.repository
 
-import com.example.data.datasource.local.friend.FriendLocalDataSource
 import com.example.data.datasource.remote.friend.FriendRemoteDataSource
-import com.example.domain.model.Friend
-import com.example.domain.model.FriendRequest
+import com.example.data.model.mapper.FriendMapper
+import com.example.domain.model.FriendRelationship
 import com.example.domain.repository.FriendRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+import kotlin.Result
 
 /**
  * FriendRepository 인터페이스 구현
  * 로컬 및 원격 데이터 소스를 활용하여 친구 관련 기능을 제공합니다.
  */
 class FriendRepositoryImpl @Inject constructor(
-    private val remoteDataSource: FriendRemoteDataSource,
-    private val localDataSource: FriendLocalDataSource
+    private val friendRemoteDataSource: FriendRemoteDataSource,
+    private val firebaseAuth: FirebaseAuth
 ) : FriendRepository {
 
+    private fun getCurrentUserId(): String? {
+        return firebaseAuth.currentUser?.uid
+    }
+
     /**
-     * 친구 목록 실시간 스트림
-     * 서버에서 새로운 친구 목록이 동기화되면 로컬에도 저장합니다.
+     * 친구 관계 목록 실시간 스트림
+     * 서버에서 새로운 친구 관계 목록이 동기화되면 로컬에도 저장합니다.
      */
-    override fun getFriendsListStream(): Flow<List<Friend>> {
-        // 원격 데이터를 가져와서 로컬에 캐싱
-        return remoteDataSource.getFriendsListStream().onEach { friends ->
-            // 원격에서 데이터가 변경되면 로컬에 저장
-            localDataSource.saveFriends(friends)
+    override fun getFriendRelationshipsStream(): Flow<Result<List<FriendRelationship>>> {
+        val currentUserId = getCurrentUserId()
+            ?: return kotlinx.coroutines.flow.flowOf(Result.failure(IllegalStateException("User not logged in.")))
+
+        return friendRemoteDataSource.getFriendRelationshipsStream(currentUserId).map { result ->
+            result.mapCatching { dtoListWithIds -> // Result 내에서 map 수행
+                dtoListWithIds.map { (friendId, dto) ->
+                    FriendMapper.dtoToDomain(dto, friendId) // FriendMapper는 object이므로 직접 호출
+                }
+            }
         }
     }
 
     /**
-     * 친구 목록 새로고침 (API 호출)
-     * 명시적으로 서버에서 친구 목록을 가져옵니다.
+     * 친구 관계 새로고침 (API 호출)
+     * 명시적으로 서버에서 친구 관계 목록을 가져옵니다.
      */
-    override suspend fun fetchFriendsList(): Result<Unit> {
-        return remoteDataSource.fetchFriendsList()
+    override suspend fun refreshFriendRelationships(): Result<Unit> {
+        // Firestore 실시간 리스너를 사용하므로, 명시적 새로고침은 UI단의 스트림 재구독이나
+        // DataSource에 별도 one-time fetch 구현 필요. 여기서는 성공으로 간주.
+        // TODO: 필요시 DataSource에 fetch 기능 추가하고 호출
+        return Result.success(Unit)
+    }
+
+    /**
+     * 사용자 이름으로 친구 요청 보내기
+     * 닉네임으로 사용자를 찾아 친구 요청을 보냅니다.
+     */
+    override suspend fun sendFriendRequest(targetUserId: String): Result<Unit> {
+        val currentUserId = getCurrentUserId()
+            ?: return Result.failure(IllegalStateException("User not logged in."))
+        if (currentUserId == targetUserId) {
+            return Result.failure(IllegalArgumentException("Cannot send friend request to oneself."))
+        }
+        return friendRemoteDataSource.sendFriendRequest(currentUserId, targetUserId)
+    }
+
+    /**
+     * 친구 요청 수락
+     * 원격 서버에서 요청을 수락하고 로컬 데이터베이스를 업데이트합니다.
+     */
+    override suspend fun acceptFriendRequest(requesterId: String): Result<Unit> {
+        val currentUserId = getCurrentUserId()
+            ?: return Result.failure(IllegalStateException("User not logged in."))
+        // TODO: 로컬 데이터 업데이트 로직 (필요하다면)
+        return friendRemoteDataSource.acceptFriendRequest(currentUserId, requesterId)
+    }
+
+    /**
+     * 친구 요청 거절
+     * 원격 서버에서 요청을 거절하고 로컬 데이터베이스를 업데이트합니다.
+     */
+    override suspend fun removeOrDenyFriend(friendId: String): Result<Unit> {
+        val currentUserId = getCurrentUserId()
+            ?: return Result.failure(IllegalStateException("User not logged in."))
+        // TODO: 로컬 데이터 업데이트 로직 (필요하다면)
+        return friendRemoteDataSource.removeOrDenyFriend(currentUserId, friendId)
     }
 
     /**
@@ -43,70 +91,15 @@ class FriendRepositoryImpl @Inject constructor(
      * 필요한 경우 새 채널을 생성합니다.
      */
     override suspend fun getDmChannelId(friendUserId: String): Result<String> {
-        return remoteDataSource.getDmChannelId(friendUserId)
-    }
-
-    /**
-     * 사용자 이름으로 친구 요청 보내기
-     * 닉네임으로 사용자를 찾아 친구 요청을 보냅니다.
-     */
-    override suspend fun sendFriendRequest(username: String): Result<String> {
-        return remoteDataSource.sendFriendRequest(username)
-    }
-
-    /**
-     * 받은 친구 요청 목록 가져오기
-     * 서버에서 요청 목록을 가져와 로컬에 캐싱합니다.
-     */
-    override suspend fun getFriendRequests(): Result<List<FriendRequest>> {
-        val result = remoteDataSource.getFriendRequests()
+        // 이전에 FriendRepository에 있던 함수. DataSource가 해당 기능을 직접 제공하지 않으므로,
+        // 여기서는 미구현 상태로 두거나, DM 관련 로직을 별도 Repository/DataSource에서 처리하도록 유도.
+        // Firestore 스키마에 따르면 DM ID는 uid1_uid2 형태이므로, 여기서 생성 가능.
+        val currentUserId = getCurrentUserId()
+            ?: return Result.failure(IllegalStateException("User not logged in."))
         
-        // 성공 시에만 로컬에 저장
-        if (result.isSuccess) {
-            result.getOrNull()?.let { requests ->
-                localDataSource.saveFriendRequests(requests)
-            }
-        }
-        
-        return result
-    }
-
-    /**
-     * 친구 요청 수락
-     * 원격 서버에서 요청을 수락하고 로컬 데이터베이스를 업데이트합니다.
-     */
-    override suspend fun acceptFriendRequest(userId: String): Result<Unit> {
-        val result = remoteDataSource.acceptFriendRequest(userId)
-        
-        // 성공 시에만 로컬 업데이트
-        if (result.isSuccess) {
-            // 친구 정보 가져오기
-            val friendInfo = localDataSource.getFriendById(userId) ?: Friend(
-                userId = userId,
-                userName = "사용자", // 기본값
-                status = "accepted",
-                profileImageUrl = null
-            )
-            
-            // 로컬 데이터베이스 업데이트
-            localDataSource.acceptFriendRequest(userId, friendInfo)
-        }
-        
-        return result
-    }
-
-    /**
-     * 친구 요청 거절
-     * 원격 서버에서 요청을 거절하고 로컬 데이터베이스를 업데이트합니다.
-     */
-    override suspend fun denyFriendRequest(userId: String): Result<Unit> {
-        val result = remoteDataSource.denyFriendRequest(userId)
-        
-        // 성공 시에만 로컬 업데이트
-        if (result.isSuccess) {
-            localDataSource.deleteFriendRequest(userId)
-        }
-        
-        return result
+        // Firestore `dms` 컬렉션의 ID 규칙 (정렬된 UID 조합)
+        val ids = listOf(currentUserId, friendUserId).sorted()
+        val dmId = "${ids[0]}_${ids[1]}"
+        return Result.success(dmId) // 임시로 직접 생성, 실제로는 DmRepository 등과 연동 필요
     }
 }

@@ -11,7 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Delete // 삭제 아이콘
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,10 +22,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_project.setting.viewmodel.ChannelType
-import com.example.feature_project.setting.viewmodel.ProjectCategory
-import com.example.feature_project.setting.viewmodel.ProjectChannel
+import com.example.domain.model.ChannelType
+import com.example.domain.model.ProjectCategory
+import com.example.domain.model.ProjectChannel
 import com.example.feature_project.setting.viewmodel.ProjectSettingEvent
 import com.example.feature_project.setting.viewmodel.ProjectSettingUiState
 import com.example.feature_project.setting.viewmodel.ProjectSettingViewModel
@@ -38,16 +41,9 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectSettingScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: ProjectSettingViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    onNavigateToEditCategory: (String, String) -> Unit, // projectId, categoryId
-    onNavigateToCreateCategory: (String) -> Unit, // projectId
-    onNavigateToEditChannel: (String, String, String) -> Unit, // projectId, categoryId, channelId
-    onNavigateToCreateChannel: (String, String) -> Unit, // projectId, categoryId
-    onNavigateToMemberList: (String) -> Unit, // projectId
-    onNavigateToRoleList: (String) -> Unit // projectId
-    // TODO: 다른 네비게이션 콜백 추가 (예: 프로젝트 이름 변경, 프로젝트 삭제 등)
+    viewModel: ProjectSettingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -62,14 +58,14 @@ fun ProjectSettingScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProjectSettingEvent.NavigateBack -> onNavigateBack()
+                is ProjectSettingEvent.NavigateBack -> navigationManager.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is ProjectSettingEvent.NavigateToEditCategory -> onNavigateToEditCategory(event.projectId, event.categoryId)
-                is ProjectSettingEvent.NavigateToCreateCategory -> onNavigateToCreateCategory(event.projectId)
-                is ProjectSettingEvent.NavigateToEditChannel -> onNavigateToEditChannel(event.projectId, event.categoryId, event.channelId)
-                is ProjectSettingEvent.NavigateToCreateChannel -> onNavigateToCreateChannel(event.projectId, event.categoryId)
-                is ProjectSettingEvent.NavigateToMemberList -> onNavigateToMemberList(event.projectId)
-                is ProjectSettingEvent.NavigateToRoleList -> onNavigateToRoleList(event.projectId)
+                is ProjectSettingEvent.NavigateToEditCategory -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToCreateCategory -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createCategory(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditChannel -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
+                is ProjectSettingEvent.NavigateToCreateChannel -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToMemberList -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.memberList(event.projectId)))
+                is ProjectSettingEvent.NavigateToRoleList -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.roleList(event.projectId)))
                 is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
                 is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
                 is ProjectSettingEvent.ShowRenameProjectDialog -> showRenameProjectDialog = true
@@ -85,7 +81,7 @@ fun ProjectSettingScreen(
             TopAppBar(
                 title = { Text("프로젝트 설정") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

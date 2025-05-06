@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.ProjectMember
@@ -37,9 +38,9 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditMemberScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: EditMemberViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: EditMemberViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -48,7 +49,7 @@ fun EditMemberScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditMemberEvent.NavigateBack -> onNavigateBack()
+                is EditMemberEvent.NavigateBack -> navigationManager.navigateBack()
                 is EditMemberEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -57,7 +58,7 @@ fun EditMemberScreen(
     // 저장 성공 시 뒤로가기 (LaunchedEffect 키를 uiState.saveSuccess로)
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
-            onNavigateBack()
+            navigationManager.navigateBack()
         }
     }
 
@@ -68,7 +69,7 @@ fun EditMemberScreen(
             TopAppBar(
                 title = { Text("멤버 역할 편집") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

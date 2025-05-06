@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
@@ -17,8 +18,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_project.structure.viewmodel.ChannelType
+import com.example.domain.model.ChannelType
 import com.example.feature_project.structure.viewmodel.CreateChannelEvent
 import com.example.feature_project.structure.viewmodel.CreateChannelUiState
 import com.example.feature_project.structure.viewmodel.CreateChannelViewModel
@@ -27,12 +29,12 @@ import kotlinx.coroutines.flow.collectLatest
 /**
  * CreateChannelScreen: 프로젝트 내 카테고리 아래 새 채널 추가 화면 (Stateful)
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun CreateChannelScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: CreateChannelViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: CreateChannelViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -42,7 +44,7 @@ fun CreateChannelScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is CreateChannelEvent.NavigateBack -> onNavigateBack()
+                is CreateChannelEvent.NavigateBack -> navigationManager.navigateBack()
                 is CreateChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is CreateChannelEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -52,7 +54,7 @@ fun CreateChannelScreen(
     // 생성 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.createSuccess) {
         if (uiState.createSuccess) {
-            onNavigateBack()
+            navigationManager.navigateBack()
         }
     }
 
@@ -63,7 +65,7 @@ fun CreateChannelScreen(
             TopAppBar(
                 title = { Text("채널 추가") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

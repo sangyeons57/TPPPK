@@ -3,8 +3,14 @@ package com.example.feature_project.roles.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getOptionalString
+import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.RolePermission
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.domain.usecase.project.CreateRoleUseCase
+import com.example.domain.usecase.project.DeleteRoleUseCase
+import com.example.domain.usecase.project.GetRoleDetailsUseCase
+import com.example.domain.usecase.project.UpdateRoleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -34,17 +40,20 @@ sealed class EditRoleEvent {
     object ShowDeleteConfirmation : EditRoleEvent() // ★ 삭제 확인 다이얼로그 표시 이벤트
 }
 
-// --- Repository 인터페이스 정의는 domain/repository/ProjectRoleRepository.kt 로 이동 ---
-
 @HiltViewModel
 class EditRoleViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val projectRoleRepository: ProjectRoleRepository // ★ Domain Repository 주입
+    private val getRoleDetailsUseCase: GetRoleDetailsUseCase,
+    private val createRoleUseCase: CreateRoleUseCase,
+    private val updateRoleUseCase: UpdateRoleUseCase,
+    private val deleteRoleUseCase: DeleteRoleUseCase
 ) : ViewModel() {
 
-    // 네비게이션 인자 가져오기 (실제 키 이름 확인 필요)
-    private val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 필요합니다.")
-    private val roleId: String? = savedStateHandle["roleId"] // 수정 모드일 경우 역할 ID
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    // 역할 ID는 수정 시에만 전달되므로 옵셔널로 처리
+    private val roleId: String? = savedStateHandle.getOptionalString(AppRoutes.Project.ARG_ROLE_ID)
+    
+    val isEditMode = roleId != null // 수정 모드 여부
 
     private val _uiState = MutableStateFlow(EditRoleUiState(roleId = roleId, isLoading = roleId != null)) // 수정 모드면 초기 로딩
     val uiState: StateFlow<EditRoleUiState> = _uiState.asStateFlow()
@@ -64,10 +73,10 @@ class EditRoleViewModel @Inject constructor(
     private fun loadRoleDetails(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Loading details for role $id")
+            println("ViewModel: Loading details for role $id (UseCase)")
 
-            // --- Repository 호출 ---
-            val result = projectRoleRepository.getRoleDetails(id) // ★ Repository 사용
+            // --- UseCase 호출 ---
+            val result = getRoleDetailsUseCase(id)
 
             if (result.isSuccess) {
                 val (loadedName, loadedPermissions) = result.getOrThrow()
@@ -148,13 +157,13 @@ class EditRoleViewModel @Inject constructor(
             val nameToSave = currentName
             val permissionsToSave = currentState.permissions
 
-            // Repository 호출 (생성 또는 수정)
+            // --- UseCase 호출 (생성 또는 수정) ---
             val result = if (currentState.roleId == null) {
-                println("ViewModel: Creating role '$nameToSave' in project $projectId")
-                projectRoleRepository.createRole(projectId, nameToSave, permissionsToSave) // ★ 생성 호출
+                println("ViewModel: Creating role '$nameToSave' in project $projectId (UseCase)")
+                createRoleUseCase(projectId, nameToSave, permissionsToSave)
             } else {
-                println("ViewModel: Updating role ${currentState.roleId} to '$nameToSave'")
-                projectRoleRepository.updateRole(currentState.roleId, nameToSave, permissionsToSave) // ★ 수정 호출
+                println("ViewModel: Updating role ${currentState.roleId} to '$nameToSave' (UseCase)")
+                updateRoleUseCase(currentState.roleId, nameToSave, permissionsToSave)
             }
 
             if (result.isSuccess) {
@@ -189,9 +198,10 @@ class EditRoleViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Deleting role $roleIdToDelete")
+            println("ViewModel: Deleting role $roleIdToDelete (UseCase)")
 
-            val result = projectRoleRepository.deleteRole(roleIdToDelete) // ★ 삭제 호출
+            // --- UseCase 호출 ---
+            val result = deleteRoleUseCase(roleIdToDelete)
 
             if (result.isSuccess) {
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할이 삭제되었습니다."))

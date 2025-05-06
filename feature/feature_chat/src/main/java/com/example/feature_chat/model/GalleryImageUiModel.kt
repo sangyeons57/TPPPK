@@ -7,6 +7,6 @@ import android.net.Uri
  */
 data class GalleryImageUiModel(
     val uri: Uri,
-    val id: Long,
+    val id: String,
     var isSelected: Boolean = false // 선택 상태 추가 (UI 관리용)
 ) 

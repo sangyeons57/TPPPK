@@ -3,12 +3,10 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.Project
 import com.example.domain.model.Schedule
-import com.example.domain.repository.ProjectRepository
-import com.example.domain.repository.ScheduleRepository
+import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
+import com.example.domain.usecase.schedule.AddScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -17,6 +15,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
+import com.example.core_navigation.destination.AppRoutes
 
 // --- 데이터 모델 ---
 data class ProjectSelectionItem(
@@ -38,7 +37,6 @@ data class AddScheduleUiState(
     val titleError: String? = null, // 제목 유효성 검사 메시지
     val timeError: String? = null, // 시간 유효성 검사 메시지
     val isLoading: Boolean = false,
-    val saveSuccess: Boolean = false,
     val errorMessage: String? = null, // 일반 오류 메시지
 
     val isShowStartTimePicker: Boolean = false,
@@ -48,19 +46,20 @@ data class AddScheduleUiState(
 // --- 이벤트 ---
 sealed class AddScheduleEvent {
     object NavigateBack : AddScheduleEvent()
+    object SaveSuccessAndRequestBackNavigation : AddScheduleEvent()
     data class ShowSnackbar(val message: String) : AddScheduleEvent()
 }
 
 @HiltViewModel
 class AddScheduleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val projectRepository: ProjectRepository,
-    private val scheduleRepository: ScheduleRepository
+    private val getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase,
+    private val addScheduleUseCase: AddScheduleUseCase
 ) : ViewModel() {
 
-    private val year: Int? = savedStateHandle["year"]
-    private val month: Int? = savedStateHandle["month"]
-    private val day: Int? = savedStateHandle["day"]
+    private val year: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR)
+    private val month: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_MONTH)
+    private val day: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_DAY)
 
     private val _uiState = MutableStateFlow(AddScheduleUiState())
     val uiState: StateFlow<AddScheduleUiState> = _uiState.asStateFlow()
@@ -85,15 +84,15 @@ class AddScheduleViewModel @Inject constructor(
             val personalScheduleOption = ProjectSelectionItem(id = PERSONAL_SCHEDULE_PROJECT_ID, name = "개인 일정")
             _uiState.update { it.copy(isLoading = true, availableProjects = listOf(personalScheduleOption), selectedProject = null) } // selectedProject를 null로 초기화 (개인 일정이 기본값)
 
-            val result = projectRepository.getAvailableProjectsForScheduling()
+            val result = getSchedulableProjectsUseCase()
 
             if (result.isSuccess) {
-                val fetchedProjects = result.getOrNull()?.map { project ->
+                val fetchedProjects = result.getOrThrow().map { project ->
                     ProjectSelectionItem(
-                        id = project.id.toString(),
+                        id = project.id ?: "",
                         name = project.name
                     )
-                } ?: emptyList()
+                }
 
                 // 개인 일정 옵션과 불러온 프로젝트 목록 합치기
                 _uiState.update {
@@ -214,7 +213,7 @@ class AddScheduleViewModel @Inject constructor(
             // project가 null이면 projectId도 null이 됨
             val schedule = Schedule(
                 id = UUID.randomUUID().toString(),
-                projectId = project?.id,
+                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID },
                 title = title,
                 content = content.takeIf { it.isNotEmpty() }, // 내용 없으면 null
                 startTime = utcStartTime,
@@ -223,12 +222,13 @@ class AddScheduleViewModel @Inject constructor(
                 isAllDay = false // 기본적으로 false
             )
             
-            // Repository를 통해 일정 추가
-            val result = scheduleRepository.addSchedule(schedule)
+            // Use UseCase to add the schedule
+            val result = addScheduleUseCase(schedule)
             
             if (result.isSuccess) {
                 _eventFlow.emit(AddScheduleEvent.ShowSnackbar("일정이 추가되었습니다."))
-                _uiState.update { it.copy(isLoading = false, saveSuccess = true) }
+                _uiState.update { it.copy(isLoading = false) }
+                _eventFlow.emit(AddScheduleEvent.SaveSuccessAndRequestBackNavigation)
             } else {
                 _uiState.update { 
                     it.copy(

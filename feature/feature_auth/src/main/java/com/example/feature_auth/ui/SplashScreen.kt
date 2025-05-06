@@ -14,6 +14,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.R
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_auth.viewmodel.SplashEvent
@@ -26,16 +29,15 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun SplashScreen(
     modifier: Modifier = Modifier,
-    viewModel: SplashViewModel = hiltViewModel(),
-    onNavigateToLogin: () -> Unit,
-    onNavigateToMain: () -> Unit
+    navigationManager: ComposeNavigationHandler,
+    viewModel: SplashViewModel = hiltViewModel()
 ) {
     // 이벤트 처리 (네비게이션)
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                SplashEvent.NavigateToLogin -> onNavigateToLogin()
-                SplashEvent.NavigateToMain -> onNavigateToMain()
+                SplashEvent.NavigateToLogin -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.LOGIN))
+                SplashEvent.NavigateToMain -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.ROOT))
             }
         }
     }

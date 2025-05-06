@@ -31,6 +31,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.MessageResult
@@ -41,6 +44,7 @@ import com.example.domain.model.UserResult
 import com.example.feature_search.viewmodel.SearchEvent
 import com.example.feature_search.viewmodel.SearchUiState
 import com.example.feature_search.viewmodel.SearchViewModel
+// 네비게이션 관련 임포트 업데이트
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -51,11 +55,9 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: SearchViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    onNavigateToChat: (channelId: String, messageId: Int) -> Unit,
-    onNavigateToUserProfile: (userId: String) -> Unit
+    viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -66,8 +68,12 @@ fun SearchScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SearchEvent.NavigateToMessage -> onNavigateToChat(event.channelId, event.messageId)
-                is SearchEvent.NavigateToUserProfile -> onNavigateToUserProfile(event.userId)
+                is SearchEvent.NavigateToMessage -> navigationManager.navigate(
+                    NavigationCommand.NavigateToRoute(AppRoutes.Chat.chatWithMessage(event.channelId, event.messageId))
+                )
+                is SearchEvent.NavigateToUserProfile -> navigationManager.navigate(
+                    NavigationCommand.NavigateToRoute(AppRoutes.User.profile(event.userId.toString()))
+                )
                 is SearchEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -84,7 +90,7 @@ fun SearchScreen(
             TopAppBar(
                 title = { Text("검색") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },
@@ -301,9 +307,9 @@ fun UserResultItem(
 @Composable
 private fun SearchScreenPreview_Results() {
     val previewResults = listOf(
-        MessageResult("m1", "ch1", "일반 채널", 101, "김개발", "이전 프로젝트 검색 결과입니다.", LocalDateTime.now().minusDays(1)),
+        MessageResult("m1", "ch1", "일반 채널", "101", "김개발", "이전 프로젝트 검색 결과입니다.", LocalDateTime.now().minusDays(1)),
         UserResult("u1", "u1", "박기획", "url...", "회의 중"),
-        MessageResult("m2", "ch2", "중요 공지", 102, "최관리", "검색 테스트 메시지 내용 미리보기", LocalDateTime.now().minusHours(3)),
+        MessageResult("m2", "ch2", "중요 공지", "102", "최관리", "검색 테스트 메시지 내용 미리보기", LocalDateTime.now().minusHours(3)),
         UserResult("u2", "u2", "정디자인", null, null)
     )
     val previewUiState = SearchUiState(

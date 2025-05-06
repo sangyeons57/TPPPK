@@ -4,15 +4,14 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.extension.getRequiredString
+import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.Schedule
-import com.example.domain.repository.ScheduleRepository
+import com.example.domain.usecase.schedule.DeleteScheduleUseCase
+import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -33,7 +32,8 @@ data class ScheduleDetailUiState(
     val isLoading: Boolean = false,
     val scheduleDetail: ScheduleDetailItem? = null,
     val error: String? = null,
-    val deleteSuccess: Boolean = false // 삭제 성공 시 네비게이션 트리거
+    val deleteSuccess: Boolean = false, // 삭제 성공 시 네비게이션 트리거
+    val scheduleId: String? = null
 )
 
 // --- 이벤트 ---
@@ -47,10 +47,9 @@ sealed class ScheduleDetailEvent {
 @HiltViewModel
 class ScheduleDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val scheduleRepository: ScheduleRepository
+    private val getScheduleDetailUseCase: GetScheduleDetailUseCase,
+    private val deleteScheduleUseCase: DeleteScheduleUseCase
 ) : ViewModel() {
-
-    private val scheduleId: String = savedStateHandle["scheduleId"] ?: error("scheduleId가 전달되지 않았습니다.")
 
     private val _uiState = MutableStateFlow(ScheduleDetailUiState(isLoading = true))
     val uiState: StateFlow<ScheduleDetailUiState> = _uiState.asStateFlow()
@@ -63,14 +62,35 @@ class ScheduleDetailViewModel @Inject constructor(
     private val timeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
 
     init {
-        loadScheduleDetail(scheduleId)
+        viewModelScope.launch {
+            val scheduleId = savedStateHandle.get<String>(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID)
+            if (scheduleId == null) {
+                _uiState.update { it.copy(isLoading = false, error = "일정 ID를 찾을 수 없습니다.") }
+                return@launch
+            }
+            // _uiState.update { it.copy(scheduleId = scheduleId, isLoading = true) } // Moved to loadScheduleDetails
+            loadScheduleDetails(scheduleId)
+        }
     }
 
-    private fun loadScheduleDetail(id: String) {
+    // ADDED: Function to reload schedule details
+    fun refreshScheduleDetails() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            val scheduleId = uiState.value.scheduleId // Get current scheduleId from state
+            if (scheduleId == null) {
+                _uiState.update { it.copy(isLoading = false, error = "일정 ID를 찾을 수 없습니다. (새로고침 실패)") }
+                return@launch
+            }
+            loadScheduleDetails(scheduleId) // Call the existing loading logic
+        }
+    }
+
+    // Modified to be callable for refresh
+    private fun loadScheduleDetails(scheduleId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(scheduleId = scheduleId, isLoading = true, error = null) } // Set loading and clear previous error
             try {
-                val result = scheduleRepository.getScheduleDetail(id)
+                val result = getScheduleDetailUseCase(scheduleId)
                 result.onSuccess { schedule ->
                     _uiState.update {
                         it.copy(
@@ -133,7 +153,7 @@ class ScheduleDetailViewModel @Inject constructor(
     fun onEditClick() {
         viewModelScope.launch {
             // 수정 화면으로 이동하는 이벤트 발생 (scheduleId 전달)
-            _eventFlow.emit(ScheduleDetailEvent.NavigateToEditSchedule(scheduleId))
+            _eventFlow.emit(ScheduleDetailEvent.NavigateToEditSchedule(uiState.value.scheduleId ?: ""))
         }
     }
 
@@ -148,7 +168,7 @@ class ScheduleDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // 삭제 중 로딩 표시
             try {
-                val result = scheduleRepository.deleteSchedule(scheduleId)
+                val result = deleteScheduleUseCase(uiState.value.scheduleId ?: "")
                 result.onSuccess {
                     _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정이 삭제되었습니다."))
                     _uiState.update { it.copy(isLoading = false, deleteSuccess = true) } // 삭제 성공 및 네비게이션 트리거

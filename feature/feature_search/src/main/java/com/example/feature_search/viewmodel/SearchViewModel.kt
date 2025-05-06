@@ -7,7 +7,7 @@ import com.example.domain.model.MessageResult
 import com.example.domain.model.SearchResultItem
 import com.example.domain.model.SearchScope
 import com.example.domain.model.UserResult
-import com.example.domain.repository.SearchRepository
+import com.example.domain.usecase.search.SearchUseCase
 // Domain 요소 Import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -28,7 +28,7 @@ data class SearchUiState(
 
 // --- 이벤트 ---
 sealed class SearchEvent {
-    data class NavigateToMessage(val channelId: String, val messageId: Int) : SearchEvent()
+    data class NavigateToMessage(val channelId: String, val messageId: String) : SearchEvent()
     data class NavigateToUserProfile(val userId: String) : SearchEvent()
     data class ShowSnackbar(val message: String) : SearchEvent()
 }
@@ -37,7 +37,7 @@ sealed class SearchEvent {
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val searchRepository: SearchRepository // ★ Domain Repository 주입
+    private val searchUseCase: SearchUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -92,7 +92,7 @@ class SearchViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null, searchPerformed = true) }
             println("ViewModel: Performing search for '$query' in scope '$scope'")
 
-            val result = searchRepository.search(query, scope) // ★ Repository 호출
+            val result = searchUseCase(query, scope) // UseCase 호출
 
             if (result.isSuccess) {
                 _uiState.update { it.copy(isLoading = false, searchResults = result.getOrThrow()) }

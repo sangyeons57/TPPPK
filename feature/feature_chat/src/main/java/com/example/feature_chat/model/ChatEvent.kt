@@ -9,4 +9,5 @@ sealed class ChatEvent {
     data class ShowUserProfileDialog(val userId: Int) : ChatEvent()
     data class ShowSnackbar(val message: String) : ChatEvent()
     object ClearFocus : ChatEvent() // 키보드 숨기기 요청 등
+    object NavigateBack : ChatEvent() // 뒤로 가기 네비게이션 요청
 } 

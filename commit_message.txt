@@ -1,9 +1,45 @@
-Feat: 네비게이션 시스템 업그레이드 계획 수립
+Feat: Firestore DB 통합 및 Mock 데이터 제거 완료
 
-- Core_Common 모듈로 네비게이션 코드 이전 계획
-- 기존 navigation 모듈 제거 전략
-- NavigationManager 구현 요구사항 정의
-- 모듈별 수정 필요 파일 목록 작성
-- 단계별 이행 계획 수립
+- 인증(Auth) 모듈 Firestore 연동 완료
+- 사용자(User) 프로필 Firestore 연동 완료
+- 친구(Friends) 기능 Firestore 연동 완료
+- 프로젝트(Project) 관리 Firestore 연동 완료
+- 채팅(Chat) 실시간 기능 Firestore 연동 완료
+- 모든 Mock 데이터 제거 및 실제 데이터 사용으로 전환
+- 데이터 모듈 구조 업데이트 및 문서화
+
+남은 작업: 각 기능별 단위 테스트 추가
+
+## 주요 변경 내용
+- Core_Common 모듈로 네비게이션 코드 이전 계획 작성
+- 기존 navigation 모듈 제거 전략 수립
+- NavigationManager 구현 요구사항 및 계층구조 설계
+- 모듈별 수정 필요 파일 목록 상세화
+- 네비게이션 의존성 주입 전략 및 중첩 네비게이션 처리 방안 마련
 
 Task: #navigation-upgrade
+
+Fix: Repository 구현 함수 추가 및 에러 존재
+
+- AuthRepositoryImpl의 getPasswordResetErrorMessage() 구현 (비밀번호 재설정 오류 메시지)
+- UserRepositoryImpl의 getCurrentStatus() 구현 (동기식 Firestore 쿼리 사용)
+
+에러 상태:
+- UserRepositoryImpl의 getCurrentStatus()에서 Firestore 동기식 호출(.get().result)을 사용하고 있어 
+  메인 스레드 차단 가능성 있음. 추후 비동기 처리로 수정 필요.
+
+Fix: Core_Common 모듈 컴파일 오류 해결
+
+- DomainError.kt에서 sealed 클래스 생성자 protected로 변경 및 companion object 팩토리 메서드 추가
+- ErrorMapper.kt에서 HttpException 처리 로직 수정
+- ResultExtensions.kt에서 타입 추론 문제 해결 (명시적 타입 파라미터 추가)
+
+모든 파일 컴파일 오류 해결 완료. 테스트 및 검증 필요.
+
+Fix: ChatRepositoryImpl의 ErrorMap 의존성 수정
+
+- ChatRepositoryImpl에서 존재하지 않는 ErrorMap 타입을 사용하던 문제 수정
+- core_common 모듈의 ErrorMapper 클래스로 변경하고 필요한 import 추가
+- KSP 컴파일 오류 해결
+
+다음 단계로 ChatRemoteDataSourceImpl 관련 추가 오류 수정 필요

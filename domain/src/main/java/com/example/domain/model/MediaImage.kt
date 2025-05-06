@@ -1,11 +1,16 @@
 package com.example.domain.model
 
+import android.net.Uri
+
 /**
- * 갤러리 이미지 정보를 담는 모델 클래스
+ * 미디어 이미지 정보를 나타내는 도메인 모델
+ * 안드로이드 의존성 없이 순수한 문자열 경로 사용 -> Uri 사용으로 변경
  */
 data class MediaImage(
-    val id: Long, // MediaStore ID 등 고유 식별자
-    val contentUri: String, // 이미지의 Content URI (문자열로 저장)
-    val displayName: String? = null, // 파일 이름 (선택적)
-    val size: Long = 0 // 파일 크기 (바이트)
+    val id: String,
+    val contentPath: Uri, // String -> Uri 변경
+    val name: String = "",
+    val size: Long = 0L,
+    val mimeType: String = "",
+    val dateAdded: Long = 0L
 )

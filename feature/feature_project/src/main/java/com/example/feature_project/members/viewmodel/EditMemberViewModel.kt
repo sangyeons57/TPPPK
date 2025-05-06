@@ -3,10 +3,14 @@ package com.example.feature_project.members.viewmodel // 경로 확인!
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.ProjectMember
-import com.example.domain.repository.ProjectMemberRepository
-import com.example.domain.repository.ProjectRoleRepository
-// Domain 요소 Import
+// import com.example.domain.repository.ProjectMemberRepository // Remove Repo import
+// import com.example.domain.repository.ProjectRoleRepository // Remove Repo import
+import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase // Import UseCase
+import com.example.domain.usecase.project.GetProjectRolesUseCase // Import UseCase
+import com.example.domain.usecase.project.UpdateMemberRolesUseCase // Import UseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -38,14 +42,18 @@ sealed class EditMemberEvent {
 
 // --- ViewModel ---
 @HiltViewModel
-class EditMemberViewModel @Inject constructor( // 클래스 이름 오타 수정 확인!
+class EditMemberViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val projectMemberRepository: ProjectMemberRepository, // ★ Member Repo 주입
-    private val projectRoleRepository: ProjectRoleRepository   // ★ Role Repo 주입
+    private val getProjectMemberDetailsUseCase: GetProjectMemberDetailsUseCase, // Inject UseCase
+    private val getProjectRolesUseCase: GetProjectRolesUseCase, // Inject UseCase
+    private val updateMemberRolesUseCase: UpdateMemberRolesUseCase // Inject UseCase
 ) : ViewModel() {
 
-    val projectId: String = savedStateHandle["projectId"] ?: error("projectId가 필요합니다.")
-    val userId: String = savedStateHandle["userId"] ?: error("userId가 필요합니다.")
+    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    private val userId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_USER_ID)
+
+    // 예시: 만약 멤버 편집 화면에서 특정 역할 ID를 옵션으로 받는다면?
+    // private val optionalRoleId: String? = savedStateHandle.getOptionalString("optionalRoleId")
 
     private val _uiState = MutableStateFlow(EditMemberUiState(isLoading = true))
     val uiState: StateFlow<EditMemberUiState> = _uiState.asStateFlow()
@@ -64,23 +72,23 @@ class EditMemberViewModel @Inject constructor( // 클래스 이름 오타 수정
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            // 1. 멤버 정보 가져오기
-            val memberResult = projectMemberRepository.getProjectMember(projectId, userId) // ★ Repo 호출
+            // 1. 멤버 정보 가져오기 (UseCase 사용)
+            val memberResult = getProjectMemberDetailsUseCase(projectId, userId)
 
-            // 2. 전체 역할 목록 가져오기
-            val rolesResult = projectRoleRepository.getRoles(projectId) // ★ Repo 호출
+            // 2. 전체 역할 목록 가져오기 (UseCase 사용)
+            val rolesResult = getProjectRolesUseCase(projectId)
 
             if (memberResult.isSuccess && rolesResult.isSuccess) {
                 val member = memberResult.getOrThrow()
                 val allRoles = rolesResult.getOrThrow()
 
-                // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember 모델에 roleIds 필드 가정)
-                // originalSelectedRoleIds = member.roleIds.toSet() // 실제 필드명 사용
+                // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roleIds 필드 사용 가정)
+                originalSelectedRoleIds = member?.roleIds?.toSet() ?: emptySet() // Null-safe
 
                 // 전체 역할 목록을 UI 모델(RoleSelectionItem)로 변환하고, 현재 멤버의 역할 선택 상태 반영
                 val roleSelectionItems = allRoles.map { role ->
                     RoleSelectionItem(
-                        id = role.id ?: "", // Role 모델에 id 필드 가정
+                        id = role.id ?: "", // Null-safe
                         name = role.name,
                         isSelected = role.id in originalSelectedRoleIds // 멤버가 가진 역할인지 확인
                     )
@@ -116,13 +124,11 @@ class EditMemberViewModel @Inject constructor( // 클래스 이름 오타 수정
         val currentState = _uiState.value
         if (currentState.isLoading || currentState.isSaving) return
 
-        // 현재 UI에서 선택된 역할 ID 목록
         val currentSelectedRoleIds = currentState.availableRoles
             .filter { it.isSelected }
             .map { it.id }
             .toSet()
 
-        // 변경사항 확인 (초기 상태와 비교)
         if (currentSelectedRoleIds == originalSelectedRoleIds) {
             viewModelScope.launch { _eventFlow.emit(EditMemberEvent.ShowSnackbar("변경된 내용이 없습니다.")) }
             return
@@ -130,19 +136,19 @@ class EditMemberViewModel @Inject constructor( // 클래스 이름 오타 수정
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, error = null) }
-            _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할을 저장하는 중...")) // 즉각적인 피드백
+            // _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할을 저장하는 중...")) // 스낵바 중복 표시 방지 위해 일단 주석 처리 (성공/실패 시 표시)
 
-            val result = projectMemberRepository.updateMemberRoles(projectId, userId, currentSelectedRoleIds.toList()) // ★ Repo 호출
+            // UseCase 호출
+            val result = updateMemberRolesUseCase(projectId, userId, currentSelectedRoleIds.toList())
 
             if (result.isSuccess) {
-                // 성공 시, 초기 선택 상태 업데이트 및 성공 상태 변경
                 originalSelectedRoleIds = currentSelectedRoleIds
-                _uiState.update { it.copy(isSaving = false, saveSuccess = true) } // 성공 이벤트 트리거
+                _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
                 _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 역할이 성공적으로 업데이트되었습니다."))
-                // 뒤로가기 이벤트 발생
                 _eventFlow.emit(EditMemberEvent.NavigateBack)
             } else {
-                _uiState.update { it.copy(isSaving = false, error = "역할 업데이트 실패: ${result.exceptionOrNull()?.message}") }
+                val errorMsg = result.exceptionOrNull()?.message ?: "알 수 없는 오류"
+                _uiState.update { it.copy(isSaving = false, error = "역할 업데이트 실패: $errorMsg") }
                 _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할 업데이트에 실패했습니다."))
             }
         }

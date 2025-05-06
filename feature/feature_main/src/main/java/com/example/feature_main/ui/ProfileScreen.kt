@@ -27,11 +27,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.feature_main.viewmodel.ProfileEvent
 import com.example.feature_main.viewmodel.ProfileViewModel
-import com.example.feature_main.viewmodel.UserProfileData
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.UserProfileData
 
 /**
  * ProfileScreen: 상태 관리 및 이벤트 처리 (Stateful)
@@ -39,11 +42,8 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
-    onLogout: () -> Unit,
-    onClickSettings: () -> Unit,
-    onClickFriends: () -> Unit,
-    onClickStatus: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel(),
+    navigationManager: ComposeNavigationHandler,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -62,9 +62,9 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProfileEvent.NavigateToSettings -> onClickSettings()
-                is ProfileEvent.NavigateToFriends -> onClickFriends()
-                is ProfileEvent.NavigateToStatus -> onClickStatus()
+                is ProfileEvent.NavigateToSettings -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.Profile.EDIT_PROFILE))
+                is ProfileEvent.NavigateToFriends -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.LIST))
+                is ProfileEvent.NavigateToStatus -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.Profile.CHANGE_PASSWORD))
                 is ProfileEvent.ShowEditStatusDialog -> {
                     // TODO: 상태 메시지 변경 다이얼로그 표시
                     snackbarHostState.showSnackbar("상태 메시지 변경 다이얼로그 (미구현)")
@@ -74,8 +74,8 @@ fun ProfileScreen(
                     imagePickerLauncher.launch("image/*")
                 }
                 is ProfileEvent.LogoutCompleted -> {
-                    // 로그인 화면으로 이동하고 MainScreen 포함 이전 스택 모두 제거
-                    onLogout();
+                    // 로그인 화면으로 이동 (스택 클리어는 NavigationHandler 구현에서 처리하거나 별도 Command 필요)
+                    navigationManager.navigate(NavigationCommand.NavigateClearingBackStack(AppRoutes.Auth.LOGIN))
                 }
                 is ProfileEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
@@ -116,15 +116,6 @@ fun ProfileScreen(
         }
     }
 }
-
-@Preview
-@Composable
-fun ProfileScreenPreview() {
-    // Dummy NavController for Preview
-    ProfileScreen(onLogout = {}, onClickSettings = {}, onClickFriends = {}, onClickStatus = {})
-}
-
-
 
 /**
  * ProfileContent: UI 렌더링 (Stateless)

@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.viewmodel.AddProjectEvent
 import com.example.feature_project.viewmodel.AddProjectMode
@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class) // Scaffold, TopAppBar 등 사용
 @Composable
 fun AddProjectScreen(
-    navController: NavHostController, // 뒤로 가기 네비게이션 제어
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: AddProjectViewModel = hiltViewModel()
 ) {
@@ -59,7 +59,7 @@ fun AddProjectScreen(
     // 프로젝트 추가 성공 시 뒤로 가기
     LaunchedEffect(uiState.projectAddedSuccessfully) {
         if (uiState.projectAddedSuccessfully) {
-            navController.popBackStack() // 이전 화면(아마도 HomeScreen)으로 돌아가기
+            navigationManager.navigateBack()
         }
     }
 
@@ -71,7 +71,7 @@ fun AddProjectScreen(
                 title = { Text("프로젝트 추가") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navController.popBackStack()
+                        navigationManager.navigateBack()
                     }) { // 뒤로가기 버튼
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }

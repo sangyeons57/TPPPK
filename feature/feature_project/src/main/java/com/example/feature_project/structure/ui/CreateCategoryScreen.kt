@@ -8,13 +8,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.structure.viewmodel.CreateCategoryEvent
 import com.example.feature_project.structure.viewmodel.CreateCategoryUiState
@@ -24,13 +25,12 @@ import kotlinx.coroutines.flow.collectLatest
 /**
  * CreateCategoryScreen: 프로젝트 내 새 카테고리 추가 화면 (Stateful)
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun CreateCategoryScreen(
-    navController: NavController,
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: CreateCategoryViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: CreateCategoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -40,7 +40,7 @@ fun CreateCategoryScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is CreateCategoryEvent.NavigateBack -> onNavigateBack()
+                is CreateCategoryEvent.NavigateBack -> navigationManager.navigateBack()
                 is CreateCategoryEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is CreateCategoryEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -50,7 +50,7 @@ fun CreateCategoryScreen(
     // 생성 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.createSuccess) {
         if (uiState.createSuccess) {
-            onNavigateBack()
+            navigationManager.navigateBack()
         }
     }
 
@@ -61,7 +61,7 @@ fun CreateCategoryScreen(
             TopAppBar(
                 title = { Text("카테고리 추가") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

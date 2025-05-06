@@ -12,13 +12,20 @@ import androidx.compose.ui.draw.scale
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.theme.Dimens
+import com.example.domain.model.Schedule
 import com.example.feature_main.viewmodel.CalendarEvent
+import com.example.feature_main.viewmodel.CalendarUiState
 import com.example.feature_main.viewmodel.CalendarViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.LocalNavController
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_main.viewmodel.CalendarUiState
-import com.example.domain.model.Schedule
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -54,24 +61,32 @@ import java.time.LocalTime
  * - CalendarDimens: UI 크기 상수
  *
  * @param modifier 이 컴포넌트에 적용할 Modifier
- * @param onClickFAB 일정 추가 버튼 클릭 시 호출될 콜백, 네비게이션 경로 문자열을 인자로 받음
- * @param onNavigateToScheduleDetail 일정 상세화면으로 이동하는 콜백, 일정 ID를 인자로 받음
- * @param onNavigateToCalendar24Hour 24시간 캘린더 화면으로 이동하는 콜백, 연도,월,일을 인자로 받음
+ * @param navigationManager 네비게이션 관리자
  * @param viewModel 캘린더 화면의 상태와 로직을 관리하는 ViewModel 인스턴스
- * @param shouldRefreshCalendar 일정 추가 후 데이터 갱신 여부
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
-    onClickFAB: (route: String) -> Unit,
-    onNavigateToScheduleDetail: (String) -> Unit = {}, 
-    onNavigateToCalendar24Hour: (Int, Int, Int) -> Unit = { _, _, _ -> },
-    viewModel: CalendarViewModel = hiltViewModel(),
-    shouldRefreshCalendar: Boolean = false
+    navigationManager: ComposeNavigationHandler,
+    viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val localNavController = LocalNavController.current
+    
+    // Observe result from AddScheduleScreen/EditScheduleScreen
+    val scheduleUpdateResult = localNavController
+        .currentBackStackEntry
+        ?.savedStateHandle
+        ?.getLiveData<Boolean>("schedule_added_or_updated")?.observeAsState()
+
+    LaunchedEffect(scheduleUpdateResult?.value) {
+        if (scheduleUpdateResult?.value == true) {
+            viewModel.refreshSchedules()
+            localNavController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("schedule_added_or_updated")
+        }
+    }
     
     // FAB 애니메이션 상태
     var isFabVisible by remember { mutableStateOf(true) }
@@ -81,10 +96,14 @@ fun CalendarScreen(
         label = "FAB Scale Animation"
     )
     
-    // 일정 추가 후 데이터 갱신 처리
-    LaunchedEffect(shouldRefreshCalendar) {
-        if (shouldRefreshCalendar) {
-            viewModel.refreshSchedules()
+    // "refresh_calendar" 키로 전달된 결과 관찰
+    LaunchedEffect(navigationManager) {
+        navigationManager.getResultFlow<Boolean>("refresh_calendar").collectLatest { refresh ->
+            if (refresh) {
+                viewModel.refreshSchedules()
+                // 결과 소비 후 다시 false로 설정하여 반복적인 새로고침 방지
+                navigationManager.setResult("refresh_calendar", false)
+            }
         }
     }
 
@@ -98,19 +117,25 @@ fun CalendarScreen(
                 is CalendarEvent.ShowAddScheduleDialog -> {
                     // FAB 클릭 애니메이션
                     isFabVisible = false
-                    kotlinx.coroutines.delay(150) // 애니메이션 효과 지연
-                    onClickFAB(
-                        com.example.navigation.AddSchedule.createRoute(
-                            uiState.selectedDate.year,
-                            uiState.selectedDate.monthValue,
-                            uiState.selectedDate.dayOfMonth,
+                    delay(150) // 애니메이션 효과 지연
+                    navigationManager.navigate(
+                        NavigationCommand.NavigateToRoute(
+                            AppRoutes.Main.Calendar.addSchedule(
+                                uiState.selectedDate.year,
+                                uiState.selectedDate.monthValue,
+                                uiState.selectedDate.dayOfMonth
+                            )
                         )
                     )
-                    kotlinx.coroutines.delay(50) // 애니메이션 효과 지연
+                    delay(50) // 애니메이션 효과 지연
                     isFabVisible = true
                 }
                 is CalendarEvent.NavigateToScheduleDetail -> {
-                    onNavigateToScheduleDetail(event.scheduleId)
+                    navigationManager.navigate(
+                        NavigationCommand.NavigateToRoute(
+                            AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId)
+                        )
+                    )
                 }
             }
         }
@@ -123,8 +148,6 @@ fun CalendarScreen(
             viewModel.errorMessageShown()
         }
     }
-
-    // 날짜 변경 감지 LaunchedEffect 제거
 
     Scaffold(
         modifier = modifier,
@@ -153,12 +176,20 @@ fun CalendarScreen(
             // 구분선
             HorizontalDivider()
             
-            // 선택된 날짜의 일정 섹션 (하단) - 애니메이션 제거하고 직접 표시
+            // 선택된 날짜의 일정 섹션 (하단)
             ScheduleSection(
                 uiState = uiState,
                 onScheduleClick = viewModel::onScheduleClick,
                 onDateClick24Hour = { date ->
-                    onNavigateToCalendar24Hour(date.year, date.monthValue, date.dayOfMonth)
+                    navigationManager.navigate(
+                        NavigationCommand.NavigateToRoute(
+                            AppRoutes.Main.Calendar.calendar24Hour(
+                                date.year,
+                                date.monthValue,
+                                date.dayOfMonth
+                            )
+                        )
+                    )
                 }
             )
         }

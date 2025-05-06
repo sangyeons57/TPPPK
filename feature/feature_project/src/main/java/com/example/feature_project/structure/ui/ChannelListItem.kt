@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_project.structure.viewmodel.ChannelType
+import com.example.domain.model.ChannelType
 
 // 채널 정보를 담는 데이터 클래스 (호출하는 쪽에서 사용)
 // 예시: feature_project_setting/viewmodel/ProjectSettingViewModel.kt 에 정의된 ProjectChannel 사용 가능

@@ -17,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.LocalNavController
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_schedule.viewmodel.AddScheduleEvent
 import com.example.feature_schedule.viewmodel.AddScheduleUiState
@@ -32,6 +33,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import com.example.core_navigation.core.ComposeNavigationHandler
 import kotlinx.coroutines.delay
 
 /**
@@ -40,33 +42,28 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddScheduleScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: AddScheduleViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
+    viewModel: AddScheduleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    // val context = LocalContext.current // Compose TimePickerDialog는 Context가 직접 필요하지 않음
+    val localNavController = LocalNavController.current
 
-
-    // 이벤트 처리
-    LaunchedEffect(viewModel) { 
+    LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is AddScheduleEvent.NavigateBack -> onNavigateBack()
+                is AddScheduleEvent.NavigateBack -> {
+                    navigationManager.navigateBack()
+                }
+                is AddScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
+                    localNavController.previousBackStackEntry?.savedStateHandle?.set("schedule_added_or_updated", true)
+                    navigationManager.navigateBack()
+                }
                 is AddScheduleEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(event.message)
                 }
             }
-        }
-    }
-
-    // 저장 성공 시 자동 뒤로가기
-    LaunchedEffect(uiState.saveSuccess) {
-        if (uiState.saveSuccess) {
-            // 스낵바가 보이도록 잠시 대기
-            delay(1000)
-            viewModel.navigateBack()
         }
     }
 
@@ -78,6 +75,7 @@ fun AddScheduleScreen(
         onDismissRequest = { viewModel.requestStartTimePicker(false) },
         onTimeSelected = { hour, minute ->
             viewModel.onStartTimeSelected(hour, minute)
+            viewModel.requestStartTimePicker(false) // EndTimePicker 표시 요청
             viewModel.requestEndTimePicker(true) // EndTimePicker 표시 요청
         },
     )
@@ -99,7 +97,7 @@ fun AddScheduleScreen(
             TopAppBar(
                 title = { Text("일정 추가") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { // 뒤로가기
+                    IconButton(onClick = { navigationManager.navigateBack() }) { // 뒤로가기
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }
@@ -247,93 +245,73 @@ fun AddScheduleContent(
     }
 }
 
-// 시간 범위 포맷 함수
-fun formatTimeRange(start: LocalTime?, end: LocalTime?): String {
-    val formatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN) // 예: 오후 3:00
-    return when {
-        start != null && end != null -> "${start.format(formatter)} ~ ${end.format(formatter)}"
-        start != null                -> "${start.format(formatter)} ~ 시간 미정"
-        else                         -> "시간 미정"
-    }
-}
-
+/**
+ * CustomAlertDialogTimePicker: 시간 선택 다이얼로그
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomAlertDialogTimePicker(
     showDialog: Boolean,
-    onDismissRequest: () -> Unit,
-    onTimeSelected: (hour: Int, minute: Int) -> Unit,
-    initialHour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
-    initialMinute: Int = Calendar.getInstance().get(Calendar.MINUTE),
-    is24Hour: Boolean = true, // 기본값을 true로 설정
-    title: String = "시간 선택",
-    confirmButtonText: String = "확인",
-    dismissButtonText: String = "취소",
-    useTimeInput: Boolean = false) {
+    onDismissRequest: () -> Unit, 
+    onTimeSelected: (Int, Int) -> Unit // 시간, 분을 선택했을 때 호출되는 콜백
+) {
     if (showDialog) {
-        val timePickerState = rememberTimePickerState(
-            initialHour = initialHour,
-            initialMinute = initialMinute,
-            is24Hour = is24Hour // 파라미터로 받은 is24Hour 사용 (기본값 true)
-        )
-
+        val timePickerState = rememberTimePickerState()
+        
         AlertDialog(
             onDismissRequest = onDismissRequest,
-            // 확인 버튼
+            title = { Text("시간 선택") },
+            text = {
+                // 시간 선택기 배치
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimePicker(state = timePickerState)
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onTimeSelected(timePickerState.hour, timePickerState.minute)
-                        onDismissRequest() // 확인 후 다이얼로그 닫기
                     }
-                ) {
-                    Text(confirmButtonText)
-                }
+                ) { Text("선택") }
             },
-            // 취소 버튼
             dismissButton = {
-                TextButton(
-                    onClick = onDismissRequest // 취소 시 onDismissRequest 호출
-                ) {
-                    Text(dismissButtonText)
-                }
-            },
-            // 제목
-            title = { Text(text = title) },
-            // 내용 영역 (TimePicker 또는 TimeInput 배치)
-            text = {
-                // TimePicker/TimeInput을 가운데 정렬하거나 패딩을 주기 위해 Box 사용 (선택 사항)
-                Box(
-                    modifier = Modifier.fillMaxWidth(), // 너비를 채우도록 설정
-                    contentAlignment = Alignment.Center // 내부 컨텐츠 중앙 정렬
-                ) {
-                    if (useTimeInput) {
-                        TimeInput(state = timePickerState)
-                    } else {
-                        TimePicker(state = timePickerState)
-                    }
-                }
-            },
-            modifier = Modifier.padding(vertical = 16.dp) // 다이얼로그 내부 상하 패딩 조절 (선택 사항)
+                TextButton(onClick = onDismissRequest) { Text("취소") }
+            }
         )
     }
+}
+
+// 시간 포맷팅 함수 (시작 시간과 종료 시간)
+private fun formatTimeRange(startTime: LocalTime?, endTime: LocalTime?): String {
+    if (startTime == null && endTime == null) return "시간을 선택하세요"
+    
+    val formatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
+    val start = startTime?.format(formatter) ?: "시작 시간 없음"
+    val end = endTime?.format(formatter) ?: "종료 시간 없음"
+    
+    return "$start ~ $end"
 }
 
 // --- Preview ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 private fun AddScheduleContentPreview() {
-    val sampleProjects = listOf(
-        ProjectSelectionItem("1", "개인 프로젝트"),
-        ProjectSelectionItem("2", "팀 프로젝트 A")
-    )
-    val previewState = AddScheduleUiState(
-        availableProjects = sampleProjects,
-        selectedDate = LocalDate.now()
-    )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         AddScheduleContent(
-            uiState = previewState,
+            uiState = AddScheduleUiState(
+                selectedDate = LocalDate.now(),
+                availableProjects = listOf(
+                    ProjectSelectionItem("p1", "프로젝트 1"),
+                    ProjectSelectionItem("p2", "프로젝트 2")
+                ),
+                scheduleTitle = "미팅"
+            ),
             onProjectSelected = {},
             onTitleChange = {},
             onContentChange = {},
@@ -343,29 +321,19 @@ private fun AddScheduleContentPreview() {
     }
 }
 
-@Preview(showBackground = true, name="Add Schedule with Time")
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, name = "Time Picker Dialog")
 @Composable
-private fun AddScheduleContentWithTimePreview() {
-    val sampleProjects = listOf(
-        ProjectSelectionItem("1", "개인 프로젝트"),
-        ProjectSelectionItem("2", "팀 프로젝트 A")
-    )
-    val previewState = AddScheduleUiState(
-        availableProjects = sampleProjects,
-        selectedProject = sampleProjects[0],
-        scheduleTitle = "미팅 준비",
-        startTime = LocalTime.of(14, 0),
-        endTime = LocalTime.of(15, 30),
-        selectedDate = LocalDate.now()
-    )
+private fun TimePickerDialogPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        AddScheduleContent(
-            uiState = previewState,
-            onProjectSelected = {},
-            onTitleChange = {},
-            onContentChange = {},
-            onTimeClick = {},
-            onSaveClick = {}
-        )
+        Surface {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CustomAlertDialogTimePicker(
+                    showDialog = true,
+                    onDismissRequest = {},
+                    onTimeSelected = { _, _ -> }
+                )
+            }
+        }
     }
 }

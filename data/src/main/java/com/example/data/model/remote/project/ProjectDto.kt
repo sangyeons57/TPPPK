@@ -1,16 +1,41 @@
 package com.example.data.model.remote.project
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
 
 /**
- * Firestore와 통신하기 위한 프로젝트 정보 DTO 입니다.
+ * 프로젝트 정보를 표현하는 데이터 전송 객체(DTO)
+ * Firebase Firestore의 'projects' 컬렉션과 매핑됩니다.
  */
 data class ProjectDto(
-    val id: String = "", // Firestore 문서 ID
+    @DocumentId
+    val projectId: String = "",
+    
+    @PropertyName("name")
     val name: String = "",
+    
+    @PropertyName("description")
     val description: String = "",
-    val ownerId: String = "", // 프로젝트 생성자 ID
-    val participantIds: List<String> = emptyList(), // 참여자 ID 목록
-    val createdAt: Timestamp = Timestamp.now(), // 생성 타임스탬프
-    val lastUpdatedAt: Timestamp = Timestamp.now() // 마지막 업데이트 타임스탬프
+    
+    @PropertyName("imageUrl")
+    val imageUrl: String? = null,
+    
+    @PropertyName("categoryId")
+    val categoryId: String = "",
+    
+    @PropertyName("ownerId")
+    val ownerId: String = "",
+    
+    @PropertyName("memberIds")
+    val memberIds: List<String> = emptyList(),
+    
+    @PropertyName("createdAt")
+    val createdAt: Timestamp = Timestamp.now(),
+    
+    @PropertyName("updatedAt")
+    val updatedAt: Timestamp = Timestamp.now(),
+    
+    @PropertyName("isPublic")
+    val isPublic: Boolean = true
 ) 

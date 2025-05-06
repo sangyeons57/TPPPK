@@ -17,6 +17,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.NavigationManager
+import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.viewmodel.SetProjectNameEvent
 import com.example.feature_project.viewmodel.SetProjectNameNavigationEvent
@@ -30,10 +32,9 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetProjectNameScreen(
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: SetProjectNameViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit,
-    onNavigateNext: () -> Unit // 다음 단계로 이동하는 콜백
+    viewModel: SetProjectNameViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -47,8 +48,8 @@ fun SetProjectNameScreen(
                 is SetProjectNameEvent.ClearFocus -> focusManager.clearFocus()
                 is SetProjectNameEvent.Navigate -> {
                     when (event.destination) {
-                        SetProjectNameNavigationEvent.NavigateBack -> onNavigateBack()
-                        SetProjectNameNavigationEvent.NavigateToNextStep -> onNavigateNext()
+                        SetProjectNameNavigationEvent.NavigateBack -> navigationManager.navigateBack()
+                        SetProjectNameNavigationEvent.NavigateToNextStep -> navigationManager.navigateToSelectProjectType()
                     }
                 }
             }
@@ -62,7 +63,7 @@ fun SetProjectNameScreen(
             TopAppBar(
                 title = { Text("프로젝트 이름 설정") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navigationManager.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

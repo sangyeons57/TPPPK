@@ -5,76 +5,121 @@ import androidx.compose.ui.focus.FocusState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.SignUpFormFocusTarget
-import com.example.domain.repository.AuthRepository
+import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
+import com.example.domain.usecase.auth.SignUpUseCase
+import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// UI 상태 정의 (이메일 인증 코드 관련 제거, 입력값 상태 추가)
+/**
+ * 회원가입 화면의 UI 상태를 정의하는 데이터 클래스
+ */
 data class SignUpUiState(
     val email: String = "",
     val password: String = "",
     val passwordConfirm: String = "",
     val name: String = "",
-    val isPasswordVisible: Boolean = false, // 비밀번호 보이기/숨기기 상태 추가
+    val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val signUpSuccess: Boolean = false,
 
-    // 필드별 에러 상태 추가
+    // 필드별 에러 상태
     val emailError: String? = null,
     val passwordError: String? = null,
     val passwordConfirmError: String? = null,
     val nameError: String? = null,
 
-    //....포커스 된 경우 확인....
+    // 필드별 포커스 상태
     val isEmailTouched: Boolean = false,
     val isPasswordTouched: Boolean = false,
     val isPasswordConfirmTouched: Boolean = false,
     val isNameTouched: Boolean = false
-    )
+)
 
-// 이벤트 정의 (화면 이동 등)
+/**
+ * 회원가입 화면에서 발생하는 일회성 이벤트를 정의하는 Sealed Class
+ */
 sealed class SignUpEvent {
-    object NavigateToLogin : SignUpEvent() // 예시: 성공 후 로그인 화면 이동
+    /**
+     * 로그인 화면으로 이동 이벤트
+     */
+    object NavigateToLogin : SignUpEvent()
+    
+    /**
+     * 스낵바 메시지 표시 이벤트
+     * @param message 표시할 메시지
+     */
     data class ShowSnackbar(val message: String) : SignUpEvent()
+    
+    /**
+     * 특정 입력 필드로 포커스 요청 이벤트
+     * @param target 포커스 대상 필드
+     */
     data class RequestFocus(val target: SignUpFormFocusTarget) : SignUpEvent()
 }
 
+/**
+ * 회원가입 화면의 비즈니스 로직을 처리하는 ViewModel
+ */
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
-    private val authRepository: AuthRepository // AuthRepository 주입
+    private val signUpUseCase: SignUpUseCase,
+    private val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
+    private val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SignUpUiState())
     val uiState: StateFlow<SignUpUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<SignUpEvent>()
-    val eventFlow = _eventFlow.asSharedFlow() // Composable에서 구독
+    val eventFlow = _eventFlow.asSharedFlow()
 
-    // 입력값 변경 시 해당 필드 에러 초기화
+    /**
+     * 이메일 입력값 변경 처리
+     * @param email 변경된 이메일 값
+     */
     fun onEmailChange(email: String) {
         _uiState.update { it.copy(email = email.trim(), emailError = null) }
     }
 
+    /**
+     * 비밀번호 입력값 변경 처리
+     * 비밀번호 변경 시 확인 에러도 초기화
+     * @param password 변경된 비밀번호 값
+     */
     fun onPasswordChange(password: String) {
-        _uiState.update { it.copy(password = password, passwordError = null, passwordConfirmError = null) } // 비밀번호 변경 시 확인 에러도 초기화
+        _uiState.update { it.copy(password = password, passwordError = null, passwordConfirmError = null) }
     }
 
+    /**
+     * 비밀번호 확인 입력값 변경 처리
+     * @param confirm 변경된 비밀번호 확인 값
+     */
     fun onPasswordConfirmChange(confirm: String) {
         _uiState.update { it.copy(passwordConfirm = confirm, passwordConfirmError = null) }
     }
 
+    /**
+     * 이름(닉네임) 입력값 변경 처리
+     * @param name 변경된 이름 값
+     */
     fun onNameChange(name: String) {
         _uiState.update { it.copy(name = name.trim(), nameError = null) }
     }
 
+    /**
+     * 비밀번호 표시/숨김 상태 토글
+     */
     fun onPasswordVisibilityToggle() {
         _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
     }
 
-
-    // 회원가입 처리 함수
+    /**
+     * 회원가입 처리 함수
+     * 각 필드 유효성 검사 후 회원가입 UseCase 실행
+     */
     fun signUp() {
         val state = _uiState.value
 
@@ -93,7 +138,6 @@ class SignUpViewModel @Inject constructor(
         if (checkName(state) && focusTarget == null)
             focusTarget = SignUpFormFocusTarget.NAME
 
-
         // 유효성 검사 실패 시 포커스 요청 후 종료
         if (focusTarget != null) {
             viewModelScope.launch {
@@ -101,6 +145,7 @@ class SignUpViewModel @Inject constructor(
             }
             return
         }
+        
         // 유효성 검사 통과 시 회원가입 로직 진행
         viewModelScope.launch {
             // 로딩 시작 및 모든 필드 에러 초기화
@@ -111,7 +156,20 @@ class SignUpViewModel @Inject constructor(
                 passwordConfirmError = null,
                 nameError = null
             )}
-            val result = authRepository.signUp(state.email, state.password, state.name)
+            
+            // 닉네임 중복 확인
+            val nicknameCheck = checkNicknameAvailabilityUseCase(state.name)
+            if (nicknameCheck.isFailure || nicknameCheck.getOrNull() == false) {
+                _uiState.update { it.copy(
+                    isLoading = false,
+                    nameError = "이미 사용 중인 닉네임입니다."
+                )}
+                _eventFlow.emit(SignUpEvent.RequestFocus(SignUpFormFocusTarget.NAME))
+                return@launch
+            }
+            
+            // SignUpUseCase 호출
+            val result = signUpUseCase(state.email, state.password, state.name)
 
             result.onSuccess { newUser ->
                 _uiState.update { it.copy(isLoading = false, signUpSuccess = true) }
@@ -119,21 +177,31 @@ class SignUpViewModel @Inject constructor(
                 _eventFlow.emit(SignUpEvent.NavigateToLogin)
                 println("회원가입 성공: ${newUser!!.email}")
             }.onFailure { exception ->
-                val errorMessage = authRepository.getSignUpErrorMessage(exception)
-                // 회원가입 API 실패 시 에러 처리 (여기서는 스낵바로 알림)
+                val errorMessage = getAuthErrorMessageUseCase.getSignUpErrorMessage(exception)
+                // 회원가입 API 실패 시 에러 처리
                 _uiState.update { it.copy(isLoading = false) }
                 _eventFlow.emit(SignUpEvent.ShowSnackbar(errorMessage))
             }
         }
     }
 
-    fun checkEmail(state: SignUpUiState): Boolean{
+    /**
+     * 이메일 유효성 검사
+     * @param state 현재 UI 상태
+     * @return 유효성 검사 실패 여부 (true: 실패, false: 성공)
+     */
+    fun checkEmail(state: SignUpUiState): Boolean {
         if (state.email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
             _uiState.update { it.copy(emailError = "올바른 이메일을 입력해주세요.") }
             return true
         }
         return false
     }
+
+    /**
+     * 이메일 포커스 상태 변경 처리
+     * @param focusState 포커스 상태
+     */
     fun onEmailFocus(focusState: FocusState) {
         if (focusState.isFocused) {
             _uiState.update { it.copy(isEmailTouched = true) }
@@ -142,7 +210,12 @@ class SignUpViewModel @Inject constructor(
         }
     }
     
-    fun checkPassword(state: SignUpUiState): Boolean{
+    /**
+     * 비밀번호 유효성 검사
+     * @param state 현재 UI 상태
+     * @return 유효성 검사 실패 여부 (true: 실패, false: 성공)
+     */
+    fun checkPassword(state: SignUpUiState): Boolean {
         val password = state.password
 
         // 길이 검사
@@ -175,6 +248,11 @@ class SignUpViewModel @Inject constructor(
 
         return false
     }
+
+    /**
+     * 비밀번호 포커스 상태 변경 처리
+     * @param focusState 포커스 상태
+     */
     fun onPasswordFocus(focusState: FocusState) {
         if (focusState.isFocused) {
             _uiState.update { it.copy(isPasswordTouched = true) }
@@ -183,13 +261,23 @@ class SignUpViewModel @Inject constructor(
         }
     }
 
-    fun checkPasswordConfirm(state: SignUpUiState): Boolean{
+    /**
+     * 비밀번호 확인 유효성 검사
+     * @param state 현재 UI 상태
+     * @return 유효성 검사 실패 여부 (true: 실패, false: 성공)
+     */
+    fun checkPasswordConfirm(state: SignUpUiState): Boolean {
         if (state.password != state.passwordConfirm) {
             _uiState.update { it.copy(passwordConfirmError = "비밀번호가 일치하지 않습니다.") }
             return true
         }
         return false
     }
+
+    /**
+     * 비밀번호 확인 포커스 상태 변경 처리
+     * @param focusState 포커스 상태
+     */
     fun onPasswordConfirmFocus(focusState: FocusState) {
         if (focusState.isFocused) {
             _uiState.update { it.copy(isPasswordConfirmTouched = true) }
@@ -198,13 +286,23 @@ class SignUpViewModel @Inject constructor(
         }
     }
 
-    fun checkName(state: SignUpUiState): Boolean{
+    /**
+     * 이름(닉네임) 유효성 검사
+     * @param state 현재 UI 상태
+     * @return 유효성 검사 실패 여부 (true: 실패, false: 성공)
+     */
+    fun checkName(state: SignUpUiState): Boolean {
         if (state.name.isBlank()) {
             _uiState.update { it.copy(nameError = "이름을 입력해주세요.") }
             return true
         }
         return false
     }
+
+    /**
+     * 이름 포커스 상태 변경 처리
+     * @param focusState 포커스 상태
+     */
     fun onNameFocus(focusState: FocusState) {
         if (focusState.isFocused) {
             _uiState.update { it.copy(isNameTouched = true) }

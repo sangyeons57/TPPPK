@@ -26,7 +26,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
+import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.SignUpFormFocusTarget
 import com.example.feature_auth.viewmodel.SignUpEvent
@@ -36,10 +38,9 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun SignUpScreen(
-    onNavigateToLogin: () -> Unit,
-    onNavigateBack: () -> Unit,
+    navigationManager: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
-    viewModel: SignUpViewModel = hiltViewModel(), // ViewModel 주입 (지금은 사용 X)
+    viewModel: SignUpViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle();
     val snackbarHostState = remember { SnackbarHostState() }
@@ -54,7 +55,7 @@ fun SignUpScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SignUpEvent.NavigateToLogin -> onNavigateToLogin()
+                is SignUpEvent.NavigateToLogin -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.LOGIN))
                 is SignUpEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
@@ -95,7 +96,7 @@ fun SignUpScreen(
             onPasswordConfirmFocus = viewModel::onPasswordConfirmFocus,
             onNameFocus = viewModel::onNameFocus,
 
-            onNavigateBack = { onNavigateBack() },
+            onNavigateBack = { navigationManager.navigateBack() },
         )
     }
 }

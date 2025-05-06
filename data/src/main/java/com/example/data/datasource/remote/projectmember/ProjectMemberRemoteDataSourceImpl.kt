@@ -66,23 +66,12 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
             val userDoc = firestore.collection(Collections.USERS).document(userId).get().await()
             if (!userDoc.exists()) continue
             
-            // 역할 정보 가져오기
-            val roleNames = mutableListOf<String>()
-            for (roleId in roleIds) {
-                val roleDoc = firestore.collection(Collections.PROJECTS).document(projectId)
-                    .collection(Collections.ROLES).document(roleId).get().await()
-                if (roleDoc.exists()) {
-                    val roleName = roleDoc.getString(RoleFields.NAME) ?: "역할"
-                    roleNames.add(roleName)
-                }
-            }
-            
-            // 멤버 객체 생성
+            // 멤버 객체 생성 시 roleIds 직접 사용
             val member = ProjectMember(
                 userId = userId,
                 userName = userDoc.getString(UserFields.NICKNAME) ?: "사용자",
                 profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
-                roleNames = roleNames
+                roleIds = roleIds // roleNames 대신 roleIds 사용
             )
             
             members.add(member)
@@ -136,25 +125,12 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                     val userDoc = transaction.get(firestore.collection(Collections.USERS).document(userId))
                     if (!userDoc.exists()) continue
                     
-                    // 역할 이름 목록 가져오기
-                    val roleNames = mutableListOf<String>()
-                    for (roleId in roleIds) {
-                        val roleDoc = transaction.get(
-                            firestore.collection(Collections.PROJECTS).document(projectId)
-                                .collection(Collections.ROLES).document(roleId)
-                        )
-                        if (roleDoc.exists()) {
-                            val roleName = roleDoc.getString(RoleFields.NAME) ?: "역할"
-                            roleNames.add(roleName)
-                        }
-                    }
-                    
-                    // 멤버 객체 생성
+                    // 멤버 객체 생성 시 roleIds 직접 사용
                     val member = ProjectMember(
                         userId = userId,
                         userName = userDoc.getString(UserFields.NICKNAME) ?: "사용자",
                         profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
-                        roleNames = roleNames
+                        roleIds = roleIds // roleNames 대신 roleIds 사용
                     )
                     
                     members.add(member)
