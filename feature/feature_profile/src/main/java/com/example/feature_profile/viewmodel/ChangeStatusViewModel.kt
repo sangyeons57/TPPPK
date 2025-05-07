@@ -101,7 +101,8 @@ class ChangeStatusViewModel @Inject constructor(
             _uiState.update { it.copy(isUpdating = true, error = null) }
             _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태 변경 중..."))
 
-            val result = updateUserStatusUseCase(statusToUpdate) // UseCase 호출
+            // UseCase는 String 매개변수를 기대하므로 displayName 사용
+            val result = updateUserStatusUseCase(statusToUpdate.displayName)
 
             if (result.isSuccess) {
                 _uiState.update {

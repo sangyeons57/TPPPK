@@ -26,28 +26,25 @@ import kotlinx.coroutines.flow.collectLatest
  * AddFriendDialog: 사용자 이름으로 친구 요청을 보내는 다이얼로그 (Stateful)
  *
  * @param onDismissRequest 다이얼로그 닫기 요청 콜백
+ * @param onShowSnackbar 스낵바 표시 이벤트 처리 콜백
  * @param viewModel ViewModel 인스턴스 (Hilt 주입)
  */
 @Composable
 fun AddFriendDialog(
     onDismissRequest: () -> Unit,
+    onShowSnackbar: (String) -> Unit = {}, // 스낵바 표시 콜백 추가
     viewModel: AddFriendViewModel = hiltViewModel() // ViewModel 직접 사용
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() } // 스낵바는 호출하는 곳에서 관리
+    val focusManager = LocalFocusManager.current
 
     // 이벤트 처리
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AddFriendEvent.DismissDialog -> onDismissRequest()
-                is AddFriendEvent.ShowSnackbar -> {
-                    // 필요 시 스낵바 메시지를 호출한 화면으로 전달하거나,
-                    // 다이얼로그 내부에 임시 메시지 표시 상태 사용
-                    println("Snackbar requested: ${event.message}")
-                    // snackbarHostState.showSnackbar(event.message) // 다이얼로그 내 스낵바 어려움
-                }
-                is AddFriendEvent.ClearFocus -> { /* FocusManager 필요 시 */ }
+                is AddFriendEvent.ShowSnackbar -> onShowSnackbar(event.message)
+                is AddFriendEvent.ClearFocus -> focusManager.clearFocus()
             }
         }
     }

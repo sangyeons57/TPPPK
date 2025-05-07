@@ -17,8 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.navigation.compose.LocalNavController
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
@@ -42,19 +40,10 @@ fun ScheduleDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val localNavController = LocalNavController.current
 
-    // Observe result from EditScheduleScreen
-    val scheduleUpdateResult = localNavController
-        .currentBackStackEntry
-        ?.savedStateHandle
-        ?.getLiveData<Boolean>("schedule_added_or_updated")?.observeAsState()
-
-    LaunchedEffect(scheduleUpdateResult?.value) {
-        if (scheduleUpdateResult?.value == true) {
-            viewModel.refreshScheduleDetails() // Call refresh
-            localNavController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("schedule_added_or_updated")
-        }
+    // 화면이 표시될 때마다 데이터 새로고침 
+    LaunchedEffect(Unit) {
+        viewModel.refreshScheduleDetails() // 일정 상세 데이터 새로고침
     }
 
     // 이벤트 처리

@@ -49,6 +49,7 @@ fun AcceptFriendsScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AcceptFriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is AcceptFriendsEvent.NavigateBack -> navigationManager.navigateBack()
                 // NavigateBack 이벤트는 Screen에서 처리하지 않고, 필요 시 ViewModel에서 직접 호출 가능
             }
         }
@@ -80,7 +81,6 @@ fun AcceptFriendsScreen(
                     Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
-            // ★ friendRequests 타입은 List<FriendRequestItem>
             uiState.friendRequests.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("받은 친구 요청이 없습니다.")
@@ -89,9 +89,9 @@ fun AcceptFriendsScreen(
             else -> {
                 AcceptFriendsListContent(
                     modifier = Modifier.padding(paddingValues),
-                    requests = uiState.friendRequests, // ★ UI 모델 리스트 전달
-                    onAcceptClick = viewModel::acceptFriendRequest, // ViewModel 함수 호출
-                    onDenyClick = viewModel::denyFriendRequest // ViewModel 함수 호출
+                    requests = uiState.friendRequests,
+                    onAcceptClick = viewModel::acceptFriendRequest,
+                    onDenyClick = viewModel::denyFriendRequest
                 )
             }
         }
@@ -104,9 +104,9 @@ fun AcceptFriendsScreen(
 @Composable
 fun AcceptFriendsListContent(
     modifier: Modifier = Modifier,
-    requests: List<FriendRequestItem>, // ★ UI 모델 타입 사용
-    onAcceptClick: (String) -> Unit, // userId 전달
-    onDenyClick: (String) -> Unit // userId 전달
+    requests: List<FriendRequestItem>,
+    onAcceptClick: (String) -> Unit,
+    onDenyClick: (String) -> Unit
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -114,10 +114,10 @@ fun AcceptFriendsListContent(
     ) {
         items(
             items = requests,
-            key = { it.userId } // ★ userId를 Key로 사용
+            key = { it.userId }
         ) { request ->
-            FriendRequestItemComposable( // ★ Composable 이름 변경 (다른 파일과 충돌 방지)
-                request = request, // ★ UI 모델 전달
+            FriendRequestItemComposable(
+                request = request,
                 onAcceptClick = { onAcceptClick(request.userId) },
                 onDenyClick = { onDenyClick(request.userId) }
             )
@@ -130,8 +130,8 @@ fun AcceptFriendsListContent(
  * FriendRequestItemComposable: 개별 친구 요청 아이템 UI (Stateless)
  */
 @Composable
-fun FriendRequestItemComposable( // ★ Composable 이름 변경
-    request: FriendRequestItem, // ★ UI 모델 타입 사용
+fun FriendRequestItemComposable(
+    request: FriendRequestItem,
     onAcceptClick: () -> Unit,
     onDenyClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -154,7 +154,7 @@ fun FriendRequestItemComposable( // ★ Composable 이름 변경
         )
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = request.userName, // ★ UI 모델 필드 사용
+            text = request.userName,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f) // 남은 공간 차지
@@ -195,7 +195,7 @@ private fun AcceptFriendsListContentPreview() {
         ) { padding ->
             AcceptFriendsListContent(
                 modifier = Modifier.padding(padding),
-                requests = previewRequests, // ★ UI 모델 리스트 사용
+                requests = previewRequests,
                 onAcceptClick = {},
                 onDenyClick = {}
             )
