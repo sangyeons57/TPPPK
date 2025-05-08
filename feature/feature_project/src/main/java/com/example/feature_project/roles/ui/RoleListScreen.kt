@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleListScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: RoleListViewModel = hiltViewModel()
 ) {
@@ -42,8 +42,8 @@ fun RoleListScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is RoleListEvent.NavigateToAddRole -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.addRole(uiState.projectId)))
-                is RoleListEvent.NavigateToEditRole -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editRole(uiState.projectId, event.roleId)))
+                is RoleListEvent.NavigateToAddRole -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.addRole(uiState.projectId)))
+                is RoleListEvent.NavigateToEditRole -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editRole(uiState.projectId, event.roleId)))
                 is RoleListEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -56,7 +56,7 @@ fun RoleListScreen(
             TopAppBar(
                 title = { Text("역할 관리") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

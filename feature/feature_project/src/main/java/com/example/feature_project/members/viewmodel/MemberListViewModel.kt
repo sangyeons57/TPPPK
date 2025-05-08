@@ -38,13 +38,15 @@ data class ProjectMemberItem(
  * @param error 오류 메시지 (nullable)
  * @param searchQuery 검색 쿼리
  * @param selectedMember 선택된 멤버 (멤버 편집/삭제 등을 위한 상태)
+ * @param projectId 프로젝트 ID
  */
 data class MemberListUiState(
     val members: List<ProjectMemberItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
-    val selectedMember: ProjectMember? = null
+    val selectedMember: ProjectMember? = null,
+    val projectId: String = ""
 )
 
 /**
@@ -92,7 +94,7 @@ class MemberListViewModel @Inject constructor(
     /**
      * UI 상태 (내부 Mutable 버전)
      */
-    private val _uiState = MutableStateFlow(MemberListUiState(isLoading = true))
+    private val _uiState = MutableStateFlow(MemberListUiState(isLoading = true, projectId = projectId))
     
     /**
      * UI 상태 (외부 노출용 읽기 전용 버전)
@@ -122,7 +124,7 @@ class MemberListViewModel @Inject constructor(
             userId = this.userId,
             userName = this.userName,
             profileImageUrl = this.profileImageUrl,
-            rolesText = this.roles.joinToString(", ") { it.name }
+            rolesText = this.roleIds.joinToString(", ") { roleId -> roleId }
         )
     }
 

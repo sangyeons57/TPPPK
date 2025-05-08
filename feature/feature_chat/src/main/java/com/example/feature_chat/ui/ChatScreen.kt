@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate // 이미지 첨
 import androidx.compose.material.icons.filled.Check // 체크 아이콘 추가
 import androidx.compose.material.icons.filled.Close // 수정 취소, 제거 아이콘
 import androidx.compose.material.icons.filled.ErrorOutline // 전송 실패 아이콘 (예시)
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -71,7 +70,7 @@ import java.util.Locale
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -102,7 +101,7 @@ fun ChatScreen(
                 is ChatEvent.ShowUserProfileDialog -> showUserProfileDialog = event.userId
                 is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ClearFocus -> focusManager.clearFocus()
-                is ChatEvent.NavigateBack -> navigationManager.navigateBack()
+                is ChatEvent.NavigateBack -> navigationHandler.navigateBack()
             }
         }
     }

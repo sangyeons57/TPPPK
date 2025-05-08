@@ -1,6 +1,6 @@
 package com.example.data.model.mapper
 
-import com.example.data.remote.dto.FriendRelationshipDto
+import com.example.data.model.remote.friend.FriendRelationshipDto
 import com.example.domain.model.FriendRelationship
 import java.util.Date
 import com.google.firebase.Timestamp

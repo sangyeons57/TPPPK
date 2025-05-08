@@ -1,0 +1,187 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 네비게이션 패턴 가이드
+
+## 1. 네비게이션 아키텍처 개요
+
+본 프로젝트는 다음과 같은 계층 구조로 네비게이션이 구성되어 있습니다:
+
+1. **NavigationHandler 인터페이스**: 네비게이션의 핵심 계약을 정의하는 추상 인터페이스
+2. **ComposeNavigationHandler 인터페이스**: Jetpack Compose 환경에 특화된 기능을 추가한 하위 인터페이스 
+3. **NavigationManager 구현체**: 실제 네비게이션 로직을 구현한 싱글톤 클래스
+4. **NavigationCommand**: 네비게이션 작업을 추상화한 sealed 클래스 집합
+
+## 2. 컴포넌트에서 네비게이션 사용 방법
+
+### 2.1 UI 컴포넌트에서 네비게이션 핸들러 주입 받기
+
+```kotlin
+@Composable
+fun MyScreen(
+    navigationHandler: ComposeNavigationHandler,
+    viewModel: MyViewModel = hiltViewModel()
+) {
+    // 화면 구현
+}
+```
+
+### 2.2 ViewModel에서 네비게이션 이벤트 발행하기
+
+```kotlin
+class MyViewModel @Inject constructor(
+    private val myRepository: MyRepository
+) : ViewModel() {
+    // 이벤트 Flow 정의
+    private val _eventFlow = MutableSharedFlow<MyEvent>()
+    val eventFlow = _eventFlow.asSharedFlow()
+    
+    // 이벤트 정의 (sealed 클래스 사용)
+    sealed class MyEvent {
+        data class NavigateToDetail(val id: String) : MyEvent()
+        data class ShowSnackbar(val message: String) : MyEvent()
+        // 기타 이벤트...
+    }
+    
+    // 이벤트 발행 메서드
+    private fun navigateToDetail(id: String) {
+        viewModelScope.launch {
+            _eventFlow.emit(MyEvent.NavigateToDetail(id))
+        }
+    }
+}
+```
+
+### 2.3 UI 컴포넌트에서 이벤트 구독 및 처리
+
+```kotlin
+@Composable
+fun MyScreen(
+    navigationHandler: ComposeNavigationHandler,
+    viewModel: MyViewModel = hiltViewModel()
+) {
+    // 이벤트 구독
+    LaunchedEffect(viewModel) {
+        viewModel.eventFlow.collectLatest { event ->
+            when (event) {
+                is MyViewModel.MyEvent.NavigateToDetail -> {
+                    navigationHandler.navigateToDetail(event.id)
+                }
+                is MyViewModel.MyEvent.ShowSnackbar -> {
+                    // 스낵바 처리...
+                }
+                // 기타 이벤트 처리...
+            }
+        }
+    }
+    
+    // 화면 내용 구현...
+}
+```
+
+## 3. 중첩 네비게이션 처리
+
+### 3.1 중첩 NavController 등록
+
+```kotlin
+@Composable
+fun NestedNavHostScreen(
+    navigationHandler: ComposeNavigationHandler
+) {
+    // 중첩 NavController 생성
+    val nestedNavController = rememberNavController()
+    
+    // NavigationHandler에 중첩 NavController 등록
+    DisposableEffect(nestedNavController) {
+        navigationHandler.setChildNavController(nestedNavController)
+        onDispose {
+            // 화면이 사라질 때 등록 해제
+            navigationHandler.setChildNavController(null)
+        }
+    }
+    
+    // 중첩 NavHost 구현
+    NavHost(
+        navController = nestedNavController,
+        startDestination = "nested_start"
+    ) {
+        // 경로 정의...
+    }
+}
+```
+
+### 3.2 TabRow 또는 BottomNavigation 구현
+
+```kotlin
+NavigationBar {
+    items.forEach { item ->
+        NavigationBarItem(
+            icon = { Icon(item.icon, contentDescription = item.title) },
+            label = { Text(item.title) },
+            selected = currentRoute == item.route,
+            onClick = {
+                // NavigationHandler를 통한 탭 전환
+                navigationHandler.navigateToTab(item.route)
+            }
+        )
+    }
+}
+```
+
+## 4. AppRoutes 사용 방법
+
+모든 네비게이션 경로는 `AppRoutes` 객체를 통해 중앙 관리됩니다.
+
+```kotlin
+// 경로 참조 방식
+navigationHandler.navigateTo(AppRoutes.Project.detail(projectId))
+
+// 인자가 있는 경로
+composable(
+    route = AppRoutes.Project.DETAIL_WITH_ARGS,
+    arguments = AppRoutes.Project.detailArguments()
+) { backStackEntry ->
+    val projectId = backStackEntry.arguments?.getString(AppRoutes.Project.ARG_PROJECT_ID) ?: ""
+    // 화면 구현...
+}
+```
+
+## 5. 일관성 유지를 위한 규칙
+
+1. **변수명**: 모든 컴포넌트에서 네비게이션 핸들러 변수명은 `navigationHandler`로 통일합니다.
+2. **이벤트 패턴**: ViewModel은 이벤트를 발행하고 UI 컴포넌트는 이를 구독하여 네비게이션을 처리합니다.
+3. **경로 정의**: 모든 경로는 `AppRoutes`에 정의하며, 하드코딩된 문자열을 사용하지 않습니다.
+4. **중첩 네비게이션**: 중첩 NavHost를 사용할 때는 반드시 생성된 NavController를 NavigationHandler에 등록합니다.
+5. **직접 NavController 접근**: 특별한 이유가 없는 한 직접 NavController를 조작하지 않고 NavigationHandler를 통해 네비게이션합니다.
+
+## 6. 트러블슈팅
+
+1. **중첩 네비게이션 문제**: 자식 화면에서 네비게이션이 동작하지 않는 경우, `setChildNavController`가 제대로 호출되었는지 확인합니다.
+2. **경로 오류**: 잘못된 경로로 인한 크래시가 발생하면 `AppRoutes`에 경로가 올바르게 정의되어 있는지 확인합니다.
+3. **백스택 문제**: 뒤로가기가 예상대로 동작하지 않는 경우, `NavigateClearingBackStack` 명령어 사용 여부를 확인합니다.
+
+## 7. 테스트
+
+네비게이션 테스트를 위해 `TestNavigationHandler`를 사용하여 네비게이션 명령을 캡처하고 검증할 수 있습니다.
+
+```kotlin
+// ViewModel 테스트 예시
+@Test
+fun `navigate to detail when item clicked`() = runTest {
+    // Given
+    val testNavigationHandler = TestNavigationHandler()
+    val viewModel = MyViewModel(testRepository)
+    
+    // When
+    viewModel.onItemClicked("test-id")
+    
+    // Then
+    val lastCommand = testNavigationHandler.lastNavigationCommand
+    assertThat(lastCommand).isInstanceOf(NavigationCommand.NavigateToRoute::class.java)
+    assertThat((lastCommand as NavigationCommand.NavigateToRoute).route)
+        .isEqualTo(AppRoutes.Project.detail("test-id"))
+}
+```
+

@@ -49,24 +49,29 @@ interface NavigationHandler {
     fun <T> getResult(key: String): T?
     
     /**
+     * 결과 데이터 Flow를 가져옵니다.
+     * 화면에서 결과를 지속적으로 관찰할 때 사용합니다.
+     *
+     * @param key 결과를 식별하는 키
+     * @return 결과 데이터의 Flow
+     */
+    fun <T> getResultFlow(key: String): Flow<T>
+    
+    /**
      * 특정 탭으로 이동합니다.
      * 
      * @param route 탭 경로
      * @param saveState 현재 상태 저장 여부
      * @param restoreState 이전 상태 복원 여부
      */
-    fun navigateToTab(route: String, saveState: Boolean = true, restoreState: Boolean = true) {
-        navigate(NavigationCommand.NavigateToTab(route, saveState, restoreState))
-    }
+    fun navigateToTab(route: String, saveState: Boolean = true, restoreState: Boolean = true)
     
     /**
      * 백스택을 모두 비우고 특정 경로로 이동합니다.
      * 
      * @param route 이동할 경로
      */
-    fun navigateClearingBackStack(route: String) {
-        navigate(NavigationCommand.NavigateClearingBackStack(route))
-    }
+    fun navigateClearingBackStack(route: String)
     
     /**
      * 중첩된 그래프로 이동합니다.
@@ -74,20 +79,5 @@ interface NavigationHandler {
      * @param parentRoute 부모 그래프 경로
      * @param childRoute 자식 경로
      */
-    fun navigateToNestedGraph(parentRoute: String, childRoute: String) {
-        navigate(NavigationCommand.NavigateToNestedGraph(parentRoute, childRoute))
-    }
-    
-    // 유틸리티 확장 함수
-    companion object {
-        /**
-         * 간단하게 경로로 이동합니다.
-         * 
-         * @param handler 네비게이션 핸들러
-         * @param route 이동할 경로
-         */
-        fun navigateTo(handler: NavigationHandler, route: String) {
-            handler.navigate(NavigationCommand.NavigateToRoute(route))
-        }
-    }
+    fun navigateToNestedGraph(parentRoute: String, childRoute: String)
 } 

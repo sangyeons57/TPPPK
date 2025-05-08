@@ -4,8 +4,8 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.core_navigation.extension.getRequiredString
 import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.Schedule
 import com.example.domain.usecase.schedule.DeleteScheduleUseCase
 import com.example.domain.usecase.schedule.GetScheduleDetailUseCase

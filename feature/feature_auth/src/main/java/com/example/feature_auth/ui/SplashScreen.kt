@@ -29,15 +29,15 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun SplashScreen(
     modifier: Modifier = Modifier,
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
     // 이벤트 처리 (네비게이션)
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                SplashEvent.NavigateToLogin -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.LOGIN))
-                SplashEvent.NavigateToMain -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.ROOT))
+                SplashEvent.NavigateToLogin -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.Login.path))
+                SplashEvent.NavigateToMain -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.ROOT))
             }
         }
     }

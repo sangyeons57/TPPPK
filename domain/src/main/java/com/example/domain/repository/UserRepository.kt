@@ -69,11 +69,11 @@ interface UserRepository {
     suspend fun updateActiveDmChannels(dmIds: List<String>): Result<Unit>
 
     /**
-     * 현재 FirebaseUser 정보를 기반으로 Firestore 사용자 문서가 존재하는지 확인하고,
+     * 현재 인증된 사용자 정보를 기반으로 사용자 문서가 존재하는지 확인하고,
      * 없으면 필요한 정보를 사용하여 문서를 생성합니다.
-     * 최종적으로 Firestore 문서에 해당하는 User 객체를 반환합니다.
-     * @param firebaseUser 현재 로그인된 Firebase 사용자 객체
-     * @return 성공 시 Firestore 문서 데이터가 반영된 User 객체, 실패 시 에러 포함 Result
+     * @param userId 현재 로그인된 사용자 ID
+     * @param email 사용자 이메일 주소
+     * @return 성공 시 생성된 User 객체, 실패 시 에러 포함 Result
      */
     suspend fun ensureUserProfileExists(firebaseUser: FirebaseUser): Result<User>
 }

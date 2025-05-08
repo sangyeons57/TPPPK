@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,9 +59,9 @@ fun LoginScreen(
     LaunchedEffect(key1 = Unit) { // Unit key: 화면 진입 시 1회 실행
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is LoginEvent.NavigateToSignUp -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.SIGN_UP))
-                is LoginEvent.NavigateToFindPassword -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.FIND_PASSWORD))
-                is LoginEvent.LoginSuccess -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.ROOT))
+                is LoginEvent.NavigateToSignUp -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.SignUp.path))
+                is LoginEvent.NavigateToFindPassword -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.FindPassword.path))
+                is LoginEvent.LoginSuccess -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.ROOT))
                 is LoginEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
                     event.message,
                     duration = SnackbarDuration.Short

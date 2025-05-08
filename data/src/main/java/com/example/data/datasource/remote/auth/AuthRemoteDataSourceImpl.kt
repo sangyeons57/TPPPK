@@ -52,13 +52,13 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         if (currentUser != null) {
             try {
                 // Firestore에서 사용자 정보 가져오기
-                val document = usersCollection.document(currentUser.uid).get().await()
-                if (document.exists()) {
-                    return@runCatching document.toObject(UserDto::class.java)
+                val documentSnapShot = usersCollection.document(currentUser.uid).get().await()
+                if (documentSnapShot.exists()) {
+                    documentSnapShot.toObject(UserDto::class.java)
                 } else {
                     // 문서가 없으면 기본 UserDto 생성
-                    return@runCatching UserDto(
-                        userId = currentUser.uid,
+                    UserDto(
+                        id = currentUser.uid,
                         email = currentUser.email ?: "",
                         name = currentUser.displayName ?: "",
                         isEmailVerified = currentUser.isEmailVerified
@@ -84,7 +84,7 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             } else {
                 // 문서가 없으면 기본 UserDto 생성
                 UserDto(
-                    userId = user.uid,
+                    id = user.uid,
                     email = user.email ?: "",
                     name = user.displayName ?: "",
                     isEmailVerified = user.isEmailVerified
@@ -135,7 +135,7 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             
             // Firestore에 사용자 정보 저장
             val userDto = UserDto(
-                userId = user.uid,
+                id = user.uid,
                 email = email,
                 name = nickname,
                 isEmailVerified = user.isEmailVerified

@@ -42,7 +42,7 @@ import com.example.domain.model.UserProfileData
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -62,9 +62,9 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProfileEvent.NavigateToSettings -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.Profile.EDIT_PROFILE))
-                is ProfileEvent.NavigateToFriends -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.LIST))
-                is ProfileEvent.NavigateToStatus -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.Profile.CHANGE_PASSWORD))
+                is ProfileEvent.NavigateToSettings -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Settings.EDIT_MY_PROFILE))
+                is ProfileEvent.NavigateToFriends -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.LIST))
+                is ProfileEvent.NavigateToStatus -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Settings.CHANGE_MY_PASSWORD))
                 is ProfileEvent.ShowEditStatusDialog -> {
                     // TODO: 상태 메시지 변경 다이얼로그 표시
                     snackbarHostState.showSnackbar("상태 메시지 변경 다이얼로그 (미구현)")
@@ -75,7 +75,7 @@ fun ProfileScreen(
                 }
                 is ProfileEvent.LogoutCompleted -> {
                     // 로그인 화면으로 이동 (스택 클리어는 NavigationHandler 구현에서 처리하거나 별도 Command 필요)
-                    navigationManager.navigate(NavigationCommand.NavigateClearingBackStack(AppRoutes.Auth.LOGIN))
+                    navigationHandler.navigate(NavigationCommand.NavigateClearingBackStack(AppRoutes.Auth.Login.path))
                 }
                 is ProfileEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }

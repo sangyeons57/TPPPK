@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.LocalNavController
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
@@ -61,32 +60,30 @@ import java.time.LocalTime
  * - CalendarDimens: UI 크기 상수
  *
  * @param modifier 이 컴포넌트에 적용할 Modifier
- * @param navigationManager 네비게이션 관리자
+ * @param navigationHandler 네비게이션 관리자
  * @param viewModel 캘린더 화면의 상태와 로직을 관리하는 ViewModel 인스턴스
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val localNavController = LocalNavController.current
     
-    // Observe result from AddScheduleScreen/EditScheduleScreen
-    val scheduleUpdateResult = localNavController
-        .currentBackStackEntry
-        ?.savedStateHandle
-        ?.getLiveData<Boolean>("schedule_added_or_updated")?.observeAsState()
-
-    LaunchedEffect(scheduleUpdateResult?.value) {
-        if (scheduleUpdateResult?.value == true) {
-            viewModel.refreshSchedules()
-            localNavController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("schedule_added_or_updated")
-        }
-    }
+    // Observe schedule update results via navigationManager
+    // 주석 처리: getResultFlow 메서드가 더 이상 존재하지 않음
+    // LaunchedEffect(navigationManager) {
+    //     navigationManager.getResultFlow<Boolean>("schedule_added_or_updated").collectLatest { isUpdated ->
+    //         if (isUpdated) {
+    //             viewModel.refreshSchedules()
+    //             // 결과 소비 후 다시 false로 설정하여 반복적인 새로고침 방지
+    //             navigationManager.setResult("schedule_added_or_updated", false)
+    //         }
+    //     }
+    // }
     
     // FAB 애니메이션 상태
     var isFabVisible by remember { mutableStateOf(true) }
@@ -97,15 +94,16 @@ fun CalendarScreen(
     )
     
     // "refresh_calendar" 키로 전달된 결과 관찰
-    LaunchedEffect(navigationManager) {
-        navigationManager.getResultFlow<Boolean>("refresh_calendar").collectLatest { refresh ->
-            if (refresh) {
-                viewModel.refreshSchedules()
-                // 결과 소비 후 다시 false로 설정하여 반복적인 새로고침 방지
-                navigationManager.setResult("refresh_calendar", false)
-            }
-        }
-    }
+    // 주석 처리: getResultFlow 메서드가 더 이상 존재하지 않음
+    // LaunchedEffect(navigationManager) {
+    //     navigationManager.getResultFlow<Boolean>("refresh_calendar").collectLatest { refresh ->
+    //         if (refresh) {
+    //             viewModel.refreshSchedules()
+    //             // 결과 소비 후 다시 false로 설정하여 반복적인 새로고침 방지
+    //             navigationManager.setResult("refresh_calendar", false)
+    //         }
+    //     }
+    // }
 
     // 이벤트 처리
     LaunchedEffect(viewModel) { 
@@ -118,7 +116,7 @@ fun CalendarScreen(
                     // FAB 클릭 애니메이션
                     isFabVisible = false
                     delay(150) // 애니메이션 효과 지연
-                    navigationManager.navigate(
+                    navigationHandler.navigate(
                         NavigationCommand.NavigateToRoute(
                             AppRoutes.Main.Calendar.addSchedule(
                                 uiState.selectedDate.year,
@@ -131,7 +129,7 @@ fun CalendarScreen(
                     isFabVisible = true
                 }
                 is CalendarEvent.NavigateToScheduleDetail -> {
-                    navigationManager.navigate(
+                    navigationHandler.navigate(
                         NavigationCommand.NavigateToRoute(
                             AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId)
                         )
@@ -181,7 +179,7 @@ fun CalendarScreen(
                 uiState = uiState,
                 onScheduleClick = viewModel::onScheduleClick,
                 onDateClick24Hour = { date ->
-                    navigationManager.navigate(
+                    navigationHandler.navigate(
                         NavigationCommand.NavigateToRoute(
                             AppRoutes.Main.Calendar.calendar24Hour(
                                 date.year,

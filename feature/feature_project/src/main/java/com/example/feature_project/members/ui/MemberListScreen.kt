@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberListScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler : ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: MemberListViewModel = hiltViewModel()
 ) {
@@ -57,7 +57,7 @@ fun MemberListScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is MemberListEvent.NavigateToEditMember -> {
-                    navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editMember(event.projectId, event.userId)))
+                    navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editMember(event.projectId, event.userId)))
                 }
                 is MemberListEvent.ShowDeleteConfirm -> {
                     showDeleteConfirmationDialog = event.member
@@ -79,7 +79,7 @@ fun MemberListScreen(
             TopAppBar(
                 title = { Text("멤버 관리") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

@@ -1,8 +1,9 @@
 package com.example.core_navigation.core
 
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
-import com.example.core_navigation.routes.AppRoutes
+import com.example.core_navigation.destination.AppRoutes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,7 +21,7 @@ import javax.inject.Singleton
  * Compose 환경에 특화되어 있으며, NavHostController를 직접 제어합니다.
  */
 @Singleton
-class NavigationManager @Inject constructor() : ComposeNavigationHandler, NavigationResultListener {
+class NavigationManager @Inject constructor() : ComposeNavigationHandler {
 
     // 최상위 네비게이션 컨트롤러 (Activity 레벨 NavHost)
     private var parentNavController: NavHostController? = null
@@ -59,7 +60,7 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler, Naviga
      * 현재 활성화된 자식 네비게이션 컨트롤러 설정.
      * 중첩된 NavHost에서 자신의 NavController를 등록하기 위해 호출합니다.
      */
-    fun setActiveChildNavController(navController: NavHostController?) { // Nullable 허용
+    override fun setChildNavController(navController: NavHostController?) {
         this.activeChildNavController = navController
         println("NavigationManager: Active Child NavController updated: ${navController?.graph?.route}") // 로그 추가
     }
@@ -67,20 +68,26 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler, Naviga
     /**
      * 현재 활성화된 자식 네비게이션 컨트롤러를 반환합니다.
      */
-    fun getActiveChildNavController(): NavHostController? {
+    override fun getChildNavController(): NavHostController? {
         return activeChildNavController
     }
 
     /**
-     * 네비게이션 명령 실행 (Non-suspend)
+     * 네비게이션 명령 실행
      * ViewModel 등에서 호출되어 네비게이션 이벤트를 내부 스코프에서 발생시킵니다.
      * 실제 이동은 UI 레벨(NavHost)에서 navigationCommands를 구독하여 처리합니다.
      */
-    override fun navigate(command: NavigationCommand) { // suspend 제거
-        // 내부 scope를 사용하여 비동기적으로 Flow에 emit
+    override fun navigate(command: NavigationCommand) {
         scope.launch {
             _navigationCommands.emit(command)
         }
+    }
+    
+    /**
+     * 특정 경로로 이동
+     */
+    fun navigateTo(routePath: String, navOptions: NavOptions?) {
+        navigate(NavigationCommand.NavigateToRoute(routePath, navOptions))
     }
 
     /**
@@ -94,14 +101,12 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler, Naviga
             println("NavigationManager: Popped back stack on Active Child NavController.")
             return true
         }
-        // 자식에서 더 이상 뒤로 갈 수 없으면, 자식 컨트롤러 참조 해제 고려
-        // setActiveChildNavController(null)
         
         // 2. 부모 네비게이션 백스택 시도
         if (parentNavController?.popBackStack() == true) {
             println("NavigationManager: Popped back stack on Parent NavController.")
             // 부모에서 뒤로 갔다면, 자식 컨트롤러 참조는 더 이상 유효하지 않음
-            setActiveChildNavController(null) // 명시적 해제
+            setChildNavController(null) // 명시적 해제
             return true
         }
         // 3. 둘 다 실패
@@ -110,68 +115,60 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler, Naviga
     }
     
     /**
-     * 특정 탭으로 이동 (주로 Bottom Navigation)
-     * 부모 NavController를 사용합니다.
-     * NavigationHandler 인터페이스의 기본 구현을 사용하도록 suspend 제거
+     * 네비게이션 결과를 전달하며 이전 화면으로 이동
      */
-    // override suspend fun navigateToTab(route: String, saveState: Boolean, restoreState: Boolean) {
-    //     navigate(NavigationCommand.NavigateToTab(route, saveState, restoreState))
-    // }
+    fun navigateBackWithResult(key: String, result: Any?) {
+        setResult(key, result)
+        navigateBack()
+    }
+    
+    /**
+     * 특정 탭으로 이동
+     * 
+     * 두 가지 시나리오를 처리합니다:
+     * 1. 자식 NavController가 있는 경우: 자식 NavController로 직접 탭 이동을 실행합니다.
+     * 2. 자식 NavController가 없는 경우: NavigationCommand.NavigateToTab을 발행하여 
+     *    AppNavigationGraph가 먼저 Main 화면으로 이동 후 탭 이동을 준비하도록 합니다.
+     */
+    override fun navigateToTab(route: String, saveState: Boolean, restoreState: Boolean) {
+        // 이미 중첩 NavController가 있는 경우 (MainScreen이 활성화됨)
+        activeChildNavController?.let { childNav ->
+            println("NavigationManager: Navigating to tab '$route' using childNavController")
+            try {
+                childNav.navigate(route) {
+                    // 중첩 네비게이션에서의 탭 전환 로직
+                    val startDestinationId = childNav.graph.findStartDestination().id
+                    popUpTo(startDestinationId) {
+                        this.saveState = saveState
+                    }
+                    launchSingleTop = true
+                    this.restoreState = restoreState
+                }
+                return // 성공적으로 이동했으므로 함수 종료
+            } catch (e: Exception) {
+                println("NavigationManager Warning: Failed to navigate to tab '$route' with child controller: ${e.message}")
+                // 실패 시 아래 로직으로 fallback
+            }
+        }
+        
+        // 위의 직접 이동이 실패했거나, 중첩 NavController가 없는 경우
+        // (MainScreen으로 먼저 이동해야 하는 경우)
+        println("NavigationManager: Emitting NavigateToTab command for '$route'")
+        navigate(NavigationCommand.NavigateToTab(route, saveState, restoreState))
+    }
 
     /**
      * 백스택을 모두 비우고 특정 경로로 이동
-     * 부모 NavController를 사용합니다.
-     * NavigationHandler 인터페이스의 기본 구현을 사용하도록 suspend 제거
      */
-    // override suspend fun navigateClearingBackStack(route: String) {
-    //     navigate(NavigationCommand.NavigateClearingBackStack(route))
-    // }
+    override fun navigateClearingBackStack(route: String) {
+        navigate(NavigationCommand.NavigateClearingBackStack(route))
+    }
     
     /**
      * 중첩된 그래프로 이동
-     * 부모 NavController를 사용하여 중첩 그래프 경로로 이동합니다.
-     * NavigationHandler 인터페이스의 기본 구현을 사용하도록 suspend 제거
      */
-    // override suspend fun navigateToNestedGraph(parentRoute: String, childRoute: String) {
-    //     navigate(NavigationCommand.NavigateToNestedGraph(parentRoute, childRoute))
-    // }
-
-    /**
-     * 탭 내에서 특정 경로로 이동
-     * 현재 활성화된 자식 NavController를 사용합니다.
-     */
-    fun navigateWithinTab(route: String) {
-        if (activeChildNavController == null) {
-            println("NavigationManager Warning: navigateWithinTab called but activeChildNavController is null.")
-            // 부모 컨트롤러로 시도하거나 오류 처리
-            // parentNavController?.navigate(route)
-            return
-        }
-        activeChildNavController?.navigate(route)
-    }
-
-    /* 주석 처리: 새 AppRoutes에 SelectType이 정의되어 있지 않음. AppRoutes.Project.ADD로 대체될 수 있음.
-    fun navigateToSelectProjectType() {
-        // navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.SelectType.path)) // 예전 경로
-        navigate(NavigationCommand.NavigateToRoute(com.example.core_navigation.routes.AppRoutes.Project.ADD))
-    }
-    */
-
-    /**
-     * 프로젝트 메인 화면으로 이동합니다.
-     * 백스택을 클리어하고 Main 화면으로 이동하며, 선택적으로 projectId를 전달합니다.
-     *
-     * @param projectId 이동할 프로젝트의 ID. null이면 projectId 없이 메인으로 이동합니다.
-     */
-    fun navigateToProjectMain(projectId: String? = null) {
-        if (projectId != null) {
-            // 이 projectId를 MainScreen 또는 관련 ViewModel/상태 관리자가 인지하도록 하는 로직 필요.
-            // 예: 특정 이벤트 버스에 projectId 발행, 공유 ViewModel 상태 업데이트 등.
-            // 이 NavigationManager는 단순히 "main" 프레임으로 이동하는 역할만 수행.
-            println("NavigationManager: Navigating to Main (Host) for projectId '$projectId'. Project context needs to be handled by MainScreen/ViewModel.")
-        }
-        // AppRoutes.MainScreens.Host.path ("main") 경로로 이동하고 백스택 클리어 -> 새 AppRoutes.Main.ROOT로 변경
-        navigate(NavigationCommand.NavigateClearingBackStack(AppRoutes.MainScreens.ROOT))
+    override fun navigateToNestedGraph(parentRoute: String, childRoute: String) {
+        navigate(NavigationCommand.NavigateToNestedGraph(parentRoute, childRoute))
     }
 
     /**
@@ -249,24 +246,59 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler, Naviga
         return resultFlows.getOrPut(key) { MutableSharedFlow(replay = 1) }.asSharedFlow() as Flow<T>
     }
 
-    // The following methods are obsolete and were causing compilation errors
-    // They referenced ScreenRoute and ScreenRouteWithArgs which are no longer part of the
-    // ComposeNavigationHandler interface or the new navigation system.
+    /**
+     * 프로젝트 상세 화면으로 이동
+     */
+    override fun navigateToProjectDetails(projectId: String) {
+        // 자식 NavController가 있는지 확인 (MainScreen 내부인지)
+        activeChildNavController?.let { childNav ->
+            println("NavigationManager: Child NavController 사용하여 프로젝트 상세로 이동: $projectId")
+            try {
+                // Home 탭 내부의 프로젝트 상세로 이동
+                childNav.navigate("project_detail/$projectId")
+                return // 성공적으로 이동했으므로 함수 종료
+            } catch (e: Exception) {
+                println("NavigationManager: 자식 NavController로 이동 실패, 부모 NavController 사용: ${e.message}")
+                // 실패 시 최상위 NavController로 이동 (아래 로직)
+            }
+        }
+        
+        // 자식 NavController가 없거나 이동 실패 시 최상위 NavController로 이동
+        println("NavigationManager: 최상위 NavController 사용하여 프로젝트 상세로 이동: $projectId")
+        navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.detail(projectId)))
+    }
+    
+    /**
+     * 채팅 화면으로 이동
+     * AppRoutes의 chat channel 경로를 사용합니다.
+     *
+     * @param channelId 이동할 채널의 ID
+     * @param messageId 스크롤할 메시지 ID (옵션)
+     */
+    override fun navigateToChat(channelId: String, messageId: String?) {
+        val route = if (messageId != null) {
+            // messageId가 있는 경우 쿼리 파라미터로 추가
+            AppRoutes.Chat.channel(channelId, messageId)
+        } else {
+            AppRoutes.Chat.channel(channelId)
+        }
+        navigate(NavigationCommand.NavigateToRoute(route))
+    }
 
-    // override fun navigateTo(screenRoute: ScreenRoute, navOptions: NavOptions?) {
-    //     navigate(NavigationCommand.NavigateToRoute(screenRoute.path, navOptions))
-    // }
-
-    // override fun <Args : Parcelable> navigateTo(
-    //     screenRouteWithArgs: ScreenRouteWithArgs<Args>,
-    //     args: Args,
-    //     navOptions: NavOptions?
-    // ) {
-    //     val route = screenRouteWithArgs.buildPath(args)
-    //     navigate(NavigationCommand.NavigateToRoute(route, navOptions))
-    // }
-
-    override fun navigateBackWithResult(key: String, result: Any?) {
-        super.navigateBackWithResult(key, result) // ComposeNavigationHandler의 기본 구현 사용
+    /**
+     * 탭 내부에서 프로젝트 상세 화면으로 이동
+     * 
+     * 참고: HomeScreen이 상태 기반으로 업데이트되어 이 메서드는 더 이상 활발히 사용되지 않습니다.
+     * HomeViewModel.onProjectClick은 네비게이션 대신 상태 업데이트를 사용합니다.
+     * 
+     * 이 메서드는 하위 호환성 및 다른 컴포넌트에서의 사용을 위해 유지됩니다.
+     * 
+     * @param projectId 이동할 프로젝트의 ID
+     */
+    override fun navigateToProjectDetailsNested(projectId: String) {
+        println("NavigationManager: navigateToProjectDetailsNested는 현재 HomeScreen의 상태 기반 업데이트로 대체되었습니다.")
+        // 이전 구현: HomeScreen 내부의 중첩 네비게이션 사용
+        // 현재: 호환성을 위해 유지하되, 표준 네비게이션으로 전환
+        navigateToProjectDetails(projectId)
     }
 } 

@@ -1,5 +1,6 @@
 package com.example.feature_auth.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,6 +66,7 @@ class SplashViewModel @Inject constructor(
             try {
                 // Use UseCase to check status
                 val result = checkAuthenticationStatusUseCase()
+                Log.d("SplashViewModel", "Auth check result: $result")
 
                 result.onSuccess { (isAuthenticated, isEmailVerified) ->
                     if (isAuthenticated) {
@@ -73,7 +75,8 @@ class SplashViewModel @Inject constructor(
                         } else {
                             // TODO: Navigate to email verification screen? Or Login?
                             // For now, matching original logic: navigate to Login
-                            _eventFlow.emit(SplashEvent.NavigateToLogin)
+                            _eventFlow.emit(SplashEvent.NavigateToMain)
+                            //_eventFlow.emit(SplashEvent.NavigateToLogin)
                         }
                     } else {
                         _eventFlow.emit(SplashEvent.NavigateToLogin)

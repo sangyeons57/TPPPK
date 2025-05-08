@@ -2,7 +2,7 @@ package com.example.data.datasource.remote.user
 
 import android.net.Uri
 import com.example.core_common.constants.FirestoreConstants.Collections
-import com.example.data.remote.dto.user.UserDto
+import com.example.data.model.remote.user.UserDto
 import com.example.domain.model.AccountStatus
 import com.example.domain.model.UserStatus
 import com.google.firebase.auth.FirebaseAuth
@@ -87,7 +87,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun createUserProfile(userDto: UserDto): Result<Unit> = runCatching {
-        userCollection.document(userDto.userId).set(userDto).await()
+        userCollection.document(userDto.id).set(userDto).await()
         Result.success(Unit) // 명시적 반환
     }
 
@@ -100,7 +100,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
      * @return kotlin.Result 객체. 성공 시 Unit, 실패 시 Exception 포함.
      */
     override suspend fun updateUserProfile(userDto: UserDto): Result<Unit> = runCatching {
-        userCollection.document(userDto.userId).set(userDto, SetOptions.merge()).await()
+        userCollection.document(userDto.id).set(userDto, SetOptions.merge()).await()
         Result.success(Unit) // 명시적 반환 및 TODO 제거
     }
 
@@ -201,7 +201,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
             document.toObject(UserDto::class.java) ?: throw Exception("사용자 문서 변환 실패")
         } else {
             val userDto = UserDto(
-                userId = userId,
+                id = userId,
                 email = firebaseUser.email ?: "",
                 name = firebaseUser.displayName ?: "", // 초기 이름, 닉네임 중복 확인은 별도 로직
                 isEmailVerified = firebaseUser.isEmailVerified,

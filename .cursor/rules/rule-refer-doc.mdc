@@ -12,6 +12,7 @@ alwaysApply: true
 - [firestore-schema.mdc](mdc:.cursor/rules/firestore-schema.mdc): Details the structure, collections, fields, and subcollections of the Firebase Firestore database.
 - [git-auto-update.mdc](mdc:.cursor/rules/git-auto-update.mdc): Describes how to use the `git-process.bat` script for Git automation.
 - [llm-guidelines.mdc](mdc:.cursor/rules/llm-guidelines.mdc): Provides instructions for the LLM's role, behavior, and interaction style within this project.
+- [navigation-patterns.mdc](mdc:.cursor/rules/navigation_patterns.mdc): Defines standard navigation patterns, architecture, and best practices for app navigation.
 - [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc): Describes the organization of modules, directories, and key files.
 - [rule-refer-doc.mdc](mdc:.cursor/rules/rule-refer-doc.mdc): Explains when and how to update these rule documents.
 - [tasks-rule.mdc](mdc:.cursor/rules/tasks-rule.mdc): Defines how to handle large or complex tasks requiring multiple steps using the `.cursor/tasks/` directory.

@@ -37,7 +37,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AcceptFriendsScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: AcceptFriendsViewModel = hiltViewModel()
 ) {
@@ -49,7 +49,7 @@ fun AcceptFriendsScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AcceptFriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is AcceptFriendsEvent.NavigateBack -> navigationManager.navigateBack()
+                is AcceptFriendsEvent.NavigateBack -> navigationHandler.navigateBack()
                 // NavigateBack 이벤트는 Screen에서 처리하지 않고, 필요 시 ViewModel에서 직접 호출 가능
             }
         }
@@ -62,7 +62,7 @@ fun AcceptFriendsScreen(
             TopAppBar(
                 title = { Text("친구 요청 수락하기") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

@@ -41,7 +41,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectSettingScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: ProjectSettingViewModel = hiltViewModel()
 ) {
@@ -58,14 +58,14 @@ fun ProjectSettingScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProjectSettingEvent.NavigateBack -> navigationManager.navigateBack()
+                is ProjectSettingEvent.NavigateBack -> navigationHandler.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is ProjectSettingEvent.NavigateToEditCategory -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToCreateCategory -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createCategory(event.projectId)))
-                is ProjectSettingEvent.NavigateToEditChannel -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
-                is ProjectSettingEvent.NavigateToCreateChannel -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToMemberList -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.memberList(event.projectId)))
-                is ProjectSettingEvent.NavigateToRoleList -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.roleList(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditCategory -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToCreateCategory -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createCategory(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditChannel -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
+                is ProjectSettingEvent.NavigateToCreateChannel -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToMemberList -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.memberList(event.projectId)))
+                is ProjectSettingEvent.NavigateToRoleList -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.roleList(event.projectId)))
                 is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
                 is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
                 is ProjectSettingEvent.ShowRenameProjectDialog -> showRenameProjectDialog = true
@@ -81,7 +81,7 @@ fun ProjectSettingScreen(
             TopAppBar(
                 title = { Text("프로젝트 설정") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

@@ -17,7 +17,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.compose.LocalNavController
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_schedule.viewmodel.AddScheduleEvent
 import com.example.feature_schedule.viewmodel.AddScheduleUiState
@@ -27,14 +26,12 @@ import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.Calendar // 초기 시간 설정을 위해 사용
 import java.util.Locale
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import com.example.core_navigation.core.ComposeNavigationHandler
-import kotlinx.coroutines.delay
 
 /**
  * AddScheduleScreen: 일정 추가 화면 (Stateful)
@@ -42,23 +39,22 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddScheduleScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: AddScheduleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val localNavController = LocalNavController.current
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AddScheduleEvent.NavigateBack -> {
-                    navigationManager.navigateBack()
+                    navigationHandler.navigateBack()
                 }
                 is AddScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
-                    localNavController.previousBackStackEntry?.savedStateHandle?.set("schedule_added_or_updated", true)
-                    navigationManager.navigateBack()
+                    navigationHandler.setResult("schedule_added_or_updated", true)
+                    navigationHandler.navigateBack()
                 }
                 is AddScheduleEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
@@ -97,7 +93,7 @@ fun AddScheduleScreen(
             TopAppBar(
                 title = { Text("일정 추가") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) { // 뒤로가기
+                    IconButton(onClick = { navigationHandler.navigateBack() }) { // 뒤로가기
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

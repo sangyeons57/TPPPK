@@ -1,6 +1,6 @@
 package com.example.data.datasource.remote.friend
 
-import com.example.data.remote.dto.FriendRelationshipDto
+import com.example.data.model.remote.friend.FriendRelationshipDto
 import com.example.domain.model.Friend
 import com.example.domain.model.FriendRequest
 import kotlinx.coroutines.flow.Flow

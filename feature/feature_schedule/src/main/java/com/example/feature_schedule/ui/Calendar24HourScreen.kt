@@ -61,7 +61,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Calendar24HourScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: Calendar24HourViewModel = hiltViewModel()
 ) {
@@ -91,7 +91,7 @@ fun Calendar24HourScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is Calendar24HourEvent.NavigateBack -> navigationManager.navigateBack()
+                is Calendar24HourEvent.NavigateBack -> navigationHandler.navigateBack()
                 is Calendar24HourEvent.NavigateToAddSchedule -> {
                     // 일정 추가 버튼 애니메이션
                     addButtonScale = 0.8f
@@ -100,7 +100,7 @@ fun Calendar24HourScreen(
                     if (currentUiState is Calendar24HourUiState.Success) {
                         val date = currentUiState.selectedDate
                         if (date != null) {
-                            navigationManager.navigate(
+                            navigationHandler.navigate(
                                 NavigationCommand.NavigateToRoute(
                                     AppRoutes.Main.Calendar.addSchedule(date.year, date.monthValue, date.dayOfMonth)
                                 )
@@ -111,7 +111,7 @@ fun Calendar24HourScreen(
                     delay(50)
                     addButtonScale = 1f
                 }
-                is Calendar24HourEvent.NavigateToScheduleDetail -> navigationManager.navigate(
+                is Calendar24HourEvent.NavigateToScheduleDetail -> navigationHandler.navigate(
                     NavigationCommand.NavigateToRoute(AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId))
                 )
                 is Calendar24HourEvent.ShowScheduleEditDialog -> showEditDialog = event.scheduleId

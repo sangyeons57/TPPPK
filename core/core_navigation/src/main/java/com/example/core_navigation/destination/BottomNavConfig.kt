@@ -5,7 +5,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.example.core_navigation.routes.AppRoutes
 
 /**
  * 데이터 클래스로 각 하단 네비게이션 아이템을 정의합니다.
@@ -24,17 +23,17 @@ data class BottomNavItem(
  */
 val mainBottomNavItems: List<BottomNavItem> = listOf(
     BottomNavItem(
-        route = AppRoutes.MainScreens.Home.GRAPH_ROOT,
+        route = AppRoutes.Main.Home.GRAPH_ROOT,
         title = "홈",
         icon = Icons.Default.Home
     ),
     BottomNavItem(
-        route = AppRoutes.MainScreens.Calendar.GRAPH_ROOT,
+        route = AppRoutes.Main.Calendar.GRAPH_ROOT,
         title = "캘린더",
         icon = Icons.Default.DateRange
     ),
     BottomNavItem(
-        route = AppRoutes.MainScreens.Profile.GRAPH_ROOT,
+        route = AppRoutes.Main.Profile.GRAPH_ROOT,
         title = "프로필",
         icon = Icons.Default.Person
     )

@@ -1,19 +1,19 @@
 package com.example.data.datasource.remote.friend
 
-import com.example.data.remote.dto.FriendRelationshipDto
 import com.example.core_common.constants.FirestoreConstants.Collections
 import com.example.core_common.constants.FirestoreConstants.DmFields
 import com.example.core_common.constants.FirestoreConstants.FriendFields
 import com.example.core_common.constants.FirestoreConstants.Status
 import com.example.core_common.constants.FirestoreConstants.UserFields
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.remote.friend.FriendRelationshipDto
 import com.example.domain.model.Friend
 import com.example.domain.model.FriendRequest
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.toObject
+import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

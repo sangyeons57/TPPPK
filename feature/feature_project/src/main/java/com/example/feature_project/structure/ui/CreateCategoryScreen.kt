@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun CreateCategoryScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: CreateCategoryViewModel = hiltViewModel()
 ) {
@@ -40,7 +40,7 @@ fun CreateCategoryScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is CreateCategoryEvent.NavigateBack -> navigationManager.navigateBack()
+                is CreateCategoryEvent.NavigateBack -> navigationHandler.navigateBack()
                 is CreateCategoryEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is CreateCategoryEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -50,7 +50,7 @@ fun CreateCategoryScreen(
     // 생성 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.createSuccess) {
         if (uiState.createSuccess) {
-            navigationManager.navigateBack()
+            navigationHandler.navigateBack()
         }
     }
 
@@ -61,7 +61,7 @@ fun CreateCategoryScreen(
             TopAppBar(
                 title = { Text("카테고리 추가") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

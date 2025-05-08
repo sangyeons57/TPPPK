@@ -45,7 +45,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: EditProfileViewModel = hiltViewModel(),
     onChangeNameClick: () -> Unit, // 이름 변경 다이얼로그 표시 콜백
@@ -67,7 +67,7 @@ fun EditProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditProfileEvent.NavigateBack -> navigationManager.navigateBack()
+                is EditProfileEvent.NavigateBack -> navigationHandler.navigateBack()
                 is EditProfileEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditProfileEvent.RequestImagePicker -> {
                     // 이미지 선택기 실행
@@ -89,7 +89,7 @@ fun EditProfileScreen(
             TopAppBar(
                 title = { Text("프로필 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

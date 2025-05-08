@@ -55,7 +55,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -68,10 +68,10 @@ fun SearchScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SearchEvent.NavigateToMessage -> navigationManager.navigate(
-                    NavigationCommand.NavigateToRoute(AppRoutes.Chat.chatWithMessage(event.channelId, event.messageId))
+                is SearchEvent.NavigateToMessage -> navigationHandler.navigate(
+                    NavigationCommand.NavigateToRoute(AppRoutes.Chat.channel(event.channelId, event.messageId))
                 )
-                is SearchEvent.NavigateToUserProfile -> navigationManager.navigate(
+                is SearchEvent.NavigateToUserProfile -> navigationHandler.navigate(
                     NavigationCommand.NavigateToRoute(AppRoutes.User.profile(event.userId.toString()))
                 )
                 is SearchEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
@@ -90,7 +90,7 @@ fun SearchScreen(
             TopAppBar(
                 title = { Text("검색") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

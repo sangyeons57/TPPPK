@@ -13,11 +13,6 @@ android {
         minSdk = 29
 
         consumerProguardFiles("consumer-rules.pro")
-        
-        // Room 스키마 내보내기 위치 설정
-        ksp {
-            arg("room.schemaLocation", "$projectDir/schemas")
-        }
     }
 
     buildTypes {
@@ -30,11 +25,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = libs.versions.jvmTarget.get()
     }
 }
 
@@ -104,4 +99,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)      // 또는 implementation "androidx.room:room-ktx:2.6.1"
     ksp(libs.androidx.room.compiler)            // 또는 ksp "androidx.room:room-compiler:2.6.1"
     androidTestImplementation(libs.androidx.room.testing) // Room 테스트 의존성 추가
+}
+
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }

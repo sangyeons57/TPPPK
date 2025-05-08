@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: ChangePasswordViewModel = hiltViewModel()
 ) {
@@ -46,7 +46,7 @@ fun ChangePasswordScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ChangePasswordEvent.NavigateBack -> navigationManager.navigateBack()
+                is ChangePasswordEvent.NavigateBack -> navigationHandler.navigateBack()
                 is ChangePasswordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChangePasswordEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -56,7 +56,7 @@ fun ChangePasswordScreen(
     // 변경 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.changeSuccess) {
         if (uiState.changeSuccess) {
-            navigationManager.navigateBack()
+            navigationHandler.navigateBack()
         }
     }
 
@@ -67,7 +67,7 @@ fun ChangePasswordScreen(
             TopAppBar(
                 title = { Text("비밀번호 변경") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

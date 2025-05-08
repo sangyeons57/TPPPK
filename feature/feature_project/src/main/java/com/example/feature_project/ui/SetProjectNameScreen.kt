@@ -19,12 +19,22 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManager
 import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.viewmodel.SetProjectNameEvent
 import com.example.feature_project.viewmodel.SetProjectNameNavigationEvent
 import com.example.feature_project.viewmodel.SetProjectNameUiState
 import com.example.feature_project.viewmodel.SetProjectNameViewModel
 import kotlinx.coroutines.flow.collectLatest
+
+/**
+ * ComposeNavigationHandler에 프로젝트 타입 선택 화면으로 이동하는 확장 함수 추가
+ */
+fun ComposeNavigationHandler.navigateToSelectProjectType() {
+    // 프로젝트 타입 선택 화면 경로로 이동
+    this.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.SELECT_TYPE))
+}
 
 /**
  * SetProjectNameScreen: 새 프로젝트의 이름을 설정하는 화면 (Stateful)

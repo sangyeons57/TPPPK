@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.teamnovapersonalprojectprojectingkotlin">
+
+    <queries>
+        <!-- Google Play Services 패키지와의 상호작용을 명시 -->
+        <package android:name="com.google.android.gms" />
+        <!-- 필요하다면, 추가적으로 다른 패키지도 명시 가능 -->
+    </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
 

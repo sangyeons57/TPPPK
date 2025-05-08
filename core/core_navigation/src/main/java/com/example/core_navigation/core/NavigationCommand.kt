@@ -6,14 +6,17 @@ import com.example.core_navigation.destination.NavDestination
 
 /**
  * 네비게이션 명령을 정의하는 sealed 클래스
- * 다양한 네비게이션 패턴을 지원합니다.
+ * 
+ * 앱의 네비게이션 관련 작업을 나타내는 이벤트로,
+ * NavigationHandler(또는 구현체인 NavigationManager)에 의해 발행되고
+ * AppNavigationGraph에서 처리됩니다.
  */
 sealed class NavigationCommand {
     /**
      * 특정 경로로 이동하는 명령
      * 
-     * @param route 이동할 경로
-     * @param navOptions 네비게이션 옵션 (애니메이션, 백스택 처리 등)
+     * @param route 이동할 경로 문자열
+     * @param navOptions 네비게이션 옵션 (선택적)
      */
     data class NavigateToRoute(
         val route: String,
@@ -56,23 +59,22 @@ sealed class NavigationCommand {
     ) : NavigationCommand()
     
     /**
-     * 탭으로 이동하는 명령
-     * (백스택 처리 포함)
+     * 특정 탭으로 이동하는 명령
      * 
-     * @param route 탭 경로
-     * @param saveState 현재 상태 저장 여부
-     * @param restoreState 이전 상태 복원 여부
+     * @param route 이동할 탭 경로
+     * @param saveState 현재 상태를 저장할지 여부
+     * @param restoreState 이전 상태를 복원할지 여부
      */
     data class NavigateToTab(
         val route: String,
-        val saveState: Boolean = true,
-        val restoreState: Boolean = true
+        val saveState: Boolean,
+        val restoreState: Boolean
     ) : NavigationCommand()
     
     /**
-     * 백스택을 모두 지우고 이동하는 명령
+     * 백스택을 모두 비우고 특정 경로로 이동하는 명령
      * 
-     * @param route 이동할 경로
+     * @param route 이동할 경로 문자열
      */
     data class NavigateClearingBackStack(
         val route: String

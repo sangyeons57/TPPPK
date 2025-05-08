@@ -1,7 +1,7 @@
 package com.example.data.datasource.remote.user
 
 import android.net.Uri
-import com.example.data.remote.dto.user.UserDto
+import com.example.data.model.remote.user.UserDto
 import com.example.domain.model.AccountStatus
 import com.example.domain.model.UserStatus
 import com.google.firebase.auth.FirebaseUser

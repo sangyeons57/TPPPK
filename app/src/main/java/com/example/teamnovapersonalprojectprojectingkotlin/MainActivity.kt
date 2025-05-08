@@ -9,24 +9,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.core_logging.SentryUtil
-import com.example.data.util.FirebaseUtil
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_navigation.core.ComposeNavigationHandler
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.graph.AppNavigationGraph
+import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigationGraph
 import com.example.core_navigation.destination.AppRoutes
 import dagger.hilt.android.AndroidEntryPoint
 import io.sentry.ITransaction
 import io.sentry.Sentry
 import io.sentry.SpanStatus
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
+import androidx.compose.runtime.LaunchedEffect
 
 @AndroidEntryPoint // Hilt 사용 시 Activity에 추가
 class MainActivity : ComponentActivity() {
@@ -42,7 +38,6 @@ class MainActivity : ComponentActivity() {
         appStartTransaction = Sentry.startTransaction("app.startup", "startup")
         
         super.onCreate(savedInstanceState)
-        FirebaseUtil.initializeApp(this) // 명시적 초기화
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
         
         // Sentry 기본 테스트 예외 전송
@@ -69,71 +64,26 @@ class MainActivity : ComponentActivity() {
                     navigationHandler.setNavController(navController) // Main NavController 등록
                     setupNavigationTracking(navController)
                     
-                    // Collect navigation commands
-                    LaunchedEffect(navController, navigationHandler) {
-                        navigationHandler.navigationCommands.collectLatest { command ->
-                            // 현재 활성 컨트롤러 결정 (자식 우선)
-                            val controllerToUse = navigationHandler.getActiveChildNavController() ?: navController
-                            
-                            try {
-                                when (command) {
-                                    is NavigationCommand.NavigateToRoute -> {
-                                        // TODO: Determine target controller more precisely if needed
-                                        // For now, assume parent controller or specific tab nav handles child nav
-                                        navController.navigate(command.route, command.navOptions)
-                                    }
-                                    is NavigationCommand.NavigateUp -> {
-                                        navigationHandler.navigateBack() // Use manager's back logic
-                                    }
-                                    is NavigationCommand.PopBackStack -> {
-                                        controllerToUse.popBackStack()
-                                    }
-                                    is NavigationCommand.NavigateToTab -> {
-                                        // Tab navigation typically handled within MainScreen's NavHost
-                                        // Or needs specific logic targeting the nested NavController
-                                        // For now, attempt navigation on the main controller
-                                        // This might need refinement based on how tabs are structured
-                                        navController.navigate(command.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = command.saveState
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = command.restoreState
-                                        }
-                                    }
-                                    is NavigationCommand.NavigateClearingBackStack -> {
-                                        navController.navigate(command.route) {
-                                            popUpTo(navController.graph.id) { inclusive = true }
-                                        }
-                                    }
-                                    is NavigationCommand.NavigateToNestedGraph -> {
-                                        // Assumes parentRoute is a destination in the main graph
-                                        // that hosts the nested graph
-                                        navController.navigate(command.parentRoute)
-                                        // Navigation to childRoute happens within the nested graph
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                // Log navigation errors
-                                SentryUtil.logWarning("Navigation Error: ${e.message}", mapOf("command" to command.toString()))
-                                println("Navigation Error: ${e.message} for command: $command")
-                            }
-                        }
-                    }
+                    // NavigationCommand 처리는 AppNavigationGraph에서 담당하므로 여기서 제거
                     
                     AppNavigationGraph(
                         navController = navController,
-                        navigationManager = navigationHandler,
+                        navigationHandler = navigationHandler,
                         startDestination = decideStartDestination()
                     )
                 }
             }
             
             uiRenderSpan?.finish(SpanStatus.OK)
-            
-            lifecycleScope.launch {
+
+            // LaunchedEffect를 사용하여 생명주기 인식 코루틴 관리
+            LaunchedEffect(key1 = lifecycle) { // lifecycle을 키로 사용하여 Activity 생명주기와 연동
+                // 이 코루틴은 LaunchedEffect가 컴포지션에 있는 동안 실행됩니다.
+                // lifecycle은 Activity에서 가져옵니다.
                 lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                     appStartTransaction?.finish(SpanStatus.OK)
+                    // Sentry 트랜잭션의 finish()는 여러 번 호출되어도 일반적으로 안전하지만,
+                    // 필요하다면 한 번만 호출되도록 플래그 관리를 추가할 수 있습니다.
                 }
             }
         }
@@ -148,7 +98,7 @@ class MainActivity : ComponentActivity() {
             // Sentry에 화면 전환 기록
             SentryUtil.addBreadcrumb(
                 "navigation", 
-                "Screen changed to: ${destination.route ?: "unknown"}"
+                "Screen changed to: ${destination.toString()}"
             )
         }
         
@@ -181,7 +131,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun decideStartDestination(): String {
         // val isLoggedIn = false // 예시: 사용자 로그인 상태 확인 로직
-        // return if (isLoggedIn) AppRoutes.Main.ROOT else AppRoutes.Auth.SPLASH // 새 AppRoutes 사용
-        return AppRoutes.Auth.SPLASH // 인증 플로우의 스플래시 화면으로 시작
+        // return if (isLoggedIn) AppRoutes.Main.ROOT else AppRoutes.Auth.Graph.path
+        return AppRoutes.Auth.Graph.path // Auth 네비게이션 그래프 자체를 시작점으로 지정
     }
 }

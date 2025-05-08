@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditMemberScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: EditMemberViewModel = hiltViewModel()
 ) {
@@ -49,7 +49,7 @@ fun EditMemberScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditMemberEvent.NavigateBack -> navigationManager.navigateBack()
+                is EditMemberEvent.NavigateBack -> navigationHandler.navigateBack()
                 is EditMemberEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -58,7 +58,7 @@ fun EditMemberScreen(
     // 저장 성공 시 뒤로가기 (LaunchedEffect 키를 uiState.saveSuccess로)
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
-            navigationManager.navigateBack()
+            navigationHandler.navigateBack()
         }
     }
 
@@ -69,7 +69,7 @@ fun EditMemberScreen(
             TopAppBar(
                 title = { Text("멤버 역할 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

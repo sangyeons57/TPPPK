@@ -304,4 +304,75 @@ fun AddMemberDialogErrorPreview() {
             error = "사용자 검색 중 오류가 발생했습니다."
         )
     }
+}
+
+/**
+ * 멤버 추가 다이얼로그 컴포넌트의 간편한 버전
+ * 
+ * @param projectId 프로젝트 ID
+ * @param onDismissRequest 다이얼로그 닫기 요청 콜백
+ * @param onMemberAdded 멤버 추가 완료 후 콜백
+ */
+@Composable
+fun AddMemberDialog(
+    projectId: String,
+    onDismissRequest: () -> Unit,
+    onMemberAdded: () -> Unit
+) {
+    // 실제 구현에서는 ViewModel을 사용하여 검색 및 추가 기능 구현
+    // 여기서는 간단한 구현으로 대체
+
+    var searchQuery by remember { mutableStateOf("") }
+    val searchResults = remember { mutableStateListOf<UserSearchResult>() }
+    val selectedUsers = remember { mutableStateSetOf<String>() }
+    var isLoading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    // 검색어 변경 핸들러
+    val onSearchQueryChange = { query: String ->
+        searchQuery = query
+        // 실제로는 ViewModel에서 검색 기능 구현
+        if (query.length >= 2) {
+            isLoading = true
+            error = null
+            
+            // 더미 데이터로 대체 (실제로는 API 호출)
+            searchResults.clear()
+            searchResults.addAll(listOf(
+                UserSearchResult("user1", "김영희", "kim@example.com", null),
+                UserSearchResult("user2", "이철수", "lee@example.com", null)
+            ))
+            isLoading = false
+        } else {
+            searchResults.clear()
+        }
+    }
+
+    // 멤버 추가 핸들러
+    val onAddMembers = { selected: Set<String> ->
+        // 실제로는 ViewModel을 통해 서버 API 호출
+        println("Adding members to project $projectId: $selected")
+        onMemberAdded()
+    }
+
+    // 사용자 선택 핸들러를 래핑하여 Boolean 대신 Unit을 반환하는 새 핸들러 생성
+    val wrappedOnUserSelectionChange: (String, Boolean) -> Unit = { userId, isSelected ->
+        if (isSelected) {
+            selectedUsers.add(userId)
+        } else {
+            selectedUsers.remove(userId)
+        }
+    }
+
+    AddMemberDialog(
+        onDismissRequest = onDismissRequest,
+        onAddMembers = onAddMembers,
+        searchQuery = searchQuery,
+        onSearchQueryChange = onSearchQueryChange,
+        searchResults = searchResults,
+        selectedUsers = selectedUsers,
+        onUserSelectionChange = wrappedOnUserSelectionChange,
+        isLoading = isLoading,
+        error = error
+    )
 } 

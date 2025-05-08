@@ -55,7 +55,7 @@ fun SignUpScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SignUpEvent.NavigateToLogin -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.LOGIN))
+                is SignUpEvent.NavigateToLogin -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.Login.path))
                 is SignUpEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }

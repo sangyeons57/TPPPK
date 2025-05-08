@@ -1,5 +1,6 @@
 package com.example.feature_main.ui
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.feature_main.viewmodel.HomeUiState
@@ -32,6 +33,11 @@ import com.example.feature_main.viewmodel.HomeViewModel
 import com.example.feature_main.viewmodel.ProjectItem
 import com.example.feature_main.viewmodel.TopSection
 import kotlinx.coroutines.flow.collectLatest
+import com.example.feature_main.ui.project.CategoryUiModel
+import com.example.feature_main.ui.project.ChannelUiModel
+import com.example.feature_main.ui.project.ProjectChannelList
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.HorizontalDivider
 
 /**
  * HomeScreen: 상태 관리 및 이벤트 처리 (Stateful)
@@ -40,7 +46,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -62,11 +68,20 @@ fun HomeScreen(
                     snackbarHostState.showSnackbar("친구 추가 다이얼로그 (미구현)")
                 }
                 is HomeEvent.NavigateToAddProject -> {
-                    navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.ADD))
+                    navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.ADD))
                 }
-                // is HomeEvent.NavigateToProjectDetails -> navigationManager.navigateToProjectDetails(...)
-                // is HomeEvent.NavigateToDmChat -> navigationManager.navigateToChat(...)
-                else -> {snackbarHostState.showSnackbar("Else")}
+                is HomeEvent.NavigateToProjectSettings -> {
+                    // 프로젝트 설정 화면으로 이동 (별도 화면)
+                    navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.settings(event.projectId)))
+                }
+                is HomeEvent.NavigateToDmChat -> {
+                    // TODO: DM 채팅 화면으로 이동
+                    snackbarHostState.showSnackbar("DM 채팅 화면으로 이동 (미구현)")
+                }
+                is HomeEvent.NavigateToChannel -> {
+                    // 채널 화면으로 이동
+                    navigationHandler.navigateToChat(event.channelId, null)
+                }
             }
         }
     }
@@ -199,7 +214,7 @@ fun HomeContent(
                     CircularProgressIndicator()
                 }
             } else {
-                MainContent(uiState)
+                MainContent(uiState, viewModel)
             }
         }
     }
@@ -305,54 +320,319 @@ fun MainContentTopSection_Dms(uiState: HomeUiState) {
 }
 
 @Composable
-fun MainContent(uiState: HomeUiState) {
+fun MainContent(
+    uiState: HomeUiState,
+    viewModel: HomeViewModel
+) {
     when (uiState.selectedTopSection) {
         TopSection.PROJECTS -> {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                tonalElevation = 1.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
+            if (uiState.selectedProjectId != null) {
+                // 선택된 프로젝트가 있으면 프로젝트 상세 표시
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // 프로젝트 헤더
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 프로젝트 이름 및 설명
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = uiState.projectName,
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            if (uiState.projectDescription != null) {
+                                Text(
+                                    text = uiState.projectDescription,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        // 설정 버튼
+                        IconButton(
+                            onClick = {
+                                val projectId = uiState.selectedProjectId
+                                viewModel.onProjectSettingsClick(projectId)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "프로젝트 설정"
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    )
+                    
+                    // 프로젝트 컨텐츠 영역
+                    ProjectContentArea(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                    )
+                }
+            } else {
+                // 선택된 프로젝트가 없으면 안내 메시지 표시
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "프로젝트 상세 정보",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "선택된 프로젝트의 상세 정보가 표시됩니다.",
+                        text = "좌측에서 프로젝트를 선택해주세요",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
         }
         TopSection.DMS -> {
-            Surface(
+            // DM 리스트 또는 선택된 DM 대화 표시
+            // TODO: DM 화면 구현
+            Box(
                 modifier = Modifier.fillMaxSize(),
-                tonalElevation = 1.dp
+                contentAlignment = Alignment.Center
             ) {
-                LazyColumn(
+                Text(
+                    text = "DM 기능은 아직 구현되지 않았습니다",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 프로젝트 상세 정보를 표시하는 화면
+ */
+@Composable
+fun ProjectDetailContent(
+    uiState: HomeUiState,
+    viewModel: HomeViewModel,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading -> {
+                // 로딩 중 표시
+                Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (uiState.dms.isEmpty()) {
-                        item {
-                            EmptyStateMessage("메시지가 없습니다.")
-                        }
-                    } else {
-                        items(
-                            items = uiState.dms,
-                            key = { it.id }
-                        ) { dm ->
-                            DmListItem(dm = dm, onClick = { /** DM 클릭시 **/})
-                        }
-                    }
+                    CircularProgressIndicator()
                 }
             }
+            uiState.errorMessage != "default" && uiState.errorMessage.isNotBlank() -> {
+                // 오류 표시
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "오류: ${uiState.errorMessage}", 
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            else -> {
+                // 프로젝트 상세 정보 표시
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    // 프로젝트 헤더
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = uiState.projectName,
+                                style = MaterialTheme.typography.headlineMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            
+                            if (!uiState.projectDescription.isNullOrBlank()) {
+                                Text(
+                                    text = uiState.projectDescription,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        
+                        // 프로젝트 설정 버튼
+                        IconButton(
+                            onClick = { 
+                                val projectId = uiState.selectedProjectId
+                                if (projectId != null) {
+                                    viewModel.onProjectSettingsClick(projectId)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "프로젝트 설정"
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    )
+                    
+                    // 프로젝트 컨텐츠 영역
+                    ProjectContentArea(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 프로젝트 컨텐츠 영역 (카테고리 및 채널 목록 + 선택된 채널의 컨텐츠)
+ */
+@Composable
+fun ProjectContentArea(
+    uiState: HomeUiState,
+    viewModel: HomeViewModel,
+    modifier: Modifier = Modifier
+) {
+    // 프로젝트 구조 로딩 중이면 로딩 인디케이터 표시
+    if (uiState.projectStructure.isLoading) {
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+    
+    // 프로젝트 구조 오류 발생 시 오류 메시지 표시
+    if (uiState.projectStructure.error != null) {
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "오류: ${uiState.projectStructure.error}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        return
+    }
+    
+    // 카테고리 및 채널 목록이 없으면 안내 메시지 표시
+    if (uiState.projectStructure.categories.isEmpty() && uiState.projectStructure.generalChannels.isEmpty()) {
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "카테고리 및 채널이 없습니다.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "프로젝트 설정에서 카테고리와 채널을 추가해보세요.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+        }
+        return
+    }
+    
+    // 프로젝트 컨텐츠 (카테고리 및 채널 목록 + 선택된 채널의 컨텐츠)
+    Row(
+        modifier = modifier
+    ) {
+        // 좌측: 채널 목록 (전체 폭의 30%)
+        Surface(
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(0.3f)
+                .padding(end = 8.dp),
+            shape = MaterialTheme.shapes.small,
+            tonalElevation = 1.dp
+        ) {
+            ProjectChannelList(
+                structureUiState = uiState.projectStructure,
+                onCategoryClick = { category ->
+                    viewModel.onCategoryClick(category)
+                },
+                onChannelClick = { channel ->
+                    viewModel.onChannelClick(channel)
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        
+        // 우측: 선택된 채널의 컨텐츠 (전체 폭의 70%)
+        Surface(
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(0.7f),
+            shape = MaterialTheme.shapes.small,
+            tonalElevation = 1.dp
+        ) {
+            // 선택된 채널이 없으면 안내 메시지 표시
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "채널을 선택하세요",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "좌측 패널에서 채널을 선택하면 해당 채널의 컨텐츠가 표시됩니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            
+            // TODO: 선택된 채널의 컨텐츠 표시 (ChannelScreen 또는 필요한 컴포넌트)
         }
     }
 }

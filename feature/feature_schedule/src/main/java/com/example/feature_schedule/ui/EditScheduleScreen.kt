@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +39,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.compose.LocalNavController
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.feature_schedule.viewmodel.EditScheduleEvent
 import com.example.feature_schedule.viewmodel.EditScheduleUiState
@@ -51,23 +51,22 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditScheduleScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: EditScheduleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val localNavController = LocalNavController.current
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is EditScheduleEvent.NavigateBack -> {
-                    navigationManager.navigateBack()
+                    navigationHandler.navigateBack()
                 }
                 is EditScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
-                    localNavController.previousBackStackEntry?.savedStateHandle?.set("schedule_added_or_updated", true)
-                    navigationManager.navigateBack()
+                    navigationHandler.setResult("schedule_added_or_updated", true)
+                    navigationHandler.navigateBack()
                 }
                 is EditScheduleEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)

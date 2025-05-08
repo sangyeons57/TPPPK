@@ -16,6 +16,7 @@ import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.extension.getString
 
 // --- 데이터 모델 ---
 data class ProjectSelectionItem(

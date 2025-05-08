@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditRoleScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: EditRoleViewModel = hiltViewModel()
 ) {
@@ -46,7 +46,7 @@ fun EditRoleScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditRoleEvent.NavigateBack -> navigationManager.navigateBack()
+                is EditRoleEvent.NavigateBack -> navigationHandler.navigateBack()
                 is EditRoleEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditRoleEvent.ClearFocus -> focusManager.clearFocus()
                 is EditRoleEvent.ShowDeleteConfirmation -> showDeleteConfirmationDialog = true // ★ 삭제 확인 요청
@@ -57,7 +57,7 @@ fun EditRoleScreen(
     // 저장 또는 삭제 성공 시 뒤로가기
     LaunchedEffect(uiState.saveSuccess, uiState.deleteSuccess) {
         if (uiState.saveSuccess || uiState.deleteSuccess) {
-            navigationManager.navigateBack()
+            navigationHandler.navigateBack()
         }
     }
 
@@ -68,7 +68,7 @@ fun EditRoleScreen(
             TopAppBar(
                 title = { Text(if (isCreating) "역할 추가" else "역할 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

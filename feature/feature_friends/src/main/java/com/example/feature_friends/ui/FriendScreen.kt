@@ -38,7 +38,7 @@ import java.util.Date // Preview용 Date 임포트
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendsScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: FriendViewModel = hiltViewModel()
 ) {
@@ -49,8 +49,8 @@ fun FriendsScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FriendsEvent.NavigateToAcceptFriends -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.ACCEPT_REQUESTS))
-                is FriendsEvent.NavigateToChat -> navigationManager.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.chat(event.channelId)))
+                is FriendsEvent.NavigateToAcceptFriends -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.ACCEPT_REQUESTS))
+                is FriendsEvent.NavigateToChat -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.channel(event.channelId)))
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -63,7 +63,7 @@ fun FriendsScreen(
             TopAppBar(
                 title = { Text("친구") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

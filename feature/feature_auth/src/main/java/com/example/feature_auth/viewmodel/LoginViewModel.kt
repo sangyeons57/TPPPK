@@ -1,5 +1,6 @@
 package com.example.feature_auth.viewmodel
 
+import android.util.Log
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -158,6 +159,7 @@ class LoginViewModel @Inject constructor(
                 // 성공 시 isLoading은 false로 바꿀 필요 없음 (화면 전환)
             }.onFailure { exception ->
                 // 로그인 실패
+                Log.e("LoginViewModel", "Login failed", exception)
                 val errorMessage = getAuthErrorMessageUseCase.getLoginErrorMessage(exception)
                 _uiState.update { it.copy(isLoading = false) } // 로딩 종료
                 _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage)) // 스낵바로 에러 알림

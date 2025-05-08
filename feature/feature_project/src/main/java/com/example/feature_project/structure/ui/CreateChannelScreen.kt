@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun CreateChannelScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: CreateChannelViewModel = hiltViewModel()
 ) {
@@ -44,7 +44,7 @@ fun CreateChannelScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is CreateChannelEvent.NavigateBack -> navigationManager.navigateBack()
+                is CreateChannelEvent.NavigateBack -> navigationHandler.navigateBack()
                 is CreateChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is CreateChannelEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -54,7 +54,7 @@ fun CreateChannelScreen(
     // 생성 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.createSuccess) {
         if (uiState.createSuccess) {
-            navigationManager.navigateBack()
+            navigationHandler.navigateBack()
         }
     }
 
@@ -65,7 +65,7 @@ fun CreateChannelScreen(
             TopAppBar(
                 title = { Text("채널 추가") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

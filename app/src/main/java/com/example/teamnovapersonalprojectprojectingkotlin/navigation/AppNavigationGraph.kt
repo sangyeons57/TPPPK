@@ -1,20 +1,35 @@
 package com.example.teamnovapersonalprojectprojectingkotlin.navigation
 
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
-import androidx.navigation.navigation
-import com.example.core_navigation.routes.AppRoutes
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.core.NavigationCommand
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import com.example.feature_auth.ui.LoginScreen
+import com.example.feature_auth.ui.SplashScreen
+import com.example.feature_auth.viewmodel.LoginViewModel
+import com.example.feature_auth.viewmodel.SplashViewModel
+import com.example.feature_main.MainScreen
+import com.example.feature_main.viewmodel.HomeViewModel
+import com.example.feature_project.ui.AddProjectScreen
+import com.example.feature_project.ui.JoinProjectScreen
+import com.example.feature_project.viewmodel.AddProjectViewModel
+import com.example.feature_project.viewmodel.JoinProjectViewModel
 
 // Screen Composable imports will be needed here from all feature modules
 // Example:
@@ -22,195 +37,220 @@ import kotlinx.coroutines.flow.onEach
 // import com.example.feature_main.MainScreen
 // ... etc.
 
+/**
+ * 앱의 최상위 네비게이션 그래프
+ * 
+ * 앱의 모든 최상위 경로들을 정의하고, NavigationManager와 연결하여 탐색을 처리합니다.
+ */
 @Composable
 fun AppNavigationGraph(
     navController: NavHostController,
     navigationHandler: ComposeNavigationHandler,
-    startDestination: String,
-    modifier: Modifier = Modifier
+    startDestination: String = AppRoutes.Auth.Graph.path
 ) {
-    LaunchedEffect(navController, navigationHandler) {
-        navigationHandler.navigationCommands
-            .onEach { command ->
-                println("Processing NavigationCommand: $command")
-                when (command) {
-                    is NavigationCommand.NavigateToRoute -> {
-                        try {
-                            navController.navigate(command.route, command.navOptions)
-                        } catch (e: IllegalArgumentException) {
-                            println("!!! Navigation Error: Failed to navigate to route: ${command.route}. ${e.message}")
-                        }
-                    }
-                    is NavigationCommand.NavigateUp -> {
-                        val success = navController.navigateUp()
-                        println("NavigateUp processed. Success: $success")
-                    }
-                    is NavigationCommand.NavigateBack -> {
-                        println("NavigateBack command received in AppNavigationGraph. Typically handled by NavigationManager.")
-                    }
-                    is NavigationCommand.NavigateToTab -> {
-                        navController.navigate(command.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = command.saveState
-                            }
-                            launchSingleTop = true
-                            restoreState = command.restoreState
-                        }
-                    }
-                    is NavigationCommand.NavigateClearingBackStack -> {
-                        navController.navigate(command.route) {
-                            popUpTo(navController.graph.id) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
-                        }
-                    }
-                    is NavigationCommand.NavigateToNestedGraph -> {
-                        println("NavigateToNestedGraph: Navigating to parent ${command.parentRoute}, child ${command.childRoute} - needs review")
-                        navController.navigate(command.parentRoute) 
-                    }
-                    is NavigationCommand.NavigateWithArguments -> {
-                        println("NavigateWithArguments: Route: ${command.route}, Args: ${command.args} - needs review/implementation if used this way")
-                        navController.navigate(command.route, command.navOptions)
-                    }
-                }
-            }
-            .launchIn(this)
+    // NavigationHandler에 최상위 NavController 설정 (한 번만 호출)
+    LaunchedEffect(Unit) {
+        navigationHandler.setNavController(navController)
     }
-
+    
+    // NavigationHandler로부터 명령을 수신하고 처리
+    LaunchedEffect(navigationHandler) {
+        navigationHandler.navigationCommands.collect { command ->
+            processNavigationCommand(command, navController)
+        }
+    }
+    
     NavHost(
         navController = navController,
-        startDestination = startDestination,
-        modifier = modifier
+        startDestination = startDestination
     ) {
-
-        navigation(
-            route = AppRoutes.Auth.Graph.path,
-            startDestination = AppRoutes.Auth.Graph.suggestedStartPath
-        ) {
-            composable(AppRoutes.Auth.Splash.path) { com.example.feature_auth.ui.SplashScreen(navigationHandler) }
-            composable(AppRoutes.Auth.Login.path) { com.example.feature_auth.ui.LoginScreen(navigationHandler) }
-            composable(AppRoutes.Auth.SignUp.path) { com.example.feature_auth.ui.SignUpScreen(navigationHandler) }
-            composable(AppRoutes.Auth.FindPassword.path) { com.example.feature_auth.ui.FindPasswordScreen(navigationHandler) }
-        }
-
-        composable(AppRoutes.MainScreens.ROOT) {
-            com.example.feature_main.MainScreen(navController = navController, navigationManager = navigationHandler)
-        }
-
-        navigation(
-            route = AppRoutes.MainScreens.Home.GRAPH_ROOT,
-            startDestination = AppRoutes.MainScreens.Home.ROOT_CONTENT
-        ) {
-            composable(AppRoutes.MainScreens.Home.ROOT_CONTENT) {
-                androidx.compose.material3.Text("Home Content Placeholder")
-            }
-            composable(AppRoutes.Project.ADD) { com.example.feature_project.ui.AddProjectScreen(navigationHandler) }
-            composable(AppRoutes.Project.SET_NAME) { com.example.feature_project.ui.SetProjectNameScreen(navigationHandler) }
-            composable(AppRoutes.Project.JOIN) { com.example.feature_project.ui.JoinProjectScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.detailRoute(),
-                arguments = AppRoutes.Project.detailArguments
-            ) {
-                com.example.feature_project.ui.ProjectDetailScreen(navigationHandler)
-            }
-            composable(
-                route = AppRoutes.Project.settingsRoute(),
-                arguments = AppRoutes.Project.settingsArguments
-            ) {
-                com.example.feature_project.setting.ui.ProjectSettingScreen(navigationHandler)
-            }
-            composable(
-                route = AppRoutes.Project.createCategoryRoute(),
-                arguments = AppRoutes.Project.createCategoryArguments
-            ) { com.example.feature_project.structure.ui.CreateCategoryScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.createChannelRoute(),
-                arguments = AppRoutes.Project.createChannelArguments
-            ) { com.example.feature_project.structure.ui.CreateChannelScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.editCategoryRoute(),
-                arguments = AppRoutes.Project.editCategoryArguments
-            ) { com.example.feature_project.structure.ui.EditCategoryScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.editChannelRoute(),
-                arguments = AppRoutes.Project.editChannelArguments
-            ) { com.example.feature_project.structure.ui.EditChannelScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.memberListRoute(),
-                arguments = AppRoutes.Project.memberListArguments
-            ) { com.example.feature_project.members.ui.MemberListScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.editMemberRoute(),
-                arguments = AppRoutes.Project.editMemberArguments
-            ) { com.example.feature_project.members.ui.EditMemberScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.roleListRoute(),
-                arguments = AppRoutes.Project.roleListArguments
-            ) { com.example.feature_project.roles.ui.RoleListScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Project.editRoleRoute(),
-                arguments = AppRoutes.Project.editRoleArguments
-            ) { com.example.feature_project.roles.ui.EditRoleScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.Chat.channelRoute(),
-                arguments = AppRoutes.Chat.channelArguments
-            ) { com.example.feature_chat.ui.ChatScreen(navigationHandler) }
-        }
-
-        navigation(
-            route = AppRoutes.MainScreens.Calendar.GRAPH_ROOT,
-            startDestination = AppRoutes.MainScreens.Calendar.ROOT_CONTENT
-        ) {
-            composable(AppRoutes.MainScreens.Calendar.ROOT_CONTENT) {
-                com.example.feature_main.ui.calendar.CalendarScreen(navigationManager = navigationHandler)
-            }
-            composable(
-                route = AppRoutes.MainScreens.Calendar.calendar24HourRoute(),
-                arguments = AppRoutes.MainScreens.Calendar.calendar24HourArguments
-            ) { com.example.feature_schedule.ui.Calendar24HourScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.MainScreens.Calendar.addScheduleRoute(),
-                arguments = AppRoutes.MainScreens.Calendar.addScheduleArguments
-            ) { com.example.feature_schedule.ui.AddScheduleScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.MainScreens.Calendar.scheduleDetailRoute(),
-                arguments = AppRoutes.MainScreens.Calendar.scheduleDetailArguments
-            ) { com.example.feature_schedule.ui.ScheduleDetailScreen(navigationHandler) }
-            composable(
-                route = AppRoutes.MainScreens.Calendar.editScheduleRoute(),
-                arguments = AppRoutes.MainScreens.Calendar.editScheduleArguments
-            ) { com.example.feature_schedule.ui.EditScheduleScreen(navigationHandler) }
-        }
-
-        navigation(
-            route = AppRoutes.MainScreens.Profile.GRAPH_ROOT,
-            startDestination = AppRoutes.MainScreens.Profile.ROOT_CONTENT
-        ) {
-            composable(AppRoutes.MainScreens.Profile.ROOT_CONTENT) {
-                com.example.feature_main.ui.ProfileScreen(navigationManager = navigationHandler)
-            }
-            composable(
-                route = AppRoutes.User.profileRoute(),
-                arguments = AppRoutes.User.profileArguments
-            ) {
-                com.example.feature_user.ui.UserProfileScreen(navigationHandler)
-            }
-            composable(AppRoutes.Settings.EDIT_MY_PROFILE) { 
-                com.example.feature_settings.ui.EditProfileScreen(navigationHandler) 
-            }
-            composable(AppRoutes.Settings.CHANGE_MY_PASSWORD) { 
-                com.example.feature_settings.ui.ChangePasswordScreen(navigationHandler) 
-            }
-            composable(AppRoutes.Friends.LIST) { com.example.feature_friends.ui.FriendsScreen(navigationHandler) }
-            composable(AppRoutes.Friends.ACCEPT_REQUESTS) { com.example.feature_friends.ui.AcceptFriendsScreen(navigationHandler) }
-        }
-
-        composable(AppRoutes.Dev.MENU) { com.example.feature_dev.ui.DevMenuScreen(navigationHandler) } 
-        composable(AppRoutes.Search.GLOBAL) { com.example.feature_search.ui.SearchScreen(navigationHandler) }
+        // 인증 관련 네비게이션 그래프 (로그인, 가입 등)
+        authGraph(navController, navigationHandler)
         
-        composable(AppRoutes.Settings.APP_SETTINGS) {
-            androidx.compose.material3.Text("App Settings Placeholder")
+        // 메인 화면 (중첩 네비게이션 사용)
+        composable(AppRoutes.Main.ROOT) {
+            MainScreen(navigationHandler = navigationHandler)
+        }
+        
+        // 독립적인 화면들 - 메인 탭 외부에서 접근하는 화면들
+        standaloneScreensGraph(navController, navigationHandler)
+    }
+}
+
+/**
+ * 인증 관련 화면들의 네비게이션 그래프
+ */
+private fun NavGraphBuilder.authGraph(
+    navController: NavHostController,
+    navigationHandler: ComposeNavigationHandler
+) {
+    navigation(
+        route = AppRoutes.Auth.Graph.path,
+        startDestination = AppRoutes.Auth.Splash.path
+    ) {
+        composable(AppRoutes.Auth.Splash.path) {
+            val viewModel = hiltViewModel<SplashViewModel>()
+            SplashScreen(
+                navigationHandler = navigationHandler,
+                viewModel = viewModel
+            )
+        }
+        
+        composable(AppRoutes.Auth.Login.path) {
+            val viewModel = hiltViewModel<LoginViewModel>()
+            LoginScreen(
+                navigationHandler = navigationHandler,
+                viewModel = viewModel
+            )
+        }
+        
+        // 다른 인증 화면들 추가 (회원가입, 비밀번호 찾기 등)
+    }
+}
+
+/**
+ * 독립적인 화면들의 네비게이션 그래프 (메인 탭 외부에서 접근)
+ */
+private fun NavGraphBuilder.standaloneScreensGraph(
+    navController: NavHostController,
+    navigationHandler: ComposeNavigationHandler
+) {
+    // 프로젝트 생성 화면
+    composable(AppRoutes.Project.ADD) {
+        val viewModel = hiltViewModel<AddProjectViewModel>()
+        AddProjectScreen(navigationHandler)
+    }
+    
+    // 프로젝트 참가 화면
+    composable(
+        route = AppRoutes.Project.JOIN,
+        arguments = listOf(
+            navArgument(AppRoutes.Project.ARG_PROJECT_ID) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }
+        )
+    ) {
+        val viewModel = hiltViewModel<JoinProjectViewModel>()
+        JoinProjectScreen(navigationHandler)
+    }
+    
+    // 프로젝트 상세 화면 - 메인 탭 외부에서도 접근 가능
+    composable(
+        route = AppRoutes.Project.detailRoute(),
+        arguments = listOf(
+            navArgument(AppRoutes.Project.ARG_PROJECT_ID) {
+                type = NavType.StringType
+            }
+        )
+    ) { backStackEntry ->
+        val projectId = backStackEntry.arguments?.getString(AppRoutes.Project.ARG_PROJECT_ID) ?: ""
+        
+        // ProjectDetailViewModel 대신 HomeScreen으로 리다이렉트
+        // 메인 화면의 Home 탭으로 이동 후 프로젝트 상세 표시
+
+        // HomeViewModel을 Composable 컨텍스트에서 가져옵니다.
+        // navController.getBackStackEntry(AppRoutes.Main.ROOT)가 유효한 시점에 호출되도록 주의해야 합니다.
+        // 이 로직은 MainScreen이 이미 백스택에 존재하고 해당 ViewModel이 초기화되었음을 가정합니다.
+        // 만약 MainScreen이 아직 생성되지 않았다면 여기서 크래시가 발생할 수 있습니다.
+        // 보다 안전한 접근 방식은 navigationHandler를 통해 HomeViewModel에 접근하거나,
+        // projectId를 MainScreen으로 전달하고 MainScreen 내부에서 HomeViewModel이 이를 처리하도록 하는 것입니다.
+        // 현재 구조에서는 MainScreen으로 먼저 이동한 후 ViewModel을 가져오므로,
+        // getBackStackEntry가 유효할 가능성이 높습니다.
+        val homeViewModelStoreOwner = remember(backStackEntry) {
+            navController.getBackStackEntry(AppRoutes.Main.ROOT)
+        }
+        val homeViewModel = hiltViewModel<HomeViewModel>(homeViewModelStoreOwner)
+
+        LaunchedEffect(projectId, homeViewModel) {
+            // 먼저 메인 화면으로 이동 (Home 탭이 기본 선택됨)
+            navigationHandler.navigateClearingBackStack(AppRoutes.Main.ROOT)
+            
+            // 지연을 주어 UI가 업데이트될 시간을 확보
+            // UI가 업데이트되고 homeViewModel이 MainScreen의 컨텍스트에서 완전히 준비될 시간을 기대합니다.
+            kotlinx.coroutines.delay(100) // 이 지연이 항상 충분하다고 보장할 수는 없습니다.
+            
+            // Home 화면에서 프로젝트 선택
+            homeViewModel.onProjectClick(projectId)
+        }
+        
+        // 리다이렉트 중 로딩 표시
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+    
+    // 추가 독립 화면들을 여기에 정의 (설정, 검색 결과 등)
+}
+
+/**
+ * NavigationCommand를 처리하여 적절한 네비게이션 작업을 수행합니다.
+ * 이 함수는 LaunchedEffect 내에서 호출되어 NavigationManager의 명령을 처리합니다.
+ * 
+ * @param command 처리할 네비게이션 명령
+ * @param navController 사용할 NavController (일반적으로 최상위 NavController)
+ */
+private fun processNavigationCommand(
+    command: NavigationCommand,
+    navController: NavHostController
+) {
+    when (command) {
+        // 특정 경로로 이동
+        is NavigationCommand.NavigateToRoute -> {
+            val route = command.route
+            val navOptions = command.navOptions
+            navController.navigate(route, navOptions ?: androidx.navigation.NavOptions.Builder().build())
+        }
+        
+        // 백스택을 지우고 이동
+        is NavigationCommand.NavigateClearingBackStack -> {
+            val route = command.route
+            navController.navigate(route) {
+                popUpTo(navController.graph.startDestinationId) {
+                    inclusive = true
+                }
+            }
+        }
+        
+        // 중첩 그래프로 이동
+        is NavigationCommand.NavigateToNestedGraph -> {
+            val nestedRoute = "${command.parentRoute}/${command.childRoute}"
+            navController.navigate(nestedRoute)
+        }
+        
+        // 특정 탭으로 이동 (MainScreen 내부의 NavHost에서 처리됨)
+        is NavigationCommand.NavigateToTab -> {
+            // 만약 우리가 Main 화면에 있지 않다면, 먼저 Main으로 이동해야 합니다
+            if (navController.currentDestination?.route != AppRoutes.Main.ROOT) {
+                navController.navigate(AppRoutes.Main.ROOT) {
+                    popUpTo(navController.graph.startDestinationId) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            
+            // 참고: 실제 탭 이동은 NavigationManager.navigateToTab() 내부에서
+            // 등록된 중첩 NavController를 찾아 처리합니다.
+        }
+        
+        // 뒤로 가기
+        is NavigationCommand.NavigateBack -> {
+            navController.popBackStack()
+        }
+        
+        // 논리적 위로 이동
+        is NavigationCommand.NavigateUp -> {
+            navController.navigateUp()
+        }
+        
+        else -> {
+            // 기타 명령 처리
         }
     }
 } 

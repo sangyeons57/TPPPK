@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleDetailScreen(
-    navigationManager: ComposeNavigationHandler,
+    navigationHandler: ComposeNavigationHandler,
     modifier: Modifier = Modifier,
     viewModel: ScheduleDetailViewModel = hiltViewModel()
 ) {
@@ -50,8 +50,8 @@ fun ScheduleDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ScheduleDetailEvent.NavigateBack -> navigationManager.navigateBack()
-                is ScheduleDetailEvent.NavigateToEditSchedule -> navigationManager.navigate(
+                is ScheduleDetailEvent.NavigateBack -> navigationHandler.navigateBack()
+                is ScheduleDetailEvent.NavigateToEditSchedule -> navigationHandler.navigate(
                     NavigationCommand.NavigateToRoute(AppRoutes.Main.Calendar.editSchedule(event.scheduleId))
                 )
                 is ScheduleDetailEvent.ShowDeleteConfirmDialog -> showDeleteDialog = true
@@ -63,7 +63,7 @@ fun ScheduleDetailScreen(
     // 삭제 성공 시 뒤로 가기
     LaunchedEffect(uiState.deleteSuccess) {
         if (uiState.deleteSuccess) {
-            navigationManager.navigateBack()
+            navigationHandler.navigateBack()
         }
     }
 
@@ -74,7 +74,7 @@ fun ScheduleDetailScreen(
             TopAppBar(
                 title = { Text("일정 상세") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { navigationHandler.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

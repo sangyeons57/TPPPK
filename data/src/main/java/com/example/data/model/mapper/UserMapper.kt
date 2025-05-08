@@ -1,6 +1,6 @@
 package com.example.data.model.mapper
 
-import com.example.data.remote.dto.user.UserDto
+import com.example.data.model.remote.user.UserDto
 import com.example.domain.model.AccountStatus
 import com.example.domain.model.User
 import com.example.domain.model.UserStatus
@@ -20,13 +20,13 @@ class UserMapper @Inject constructor() {
      */
     fun mapToDomain(dto: UserDto): User {
         return User(
-            userId = dto.userId,
+            userId = dto.id,
             email = dto.email,
             name = dto.name,
             profileImageUrl = dto.profileImageUrl,
             memo = dto.memo,
             status = try {
-                UserStatus.valueOf(dto.status.uppercase())
+                UserStatus.valueOf(dto.status?.uppercase() ?: "OFFLINE")
             } catch (e: IllegalArgumentException) {
                 UserStatus.OFFLINE
             },
@@ -51,7 +51,7 @@ class UserMapper @Inject constructor() {
      */
     fun mapToDto(domainModel: User): UserDto {
         return UserDto(
-            userId = domainModel.userId,
+            id = domainModel.userId,
             email = domainModel.email,
             name = domainModel.name,
             profileImageUrl = domainModel.profileImageUrl,
