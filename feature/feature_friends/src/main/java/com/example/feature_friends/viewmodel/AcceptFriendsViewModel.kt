@@ -10,6 +10,7 @@ import com.example.domain.usecase.friend.RemoveOrDenyFriendUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.util.Date
 import javax.inject.Inject
 
@@ -18,7 +19,7 @@ data class FriendRequestItem(
     val userId: String,
     val userName: String,
     val profileImageUrl: String? = null,
-    val requestDate: Date? = null
+    val requestDate: Instant? = null
 )
 
 // --- UI 상태 ---
@@ -72,8 +73,8 @@ class AcceptFriendsViewModel @Inject constructor(
                             // 여기서는 더미 데이터 사용
                             val requests = relationships.map { relationship ->
                                 FriendRequestItem(
-                                    userId = relationship.friendId, // FriendRelationship의 friendId 필드 사용
-                                    userName = "사용자 ${relationship.friendId.takeLast(4)}", // 실제 구현에서는 UserRepository에서 이름 가져오기
+                                    userId = relationship.friendUserId, // FriendRelationship의 friendId 필드 사용
+                                    userName = "사용자 ${relationship.friendUserId.takeLast(4)}", // 실제 구현에서는 UserRepository에서 이름 가져오기
                                     profileImageUrl = null, // 실제 구현에서는 UserRepository에서 프로필 이미지 URL 가져오기
                                     requestDate = relationship.timestamp
                                 )

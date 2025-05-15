@@ -16,12 +16,19 @@ import kotlin.Result
 interface UserRepository {
 
     /** 특정 사용자의 프로필 정보 가져오기 */
-    suspend fun getUserProfile(userId: String): Result<User>
-    
-    /** 현재 로그인한 사용자 프로필 정보 가져오기 (Flow 형태로 실시간 업데이트) */
-    fun getCurrentUserProfile(): Flow<Result<User?>>
+    suspend fun getUser(userId: String): Result<User>
 
-    fun getCurrentStatus(): Result<UserStatus>
+    /** 현재 로그인한 사용자 프로필 정보 가져오기 (Flow 형태로 실시간 업데이트) */
+    fun getCurrentUser(): Flow<Result<User?>>
+
+    /** 현재 로그인한 사용자 프로필 정보 스트림 (실시간 업데이트) */
+    fun getCurrentUserProfileStream(): Flow<User>
+
+    /** 특정 사용자의 프로필 정보 스트림 (실시간 업데이트) */
+    fun getUserProfileStream(userId: String): Flow<User>
+
+    /** 현재 로그인한 사용자의 상태를 가져옵니다. */
+    suspend fun getCurrentStatus(): Result<UserStatus>
 
     /** 닉네임 중복 확인 */
     suspend fun checkNicknameAvailability(nickname: String): Result<Boolean>
@@ -76,4 +83,13 @@ interface UserRepository {
      * @return 성공 시 생성된 User 객체, 실패 시 에러 포함 Result
      */
     suspend fun ensureUserProfileExists(firebaseUser: FirebaseUser): Result<User>
+
+    /**
+     * 현재 로그인된 사용자의 고유 ID를 반환합니다.
+     * 사용자가 로그인되어 있지 않거나 ID를 가져올 수 없는 경우 예외를 발생시킵니다.
+     *
+     * @return 현재 사용자의 ID (String).
+     * @throws IllegalStateException 사용자를 찾을 수 없거나 인증되지 않은 경우.
+     */
+    suspend fun getCurrentUserId(): String
 }

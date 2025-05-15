@@ -16,7 +16,8 @@ import kotlin.Result
  */
 class FriendRepositoryImpl @Inject constructor(
     private val friendRemoteDataSource: FriendRemoteDataSource,
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val friendMapper: FriendMapper
 ) : FriendRepository {
 
     private fun getCurrentUserId(): String? {
@@ -34,7 +35,7 @@ class FriendRepositoryImpl @Inject constructor(
         return friendRemoteDataSource.getFriendRelationshipsStream(currentUserId).map { result ->
             result.mapCatching { dtoListWithIds -> // Result 내에서 map 수행
                 dtoListWithIds.map { (friendId, dto) ->
-                    FriendMapper.dtoToDomain(dto, friendId) // FriendMapper는 object이므로 직접 호출
+                    friendMapper.mapToDomain(dto, currentUserId)
                 }
             }
         }
@@ -88,18 +89,14 @@ class FriendRepositoryImpl @Inject constructor(
 
     /**
      * 친구와의 DM 채널 ID 가져오기
-     * 필요한 경우 새 채널을 생성합니다.
+     * 채널 정보는 이제 채널 시스템으로 통합되어 관리됩니다.
+     * 채널 타입이 'DM'인 채널을 사용합니다.
      */
     override suspend fun getDmChannelId(friendUserId: String): Result<String> {
-        // 이전에 FriendRepository에 있던 함수. DataSource가 해당 기능을 직접 제공하지 않으므로,
-        // 여기서는 미구현 상태로 두거나, DM 관련 로직을 별도 Repository/DataSource에서 처리하도록 유도.
-        // Firestore 스키마에 따르면 DM ID는 uid1_uid2 형태이므로, 여기서 생성 가능.
         val currentUserId = getCurrentUserId()
             ?: return Result.failure(IllegalStateException("User not logged in."))
         
-        // Firestore `dms` 컬렉션의 ID 규칙 (정렬된 UID 조합)
-        val ids = listOf(currentUserId, friendUserId).sorted()
-        val dmId = "${ids[0]}_${ids[1]}"
-        return Result.success(dmId) // 임시로 직접 생성, 실제로는 DmRepository 등과 연동 필요
+        // FriendRemoteDataSource의 구현을 사용하여 채널 ID를 가져오거나 새로 생성
+        return friendRemoteDataSource.getDmChannelId(friendUserId)
     }
 }

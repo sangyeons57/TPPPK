@@ -1,7 +1,11 @@
 package com.example.domain.usecase.project
 
+import com.example.domain.model.Channel
+import com.example.domain.model.ChannelType
 import com.example.domain.model.ProjectCategory
+import com.example.domain.model.channel.ProjectSpecificData
 import com.example.domain.repository.ProjectSettingRepository // Assuming this repo exists
+import java.time.Instant
 import javax.inject.Inject
 
 /**
@@ -32,10 +36,49 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
 
         // 임시 구현 (성공 및 임시 데이터 반환)
         // kotlin.coroutines.delay(500) // Remove delay
+        val now = Instant.now()
         val tempProjectName = "프로젝트 $projectId (Loaded - Placeholder)"
         val tempCategories = listOf(
-            ProjectCategory("c1", "공지사항", listOf(com.example.domain.model.ProjectChannel("ch1", "전체 공지", com.example.domain.model.ChannelType.TEXT))),
-            ProjectCategory("c2", "팀 채널", listOf(com.example.domain.model.ProjectChannel("ch2", "일반 대화", com.example.domain.model.ChannelType.TEXT), com.example.domain.model.ProjectChannel("ch3", "아이디어 공유", com.example.domain.model.ChannelType.TEXT)))
+            ProjectCategory("c1", "공지사항", listOf(
+                Channel(
+                    id = "ch1",
+                    name = "전체 공지",
+                    type = ChannelType.PROJECT,
+                    projectSpecificData = ProjectSpecificData(
+                        projectId = projectId,
+                        categoryId = "c1",
+                        order = 0
+                    ),
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )),
+            ProjectCategory("c2", "팀 채널", listOf(
+                Channel(
+                    id = "ch2",
+                    name = "일반 대화",
+                    type = ChannelType.PROJECT,
+                    projectSpecificData = ProjectSpecificData(
+                        projectId = projectId,
+                        categoryId = "c2",
+                        order = 0
+                    ),
+                    createdAt = now,
+                    updatedAt = now
+                ),
+                Channel(
+                    id = "ch3", 
+                    name = "아이디어 공유", 
+                    type = ChannelType.PROJECT,
+                    projectSpecificData = ProjectSpecificData(
+                        projectId = projectId,
+                        categoryId = "c2",
+                        order = 1
+                    ),
+                    createdAt = now,
+                    updatedAt = now
+                )
+            ))
         )
         println("UseCase: GetProjectStructureUseCase - $tempProjectName (TODO: Implement actual logic)")
         return Result.success(Pair(tempProjectName, tempCategories))

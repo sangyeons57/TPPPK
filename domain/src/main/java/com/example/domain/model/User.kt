@@ -1,32 +1,48 @@
 // 경로: domain/model/User.kt
 package com.example.domain.model
 
-import java.util.Date
-
+import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model.AccountStatus
 /**
  * 사용자 정보를 담는 도메인 모델.
  * Firestore 'users' 컬렉션에 저장된 사용자 데이터를 표현합니다.
  */
 data class User(
-    val userId: String = "", // Firebase Auth UID
+    val id: String = "", // Renamed from userId to id
     val email: String = "",
     val name: String = "", // Unique
     val profileImageUrl: String? = null,
     val memo: String? = null, // User's personal memo/bio
+    val statusMessage: String? = null, // User's status message
     val status: UserStatus = UserStatus.OFFLINE,
-    val createdAt: Date = Date(),
+    val createdAt: Instant = DateTimeUtil.nowInstant(),
     val fcmToken: String? = null,
     val participatingProjectIds: List<String> = emptyList(),
     val accountStatus: AccountStatus = AccountStatus.ACTIVE,
     val activeDmIds: List<String> = emptyList(),
-    val isEmailVerified: Boolean = false
-)
-
-/**
- * 사용자 계정 상태를 나타내는 열거형.
- */
-enum class AccountStatus {
-    ACTIVE,     // 활성 계정
-    SUSPENDED,  // 일시 정지된 계정
-    DELETED     // 삭제된 계정
+    val isEmailVerified: Boolean = false,
+    val updatedAt: Instant? = null // 사용자 정보 마지막 업데이트 시간
+) {
+    companion object {
+        /**
+         * 비어 있거나 초기화되지 않은 사용자 상태를 나타내는 User 객체입니다.
+         */
+        val EMPTY = User(
+            id = "",
+            email = "",
+            name = "",
+            profileImageUrl = null,
+            memo = null,
+            statusMessage = null,
+            status = UserStatus.OFFLINE,
+            createdAt = DateTimeUtil.nowInstant(), // 생성 시간은 현재로 초기화하거나 특정 값 사용
+            fcmToken = null,
+            participatingProjectIds = emptyList(),
+            accountStatus = AccountStatus.UNKNOWN, // 또는 적절한 기본 AccountStatus
+            activeDmIds = emptyList(),
+            isEmailVerified = false,
+            updatedAt = null
+        )
+    }
 }

@@ -50,7 +50,7 @@ fun FriendsScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is FriendsEvent.NavigateToAcceptFriends -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.ACCEPT_REQUESTS))
-                is FriendsEvent.NavigateToChat -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.channel(event.channelId)))
+                is FriendsEvent.NavigateToChat -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(event.channelId)))
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }

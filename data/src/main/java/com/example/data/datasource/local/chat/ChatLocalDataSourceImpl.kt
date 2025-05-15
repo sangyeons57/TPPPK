@@ -12,6 +12,10 @@ import com.example.data.db.dao.ChatMessageDao
 import com.example.data.model.local.MediaImageEntity
 import com.example.data.model.local.chat.ChatMessageEntity
 import com.example.data.model.mapper.ChatMessageMapper
+import com.example.data.model.mapper.toDomainModel
+import com.example.data.model.mapper.toDomainModelWithTime
+import com.example.data.model.mapper.toDtoWithTime
+import com.example.data.model.mapper.toEntity
 import com.example.data.model.remote.chat.ChatMessageDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -38,112 +42,128 @@ class ChatLocalDataSourceImpl @Inject constructor(
      * 특정 채널의 메시지 스트림을 가져옵니다.
      * 
      * @param channelId 채팅 채널 ID
+     * @param channelType 채널 유형 (예: "DM", "PROJECT_CATEGORY")
      * @return 채팅 메시지 엔티티 리스트를 포함하는 Flow
      */
-    override fun getMessagesStream(channelId: String): Flow<List<ChatMessageEntity>> {
-        return chatMessageDao.getMessagesStream(channelId)
+    override fun getMessagesStream(channelId: String, channelType: String): Flow<List<ChatMessageEntity>> {
+        return chatMessageDao.getMessagesStream(channelId, channelType)
     }
 
     /**
      * 특정 채널의 메시지 목록을 저장합니다.
      * 
      * @param channelId 채팅 채널 ID
+     * @param channelType 채널 유형
      * @param messages 저장할 채팅 메시지 엔티티 목록
      */
-    override suspend fun saveMessages(channelId: String, messages: List<ChatMessageEntity>) {
-        chatMessageDao.insertMessages(messages)
+    override suspend fun saveMessages(channelId: String, channelType: String, messages: List<ChatMessageEntity>) {
+        chatMessageDao.insertOrReplaceMessages(messages)
     }
 
     /**
-     * 단일 메시지를 추가하거나 업데이트합니다.
-     * 
+     * 단일 메시지를 추가하거나 업데이트합니다. (chatId 기준)
+     * ChatMessageEntity는 channelId와 channelType을 이미 가지고 있어야 합니다.
+     *
      * @param message 추가 또는 업데이트할 채팅 메시지 엔티티
      */
     override suspend fun upsertMessage(message: ChatMessageEntity) {
-        chatMessageDao.upsertMessage(message)
+        chatMessageDao.upsertMessageByChatId(message)
     }
 
     /**
-     * 메시지를 삭제합니다.
-     * 
-     * @param messageId 삭제할 메시지 ID
+     * 메시지를 삭제합니다. (chatId 기준)
+     *
+     * @param chatId 삭제할 메시지의 Firestore ID
      */
-    override suspend fun deleteMessage(messageId: String) {
-        chatMessageDao.deleteMessage(messageId)
+    override suspend fun deleteMessage(chatId: String) {
+        chatMessageDao.deleteMessageByChatId(chatId)
     }
 
     /**
      * 특정 채널의 모든 메시지를 삭제합니다.
-     * 
+     *
      * @param channelId 채팅 채널 ID
+     * @param channelType 채널 유형
      */
-    override suspend fun clearMessagesForChannel(channelId: String) {
-        chatMessageDao.clearMessagesForChannel(channelId)
+    override suspend fun clearMessagesForChannel(channelId: String, channelType: String) {
+        chatMessageDao.clearMessagesForChannel(channelId, channelType)
     }
 
     /**
      * 채팅 메시지를 로컬 데이터베이스에 저장합니다.
-     * 
+     *
      * @param message 저장할 채팅 메시지 DTO
+     * @param channelType 이 메시지가 속한 채널의 유형
      */
-    override suspend fun insertMessage(message: ChatMessageDto) {
-        val entity = chatMessageMapper.mapDtoToEntity(message)
-        chatMessageDao.upsertMessage(entity)
+    override suspend fun insertMessage(message: ChatMessageDto, channelType: String) {
+        val domainModel = message.toDomainModelWithTime()
+        val entity = domainModel.toEntity(channelType)
+        chatMessageDao.upsertMessageByChatId(entity)
     }
 
     /**
      * 여러 채팅 메시지를 로컬 데이터베이스에 저장합니다.
-     * 
+     *
      * @param messages 저장할 채팅 메시지 DTO 목록
+     * @param channelType 이 메시지들이 속한 채널의 유형
      */
-    override suspend fun insertMessages(messages: List<ChatMessageDto>) {
-        val entities = messages.map { chatMessageMapper.mapDtoToEntity(it) }
-        chatMessageDao.insertMessages(entities)
+    override suspend fun insertMessages(messages: List<ChatMessageDto>, channelType: String) {
+        val entities = messages.map {
+            val domainModel = it.toDomainModelWithTime()
+            domainModel.toEntity(channelType)
+        }
+        chatMessageDao.insertOrReplaceMessages(entities)
     }
 
     /**
      * 특정 채널의 모든 메시지를 가져옵니다.
-     * 
+     *
      * @param channelId 채팅 채널 ID
+     * @param channelType 채널 유형
      * @return 해당 채널의 모든 메시지 DTO 목록
      */
-    override suspend fun getAllMessages(channelId: String): List<ChatMessageDto> {
-        val entities = chatMessageDao.getAllMessages(channelId)
-        return entities.map { chatMessageMapper.mapEntityToDto(it) }
+    override suspend fun getAllMessages(channelId: String, channelType: String): List<ChatMessageDto> {
+        val entities = chatMessageDao.getAllMessages(channelId, channelType)
+        return entities.map { entity -> 
+            val domainModel = entity.toDomainModel()
+            domainModel.toDtoWithTime()
+        }
     }
 
     /**
-     * 특정 메시지 ID 이전의 메시지를 가져옵니다.
-     * 
+     * 특정 시간 이전의 메시지를 가져옵니다.
+     *
      * @param channelId 채팅 채널 ID
-     * @param beforeMessageId 이 메시지 ID 이전의 메시지를 가져옴
+     * @param channelType 채널 유형
+     * @param beforeSentAt 이 타임스탬프 이전의 메시지를 가져옴 (milliseconds)
      * @param limit 가져올 메시지 최대 개수
      * @return 메시지 DTO 목록
      */
-    override suspend fun getMessagesBefore(channelId: String, beforeMessageId: Int, limit: Int): List<ChatMessageDto> {
-        val entities = chatMessageDao.getMessagesBefore(channelId, beforeMessageId, limit)
-        return entities.map { chatMessageMapper.mapEntityToDto(it) }
+    override suspend fun getMessagesBefore(channelId: String, channelType: String, beforeSentAt: Long, limit: Int): List<ChatMessageDto> {
+        val entities = chatMessageDao.getMessagesBefore(channelId, channelType, beforeSentAt, limit)
+        return entities.map { entity ->
+            val domainModel = entity.toDomainModel()
+            domainModel.toDtoWithTime()
+        }
     }
 
     /**
      * 메시지 내용을 업데이트합니다.
-     * 
-     * @param channelId 채팅 채널 ID
-     * @param chatId 수정할 메시지 ID
+     *
+     * @param chatId 수정할 메시지의 Firestore ID
      * @param newMessage 새 메시지 내용
      */
-    override suspend fun updateMessage(channelId: String, chatId: Int, newMessage: String) {
-        chatMessageDao.updateMessage(channelId, chatId, newMessage, true)
+    override suspend fun updateMessageContent(chatId: String, newMessage: String) {
+        chatMessageDao.updateMessageContentByChatId(chatId, newMessage, true)
     }
 
     /**
-     * 메시지를 삭제합니다.
-     * 
-     * @param channelId 채팅 채널 ID
-     * @param chatId 삭제할 메시지 ID
+     * 메시지를 삭제합니다. (Firestore ID chatId 기준)
+     *
+     * @param chatId 삭제할 메시지의 Firestore ID
      */
-    override suspend fun deleteMessage(channelId: String, chatId: Int) {
-        chatMessageDao.deleteMessageByChatId(channelId, chatId)
+    override suspend fun deleteMessageByChatId(chatId: String) {
+        chatMessageDao.deleteMessageByChatId(chatId)
     }
 
     /**

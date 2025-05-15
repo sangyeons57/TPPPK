@@ -85,7 +85,7 @@ interface ProjectStructureDao {
      * @param projectId 프로젝트 ID
      * @return 채널 엔티티 목록
      */
-    @Query("SELECT * FROM channels WHERE projectId = :projectId ORDER BY `order`")
+    @Query("SELECT * FROM channels WHERE projectId = :projectId ORDER BY `channelOrder`")
     suspend fun getChannelsByProjectId(projectId: String): List<ChannelEntity>
 
     /**
@@ -93,7 +93,7 @@ interface ProjectStructureDao {
      * @param categoryId 카테고리 ID
      * @return 채널 엔티티 목록
      */
-    @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY `order`")
+    @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY `channelOrder`")
     suspend fun getChannelsByCategoryId(categoryId: String): List<ChannelEntity>
 
     /**
@@ -101,7 +101,7 @@ interface ProjectStructureDao {
      * @param projectId 프로젝트 ID
      * @return 채널 엔티티 목록 Flow
      */
-    @Query("SELECT * FROM channels WHERE projectId = :projectId ORDER BY `order`")
+    @Query("SELECT * FROM channels WHERE projectId = :projectId ORDER BY `channelOrder`")
     fun observeChannelsByProjectId(projectId: String): Flow<List<ChannelEntity>>
 
     /**
@@ -109,7 +109,7 @@ interface ProjectStructureDao {
      * @param categoryId 카테고리 ID
      * @return 채널 엔티티 목록 Flow
      */
-    @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY `order`")
+    @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY `channelOrder`")
     fun observeChannelsByCategoryId(categoryId: String): Flow<List<ChannelEntity>>
 
     /**

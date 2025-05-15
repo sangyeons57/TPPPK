@@ -3,6 +3,7 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.*
 import com.example.domain.model.Schedule
 import com.example.domain.usecase.schedule.DeleteScheduleUseCase
@@ -14,17 +15,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import com.example.core_navigation.destination.AppRoutes
-
-// --- 데이터 모델 ---
-data class ScheduleItem24Hour(
-    val id: String,
-    val title: String,
-    val startTime: LocalTime,
-    val endTime: LocalTime,
-    val color: ULong, // 기본 ARGB 색상 (ULong으로 변경)
-    val startColorAlpha: Float = 1.0f, // 시작 시간 색상 알파값
-    val endColorAlpha: Float = 1.0f // 종료 시간 색상 알파값
-)
+import com.example.domain.model.ScheduleItem24Hour
+import java.time.Instant
 
 // --- UI 상태 ---
 sealed interface Calendar24HourUiState {
@@ -99,15 +91,15 @@ class Calendar24HourViewModel @Inject constructor(
                     
                     // 시간 기반 그라데이션 효과를 위한 알파값 계산
                     val (startAlpha, endAlpha) = colorManager.calculateTimeBasedAlpha(
-                        schedule.startTime.toLocalTime(),
-                        schedule.endTime.toLocalTime()
+                        schedule.startTime,
+                        schedule.endTime
                     )
                     
                     ScheduleItem24Hour(
                         id = schedule.id,
                         title = schedule.title,
-                        startTime = schedule.startTime.toLocalTime(),
-                        endTime = schedule.endTime.toLocalTime(),
+                        startTime = schedule.startTime,
+                        endTime = schedule.endTime,
                         color = color,
                         startColorAlpha = startAlpha,
                         endColorAlpha = endAlpha
@@ -307,7 +299,7 @@ class ScheduleColorManager {
     /**
      * 시간대에 따른 알파값 계산
      * 
-     * @param time 시간
+     * @param time 시간 (LocalTime)
      * @return 해당 시간에 적용할 알파값 (0.6f ~ 1.0f)
      */
     fun getAlphaForTime(time: LocalTime): Float {
@@ -345,20 +337,21 @@ class ScheduleColorManager {
     }
     
     /**
-     * 일정 시작 및 종료 시간에 따른 알파값 쌍 계산
+     * 일정 시작 및 종료 시간에 따른 알파값 쌍 계산 (Instant 버전)
      * 
-     * @param startTime 일정 시작 시간
-     * @param endTime 일정 종료 시간
+     * @param startInstant 일정 시작 시간 (Instant)
+     * @param endInstant 일정 종료 시간 (Instant)
      * @return 시작 및 종료 시간에 대한 알파값 쌍 (그라데이션 효과가 비활성화되면 둘 다 1.0f)
      */
-    fun calculateTimeBasedAlpha(startTime: LocalTime, endTime: LocalTime): Pair<Float, Float> {
+    fun calculateTimeBasedAlpha(startInstant: Instant, endInstant: Instant): Pair<Float, Float> {
         if (!useGradientEffect) {
             return Pair(1.0f, 1.0f)
         }
         
-        val startAlpha = getAlphaForTime(startTime)
-        val endAlpha = getAlphaForTime(endTime)
-        
+        // Instant를 LocalTime으로 변환
+        val startAlpha = getAlphaForTime(DateTimeUtil.toLocalTime(startInstant) ?: LocalTime.NOON)
+        val endAlpha = getAlphaForTime( DateTimeUtil.toLocalTime(endInstant) ?: LocalTime.NOON )
+
         return Pair(startAlpha, endAlpha)
     }
     

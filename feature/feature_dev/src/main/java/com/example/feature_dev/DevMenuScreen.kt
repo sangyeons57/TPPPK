@@ -96,7 +96,9 @@ fun DevMenuScreen(
             DevMenuButton(text = "비밀번호 변경 (ChangePassword)") { navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Settings.CHANGE_MY_PASSWORD)) }
 
             Text("--- 채팅 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "채팅 (Chat - 임시 ID)") { navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.channel("temp_channel_123"))) }
+            DevMenuButton(text = "채팅 (DM - 임시 ID: temp_dm_channel_123)") { navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(channelId = "temp_dm_channel_123"))) }
+            DevMenuButton(text = "채팅 (프로젝트 직속 - 임시 IDs)") { navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(channelId = "dev_direct_channel_id"))) }
+            DevMenuButton(text = "채팅 (프로젝트 카테고리 - 임시 IDs)") { navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(channelId = "dev_category_channel_id"))) }
 
             Text("--- 캘린더/스케줄 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
             DevMenuButton(text = "24시간 캘린더 (Calendar24Hour - 오늘)") {

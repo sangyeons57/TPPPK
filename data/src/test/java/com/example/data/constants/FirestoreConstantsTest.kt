@@ -20,20 +20,21 @@ class FirestoreConstantsTest {
         assertEquals("categories", FirestoreConstants.Collections.CATEGORIES)
         assertEquals("channels", FirestoreConstants.Collections.CHANNELS)
         assertEquals("messages", FirestoreConstants.Collections.MESSAGES)
-        assertEquals("dms", FirestoreConstants.Collections.DMS)
         assertEquals("invites", FirestoreConstants.Collections.INVITES)
         assertEquals("schedules", FirestoreConstants.Collections.SCHEDULES)
         assertEquals("friends", FirestoreConstants.Collections.FRIENDS)
-        assertEquals("chatChannels", FirestoreConstants.Collections.CHAT_CHANNELS)
     }
 
     @Test
     fun `user fields are correctly defined`() {
         // 사용자 필드 정의 검증
-        assertEquals("nickname", FirestoreConstants.UserFields.NICKNAME)
+        assertEquals("id", FirestoreConstants.UserFields.ID)
         assertEquals("email", FirestoreConstants.UserFields.EMAIL)
+        assertEquals("displayName", FirestoreConstants.UserFields.DISPLAY_NAME)
         assertEquals("profileImageUrl", FirestoreConstants.UserFields.PROFILE_IMAGE_URL)
         assertEquals("participatingProjectIds", FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS)
+        assertEquals("createdAt", FirestoreConstants.UserFields.CREATED_AT)
+        assertEquals("lastActiveAt", FirestoreConstants.UserFields.LAST_ACTIVE_AT)
         assertEquals("activeDmIds", FirestoreConstants.UserFields.ACTIVE_DM_IDS)
     }
 
@@ -52,9 +53,9 @@ class FirestoreConstantsTest {
         // 메시지 필드 정의 검증
         assertEquals("senderId", FirestoreConstants.MessageFields.SENDER_ID)
         assertEquals("content", FirestoreConstants.MessageFields.CONTENT)
-        assertEquals("sentAt", FirestoreConstants.MessageFields.TIMESTAMP)
+        assertEquals("sentAt", FirestoreConstants.MessageFields.SENT_AT)
         assertEquals("chatId", FirestoreConstants.MessageFields.CHAT_ID)
-        assertEquals("isModified", FirestoreConstants.MessageFields.IS_MODIFIED)
+        assertEquals("isModified", FirestoreConstants.MessageFields.IS_EDITED)
     }
 
     @Test
@@ -70,7 +71,7 @@ class FirestoreConstantsTest {
     fun `channel fields are correctly defined`() {
         // 채널 필드 정의 검증
         assertEquals("name", FirestoreConstants.ChannelFields.NAME)
-        assertEquals("type", FirestoreConstants.ChannelFields.TYPE)
+        assertEquals("type", FirestoreConstants.ChannelFields.CHANNEL_TYPE)
         assertEquals("order", FirestoreConstants.ChannelFields.ORDER)
         assertEquals("createdAt", FirestoreConstants.ChannelFields.CREATED_AT)
         assertEquals("createdBy", FirestoreConstants.ChannelFields.CREATED_BY)

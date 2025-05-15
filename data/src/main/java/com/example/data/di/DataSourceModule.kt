@@ -1,7 +1,5 @@
 package com.example.data.di
 
-import com.example.data.datasource.local.dm.DmLocalDataSource
-import com.example.data.datasource.local.dm.DmLocalDataSourceImpl
 import com.example.data.datasource.local.friend.FriendLocalDataSource
 import com.example.data.datasource.local.friend.FriendLocalDataSourceImpl
 import com.example.data.datasource.local.invite.InviteLocalDataSource
@@ -12,10 +10,6 @@ import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSou
 import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSourceImpl
 import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSource
 import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSourceImpl
-import com.example.data.datasource.remote.chat.ChatRemoteDataSource
-import com.example.data.datasource.remote.chat.ChatRemoteDataSourceImpl
-import com.example.data.datasource.remote.dm.DmRemoteDataSource
-import com.example.data.datasource.remote.dm.DmRemoteDataSourceImpl
 import com.example.data.datasource.remote.friend.FriendRemoteDataSource
 import com.example.data.datasource.remote.friend.FriendRemoteDataSourceImpl
 import com.example.data.datasource.remote.invite.InviteRemoteDataSource
@@ -28,6 +22,10 @@ import com.example.data.datasource.remote.schedule.ScheduleRemoteDataSource
 import com.example.data.datasource.remote.schedule.ScheduleRemoteDataSourceImpl
 import com.example.data.datasource.remote.project.ProjectRemoteDataSource
 import com.example.data.datasource.remote.project.ProjectRemoteDataSourceImpl
+import com.example.data.datasource.remote.channel.ChannelRemoteDataSource
+import com.example.data.datasource.remote.channel.ChannelRemoteDataSourceImpl
+import com.example.data.datasource.remote.message.MessageRemoteDataSource
+import com.example.data.datasource.remote.message.MessageRemoteDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -46,7 +44,7 @@ abstract class DataSourceModule {
      * ScheduleRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
      */
     @Binds
-    @Singleton // Impl이 Singleton이므로 Binds도 Singleton 스코프 지정 가능
+    @Singleton
     abstract fun bindScheduleRemoteDataSource(
         scheduleRemoteDataSourceImpl: ScheduleRemoteDataSourceImpl
     ): ScheduleRemoteDataSource
@@ -60,46 +58,6 @@ abstract class DataSourceModule {
     abstract fun bindProjectRoleRemoteDataSource(
         projectRoleRemoteDataSourceImpl: ProjectRoleRemoteDataSourceImpl
     ): ProjectRoleRemoteDataSource
-
-    /**
-     * ProjectRoleLocalDataSource 인터페이스 요청 시
-     * ProjectRoleLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindProjectRoleLocalDataSource(
-        projectRoleLocalDataSourceImpl: ProjectRoleLocalDataSourceImpl
-    ): ProjectRoleLocalDataSource
-    
-    /**
-     * ChatRemoteDataSource 인터페이스 요청 시
-     * ChatRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindChatRemoteDataSource(
-        chatRemoteDataSourceImpl: ChatRemoteDataSourceImpl
-    ): ChatRemoteDataSource
-
-    /**
-     * DmRemoteDataSource 인터페이스 요청 시
-     * DmRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindDmRemoteDataSource(
-        dmRemoteDataSourceImpl: DmRemoteDataSourceImpl
-    ): DmRemoteDataSource
-
-    /**
-     * DmLocalDataSource 인터페이스 요청 시
-     * DmLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindDmLocalDataSource(
-        dmLocalDataSourceImpl: DmLocalDataSourceImpl
-    ): DmLocalDataSource
     
     /**
      * InviteRemoteDataSource 인터페이스 요청 시
@@ -110,16 +68,6 @@ abstract class DataSourceModule {
     abstract fun bindInviteRemoteDataSource(
         inviteRemoteDataSourceImpl: InviteRemoteDataSourceImpl
     ): InviteRemoteDataSource
-    
-    /**
-     * InviteLocalDataSource 인터페이스 요청 시
-     * InviteLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindInviteLocalDataSource(
-        inviteLocalDataSourceImpl: InviteLocalDataSourceImpl
-    ): InviteLocalDataSource
 
     /**
      * FriendRemoteDataSource 인터페이스 요청 시
@@ -132,16 +80,6 @@ abstract class DataSourceModule {
     ): FriendRemoteDataSource
     
     /**
-     * FriendLocalDataSource 인터페이스 요청 시
-     * FriendLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindFriendLocalDataSource(
-        friendLocalDataSourceImpl: FriendLocalDataSourceImpl
-    ): FriendLocalDataSource
-    
-    /**
      * ProjectMemberRemoteDataSource 인터페이스 요청 시
      * ProjectMemberRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
      */
@@ -151,15 +89,14 @@ abstract class DataSourceModule {
         projectMemberRemoteDataSourceImpl: ProjectMemberRemoteDataSourceImpl
     ): ProjectMemberRemoteDataSource
     
-    /**
-     * ProjectMemberLocalDataSource 인터페이스 요청 시
-     * ProjectMemberLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindProjectMemberLocalDataSource(
-        projectMemberLocalDataSourceImpl: ProjectMemberLocalDataSourceImpl
-    ): ProjectMemberLocalDataSource
+    // /**
+    //  * ProjectMemberLocalDataSource 인터페이스 요청 시
+    //  * ProjectMemberLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+    //  */
+    // @Binds
+    // abstract fun bindProjectMemberLocalDataSource(
+    //     projectMemberLocalDataSourceImpl: ProjectMemberLocalDataSourceImpl
+    // ): ProjectMemberLocalDataSource
 
     /**
      * ProjectRemoteDataSource 인터페이스 요청 시
@@ -172,14 +109,22 @@ abstract class DataSourceModule {
     ): ProjectRemoteDataSource
 
     /**
-     * ProjectLocalDataSource 인터페이스 요청 시
-     * ProjectLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+     * ChannelRemoteDataSource 인터페이스 요청 시
+     * ChannelRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
      */
     @Binds
     @Singleton
-    abstract fun bindProjectLocalDataSource(
-        projectLocalDataSourceImpl: ProjectLocalDataSourceImpl
-    ): ProjectLocalDataSource
+    abstract fun bindChannelRemoteDataSource(
+        channelRemoteDataSourceImpl: ChannelRemoteDataSourceImpl
+    ): ChannelRemoteDataSource
+
+    /**
+     * MessageRemoteDataSource 인터페이스 요청 시
+     * MessageRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindMessageRemoteDataSource(messageRemoteDataSourceImpl: MessageRemoteDataSourceImpl): MessageRemoteDataSource
 
     // 다른 데이터 소스 인터페이스/구현체 쌍이 있다면 여기에 추가
 } 

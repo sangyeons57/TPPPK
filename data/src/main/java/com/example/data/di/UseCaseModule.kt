@@ -19,7 +19,7 @@ abstract class UseCaseModule {
 
     @Binds
     @Singleton
-    abstract fun bindGetUserProfileUseCase(impl: GetUserProfileUseCaseImpl): GetUserProfileUseCase
+    abstract fun bindGetUserUseCase(impl: GetUserUseCaseImpl): GetUserUseCase
 
     @Binds
     @Singleton
@@ -31,7 +31,7 @@ abstract class UseCaseModule {
 
     @Binds
     @Singleton
-    abstract fun bindUpdateUserProfileImageUseCase(impl: UpdateUserProfileImageUseCaseImpl): UpdateUserProfileImageUseCase
+    abstract fun bindUpdateUserImageUseCase(impl: UpdateUserImageUseCaseImpl): UpdateUserImageUseCase
 
     // --- Project UseCases ---
     @Binds

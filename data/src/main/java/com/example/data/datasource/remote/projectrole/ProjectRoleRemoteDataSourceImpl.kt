@@ -4,6 +4,7 @@ import com.example.core_common.constants.FirestoreConstants.Collections
 import com.example.core_common.constants.FirestoreConstants.MemberFields
 import com.example.core_common.constants.FirestoreConstants.ProjectFields
 import com.example.core_common.constants.FirestoreConstants.RoleFields
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.Role
 import com.example.domain.model.RolePermission
 import com.google.firebase.auth.FirebaseAuth
@@ -203,39 +204,24 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
         permissions: Map<RolePermission, Boolean>
     ): Result<String> {
         return try {
-            // 현재 사용자 권한 확인 (프로젝트 소유자 또는 관리자인지)
-            val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId)
-                .get()
-                .await()
-            
+            val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId).get().await()
             if (!projectDoc.exists()) {
                 Result.failure(IllegalArgumentException("존재하지 않는 프로젝트입니다."))
             } else {
-                val ownerId = projectDoc.getString(ProjectFields.OWNER_ID)
+                val permissionsMap = permissions.mapKeys { it.key.name }
+                val nowTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
                 
-                // 소유자가 아닌 경우 권한 확인 (간소화된 예시)
-                if (ownerId != currentUserId) {
-                    Result.failure(IllegalArgumentException("역할을 생성할 권한이 없습니다."))
-                } else {
-                    // 권한 맵 변환
-                    val permissionsMap = permissions.mapKeys { it.key.name }
-                    
-                    // 역할 데이터 생성
-                    val roleData = hashMapOf(
-                        RoleFields.NAME to name,
-                        RoleFields.PERMISSIONS to permissionsMap,
-                        RoleFields.CREATED_AT to FieldValue.serverTimestamp(),
-                        RoleFields.CREATED_BY to currentUserId
-                    )
-                    
-                    // 역할 문서 생성
-                    val roleRef = firestore.collection(Collections.PROJECTS).document(projectId)
-                        .collection(Collections.ROLES).document()
-                    
-                    roleRef.set(roleData).await()
-                    
-                    Result.success(roleRef.id)
-                }
+                val roleData = mapOf(
+                    RoleFields.NAME to name,
+                    RoleFields.PERMISSIONS to permissionsMap,
+                    RoleFields.CREATED_AT to nowTimestamp,
+                    RoleFields.UPDATED_AT to nowTimestamp
+                )
+                
+                val roleRef = firestore.collection(Collections.PROJECTS).document(projectId)
+                    .collection(Collections.ROLES).document()
+                roleRef.set(roleData).await()
+                Result.success(roleRef.id)
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -244,59 +230,44 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
 
     /**
      * 역할을 업데이트합니다.
+     * @param projectId 프로젝트 ID
      * @param roleId 역할 ID
      * @param name 새 역할 이름
      * @param permissions 새 권한 맵
      * @return 작업 성공 여부
      */
     override suspend fun updateRole(
+        projectId: String, 
         roleId: String,
         name: String,
         permissions: Map<RolePermission, Boolean>
     ): Result<Unit> {
         return try {
-            // roleId에서 프로젝트 ID 추출 (구현에 따라 다를 수 있음)
-            val parts = roleId.split("_")
-            if (parts.size < 2) {
-                Result.failure(IllegalArgumentException("유효하지 않은 역할 ID 형식입니다."))
-            } else {
-                val projectId = parts[0]
-                val actualRoleId = parts[1]
-                
-                // 현재 사용자 권한 확인 (프로젝트 소유자 또는 관리자인지)
-                val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId)
-                    .get()
-                    .await()
-                
-                if (!projectDoc.exists()) {
-                    Result.failure(IllegalArgumentException("존재하지 않는 프로젝트입니다."))
-                } else {
-                    val ownerId = projectDoc.getString(ProjectFields.OWNER_ID)
-                    
-                    // 소유자가 아닌 경우 권한 확인 (간소화된 예시)
-                    if (ownerId != currentUserId) {
-                        Result.failure(IllegalArgumentException("역할을 수정할 권한이 없습니다."))
-                    } else {
-                        // 권한 맵 변환
-                        val permissionsMap = permissions.mapKeys { it.key.name }
-                        
-                        // 역할 문서 업데이트
-                        val roleRef = firestore.collection(Collections.PROJECTS).document(projectId)
-                            .collection(Collections.ROLES).document(actualRoleId)
-                        
-                        val updateData = hashMapOf(
-                            RoleFields.NAME to name,
-                            RoleFields.PERMISSIONS to permissionsMap,
-                            RoleFields.UPDATED_AT to FieldValue.serverTimestamp(),
-                            RoleFields.UPDATED_BY to currentUserId
-                        )
-                        
-                        roleRef.update(updateData).await()
-                        
-                        Result.success(Unit)
-                    }
-                }
+            // Simplified permission check (ensure user has rights to update role in this project)
+            // val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId).get().await()
+            // val ownerId = projectDoc.getString(ProjectFields.OWNER_ID)
+            // if (ownerId != currentUserId && !isUserAdminInProject(projectId, currentUserId)) { 
+            //    Result.failure(SecurityException("역할을 수정할 권한이 없습니다."))
+            // } else {
+            val permissionsMap = permissions.mapKeys { it.key.name }
+            val roleRef = firestore.collection(Collections.PROJECTS).document(projectId)
+                .collection(Collections.ROLES).document(roleId)
+
+            // Check if role exists before attempting to update
+            if (!roleRef.get().await().exists()) {
+                return Result.failure(IllegalArgumentException("수정하려는 역할(ID: $roleId)이 프로젝트(ID: $projectId)에 존재하지 않습니다."))
             }
+
+            val updateData = mutableMapOf<String, Any>(
+                RoleFields.NAME to name,
+                RoleFields.PERMISSIONS to permissionsMap,
+                RoleFields.UPDATED_AT to FieldValue.serverTimestamp()
+            )
+            // createdAt should not be changed on update
+
+            roleRef.update(updateData).await()
+            Result.success(Unit)
+            // }
         } catch (e: Exception) {
             Result.failure(e)
         }

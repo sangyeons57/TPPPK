@@ -26,13 +26,17 @@ import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.Channel
 import com.example.domain.model.ChannelType
 import com.example.domain.model.ProjectCategory
-import com.example.domain.model.ProjectChannel
 import com.example.feature_project.setting.viewmodel.ProjectSettingEvent
 import com.example.feature_project.setting.viewmodel.ProjectSettingUiState
 import com.example.feature_project.setting.viewmodel.ProjectSettingViewModel
 import kotlinx.coroutines.flow.collectLatest
+import com.example.core_common.constants.FirestoreConstants
+import com.example.domain.model.ChannelMode
+import com.example.domain.model.channel.ProjectSpecificData
+import java.time.Instant
 
 /**
  * ProjectSettingScreen: 프로젝트 설정 화면 (Stateful)
@@ -50,7 +54,7 @@ fun ProjectSettingScreen(
 
     // 다이얼로그 상태
     var showDeleteCategoryDialog by remember { mutableStateOf<ProjectCategory?>(null) }
-    var showDeleteChannelDialog by remember { mutableStateOf<ProjectChannel?>(null) }
+    var showDeleteChannelDialog by remember { mutableStateOf<Channel?>(null) }
     var showRenameProjectDialog by remember { mutableStateOf(false) } // 프로젝트 이름 변경 다이얼로그
     var showDeleteProjectDialog by remember { mutableStateOf(false) } // 프로젝트 삭제 확인 다이얼로그
 
@@ -196,7 +200,7 @@ fun ProjectSettingContent(
     onCategoryEditClick: (String) -> Unit, // categoryId
     onCategoryDeleteClick: (ProjectCategory) -> Unit, // category 객체 전달
     onChannelEditClick: (String, String) -> Unit, // categoryId, channelId
-    onChannelDeleteClick: (ProjectChannel) -> Unit, // channel 객체 전달
+    onChannelDeleteClick: (Channel) -> Unit, // channel 객체 전달
     onAddCategoryClick: () -> Unit,
     onAddChannelClick: (String) -> Unit, // categoryId
     onManageMembersClick: () -> Unit,
@@ -363,7 +367,7 @@ fun CategoryHeader(
 // 채널 아이템
 @Composable
 fun ChannelItem(
-    channel: ProjectChannel,
+    channel: Channel,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -376,10 +380,10 @@ fun ChannelItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 아이콘 (텍스트/음성 구분)
-        val icon = if (channel.type == ChannelType.TEXT) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp // 예시 아이콘
+        val icon = if (channel.channelMode == ChannelMode.TEXT) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp
         Icon(
             imageVector = icon,
-            contentDescription = "${channel.type} 채널",
+            contentDescription = "${channel.channelMode} 채널",
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.secondary
         )
@@ -458,16 +462,20 @@ private fun ProjectSettingContentPreview() {
         projectName = "샘플 프로젝트",
         categories = listOf(
             ProjectCategory(
-                "c1", "일반", listOf(
-                    ProjectChannel("ch1", "잡담", ChannelType.TEXT),
-                    ProjectChannel("ch2", "공지사항", ChannelType.TEXT)
+                id = "c1",
+                name = "일반",
+                channels = listOf(
+                    Channel(id = "ch1", name = "잡담", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT)),
+                    Channel(id = "ch2", name = "공지사항", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT))
                 )
             ),
             ProjectCategory(
-                "c2", "개발", listOf(
-                    ProjectChannel("ch3", "프론트엔드", ChannelType.TEXT),
-                    ProjectChannel("ch4", "백엔드", ChannelType.TEXT),
-                    ProjectChannel("ch5", "개발 회의", ChannelType.VOICE)
+                id = "c2",
+                name = "개발",
+                channels = listOf(
+                    Channel(id = "ch3", name = "프론트엔드", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
+                    Channel(id = "ch4", name = "백엔드", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
+                    Channel(id = "ch5", name = "개발 회의", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.VOICE))
                 )
             )
         )

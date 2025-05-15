@@ -270,18 +270,13 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
     
     /**
      * 채팅 화면으로 이동
-     * AppRoutes의 chat channel 경로를 사용합니다.
+     * AppRoutes의 chat 경로를 사용합니다.
      *
      * @param channelId 이동할 채널의 ID
      * @param messageId 스크롤할 메시지 ID (옵션)
      */
     override fun navigateToChat(channelId: String, messageId: String?) {
-        val route = if (messageId != null) {
-            // messageId가 있는 경우 쿼리 파라미터로 추가
-            AppRoutes.Chat.channel(channelId, messageId)
-        } else {
-            AppRoutes.Chat.channel(channelId)
-        }
+        val route = AppRoutes.Chat.screen(channelId, messageId)
         navigate(NavigationCommand.NavigateToRoute(route))
     }
 

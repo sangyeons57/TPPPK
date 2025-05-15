@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,11 +19,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.domain.model.ChannelMode
 import com.example.domain.model.ChannelType
 
 /**
@@ -186,14 +184,17 @@ fun ChannelItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 타입에 따른 아이콘
+
         Icon(
-            imageVector = when(channel.type) {
-                ChannelType.TEXT -> Icons.Default.Tag
-                ChannelType.VOICE -> Icons.Default.Mic
+            imageVector = when(channel.mode) {
+                ChannelMode.TEXT -> Icons.Default.Tag
+                ChannelMode.VOICE -> Icons.Default.Mic
+                ChannelMode.UNKNOWN -> TODO()
             },
-            contentDescription = when(channel.type) {
-                ChannelType.TEXT -> "텍스트 채널"
-                ChannelType.VOICE -> "음성 채널"
+            contentDescription = when(channel.mode) {
+                ChannelMode.TEXT -> "텍스트 채널"
+                ChannelMode.VOICE -> "음성 채널"
+                ChannelMode.UNKNOWN -> TODO()
             },
             modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)

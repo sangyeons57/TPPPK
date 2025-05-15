@@ -7,5 +7,5 @@ package com.example.domain.model
 data class ProjectCategory(
     val id: String,
     val name: String,
-    val channels: List<ProjectChannel> = emptyList()
+    val channels: List<Channel> = emptyList()
 ) 

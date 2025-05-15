@@ -58,6 +58,7 @@ interface ProjectRoleRemoteDataSource {
      * @return 작업 성공 여부
      */
     suspend fun updateRole(
+        projectId: String,
         roleId: String,
         name: String,
         permissions: Map<RolePermission, Boolean>

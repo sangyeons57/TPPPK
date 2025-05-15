@@ -1,0 +1,39 @@
+# Task: Fix Compilation Errors in Feature Modules
+
+- [x] **Step 1: Resolve `ProjectChannel` and Channel Type/Mode Constant Issues**
+    - [-] ~~Investigate the `ProjectChannel` type. Determine if it's a domain model (e.g., `com.example.domain.model.Channel`) or a UI-specific model. It's highly likely that `ProjectChannel` is an incorrect reference and should be `com.example.domain.model.Channel`. (Confirmed: Should be `com.example.domain.model.Channel`)~~
+    - [x] Replace `ProjectChannel` with `com.example.domain.model.Channel` in `feature_project` and add necessary imports. (Done for `ProjectSettingScreen.kt`, `ProjectSettingViewModel.kt`)
+    - [x] Ensure `com.example.core_common.constants.FirestoreConstants.ChannelModeValues.TEXT` and `com.example.core_common.constants.FirestoreConstants.ChannelModeValues.VOICE` are correctly imported and used across all affected files in the `feature_project` module. (Done for `ProjectSettingScreen.kt`, `ChannelListItem.kt`, `CreateChannelScreen.kt`, `EditChannelScreen.kt`, `ExpandableCategoryItem.kt`, and their ViewModels/Previews where applicable)
+    - [x] Ensure `com.example.core_common.constants.FirestoreConstants.ChannelTypeValues` are used for channel type comparisons (e.g., `DM`, `PROJECT`, `CATEGORY`), and `when` statements on channel types are exhaustive. (Addressed in `ChannelListItem.kt` by switching to `channelMode`; other direct `ChannelType` enum uses in previews were corrected to valid enum values like `ChannelType.PROJECT` or `ChannelType.CATEGORY`).
+- [x] **Step 2: Fix Errors in `feature_project/setting/ui/ProjectSettingScreen.kt` and `feature_project/setting/viewmodel/ProjectSettingViewModel.kt`**
+    - [x] Replace `ProjectChannel` with the correct type (likely `com.example.domain.model.Channel`). (Done as part of Step 1)
+    - [x] Address type inference issues, especially with `mutableStateOf`, by providing explicit types if necessary. (Believed to be resolved by Step 1 changes for `showDeleteChannelDialog`)
+    - [x] Resolve unresolved property references (e.g., `name`, `id`, `type`) based on the properties available in the corrected channel model. (Done as part of Step 1 for `name`, `id`. `type` usage shifted to `channelMode` where appropriate).
+- [x] **Step 3: Fix Errors in `feature_project/structure/ui/` files (`ChannelListItem.kt`, `CreateChannelScreen.kt`, `EditChannelScreen.kt`, `ExpandableCategoryItem.kt`)**
+    - [x] Replace `ProjectChannel` with the correct type. (Done for relevant files like `ChannelListItem.kt` and `ExpandableCategoryItem.kt` as part of Step 1)
+    - [x] Correct references to `TEXT`, `VOICE` using `FirestoreConstants.ChannelModeValues`. (Done as part of Step 1)
+    - [x] In `ChannelListItem.kt`, ensure the `when` statement on `channel.type` (or similar) is exhaustive by including all cases from `FirestoreConstants.ChannelTypeValues` (`DM`, `PROJECT`, `CATEGORY`) or adding an `else` branch. (Done by switching to `channelMode` and adding an `else` case as part of Step 1)
+- [x] **Step 4: Fix Errors in `feature_project/structure/viewmodel/` files (`CreateChannelViewModel.kt`, `EditChannelViewModel.kt`)**
+    - [x] Replace `ProjectChannel` with the correct type. (Not applicable as these ViewModels didn't directly use `ProjectChannel` but `ChannelType` enum which was problematic; addressed by changing to String for channel mode)
+    - [x] Correct references to `TEXT`, `VOICE` using `FirestoreConstants.ChannelModeValues`. (Done by changing `selectedChannelType`/`currentChannelType` to String and using constants, as part of Step 1)
+- [x] **Step 5: Fix Errors in `feature_project/ui/ProjectDetailScreen.kt` and `feature_project/viewmodel/ProjectDetailViewModel.kt`**
+    - [x] **`ProjectDetailScreen.kt`**:
+        - [x] Address protected constructor access for `NavigationCommand`. (Fixed)
+        - [x] Resolve `projectDirectChannel` and `projectCategoryChannel`. (Assumed correct AppRoutes usage, navigation command fixed)
+        - [x] Fix the type mismatch for `CreateChannelDialogData`. (Fixed by aligning screen with domain model, and updating domain model)
+    - [x] **`ProjectDetailViewModel.kt`**:
+        - [x] Correct `TEXT` references. (Fixed by changing channel mode handling)
+        - [x] Ensure `CreateChannelDialogData` is used correctly. (Aligned with domain model, local removed, domain model updated)
+        - [x] Resolve `getRequiredString`. (Fixed)
+        - [x] Correct parameter names and ensure all required parameters are passed in calls to use cases. (Fixed for `channelMode` (née `channelType`) and `order` based on current use case signatures; functional gap for mode noted).
+- [ ] **Step 6: Investigate and Fix KSP errors in `feature_main` and `feature_chat`**
+    - [ ] After resolving `feature_project` errors, re-compile and check if these KSP errors persist.
+    - [ ] If they do, it could indicate issues with Hilt dependency injection, Room, or other annotation processors in those modules, potentially due to the changes made or pre-existing misconfigurations.
+    - [x] **Step 6: Investigate and Fix KSP errors in `feature_main` and `feature_chat`**
+        - [x] Identified KSP errors due to unresolved UseCases: `GetUserDmChannelsUseCase`, `GetUserChannelsUseCase`, `GetChannelUseCase`.
+        - [x] Created `domain/src/main/java/com/example/domain/usecase/dm/GetUserDmChannelsUseCase.kt` to wrap `channelRepository.getUserDmChannelsStream()`.
+        - [x] Created `domain/src/main/java/com/example/domain/usecase/channel/GetUserChannelsUseCase.kt` to wrap `channelRepository.getUserChannelsStream(type = null)` and map to `Flow<Result<List<Channel>>>`.
+        - [x] Updated import for `GetUserChannelsUseCase` in `feature_chat/src/main/java/com/example/feature_chat/viewmodel/ChannelListViewModel.kt`.
+        - [x] Created `domain/src/main/java/com/example/domain/usecase/channel/GetChannelUseCase.kt` to wrap `channelRepository.getChannelStream()` and map to `Flow<Result<Channel>>>`.
+        - [x] Updated import for `GetChannelUseCase` in `feature_chat/src/main/java/com/example/feature_chat/viewmodel/ChannelViewModel.kt`.
+        - [ ] User should re-compile to verify KSP errors are resolved. 

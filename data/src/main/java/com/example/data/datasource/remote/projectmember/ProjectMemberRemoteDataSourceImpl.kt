@@ -5,6 +5,7 @@ import com.example.core_common.constants.FirestoreConstants.MemberFields
 import com.example.core_common.constants.FirestoreConstants.ProjectFields
 import com.example.core_common.constants.FirestoreConstants.RoleFields
 import com.example.core_common.constants.FirestoreConstants.UserFields
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.ProjectMember
 import com.example.domain.model.Role
 import com.google.firebase.auth.FirebaseAuth
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 
 /**
  * 프로젝트 멤버 관련 원격 데이터 소스 구현체
@@ -69,7 +71,7 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
             // 멤버 객체 생성 시 roleIds 직접 사용
             val member = ProjectMember(
                 userId = userId,
-                userName = userDoc.getString(UserFields.NICKNAME) ?: "사용자",
+                userName = userDoc.getString(UserFields.NAME) ?: "사용자",
                 profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
                 roleIds = roleIds // roleNames 대신 roleIds 사용
             )
@@ -128,7 +130,7 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                     // 멤버 객체 생성 시 roleIds 직접 사용
                     val member = ProjectMember(
                         userId = userId,
-                        userName = userDoc.getString(UserFields.NICKNAME) ?: "사용자",
+                        userName = userDoc.getString(UserFields.NAME) ?: "사용자",
                         profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
                         roleIds = roleIds // roleNames 대신 roleIds 사용
                     )
@@ -183,8 +185,8 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                 // 멤버 추가
                 val memberData = hashMapOf(
                     MemberFields.ROLE_IDS to roleIds,
-                    MemberFields.ADDED_AT to FieldValue.serverTimestamp(),
-                    MemberFields.ADDED_BY to currentUserId
+                    MemberFields.JOINED_AT to DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant()),
+                    MemberFields.CHANNEL_IDS to emptyList<String>() // 채널 접근 권한 목록 초기화
                 )
                 
                 // 멤버 문서 생성/업데이트
@@ -284,23 +286,174 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                 // TODO: 실제 구현에서는 사용자의 역할에 따른 권한 확인 로직 추가
                 Result.failure(IllegalArgumentException("멤버 역할을 변경할 권한이 없습니다."))
             } else {
-                // 역할 업데이트
-                val updateData = hashMapOf(
-                    MemberFields.ROLE_IDS to roleIds,
-                    MemberFields.UPDATED_AT to FieldValue.serverTimestamp(),
-                    MemberFields.UPDATED_BY to currentUserId
-                )
-                
                 // 멤버 문서 업데이트
                 firestore.collection(Collections.PROJECTS).document(projectId)
                     .collection(Collections.MEMBERS).document(userId)
-                    .update(updateData as Map<String, Any>)
+                    .update(MemberFields.ROLE_IDS, roleIds)
                     .await()
                 
                 Result.success(Unit)
             }
         }
     } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * 멤버에게 채널 접근 권한을 추가합니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @param channelId 채널 ID
+     * @return 작업 성공 여부
+     */
+    override suspend fun addChannelAccessToMember(
+        projectId: String, 
+        userId: String, 
+        channelId: String
+    ): Result<Unit> = try {
+        // 프로젝트 존재 여부 확인
+        val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId)
+            .get()
+            .await()
+            
+        if (!projectDoc.exists()) {
+            Result.failure(IllegalArgumentException("존재하지 않는 프로젝트입니다."))
+        } else {
+            // 멤버 문서 참조
+            val memberRef = firestore.collection(Collections.PROJECTS).document(projectId)
+                .collection(Collections.MEMBERS).document(userId)
+                
+            // 멤버 문서 확인
+            val memberDoc = memberRef.get().await()
+            
+            if (memberDoc.exists()) {
+                // 기존 멤버 문서의 채널 접근 권한에 추가
+                memberRef.update(MemberFields.CHANNEL_IDS, FieldValue.arrayUnion(channelId))
+                    .await()
+                    
+                Result.success(Unit)
+            } else {
+                // 멤버가 존재하지 않는 경우 오류 반환
+                Result.failure(IllegalArgumentException("프로젝트에 존재하지 않는 멤버입니다."))
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("ProjectMemberDataSource", "Error adding channel access to member", e)
+        Result.failure(e)
+    }
+    
+    /**
+     * 멤버의 채널 접근 권한을 제거합니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @param channelId 채널 ID
+     * @return 작업 성공 여부
+     */
+    override suspend fun removeChannelAccessFromMember(
+        projectId: String, 
+        userId: String, 
+        channelId: String
+    ): Result<Unit> = try {
+        // 프로젝트 존재 여부 확인
+        val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId)
+            .get()
+            .await()
+            
+        if (!projectDoc.exists()) {
+            Result.failure(IllegalArgumentException("존재하지 않는 프로젝트입니다."))
+        } else {
+            // 멤버 문서 참조
+            val memberRef = firestore.collection(Collections.PROJECTS).document(projectId)
+                .collection(Collections.MEMBERS).document(userId)
+                
+            // 멤버 문서 확인
+            val memberDoc = memberRef.get().await()
+            
+            if (memberDoc.exists()) {
+                // 기존 멤버 문서의 채널 접근 권한에서 제거
+                memberRef.update(MemberFields.CHANNEL_IDS, FieldValue.arrayRemove(channelId))
+                    .await()
+                    
+                Result.success(Unit)
+            } else {
+                // 멤버가 존재하지 않는 경우 오류 반환
+                Result.failure(IllegalArgumentException("프로젝트에 존재하지 않는 멤버입니다."))
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("ProjectMemberDataSource", "Error removing channel access from member", e)
+        Result.failure(e)
+    }
+    
+    /**
+     * 채널에 접근 가능한 모든 멤버 ID 목록을 가져옵니다.
+     * @param projectId 프로젝트 ID
+     * @param channelId 채널 ID
+     * @return 멤버 ID 목록
+     */
+    override suspend fun getMembersWithChannelAccess(
+        projectId: String, 
+        channelId: String
+    ): Result<List<String>> = try {
+        // 프로젝트 멤버 컬렉션 참조
+        val membersCollection = firestore.collection(Collections.PROJECTS).document(projectId)
+            .collection(Collections.MEMBERS)
+        
+        // 멤버 목록 가져오기
+        val membersSnapshot = membersCollection.get().await()
+        
+        // 특정 채널에 접근 가능한 멤버 ID 필터링
+        val memberIds = membersSnapshot.documents.filter { memberDoc ->
+            val channelIds = memberDoc.get(MemberFields.CHANNEL_IDS)?.let { data ->
+                if (data is List<*>) {
+                    data.mapNotNull { it as? String }
+                } else {
+                    emptyList()
+                }
+            } ?: emptyList()
+            
+            channelIds.contains(channelId)
+        }.map { it.id }
+        
+        Result.success(memberIds)
+    } catch (e: Exception) {
+        Log.e("ProjectMemberDataSource", "Error getting members with channel access", e)
+        Result.failure(e)
+    }
+    
+    /**
+     * 멤버가 접근 가능한 모든 채널 ID 목록을 가져옵니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @return 채널 ID 목록
+     */
+    override suspend fun getMemberChannelAccess(
+        projectId: String, 
+        userId: String
+    ): Result<List<String>> = try {
+        // 멤버 문서 참조
+        val memberDoc = firestore.collection(Collections.PROJECTS).document(projectId)
+            .collection(Collections.MEMBERS).document(userId)
+            .get()
+            .await()
+            
+        if (!memberDoc.exists()) {
+            // 멤버가 존재하지 않는 경우 빈 목록 반환
+            Result.success(emptyList())
+        } else {
+            // 멤버가 접근 가능한 채널 ID 목록 가져오기
+            val channelIds = memberDoc.get(MemberFields.CHANNEL_IDS)?.let { data ->
+                if (data is List<*>) {
+                    data.mapNotNull { it as? String }
+                } else {
+                    emptyList()
+                }
+            } ?: emptyList()
+            
+            Result.success(channelIds)
+        }
+    } catch (e: Exception) {
+        Log.e("ProjectMemberDataSource", "Error getting member channel access", e)
         Result.failure(e)
     }
 } 

@@ -21,11 +21,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.ChannelType
 import com.example.feature_project.structure.viewmodel.EditChannelEvent
 import com.example.feature_project.structure.viewmodel.EditChannelUiState
 import com.example.feature_project.structure.viewmodel.EditChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
+import com.example.domain.model.ChannelMode
 
 /**
  * EditChannelScreen: 프로젝트 내 채널 이름 및 유형 수정/삭제 화면 (Stateful)
@@ -137,7 +137,7 @@ fun EditChannelContent(
     modifier: Modifier = Modifier,
     uiState: EditChannelUiState,
     onChannelNameChange: (String) -> Unit,
-    onChannelTypeSelected: (ChannelType) -> Unit,
+    onChannelTypeSelected: (ChannelMode) -> Unit,
     onUpdateClick: () -> Unit
 ) {
     Column(
@@ -171,14 +171,14 @@ fun EditChannelContent(
                     .fillMaxWidth()
                     .height(56.dp)
                     .selectable(
-                        selected = (uiState.currentChannelType == ChannelType.TEXT),
-                        onClick = { onChannelTypeSelected(ChannelType.TEXT) },
+                        selected = (uiState.currentChannelMode == ChannelMode.TEXT),
+                        onClick = { onChannelTypeSelected(ChannelMode.TEXT) },
                         role = Role.RadioButton
                     )
                     .padding(horizontal = 16.dp)
             ) {
                 RadioButton(
-                    selected = (uiState.currentChannelType == ChannelType.TEXT),
+                    selected = (uiState.currentChannelMode == ChannelMode.TEXT),
                     onClick = null
                 )
                 Text(
@@ -193,14 +193,14 @@ fun EditChannelContent(
                     .fillMaxWidth()
                     .height(56.dp)
                     .selectable(
-                        selected = (uiState.currentChannelType == ChannelType.VOICE),
-                        onClick = { onChannelTypeSelected(ChannelType.VOICE) },
+                        selected = (uiState.currentChannelMode == ChannelMode.VOICE),
+                        onClick = { onChannelTypeSelected(ChannelMode.VOICE) },
                         role = Role.RadioButton
                     )
                     .padding(horizontal = 16.dp)
             ) {
                 RadioButton(
-                    selected = (uiState.currentChannelType == ChannelType.VOICE),
+                    selected = (uiState.currentChannelMode == ChannelMode.VOICE),
                     onClick = null
                 )
                 Text(
@@ -251,8 +251,8 @@ private fun EditChannelContentPreview() {
                 channelId = "1",
                 currentChannelName = "기존-채팅방",
                 originalChannelName = "기존-채팅방",
-                currentChannelType = ChannelType.TEXT,
-                originalChannelType = ChannelType.TEXT
+                currentChannelMode = ChannelMode.TEXT,
+                originalChannelMode = ChannelMode.TEXT
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
@@ -287,6 +287,22 @@ private fun EditChannelContentErrorPreview() {
                 channelId = "1",
                 currentChannelName = "",
                 error = "이름은 필수입니다."
+            ),
+            onChannelNameChange = {},
+            onChannelTypeSelected = {},
+            onUpdateClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Edit Channel Voice Selected")
+@Composable
+private fun EditChannelContentVoicePreview() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        EditChannelContent(
+            uiState = EditChannelUiState(
+                currentChannelName = "음성 채널 편집",
+                currentChannelMode = ChannelMode.VOICE
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},

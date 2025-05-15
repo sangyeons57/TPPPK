@@ -155,7 +155,7 @@ class LoginViewModel @Inject constructor(
 
             result.onSuccess { loggedInUser ->
                 // 로그인 성공
-                _eventFlow.emit(LoginEvent.LoginSuccess(loggedInUser!!.userId))
+                _eventFlow.emit(LoginEvent.LoginSuccess(loggedInUser!!.id))
                 // 성공 시 isLoading은 false로 바꿀 필요 없음 (화면 전환)
             }.onFailure { exception ->
                 // 로그인 실패

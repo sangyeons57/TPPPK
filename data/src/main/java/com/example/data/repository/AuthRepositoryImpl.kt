@@ -8,8 +8,6 @@ import com.example.domain.model.User
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.UserRepository
 import com.example.data.util.FirebaseAuthWrapper
-import com.example.data.util.FirestoreConstants as FC
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await // await() 사용 위해 임포트
 import javax.inject.Inject
 import com.example.data.datasource.remote.auth.AuthRemoteDataSource
@@ -125,7 +123,7 @@ class AuthRepositoryImpl @Inject constructor(
     // FirebaseUser를 Domain User 모델로 변환하는 확장 함수 (AuthRepositoryImpl 내부 또는 별도 파일)
     private fun FirebaseUser.toDomainUser(defaultName: String? = null): User {
         return User(
-            userId = this.uid,
+            id = this.uid,
             email = this.email ?: "",
             name = this.displayName ?: defaultName ?: "Unknown" // Firebase 프로필 이름 또는 가입 시 이름 사용
         )

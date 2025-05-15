@@ -1,77 +1,146 @@
 package com.example.data.model.mapper
 
+import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.local.ChannelEntity
 import com.example.data.model.remote.project.ChannelDto
 import com.example.domain.model.Channel
+import com.example.domain.model.ChannelMode
 import com.example.domain.model.ChannelType
+import com.example.domain.model.channel.DmSpecificData
+import com.example.domain.model.channel.ProjectSpecificData
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
+import java.time.Instant
 import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
- * ChannelDto와 Channel 도메인 모델 간의 변환을 담당하는 매퍼 클래스
+ * ChannelDto, ChannelEntity, Channel 도메인 모델 간의 변환을 담당합니다.
+ * DateTimeUtil을 주입받아 Firestore Timestamp 관련 변환을 처리합니다.
  */
-@Singleton
-class ChannelMapper @Inject constructor() {
+class ChannelMapper @Inject constructor(
+    private val dateTimeUtil: DateTimeUtil
+) {
 
     /**
-     * ChannelDto를 Channel 도메인 모델로 변환합니다.
-     *
-     * @param dto 변환할 ChannelDto 객체
-     * @param categoryId 채널이 속한 카테고리 ID
-     * @param projectId 채널이 속한 프로젝트 ID
-     * @return 변환된 Channel 도메인 모델
+     * Firestore DocumentSnapshot을 Channel 도메인 모델로 변환합니다.
+     * 내부적으로 Snapshot을 DTO로 변환 후, 도메인 모델로 최종 변환합니다.
      */
-    fun mapToDomain(dto: ChannelDto, categoryId: String, projectId: String): Channel {
-        return Channel(
-            id = dto.channelId,
-            categoryId = categoryId,
-            projectId = projectId,
-            name = dto.name,
-            type = parseChannelType(dto.type),
-            order = dto.order
-        )
-    }
-
-    /**
-     * Channel 도메인 모델을 ChannelDto로 변환합니다.
-     *
-     * @param domainModel 변환할 Channel 도메인 모델
-     * @param userId 현재 로그인한 사용자 ID (새 채널 생성 시 createdBy 필드에 사용)
-     * @return 변환된 ChannelDto 객체
-     */
-    fun mapToDto(domainModel: Channel, userId: String): ChannelDto {
-        return ChannelDto(
-            channelId = domainModel.id,
-            name = domainModel.name,
-            type = domainModel.type.name,
-            order = domainModel.order,
-            createdAt = Timestamp.now(),
-            createdBy = userId
-        )
-    }
-
-    /**
-     * ChannelDto 목록을 Channel 도메인 모델 목록으로 변환합니다.
-     *
-     * @param dtoList 변환할 ChannelDto 목록
-     * @param categoryId 채널이 속한 카테고리 ID
-     * @param projectId 채널이 속한 프로젝트 ID
-     * @return 변환된 Channel 도메인 모델 목록
-     */
-    fun mapToDomainList(dtoList: List<ChannelDto>, categoryId: String, projectId: String): List<Channel> {
-        return dtoList.map { mapToDomain(it, categoryId, projectId) }
-    }
-
-    /**
-     * 문자열 채널 타입을 ChannelType enum으로 변환합니다.
-     *
-     * @param typeString 변환할 채널 타입 문자열
-     * @return 변환된 ChannelType 열거형 값
-     */
-    private fun parseChannelType(typeString: String): ChannelType {
-        return when (typeString.uppercase()) {
-            "VOICE" -> ChannelType.VOICE
-            else -> ChannelType.TEXT
+    fun mapToDomain(document: DocumentSnapshot): Channel? {
+        return try {
+            val dto = document.toObject(ChannelDto::class.java)
+            // ID는 dto.id에 자동으로 채워짐 (@DocumentId)
+            dto?.toDomainModelWithTime(dateTimeUtil)
+        } catch (e: Exception) {
+            // Log error: e.g., println("Error mapping snapshot to Channel: ${e.message}")
+            null
         }
     }
-} 
+
+    /**
+     * ChannelDto (Firestore 데이터)를 Channel 도메인 모델로 변환합니다.
+     */
+    fun mapToDomain(dto: ChannelDto): Channel {
+        return dto.toDomainModelWithTime(dateTimeUtil)
+    }
+
+    /**
+     * Channel 도메인 모델을 Firestore에 저장하기 위한 ChannelDto로 변환합니다.
+     */
+    fun mapToDto(domain: Channel): ChannelDto {
+        return domain.toDtoWithTime()
+    }
+
+    // --- Room Entity <-> Domain Model Mappers --- //
+    // These do not directly use DateTimeUtil for Firestore Timestamp conversion,
+    // but handle Long epoch millis for local storage.
+
+    /**
+     * ChannelEntity (Room Entity)를 도메인 모델 Channel로 변환합니다.
+     */
+    fun toDomain(entity: ChannelEntity): Channel {
+        // Updated to use ChannelType.fromString
+        val channelType = ChannelType.fromString(entity.type)
+
+        val projectData = if (channelType == ChannelType.PROJECT || channelType == ChannelType.CATEGORY) {
+            entity.projectId?.let {
+                ProjectSpecificData(
+                    projectId = it,
+                    categoryId = entity.categoryId,
+                    order = entity.channelOrder,
+                    // Ensure FirestoreConstants.ChannelModeValues.TEXT is correct here
+                    channelMode = entity.channelMode
+                )
+            }
+        } else null
+
+        val dmData = if (channelType == ChannelType.DM) {
+            DmSpecificData(
+                participantIds = if (entity.participantIds.isNotEmpty()) entity.participantIds.split(",") else emptyList()
+            )
+        } else null
+
+        return Channel(
+            id = entity.id,
+            name = entity.name,
+            description = entity.description,
+            type = channelType,
+            projectSpecificData = projectData,
+            dmSpecificData = dmData,
+            lastMessagePreview = entity.lastMessagePreview,
+            lastMessageTimestamp = if (entity.lastMessageTimestamp > 0) Instant.ofEpochMilli(entity.lastMessageTimestamp) else null,
+            createdAt = Instant.ofEpochMilli(entity.createdAt),
+            updatedAt = Instant.ofEpochMilli(entity.updatedAt),
+            createdBy = entity.createdBy
+        )
+    }
+
+    /**
+     * 도메인 모델 Channel을 ChannelEntity (Room Entity)로 변환합니다.
+     */
+    fun toEntity(domain: Channel): ChannelEntity {
+        return ChannelEntity(
+            id = domain.id,
+            name = domain.name,
+            description = domain.description,
+            type = domain.type.name, // Store enum name as string
+            projectId = domain.projectSpecificData?.projectId,
+            categoryId = domain.projectSpecificData?.categoryId,
+            channelOrder = domain.projectSpecificData?.order ?: 0,
+            channelMode = domain.projectSpecificData?.channelMode ?: ChannelMode.UNKNOWN,
+            participantIds = domain.dmSpecificData?.participantIds?.joinToString(",") ?: "",
+            lastMessagePreview = domain.lastMessagePreview,
+            lastMessageTimestamp = domain.lastMessageTimestamp?.toEpochMilli() ?: 0,
+            createdAt = domain.createdAt.toEpochMilli(),
+            updatedAt = domain.updatedAt.toEpochMilli(),
+            createdBy = domain.createdBy
+            // cachedAt is set by ChannelEntity by default
+        )
+    }
+}
+
+/**
+ * ChannelDto를 Channel 도메인 모델로 변환합니다.
+ * DateTimeUtil을 사용하여 Timestamp 필드를 Instant로 변환합니다.
+ */
+fun ChannelDto.toDomainModelWithTime(dateTimeUtil: DateTimeUtil): Channel {
+    val basicDomain = this.toBasicDomainModel() // Uses ChannelType.fromString internally
+    return basicDomain.copy(
+        lastMessageTimestamp = this.lastMessageTimestamp?.let { dateTimeUtil.firebaseTimestampToInstant(it) },
+        createdAt = this.createdAt?.let { dateTimeUtil.firebaseTimestampToInstant(it) } ?: Instant.EPOCH,
+        updatedAt = this.updatedAt?.let { dateTimeUtil.firebaseTimestampToInstant(it) } ?: Instant.EPOCH
+    )
+}
+
+/**
+ * Channel 도메인 모델을 ChannelDto로 변환합니다.
+ * DateTimeUtil을 사용하여 Instant 필드를 Timestamp로 변환합니다.
+ */
+fun Channel.toDtoWithTime(): ChannelDto {
+    val basicDto = ChannelDto.fromBasicDomainModel(this)
+    return basicDto.copy(
+        lastMessageTimestamp = this.lastMessageTimestamp?.let { DateTimeUtil.instantToFirebaseTimestamp(it) },
+        createdAt = DateTimeUtil.instantToFirebaseTimestamp(this.createdAt),
+        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(this.updatedAt)
+    )
+}

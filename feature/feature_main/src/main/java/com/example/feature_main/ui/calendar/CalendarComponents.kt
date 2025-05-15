@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.Schedule
@@ -533,14 +534,10 @@ fun ScheduleListItem(
     
     // UTC LocalDateTime을 로컬 시간으로 변환
     val localStartTime = remember(schedule.startTime) {
-        schedule.startTime.atZone(ZoneId.of("UTC"))
-            .withZoneSameInstant(ZoneId.systemDefault())
-            .toLocalDateTime()
+        schedule.startTime.let { DateTimeUtil.toLocalDateTime(it, ZoneId.systemDefault()) }
     }
     val localEndTime = remember(schedule.endTime) {
-        schedule.endTime.atZone(ZoneId.of("UTC"))
-            .withZoneSameInstant(ZoneId.systemDefault())
-            .toLocalDateTime()
+        schedule.endTime.let { DateTimeUtil.toLocalDateTime(it, ZoneId.systemDefault()) }
     }
 
     Card(
@@ -586,7 +583,7 @@ fun ScheduleListItem(
                 )
                 
                 // 일정 시간 (시작~종료) - 있을 경우에만 표시
-                if (!schedule.isAllDay) {
+                if (localStartTime != null && localEndTime != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = Dimens.paddingSmall)
@@ -601,22 +598,11 @@ fun ScheduleListItem(
                         Spacer(modifier = Modifier.width(Dimens.paddingSmall))
                         // 시간 텍스트 (하루 종일 또는 시간 범위)
                         Text(
-                            text = if (schedule.isAllDay) {
-                                "하루 종일"
-                            } else {
-                                "${localStartTime.format(timeFormatter)} - ${localEndTime.format(timeFormatter)}"
-                            },
+                            text = "${localStartTime.format(timeFormatter)} - ${localEndTime.format(timeFormatter)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = LocalContentColor.current.copy(alpha = 0.8f)
                         )
                     }
-                } else {
-                    Text(
-                        text = "하루 종일",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(top = Dimens.paddingSmall)
-                    )
                 }
             }
             
@@ -655,7 +641,7 @@ private fun getProjectColor(projectId: String): Color {
 fun ScheduleSectionPreview() {
     val previewState = CalendarUiState(
         selectedDate = LocalDate.now(),
-        schedulesForSelectedDate = getSampleSchedulesForPreview()
+        schedulesForSelectedDate = getSampleSchedulesForPreview("previewUser")
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ScheduleSection(
@@ -672,7 +658,7 @@ fun ScheduleSectionPreview() {
 @Preview(showBackground = true, name = "일반 일정 아이템")
 @Composable
 fun ScheduleListItemPreview() {
-    val sample = getSampleSchedulesForPreview().first()
+    val sample = getSampleSchedulesForPreview("previewUser").first()
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ScheduleListItem(schedule = sample, onClick = {})
     }
@@ -684,7 +670,13 @@ fun ScheduleListItemPreview() {
 @Preview(showBackground = true, name = "하루 종일 일정 아이템")
 @Composable
 fun ScheduleListItemAllDayPreview() {
-    val sample = getSampleSchedulesForPreview().first { it.isAllDay }
+    val sample = getSampleSchedulesForPreview("previewUser").last { 
+        val startDateTime = DateTimeUtil.toLocalDateTime(it.startTime)
+        val endDateTime = DateTimeUtil.toLocalDateTime(it.endTime)
+        startDateTime?.toLocalTime() == java.time.LocalTime.MIDNIGHT && 
+        endDateTime?.toLocalTime() == java.time.LocalTime.MAX.minusNanos(1)
+    }
+    
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ScheduleListItem(schedule = sample, onClick = {})
     }
@@ -693,49 +685,64 @@ fun ScheduleListItemAllDayPreview() {
 /**
  * 프리뷰용 샘플 일정 데이터 생성 유틸리티
  */
-private fun getSampleSchedulesForPreview(): List<Schedule> {
+private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser"): List<Schedule> {
     val today = LocalDate.now()
     val time1 = java.time.LocalTime.of(10, 0)
     val time2 = java.time.LocalTime.of(11, 30)
     val time3 = java.time.LocalTime.of(14, 0)
     val time4 = java.time.LocalTime.of(15, 0)
+    val now = DateTimeUtil.nowInstant()
 
     return listOf(
         Schedule(
-            id = "1", projectId = "projA", title = "팀 회의: 주간 보고", 
+            id = "1", 
+            projectId = "projA", 
+            title = "팀 회의: 주간 보고", 
             content = "지난 주 성과 및 이번 주 계획 논의", 
-            startTime = java.time.LocalDateTime.of(today, time1),
-            endTime = java.time.LocalDateTime.of(today, time2),
-            participants = listOf("user1", "user2", "user3")
+            startTime = DateTimeUtil.toInstant(java.time.LocalDateTime.of(today, time1))!!,
+            endTime = DateTimeUtil.toInstant(java.time.LocalDateTime.of(today, time2))!!,
+            creatorId = creatorId,
+            createdAt = now
         ),
         Schedule(
-            id = "2", projectId = "projB", title = "디자인 검토", 
+            id = "2", 
+            projectId = "projB", 
+            title = "디자인 검토", 
             content = "새로운 랜딩 페이지 시안 검토",
-            startTime = java.time.LocalDateTime.of(today, time3),
-            endTime = java.time.LocalDateTime.of(today, time4),
-            participants = listOf("user1", "user4")
+            startTime = DateTimeUtil.localDateAndTimeToInstant(today, time3)!!,
+            endTime = DateTimeUtil.localDateAndTimeToInstant(today, time4)!!,
+            creatorId = creatorId,
+            createdAt = now
         ),
         Schedule(
-            id = "3", projectId = "projA", title = "클라이언트 미팅", 
+            id = "3", 
+            projectId = "projA", 
+            title = "클라이언트 미팅", 
             content = null,
-            startTime = java.time.LocalDateTime.of(today.plusDays(1), time1),
-            endTime = java.time.LocalDateTime.of(today.plusDays(1), time1.plusHours(1)),
-            participants = listOf("user1", "user5")
+            startTime = DateTimeUtil.localDateAndTimeToInstant(today.minusDays(1), time1)!!,
+            endTime = DateTimeUtil.localDateAndTimeToInstant(today.plusDays(1), time1.plusHours(1))!!,
+            creatorId = creatorId,
+            createdAt = now
         ),
         Schedule(
-            id = "4", projectId = null, title = "개인 약속: 병원", 
+            id = "4", 
+            projectId = null, 
+            title = "개인 약속: 병원", 
             content = "정기 검진",
-            startTime = java.time.LocalDateTime.of(today, java.time.LocalTime.of(9, 0)),
-            endTime = java.time.LocalDateTime.of(today, java.time.LocalTime.of(9, 30)),
-            participants = listOf("user1")
+            startTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.of(9, 0))!!,
+            endTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.of(9, 30))!!,
+            creatorId = creatorId,
+            createdAt = now
         ),
         Schedule(
-            id = "5", projectId = "projC", title = "프로젝트 킥오프",
+            id = "5", 
+            projectId = "projC", 
+            title = "프로젝트 킥오프",
             content = "신규 프로젝트 시작",
-            startTime = java.time.LocalDateTime.of(today, java.time.LocalTime.MIDNIGHT),
-            endTime = java.time.LocalDateTime.of(today, java.time.LocalTime.MAX),
-            isAllDay = true,
-            participants = listOf("user1", "user6")
+            startTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.MIDNIGHT)!!,
+            endTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.MAX.minusNanos(1))!!,
+            creatorId = creatorId,
+            createdAt = now
         )
     )
 } 

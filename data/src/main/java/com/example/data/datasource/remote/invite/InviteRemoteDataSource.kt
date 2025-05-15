@@ -2,6 +2,7 @@ package com.example.data.datasource.remote.invite
 
 import com.example.domain.model.Invite
 import com.example.domain.model.ProjectInfo
+import java.time.Instant
 import java.time.LocalDateTime
 
 /**
@@ -20,7 +21,7 @@ interface InviteRemoteDataSource {
     suspend fun createInviteToken(
         projectId: String,
         inviterId: String,
-        expiresAt: LocalDateTime? = null
+        expiresAt: Instant? = null
     ): Result<String>
     
     /**

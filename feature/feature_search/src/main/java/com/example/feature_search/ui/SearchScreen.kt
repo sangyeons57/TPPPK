@@ -69,7 +69,7 @@ fun SearchScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is SearchEvent.NavigateToMessage -> navigationHandler.navigate(
-                    NavigationCommand.NavigateToRoute(AppRoutes.Chat.channel(event.channelId, event.messageId))
+                    NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(event.channelId, event.messageId))
                 )
                 is SearchEvent.NavigateToUserProfile -> navigationHandler.navigate(
                     NavigationCommand.NavigateToRoute(AppRoutes.User.profile(event.userId.toString()))

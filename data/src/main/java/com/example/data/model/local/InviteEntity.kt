@@ -2,7 +2,9 @@ package com.example.data.model.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.Invite
+import com.example.domain.model.InviteType
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -21,7 +23,7 @@ data class InviteEntity(
     /**
      * 초대 유형 (예: "project_invite")
      */
-    val type: String,
+    val type: InviteType,
     
     /**
      * 초대를 생성한 사용자 ID
@@ -69,8 +71,8 @@ data class InviteEntity(
             inviterName = inviterName,
             projectId = projectId,
             projectName = projectName,
-            expiresAt = Instant.ofEpochMilli(expiresAt).atZone(ZoneId.systemDefault()).toLocalDateTime(),
-            createdAt = Instant.ofEpochMilli(createdAt).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            expiresAt = Instant.ofEpochMilli(expiresAt),
+            createdAt = Instant.ofEpochMilli(createdAt)
         )
     }
     

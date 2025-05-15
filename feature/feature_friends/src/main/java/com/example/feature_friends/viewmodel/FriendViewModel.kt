@@ -4,31 +4,32 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.FriendRelationship
+import com.example.domain.model.FriendRequestStatus
 import com.example.domain.usecase.friend.GetDmChannelIdUseCase
 import com.example.domain.usecase.friend.GetFriendRelationshipsStreamUseCase
 import com.example.domain.usecase.friend.RefreshFriendRelationshipsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.Date
+import java.time.Instant
 import javax.inject.Inject
 
 // --- 데이터 모델 ---
 data class FriendItem(
     val friendId: String,
-    val status: String,
-    val relationshipTimestamp: Date,
-    val acceptedAt: Date?,
+    val status: FriendRequestStatus,
+    val relationshipTimestamp: Instant,
+    val acceptedAt: Instant?,
     val displayName: String // UI에 표시될 이름 (실제로는 User 정보와 조합 필요)
 )
 
 fun FriendRelationship.toUiModel(): FriendItem {
     return FriendItem(
-        friendId = this.friendId,
+        friendId = this.friendUserId,
         status = this.status,
         relationshipTimestamp = this.timestamp,
         acceptedAt = this.acceptedAt,
-        displayName = "Friend: ${this.friendId}" // 임시 표시 이름
+        displayName = "Friend: ${this.friendUserId}" // 임시 표시 이름
     )
 }
 

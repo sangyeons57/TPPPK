@@ -64,12 +64,18 @@ interface ComposeNavigationHandler : NavigationHandler, NavigationResultListener
     )
 
     /**
+     * 채팅 화면으로 이동
+     *
+     * @param channelId 이동할 채널의 ID
+     * @param messageId 스크롤할 메시지 ID (옵션)
+     */
+    fun navigateToChat(channelId: String, messageId: String? = null)
+
+    /**
      * 프로젝트 상세 화면으로 이동
      * @param projectId 이동할 프로젝트의 ID
      */
     fun navigateToProjectDetails(projectId: String)
-
-    fun navigateToChat(channelId: String, messageId: String?)
 
     /**
      * 탭 내부에서 프로젝트 상세 화면으로 이동

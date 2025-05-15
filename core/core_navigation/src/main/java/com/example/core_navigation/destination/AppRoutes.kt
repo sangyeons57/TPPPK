@@ -216,16 +216,47 @@ object AppRoutes {
         private const val ROOT = "chat"
         const val ARG_CHANNEL_ID = "channelId"
         const val ARG_MESSAGE_ID = "messageId" // Optional for scrolling to a message
+        // const val ARG_PROJECT_ID = "projectId" // REMOVED: Not needed for unified chat route
 
-        fun channel(channelId: String, messageId: String? = null): String {
-            return if (messageId != null) "$ROOT/$channelId?messageId=$messageId"
-                   else "$ROOT/$channelId"
+        // 통합 채널 라우트: chat/{channelId}?messageId={messageId}
+        /**
+         * 지정된 채널 ID와 선택적 메시지 ID를 사용하여 채팅 화면으로 이동하는 경로를 생성합니다.
+         * 예: "chat/someChannelId" 또는 "chat/someChannelId?messageId=someMessageId"
+         *
+         * @param channelId 대상 채널의 ID.
+         * @param messageId (선택 사항) 특정 메시지로 스크롤하기 위한 메시지 ID.
+         * @return 구성된 네비게이션 경로 문자열.
+         */
+        fun screen(channelId: String, messageId: String? = null): String {
+            var route = "$ROOT/$channelId"
+            messageId?.let { route += "?$ARG_MESSAGE_ID=$it" }
+            return route
         }
-        fun channelRoute() = "$ROOT/{$ARG_CHANNEL_ID}" // Query param handled by SavedStateHandle
-        val channelArguments = listOf(navArgument(ARG_CHANNEL_ID) {
-            type = NavType.Companion.StringType
-        })
-        // ARG_MESSAGE_ID is optional, so not listed in mandatory arguments for route pattern
+
+        /**
+         * 채팅 화면의 기본 라우트 패턴입니다.
+         * 예: "chat/{channelId}"
+         * messageId는 선택적 쿼리 파라미터로 처리됩니다.
+         */
+        val route = "$ROOT/{$ARG_CHANNEL_ID}"
+
+        /**
+         * 채팅 화면 라우트에 필요한 네비게이션 인자 목록입니다.
+         * channelId는 필수 경로 파라미터입니다.
+         */
+        val arguments = listOf(
+            navArgument(ARG_CHANNEL_ID) { type = NavType.StringType }
+            // messageId는 선택적 쿼리 파라미터이므로, NavHostController.navigate 호출 시 URL에 직접 추가됩니다.
+            // NavArgument로 정의할 필요는 일반적으로 없습니다 (딥 링크 처리 시에는 고려할 수 있음).
+        )
+
+        // REMOVED: dm function
+        // REMOVED: dmRoute
+        // REMOVED: dmArguments
+
+        // REMOVED: projectChannel function
+        // REMOVED: projectChannelRoute
+        // REMOVED: projectChannelArguments
     }
 
     object Search {

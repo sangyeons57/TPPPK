@@ -2,7 +2,7 @@ package com.example.domain.repository
 
 import com.example.domain.model.Invite
 import com.example.domain.model.ProjectInfo
-import java.time.LocalDateTime
+import java.time.Instant
 
 /**
  * 초대 관련 저장소 인터페이스
@@ -18,7 +18,7 @@ interface InviteRepository {
      */
     suspend fun createInviteToken(
         projectId: String,
-        expiresAt: LocalDateTime? = null
+        expiresAt: Instant? = null
     ): Result<String>
     
     /**

@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.example.data.db.AppTypeConverters
+import java.time.Instant
 import java.time.LocalDateTime
 
 /**
@@ -25,6 +26,6 @@ data class ProjectEntity(
     val description: String,
     val ownerId: String,
     val participantIds: List<String> = emptyList(),
-    val createdAt: LocalDateTime,
-    val lastUpdatedAt: LocalDateTime
+    val createdAt: Instant,
+    val lastUpdatedAt: Instant
 ) 

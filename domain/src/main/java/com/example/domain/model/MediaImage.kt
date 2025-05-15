@@ -1,6 +1,7 @@
 package com.example.domain.model
 
 import android.net.Uri
+import java.time.Instant
 
 /**
  * 미디어 이미지 정보를 나타내는 도메인 모델
@@ -12,5 +13,5 @@ data class MediaImage(
     val name: String = "",
     val size: Long = 0L,
     val mimeType: String = "",
-    val dateAdded: Long = 0L
+    val dateAdded: Instant
 )

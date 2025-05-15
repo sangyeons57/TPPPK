@@ -1,5 +1,6 @@
 package com.example.data.util
 
+import com.example.core_common.constants.FirestoreConstants
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -12,154 +13,207 @@ import org.junit.Test
 class FirestoreConstantsTest {
 
     /**
-     * 최상위 컬렉션 이름 테스트
+     * 컬렉션 이름 테스트
      */
     @Test
-    fun testTopLevelCollectionNames() {
-        // 최상위 컬렉션 이름 확인
+    fun testCollectionNames() {
         assertEquals("users", FirestoreConstants.Collections.USERS)
-        assertEquals("friendRequests", FirestoreConstants.Collections.FRIEND_REQUESTS)
         assertEquals("projects", FirestoreConstants.Collections.PROJECTS)
+        assertEquals("members", FirestoreConstants.Collections.MEMBERS)
+        assertEquals("roles", FirestoreConstants.Collections.ROLES)
+        assertEquals("categories", FirestoreConstants.Collections.CATEGORIES)
+        assertEquals("channels", FirestoreConstants.Collections.CHANNELS)
+        assertEquals("messages", FirestoreConstants.Collections.MESSAGES)
+        assertEquals("invites", FirestoreConstants.Collections.INVITES)
         assertEquals("schedules", FirestoreConstants.Collections.SCHEDULES)
-        assertEquals("dmChannels", FirestoreConstants.Collections.DM_CHANNELS)
+        assertEquals("friends", FirestoreConstants.Collections.FRIENDS)
+        assertEquals("participants", FirestoreConstants.Collections.PARTICIPANTS)
     }
-    
+
     /**
-     * 스토리지 경로 테스트
+     * 사용자 필드 테스트
      */
     @Test
-    fun testStoragePaths() {
-        // 스토리지 경로 확인
-        assertEquals("profileImages", FirestoreConstants.StoragePaths.PROFILE_IMAGES)
+    fun testUserFields() {
+        assertEquals("name", FirestoreConstants.UserFields.NAME)
+        assertEquals("email", FirestoreConstants.UserFields.EMAIL)
+        assertEquals("profileImageUrl", FirestoreConstants.UserFields.PROFILE_IMAGE_URL)
+        assertEquals("statusMessage", FirestoreConstants.UserFields.STATUS_MESSAGE)
+        assertEquals("memo", FirestoreConstants.UserFields.MEMO)
+        assertEquals("status", FirestoreConstants.UserFields.STATUS)
+        assertEquals("participatingProjectIds", FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS)
+        assertEquals("createdAt", FirestoreConstants.UserFields.CREATED_AT)
+        assertEquals("activeDmIds", FirestoreConstants.UserFields.ACTIVE_DM_IDS)
+        assertEquals("fcmToken", FirestoreConstants.UserFields.FCM_TOKEN)
+        assertEquals("accountStatus", FirestoreConstants.UserFields.ACCOUNT_STATUS)
+        assertEquals("isEmailVerified", FirestoreConstants.UserFields.IS_EMAIL_VERIFIED)
     }
-    
+
     /**
-     * Users 컬렉션 관련 상수 테스트
+     * 프로젝트 필드 테스트
      */
     @Test
-    fun testUsersConstants() {
-        // Users 컬렉션 이름
-        assertEquals("users", FirestoreConstants.Users.NAME)
-        
-        // Users 필드 이름
-        assertEquals("userId", FirestoreConstants.Users.Fields.USER_ID)
-        assertEquals("name", FirestoreConstants.Users.Fields.NAME)
-        assertEquals("email", FirestoreConstants.Users.Fields.EMAIL)
-        assertEquals("profileImageUrl", FirestoreConstants.Users.Fields.PROFILE_IMAGE_URL)
-        assertEquals("status", FirestoreConstants.Users.Fields.STATUS)
-        assertEquals("statusMessage", FirestoreConstants.Users.Fields.STATUS_MESSAGE)
-        
-        // 상태 값
-        assertEquals("online", FirestoreConstants.Users.StatusValues.ONLINE)
-        assertEquals("offline", FirestoreConstants.Users.StatusValues.OFFLINE)
-        
-        // Friends 서브컬렉션
-        assertEquals("friends", FirestoreConstants.Users.FriendsSubcollection.NAME)
-        assertEquals("addedAt", FirestoreConstants.Users.FriendsSubcollection.Fields.ADDED_AT)
+    fun testProjectFields() {
+        assertEquals("name", FirestoreConstants.ProjectFields.NAME)
+        assertEquals("description", FirestoreConstants.ProjectFields.DESCRIPTION)
+        assertEquals("imageUrl", FirestoreConstants.ProjectFields.IMAGE_URL)
+        assertEquals("ownerId", FirestoreConstants.ProjectFields.OWNER_ID)
+        assertEquals("memberIds", FirestoreConstants.ProjectFields.MEMBER_IDS)
+        assertEquals("createdAt", FirestoreConstants.ProjectFields.CREATED_AT)
+        assertEquals("updatedAt", FirestoreConstants.ProjectFields.UPDATED_AT)
+        assertEquals("isPublic", FirestoreConstants.ProjectFields.IS_PUBLIC)
     }
-    
+
     /**
-     * 친구 요청 컬렉션 관련 상수 테스트
+     * 멤버 필드 테스트
      */
     @Test
-    fun testFriendRequestsConstants() {
-        // FriendRequests 컬렉션 이름
-        assertEquals("friendRequests", FirestoreConstants.FriendRequests.NAME)
-        
-        // FriendRequests 필드 이름
-        assertEquals("senderUid", FirestoreConstants.FriendRequests.Fields.SENDER_UID)
-        assertEquals("receiverUid", FirestoreConstants.FriendRequests.Fields.RECEIVER_UID)
-        assertEquals("status", FirestoreConstants.FriendRequests.Fields.STATUS)
-        assertEquals("createdAt", FirestoreConstants.FriendRequests.Fields.CREATED_AT)
-        
-        // 상태 값
-        assertEquals("pending", FirestoreConstants.FriendRequests.StatusValues.PENDING)
-        assertEquals("accepted", FirestoreConstants.FriendRequests.StatusValues.ACCEPTED)
+    fun testMemberFields() {
+        assertEquals("roleIds", FirestoreConstants.MemberFields.ROLE_IDS)
+        assertEquals("joinedAt", FirestoreConstants.MemberFields.JOINED_AT)
     }
-    
+
     /**
-     * 프로젝트 컬렉션 관련 상수 테스트
+     * 역할 필드 테스트
      */
     @Test
-    fun testProjectsConstants() {
-        // Projects 컬렉션 이름
-        assertEquals("projects", FirestoreConstants.Projects.NAME)
-        
-        // Projects 필드 이름
-        assertEquals("id", FirestoreConstants.Projects.Fields.ID)
-        assertEquals("name", FirestoreConstants.Projects.Fields.NAME)
-        assertEquals("description", FirestoreConstants.Projects.Fields.DESCRIPTION)
-        assertEquals("imageUrl", FirestoreConstants.Projects.Fields.IMAGE_URL)
-        assertEquals("memberCount", FirestoreConstants.Projects.Fields.MEMBER_COUNT)
-        assertEquals("isPublic", FirestoreConstants.Projects.Fields.IS_PUBLIC)
-        assertEquals("ownerId", FirestoreConstants.Projects.Fields.OWNER_ID)
-        
-        // Members 서브컬렉션
-        assertEquals("members", FirestoreConstants.Projects.MembersSubcollection.NAME)
-        assertEquals("userId", FirestoreConstants.Projects.MembersSubcollection.Fields.USER_ID)
-        assertEquals("roleIds", FirestoreConstants.Projects.MembersSubcollection.Fields.ROLE_IDS)
-        
-        // Roles 서브컬렉션
-        assertEquals("roles", FirestoreConstants.Projects.RolesSubcollection.NAME)
-        assertEquals("name", FirestoreConstants.Projects.RolesSubcollection.Fields.ROLE_NAME)
-        assertEquals("permissions", FirestoreConstants.Projects.RolesSubcollection.Fields.PERMISSIONS)
-        
-        // Categories 서브컬렉션
-        assertEquals("categories", FirestoreConstants.Projects.CategoriesSubcollection.NAME)
-        assertEquals("name", FirestoreConstants.Projects.CategoriesSubcollection.Fields.CATEGORY_NAME)
-        assertEquals("order", FirestoreConstants.Projects.CategoriesSubcollection.Fields.ORDER)
-        
-        // Channels 서브컬렉션
-        assertEquals("channels", FirestoreConstants.Projects.ChannelsSubcollection.NAME)
-        assertEquals("categoryId", FirestoreConstants.Projects.ChannelsSubcollection.Fields.CATEGORY_ID)
-        assertEquals("name", FirestoreConstants.Projects.ChannelsSubcollection.Fields.CHANNEL_NAME)
-        assertEquals("type", FirestoreConstants.Projects.ChannelsSubcollection.Fields.TYPE)
-        assertEquals("order", FirestoreConstants.Projects.ChannelsSubcollection.Fields.ORDER)
-        
-        // Channel 타입 값
-        assertEquals("TEXT", FirestoreConstants.Projects.ChannelsSubcollection.TypeValues.TEXT)
-        assertEquals("VOICE", FirestoreConstants.Projects.ChannelsSubcollection.TypeValues.VOICE)
-        
-        // Schedules 서브컬렉션
-        assertEquals("schedules", FirestoreConstants.Projects.SchedulesSubcollection.NAME)
+    fun testRoleFields() {
+        assertEquals("name", FirestoreConstants.RoleFields.NAME)
+        assertEquals("permissions", FirestoreConstants.RoleFields.PERMISSIONS)
+        assertEquals("isDefault", FirestoreConstants.RoleFields.IS_DEFAULT)
     }
-    
+
     /**
-     * 일정 컬렉션 관련 상수 테스트
+     * 카테고리 필드 테스트
      */
     @Test
-    fun testSchedulesConstants() {
-        // Schedules 컬렉션 이름
-        assertEquals("schedules", FirestoreConstants.Schedules.NAME)
-        
-        // Schedules 필드 이름
-        assertEquals("id", FirestoreConstants.Schedules.Fields.ID)
-        assertEquals("projectId", FirestoreConstants.Schedules.Fields.PROJECT_ID)
-        assertEquals("title", FirestoreConstants.Schedules.Fields.TITLE)
-        assertEquals("content", FirestoreConstants.Schedules.Fields.CONTENT)
-        assertEquals("startTime", FirestoreConstants.Schedules.Fields.START_TIME)
-        assertEquals("endTime", FirestoreConstants.Schedules.Fields.END_TIME)
-        assertEquals("attendees", FirestoreConstants.Schedules.Fields.ATTENDEES)
-        assertEquals("isAllDay", FirestoreConstants.Schedules.Fields.IS_ALL_DAY)
+    fun testCategoryFields() {
+        assertEquals("name", FirestoreConstants.CategoryFields.NAME)
+        assertEquals("order", FirestoreConstants.CategoryFields.ORDER)
     }
-    
+
     /**
-     * 채팅 메시지 관련 상수 테스트
+     * 채널 필드 테스트
      */
     @Test
-    fun testChatMessagesConstants() {
-        // 메시지 서브컬렉션 이름
-        assertEquals("messages", FirestoreConstants.ChatMessages.SUBCOLLECTION_NAME)
-        
-        // 메시지 필드 이름
-        assertEquals("chatId", FirestoreConstants.ChatMessages.Fields.CHAT_ID)
-        assertEquals("channelId", FirestoreConstants.ChatMessages.Fields.CHANNEL_ID)
-        assertEquals("userId", FirestoreConstants.ChatMessages.Fields.USER_ID)
-        assertEquals("userName", FirestoreConstants.ChatMessages.Fields.USER_NAME)
-        assertEquals("userProfileUrl", FirestoreConstants.ChatMessages.Fields.USER_PROFILE_URL)
-        assertEquals("message", FirestoreConstants.ChatMessages.Fields.MESSAGE)
-        assertEquals("sentAt", FirestoreConstants.ChatMessages.Fields.SENT_AT)
-        assertEquals("isModified", FirestoreConstants.ChatMessages.Fields.IS_MODIFIED)
-        assertEquals("attachmentImageUrls", FirestoreConstants.ChatMessages.Fields.ATTACHMENT_IMAGE_URLS)
+    fun testChannelFields() {
+        assertEquals("id", FirestoreConstants.ChannelFields.ID)
+        assertEquals("name", FirestoreConstants.ChannelFields.NAME)
+        assertEquals("description", FirestoreConstants.ChannelFields.DESCRIPTION)
+        assertEquals("participantIds", FirestoreConstants.ChannelFields.PARTICIPANT_IDS)
+        assertEquals("lastMessagePreview", FirestoreConstants.ChannelFields.LAST_MESSAGE_PREVIEW)
+        assertEquals("lastMessageTimestamp", FirestoreConstants.ChannelFields.LAST_MESSAGE_TIMESTAMP)
+        assertEquals("metadata", FirestoreConstants.ChannelFields.METADATA)
+        assertEquals("createdAt", FirestoreConstants.ChannelFields.CREATED_AT)
+        assertEquals("createdBy", FirestoreConstants.ChannelFields.CREATED_BY)
+        assertEquals("updatedAt", FirestoreConstants.ChannelFields.UPDATED_AT)
+    }
+
+    /**
+     * 채널 참조 필드 테스트
+     */
+    @Test
+    fun testChannelReferenceFields() {
+        assertEquals("order", FirestoreConstants.ChannelReferenceFields.ORDER)
+    }
+
+    /**
+     * 채널 메타데이터 키 테스트
+     */
+    @Test
+    fun testChannelMetadataKeys() {
+        assertEquals("source", FirestoreConstants.ChannelMetadataKeys.SOURCE)
+        assertEquals("dmUsers", FirestoreConstants.ChannelMetadataKeys.DM_USERS)
+        assertEquals("projectId", FirestoreConstants.ChannelMetadataKeys.PROJECT_ID)
+        assertEquals("categoryId", FirestoreConstants.ChannelMetadataKeys.CATEGORY_ID)
+        assertEquals("type", FirestoreConstants.ChannelMetadataKeys.TYPE)
+    }
+
+    /**
+     * 채널 메타데이터 소스 값 테스트
+     */
+    @Test
+    fun testChannelMetadataSourceValues() {
+        assertEquals("dm", FirestoreConstants.ChannelMetadataSourceValues.DM)
+        assertEquals("project", FirestoreConstants.ChannelMetadataSourceValues.PROJECT)
+        assertEquals("schedule", FirestoreConstants.ChannelMetadataSourceValues.SCHEDULE)
+    }
+
+    /**
+     * 초대 필드 테스트
+     */
+    @Test
+    fun testInviteFields() {
+        assertEquals("type", FirestoreConstants.InviteFields.TYPE)
+        assertEquals("inviterId", FirestoreConstants.InviteFields.INVITER_ID)
+        assertEquals("inviterName", FirestoreConstants.InviteFields.INVITER_NAME)
+        assertEquals("projectId", FirestoreConstants.InviteFields.PROJECT_ID)
+        assertEquals("projectName", FirestoreConstants.InviteFields.PROJECT_NAME)
+        assertEquals("createdAt", FirestoreConstants.InviteFields.CREATED_AT)
+        assertEquals("expiresAt", FirestoreConstants.InviteFields.EXPIRES_AT)
+    }
+
+    /**
+     * 친구 필드 테스트
+     */
+    @Test
+    fun testFriendFields() {
+        assertEquals("status", FirestoreConstants.FriendFields.STATUS)
+        assertEquals("timestamp", FirestoreConstants.FriendFields.TIMESTAMP)
+        assertEquals("acceptedAt", FirestoreConstants.FriendFields.ACCEPTED_AT)
+    }
+
+    /**
+     * 메시지 필드 테스트
+     */
+    @Test
+    fun testMessageFields() {
+        assertEquals("id", FirestoreConstants.MessageFields.ID)
+        assertEquals("senderId", FirestoreConstants.MessageFields.SENDER_ID)
+        assertEquals("text", FirestoreConstants.MessageFields.MESSAGE)
+        assertEquals("timestamp", FirestoreConstants.MessageFields.SENT_AT)
+        assertEquals("reactions", FirestoreConstants.MessageFields.REACTIONS)
+        assertEquals("attachments", FirestoreConstants.MessageFields.ATTACHMENTS)
+        assertEquals("metadata", FirestoreConstants.MessageFields.METADATA)
+        assertEquals("replyToMessageId", FirestoreConstants.MessageFields.REPLY_TO_MESSAGE_ID)
+        assertEquals("isEdited", FirestoreConstants.MessageFields.IS_EDITED)
+        assertEquals("isDeleted", FirestoreConstants.MessageFields.IS_DELETED)
+        assertEquals("isModified", FirestoreConstants.MessageFields.IS_EDITED)
+    }
+
+    /**
+     * 일정 필드 테스트
+     */
+    @Test
+    fun testScheduleFields() {
+        assertEquals("title", FirestoreConstants.ScheduleFields.TITLE)
+        assertEquals("description", FirestoreConstants.ScheduleFields.CONTENT)
+        assertEquals("startTime", FirestoreConstants.ScheduleFields.START_TIME)
+        assertEquals("endTime", FirestoreConstants.ScheduleFields.END_TIME)
+        assertEquals("location", FirestoreConstants.ScheduleFields.LOCATION)
+        assertEquals("projectId", FirestoreConstants.ScheduleFields.PROJECT_ID)
+        assertEquals("channelId", FirestoreConstants.ScheduleFields.CHANNEL_ID)
+        assertEquals("creatorId", FirestoreConstants.ScheduleFields.CREATOR_ID)
+        assertEquals("participantIds", FirestoreConstants.ScheduleFields.PARTICIPANT_IDS)
+        assertEquals("isAllDay", FirestoreConstants.ScheduleFields.IS_ALL_DAY)
+        assertEquals("priority", FirestoreConstants.ScheduleFields.PRIORITY)
+        assertEquals("status", FirestoreConstants.ScheduleFields.STATUS)
+        assertEquals("reminderTime", FirestoreConstants.ScheduleFields.REMINDER_TIME)
+        assertEquals("color", FirestoreConstants.ScheduleFields.COLOR)
+        assertEquals("tags", FirestoreConstants.ScheduleFields.TAGS)
+        assertEquals("recurrenceRule", FirestoreConstants.ScheduleFields.RECURRENCE_RULE)
+        assertEquals("createdAt", FirestoreConstants.ScheduleFields.CREATED_AT)
+        assertEquals("updatedAt", FirestoreConstants.ScheduleFields.UPDATED_AT)
+    }
+
+    /**
+     * 상태 상수 테스트
+     */
+    @Test
+    fun testStatusValues() {
+        assertEquals("accepted", FirestoreConstants.Status.ACCEPTED)
+        assertEquals("pending_sent", FirestoreConstants.Status.PENDING_SENT)
+        assertEquals("pending_received", FirestoreConstants.Status.PENDING_RECEIVED)
+        assertEquals("project_invite", FirestoreConstants.Status.PROJECT_INVITE)
     }
 } 

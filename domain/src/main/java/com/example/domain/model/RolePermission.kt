@@ -28,7 +28,16 @@ enum class RolePermission(val description: String) {
 
     // --- 기타 ---
     CREATE_SCHEDULE("일정 생성/편집 권한"),      // 프로젝트 일정을 생성하거나 편집하는 권한
-    MENTION_EVERYONE("@everyone 언급 권한")       // @everyone, @here 등 전체 알림을 보낼 수 있는 권한
+    MENTION_EVERYONE("@everyone 언급 권한"),       // @everyone, @here 등 전체 알림을 보낼 수 있는 권한
+
+    // --- 채널 관련 권한 (ChannelPermissionType에서 이전) ---
+    READ_MESSAGES("채널 메시지 읽기 권한"),           // 채널의 메시지를 읽을 수 있는 권한
+    SEND_MESSAGES("채널 메시지 전송 권한"),         // 채널에 메시지를 보낼 수 있는 권한
+    // MANAGE_MESSAGES 대신 DELETE_MESSAGES 와 DELETE_OTHERS_MESSAGES 사용 고려
+    DELETE_MESSAGES("자신의 메시지 삭제 권한"),       // 자신이 보낸 메시지를 삭제할 수 있는 권한
+    UPLOAD_FILES("파일 업로드 권한"),            // 채널에 파일을 업로드할 수 있는 권한
+    MENTION_MEMBERS("멤버 언급(@) 권한"),          // 채널에서 다른 멤버를 @로 언급할 수 있는 권한
+    MANAGE_MESSAGE_THREADS("메시지 스레드 관리 권한") // 메시지 스레드를 생성/관리하는 권한 (예시)
 
     // TODO: 앱의 실제 기획에 맞게 필요한 권한들을 추가, 수정, 삭제하세요.
 }

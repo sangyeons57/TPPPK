@@ -1,78 +1,90 @@
 package com.example.data.model.mapper
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.remote.user.UserDto
-import com.example.domain.model.AccountStatus
+import com.example.domain.model.AccountStatus // Ensure this import is correct
 import com.example.domain.model.User
-import com.example.domain.model.UserStatus
-import java.util.Date
+import com.example.domain.model.UserStatus // Ensure this import is correct
+import com.google.firebase.firestore.DocumentSnapshot
+import java.time.Instant
 import javax.inject.Inject
 
 /**
  * UserDto와 User 도메인 모델 간의 변환을 처리하는 매퍼 클래스
  */
-class UserMapper @Inject constructor() {
+class UserMapper @Inject constructor(
+    private val dateTimeUtil: DateTimeUtil
+) {
+
+    /**
+     * Firestore DocumentSnapshot을 User 도메인 모델로 변환합니다.
+     * DTO의 ID(@DocumentId)가 User 모델의 ID로 매핑됩니다.
+     */
+    fun mapToDomain(document: DocumentSnapshot): User? {
+        return try {
+            val dto = document.toObject(UserDto::class.java)
+            // UserDto.id (@DocumentId) is automatically populated from snapshot's ID
+            // User.id will be set from dto.id in toDomainModelWithTime
+            dto?.toDomainModelWithTime(dateTimeUtil)
+        } catch (e: Exception) {
+            // Consider logging the exception, e.g., Log.e("UserMapper", "Error mapping snapshot to User: ${e.message}")
+            null
+        }
+    }
 
     /**
      * UserDto를 User 도메인 모델로 변환합니다.
-     *
-     * @param dto 변환할 UserDto 객체
-     * @return 변환된 User 도메인 모델
+     * DTO의 ID가 User 모델의 ID로 매핑됩니다.
      */
     fun mapToDomain(dto: UserDto): User {
-        return User(
-            userId = dto.id,
-            email = dto.email,
-            name = dto.name,
-            profileImageUrl = dto.profileImageUrl,
-            memo = dto.memo,
-            status = try {
-                UserStatus.valueOf(dto.status?.uppercase() ?: "OFFLINE")
-            } catch (e: IllegalArgumentException) {
-                UserStatus.OFFLINE
-            },
-            createdAt = Date(dto.createdAt.seconds * 1000),
-            fcmToken = dto.fcmToken,
-            participatingProjectIds = dto.participatingProjectIds,
-            accountStatus = try {
-                AccountStatus.valueOf(dto.accountStatus.uppercase())
-            } catch (e: IllegalArgumentException) {
-                AccountStatus.ACTIVE
-            },
-            activeDmIds = dto.activeDmIds,
-            isEmailVerified = dto.isEmailVerified
-        )
+        return dto.toDomainModelWithTime(dateTimeUtil)
     }
 
     /**
      * User 도메인 모델을 UserDto로 변환합니다.
-     *
-     * @param domainModel 변환할 User 도메인 모델
-     * @return 변환된 UserDto 객체
+     * User 모델의 ID가 DTO의 ID로 매핑됩니다.
      */
     fun mapToDto(domainModel: User): UserDto {
-        return UserDto(
-            id = domainModel.userId,
-            email = domainModel.email,
-            name = domainModel.name,
-            profileImageUrl = domainModel.profileImageUrl,
-            memo = domainModel.memo,
-            status = domainModel.status.name,
-            createdAt = com.google.firebase.Timestamp(domainModel.createdAt.time / 1000, 0),
-            fcmToken = domainModel.fcmToken,
-            participatingProjectIds = domainModel.participatingProjectIds,
-            accountStatus = domainModel.accountStatus.name,
-            activeDmIds = domainModel.activeDmIds,
-            isEmailVerified = domainModel.isEmailVerified
-        )
+        return domainModel.toDtoWithTime(dateTimeUtil)
     }
 
     /**
      * UserDto 목록을 User 도메인 모델 목록으로 변환합니다.
-     *
-     * @param dtoList 변환할 UserDto 목록
-     * @return 변환된 User 도메인 모델 목록
      */
     fun mapToDomainList(dtoList: List<UserDto>): List<User> {
         return dtoList.map { mapToDomain(it) }
     }
-} 
+}
+
+/**
+ * UserDto를 User 도메인 모델로 변환합니다.
+ * DateTimeUtil을 사용하여 Timestamp를 Instant로 변환하고, Enum 문자열을 Enum 타입으로 변환합니다.
+ * UserDto.id (문서 ID)가 User.id로 매핑됩니다.
+ */
+fun UserDto.toDomainModelWithTime(dateTimeUtil: DateTimeUtil): User {
+    // UserDto.toBasicDomainModel() correctly maps this.id (from DTO) to User.id
+    val basicDomain = this.toBasicDomainModel() 
+    return basicDomain.copy(
+        status = this.status, // Uses UserStatus.fromString
+        createdAt = this.createdAt?.let { dateTimeUtil.firebaseTimestampToInstant(it) } 
+            ?: basicDomain.createdAt, // Use existing instant from domain if DTO's is null (e.g. Instant.EPOCH or User.kt default)
+        updatedAt = this.updatedAt?.let { dateTimeUtil.firebaseTimestampToInstant(it) }, // Nullable Instant
+        accountStatus = this.accountStatus // Uses AccountStatus.fromString
+    )
+}
+
+/**
+ * User 도메인 모델을 UserDto로 변환합니다.
+ * DateTimeUtil을 사용하여 Instant를 Timestamp로 변환하고, Enum 타입을 문자열로 변환합니다.
+ * User.id가 UserDto.id로 매핑됩니다.
+ */
+fun User.toDtoWithTime(dateTimeUtil: DateTimeUtil): UserDto {
+    // UserDto.fromBasicDomainModel() correctly maps domain.id to UserDto.id
+    val basicDto = UserDto.fromBasicDomainModel(this) 
+    return basicDto.copy(
+        status = this.status, // Convert enum to string for Firestore
+        createdAt = this.createdAt?.let { dateTimeUtil.instantToFirebaseTimestamp(it) }, // Respect domain's createdAt
+        updatedAt = this.updatedAt?.let { dateTimeUtil.instantToFirebaseTimestamp(it) }, // Nullable Timestamp
+        accountStatus = this.accountStatus // Convert enum to string for Firestore
+    )
+}

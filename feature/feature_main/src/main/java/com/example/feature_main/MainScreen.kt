@@ -2,6 +2,7 @@ package com.example.feature_main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,10 +35,14 @@ import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.destination.mainBottomNavItems
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_main.ui.HomeScreen
 import com.example.feature_main.ui.ProfileScreen
 import com.example.feature_main.ui.calendar.CalendarScreen
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.domain.model.ui.MainScreenType
+import com.example.domain.model.ui.MainUiState
+import com.example.feature_main.ui.DmListScreen
+import com.example.feature_main.ui.ProjectListScreen
 import kotlinx.coroutines.launch
 
 /**
@@ -121,7 +127,8 @@ fun MainScreen(
                 AppRoutes.Main.Home.GRAPH_ROOT -> {
                     HomeTabNavHost(
                         navController = homeNavController,
-                        navigationHandler = navigationHandler
+                        navigationHandler = navigationHandler,
+                        mainViewModel = mainViewModel
                     )
                 }
                 AppRoutes.Main.Calendar.GRAPH_ROOT -> {
@@ -159,7 +166,8 @@ private fun getTabStartDestination(tabRoute: String): String {
 @Composable
 private fun HomeTabNavHost(
     navController: NavHostController,
-    navigationHandler: ComposeNavigationHandler
+    navigationHandler: ComposeNavigationHandler,
+    mainViewModel: MainViewModel
 ) {
     // Register this NavController when this NavHost is active
     DisposableEffect(navController, navigationHandler) {
@@ -174,12 +182,83 @@ private fun HomeTabNavHost(
         }
     }
 
-    NavHost(
+        NavHost(
         navController = navController,
         startDestination = AppRoutes.Main.Home.ROOT_CONTENT
-    ) {
+        ) {
         composable(AppRoutes.Main.Home.ROOT_CONTENT) {
-            HomeScreen(navigationHandler = navigationHandler)
+            HomeContentScreen(
+                viewModel = mainViewModel,
+                    navigationHandler = navigationHandler
+                )
+            }
+    }
+}
+
+/**
+ * HomeContentScreen: Home 탭의 실제 콘텐츠 (DM 목록 또는 프로젝트 목록)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeContentScreen(
+    viewModel: MainViewModel,
+    navigationHandler: ComposeNavigationHandler
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // DM / Project Toggle
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            SegmentedButton(
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                onClick = { viewModel.setCurrentScreen(MainScreenType.DMS) },
+                selected = uiState.currentScreen == MainScreenType.DMS
+            ) {
+                Text("DM")
+            }
+            SegmentedButton(
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                onClick = { viewModel.setCurrentScreen(MainScreenType.PROJECTS) },
+                selected = uiState.currentScreen == MainScreenType.PROJECTS
+            ) {
+                Text("프로젝트")
+            }
+        }
+
+        // Display based on current screen type
+        when (uiState.currentScreen) {
+            MainScreenType.DMS -> {
+                // TODO: Handle loading and error states for DMs
+                DmListScreen(
+                    dms = uiState.dmConversations,
+                    onDmClick = {
+                        // Navigate to ChatScreen with DM parameters
+                        navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(it)))
+                    },
+                    modifier = Modifier.weight(1f) // Fill remaining space
+                )
+            }
+            MainScreenType.PROJECTS -> {
+                // TODO: Handle loading and error states for Projects
+                ProjectListScreen(
+                    projects = uiState.projects,
+                    onProjectClick = { projectId ->
+                        // Navigate to Project Detail Screen
+                        navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.detail(projectId = projectId)))
+                    },
+                    modifier = Modifier.weight(1f) // Fill remaining space
+                )
+            }
+            else -> {
+                // Handle other cases if MainScreenType expands (e.g., Calendar, Profile handled by separate NavHosts)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("선택된 화면 유형 오류: ${uiState.currentScreen}")
+                }
+            }
         }
     }
 }
@@ -269,25 +348,25 @@ private fun PreviewBottomNavigation(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     
-    NavigationBar(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        mainBottomNavItems.forEach { screen ->
-            NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = screen.title) },
-                label = { Text(screen.title) },
-                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                onClick = {
+                NavigationBar(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    mainBottomNavItems.forEach { screen ->
+                        NavigationBarItem(
+                            icon = { Icon(screen.icon, contentDescription = screen.title) },
+                            label = { Text(screen.title) },
+                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            onClick = {
                     // 프리뷰에서는 직접 NavController 사용
                     navController.navigate(screen.route) {
                         popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        )
         }
     }
 }

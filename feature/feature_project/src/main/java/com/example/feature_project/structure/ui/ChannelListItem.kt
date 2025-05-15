@@ -16,20 +16,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ChannelType
-
-// 채널 정보를 담는 데이터 클래스 (호출하는 쪽에서 사용)
-// 예시: feature_project_setting/viewmodel/ProjectSettingViewModel.kt 에 정의된 ProjectChannel 사용 가능
-data class ChannelInfo(
-    val id: String,
-    val name: String,
-    val type: ChannelType // TEXT 또는 VOICE
-)
+import com.example.domain.model.Channel
+import com.example.core_common.constants.FirestoreConstants
+import com.example.domain.model.ChannelMode
+import com.example.domain.model.channel.ProjectSpecificData
+import java.time.Instant
 
 /**
  * ChannelListItem: 프로젝트 내 채널 목록의 아이템 UI
  * (item_channel.xml 변환 결과)
  *
- * @param channel 표시할 채널 정보
+ * @param channel 표시할 채널 정보 (Using domain model Channel)
  * @param onClick 채널 아이템 클릭 시 실행될 콜백 (채팅방 이동 등)
  * @param modifier Modifier
  * @param showActions 수정/삭제 등 추가 액션 버튼 표시 여부 (옵션)
@@ -38,7 +35,7 @@ data class ChannelInfo(
  */
 @Composable
 fun ChannelListItem(
-    channel: ChannelInfo,
+    channel: Channel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showActions: Boolean = false, // 추가 액션 버튼 표시 여부
@@ -58,13 +55,14 @@ fun ChannelListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 타입 아이콘
-        val icon: ImageVector = when (channel.type) {
-            ChannelType.TEXT -> Icons.Filled.ChatBubbleOutline // 텍스트 채널 아이콘
-            ChannelType.VOICE -> Icons.AutoMirrored.Filled.VolumeUp // AutoMirrored 버전 사용
+        val icon: ImageVector = when (channel.channelMode) {
+            ChannelMode.TEXT -> Icons.Filled.ChatBubbleOutline
+            ChannelMode.VOICE -> Icons.AutoMirrored.Filled.VolumeUp
+            else -> Icons.Filled.ChatBubbleOutline // Default icon or handle error
         }
         Icon(
             imageVector = icon,
-            contentDescription = "${channel.type} 채널",
+            contentDescription = "${channel.channelMode} 채널",
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.secondary // 아이콘 색상
         )
@@ -100,10 +98,17 @@ fun ChannelListItem(
 @Preview(showBackground = true, name = "Text Channel Item")
 @Composable
 private fun ChannelListItemTextPreview() {
-    val channel = ChannelInfo("ch1", "일반 대화", ChannelType.TEXT)
+    val textChannel = Channel(
+        id = "ch1",
+        name = "일반 대화",
+        type = ChannelType.PROJECT, // Domain model ChannelType
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+        projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT)
+    )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
-            ChannelListItem(channel = channel, onClick = {})
+            ChannelListItem(channel = textChannel, onClick = {})
         }
     }
 }
@@ -111,10 +116,17 @@ private fun ChannelListItemTextPreview() {
 @Preview(showBackground = true, name = "Voice Channel Item")
 @Composable
 private fun ChannelListItemVoicePreview() {
-    val channel = ChannelInfo("ch2", "음성 회의", ChannelType.VOICE)
+    val voiceChannel = Channel(
+        id = "ch2",
+        name = "음성 회의",
+        type = ChannelType.PROJECT, // Domain model ChannelType
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+        projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.VOICE)
+    )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
-            ChannelListItem(channel = channel, onClick = {})
+            ChannelListItem(channel = voiceChannel, onClick = {})
         }
     }
 }
@@ -122,11 +134,18 @@ private fun ChannelListItemVoicePreview() {
 @Preview(showBackground = true, name = "Channel Item with Actions")
 @Composable
 private fun ChannelListItemWithActionsCallback() {
-    val channel = ChannelInfo("ch3", "공지사항", ChannelType.TEXT)
+    val actionChannel = Channel(
+        id = "ch3",
+        name = "공지사항",
+        type = ChannelType.PROJECT, // Domain model ChannelType
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+        projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT)
+    )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
             ChannelListItem(
-                channel = channel,
+                channel = actionChannel,
                 onClick = {},
                 showActions = true, // 액션 버튼 표시
                 onEditClick = {},

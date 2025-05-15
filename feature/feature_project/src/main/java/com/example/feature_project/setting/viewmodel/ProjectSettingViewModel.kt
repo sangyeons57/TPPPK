@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 // Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
+import com.example.domain.model.Channel
 import com.example.domain.model.ProjectCategory
-import com.example.domain.model.ProjectChannel
 // import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
 import com.example.domain.usecase.project.* // Import project use cases
 
@@ -35,7 +35,7 @@ sealed class ProjectSettingEvent {
     data class NavigateToMemberList(val projectId: String) : ProjectSettingEvent()
     data class NavigateToRoleList(val projectId: String) : ProjectSettingEvent()
     data class ShowDeleteCategoryConfirm(val category: ProjectCategory) : ProjectSettingEvent()
-    data class ShowDeleteChannelConfirm(val channel: ProjectChannel) : ProjectSettingEvent()
+    data class ShowDeleteChannelConfirm(val channel: Channel) : ProjectSettingEvent()
     object ShowRenameProjectDialog : ProjectSettingEvent()
     object ShowDeleteProjectConfirm : ProjectSettingEvent()
 }
@@ -124,7 +124,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun requestEditChannel(categoryId: String, channelId: String) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToEditChannel(projectId, categoryId, channelId)) }
     }
-    fun requestDeleteChannel(channel: ProjectChannel) { // 파라미터 타입은 도메인 모델
+    fun requestDeleteChannel(channel: Channel) { // Replaced ProjectChannel with Channel // 파라미터 타입은 도메인 모델
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteChannelConfirm(channel)) }
     }
     fun confirmDeleteChannel(channelId: String) {

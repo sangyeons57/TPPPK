@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
@@ -45,10 +46,10 @@ import com.example.core_ui.theme.ScheduleColor1
 import com.example.core_ui.theme.ScheduleColor3
 import com.example.core_ui.theme.ScheduleColor4
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.ScheduleItem24Hour
 import com.example.feature_schedule.viewmodel.Calendar24HourEvent
 import com.example.feature_schedule.viewmodel.Calendar24HourUiState
 import com.example.feature_schedule.viewmodel.Calendar24HourViewModel
-import com.example.feature_schedule.viewmodel.ScheduleItem24Hour
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
@@ -460,8 +461,8 @@ fun DrawScope.drawSchedules(
     val selectionAlpha = if (selectionActive) 0.7f else 1.0f
 
     schedules.forEach { schedule ->
-        val startY = schedule.startTime.toSecondOfDay() / 3600f * hourHeightPx
-        val endY = schedule.endTime.toSecondOfDay() / 3600f * hourHeightPx
+        val startY = DateTimeUtil.getSecondOfDayFromInstant(schedule.startTime) / 3600f * hourHeightPx
+        val endY = DateTimeUtil.getSecondOfDayFromInstant(schedule.endTime) / 3600f * hourHeightPx
         val scheduleHeight = endY - startY
         val scheduleWidth = size.width - timelineStartPadding - schedulePadding * 2
 
@@ -634,12 +635,33 @@ fun ScheduleEditDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Calendar24HourScreenPreview() {
+    // 오늘 날짜와 시간을 기준으로 Instant 생성
+    val today = LocalDate.now()
     val sampleSchedules = listOf(
-        ScheduleItem24Hour("1", "팀 회의", LocalTime.of(10, 0), LocalTime.of(11, 30), ScheduleColor4.value), // 미팅 일정 (노랑)
-        ScheduleItem24Hour("2", "점심 약속", LocalTime.of(12, 30), LocalTime.of(13, 30), ScheduleColor1.value), // 개인 일정 (연한 빨강)
-        ScheduleItem24Hour("3", "개인 프로젝트", LocalTime.of(15, 0), LocalTime.of(17, 0), ScheduleColor3.value) // 프로젝트 일정 (민트)
+        ScheduleItem24Hour(
+            "1", 
+            "팀 회의", 
+            DateTimeUtil.toInstant(LocalTime.of(10, 0))!!, // 오전 10시
+            DateTimeUtil.toInstant(LocalTime.of(11, 30))!!, // 오전 11시 30분
+            ScheduleColor4.value
+        ),
+        ScheduleItem24Hour(
+            "2", 
+            "점심 약속", 
+            DateTimeUtil.toInstant(LocalTime.of(12, 30))!!, // 오후 12시 30분 
+            DateTimeUtil.toInstant(LocalTime.of(13, 30))!!, // 오후 1시 30분
+            ScheduleColor1.value
+        ),
+        ScheduleItem24Hour(
+            "3", 
+            "개인 프로젝트", 
+            DateTimeUtil.toInstant(LocalTime.of(15, 0))!!, // 오후 3시
+            DateTimeUtil.toInstant(LocalTime.of(17, 0))!!, // 오후 5시
+            ScheduleColor3.value
+        )
     )
-    val previewState = Calendar24HourUiState.Success(LocalDate.now(), sampleSchedules)
+
+    val previewState = Calendar24HourUiState.Success(today, sampleSchedules)
 
     TeamnovaPersonalProjectProjectingKotlinTheme {
         // Scaffold 포함된 전체 화면 미리보기 (이벤트 핸들러는 빈 람다)

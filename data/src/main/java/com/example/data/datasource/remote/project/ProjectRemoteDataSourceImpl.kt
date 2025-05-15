@@ -5,7 +5,10 @@ import com.example.core_common.constants.FirestoreConstants.ProjectFields
 import com.example.data.model.remote.project.ProjectDto
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.core_common.util.DateTimeUtil
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,10 +33,37 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
      */
     override suspend fun getParticipatingProjects(userId: String): Result<List<ProjectDto>> = runCatching {
         val querySnapshot = projectCollection
-            .whereArrayContains(ProjectFields.PARTICIPATING_MEMBERS, userId)
+            .whereArrayContains(ProjectFields.MEMBER_IDS, userId)
             .get()
             .await()
         querySnapshot.documents.mapNotNull { it.toObject(ProjectDto::class.java) }
+    }
+
+    /**
+     * Firestore에서 사용자가 참여하고 있는 프로젝트 목록을 Flow 형태로 가져옵니다.
+     *
+     * @param userId 사용자 ID.
+     * @return Flow<Result<List<ProjectDto>>> 객체.
+     */
+    override fun getParticipatingProjectsStream(userId: String): Flow<Result<List<ProjectDto>>> = callbackFlow {
+        val listenerRegistration = projectCollection
+            .whereArrayContains(ProjectFields.MEMBER_IDS, userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Result.failure(error))
+                    close(error) // 에러 발생 시 Flow 종료
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val projects = snapshot.documents.mapNotNull { it.toObject(ProjectDto::class.java) }
+                    trySend(Result.success(projects))
+                } else {
+                    // 스냅샷이 null인 경우 (이론적으로는 발생하지 않아야 함, Firestore API 계약에 따라)
+                    trySend(Result.failure(IllegalStateException("Snapshot was null without an error")))
+                }
+            }
+        // Flow가 취소될 때 리스너 제거
+        awaitClose { listenerRegistration.remove() }
     }
 
     /**
@@ -55,7 +85,12 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
      * @return kotlin.Result 객체. 성공 시 생성된 프로젝트 ID(String), 실패 시 Exception 포함.
      */
     override suspend fun createProject(projectDto: ProjectDto): Result<String> = runCatching {
-        val documentReference = projectCollection.add(projectDto).await()
+        val nowTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
+        val dtoToSave = projectDto.copy(
+            createdAt = nowTimestamp,
+            updatedAt = nowTimestamp
+        )
+        val documentReference = projectCollection.add(dtoToSave).await()
         documentReference.id
     }
 

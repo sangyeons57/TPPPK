@@ -72,4 +72,47 @@ interface ProjectMemberRepository {
      * @return 작업 성공 여부
      */
     suspend fun fetchProjectMembers(projectId: String): Result<Unit> = syncProjectMembers(projectId)
+    
+    /**
+     * 멤버에게 채널 접근 권한을 추가합니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @param channelId 채널 ID
+     * @return 작업 성공 여부
+     */
+    suspend fun addChannelAccessToMember(projectId: String, userId: String, channelId: String): Result<Unit>
+    
+    /**
+     * 멤버의 채널 접근 권한을 제거합니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @param channelId 채널 ID
+     * @return 작업 성공 여부
+     */
+    suspend fun removeChannelAccessFromMember(projectId: String, userId: String, channelId: String): Result<Unit>
+    
+    /**
+     * 채널에 접근 가능한 모든 멤버 ID 목록을 가져옵니다.
+     * @param projectId 프로젝트 ID
+     * @param channelId 채널 ID
+     * @return 멤버 ID 목록
+     */
+    suspend fun getMembersWithChannelAccess(projectId: String, channelId: String): Result<List<String>>
+    
+    /**
+     * 멤버가 접근 가능한 모든 채널 ID 목록을 가져옵니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @return 채널 ID 목록
+     */
+    suspend fun getMemberChannelAccess(projectId: String, userId: String): Result<List<String>>
+    
+    /**
+     * 사용자가 특정 채널에 접근할 수 있는지 확인합니다.
+     * @param projectId 프로젝트 ID
+     * @param channelId 채널 ID
+     * @param userId 사용자 ID
+     * @return 접근 가능 여부
+     */
+    suspend fun canAccessChannel(projectId: String, channelId: String, userId: String): Result<Boolean>
 } 

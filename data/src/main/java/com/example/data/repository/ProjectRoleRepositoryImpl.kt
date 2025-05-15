@@ -1,23 +1,23 @@
 package com.example.data.repository
 
-import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSource
+// import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSource // 제거
 import com.example.data.datasource.remote.projectrole.ProjectRoleRemoteDataSource
 import com.example.domain.model.Role
 import com.example.domain.model.RolePermission
 import com.example.domain.repository.ProjectRoleRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.onEach
+// import kotlinx.coroutines.flow.firstOrNull // 필요 시 유지, 현재는 createRole에서만 사용
+// import kotlinx.coroutines.flow.onEach // 제거
 import javax.inject.Inject
 import kotlin.Result
 
 /**
  * 프로젝트 역할 관련 리포지토리 구현
- * 로컬 및 원격 데이터 소스를 활용하여 역할 관련 기능을 제공합니다.
+ * 원격 데이터 소스를 활용하고 Firestore 캐시를 통해 역할 관련 기능을 제공합니다.
  */
 class ProjectRoleRepositoryImpl @Inject constructor(
-    private val remoteDataSource: ProjectRoleRemoteDataSource,
-    private val localDataSource: ProjectRoleLocalDataSource
+    private val remoteDataSource: ProjectRoleRemoteDataSource
+    // private val localDataSource: ProjectRoleLocalDataSource // 제거
 ) : ProjectRoleRepository {
 
     /**
@@ -27,29 +27,8 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * @return 역할 목록 또는 에러
      */
     override suspend fun getRoles(projectId: String): Result<List<Role>> {
-        // 로컬 데이터 소스에서 역할 목록 가져오기
-        val localRoles = localDataSource.getRoles(projectId)
-        
-        // 로컬에 데이터가 있으면 반환
-        if (localRoles.isNotEmpty()) {
-            return Result.success(localRoles)
-        }
-        
-        // 로컬에 데이터가 없으면 원격에서 가져와서 로컬에 저장
-        return try {
-            val remoteRoles = remoteDataSource.getRoles(projectId)
-            if (remoteRoles.isSuccess) {
-                val roles = remoteRoles.getOrNull() ?: emptyList()
-                if (roles.isNotEmpty()) {
-                    localDataSource.saveRoles(roles)
-                }
-                Result.success(roles)
-            } else {
-                remoteRoles // 원격 요청이 실패한 경우 그대로 반환
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // 원격에서 직접 가져오기 (Firestore 캐시 활용)
+        return remoteDataSource.getRoles(projectId)
     }
 
     /**
@@ -60,11 +39,9 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * @return 역할 목록의 Flow
      */
     override fun getRolesStream(projectId: String): Flow<List<Role>> {
-        // 원격 데이터 소스의 실시간 스트림을 받아 로컬에 캐싱하고 반환
-        return remoteDataSource.getRolesStream(projectId).onEach { roles ->
-            // 변경이 감지되면 로컬에 저장
-            localDataSource.saveRoles(roles)
-        }
+        // 원격 데이터 소스의 실시간 스트림을 직접 반환 (Firestore 캐시 활용)
+        return remoteDataSource.getRolesStream(projectId)
+        // .onEach 로컬 저장 로직 제거
     }
 
     /**
@@ -74,16 +51,9 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * @return 작업 성공 여부
      */
     override suspend fun fetchRoles(projectId: String): Result<Unit> {
-        // 원격 데이터 소스에서 역할 목록 새로고침
-        val result = remoteDataSource.fetchRoles(projectId)
-        
-        // 성공 시 최신 역할 목록 가져와서 로컬에 저장
-        if (result.isSuccess) {
-            val roles = remoteDataSource.getRoles(projectId).getOrNull() ?: emptyList()
-            localDataSource.saveRoles(roles)
-        }
-        
-        return result
+        // 원격 데이터 소스에서 역할 목록 새로고침 (Firestore 캐시 업데이트 유도)
+        return remoteDataSource.fetchRoles(projectId)
+        // 로컬 저장 로직 제거
     }
 
     /**
@@ -93,15 +63,7 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * @return 역할 이름과 권한 맵 Pair 또는 에러
      */
     override suspend fun getRoleDetails(roleId: String): Result<Pair<String, Map<RolePermission, Boolean>>> {
-        // 로컬 데이터 소스에서 역할 상세 정보 가져오기
-        val localRoleDetails = localDataSource.getRoleDetails(roleId)
-        
-        // 로컬에 데이터가 있으면 반환
-        if (localRoleDetails != null) {
-            return Result.success(localRoleDetails)
-        }
-        
-        // 로컬에 데이터가 없으면 원격에서 가져오기
+        // 원격에서 직접 가져오기 (Firestore 캐시 활용)
         return remoteDataSource.getRoleDetails(roleId)
     }
 
@@ -120,19 +82,11 @@ class ProjectRoleRepositoryImpl @Inject constructor(
     ): Result<Unit> {
         // 원격 데이터 소스에서 역할 생성
         val result = remoteDataSource.createRole(projectId, name, permissions)
-        
-        // 성공 시 최신 역할 목록 가져와서 로컬에 저장
-        if (result.isSuccess) {
-            val roleId = result.getOrNull()
-            if (roleId != null) {
-                // 새로운 역할을 생성했으므로 최신 목록 가져오기
-                val roles = remoteDataSource.getRolesStream(projectId).firstOrNull() ?: emptyList()
-                localDataSource.saveRoles(roles)
-            }
-            return Result.success(Unit)
-        }
-        
-        return Result.failure(result.exceptionOrNull() ?: Exception("역할 생성 실패"))
+        // 로컬 저장 로직 제거
+        // createRole이 ID 대신 Unit을 반환하도록 remoteDataSource가 변경되었다고 가정, 또는 ID를 받아도 사용 안 함.
+        // 성공 시 Unit을 반환하거나, remoteDataSource의 Result를 그대로 반환할 수 있음.
+        return if (result.isSuccess) Result.success(Unit) 
+               else Result.failure(result.exceptionOrNull() ?: Exception("역할 생성 실패"))
     }
 
     /**
@@ -144,38 +98,21 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * @return 성공/실패 결과
      */
     override suspend fun updateRole(
-        roleId: String,
+        roleId: String, // This is expected to be a composite ID "projectId_actualRoleId"
         name: String,
         permissions: Map<RolePermission, Boolean>
     ): Result<Unit> {
-        // 원격 데이터 소스에서 역할 업데이트
-        val result = remoteDataSource.updateRole(roleId, name, permissions)
-        
-        // 성공 시 로컬 데이터 업데이트
-        if (result.isSuccess) {
-            // 역할 ID에서 프로젝트 ID 추출 (이 구현은 역할 ID 형식에 따라 달라질 수 있음)
-            val parts = roleId.split("_")
-            if (parts.size >= 2) {
-                val projectId = parts[0]
-                // 프로젝트의 최신 역할 목록 가져오기
-                val roles = remoteDataSource.getRolesStream(projectId).firstOrNull() ?: emptyList()
-                localDataSource.saveRoles(roles)
-            } else {
-                // 역할 ID에서 프로젝트 ID를 추출할 수 없는 경우 
-                // 직접 해당 역할의 정보를 포함하는 객체를 생성하여 업데이트
-                // (권장되지 않는 방법이지만 폴백 처리로 제공)
-                val projectId = "unknown" // 이 경우 프로젝트 ID를 알 수 없으므로 임시 값 사용
-                val role = Role(
-                    id = roleId,
-                    projectId = projectId,
-                    name = name,
-                    permissions = permissions
-                )
-                localDataSource.updateRole(role)
-            }
+        // Parse roleId to get projectId and actualRoleId
+        val parts = roleId.split('_')
+        if (parts.size < 2) { // Basic validation for "projectId_roleId" format
+            return Result.failure(IllegalArgumentException("Invalid roleId format. Expected 'projectId_roleId'."))
         }
-        
-        return result
+        val projectId = parts[0]
+        val actualRoleId = parts.subList(1, parts.size).joinToString("_") // Handle roleIds that might contain underscores
+
+        // 원격 데이터 소스에서 역할 업데이트
+        // 로컬 저장 로직 제거
+        return remoteDataSource.updateRole(projectId, actualRoleId, name, permissions)
     }
 
     /**
@@ -186,13 +123,7 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      */
     override suspend fun deleteRole(roleId: String): Result<Unit> {
         // 원격 데이터 소스에서 역할 삭제
-        val result = remoteDataSource.deleteRole(roleId)
-        
-        // 성공 시 로컬 데이터에서도 삭제
-        if (result.isSuccess) {
-            localDataSource.deleteRole(roleId)
-        }
-        
-        return result
+        // 로컬 삭제 로직 제거
+        return remoteDataSource.deleteRole(roleId)
     }
 }

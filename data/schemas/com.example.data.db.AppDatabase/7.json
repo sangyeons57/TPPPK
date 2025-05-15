@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "3d972bb6100435dd479bd1c60dd87883",
+    "identityHash": "9282c7873b925461cdd71b9ca6468874",
     "entities": [
       {
         "tableName": "schedules",
@@ -205,7 +205,7 @@
       },
       {
         "tableName": "chat_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chatId` INTEGER NOT NULL, `channelId` TEXT NOT NULL, `userId` INTEGER NOT NULL, `userName` TEXT NOT NULL, `userProfileUrl` TEXT, `message` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `isModified` INTEGER NOT NULL, `attachmentImageUrls` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chatId` TEXT NOT NULL, `channelId` TEXT NOT NULL, `channelType` TEXT NOT NULL, `userId` TEXT NOT NULL, `userName` TEXT NOT NULL, `userProfileUrl` TEXT, `message` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `isModified` INTEGER NOT NULL, `attachmentImageUrls` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -216,7 +216,7 @@
           {
             "fieldPath": "chatId",
             "columnName": "chatId",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -226,9 +226,15 @@
             "notNull": true
           },
           {
+            "fieldPath": "channelType",
+            "columnName": "channelType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
             "fieldPath": "userId",
             "columnName": "userId",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -274,23 +280,34 @@
         },
         "indices": [
           {
-            "name": "index_chat_messages_channelId",
+            "name": "index_chat_messages_channelId_sentAt",
             "unique": false,
             "columnNames": [
-              "channelId"
+              "channelId",
+              "sentAt"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_channelId` ON `${TABLE_NAME}` (`channelId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_channelId_sentAt` ON `${TABLE_NAME}` (`channelId`, `sentAt`)"
           },
           {
-            "name": "index_chat_messages_chatId_channelId",
-            "unique": true,
+            "name": "index_chat_messages_channelType_channelId_sentAt",
+            "unique": false,
             "columnNames": [
-              "chatId",
-              "channelId"
+              "channelType",
+              "channelId",
+              "sentAt"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_chat_messages_chatId_channelId` ON `${TABLE_NAME}` (`chatId`, `channelId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_channelType_channelId_sentAt` ON `${TABLE_NAME}` (`channelType`, `channelId`, `sentAt`)"
+          },
+          {
+            "name": "index_chat_messages_chatId",
+            "unique": true,
+            "columnNames": [
+              "chatId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_chat_messages_chatId` ON `${TABLE_NAME}` (`chatId`)"
           }
         ]
       },
@@ -377,57 +394,6 @@
           "autoGenerate": false,
           "columnNames": [
             "userId"
-          ]
-        }
-      },
-      {
-        "tableName": "dm_conversations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `otherUserId` TEXT NOT NULL, `otherUserNickname` TEXT NOT NULL, `otherUserProfileImageUrl` TEXT, `lastMessage` TEXT, `lastMessageTimestamp` INTEGER, `cachedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "otherUserId",
-            "columnName": "otherUserId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "otherUserNickname",
-            "columnName": "otherUserNickname",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "otherUserProfileImageUrl",
-            "columnName": "otherUserProfileImageUrl",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "lastMessage",
-            "columnName": "lastMessage",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "lastMessageTimestamp",
-            "columnName": "lastMessageTimestamp",
-            "affinity": "INTEGER"
-          },
-          {
-            "fieldPath": "cachedAt",
-            "columnName": "cachedAt",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
           ]
         }
       },
@@ -661,7 +627,7 @@
       },
       {
         "tableName": "channels",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `categoryId` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `order` INTEGER NOT NULL, `cachedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `categoryId` TEXT, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `order` INTEGER NOT NULL, `lastMessagePreview` TEXT, `lastMessageTimestamp` INTEGER NOT NULL, `participantIds` TEXT NOT NULL, `cachedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -672,8 +638,7 @@
           {
             "fieldPath": "categoryId",
             "columnName": "categoryId",
-            "affinity": "TEXT",
-            "notNull": true
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "projectId",
@@ -700,6 +665,23 @@
             "notNull": true
           },
           {
+            "fieldPath": "lastMessagePreview",
+            "columnName": "lastMessagePreview",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastMessageTimestamp",
+            "columnName": "lastMessageTimestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "participantIds",
+            "columnName": "participantIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
             "fieldPath": "cachedAt",
             "columnName": "cachedAt",
             "affinity": "INTEGER",
@@ -721,15 +703,6 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_channels_projectId` ON `${TABLE_NAME}` (`projectId`)"
-          },
-          {
-            "name": "index_channels_categoryId",
-            "unique": false,
-            "columnNames": [
-              "categoryId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_channels_categoryId` ON `${TABLE_NAME}` (`categoryId`)"
           }
         ]
       },
@@ -801,7 +774,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3d972bb6100435dd479bd1c60dd87883')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9282c7873b925461cdd71b9ca6468874')"
     ]
   }
 }

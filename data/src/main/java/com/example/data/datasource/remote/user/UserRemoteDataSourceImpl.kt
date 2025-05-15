@@ -21,6 +21,7 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.Result
+import com.example.core_common.util.DateTimeUtil
 
 /**
  * UserRemoteDataSource 인터페이스의 Firestore 구현체입니다.
@@ -121,7 +122,10 @@ class UserRemoteDataSourceImpl @Inject constructor(
         imageRef.putFile(imageUri).await()
         val downloadUrl = imageRef.downloadUrl.await().toString()
         
-        userCollection.document(userId).update("profileImageUrl", downloadUrl).await()
+        userCollection.document(userId).update(mapOf(
+            "profileImageUrl" to downloadUrl,
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         downloadUrl
     }
 
@@ -135,7 +139,10 @@ class UserRemoteDataSourceImpl @Inject constructor(
             imageRef.delete().await()
         }
         
-        userCollection.document(userId).update("profileImageUrl", FieldValue.delete()).await() // 필드 삭제
+        userCollection.document(userId).update(mapOf(
+            "profileImageUrl" to FieldValue.delete(),
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await() // 필드 삭제
         Result.success(Unit)
     }
 
@@ -144,12 +151,18 @@ class UserRemoteDataSourceImpl @Inject constructor(
         if (!isAvailable) {
             throw IllegalArgumentException("이미 사용 중인 닉네임입니다: $newNickname")
         }
-        userCollection.document(userId).update("name", newNickname).await() // DTO의 @PropertyName("name")
+        userCollection.document(userId).update(mapOf(
+            "name" to newNickname, // DTO의 @PropertyName("name")
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         Result.success(Unit)
     }
 
     override suspend fun updateUserMemo(userId: String, newMemo: String): Result<Unit> = runCatching {
-        userCollection.document(userId).update("memo", newMemo).await()
+        userCollection.document(userId).update(mapOf(
+            "memo" to newMemo,
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         Result.success(Unit)
     }
 
@@ -159,17 +172,26 @@ class UserRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun updateUserStatus(userId: String, status: UserStatus): Result<Unit> = runCatching {
-        userCollection.document(userId).update("status", status.name).await()
+        userCollection.document(userId).update(mapOf(
+            "status" to status.name,
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         Result.success(Unit)
     }
 
     override suspend fun updateAccountStatus(userId: String, accountStatus: AccountStatus): Result<Unit> = runCatching {
-        userCollection.document(userId).update("accountStatus", accountStatus.name).await()
+        userCollection.document(userId).update(mapOf(
+            "accountStatus" to accountStatus.name,
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         Result.success(Unit)
     }
 
     override suspend fun updateFcmToken(userId: String, token: String): Result<Unit> = runCatching {
-        userCollection.document(userId).update("fcmToken", token).await()
+        userCollection.document(userId).update(mapOf(
+            "fcmToken" to token,
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         Result.success(Unit)
     }
 
@@ -179,7 +201,10 @@ class UserRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun updateParticipatingProjects(userId: String, projectIds: List<String>): Result<Unit> = runCatching {
-        userCollection.document(userId).update("participatingProjectIds", projectIds).await()
+        userCollection.document(userId).update(mapOf(
+            "participatingProjectIds" to projectIds,
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         Result.success(Unit)
     }
 
@@ -189,7 +214,10 @@ class UserRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun updateActiveDmChannels(userId: String, dmIds: List<String>): Result<Unit> = runCatching {
-        userCollection.document(userId).update("activeDmIds", dmIds).await()
+        userCollection.document(userId).update(mapOf(
+            "activeDmIds" to dmIds,
+            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
+        )).await()
         Result.success(Unit)
     }
 
@@ -198,17 +226,25 @@ class UserRemoteDataSourceImpl @Inject constructor(
         val document = userCollection.document(userId).get().await()
         
         if (document.exists()) {
-            document.toObject(UserDto::class.java) ?: throw Exception("사용자 문서 변환 실패")
+            document.toObject(UserDto::class.java)
+                ?: throw NoSuchElementException("User document $userId exists but could not be deserialized.")
         } else {
-            val userDto = UserDto(
+            // 사용자 프로필이 존재하지 않으면 새로 생성합니다.
+            val now = DateTimeUtil.nowFirebaseTimestamp() // 일관성을 위해 한 번 호출
+            val newUserDto = UserDto(
                 id = userId,
                 email = firebaseUser.email ?: "",
-                name = firebaseUser.displayName ?: "", // 초기 이름, 닉네임 중복 확인은 별도 로직
-                isEmailVerified = firebaseUser.isEmailVerified,
-                // 나머지 필드는 DTO의 기본값 사용
+                name = firebaseUser.displayName ?: firebaseUser.email?.substringBefore('@') ?: "User_${userId.take(6)}",
+                profileImageUrl = firebaseUser.photoUrl?.toString(),
+                createdAt = now, 
+                updatedAt = now, // updatedAt 추가
+                status = UserStatus.OFFLINE,
+                accountStatus = AccountStatus.ACTIVE,
+                isEmailVerified = firebaseUser.isEmailVerified
+                // participatingProjectIds and activeDmIds default to emptyList in UserDto
             )
-            userCollection.document(userId).set(userDto).await()
-            userDto
+            createUserProfile(newUserDto).getOrThrow() // 이 호출은 UserMapper를 통해 UserDto를 사용합니다.
+            newUserDto
         }
     }
 } 

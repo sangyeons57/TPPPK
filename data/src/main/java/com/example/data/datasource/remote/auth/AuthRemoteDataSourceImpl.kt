@@ -5,6 +5,7 @@ import com.example.data.model.remote.user.UserDto
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.core_common.util.DateTimeUtil
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -61,7 +62,8 @@ class AuthRemoteDataSourceImpl @Inject constructor(
                         id = currentUser.uid,
                         email = currentUser.email ?: "",
                         name = currentUser.displayName ?: "",
-                        isEmailVerified = currentUser.isEmailVerified
+                        isEmailVerified = currentUser.isEmailVerified,
+                        createdAt = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
                     )
                 }
             } catch (e: Exception) {
@@ -87,7 +89,8 @@ class AuthRemoteDataSourceImpl @Inject constructor(
                     id = user.uid,
                     email = user.email ?: "",
                     name = user.displayName ?: "",
-                    isEmailVerified = user.isEmailVerified
+                    isEmailVerified = user.isEmailVerified,
+                    createdAt = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
                 )
             }
         } else {
@@ -134,11 +137,13 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             user.updateProfile(profileUpdates).await()
             
             // Firestore에 사용자 정보 저장
+            val nowTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
             val userDto = UserDto(
                 id = user.uid,
                 email = email,
                 name = nickname,
-                isEmailVerified = user.isEmailVerified
+                isEmailVerified = user.isEmailVerified,
+                createdAt = nowTimestamp
             )
             
             usersCollection.document(user.uid).set(userDto).await()

@@ -1,14 +1,13 @@
 package com.example.data.datasource.remote.friend
 
 import com.example.core_common.constants.FirestoreConstants.Collections
-import com.example.core_common.constants.FirestoreConstants.DmFields
 import com.example.core_common.constants.FirestoreConstants.FriendFields
-import com.example.core_common.constants.FirestoreConstants.Status
 import com.example.core_common.constants.FirestoreConstants.UserFields
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.remote.friend.FriendRelationshipDto
 import com.example.domain.model.Friend
 import com.example.domain.model.FriendRequest
+import com.example.domain.model.FriendRequestStatus
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -22,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.Result
+import java.time.Instant
 
 /**
  * 친구 관련 원격 데이터 소스 구현
@@ -46,7 +46,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
         // 현재 사용자의 친구 컬렉션에 대한 참조
         val friendsRef = firestore.collection(Collections.USERS).document(currentUserId)
             .collection(Collections.FRIENDS)
-            .whereEqualTo(FriendFields.STATUS, Status.ACCEPTED) // 수락된 친구만 필터링
+            .whereEqualTo(FriendFields.STATUS, FriendRequestStatus.ACCEPTED) // 수락된 친구만 필터링
         
         // 실시간 스냅샷 리스너 설정
         val subscription = friendsRef.addSnapshotListener { snapshot, error ->
@@ -78,9 +78,9 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                             
                             val friend = Friend(
                                 userId = friendId,
-                                userName = friendUserDoc.getString(UserFields.NICKNAME) ?: "알 수 없음",
-                                status = Status.ACCEPTED,
-                                profileImageUrl = friendUserDoc.getString(UserFields.PROFILE_IMAGE_URL)
+                                userName = friendUserDoc.getString(UserFields.NAME) ?: "알 수 없음",
+                                profileImageUrl = friendUserDoc.getString(UserFields.PROFILE_IMAGE_URL),
+                                status = friendUserDoc.getString(FriendFields.STATUS) ?: "",
                             )
                             
                             friendsList.add(friend)
@@ -121,32 +121,28 @@ class FriendRemoteDataSourceImpl @Inject constructor(
      * @return DM 채널 ID
      */
     override suspend fun getDmChannelId(friendUserId: String): Result<String> = try {
-        // 두 사용자 ID를 알파벳 순으로 정렬하여 DM 채널 ID 생성
         val sortedUserIds = listOf(currentUserId, friendUserId).sorted()
         val dmId = "${sortedUserIds[0]}_${sortedUserIds[1]}"
         
-        // 해당 DM이 존재하는지 확인
-        val dmDoc = firestore.collection(Collections.DMS).document(dmId).get().await()
+        val channelDoc = firestore.collection(Collections.CHANNELS).document(dmId).get().await()
         
-        if (dmDoc.exists()) {
-            // 이미 존재하면 ID 반환
+        if (channelDoc.exists()) {
             Result.success(dmId)
         } else {
-            // 존재하지 않으면 새로 생성
-            val dmData = hashMapOf(
-                DmFields.PARTICIPANTS to sortedUserIds,
-                DmFields.CREATED_AT to FieldValue.serverTimestamp()
+            val channelData = hashMapOf(
+                "type" to "DM",
+                "participantIds" to sortedUserIds,
+                "createdAt" to DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant()),
+                "isActive" to true
             )
             
-            firestore.collection(Collections.DMS).document(dmId).set(dmData).await()
+            firestore.collection(Collections.CHANNELS).document(dmId).set(channelData).await()
             
-            // 사용자 문서에 활성 DM ID 추가
             sortedUserIds.forEach { userId ->
                 firestore.collection(Collections.USERS).document(userId)
-                    .update(UserFields.ACTIVE_DM_IDS, FieldValue.arrayUnion(dmId))
+                    .update("activeDmIds", FieldValue.arrayUnion(dmId))
                     .await()
             }
-            
             Result.success(dmId)
         }
     } catch (e: Exception) {
@@ -159,9 +155,8 @@ class FriendRemoteDataSourceImpl @Inject constructor(
      * @return 성공 시 메시지 또는 실패 시 예외
      */
     override suspend fun sendFriendRequest(username: String): Result<String> = try {
-        // 닉네임으로 사용자 검색
         val userQuery = firestore.collection(Collections.USERS)
-            .whereEqualTo(UserFields.NICKNAME, username)
+            .whereEqualTo(UserFields.NAME, username)
             .limit(1)
             .get()
             .await()
@@ -172,45 +167,41 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             val targetUser = userQuery.documents.first()
             val targetUserId = targetUser.id
             
-            // 자기 자신에게 요청을 보내는 경우 방지
             if (targetUserId == currentUserId) {
                 Result.failure(IllegalArgumentException("자신에게 친구 요청을 보낼 수 없습니다."))
             } else {
-                // 이미 친구인지 확인
                 val existingFriendDoc = firestore.collection(Collections.USERS).document(currentUserId)
                     .collection(Collections.FRIENDS).document(targetUserId)
                     .get()
                     .await()
                 
                 if (existingFriendDoc.exists()) {
-                    val status = existingFriendDoc.getString(FriendFields.STATUS)
+                    val status = FriendRequestStatus.fromString(existingFriendDoc.getString(FriendFields.STATUS))
                     when (status) {
-                        Status.ACCEPTED -> Result.failure(IllegalArgumentException("이미 친구입니다."))
-                        Status.PENDING_SENT -> Result.failure(IllegalArgumentException("이미 친구 요청을 보냈습니다."))
-                        Status.PENDING_RECEIVED -> Result.failure(IllegalArgumentException("상대방이 이미 친구 요청을 보냈습니다."))
-                        else -> Result.failure(IllegalArgumentException("알 수 없는 상태입니다."))
+                        FriendRequestStatus.ACCEPTED -> Result.failure(IllegalArgumentException("이미 친구입니다."))
+                        FriendRequestStatus.PENDING_SENT -> Result.failure(IllegalArgumentException("이미 친구 요청을 보냈습니다."))
+                        FriendRequestStatus.PENDING_RECEIVED -> Result.failure(IllegalArgumentException("상대방이 이미 친구 요청을 보냈습니다."))
+                        else -> Result.failure(IllegalArgumentException("알 수 없는 상태입니다: $status"))
                     }
                 } else {
-                    // 친구 요청 데이터 생성
-                    val timestamp = FieldValue.serverTimestamp()
+                    val nowAsTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
                     
-                    // 보낸 사람의 친구 컬렉션에 추가
+                    val senderRequestDto = FriendRelationshipDto(
+                        status = FriendRequestStatus.PENDING_SENT,
+                        timestamp = nowAsTimestamp,
+                        acceptedAt = null
+                    )
+                    val receiverRequestDto = FriendRelationshipDto(
+                        status = FriendRequestStatus.PENDING_RECEIVED,
+                        timestamp = nowAsTimestamp,
+                        acceptedAt = null
+                    )
+                    
                     firestore.collection(Collections.USERS).document(currentUserId)
-                        .collection(Collections.FRIENDS).document(targetUserId)
-                        .set(hashMapOf(
-                            FriendFields.STATUS to Status.PENDING_SENT,
-                            FriendFields.TIMESTAMP to timestamp
-                        ))
-                        .await()
+                        .collection(Collections.FRIENDS).document(targetUserId).set(senderRequestDto).await()
                     
-                    // 받는 사람의 친구 컬렉션에 추가
                     firestore.collection(Collections.USERS).document(targetUserId)
-                        .collection(Collections.FRIENDS).document(currentUserId)
-                        .set(hashMapOf(
-                            FriendFields.STATUS to Status.PENDING_RECEIVED,
-                            FriendFields.TIMESTAMP to timestamp
-                        ))
-                        .await()
+                        .collection(Collections.FRIENDS).document(currentUserId).set(receiverRequestDto).await()
                     
                     Result.success("친구 요청을 보냈습니다.")
                 }
@@ -228,7 +219,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
         // 받은 친구 요청 쿼리
         val requestsQuery = firestore.collection(Collections.USERS).document(currentUserId)
             .collection(Collections.FRIENDS)
-            .whereEqualTo(FriendFields.STATUS, Status.PENDING_RECEIVED)
+            .whereEqualTo(FriendFields.STATUS, FriendRequestStatus.PENDING_RECEIVED)
             .get()
             .await()
         
@@ -238,12 +229,17 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             try {
                 // 요청자 정보 가져오기
                 val requesterDoc = firestore.collection(Collections.USERS).document(requesterId).get().await()
-                FriendRequest(
-                    userId = requesterId,
-                    userName = requesterDoc.getString(UserFields.NICKNAME) ?: "알 수 없음",
-                    profileImageUrl = requesterDoc.getString(UserFields.PROFILE_IMAGE_URL),
-                    timestamp = DateTimeUtil.toLocalDateTime(doc.getTimestamp(FriendFields.TIMESTAMP))
-                )
+                val requesterDocData = requesterDoc.data
+                if (requesterDocData != null) {
+                    FriendRequest(
+                        userId = requesterId,
+                        userName = requesterDocData[UserFields.NAME] as? String ?: "알 수 없음",
+                        profileImageUrl = requesterDocData[UserFields.PROFILE_IMAGE_URL] as? String?,
+                        timestamp = DateTimeUtil.firebaseTimestampToInstant(doc.getTimestamp(FriendFields.TIMESTAMP)) ?: Instant.now()
+                    )
+                } else {
+                    null
+                }
             } catch (e: Exception) {
                 null // 오류 발생 시 해당 요청은 건너뜀
             }
@@ -265,16 +261,17 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             .collection(Collections.FRIENDS).document(userId)
             .get()
             .await()
-        
-        if (!requestDoc.exists() || requestDoc.getString(FriendFields.STATUS) != Status.PENDING_RECEIVED) {
+
+        val status = FriendRequestStatus.fromString(requestDoc.getString(FriendFields.STATUS))
+        if (!requestDoc.exists() || status != FriendRequestStatus.PENDING_RECEIVED) {
             Result.failure(IllegalArgumentException("유효한 친구 요청이 없습니다."))
         } else {
             // 내 친구 목록 업데이트
             firestore.collection(Collections.USERS).document(currentUserId)
                 .collection(Collections.FRIENDS).document(userId)
                 .update(mapOf(
-                    FriendFields.STATUS to Status.ACCEPTED,
-                    FriendFields.ACCEPTED_AT to FieldValue.serverTimestamp()
+                    FriendFields.STATUS to FriendRequestStatus.ACCEPTED,
+                    FriendFields.ACCEPTED_AT to DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
                 ))
                 .await()
             
@@ -282,8 +279,8 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             firestore.collection(Collections.USERS).document(userId)
                 .collection(Collections.FRIENDS).document(currentUserId)
                 .update(mapOf(
-                    FriendFields.STATUS to Status.ACCEPTED,
-                    FriendFields.ACCEPTED_AT to FieldValue.serverTimestamp()
+                    FriendFields.STATUS to FriendRequestStatus.ACCEPTED,
+                    FriendFields.ACCEPTED_AT to DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
                 ))
                 .await()
             
@@ -304,8 +301,10 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             .collection(Collections.FRIENDS).document(userId)
             .get()
             .await()
-        
-        if (!requestDoc.exists() || requestDoc.getString(FriendFields.STATUS) != Status.PENDING_RECEIVED) {
+
+        val status = FriendRequestStatus.fromString(requestDoc.getString(FriendFields.STATUS))
+
+        if (!requestDoc.exists() || status != FriendRequestStatus.PENDING_RECEIVED) {
             Result.failure(IllegalArgumentException("유효한 친구 요청이 없습니다."))
         } else {
             // 내 친구 목록에서 삭제
@@ -352,9 +351,9 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun sendFriendRequest(currentUserId: String, targetUserId: String): Result<Unit> = try {
-        val now = Timestamp.now()
-        val requestDto = FriendRelationshipDto(status = Status.PENDING_SENT, timestamp = now, acceptedAt = null)
-        val receivedDto = FriendRelationshipDto(status = Status.PENDING_RECEIVED, timestamp = now, acceptedAt = null)
+        val now = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
+        val requestDto = FriendRelationshipDto(status = FriendRequestStatus.PENDING_SENT, timestamp = now, acceptedAt = null)
+        val receivedDto = FriendRelationshipDto(status = FriendRequestStatus.PENDING_RECEIVED, timestamp = now, acceptedAt = null)
 
         firestore.batch().apply {
             set(
@@ -374,9 +373,9 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun acceptFriendRequest(currentUserId: String, requesterId: String): Result<Unit> = try {
-        val now = Timestamp.now()
+        val now = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
         val updates = mapOf(
-            FriendFields.STATUS to Status.ACCEPTED,
+            FriendFields.STATUS to FriendRequestStatus.ACCEPTED,
             FriendFields.ACCEPTED_AT to now
         )
 

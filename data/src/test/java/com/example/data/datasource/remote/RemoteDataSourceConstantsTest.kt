@@ -57,8 +57,8 @@ class RemoteDataSourceConstantsTest {
         firestore.collection(FirestoreConstants.Collections.USERS)
         verify(firestore).collection("users")
         
-        firestore.collection(FirestoreConstants.Collections.DMS)
-        verify(firestore).collection("dms")
+        firestore.collection(FirestoreConstants.Collections.CHANNELS)
+        verify(firestore).collection("channels")
     }
 
     @Test

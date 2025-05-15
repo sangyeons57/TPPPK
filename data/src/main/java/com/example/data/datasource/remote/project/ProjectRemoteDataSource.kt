@@ -16,6 +16,14 @@ interface ProjectRemoteDataSource {
     suspend fun getParticipatingProjects(userId: String): Result<List<ProjectDto>>
 
     /**
+     * 사용자가 참여하고 있는 프로젝트 목록을 Flow 형태로 가져옵니다.
+     *
+     * @param userId 사용자 ID.
+     * @return Flow<Result<List<ProjectDto>>> 객체. 각 방출은 성공 시 List<ProjectDto>, 실패 시 Exception을 포함하는 Result.
+     */
+    fun getParticipatingProjectsStream(userId: String): Flow<Result<List<ProjectDto>>>
+
+    /**
      * 프로젝트 상세 정보를 가져옵니다.
      *
      * @param projectId 프로젝트 ID.

@@ -20,11 +20,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.ChannelType
 import com.example.feature_project.structure.viewmodel.CreateChannelEvent
 import com.example.feature_project.structure.viewmodel.CreateChannelUiState
 import com.example.feature_project.structure.viewmodel.CreateChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
+import com.example.domain.model.ChannelMode
 
 /**
  * CreateChannelScreen: 프로젝트 내 카테고리 아래 새 채널 추가 화면 (Stateful)
@@ -90,7 +90,7 @@ fun CreateChannelContent(
     modifier: Modifier = Modifier,
     uiState: CreateChannelUiState,
     onChannelNameChange: (String) -> Unit,
-    onChannelTypeSelected: (ChannelType) -> Unit,
+    onChannelTypeSelected: (ChannelMode) -> Unit,
     onCreateClick: () -> Unit
 ) {
     Column(
@@ -124,14 +124,14 @@ fun CreateChannelContent(
                     .fillMaxWidth()
                     .height(56.dp) // RadioButton 높이와 비슷하게
                     .selectable(
-                        selected = (uiState.selectedChannelType == ChannelType.TEXT),
-                        onClick = { onChannelTypeSelected(ChannelType.TEXT) },
+                        selected = (uiState.selectedChannelMode == ChannelMode.TEXT),
+                        onClick = { onChannelTypeSelected(ChannelMode.TEXT) },
                         role = Role.RadioButton
                     )
                     .padding(horizontal = 16.dp)
             ) {
                 RadioButton(
-                    selected = (uiState.selectedChannelType == ChannelType.TEXT),
+                    selected = (uiState.selectedChannelMode == ChannelMode.TEXT),
                     onClick = null // Row의 selectable에서 처리
                 )
                 Text(
@@ -146,14 +146,14 @@ fun CreateChannelContent(
                     .fillMaxWidth()
                     .height(56.dp)
                     .selectable(
-                        selected = (uiState.selectedChannelType == ChannelType.VOICE),
-                        onClick = { onChannelTypeSelected(ChannelType.VOICE) },
+                        selected = (uiState.selectedChannelMode == ChannelMode.VOICE),
+                        onClick = { onChannelTypeSelected(ChannelMode.VOICE) },
                         role = Role.RadioButton
                     )
                     .padding(horizontal = 16.dp)
             ) {
                 RadioButton(
-                    selected = (uiState.selectedChannelType == ChannelType.VOICE),
+                    selected = (uiState.selectedChannelMode == ChannelMode.VOICE),
                     onClick = null // Row의 selectable에서 처리
                 )
                 Text(
@@ -202,7 +202,7 @@ private fun CreateChannelContentPreview() {
         CreateChannelContent(
             uiState = CreateChannelUiState(
                 channelName = "새로운-채팅방",
-                selectedChannelType = ChannelType.TEXT
+                selectedChannelMode = ChannelMode.TEXT
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
@@ -218,7 +218,7 @@ private fun CreateChannelContentVoicePreview() {
         CreateChannelContent(
             uiState = CreateChannelUiState(
                 channelName = "음성 회의 채널",
-                selectedChannelType = ChannelType.VOICE
+                selectedChannelMode = ChannelMode.VOICE
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},

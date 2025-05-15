@@ -1,5 +1,6 @@
 package com.example.data.datasource.local.friend
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.db.dao.FriendDao
 import com.example.data.model.local.FriendEntity
 import com.example.data.model.local.FriendRequestEntity
@@ -7,7 +8,7 @@ import com.example.domain.model.Friend
 import com.example.domain.model.FriendRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.time.LocalDateTime
+import java.time.Instant
 import javax.inject.Inject
 
 /**
@@ -26,7 +27,7 @@ class FriendLocalDataSourceImpl @Inject constructor(
         status = this.status,
         profileImageUrl = this.profileImageUrl,
         acceptedAt = null, // 필요시 파라미터로 전달
-        lastUpdatedAt = LocalDateTime.now()
+        lastUpdatedAt = DateTimeUtil.nowInstant()
     )
 
     // 로컬 엔티티 -> 도메인 모델 변환 함수
@@ -43,7 +44,7 @@ class FriendLocalDataSourceImpl @Inject constructor(
         nickname = userName,
         profileImageUrl = profileImageUrl,
         timestamp = timestamp,
-        cachedAt = LocalDateTime.now()
+        cachedAt = Instant.now()
     )
 
     // 로컬 엔티티 -> 도메인 모델 변환 함수 (친구 요청)
@@ -144,8 +145,8 @@ class FriendLocalDataSourceImpl @Inject constructor(
                 userId = userId,
                 nickname = it.nickname,
                 profileImageUrl = it.profileImageUrl,
-                timestamp = it.acceptedAt ?: LocalDateTime.now(),
-                cachedAt = LocalDateTime.now()
+                timestamp = it.acceptedAt ?: Instant.now(),
+                cachedAt = Instant.now()
             )
         } ?: return
         

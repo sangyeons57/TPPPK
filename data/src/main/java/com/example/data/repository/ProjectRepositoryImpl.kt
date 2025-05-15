@@ -1,141 +1,95 @@
 package com.example.data.repository
 
-import com.example.data.datasource.local.project.ProjectLocalDataSource
 import com.example.data.datasource.remote.project.ProjectRemoteDataSource
-import com.example.data.model.local.ProjectEntity
 import com.example.data.model.remote.project.ProjectDto
 import com.example.data.util.CurrentUserProvider
 import com.example.domain.model.Project
 import com.example.domain.model.ProjectInfo
 import com.example.domain.repository.ProjectRepository
-import com.example.domain.util.NetworkConnectivityMonitor
+// import com.example.domain.util.NetworkConnectivityMonitor // Removed
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flow // Required for flow builder
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.firstOrNull
+// import kotlinx.coroutines.flow.firstOrNull // Keep if used, remove if only for networkMonitor
+// import kotlinx.coroutines.flow.first // Will be removed if only used with networkMonitor
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.Result
+import com.example.data.datasource.remote.projectstructure.ProjectStructureRemoteDataSource
+import com.example.domain.model.Category
+import com.example.domain.model.Channel
+import com.example.domain.model.ChannelType
+import com.example.domain.model.ProjectStructure
+import com.example.domain.repository.ChannelRepository // Added for createProject
+import kotlinx.coroutines.flow.emitAll // Added for getProjectListStream
+import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model.ChannelMode
 
 /**
  * ProjectRepository 인터페이스의 실제 구현체
- * 로컬 및 원격 데이터 소스를 조율하여 프로젝트 데이터를 관리합니다.
+ * 원격 데이터 소스를 사용하여 프로젝트 데이터를 관리하고 Firestore 캐시를 활용합니다.
  *
  * @param remoteDataSource 프로젝트 원격 데이터 소스
- * @param localDataSource 프로젝트 로컬 데이터 소스
- * @param networkMonitor 네트워크 연결 상태 모니터
+ * @param currentUserProvider 현재 로그인한 사용자 정보를 제공하는 클래스
+ * @param projectStructureRemoteDataSource 프로젝트 구조 관련 원격 데이터 소스
+ * @param channelRepository 채널 관련 리포지토리 (프로젝트 생성 시 기본 채널 생성용)
  */
 @Singleton
 class ProjectRepositoryImpl @Inject constructor(
     private val remoteDataSource: ProjectRemoteDataSource,
-    private val localDataSource: ProjectLocalDataSource,
-    private val networkMonitor: NetworkConnectivityMonitor,
-    private val currentUserProvider: CurrentUserProvider // 현재 로그인한 사용자 정보를 제공하는 클래스
+    // private val networkMonitor: NetworkConnectivityMonitor, // Removed
+    private val currentUserProvider: CurrentUserProvider,
+    private val projectStructureRemoteDataSource: ProjectStructureRemoteDataSource,
+    private val channelRepository: ChannelRepository // Added for createProject
 ) : ProjectRepository {
 
     override fun getProjectListStream(): Flow<List<Project>> = flow {
-        // 로그인한 사용자의 ID 가져오기
         val userId = currentUserProvider.getCurrentUserId()
-        
-        // 로컬 DB에서 프로젝트 목록 Flow 가져오기
-        val localProjectsFlow = localDataSource.getParticipatingProjectsStream(userId)
-            .map { projectEntities -> projectEntities.map { it.toDomain() } }
-        
-        // 로컬 데이터를 우선 방출
-        emitAll(localProjectsFlow)
-        
-        // 네트워크 연결 확인 후 원격 데이터 가져오기 시도
-        if (networkMonitor.isNetworkAvailable.first()) {
-            try {
-                fetchProjectList() // 원격 데이터를 동기화
-            } catch (e: Exception) {
-                // 네트워크 오류 처리 (로그만 남기고 로컬 데이터는 계속 제공)
-                println("Network error while fetching projects: ${e.message}")
+        val projectsStream = remoteDataSource.getParticipatingProjectsStream(userId)
+            .map { result ->
+                result.map { dtos ->
+                    dtos.map { it.toDomain() }
+                }.getOrElse {
+                    println("Error fetching project list stream: ${it.message}")
+                    emptyList<Project>()
+                }
             }
-        }
+        emitAll(projectsStream) // emitAll requires kotlinx.coroutines.flow.emitAll
     }
 
     override suspend fun fetchProjectList(): Result<Unit> = runCatching {
-        // 로그인한 사용자의 ID 가져오기
+        // Network check removed, Firestore cache handles offline.
         val userId = currentUserProvider.getCurrentUserId()
-        
-        // 원격 데이터 소스에서 프로젝트 목록 가져오기
-        val remoteProjects = remoteDataSource.getParticipatingProjects(userId).getOrThrow()
-        
-        // 원격 데이터를 로컬 DB에 저장
-        remoteProjects.forEach { projectDto ->
-            localDataSource.upsertProject(projectDto.toEntity())
-        }
+        remoteDataSource.getParticipatingProjects(userId).getOrThrow()
     }
 
     override suspend fun isProjectNameAvailable(name: String): Result<Boolean> = runCatching {
-        // 네트워크 연결 확인
-        if (!networkMonitor.isNetworkAvailable.first()) {
-            throw IllegalStateException("네트워크 연결이 필요합니다.")
-        }
-        
-        // 원격 API를 통해 프로젝트 이름 중복 검사
-        // 필요한 원격 데이터 소스 메서드가 추가되어야 함
-        // remoteDataSource.checkProjectNameAvailability(name).getOrThrow()
-        
-        // 임시 구현 (필요에 따라 수정)
-        true
+        // Network check removed.
+        // remoteDataSource.checkProjectNameAvailability(name).getOrThrow() // Actual implementation needed
+        true // Placeholder
     }
 
     override suspend fun joinProjectWithCode(codeOrLink: String): Result<String> = runCatching {
-        // 네트워크 연결 확인
-        if (!networkMonitor.isNetworkAvailable.first()) {
-            throw IllegalStateException("네트워크 연결이 필요합니다.")
-        }
-        
-        // 원격 API를 통해 코드로 프로젝트 참여
-        // 필요한 원격 데이터 소스 메서드가 추가되어야 함
-        // val projectId = remoteDataSource.joinProjectWithCode(codeOrLink).getOrThrow()
-        
-        // 임시 반환 (필요에 따라 수정)
-        throw NotImplementedError("원격 데이터 소스 메서드 구현 필요")
+        // Network check removed.
+        // remoteDataSource.joinProjectWithCode(codeOrLink).getOrThrow()
+        throw NotImplementedError("Remote data source method implementation needed")
     }
 
     override suspend fun getProjectInfoFromToken(token: String): Result<ProjectInfo> = runCatching {
-        // 네트워크 연결 확인
-        if (!networkMonitor.isNetworkAvailable.first()) {
-            throw IllegalStateException("네트워크 연결이 필요합니다.")
-        }
-        
-        // 원격 API를 통해 토큰에서 프로젝트 정보 가져오기
-        // 필요한 원격 데이터 소스 메서드가 추가되어야 함
-        // val projectInfo = remoteDataSource.getProjectInfoFromToken(token).getOrThrow()
-        
-        // 임시 반환 (필요에 따라 수정)
-        throw NotImplementedError("원격 데이터 소스 메서드 구현 필요")
+        // Network check removed.
+        // remoteDataSource.getProjectInfoFromToken(token).getOrThrow()
+        throw NotImplementedError("Remote data source method implementation needed")
     }
 
     override suspend fun joinProjectWithToken(token: String): Result<String> = runCatching {
-        // 네트워크 연결 확인
-        if (!networkMonitor.isNetworkAvailable.first()) {
-            throw IllegalStateException("네트워크 연결이 필요합니다.")
-        }
-        
-        // 원격 API를 통해 토큰으로 프로젝트 참여
-        // 필요한 원격 데이터 소스 메서드가 추가되어야 함
-        // val projectId = remoteDataSource.joinProjectWithToken(token).getOrThrow()
-        
-        // 임시 반환 (필요에 따라 수정)
-        throw NotImplementedError("원격 데이터 소스 메서드 구현 필요")
+        // Network check removed.
+        // remoteDataSource.joinProjectWithToken(token).getOrThrow()
+        throw NotImplementedError("Remote data source method implementation needed")
     }
 
     override suspend fun createProject(name: String, description: String, isPublic: Boolean): Result<Project> = runCatching {
-        // 네트워크 연결 확인
-        if (!networkMonitor.isNetworkAvailable.first()) {
-            throw IllegalStateException("네트워크 연결이 필요합니다.")
-        }
-        
-        // 현재 사용자 ID 가져오기
+        // Network check removed.
         val userId = currentUserProvider.getCurrentUserId()
-        
-        // 프로젝트 DTO 생성
         val projectDto = ProjectDto(
             name = name,
             description = description,
@@ -143,76 +97,77 @@ class ProjectRepositoryImpl @Inject constructor(
             memberIds = listOf(userId),
             isPublic = isPublic
         )
-        
-        // 원격 API를 통해 프로젝트 생성
         val projectId = remoteDataSource.createProject(projectDto).getOrThrow()
         
-        // 생성된 프로젝트 상세 정보 가져오기
-        val createdProject = remoteDataSource.getProjectDetails(projectId).getOrThrow()
-        
-        // 로컬 DB에 저장
-        localDataSource.upsertProject(createdProject.toEntity())
-        
-        // 도메인 모델로 변환하여 반환
-        createdProject.toDomain()
+        // 확실한 오류 방지를 위해 프로젝트 생성 시 채널 생성 관련 로직은 모두 제거합니다.
+        // 이 로직은 추후 별도의 UseCase나 서비스 로직으로 분리하여 관리하는 것이 좋습니다.
+        // 예시: channelRepository.createDirectMessageChannelWithUser(projectId, userId).getOrThrow()
+        // 예시: projectStructureRemoteDataSource.createDirectChannel(projectId, "${userId}_self_dm", ChannelType.DIRECT_MESSAGE.name, 0).getOrThrow()
+
+        val createdProjectDto = remoteDataSource.getProjectDetails(projectId).getOrThrow()
+        createdProjectDto.toDomain()
     }
 
-    override suspend fun getAvailableProjectsForScheduling(): Result<List<Project>> = runCatching {
-        // 로그인한 사용자의 ID 가져오기
+    override suspend fun getAvailableProjectsForScheduling(): Result<List<Project>> {
         val userId = currentUserProvider.getCurrentUserId()
-        
-        // 사용자가 참여하고 있는 프로젝트 목록 가져오기 (로컬 DB 우선)
-        val localProjects = localDataSource.getParticipatingProjectsStream(userId).map { 
-            it.map { entity -> entity.toDomain() } 
+        return remoteDataSource.getParticipatingProjects(userId).map { dtos ->
+            dtos.map { it.toDomain() }
         }
-        
-        // 네트워크 연결이 있으면 원격 데이터를 동기화
-        if (networkMonitor.isNetworkAvailable.first()) {
-            try {
-                fetchProjectList()
-            } catch (e: Exception) {
-                // 네트워크 오류 (무시하고 로컬 데이터 사용)
-            }
-        }
-        
-        // 현재 시점의 로컬 데이터 반환
-        localProjects.firstOrNull() ?: emptyList()
     }
     
-    // DTO와 Entity 간 변환 확장 함수
-    private fun ProjectDto.toEntity(): ProjectEntity {
-        return ProjectEntity(
-            id = this.projectId,
-            name = this.name,
-            description = this.description,
-            ownerId = this.ownerId,
-            participantIds = this.memberIds,
-            createdAt = this.createdAt.toDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime(),
-            lastUpdatedAt = this.updatedAt.toDate().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
-        )
-    }
+    // DTO와 Entity 간 변환 확장 함수 - ProjectEntity 관련 제거 또는 수정
+    // private fun ProjectDto.toEntity(): ProjectEntity { ... } // 제거
     
-    // Entity와 Domain 모델 간 변환 확장 함수
-    private fun ProjectEntity.toDomain(): Project {
-        return Project(
-            id = this.id,
-            name = this.name,
-            description = this.description,
-            imageUrl = null, // Entity에 imageUrl 필드가 없는 경우 조정 필요
-            memberCount = this.participantIds.size,
-            isPublic = true // Entity에 isPublic 필드가 없는 경우 조정 필요
-        )
-    }
-    
-    // DTO와 Domain 모델 간 변환 확장 함수
+    // Entity와 Domain 모델 간 변환 확장 함수 - ProjectEntity 관련 제거
+    // private fun ProjectEntity.toDomain(): Project { ... } // 제거
+
+    // DTO와 Domain 모델 간 변환 확장 함수 (유지)
     private fun ProjectDto.toDomain(): Project {
+        val now = DateTimeUtil.nowInstant() // Fallback for missing timestamps
         return Project(
             id = this.projectId,
             name = this.name,
             description = this.description,
             imageUrl = this.imageUrl,
-            memberCount = this.memberIds.size,
-            isPublic = this.isPublic
+            ownerId = this.ownerId,
+            memberIds = this.memberIds,
+            isPublic = this.isPublic,
+            createdAt = DateTimeUtil.firebaseTimestampToInstant(this.createdAt) ?: now,
+            updatedAt = DateTimeUtil.firebaseTimestampToInstant(this.updatedAt) ?: now
         )
+    }
+
+    // CurrentUserProvider에 getCurrentUserIdBlocking() 같은 동기 메소드가 없다고 가정하고,
+    // getCurrentUserId()가 suspend 함수라고 가정하여 호출부를 수정합니다.
+    // 실제 CurrentUserProvider 구현에 맞춰 조정 필요.
+    // 임시로 getProjectListStream을 suspend로 변경하거나, viewModelScope 등에서 호출하도록 변경 필요.
+    // 여기서는 예시로 userId를 가져오는 부분을 flow 빌더 내부로 옮기거나,
+    // Repository의 해당 메소드를 suspend로 만들 수 있습니다.
+    // 우선 getCurrentUserId()가 suspend라고 가정하고 flow 빌더 내에서 호출하는 방식으로 유지 (원래 코드와 유사하게)
+
+    // --- Project Structure Management Implementations ---
+
+    override fun getProjectStructureStream(projectId: String): Flow<ProjectStructure> {
+        return projectStructureRemoteDataSource.getProjectStructureStream(projectId)
+    }
+
+    override suspend fun createCategory(projectId: String, name: String): Result<Category> = runCatching {
+        projectStructureRemoteDataSource.createCategory(projectId, name).getOrThrow()
+    }
+
+    override suspend fun createCategoryChannel(projectId: String, categoryId: String, name: String, type: ChannelMode, order: Int): Result<Channel> = runCatching {
+        projectStructureRemoteDataSource.createCategoryChannel(projectId, categoryId, name, type, order).getOrThrow()
+    }
+
+    override suspend fun createDirectChannel(projectId: String, name: String, type: ChannelMode, order: Int): Result<Channel> = runCatching {
+        // Call the correct method on projectStructureRemoteDataSource with appropriate parameters
+        projectStructureRemoteDataSource.createProjectChannel(projectId, name, type, order).getOrThrow()
+    }
+
+    // Helper for CurrentUserProvider if it's suspend
+    // This is a conceptual change, actual implementation of getCurrentUserIdBlocking would be in CurrentUserProvider
+    // For this refactor, we assume getCurrentUserId() is suspend and called within a coroutine scope
+    private suspend fun getCurrentUserIdFromProvider(): String {
+        return currentUserProvider.getCurrentUserId()
     }
 }

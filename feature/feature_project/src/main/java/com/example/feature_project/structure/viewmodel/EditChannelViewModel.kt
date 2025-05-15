@@ -10,7 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.domain.model.ChannelType
+import com.example.domain.model.ChannelMode
 
 // ChannelType enum은 CreateChannelViewModel과 공유하거나 별도 파일로 분리 가능 -> domain/model/ChannelType 으로 이동했으므로 제거
 
@@ -19,8 +19,8 @@ data class EditChannelUiState(
     val channelId: String = "",
     val currentChannelName: String = "",
     val originalChannelName: String = "", // 변경 여부 확인용
-    val currentChannelType: ChannelType = ChannelType.TEXT,
-    val originalChannelType: ChannelType = ChannelType.TEXT, // 변경 여부 확인용
+    val currentChannelMode: ChannelMode = ChannelMode.TEXT,
+    val originalChannelMode: ChannelMode = ChannelMode.TEXT,
     val isLoading: Boolean = false,
     val error: String? = null,
     val updateSuccess: Boolean = false, // 업데이트 성공 시 네비게이션 트리거
@@ -67,7 +67,7 @@ class EditChannelViewModel @Inject constructor(
             delay(500)
             val success = true
             val currentName = "기존 채널 이름 $channelId" // 임시
-            val currentType = if (channelId.hashCode() % 2 == 0) ChannelType.TEXT else ChannelType.VOICE // 임시
+            val currentType = if (channelId.hashCode() % 2 == 0) ChannelMode.TEXT else ChannelMode.VOICE // Changed to String constants
             // val result = repository.getChannelDetails(channelId)
             // -------------------------------------------------------------
             if (success /*result.isSuccess*/) {
@@ -77,8 +77,8 @@ class EditChannelViewModel @Inject constructor(
                         isLoading = false,
                         currentChannelName = currentName, // loadedName
                         originalChannelName = currentName, // loadedName
-                        currentChannelType = currentType, // loadedType
-                        originalChannelType = currentType // loadedType
+                        currentChannelMode = currentType, // loadedType
+                        originalChannelMode = currentType // loadedType
                     )
                 }
             } else {
@@ -107,8 +107,8 @@ class EditChannelViewModel @Inject constructor(
     /**
      * 채널 유형 선택 시 호출
      */
-    fun onChannelTypeSelected(newType: ChannelType) {
-        _uiState.update { it.copy(currentChannelType = newType) }
+    fun onChannelTypeSelected(newType: ChannelMode) {
+        _uiState.update { it.copy(currentChannelMode = newType) }
     }
 
     /**
@@ -117,7 +117,7 @@ class EditChannelViewModel @Inject constructor(
     fun updateChannel() {
         val currentState = _uiState.value
         val newName = currentState.currentChannelName.trim()
-        val newType = currentState.currentChannelType
+        val newType = currentState.currentChannelMode
 
         // 이름 유효성 검사
         if (newName.isBlank()) {
@@ -125,7 +125,7 @@ class EditChannelViewModel @Inject constructor(
             return
         }
         // 변경 여부 확인
-        if (newName == currentState.originalChannelName && newType == currentState.originalChannelType) {
+        if (newName == currentState.originalChannelName && newType == currentState.originalChannelMode) {
             viewModelScope.launch {
                 _eventFlow.emit(EditChannelEvent.ShowSnackbar("변경된 내용이 없습니다."))
                 _eventFlow.emit(EditChannelEvent.NavigateBack)

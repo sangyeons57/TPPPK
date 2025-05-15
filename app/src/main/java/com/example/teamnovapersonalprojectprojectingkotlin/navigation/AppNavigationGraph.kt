@@ -30,6 +30,7 @@ import com.example.feature_project.ui.AddProjectScreen
 import com.example.feature_project.ui.JoinProjectScreen
 import com.example.feature_project.viewmodel.AddProjectViewModel
 import com.example.feature_project.viewmodel.JoinProjectViewModel
+import androidx.compose.material3.Text
 
 // Screen Composable imports will be needed here from all feature modules
 // Example:
@@ -59,7 +60,7 @@ fun AppNavigationGraph(
             processNavigationCommand(command, navController)
         }
     }
-    
+
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -83,12 +84,12 @@ fun AppNavigationGraph(
 private fun NavGraphBuilder.authGraph(
     navController: NavHostController,
     navigationHandler: ComposeNavigationHandler
-) {
-    navigation(
-        route = AppRoutes.Auth.Graph.path,
-        startDestination = AppRoutes.Auth.Splash.path
     ) {
-        composable(AppRoutes.Auth.Splash.path) {
+        navigation(
+            route = AppRoutes.Auth.Graph.path,
+            startDestination = AppRoutes.Auth.Splash.path
+        ) {
+            composable(AppRoutes.Auth.Splash.path) { 
             val viewModel = hiltViewModel<SplashViewModel>()
             SplashScreen(
                 navigationHandler = navigationHandler,
@@ -122,7 +123,7 @@ private fun NavGraphBuilder.standaloneScreensGraph(
     }
     
     // 프로젝트 참가 화면
-    composable(
+            composable(
         route = AppRoutes.Project.JOIN,
         arguments = listOf(
             navArgument(AppRoutes.Project.ARG_PROJECT_ID) {
@@ -137,7 +138,7 @@ private fun NavGraphBuilder.standaloneScreensGraph(
     }
     
     // 프로젝트 상세 화면 - 메인 탭 외부에서도 접근 가능
-    composable(
+            composable(
         route = AppRoutes.Project.detailRoute(),
         arguments = listOf(
             navArgument(AppRoutes.Project.ARG_PROJECT_ID) {
@@ -181,6 +182,21 @@ private fun NavGraphBuilder.standaloneScreensGraph(
             contentAlignment = Alignment.Center
         ) {
             CircularProgressIndicator()
+        }
+    }
+
+    // 채팅 화면
+    composable(
+        route = AppRoutes.Chat.route, // "chat/{channelId}?messageId={messageId}"
+        arguments = AppRoutes.Chat.arguments // channelId는 필수, messageId는 선택적 쿼리 파라미터
+    ) {
+        // TODO: 실제 ChatScreen Composable 구현 필요
+        // 예시:
+        // val channelId = it.arguments?.getString(AppRoutes.Chat.ARG_CHANNEL_ID) ?: return@composable
+        // val messageId = it.arguments?.getString(AppRoutes.Chat.ARG_MESSAGE_ID) // nullable
+        // ChatScreen(navigationHandler = navigationHandler, channelId = channelId, initialMessageId = messageId)
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Chat Screen Placeholder\nChannel ID: ${it.arguments?.getString(AppRoutes.Chat.ARG_CHANNEL_ID)}\nMessage ID: ${it.arguments?.getString(AppRoutes.Chat.ARG_MESSAGE_ID)}")
         }
     }
     

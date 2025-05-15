@@ -10,7 +10,7 @@ alwaysApply: false
 - **Clean Architecture**: 계층 간 명확한 책임 분리와 단방향 의존성
 - **모듈화**: 세분화된 모듈로 빌드 성능 최적화 및 코드 관리 용이성 확보
 - **테스트 용이성**: 모든 레이어가 독립적으로 테스트 가능하도록 설계
-- **오프라인 우선**: 오프라인 작업을 위한 효율적인 로컬 캐싱 전략 구현
+- **오프라인 우선 (전략 변경 중)**: Firestore 캐시를 우선 활용하며, 필요시 Room DB를 통한 고도화된 로컬 캐싱 전략 적용 ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md) 참조)
 
 ## 모듈 구조 및 의존성
 
@@ -26,6 +26,7 @@ alwaysApply: false
     - 로컬 엔티티 (Room Entity)
     - DAO (Data Access Object) 인터페이스
     - `AppTypeConverters`: 커스텀 타입 변환 (Date, LocalDateTime, List<String>)
+    - **참고**: 현재 Room DB는 기능적으로 분리되어 비활성 상태이며, Firestore 캐시를 우선 사용합니다. ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md))
   - **`:data:repository`**: 도메인 레이어의 레포지토리 인터페이스 구현
   - 의존성: `:domain:model`, `:domain:repository`, `:core:network`
 
@@ -79,7 +80,7 @@ alwaysApply: false
 - **레포지토리 패턴**
   - 데이터 소스 추상화 (로컬/원격)
   - 오프라인 우선 전략
-    - 로컬 데이터 우선 제공
+    - 로컬 데이터 우선 제공 (현재는 Firestore 캐시 우선)
     - 백그라운드에서 원격 데이터 동기화
     - 네트워크 상태에 따른 적응형 동작
 
@@ -126,16 +127,18 @@ alwaysApply: false
     - `roles`: 역할 정의 (서브컬렉션)
     - `categories`: 채널 카테고리 (서브컬렉션)
       - `channels`: 채널 정보 (서브컬렉션)
-        - `messages`: 채널 메시지 (서브컬렉션)
+        - `messages`: 채널 메시지 (서브컬렉션) - WebSocket 서버가 Admin SDK로 저장
   - `dms`: DM 대화방
-    - `messages`: DM 메시지 (서브컬렉션)
+    - `messages`: DM 메시지 (서브컬렉션) - WebSocket 서버가 Admin SDK로 저장
   - `invites`: 초대 토큰
   - `schedules`: 일정 정보
+- **채팅 데이터**: 채팅 메시지(`messages`)는 실시간성을 위해 WebSocket 서버를 통해 Firestore에 저장됩니다. 클라이언트는 과거 기록 로드를 위해 Firestore SDK를 직접 사용합니다. ([websocket-server.md](mdc:.cursor/tasks/websocket-server.md) 참조)
 
 - **보안 규칙**:
   - 사용자 인증 기반 접근 제어
   - 역할 기반 권한 관리
   - 컬렉션/문서별 세분화된 접근 권한
+  - **채팅 메시지**: `messages` 컬렉션 쓰기는 WebSocket 서버(Admin SDK)만 가능하도록 제한, 읽기는 해당 채팅방 멤버에게 허용.
 
 - **복합 색인**:
   - 친구 관련 필터링 및 정렬
@@ -143,6 +146,7 @@ alwaysApply: false
   - 프로젝트 멤버/역할 관련 필터링 및 정렬
 
 ### 로컬 데이터 관리 (Room)
+- **(현재 비활성 상태)**: 아래 구조는 유지되지만, 현재는 기능적으로 분리되어 Firestore 캐시를 우선 사용합니다. ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md))
 - **엔티티**:
   - 사용자 관련: `UserEntity`, `FriendEntity`, `FriendRequestEntity`
   - 프로젝트 관련: `ProjectEntity`, `ProjectMemberEntity`, `RoleEntity`, `RolePermissionEntity`
@@ -167,9 +171,9 @@ alwaysApply: false
 2. ViewModel: 이벤트 처리 → 적절한 UseCase 호출
 3. UseCase: 비즈니스 로직 실행 → Repository 호출
 4. Repository: 
-   - 적절한 DataSource 선택 (로컬/원격)
+   - 적절한 DataSource 선택 (주로 원격 Firestore, 로컬은 Firestore 캐시 활용)
    - 원격 호출 시 네트워크 오류 처리
-   - 데이터 캐싱 및 동기화
+   - 데이터 캐싱 및 동기화 (Firestore 캐시 기반)
 5. ViewModel: UseCase 결과 수신 → UiState 업데이트
 6. UI: 새 UiState 감지 → UI 갱신
 
@@ -186,4 +190,20 @@ alwaysApply: false
 - 유닛 테스트: UseCase, Repository, ViewModel 
 - 통합 테스트: DataSource와 실제 Repository 통합
 - UI 테스트: Compose 컴포넌트 테스트
+
+## 실시간 채팅 아키텍처 (WebSocket + Firestore Hybrid)
+
+- **개요**: 실시간 메시지 교환은 WebSocket을 사용하고, 메시지 영구 저장 및 과거 기록 로드는 Firestore를 활용하는 하이브리드 방식입니다. ([websocket-server.md](mdc:.cursor/tasks/websocket-server.md))
+- **컴포넌트**:
+  - **클라이언트 (Android)**: OkHttp로 WebSocket 서버에 연결, 실시간 메시지 송수신. Firestore SDK로 과거 메시지 로드 및 오프라인 캐싱 활용. Firebase Storage에 미디어 업로드.
+  - **WebSocket 서버 (Java/Cloud Run)**: 클라이언트 간 메시지 중계, 수신 메시지를 Firebase Admin SDK를 통해 Firestore에 저장, 필요한 경우 FCM 발송.
+  - **Firebase**: Firestore (메시지 DB), Authentication (인증), Storage (미디어), FCM (푸시 알림).
+- **데이터 흐름 (메시지 전송)**:
+  1. 클라이언트 -> WebSocket 서버: `sendMessage` (텍스트 또는 미디어 URL)
+  2. WebSocket 서버 -> 다른 클라이언트들: `newMessage` 브로드캐스팅
+  3. WebSocket 서버 -> Firestore: Admin SDK로 메시지 저장 (비동기)
+  4. WebSocket 서버 -> 발신 클라이언트: 저장 성공/실패 알림 (`messageSentConfirmation` / `messageSendFailed`)
+- **데이터 흐름 (과거 기록 로드)**:
+  1. 클라이언트 -> Firestore: SDK 사용하여 `messages` 컬렉션 직접 쿼리 (페이지네이션)
+- **오프라인 처리**: Firestore의 디스크 캐시를 통해 오프라인 시 과거 메시지 조회 가능. 실시간 메시지 수신 및 전송은 온라인 상태 필요.
 

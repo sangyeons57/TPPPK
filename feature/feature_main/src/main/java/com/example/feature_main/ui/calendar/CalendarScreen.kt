@@ -28,6 +28,9 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
 
 /**
  * 캘린더 모듈
@@ -206,46 +209,47 @@ private object PreviewUtils {
      */
     fun getSampleSchedules(): List<Schedule> {
         val today = LocalDate.now()
+        val now = Instant.now()
         return listOf(
             Schedule(
                 id = "s1",
                 projectId = "p1",
                 title = "팀 회의",
                 content = "주간 진행 상황 공유",
-                startTime = LocalDateTime.of(today, LocalTime.of(10, 0)),
-                endTime = LocalDateTime.of(today, LocalTime.of(11, 30)),
-                participants = listOf("user1", "user2"),
-                isAllDay = false
+                startTime = LocalDateTime.of(today, LocalTime.of(10, 0)).atZone(ZoneId.systemDefault()).toInstant(),
+                endTime = LocalDateTime.of(today, LocalTime.of(11, 30)).atZone(ZoneId.systemDefault()).toInstant(),
+                creatorId = "sample_creator_id_1",
+                createdAt = now
             ),
             Schedule(
                 id = "s2",
                 projectId = null,
                 title = "점심 약속",
                 content = "김대표님과 식사",
-                startTime = LocalDateTime.of(today, LocalTime.of(12, 0)),
-                endTime = LocalDateTime.of(today, LocalTime.of(13, 0)),
-                participants = listOf("user1"),
-                isAllDay = false
+                startTime = LocalDateTime.of(today, LocalTime.of(12, 0)).atZone(ZoneId.systemDefault()).toInstant(),
+                endTime = LocalDateTime.of(today, LocalTime.of(13, 0)).atZone(ZoneId.systemDefault()).toInstant(),
+                creatorId = "sample_creator_id_2",
+                createdAt = now
             ),
             Schedule(
                 id = "s3",
                 projectId = "p2",
                 title = "프로젝트 회의",
                 content = "UI 디자인 검토",
-                startTime = LocalDateTime.of(today, LocalTime.of(14, 0)),
-                endTime = LocalDateTime.of(today, LocalTime.of(15, 30)),
-                participants = listOf("user1", "user3", "user4"),
-                isAllDay = false
+                startTime = LocalDateTime.of(today, LocalTime.of(14, 0)).atZone(ZoneId.systemDefault()).toInstant(),
+                endTime = LocalDateTime.of(today, LocalTime.of(15, 30)).atZone(ZoneId.systemDefault()).toInstant(),
+                creatorId = "sample_creator_id_3",
+                createdAt = now
             ),
              Schedule(
                 id = "s4",
                 projectId = "p1",
                 title = "종일 이벤트",
                 content = "워크샵 준비",
-                startTime = LocalDateTime.of(today, LocalTime.MIDNIGHT),
-                endTime = LocalDateTime.of(today, LocalTime.MAX),
-                participants = listOf("user1"),
-                isAllDay = true
+                startTime = LocalDateTime.of(today, LocalTime.MIDNIGHT).atZone(ZoneId.systemDefault()).toInstant(),
+                endTime = LocalDateTime.of(today, LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant(),
+                creatorId = "sample_creator_id_4",
+                createdAt = now
             )
         )
     }

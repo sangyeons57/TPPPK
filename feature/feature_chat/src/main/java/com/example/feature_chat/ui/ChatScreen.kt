@@ -62,6 +62,7 @@ import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 import com.example.core_navigation.core.ComposeNavigationHandler
 import java.util.Locale
+import android.util.Log // Added for logging
 
 /**
  * ChatScreen: 채팅 화면 (Stateful)
@@ -146,6 +147,8 @@ fun ChatScreen(
             )
         },
         bottomBar = {
+            // TODO: WebSocket 구현 후 채팅 입력 영역 활성화
+            if (uiState.error == null || uiState.error?.contains("WebSocket 구현 예정") == false) {
             ChatInputArea(
                 modifier = Modifier.navigationBarsPadding().imePadding(),
                 uiState = uiState,
@@ -163,8 +166,29 @@ fun ChatScreen(
                 onCancelEdit = viewModel::cancelEdit,
                 onPickImages = { imagePickerLauncher.launch("image/*") }
             )
+            } else {
+                // 채팅 비활성화 시 입력 영역을 보여주지 않거나, 다른 UI를 표시할 수 있습니다.
+                // 여기서는 간단히 아무것도 표시하지 않도록 합니다.
+                Log.d("ChatScreen", "Chat input area hidden as chat is pending WebSocket implementation.")
+            }
         }
     ) { innerPadding ->
+        // TODO: WebSocket 구현 후 메시지 목록 활성화
+        if (uiState.error != null && uiState.error?.contains("WebSocket 구현 예정") == true) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "채팅 기능을 현재 사용할 수 없습니다.\n(WebSocket 구현 예정)",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
         ChatMessagesList(
             modifier = Modifier
                 .fillMaxSize()
@@ -174,6 +198,7 @@ fun ChatScreen(
             onMessageLongClick = viewModel::onMessageLongClick, // ViewModel 함수 직접 전달
             onUserProfileClick = viewModel::onUserProfileClick // ViewModel 함수 직접 전달
         )
+        }
     }
 
     // 수정/삭제 다이얼로그
@@ -728,8 +753,8 @@ private fun ChatScreenFullPreview() {
             val isMy = i % 3 == 0
             ChatMessageUiModel(
                 localId = (100 + i).toString(),
-                chatId = 100 + i,
-                userId = if (isMy) 1 else i + 2,
+                chatId = "100$i",
+                userId = (if (isMy) 1 else i + 2).toString(),
                 userName = "사용자 ${if (isMy) 1 else i + 2}",
                 userProfileUrl = null,
                 message = "미리보기 메시지 내용입니다. ${15-i}",

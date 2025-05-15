@@ -2,7 +2,7 @@ package com.example.data.model.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDateTime
+import java.time.Instant
 
 /**
  * 친구 데이터를 로컬 데이터베이스에 저장하기 위한 엔티티
@@ -33,10 +33,10 @@ data class FriendEntity(
     /**
      * 친구 관계 수락 시간 (nullable)
      */
-    val acceptedAt: LocalDateTime?,
+    val acceptedAt: Instant?,
     
     /**
      * 마지막 갱신 시간
      */
-    val lastUpdatedAt: LocalDateTime
+    val lastUpdatedAt: Instant
 ) 

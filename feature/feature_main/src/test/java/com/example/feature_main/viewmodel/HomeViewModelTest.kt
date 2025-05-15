@@ -7,6 +7,7 @@ import com.example.domain.model.DmConversation
 import com.example.domain.model.Project
 import com.example.domain.repository.DmRepository
 import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.ChannelRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDateTime
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * HomeViewModel 테스트
@@ -36,7 +38,7 @@ class HomeViewModelTest {
 
     // Fake Repositories
     private lateinit var fakeProjectRepository: FakeProjectRepository
-    private lateinit var fakeDmRepository: FakeDmRepository
+    private lateinit var fakeChannelRepository: FakeChannelRepository
 
     // 테스트 데이터
     private val testProject1 = Project(
@@ -82,16 +84,16 @@ class HomeViewModelTest {
     fun setup() {
         // Fake Repository 초기화
         fakeProjectRepository = FakeProjectRepository()
-        fakeDmRepository = FakeDmRepository()
+        fakeChannelRepository = FakeChannelRepository()
 
         // 테스트 데이터 설정
         fakeProjectRepository.addProject(testProject1)
         fakeProjectRepository.addProject(testProject2)
-        fakeDmRepository.addDm(testDm1)
-        fakeDmRepository.addDm(testDm2)
+        fakeChannelRepository.addDmChannel(testDm1)
+        fakeChannelRepository.addDmChannel(testDm2)
 
         // ViewModel 초기화 (의존성 주입)
-        viewModel = HomeViewModel(fakeProjectRepository, fakeDmRepository)
+        viewModel = HomeViewModel(fakeProjectRepository, fakeChannelRepository)
     }
 
     /**
@@ -213,7 +215,7 @@ class HomeViewModelTest {
         fakeProjectRepository.setShouldSimulateError(true)
 
         // When: ViewModel 초기화 (자동으로 프로젝트 로딩)
-        viewModel = HomeViewModel(fakeProjectRepository, fakeDmRepository)
+        viewModel = HomeViewModel(fakeProjectRepository, fakeChannelRepository)
 
         // Then: 에러 메시지 확인
         val state = viewModel.uiState.getValue()
@@ -226,7 +228,7 @@ class HomeViewModelTest {
     @Test
     fun `DM Repository 오류 발생 시 에러 메시지가 표시되어야 함`() = coroutinesTestRule.runBlockingTest {
         // Given: Repository에서 오류가 발생하도록 설정
-        fakeDmRepository.setShouldSimulateError(true)
+        fakeChannelRepository.setShouldSimulateError(true)
 
         // When: DM 탭으로 전환
         viewModel.onTopSectionSelect(TopSection.DMS)
@@ -329,35 +331,57 @@ class FakeProjectRepository : ProjectRepository {
 }
 
 /**
- * HomeViewModel 테스트용 FakeDmRepository
+ * HomeViewModel 테스트용 FakeChannelRepository
  */
-class FakeDmRepository : DmRepository {
-    private val dms = mutableListOf<DmConversation>()
-    private val dmsFlow = MutableStateFlow<List<DmConversation>>(emptyList())
+class FakeChannelRepository : ChannelRepository {
+    private val dmChannels = mutableListOf<Channel>()
+    private val dmChannelsFlow = MutableStateFlow<List<Channel>>(emptyList())
     private var shouldSimulateError = false
 
-    fun addDm(dm: DmConversation) {
-        dms.add(dm)
-        dmsFlow.value = dms.toList()
+    fun addDmChannel(channel: Channel) {
+        dmChannels.add(channel)
+        dmChannelsFlow.value = dmChannels.toList()
     }
 
-    fun clearDms() {
-        dms.clear()
-        dmsFlow.value = emptyList()
+    fun clearDmChannels() {
+        dmChannels.clear()
+        dmChannelsFlow.value = emptyList()
     }
 
     fun setShouldSimulateError(shouldError: Boolean) {
         shouldSimulateError = shouldError
     }
 
-    override fun getDmListStream(): Flow<List<DmConversation>> = dmsFlow
+    override fun getUserDmChannelsStream(userId: String): Flow<List<Channel>> = dmChannelsFlow
 
-    override suspend fun fetchDmList(): Result<Unit> {
+    override suspend fun getUserDmChannels(userId: String): Result<List<Channel>> {
         return if (shouldSimulateError) {
             Result.failure(Exception("Simulated DM fetch error"))
         } else {
-            dmsFlow.value = dms
-            Result.success(Unit)
+            Result.success(dmChannels)
         }
     }
+
+    // 나머지 필요한 메서드들은 기본 구현만 제공 (테스트에 사용되지 않음)
+    override suspend fun createChannel(name: String, description: String?, type: String, isPrivate: Boolean, projectId: String?, categoryId: String?): Result<Channel> = Result.success(Channel("channel1", "Channel", null, "TEXT", false, null, null, emptyList(), emptyMap(), null, null))
+    override suspend fun createDmChannel(otherUserId: String, isActive: Boolean): Result<Channel> = Result.success(Channel("dm1", "DM", null, "DM", false, null, null, listOf("user1", otherUserId), emptyMap(), null, null))
+    override suspend fun getChannelById(channelId: String): Result<Channel?> = Result.success(null)
+    override suspend fun updateChannel(channelId: String, updates: Map<String, Any>): Result<Unit> = Result.success(Unit)
+    override suspend fun deleteChannel(channelId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun addDmParticipant(channelId: String, userId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun removeDmParticipant(channelId: String, userId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun getDmParticipants(channelId: String): Result<List<String>> = Result.success(emptyList())
+    override fun getDmParticipantsStream(channelId: String): Flow<List<String>> = flowOf(emptyList())
+    override suspend fun createOrGetDmChannel(userId1: String, userId2: String): Result<Channel> = Result.success(Channel("dm1", "DM", null, "DM", false, null, null, listOf(userId1, userId2), emptyMap(), null, null))
+    override suspend fun getDmChannelByUsers(userId1: String, userId2: String): Result<Channel?> = Result.success(null)
+    override suspend fun getChannelMessages(channelId: String, limit: Int, beforeMessageId: String?): Result<List<Message>> = Result.success(emptyList())
+    override fun getChannelMessagesStream(channelId: String, limit: Int): Flow<List<Message>> = flowOf(emptyList())
+    override suspend fun sendMessage(channelId: String, message: String, attachments: List<String>?): Result<Message> = Result.success(Message("msg1", "channel1", "user1", "username", null, "test", System.currentTimeMillis(), false, emptyList()))
+    override suspend fun editMessage(messageId: String, channelId: String, newContent: String): Result<Unit> = Result.success(Unit)
+    override suspend fun deleteMessage(messageId: String, channelId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun getChannelMembers(channelId: String): Result<List<User>> = Result.success(emptyList())
+    override fun getChannelMembersStream(channelId: String): Flow<List<User>> = flowOf(emptyList())
+    override suspend fun addChannelMember(channelId: String, userId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun removeChannelMember(channelId: String, userId: String): Result<Unit> = Result.success(Unit)
+    override suspend fun getChannelPermissions(channelId: String): Result<List<ChannelPermission>> = Result.success(emptyList())
 } 

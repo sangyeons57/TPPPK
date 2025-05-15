@@ -25,6 +25,7 @@ interface FriendRemoteDataSource {
     
     /**
      * 특정 친구와의 DM 채널 ID를 가져옵니다.
+     * 이제 DM 메시지는 Channel 컬렉션에서 type이 'DM'인 채널로 관리됩니다.
      * @param friendUserId 친구 사용자 ID
      * @return DM 채널 ID
      */

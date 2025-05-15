@@ -8,6 +8,7 @@ import android.net.Uri
 data class ChatUiState(
     val channelId: String = "", // 생성자에서 초기화되므로 non-null
     val channelName: String = "채팅방",
+    val channelPath: String = "",
     val messages: List<ChatMessageUiModel> = emptyList(), // ★ UI 모델 사용
     val messageInput: String = "",
     val isAttachmentAreaVisible: Boolean = false,
@@ -17,7 +18,13 @@ data class ChatUiState(
     val isSendingMessage: Boolean = false, // ★ 이름 명확화: 메시지 전송 중
     val isEditing: Boolean = false,
     val editingMessageId: Int? = null,
-    val myUserId: Int = 1, // 실제로는 외부에서 주입 또는 설정 필요
+    val myUserId: String = "", // 실제로는 외부에서 주입 또는 설정 필요
+    val myUserNameDisplay: String? = null, // For optimistic UI updates
+    val myUserProfileUrl: String? = null, // For optimistic UI updates
     val isLastPage: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    // Added for ChatViewModel refactor
+    val pendingMessageText: String = "", 
+    val selectedAttachmentUris: List<Uri> = emptyList(),
+    val isLoadingGallery: Boolean = false
 ) 

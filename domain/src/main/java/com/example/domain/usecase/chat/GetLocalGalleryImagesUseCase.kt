@@ -1,17 +1,17 @@
 package com.example.domain.usecase.chat
 
 import com.example.domain.model.MediaImage
-import com.example.domain.repository.ChatRepository
+import com.example.domain.repository.MediaRepository
 import javax.inject.Inject
 import kotlin.Result
 
 /**
  * 로컬 갤러리 이미지를 가져오는 UseCase
  * 
- * @property chatRepository 채팅 관련 기능을 제공하는 Repository
+ * @property mediaRepository 미디어 관련 기능을 제공하는 Repository
  */
 class GetLocalGalleryImagesUseCase @Inject constructor(
-    private val chatRepository: ChatRepository
+    private val mediaRepository: MediaRepository
 ) {
     /**
      * 로컬 갤러리에서 이미지를 가져옵니다.
@@ -21,6 +21,6 @@ class GetLocalGalleryImagesUseCase @Inject constructor(
      * @return 성공 시 갤러리 이미지 목록이 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
     suspend operator fun invoke(page: Int, pageSize: Int): Result<List<MediaImage>> {
-        return chatRepository.getLocalGalleryImages(page, pageSize)
+        return mediaRepository.getLocalGalleryImages(page, pageSize)
     }
 } 

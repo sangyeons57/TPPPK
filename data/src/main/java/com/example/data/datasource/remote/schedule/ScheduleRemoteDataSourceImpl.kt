@@ -11,6 +11,7 @@ import kotlinx.coroutines.tasks.await // kotlinx-coroutines-play-services for Ta
 import java.util.NoSuchElementException // 예외 추가
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.core_common.util.DateTimeUtil // Import DateTimeUtil
 
 /**
  * Firestore 'schedules' 컬렉션과 상호작용하는 ScheduleRemoteDataSource의 구현체입니다.
@@ -82,11 +83,14 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
      * Firestore가 자동으로 문서 ID를 생성합니다.
      */
     override suspend fun addSchedule(scheduleDto: ScheduleDto): String {
-        // DTO 객체를 Firestore에 추가, await()은 DocumentReference를 반환
+        val now = DateTimeUtil.nowFirebaseTimestamp()
+        val dtoToSave = scheduleDto.copy(
+            createdAt = scheduleDto.createdAt ?: now, // Use existing if somehow set, else now
+            updatedAt = now // Always set updatedAt to now for new schedule
+        )
         val documentReference = scheduleCollection
-            .add(scheduleDto) // DTO 객체를 직접 전달 (필드명과 일치해야 함)
+            .add(dtoToSave) 
             .await()
-        // 생성된 문서의 ID 반환
         return documentReference.id
     }
 
@@ -105,13 +109,12 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
      * 여기서는 DTO 객체 전체를 사용하여 문서를 업데이트합니다 (set 또는 merge set 권장).
      */
     override suspend fun updateSchedule(scheduleId: String, scheduleDto: ScheduleDto) {
-        // scheduleDto에 id 필드가 있다면 Firestore 쓰기 시 문제를 일으킬 수 있으므로 주의
-        // 여기서는 set(dto, SetOptions.merge())를 사용해 명시된 필드만 업데이트하거나,
-        // 또는 dto에서 id를 제외한 Map을 만들어 update()를 사용하는 것이 더 안전할 수 있습니다.
-        // 가장 간단한 방법은 DTO 전체를 set으로 덮어쓰는 것입니다. (단, createdAt 같은 필드 관리 주의)
+        val dtoToUpdate = scheduleDto.copy(
+            updatedAt = DateTimeUtil.nowFirebaseTimestamp() // Always update 'updatedAt'
+            // createdAt should not be changed on update, merge will handle this if scheduleDto.createdAt is null or original
+        )
         scheduleCollection.document(scheduleId)
-            //.set(scheduleDto) // 문서 전체 덮어쓰기
-             .set(scheduleDto, com.google.firebase.firestore.SetOptions.merge()) // 병합: DTO 내 non-null 필드만 업데이트/추가
+             .set(dtoToUpdate, com.google.firebase.firestore.SetOptions.merge()) 
             .await() // Task<Void> -> Unit (성공 시), 실패 시 예외 발생
     }
 } 

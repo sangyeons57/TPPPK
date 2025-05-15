@@ -4,14 +4,19 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.ChatMessage
 import com.example.domain.model.MediaImage
-import com.example.domain.usecase.chat.DeleteMessageUseCase
-import com.example.domain.usecase.chat.EditMessageUseCase
-import com.example.domain.usecase.chat.FetchPastMessagesUseCase
+import com.example.domain.model.Channel
+import com.example.domain.model.MessageAttachment
+import com.example.domain.repository.ChannelRepository
+import com.example.domain.repository.UserRepository
+import com.example.domain.usecase.message.DeleteMessageUseCase
+import com.example.domain.usecase.message.EditMessageUseCase
+import com.example.domain.usecase.message.FetchPastMessagesUseCase
 import com.example.domain.usecase.chat.GetLocalGalleryImagesUseCase
-import com.example.domain.usecase.chat.GetMessagesStreamUseCase
-import com.example.domain.usecase.chat.SendMessageUseCase
+import com.example.domain.usecase.message.GetMessagesStreamUseCase
+import com.example.domain.usecase.message.SendMessageUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
@@ -23,39 +28,34 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.time.Instant
 import javax.inject.Inject
 import com.example.core_navigation.extension.getRequiredString
 import com.example.core_navigation.destination.AppRoutes
+import android.util.Log
+import com.example.data.model.channel.ChannelLocator
 
 // --- Domain 모델 -> UI 모델 변환 함수 ---
 // ViewModel 내부 또는 별도 Mapper 파일에 위치 가능
-private fun ChatMessage.toUiModel(myUserId: Int, tempIdGenerator: () -> String): ChatMessageUiModel {
-    // 시간 포맷팅 (오전/오후 h:mm 형식, 한국어)
-    val formatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
-
-    // UTC LocalDateTime을 사용자의 로컬 시간대로 변환
-    val localSentAt = this.sentAt.atZone(ZoneId.of("UTC"))
-        .withZoneSameInstant(ZoneId.systemDefault())
-        .toLocalDateTime()
-
+private fun ChatMessage.toUiModel(myUserId: String, tempIdGenerator: () -> String): ChatMessageUiModel {
     return ChatMessageUiModel(
-        localId = tempIdGenerator(), // 실제 ID 또는 임시 ID 사용
-        chatId = this.chatId,
-        userId = this.userId,
-        userName = this.userName,
-        userProfileUrl = this.userProfileUrl,
-        message = this.message,
-        formattedTimestamp = localSentAt.format(formatter), // 변환된 로컬 시간 포맷팅
-        isModified = this.isModified,
-        attachmentImageUrls = this.attachmentImageUrls,
-        isMyMessage = this.userId == myUserId
+        localId = tempIdGenerator(),
+        chatId = this.id, 
+        userId = this.senderId, 
+        userName = this.senderName, 
+        userProfileUrl = this.senderProfileUrl,
+        message = this.text, 
+        formattedTimestamp = DateTimeUtil.formatChatTime(this.timestamp),
+        isModified = this.isEdited, 
+        attachmentImageUrls = this.attachments?.mapNotNull { it.url } ?: emptyList(),
+        isMyMessage = this.senderId == myUserId,
+        isDeleted = this.isDeleted ?: false,
+        actualTimestamp = this.timestamp
     )
 }
 
@@ -67,314 +67,350 @@ private fun MediaImage.toUiModel(): GalleryImageUiModel {
     )
 }
 
+private const val INITIAL_MESSAGE_LOAD_LIMIT = 30
+private const val PAST_MESSAGE_LOAD_LIMIT = 20
+
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
+    private val channelRepository: ChannelRepository,
     private val getMessagesStreamUseCase: GetMessagesStreamUseCase,
     private val fetchPastMessagesUseCase: FetchPastMessagesUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val getLocalGalleryImagesUseCase: GetLocalGalleryImagesUseCase,
     private val editMessageUseCase: EditMessageUseCase,
-    private val deleteMessageUseCase: DeleteMessageUseCase
+    private val deleteMessageUseCase: DeleteMessageUseCase,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
-    private val channelId: String = savedStateHandle.getRequiredString(AppRoutes.Chat.ARG_CHANNEL_ID) // 변경: 채널 ID
+    private val channelType: String = savedStateHandle.getRequiredString(AppRoutes.Chat.ARG_CHANNEL_TYPE)
+    private val channelId: String = savedStateHandle.getRequiredString(AppRoutes.Chat.ARG_CHANNEL_ID)
+    private val projectId: String? = savedStateHandle[AppRoutes.Chat.ARG_PROJECT_ID]
+    private val categoryId: String? = savedStateHandle[AppRoutes.Chat.ARG_CATEGORY_ID]
 
-    private val _uiState = MutableStateFlow(ChatUiState(channelId = channelId, channelName = "채팅방 $channelId")) // 초기 상태
+    private val channelLocator: ChannelLocator = run {
+        Log.d("ChatViewModel", "Initializing ChannelLocator with type: $channelType, id: $channelId, pId: $projectId, cId: $categoryId")
+        when (channelType) {
+            "dm" -> ChannelLocator.Dm(channelId = channelId)
+            "project_direct" -> {
+                val pId = projectId ?: throw IllegalArgumentException("Project ID is required for project_direct channel type")
+                ChannelLocator.ProjectDirectChannel(projectId = pId, channelId = channelId)
+            }
+            "project_category" -> {
+                val pId = projectId ?: throw IllegalArgumentException("Project ID is required for project_category channel type")
+                val cId = categoryId ?: throw IllegalArgumentException("Category ID is required for project_category channel type")
+                ChannelLocator.ProjectCategoryChannel(projectId = pId, categoryId = cId, channelId = channelId)
+            }
+            else -> throw IllegalArgumentException("Unknown channel type: $channelType")
+        }
+    }
+
+    private val _uiState = MutableStateFlow(ChatUiState(channelName = "로딩 중...", isLoadingHistory = true))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<ChatEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    // 임시 메시지 ID 생성을 위한 카운터 (실제 앱에서는 UUID 등 사용 권장)
+    private var currentUserId: String? = null
+    private var oldestLoadedMessageTimestamp: Instant? = null
+    private var oldestMessageReached = false
+
     private var tempMessageLocalIdCounter = -1L
 
     init {
-        observeMessages()
-        fetchInitialMessages()
-        // loadGalleryImages() // 필요 시 갤러리 이미지 로드
+        viewModelScope.launch {
+            currentUserId = userRepository.getCurrentUser()
+                .filterNotNull() 
+                .firstOrNull() 
+                ?.getOrNull()?.userId 
+
+            if (currentUserId == null) {
+                Log.e("ChatViewModel", "Failed to get current user ID.")
+                _uiState.update {
+                    it.copy(
+                        error = "사용자 정보를 가져올 수 없습니다.",
+                        isLoadingHistory = false,
+                        channelName = "오류"
+                    )
+                }
+                return@launch 
+            }
+
+            _uiState.update { it.copy(myUserId = currentUserId!!) }
+
+            _uiState.update { it.copy(isLoadingHistory = true, error = null) }
+            Log.d("ChatViewModel", "Fetching channel details for ID: $channelId")
+            val result = channelRepository.getChannel(channelId)
+            if (result.isSuccess) {
+                val channel = result.getOrThrow()
+                Log.d("ChatViewModel", "Channel details fetched: ${channel.name}")
+                validateChannelContext(channel)
+
+                _uiState.update {
+                    it.copy(
+                        channelName = channel.name,
+                        channelPath = channelLocator.getMessagesPath(),
+                    )
+                }
+                initializeChatFeatures()
+            } else {
+                val errorMsg = "채널 정보를 불러오는데 실패했습니다: ${result.exceptionOrNull()?.message}"
+                Log.e("ChatViewModel", errorMsg)
+                _uiState.update {
+                    it.copy(
+                        error = errorMsg,
+                        channelName = "오류",
+                        isLoadingHistory = false
+                    )
+                }
+            }
+        }
+    }
+    
+    private fun validateChannelContext(channel: Channel) {
+        val metadataSource = channel.metadata?.get(com.example.core_common.constants.FirestoreConstants.ChannelMetadataKeys.SOURCE) as? String
+        val metadataProjectId = channel.metadata?.get(com.example.core_common.constants.FirestoreConstants.ChannelMetadataKeys.PROJECT_ID) as? String
+        val metadataCategoryId = channel.metadata?.get(com.example.core_common.constants.FirestoreConstants.ChannelMetadataKeys.CATEGORY_ID) as? String
+
+        var expectedSource: String? = null
+        when (channelType) {
+            "dm" -> expectedSource = com.example.core_common.constants.FirestoreConstants.ChannelMetadataSourceValues.DM
+            "project_direct", "project_category" -> expectedSource = com.example.core_common.constants.FirestoreConstants.ChannelMetadataSourceValues.PROJECT
+        }
+
+        if (expectedSource != null && metadataSource != expectedSource) {
+            Log.w("ChatViewModel", "Channel context mismatch: Expected source '$expectedSource' based on nav arg type '$channelType', but channel metadata source is '$metadataSource'. Channel ID: $channelId")
+        }
+        if (channelType == "project_direct" || channelType == "project_category") {
+            if (projectId != metadataProjectId) {
+                 Log.w("ChatViewModel", "Channel context mismatch: Expected projectId '$projectId' from nav arg, but channel metadata projectId is '$metadataProjectId'. Channel ID: $channelId")
+            }
+        }
+        if (channelType == "project_category") {
+            if (categoryId != metadataCategoryId) {
+                 Log.w("ChatViewModel", "Channel context mismatch: Expected categoryId '$categoryId' from nav arg, but channel metadata categoryId is '$metadataCategoryId'. Channel ID: $channelId")
+            }
+        }
     }
 
-    // 메시지 스트림 구독 및 UI 상태 업데이트
-    private fun observeMessages() {
+    private fun initializeChatFeatures() {
+        val userId = currentUserId ?: return 
+
+        observeMessages(userId)
+    }
+
+    private fun observeMessages(currentUserIdForMapping: String) {
         viewModelScope.launch {
-            getMessagesStreamUseCase(channelId)
-                .map { domainMessages ->
-                    // Domain 모델 리스트 -> UI 모델 리스트 변환
-                    domainMessages.map { it.toUiModel(uiState.value.myUserId) { "temp_${tempMessageLocalIdCounter--}" } }
+            getMessagesStreamUseCase(channelId = channelId, limit = INITIAL_MESSAGE_LOAD_LIMIT)
+                .catch { e -> 
+                    Log.e("ChatViewModel", "Error observing messages", e)
+                    _uiState.update { it.copy(error = "메시지를 실시간으로 불러오는 중 오류 발생: ${e.message}", isLoadingHistory = false) }
                 }
-                .catch { e -> _uiState.update { it.copy(error = "메시지 스트림 오류: ${e.message}") } }
+                .map { messages -> 
+                    if (messages.isNotEmpty() && (_uiState.value.messages.isEmpty() || messages.first().timestamp < (oldestLoadedMessageTimestamp ?: Instant.MAX))) {
+                         oldestLoadedMessageTimestamp = messages.firstOrNull()?.timestamp
+                    }
+                     if (messages.size < INITIAL_MESSAGE_LOAD_LIMIT && _uiState.value.messages.isEmpty()) {
+                        oldestMessageReached = true
+                    }
+                    messages.map { msg -> msg.toUiModel(currentUserIdForMapping) { (++tempMessageLocalIdCounter).toString() } } 
+                }
                 .collect { uiMessages ->
-                    // TODO: 정렬 로직 개선 (chatId, 임시 ID, 시간 등 고려)
-                    _uiState.update { it.copy(messages = uiMessages, isLoadingHistory = false) } // 로딩 상태 해제
-                    // 새 메시지 수신 시 스크롤 (조건 추가 가능)
-                    if (uiMessages.isNotEmpty()) {
-                        _eventFlow.emit(ChatEvent.ScrollToBottom)
+                    _uiState.update { 
+                        it.copy(
+                            messages = uiMessages,
+                            isLoadingHistory = false
+                        ) 
                     }
                 }
         }
     }
 
+    fun loadMorePastMessages() {
+        if (_uiState.value.isLoadingHistory || oldestMessageReached) return
 
-    // 초기 메시지 로드 (과거 데이터 가져오기)
-    private fun fetchInitialMessages() {
-        if (uiState.value.isLoadingHistory) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingHistory = true, error = null) }
-            println("ViewModel: Fetching initial messages for channel $channelId")
-            // 가장 오래된 메시지 ID 또는 시간 기준으로 과거 메시지 요청
-            val oldestMessageId = uiState.value.messages.minByOrNull { it.chatId }?.chatId ?: Int.MAX_VALUE // 예시
-            val result = fetchPastMessagesUseCase(channelId, beforeMessageId = oldestMessageId, limit = 20) // 첫 로드 시 적절한 limit
-
-            if (result.isFailure) {
-                _uiState.update { it.copy(error = "초기 메시지 로드 실패", isLoadingHistory = false) }
-            } else {
-                // 성공 시 Flow가 DB 변경을 감지하여 업데이트하므로, 여기서는 로딩 상태만 해제
-                _uiState.update { it.copy(isLoadingHistory = false, isLastPage = result.getOrNull()?.isEmpty() ?: false) }
-            }
-        }
-    }
-
-    // 과거 메시지 추가 로드
-    fun loadMoreMessages() {
-        if (uiState.value.isLoadingHistory || uiState.value.isLastPage) return // 로딩 중이거나 마지막 페이지면 중지
-
+        val userId = currentUserId ?: return
+        
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingHistory = true) }
-            val oldestMessageId = uiState.value.messages.minByOrNull { it.chatId }?.chatId ?: Int.MAX_VALUE
-            println("ViewModel: Loading more messages before $oldestMessageId")
-
-            val result = fetchPastMessagesUseCase(channelId, beforeMessageId = oldestMessageId, limit = 20) // 추가 로드 limit
+            val result = fetchPastMessagesUseCase(
+                channelId = channelId,
+                before = oldestLoadedMessageTimestamp,
+                limit = PAST_MESSAGE_LOAD_LIMIT
+            )
 
             if (result.isSuccess) {
-                val fetchedMessages = result.getOrThrow()
-                _uiState.update {
-                    it.copy(
-                        isLoadingHistory = false,
-                        isLastPage = fetchedMessages.isEmpty() // 더 이상 가져올 메시지가 없으면 마지막 페이지
-                    )
-                    // 성공 시 Flow가 DB 변경을 감지하여 업데이트하므로, 여기서는 상태만 업데이트
+                val pastMessages = result.getOrThrow()
+                if (pastMessages.isNotEmpty()) {
+                    oldestLoadedMessageTimestamp = pastMessages.firstOrNull()?.timestamp
+                     val uiPastMessages = pastMessages.map { it.toUiModel(userId) { (++tempMessageLocalIdCounter).toString() } }
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            messages = uiPastMessages + currentState.messages,
+                            isLoadingHistory = false
+                        )
+                    }
+                } else {
+                    oldestMessageReached = true
+                    _uiState.update { it.copy(isLoadingHistory = false) }
+                }
+                if (pastMessages.size < PAST_MESSAGE_LOAD_LIMIT) {
+                    oldestMessageReached = true
                 }
             } else {
-                _uiState.update { it.copy(isLoadingHistory = false, error = "과거 메시지 로드 실패") }
-                _eventFlow.emit(ChatEvent.ShowSnackbar("과거 메시지를 불러오는 데 실패했습니다."))
+                val errorMsg = "이전 메시지를 불러오는데 실패했습니다: ${result.exceptionOrNull()?.message}"
+                Log.e("ChatViewModel", errorMsg)
+                _uiState.update { it.copy(error = errorMsg, isLoadingHistory = false) }
             }
         }
     }
 
-    // 메시지 입력 변경
-    fun onMessageInputChange(text: String) {
-        _uiState.update { it.copy(messageInput = text) }
-    }
+    fun sendMessage(text: String, attachmentUris: List<Uri> = emptyList()) {
+        if (text.isBlank() && attachmentUris.isEmpty()) {
+            return
+        }
+        val currentSenderId = currentUserId ?: run {
+            viewModelScope.launch { _eventFlow.emit(ChatEvent.Error("사용자 정보를 찾을 수 없어 메시지를 보낼 수 없습니다.")) }
+            return
+        }
 
-    // 메시지 전송
-    fun onSendMessageClick() {
-        val messageToSend = uiState.value.messageInput.trim()
-        val selectedImages = uiState.value.selectedImages.toList()
-        val myUserId = uiState.value.myUserId
-
-        if (messageToSend.isBlank() && selectedImages.isEmpty()) return
-        if (uiState.value.isSendingMessage) return // 중복 전송 방지
-
-        // 1. 임시 UI 모델 생성 (즉각적인 UI 피드백용)
-        val tempLocalId = "temp_${tempMessageLocalIdCounter--}"
-        val tempMessage = ChatMessageUiModel(
-            localId = tempLocalId,
-            chatId = 0, // 아직 서버 ID 없음
-            userId = myUserId,
-            userName = "나", // 실제 사용자 이름 사용 필요
-            userProfileUrl = null, // 실제 사용자 프로필 URL 사용 필요
-            message = messageToSend,
-            formattedTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)),
-            isModified = false,
-            attachmentImageUrls = selectedImages.map { it.toString() }, // 임시 URL 표시
+        val attachments = attachmentUris.map { uri ->
+            MessageAttachment(
+                id = (++tempMessageLocalIdCounter).toString(),
+                type = mapUriToAttachmentType(uri),
+                url = uri.toString(),
+                name = uri.lastPathSegment ?: "attachment",
+                metadata = mapOf("localPath" to uri.toString())
+            )
+        }
+        
+        val tempUiMessage = ChatMessageUiModel(
+            localId = (++tempMessageLocalIdCounter).toString(),
+            chatId = tempMessageLocalIdCounter.toString(),
+            userId = currentSenderId,
+            userName = _uiState.value.myUserNameDisplay,
+            userProfileUrl = _uiState.value.myUserProfileUrl,
+            message = text,
+            formattedTimestamp = "전송 중...",
             isMyMessage = true,
-            isSending = true, // 전송 중 상태 표시
-            sendFailed = false
+            attachmentImageUrls = attachmentUris.map { it.toString() }
         )
+        _uiState.update { it.copy(messages = it.messages + tempUiMessage) }
 
-        // 2. UI 상태 업데이트 (임시 메시지 추가)
-        _uiState.update {
-            it.copy(
-                messages = listOf(tempMessage) + it.messages, // 맨 앞에 추가
-                messageInput = "",
-                selectedImages = emptySet(),
-                isAttachmentAreaVisible = false,
-                isSendingMessage = true // 전체적인 전송 상태 플래그 (선택적)
+        viewModelScope.launch {
+            val result = sendMessageUseCase(
+                channelId = channelId,
+                text = text,
+                attachments = attachments
             )
-        }
-        viewModelScope.launch { _eventFlow.emit(ChatEvent.ScrollToBottom) } // 스크롤
 
-        // 3. 실제 메시지 전송 요청 (Repository 호출)
-        viewModelScope.launch {
-            val result = sendMessageUseCase(channelId, messageToSend, selectedImages)
-
-            // 4. 결과 처리
             if (result.isSuccess) {
-                // 성공: Flow가 DB 변경을 감지하고 실제 메시지로 업데이트할 것을 기대.
-                // 또는 여기서 직접 임시 메시지를 제거하고 실제 메시지 데이터(result.getOrThrow())로 교체할 수도 있음.
-                // 여기서는 Flow에 맡기고 전송 상태만 해제.
-                _uiState.update { it.copy(isSendingMessage = false) } // 전체 전송 상태 해제
-                // 개별 메시지 상태 업데이트는 Flow를 통해 처리되도록 기대
-            } else {
-                // 실패: 임시 메시지의 상태를 '실패'로 변경하고 스낵바 표시
-                _uiState.update { state ->
-                    state.copy(
-                        messages = state.messages.map { if (it.localId == tempLocalId) it.copy(isSending = false, sendFailed = true) else it },
-                        isSendingMessage = false
-                    )
-                }
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 전송 실패: ${result.exceptionOrNull()?.message}"))
-            }
-            _eventFlow.emit(ChatEvent.ClearFocus)
-        }
-    }
-
-
-    // --- 갤러리 및 첨부 관련 ---
-
-    fun onAttachmentClick() {
-        _uiState.update { it.copy(isAttachmentAreaVisible = !it.isAttachmentAreaVisible) }
-    }
-
-    // 갤러리 이미지 로드
-    fun loadGalleryImages(page: Int = 0) { // 페이징 지원 예시
-        viewModelScope.launch {
-            // TODO: 갤러리 로딩 상태 관리 (필요시 uiState에 추가)
-            val result = getLocalGalleryImagesUseCase(page, pageSize = 50) // 페이지 크기 조정
-            if (result.isSuccess) {
-                val newImages = result.getOrThrow().map { it.toUiModel() }
+                val sentMessage = result.getOrThrow()
                 _uiState.update { currentState ->
-                    // 기존 이미지와 합치되 중복 제거 (ID 기준)
-                    val updatedImages = (currentState.galleryImages + newImages).distinctBy { it.id }
-                    currentState.copy(galleryImages = updatedImages)
+                    val updatedMessages = currentState.messages.map {
+                        if (it.localId == tempUiMessage.localId) sentMessage.toUiModel(currentSenderId) { sentMessage.id }
+                        else it
+                    }
+                    currentState.copy(messages = updatedMessages.filterNot { it.formattedTimestamp == "전송 중..." && it.message == text })
                 }
+                 _uiState.update { it.copy(pendingMessageText = "") }
             } else {
-                _eventFlow.emit(ChatEvent.ShowSnackbar("갤러리 이미지 로드 실패"))
+                Log.e("ChatViewModel", "Failed to send message: ${result.exceptionOrNull()?.message}")
+                _eventFlow.emit(ChatEvent.Error("메시지 전송 실패: ${result.exceptionOrNull()?.localizedMessage}"))
+                _uiState.update { currentState ->
+                    currentState.copy(messages = currentState.messages.filterNot { it.localId == tempUiMessage.localId })
+                }
             }
         }
     }
 
-
-    fun onImagesSelected(uris: List<Uri>) { // 여러 이미지 선택 (런처 결과)
-        _uiState.update {
-            it.copy(selectedImages = it.selectedImages + uris)
-        }
+    private fun mapUriToAttachmentType(uri: Uri): String {
+        return "image"
     }
 
-    fun onImageSelected(uri: Uri) {
-        // 이미 선택된 이미지는 선택 해제
-        if (uiState.value.selectedImages.contains(uri)) {
-            onImageDeselected(uri)
-            return
-        }
-        
-        _uiState.update { 
-            it.copy(
-                selectedImages = it.selectedImages + uri,
-                galleryImages = it.galleryImages.map { galleryImage -> 
-                    if (galleryImage.uri == uri) galleryImage.copy(isSelected = true) else galleryImage 
-                }
-            )
-        }
+    fun onUserInputChange(text: String) {
+        _uiState.update { it.copy(pendingMessageText = text) }
     }
 
-    fun onImageDeselected(uri: Uri) {
-        _uiState.update { 
-            it.copy(
-                selectedImages = it.selectedImages - uri,
-                galleryImages = it.galleryImages.map { galleryImage -> 
-                    if (galleryImage.uri == uri) galleryImage.copy(isSelected = false) else galleryImage 
-                }
-            )
-        }
+    fun onAttachmentSelected(uris: List<Uri>) {
+        _uiState.update { it.copy(selectedAttachmentUris = it.selectedAttachmentUris + uris) }
+    }
+    
+    fun removeAttachment(uri: Uri) {
+        _uiState.update { it.copy(selectedAttachmentUris = it.selectedAttachmentUris - uri) }
     }
 
-
-    // --- 메시지 수정/삭제 관련 ---
-
-    fun onMessageLongClick(message: ChatMessageUiModel) {
+    fun editMessage(messageId: String, newText: String) {
         viewModelScope.launch {
-            _eventFlow.emit(ChatEvent.ShowEditDeleteDialog(message))
-        }
-    }
-
-    fun startEditMessage(messageId: Int, text: String) {
-        _uiState.update { 
-            it.copy(
-                messageInput = text,
-                isEditing = true,
-                editingMessageId = messageId
+            val result = editMessageUseCase(
+                channelId = channelId,
+                messageId = messageId,
+                newText = newText
             )
-        }
-    }
-
-    // 메시지 편집 취소
-    fun cancelEdit() {
-        _uiState.update { 
-            it.copy(
-                messageInput = "",
-                isEditing = false,
-                editingMessageId = null
-            )
-        }
-    }
-
-    // 메시지 편집 완료
-    fun confirmEditMessage() {
-        val editingId = uiState.value.editingMessageId ?: return
-        val newMessage = uiState.value.messageInput.trim()
-        
-        if (newMessage.isBlank()) {
-            viewModelScope.launch {
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지를 입력해주세요."))
-            }
-            return
-        }
-        
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSendingMessage = true) }
-            
-            val result = editMessageUseCase(channelId, editingId, newMessage)
-            
-            if (result.isSuccess) {
-                _uiState.update {
-                    it.copy(
-                        messageInput = "",
-                        isEditing = false,
-                        editingMessageId = null,
-                        isSendingMessage = false
-                    )
-                }
-            } else {
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 수정에 실패했습니다."))
-            }
-        }
-    }
-
-
-    fun confirmDeleteMessage(messageId: Int) {
-        viewModelScope.launch {
-            val result = deleteMessageUseCase(channelId, messageId)
-            
             if (result.isFailure) {
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제에 실패했습니다."))
+                Log.e("ChatViewModel", "Failed to edit message $messageId: ${result.exceptionOrNull()?.message}")
+                _eventFlow.emit(ChatEvent.Error("메시지 수정 실패: ${result.exceptionOrNull()?.localizedMessage}"))
             }
-            // 성공 시 Flow가 DB 변경을 감지하여 자동으로 UI 업데이트
         }
     }
 
-    // --- 기타 ---
-    fun onUserProfileClick(userId: Int) {
+    fun deleteMessage(messageId: String) {
         viewModelScope.launch {
-            _eventFlow.emit(ChatEvent.ShowUserProfileDialog(userId))
+            val result = deleteMessageUseCase(channelId = channelId, messageId = messageId)
+            if (result.isFailure) {
+                Log.e("ChatViewModel", "Failed to delete message $messageId: ${result.exceptionOrNull()?.message}")
+                _eventFlow.emit(ChatEvent.Error("메시지 삭제 실패: ${result.exceptionOrNull()?.localizedMessage}"))
+            }
         }
     }
     
-    // 뒤로 가기 클릭 처리
-    fun onBackClick() {
+    fun onMessageLongClicked(messageId: String) {
         viewModelScope.launch {
-            _eventFlow.emit(ChatEvent.NavigateBack)
+             val message = _uiState.value.messages.find { it.chatId == messageId }
+            if (message != null && message.userId == currentUserId && !message.isDeleted) {
+                 _eventFlow.emit(ChatEvent.ShowMessageActions(messageId, message.message))
+            } else if (message != null && message.isDeleted) {
+            }
+        }
+    }
+
+    fun clearSelectionMode() {
+    }
+    
+    fun onImageLongClicked(imageId: String) {
+    }
+
+    fun loadGalleryImages() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingGallery = true) }
+            try {
+                val images = getLocalGalleryImagesUseCase(1, 100)
+                    .map { it.toUiModel() }
+                _uiState.update { it.copy(galleryImages = images, isLoadingGallery = false) }
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Error loading gallery images", e)
+                _uiState.update { it.copy(error = "갤러리 이미지를 불러올 수 없습니다.", isLoadingGallery = false) }
+            }
+        }
+    }
+
+    fun onGalleryImageSelected(imageId: String) {
+        _uiState.update { currentState ->
+            val updatedImages = currentState.galleryImages.map {
+                if (it.id == imageId) it.copy(isSelected = !it.isSelected) else it
+            }
+            currentState.copy(galleryImages = updatedImages)
+        }
+    }
+    
+    fun getSelectedGalleryImageUris(): List<Uri> {
+        return _uiState.value.galleryImages.filter { it.isSelected }.map { it.uri }
+    }
+    
+    fun clearGallerySelection() {
+         _uiState.update { currentState ->
+            val updatedImages = currentState.galleryImages.map { it.copy(isSelected = false) }
+            currentState.copy(galleryImages = updatedImages)
         }
     }
 }

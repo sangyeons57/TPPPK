@@ -8,129 +8,125 @@ alwaysApply: false
 *This document outlines the primary Firestore database structure. Logic is implemented in the `:data` module's repositories.*
 
 **Root:**
-└── **`users`** [User information]
-    └── `{userId}` (ID: Firebase Auth UID)
-        ├── **Fields:** 
-            ├── `email`: String - User email address
-            ├── `name`: String (Unique) - User nickname/name
-            ├── `profileImageUrl`?: String - Profile image URL
-            ├── `statusMessage`?: String - User status message
-            ├── `memo`?: String - User's bio or personal memo
-            ├── `status`: String - Current status (`ONLINE`, `OFFLINE`)
-            ├── `createdAt`: Timestamp - Account creation time
-            ├── `fcmToken`?: String - Firebase Cloud Messaging token
-            ├── `participatingProjectIds`[]?: Array<String> - Projects user is part of
-            ├── `accountStatus`: String - Account status (`ACTIVE`, `SUSPENDED`, `DELETED`)
-            ├── `activeDmIds`[]?: Array<String> - Active DM channel IDs
-            ├── `isEmailVerified`: Boolean - Email verification status
-        └── **Subcollections:**
-            └── **`friends`** [Friend relationships/status]
-                └── `{friendId}` (ID: Friend UID)
-                    └── **Fields:** 
-                        ├── `status`: String - Relationship status (`accepted`, `pending_sent`, `pending_received`)
-                        ├── `timestamp`: Timestamp - When the relationship was created
-                        ├── `acceptedAt`: Timestamp? - When the relationship was accepted (nullable)
-└── **`dms`** [1:1 direct message rooms]
-    └── `{dmId}` (ID: Sorted UIDs `uid1_uid2`)
-        ├── **Fields:** 
-            ├── `participants`: Array<String> - List of user IDs
-            ├── `lastMessage`: String? - Most recent message text
-            ├── `lastMessageTimestamp`: Timestamp? - When the last message was sent
-            ├── `createdAt`: Timestamp - When the DM channel was created
-        └── **Subcollections:**
-            └── **`messages`** [DM messages]
-                └── `{messageId}` (ID: Auto)
-                    └── **Fields:** 
-                        ├── `senderId`: String - ID of user who sent the message
-                        ├── `text`: String - Message content
-                        ├── `timestamp`: Timestamp - When the message was sent
-└── **`projects`** [Project/server information]
-    └── `{projectId}` (ID: Auto)
-        ├── **Fields:** 
-            ├── `name`: String - Project name
-            ├── `description`: String - Project description
-            ├── `imageUrl`: String? - Project image URL
-            ├── `categoryId`: String - Default category ID
-            ├── `ownerId`: String - Creator/owner user ID
-            ├── `memberIds`: Array<String> - List of member user IDs
-            ├── `createdAt`: Timestamp - Creation time
-            ├── `updatedAt`: Timestamp - Last update time
-            ├── `isPublic`: Boolean - Whether project is publicly visible
-        └── **Subcollections:**
-            ├── **`members`** [Project members & roles]
-            │   └── `{userId}` (ID: User UID)
-            │       └── **Fields:** 
-                        ├── `roleIds`: Array<String> - List of role IDs
-                        ├── `joinedAt`: Timestamp - When the user joined
-            ├── **`roles`** [Project roles & permissions]
-            │   └── `{roleId}` (ID: Auto)
-            │       └── **Fields:** 
-                        ├── `name`: String - Role name
-                        ├── `permissions`: Map<String, Boolean> - Permission map
-                        ├── `isDefault`: Boolean - Whether this is a default role
-            ├── **`categories`** [Channel categories]
-            │   └── `{categoryId}` (ID: Auto)
-            │       ├── **Fields:** 
-                        ├── `name`: String - Category name
-                        ├── `order`: Number - Display order
-            │       └── **Subcollections:**
-            │           └── **`channels`** [Text channels]
-            │               └── `{channelId}` (ID: Auto)
-            │                   ├── **Fields:** 
-                                    ├── `name`: String - Channel name
-                                    ├── `type`: String - Channel type
-                                    ├── `order`: Number - Display order
-            │                   └── **Subcollections:**
-            │                       └── **`messages`** [Channel messages]
-            │                           └── `{messageId}` (ID: Auto)
-            │                               └── **Fields:** 
-                                                ├── `senderId`: String - ID of sender
-                                                ├── `text`: String - Message content
-                                                ├── `timestamp`: Timestamp - When sent
-            └── **`scheduleChannels`** [Schedule-related channels]
-                └── `{scheduleId}` (ID: Schedule ID)
-                    ├── **Fields:** `name`: String - Channel name
-                    └── **Subcollections:**
-                        └── **`messages`** [Schedule channel messages]
-                            └── `{messageId}` (ID: Auto)
-                                └── **Fields:** 
-                                    ├── `senderId`: String - ID of sender
-                                    ├── `text`: String - Message content 
-                                    ├── `timestamp`: Timestamp - When sent
-└── **`schedules`** [Personal & project schedules]
-    └── `{scheduleId}` (ID: Auto)
-        └── **Fields:** 
-            ├── `title`: String - Schedule title
-            ├── `description`: String - Schedule description
-            ├── `startTime`: Timestamp - Start time
-            ├── `endTime`: Timestamp - End time
-            ├── `location`: String? - Location information
-            ├── `projectId`: String? - Associated project ID (null for personal schedules)
-            ├── `creatorId`: String - Creator user ID
-            ├── `participantIds`: Array<String> - List of participant user IDs
-            ├── `isAllDay`: Boolean - Whether schedule spans all day
-            ├── `priority`: String - Priority level (`LOW`, `MEDIUM`, `HIGH`)
-            ├── `status`: String - Status (`SCHEDULED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`)
-            ├── `reminderTime`: Timestamp? - When to send reminder
-            ├── `color`: String? - Display color
-            ├── `tags`: Array<String> - Schedule tags
-            ├── `recurrenceRule`: String? - iCalendar RRULE for repeating schedules
-            ├── `createdAt`: Timestamp - Creation time
-            ├── `updatedAt`: Timestamp - Last update time
-└── **`invites`** [Temporary invite tokens]
-    └── `{inviteToken}` (ID: Auto unique token)
-        └── **Fields:** 
-            ├── `type`: String - Invite type (e.g., `project_invite`)
-            ├── `inviterId`: String - User ID who created the invite
-            ├── `inviterName`: String - Name of user who created the invite
-            ├── `projectId`: String? - Target project ID (for project invites)
-            ├── `projectName`: String - Name of target project
-            ├── `expiresAt`: Timestamp - When the invite expires
-            ├── `createdAt`: Timestamp - When the invite was created
-└── **`passwordResetTokens`** [Temporary password reset tokens]
-    └── `{tokenId}` (ID: Auto)
-        └── **Fields:** 
-            ├── `userId`: String - Associated user ID
-            ├── `token`: String - Unique reset token
-            ├── `expiresAt`: Timestamp - When the token expires
+└── **`users`** `/{userId}` [User information] (ID: Firebase Auth UID)
+    ├── **Fields:**
+    │   ├── `email`: String - User email address
+    │   ├── `name`: String (Unique) - User nickname/name
+    │   ├── `profileImageUrl`?: String - Profile image URL
+    │   ├── `statusMessage`?: String - User status message
+    │   ├── `memo`?: String - User's bio or personal memo
+    │   ├── `status`: String - Current status (`ONLINE`, `OFFLINE`)
+    │   ├── `createdAt`: Instant - Account creation time
+    │   ├── `fcmToken`?: String - Firebase Cloud Messaging token
+    │   ├── `participatingProjectIds`[]?: Array<String> - Projects user is part of
+    │   ├── `accountStatus`: String - Account status (`ACTIVE`, `SUSPENDED`, `DELETED`)
+    │   ├── `activeDmIds`[]?: Array<String> - IDs of active DM channels (references `/channels/{channelId}`)
+    │   └── `isEmailVerified`: Boolean - Email verification status
+    └── **Subcollections:**
+        └── **`friends`** `/{friendId}` [Friend relationships/status] (ID: Friend UID)
+            └── **Fields:**
+                ├── `status`: String - Relationship status (`accepted`, `pending_sent`, `pending_received`)
+                ├── `timestamp`: Instant - When the relationship was created
+                └── `acceptedAt`: Instant? - When the relationship was accepted (nullable)
 
+└── **`channels`** `/{channelId}` [GLOBAL COLLECTION: All types of chat channels - DM, Project, etc.] (ID: Auto)
+    ├── **Fields:**
+    │   ├── `id`: String - Unique channel ID (matches document ID)
+    │   ├── `name`: String - Channel name (e.g., "General", "User One & User Two", "Project Alpha Chat")
+    │   ├── `description`: String? - Channel description/topic
+    │   ├── `type`: String - Channel type (`DM`, `PROJECT`, `CATEGORY`) - Helps determine the structure quickly
+    │   ├── `channelMode`: String? - Channel subtype (e.g., `TEXT`, `VOICE`)
+    │   ├── `lastMessagePreview`: String? - Preview of the last message
+    │   ├── `lastMessageTimestamp`: Instant? - When the last message was sent
+    │   ├── `createdAt`: Instant - Creation time
+    │   ├── `updatedAt`: Instant - Last update time
+    │   ├── `createdBy`: String? - User ID of the creator (if applicable)
+    │   ├── `projectSpecificData`: Map - Only for PROJECT/CATEGORY type channels
+    │   │   ├── `projectId`: String - Associated project ID
+    │   │   ├── `categoryId`: String? - Associated category ID (null for direct project channels)
+    │   │   └── `order`: Number - Display order within project/category
+    │   └── `dmSpecificData`: Map - Only for DM type channels
+    │       └── `participantIds`: Array<String> - List of participant user IDs
+    └── **Subcollections:**
+        └── **`messages`** `/{messageId}` [Channel messages] (ID: Auto)
+            └── **Fields:**
+                ├── `id`: String - Message ID
+                ├── `senderId`: String - Sender ID
+                ├── `text`: String - Message content
+                ├── `sentAt`: Timestamp - When the message was sent (creation time)
+                ├── `updatedAt`: Timestamp - Last update time
+                ├── `reactions`: Map<String, Array<String>>?
+                ├── `attachments`: Array<Map<String, String>>? - List of attachments. Each map contains:
+                │   ├── `id`: String? - Attachment ID (optional)
+                │   ├── `type`: String - Type of attachment (e.g., "image", "video", "file")
+                │   ├── `url`: String - URL to access the attachment
+                │   ├── `fileName`: String? - Original file name (optional)
+                │   ├── `size`: String? - File size (optional, stored as string if present)
+                │   ├── `mimeType`: String? - MIME type (optional)
+                │   └── `thumbnailUrl`: String? - Thumbnail URL (optional)
+                ├── `metadata`: Map<String, Any>?
+                ├── `replyToMessageId`: String?
+                ├── `isEdited`: Boolean - Whether the message has been edited
+                └── `isDeleted`: Boolean - Whether the message has been soft-deleted
+
+└── **`projects`** `/{projectId}` [Project/server information] (ID: Auto)
+    ├── **Fields:**
+    │   ├── `name`: String - Project name
+    │   ├── `description`: String - Project description
+    │   ├── `imageUrl`: String? - Project image URL
+    │   ├── `ownerId`: String - Creator/owner user ID
+    │   ├── `memberIds`: Array<String> - List of member user IDs
+    │   ├── `createdAt`: Instant - Creation time
+    │   ├── `updatedAt`: Instant - Last update time
+    │   └── `isPublic`: Boolean - Whether project is publicly visible
+    └── **Subcollections:**
+        ├── **`members`** `/{userId}` [Project members & roles] (ID: User UID)
+        │   └── **Fields:**
+        │       ├── `roleIds`: Array<String> - List of role IDs
+        │       ├── `joinedAt`: Instant - When the user joined
+        │       └── `channelIds`: Array<String> - List of channel IDs this member has access to
+        ├── **`roles`** `/{roleId}` [Project roles & permissions] (ID: Auto)
+        │   └── **Fields:**
+        │       ├── `name`: String - Role name
+        │       ├── `permissions`: Map<String, Boolean> - Permission map
+        │       └── `isDefault`: Boolean - Whether this is a default role
+        └── **`categories`** `/{categoryId}` [Channel categories within a project] (ID: Auto)
+            └── **Fields:**
+                ├── `name`: String - Category name
+                └── `order`: Number - Display order
+
+└── **`schedules`** `/{scheduleId}` [Personal & project schedules] (ID: Auto)
+    └── **Fields:**
+        ├── `title`: String - Schedule title
+        ├── `content`: String - Schedule content
+        ├── `startTime`: Instant - Start time
+        ├── `endTime`: Instant - End time
+        ├── `projectId`: String? - Associated project ID (null for personal schedules)
+        ├── `creatorId`: String - Creator user ID
+        ├── `status`: String - Status (`SCHEDULED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`)
+        ├── `reminderTime`: Instant? - When to send reminder
+        ├── `color`: String? - Display color
+        ├── `createdAt`: Instant - Creation time
+        └── `updatedAt`: Instant - Last update time
+
+└── **`invites`** `/{inviteToken}` [Temporary invite tokens] (ID: Auto unique token)
+    └── **Fields:**
+        ├── `type`: String - Invite type (e.g., `project_invite`)
+        ├── `inviterId`: String - User ID who created the invite
+        ├── `inviterName`: String - Name of user who created the invite
+        ├── `projectId`: String? - Target project ID (for project invites)
+        ├── `projectName`: String - Name of target project
+        ├── `expiresAt`: Instant - When the invite expires
+        └── `createdAt`: Instant - When the invite was created
+
+└── **`passwordResetTokens`** `/{tokenId}` [Temporary password reset tokens] (ID: Auto)
+    └── **Fields:**
+        ├── `userId`: String - Associated user ID
+        ├── `token`: String - Unique reset token
+        └── `expiresAt`: Instant - When the token expires
+
+# 변경 이력:
+- 2023-07-XX: `participants` 컬렉션 제거, 채널 접근 권한을 `members.channelIds`로 통합
+- 2023-09-XX: DM 채널과 프로젝트 채널을 글로벌 `channels` 컬렉션으로 통합, `type` 필드 도입
+- 2023-10-XX: `channelReferences`/`projectChannelReferences` 제거, 채널 순서 및 소속 정보를 채널 자체의 `order`/`metadata` 필드로 이동
+- 2024-XX-XX: `metadata`, `participantIds`, `order` 필드 제거 및 타입별 특화 데이터 구조 도입 (`projectSpecificData`, `dmSpecificData`)

@@ -4,6 +4,7 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.Schedule
@@ -12,9 +13,6 @@ import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import javax.inject.Inject
 
 // --- 데이터 모델 ---
@@ -56,10 +54,6 @@ class ScheduleDetailViewModel @Inject constructor(
 
     private val _eventFlow = MutableSharedFlow<ScheduleDetailEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
-
-    // Date and Time formatters
-    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN)
-    private val timeFormatter = DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)
 
     init {
         viewModelScope.launch {
@@ -121,23 +115,14 @@ class ScheduleDetailViewModel @Inject constructor(
 
     // Helper function to map domain Schedule to ScheduleDetailItem
     private fun Schedule.toDetailItem(): ScheduleDetailItem {
-        // UTC LocalDateTime을 사용자의 로컬 시간대로 변환
-        val localStartTime = this.startTime.atZone(ZoneId.of("UTC"))
-            .withZoneSameInstant(ZoneId.systemDefault())
-            .toLocalDateTime()
-        val localEndTime = this.endTime.atZone(ZoneId.of("UTC"))
-            .withZoneSameInstant(ZoneId.systemDefault())
-            .toLocalDateTime()
+        val datePattern = "yyyy년 M월 d일 (E)" // Define pattern locally or in DateTimeUtil if widely used
 
-        val dateString = localStartTime.format(dateFormatter)
-        val timeString = if (this.isAllDay) {
-            "하루 종일"
-        } else {
-            val start = localStartTime.format(timeFormatter)
-            val end = localEndTime.format(timeFormatter)
-            "$start ~ $end"
-        }
-        // TODO: Fetch project name based on this.projectId if necessary
+        val dateString = DateTimeUtil.format(this.startTime, datePattern)
+
+        val start = DateTimeUtil.formatChatTime(this.startTime)
+        val end = DateTimeUtil.formatChatTime(this.endTime)
+        val timeString = "$start ~ $end"
+
         val projectName = this.projectId?.let { "Project $it" } // Placeholder
 
         return ScheduleDetailItem(

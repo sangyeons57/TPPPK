@@ -3,6 +3,7 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.Schedule
 import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
 import com.example.domain.usecase.schedule.AddScheduleUseCase
@@ -203,24 +204,19 @@ class AddScheduleViewModel @Inject constructor(
             val localEndTime = LocalDateTime.of(date, end!!)
 
             // UTC LocalDateTime으로 변환
-            val utcStartTime = localStartTime.atZone(ZoneId.systemDefault())
-                                        .withZoneSameInstant(ZoneId.of("UTC"))
-                                        .toLocalDateTime()
-            val utcEndTime = localEndTime.atZone(ZoneId.systemDefault())
-                                    .withZoneSameInstant(ZoneId.of("UTC"))
-                                    .toLocalDateTime()
+            val instantStartTime = DateTimeUtil.toInstant(localStartTime)
+            val instantEndTime = DateTimeUtil.toInstant(localEndTime)
 
             // Schedule 객체 생성 (UTC 시간 사용)
             // project가 null이면 projectId도 null이 됨
             val schedule = Schedule(
                 id = UUID.randomUUID().toString(),
+                creatorId = Fireb,
                 projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID },
                 title = title,
                 content = content.takeIf { it.isNotEmpty() }, // 내용 없으면 null
-                startTime = utcStartTime,
-                endTime = utcEndTime,
-                participants = listOf(), // 초기에는 빈 리스트
-                isAllDay = false // 기본적으로 false
+                startTime = instantStartTime!!,
+                endTime = instantEndTime!!,
             )
             
             // Use UseCase to add the schedule

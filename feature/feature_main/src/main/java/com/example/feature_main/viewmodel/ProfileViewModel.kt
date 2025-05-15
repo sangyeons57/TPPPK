@@ -5,9 +5,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.UserProfileData
-import com.example.domain.usecase.user.GetUserProfileUseCase
+import com.example.domain.usecase.user.GetUserUseCase
 import com.example.domain.usecase.auth.LogoutUseCase
-import com.example.domain.usecase.user.UpdateUserProfileImageUseCase
+import com.example.domain.usecase.user.UpdateUserImageUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -37,10 +37,10 @@ sealed class ProfileEvent {
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val getUserProfileUseCase: GetUserUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val updateUserStatusUseCase: UpdateUserStatusUseCase,
-    private val updateUserProfileImageUseCase: UpdateUserProfileImageUseCase
+    private val updateUserProfileImageUseCase: UpdateUserImageUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(isLoading = true)) // 초기 로딩 상태

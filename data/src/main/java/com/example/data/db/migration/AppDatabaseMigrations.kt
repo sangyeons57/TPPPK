@@ -27,11 +27,27 @@ object AppDatabaseMigrations {
     }
     
     /**
+     * 버전 7에서 8로의 마이그레이션
+     * 
+     * 변경 사항:
+     * - ChannelEntity 구조 변경
+     * - metadata, order, participantIds 필드 제거
+     * - projectSpecificData와 dmSpecificData 관련 필드 추가
+     */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // 채널 테이블 마이그레이션은 ChannelMigration.MIGRATION_2_3에 구현되어 있음
+            ChannelMigration.MIGRATION_2_3.migrate(database)
+        }
+    }
+    
+    /**
      * 앱에서 사용할 모든 마이그레이션 배열
      * 새로운 마이그레이션을 추가할 때 이 배열에도 추가해야 합니다.
      */
     val ALL_MIGRATIONS = arrayOf(
-        MIGRATION_6_7
+        MIGRATION_6_7,
+        MIGRATION_7_8
         // 추후 추가될 마이그레이션들...
     )
 } 
