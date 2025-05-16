@@ -2,46 +2,45 @@ package com.example.feature_main.ui
 
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.feature_main.viewmodel.HomeUiState
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.ui.DmUiModel
+import com.example.domain.model.ui.ProjectUiModel
 import com.example.feature_main.viewmodel.HomeEvent
 import com.example.feature_main.viewmodel.HomeViewModel
 import com.example.feature_main.viewmodel.ProjectItem
 import com.example.feature_main.viewmodel.TopSection
 import kotlinx.coroutines.flow.collectLatest
 import com.example.feature_main.ui.project.ProjectChannelList
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.HorizontalDivider
-import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.ui.DmUiModel
+import com.example.feature_main.viewmodel.HomeUiState
 
 /**
- * HomeScreen: 상태 관리 및 이벤트 처리 (Stateful)
+ * HomeScreen: 디스코드 스타일 홈 화면
+ * - 왼쪽: 프로필/프로젝트 사이드바
+ * - 중간: DM 목록 또는 선택한 프로젝트의 채널 목록
+ * - 오른쪽: (채팅 화면으로 이동)
  */
-@OptIn(ExperimentalMaterial3Api::class) // TabRow, FAB 등 사용
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
@@ -51,6 +50,11 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // 앱 시작 시 DM 섹션을 기본 선택되도록 설정
+    LaunchedEffect(Unit) {
+        viewModel.onTopSectionSelect(TopSection.DMS)
+    }
+
     // 이벤트 처리 (스낵바, 다이얼로그 등)
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
@@ -59,41 +63,34 @@ fun HomeScreen(
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
                 is HomeEvent.ShowAddProjectDialog -> {
-                    // TODO: 프로젝트 추가 다이얼로그 표시 로직
                     snackbarHostState.showSnackbar("프로젝트 추가 다이얼로그 (미구현)")
                 }
                 is HomeEvent.ShowAddFriendDialog -> {
-                    // TODO: 친구 추가 다이얼로그 표시 로직
                     snackbarHostState.showSnackbar("친구 추가 다이얼로그 (미구현)")
                 }
                 is HomeEvent.NavigateToAddProject -> {
                     navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.ADD))
                 }
                 is HomeEvent.NavigateToProjectSettings -> {
-                    // 프로젝트 설정 화면으로 이동 (별도 화면)
                     navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.settings(event.projectId)))
                 }
                 is HomeEvent.NavigateToDmChat -> {
-                    // DM 채팅 화면으로 이동
-                    // Assuming AppRoutes.Chat.chat(channelId, chatName?) exists or similar
-                    // For DMs, chatName can be the partner's name, fetched via ViewModel if needed or passed directly
-                    // For now, let's pass null for chatName, ChatViewModel can fetch participant details
                     Log.d("HomeScreen", "Navigating to DM Chat with ID: ${event.dmId}")
-                    navigationHandler.navigateToChat(event.dmId, null) 
+                    navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(event.dmId)))
                 }
                 is HomeEvent.NavigateToChannel -> {
-                    // 채널 화면으로 이동
-                    navigationHandler.navigateToChat(event.channelId, null)
+                    navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(event.channelId)))
                 }
             }
         }
     }
 
-
     // 에러 메시지 스낵바로 표시
     LaunchedEffect(uiState.errorMessage) {
-        snackbarHostState.showSnackbar(uiState.errorMessage, duration = SnackbarDuration.Short)
-        viewModel.errorMessageShown()
+        if (uiState.errorMessage != "default" && uiState.errorMessage.isNotBlank()) {
+            snackbarHostState.showSnackbar(uiState.errorMessage, duration = SnackbarDuration.Short)
+            viewModel.errorMessageShown()
+        }
     }
 
     Scaffold(
@@ -101,374 +98,159 @@ fun HomeScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick =
-                viewModel::onProjectAddButtonClick
-                //viewModel::onAddButtonClick
-            ) {
+            // 선택된 탭에 따라 FAB 동작 변경
+            FloatingActionButton(onClick = {
+                if (uiState.selectedTopSection == TopSection.PROJECTS) {
+                    viewModel.onProjectAddButtonClick()
+                } else {
+                    viewModel.onAddFriendClick() // 이 메소드를 ViewModel에 추가해야 합니다
+                }
+            }) {
                 Icon(Icons.Filled.Add, contentDescription = "추가")
             }
         }
-    ) { paddingValues -> // Scaffold는 content 영역에 패딩 제공
+    ) { paddingValues ->
         HomeContent(
-            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()), // 패딩 적용
+            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()),
             uiState = uiState,
-            viewModel = viewModel,
+            onProjectSelect = { projectId ->
+                viewModel.onProjectClick(projectId)
+                viewModel.onTopSectionSelect(TopSection.PROJECTS)
+            },
+            onProfileClick = {
+                viewModel.onTopSectionSelect(TopSection.DMS)
+            },
+            onCategoryClick = viewModel::onCategoryClick,
+            onChannelClick = viewModel::onChannelClick,
+            onDmItemClick = viewModel::onDmItemClick
         )
     }
 }
 
 /**
- * HomeContent: UI 렌더링 (Stateless)
+ * HomeContent: 디스코드 스타일 UI 렌더링
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeContent(
     modifier: Modifier = Modifier,
-    uiState: HomeUiState,
-    viewModel: HomeViewModel,
+    uiState: com.example.feature_main.viewmodel.HomeUiState,
+    onProjectSelect: (projectId: String) -> Unit,
+    onProfileClick: () -> Unit,
+    onCategoryClick: (category: com.example.feature_main.ui.project.CategoryUiModel) -> Unit,
+    onChannelClick: (channel: com.example.feature_main.ui.project.ChannelUiModel) -> Unit,
+    onDmItemClick: (dm: DmUiModel) -> Unit
 ) {
     Row(modifier = modifier.fillMaxSize()) {
-        // 1. 왼쪽 사이드바
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(100.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // 상단부 (프로필 + 프로젝트 리스트)
-                Column(modifier = Modifier.weight(1f)) {
-                    // DM 모드 전환을 위한 헤더 이미지
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .clickable { viewModel.onTopSectionSelect(TopSection.DMS) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // 프로필 이미지 (원형)
-                        Box(
-                            modifier = Modifier
-                                .size(60.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Me",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    }
+        // 1. 왼쪽 사이드바: 프로필과 프로젝트 목록
+        ProjectListScreen(
+            projects = uiState.projects.map { ProjectUiModel(id = it.id, name = it.name, description = it.description, imageUrl = null) },
+            selectedProjectId = uiState.selectedProjectId,
+            isDmSelected = uiState.selectedTopSection == TopSection.DMS,
+            onProfileClick = onProfileClick,
+            onProjectClick = onProjectSelect,
+            userInitial = uiState.userInitial,
+            profileImageUrl = uiState.userProfileImageUrl,
+            modifier = Modifier.fillMaxHeight()
+        )
 
-                    // 프로젝트 리스트
-                    if (uiState.isLoading) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        ProjectsList(
-                            projects = uiState.projects,
-                            onProjectClick = {
-                                viewModel.onProjectClick(it)
-                                viewModel.onTopSectionSelect(TopSection.PROJECTS)
-                            },
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
-                        )
-                        Column(
-                            modifier = modifier.padding(top = 4.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            ProjectListItem(
-                                projectName = "프로젝트 추가 버튼",
-                                onClick = viewModel::onProjectAddButtonClick,
-                                isCompact = true
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2. 오른쪽 메인 콘텐츠 영역
+        // 2. 중간 섹션: DM 목록 또는 프로젝트 채널
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 8.dp, end = 8.dp)
+                .fillMaxHeight()
+                .weight(0.35f)
+                .background(MaterialTheme.colorScheme.surfaceColorAtElevation(0.5.dp))
+                .padding(start = 8.dp, end = 4.dp)
         ) {
-            MainContentTopSection(uiState)
+            // 섹션 헤더
+            HomeMiddleSectionHeader(uiState = uiState)
             Spacer(modifier = Modifier.height(8.dp))
-            // 메인 콘텐츠
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+
+            // 컨텐츠 분기
+            when (uiState.selectedTopSection) {
+                TopSection.PROJECTS -> {
+                    if (uiState.selectedProjectId != null) {
+                        ProjectChannelList(
+                            structureUiState = uiState.projectStructure,
+                            onCategoryClick = onCategoryClick,
+                            onChannelClick = onChannelClick,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        EmptyStateMessage("프로젝트를 선택하세요")
+                    }
                 }
-            } else {
-                MainContent(uiState, viewModel)
+                TopSection.DMS -> {
+                    if (uiState.isLoading) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (uiState.dms.isEmpty()) {
+                        EmptyStateMessage("DM이 없습니다")
+                    } else {
+                        DmListScreen(
+                            dms = uiState.dms,
+                            onDmItemClick = onDmItemClick,
+                            isLoading = false,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+/**
+ * HomeScreen 중간 영역의 헤더 (프로젝트명 또는 "Direct Messages")
+ */
 @Composable
-fun MainContentTopSection(uiState: HomeUiState) {
-    // 상단 탭 (선택된 모드에 따라 다른 텍스트 표시)
+fun HomeMiddleSectionHeader(
+    uiState: com.example.feature_main.viewmodel.HomeUiState
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.primaryContainer
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shadowElevation = 2.dp
     ) {
-        when (uiState.selectedTopSection) {
-            TopSection.PROJECTS -> MainContentTopSection_Projects(uiState)
-            TopSection.DMS -> MainContentTopSection_Dms(uiState)
-        }
-    }
-}
-
-@Composable
-fun MainContentTopSection_Projects(uiState: HomeUiState) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp)
-    ) {
-        Text(
-            text = "프로젝트 이름",
-            style = MaterialTheme.typography.headlineLarge, // 28sp
-            color = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.padding(4.dp)
-        )
-        
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(
-                onClick = { /* 검색 로직 */ },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Text(
-                    text = "검색하기",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            
-            Button(
-                onClick = { /* 멤버 추가 로직 */ },
-                modifier = Modifier.width(44.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Text(
-                    text = "+",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
+            Text(
+                text = if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
+                    uiState.projectName.ifBlank { "프로젝트" }
+                } else {
+                    "Direct Messages"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
 
+/**
+ * 빈 상태 메시지 표시
+ */
 @Composable
-fun MainContentTopSection_Dms(uiState: HomeUiState) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp)
+fun EmptyStateMessage(message: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize().padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "메시지",
-            style = MaterialTheme.typography.headlineLarge, // 28sp
-            color = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.padding(4.dp)
-        )
-        
-        Button(
-            onClick = { /* 친구 추가 로직 */ },
-            modifier = Modifier
-                .width(200.dp)
-                .align(Alignment.End)
-                .padding(end = 20.dp, bottom = 4.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer // default_app_color_bl1에 해당
-            )
-        ) {
-            Text(
-                text = "친구 추가하기",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-    }
-}
-
-@Composable
-fun MainContent(
-    uiState: HomeUiState,
-    viewModel: HomeViewModel
-) {
-    when (uiState.selectedTopSection) {
-        TopSection.PROJECTS -> {
-            if (uiState.selectedProjectId != null) {
-                // 프로젝트 구조 (카테고리 및 채널 목록) 표시
-                ProjectContentScreen(
-                    uiState = uiState.projectStructure,
-                    onChannelClick = { channelId, categoryId ->  // Modified lambda
-                        viewModel.onChannelClick(channelId, categoryId, uiState.selectedProjectId ?: "")
-                    },
-                    onCategoryHeaderClick = { categoryId ->
-                        viewModel.toggleCategoryExpanded(categoryId)
-                    },
-                    selectedChannelId = uiState.projectStructure.selectedChannelId
-                )
-            } else {
-                // TODO: "프로젝트를 선택하세요" 또는 기본 프로젝트 대시보드
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("프로젝트를 선택해주세요.")
-                }
-            }
-        }
-        TopSection.DMS -> {
-            DmListScreen( // New Composable for DMs
-                dms = uiState.dms,
-                onDmItemClick = { dmItem ->
-                    viewModel.onDmItemClick(dmItem)
-                },
-                isLoading = uiState.isLoading // Pass isLoading for DMs specifically
-            )
-        }
-    }
-}
-
-@Composable
-fun DmListScreen(
-    dms: List<DmUiModel>,
-    onDmItemClick: (DmUiModel) -> Unit,
-    isLoading: Boolean,
-    modifier: Modifier = Modifier
-) {
-    if (isLoading && dms.isEmpty()) { // Show loader only if list is empty and loading
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-
-    if (dms.isEmpty()) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("활성화된 DM이 없습니다.")
-        }
-        return
-    }
-
-    LazyColumn(modifier = modifier.fillMaxSize()) {
-        items(dms, key = { it.channelId }) { dmItem ->
-            DmListItem(dmItem = dmItem, onClick = { onDmItemClick(dmItem) })
-            HorizontalDivider()
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class) // For Badge
-@Composable
-fun DmListItem(
-    dmItem: DmUiModel,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // TODO: Replace with CoilAsyncImage or similar for network images
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(dmItem.partnerName.firstOrNull()?.toString() ?: "P", color = MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = dmItem.partnerName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = dmItem.lastMessage ?: "메시지가 없습니다.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.width(16.dp))
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = dmItem.lastMessageTimestamp ?: "default",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DmListItemPreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        DmListItem(
-            dmItem = DmUiModel(
-                channelId = "dm1",
-                partnerName = "김철수",
-                partnerProfileImageUrl = null,
-                lastMessage = "내일 회의 시간에 맞춰서 와주세요. 장소는 동일합니다.",
-                lastMessageTimestamp = "2023-09-01T10:30:00",
-            ),
-            onClick = {}
+            text = message, 
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.outline
         )
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun DmListScreenPreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        val sampleDms = listOf(
-            DmUiModel("1", "u1", "User One", null, DateTimeUtil.nowInstant()),
-            DmUiModel("2", "u2", "User Two With A Very Long Name To Test Ellipsis", null, DateTimeUtil.nowInstant()),
-            DmUiModel("3", "u3", "User Three", null, DateTimeUtil.nowInstant())
-        )
-        DmListScreen(dms = sampleDms, onDmItemClick = {}, isLoading = false)
-    }
-}
+// DmListScreen 및 관련 컴포넌트는 이제 별도의 파일(DmListScreen.kt)로 이동했습니다.
 
 /**
  * 프로젝트 상세 정보를 표시하는 화면
@@ -578,7 +360,7 @@ fun ProjectDetailContent(
  */
 @Composable
 fun ProjectContentArea(
-    uiState: HomeUiState,
+    uiState: com.example.feature_main.viewmodel.HomeUiState,
     viewModel: HomeViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -753,7 +535,7 @@ fun ProjectsList(
     ) {
         items(
             items = projects,
-            key = { it.id }
+            key = { project -> project.id }
         ) { project ->
             ProjectListItem(
                 projectName = project.name,
@@ -764,18 +546,6 @@ fun ProjectsList(
     }
 }
 
-@Composable
-fun EmptyStateMessage(message: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize().padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
-    }
-}
-
-
-// --- Preview ---
 @Preview(showBackground = true)
 @Composable
 fun HomeContentProjectsPreview() {
@@ -789,23 +559,41 @@ fun HomeContentProjectsPreview() {
                 "${i}분 전"
             )
         },
+        userInitial = "U", // 사용자 이니셜 추가
+        userProfileImageUrl = null, // 프로필 이미지 URL 추가
         isLoading = false
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        HomeContent(uiState = previewState, viewModel = hiltViewModel());
+        HomeContent(
+            uiState = previewState, 
+            onProjectSelect = { Log.d("Preview", "Project selected: $it") }, 
+            onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
+            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") }, 
+            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") }, 
+            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") }
+        );
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun HomeContentDmsPreview() {
-    val previewState = HomeUiState(
+    val previewState = com.example.feature_main.viewmodel.HomeUiState(
         selectedTopSection = TopSection.DMS,
-        dms = List(3) { i -> DmUiModel("dm$i", "친구 ${i + 1}", "미리보기 메시지 ${i + 1}", "timestamp", null) },
+        dms = List(3) { i -> DmUiModel("dm$i", "친구 ${i + 1}", "미리보기 메시지 ${i + 1}", "TimeStamp", DateTimeUtil.nowInstant()) },
+        userInitial = "U", // 사용자 이니셜 추가
+        userProfileImageUrl = null, // 프로필 이미지 URL 추가
         isLoading = false
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        HomeContent(uiState = previewState, viewModel = hiltViewModel());
+        HomeContent(
+            uiState = previewState, 
+            onProjectSelect = { Log.d("Preview", "Project selected: $it") }, 
+            onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
+            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") }, 
+            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") }, 
+            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") }
+        );
     }
 }
 
@@ -813,6 +601,113 @@ fun HomeContentDmsPreview() {
 @Composable
 fun HomeContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        HomeContent(uiState = HomeUiState(isLoading = true), viewModel = hiltViewModel());
+        HomeContent(
+            uiState = HomeUiState(
+                isLoading = true,
+                userInitial = "U", // 사용자 이니셜 추가
+                userProfileImageUrl = null, // 프로필 이미지 URL 추가
+            ), 
+            onProjectSelect = { Log.d("Preview", "Project selected: $it") }, 
+            onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
+            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") }, 
+            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") }, 
+            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") }
+        );
+    }
+}
+
+// --- HomeScreen Preview ---
+
+@Preview(showBackground = true, name = "HomeScreen Default Preview")
+@Composable
+fun HomeScreenPreview_Default() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        HomeScreen(
+            navigationHandler = TODO("preview"),
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "HomeScreen With Data Preview")
+@Composable
+fun HomeScreenPreview_WithData() {
+
+    val sampleUiState = HomeUiState(
+        projects = listOf(
+            ProjectItem("proj1", "Project Alpha", "Description for Alpha", "10m ago"),
+            ProjectItem("proj2", "Project Beta", "Description for Beta", "1h ago")
+        ),
+        dms = listOf(
+            DmUiModel(
+                channelId = "dm1",
+                partnerName = "Alice",
+                partnerProfileImageUrl = null,
+                lastMessage = "Hey there!",
+                lastMessageTimestamp = DateTimeUtil.nowInstant().minusSeconds(3600)
+            ),
+            DmUiModel(
+                channelId = "dm2",
+                partnerName = "Bob",
+                partnerProfileImageUrl = null,
+                lastMessage = "See you soon!",
+                lastMessageTimestamp = DateTimeUtil.nowInstant().minusSeconds(7200)
+            )
+        ),
+        selectedTopSection = TopSection.PROJECTS,
+        selectedProjectId = "proj1",
+        projectName = "Project Alpha",
+        userInitial = "U", // 사용자 이니셜 추가
+        userProfileImageUrl = null, // 프로필 이미지 URL 추가
+        projectStructure = com.example.feature_main.ui.project.ProjectStructureUiState(
+            generalChannels = listOf(
+                com.example.feature_main.ui.project.ChannelUiModel(
+                    id = "ch1",
+                    name = "general",
+                    mode = com.example.domain.model.ChannelMode.TEXT,
+                    isSelected = false
+                )
+            ),
+            categories = listOf(
+                com.example.feature_main.ui.project.CategoryUiModel(
+                    id = "cat1",
+                    name = "Text Channels",
+                    channels = listOf(
+                        com.example.feature_main.ui.project.ChannelUiModel(
+                            id = "ch2",
+                            name = "announcements",
+                            mode = com.example.domain.model.ChannelMode.TEXT,
+                            isSelected = true
+                        )
+                    ),
+                    isExpanded = true
+                )
+            ),
+            selectedChannelId = "ch2"
+        ),
+        isLoading = false,
+        errorMessage = ""
+    )
+
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            snackbarHost = { SnackbarHost(remember { SnackbarHostState() }) },
+            floatingActionButton = {
+                FloatingActionButton(onClick = { Log.d("Preview", "FAB Clicked") }) { // Simple log for preview
+                    Icon(Icons.Filled.Add, contentDescription = "추가")
+                }
+            }
+        ) { paddingValues ->
+             HomeContent(
+                 modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()),
+                 uiState = sampleUiState, // Pass the state directly
+                 onProjectSelect = { projectId -> Log.d("Preview", "Project selected in HomeContent: $projectId") },
+                 onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
+                 onCategoryClick = { category -> Log.d("Preview", "Category clicked in HomeContent: ${category.name}") },
+                 onChannelClick = { channel -> Log.d("Preview", "Channel clicked in HomeContent: ${channel.name}") },
+                 onDmItemClick = { dm -> Log.d("Preview", "DM clicked in HomeContent: ${dm.partnerName}") }
+             )
+        }
     }
 }

@@ -27,7 +27,7 @@ import kotlin.Result
 import com.example.data.model.mapper.CategoryMapper
 import com.example.data.model.mapper.ChannelMapper
 import com.example.domain.model.ChannelMode
-import kotlinx.coroutines.CoroutineDispatcher
+import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.domain.model.channel.ProjectSpecificData
 import com.google.firebase.firestore.FieldValue
 import java.util.UUID
@@ -49,7 +49,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
     private val userRepository: UserRepository,
     private val categoryMapper: CategoryMapper,
     private val channelMapper: ChannelMapper,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val dispatcherProvider: DispatcherProvider
 ) : ProjectStructureRemoteDataSource {
 
     private val currentUserId: String
@@ -62,7 +62,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 구조 결과
      */
-    override suspend fun getProjectStructure(projectId: String): Result<ProjectStructure> = withContext(ioDispatcher) {
+    override suspend fun getProjectStructure(projectId: String): Result<ProjectStructure> = withContext(dispatcherProvider.io) {
         try {
             val categoriesCollection = firestore.collection(Collections.PROJECTS)
                 .document(projectId)
@@ -128,7 +128,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
     override fun getProjectStructureStream(projectId: String): Flow<ProjectStructure> {
         return callbackFlow {
             Log.w("ProjStructRemoteDS", "getProjectStructureStream for $projectId is simplified.")
-            val job = CoroutineScope(ioDispatcher).launch {
+            val job = CoroutineScope(dispatcherProvider.io).launch {
                 getProjectStructure(projectId).onSuccess { send(it) }.onFailure { close(it) }
             }
             awaitClose { job.cancel() }
@@ -143,7 +143,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
      * @param name 카테고리 이름
      * @return 생성된 카테고리 결과
      */
-    override suspend fun createCategory(projectId: String, name: String): Result<Category> = withContext(ioDispatcher) {
+    override suspend fun createCategory(projectId: String, name: String): Result<Category> = withContext(dispatcherProvider.io) {
         try {
             val categoriesColRef = firestore.collection(Collections.PROJECTS).document(projectId)
                 .collection(Collections.CATEGORIES)
@@ -197,7 +197,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
         categoryId: String, 
         newName: String?, 
         newOrder: Int?
-    ): Result<Unit> = withContext(ioDispatcher) {
+    ): Result<Unit> = withContext(dispatcherProvider.io) {
         try {
             val categoryRef = firestore.collection(Collections.PROJECTS).document(projectId)
                 .collection(Collections.CATEGORIES).document(categoryId)
@@ -228,7 +228,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
      * @param categoryId 카테고리 ID
      * @return 작업 성공 여부
      */
-    override suspend fun deleteCategory(projectId: String, categoryId: String): Result<Unit> = withContext(ioDispatcher) {
+    override suspend fun deleteCategory(projectId: String, categoryId: String): Result<Unit> = withContext(dispatcherProvider.io) {
         try {
             val categoryRef = firestore.collection(Collections.PROJECTS).document(projectId)
                 .collection(Collections.CATEGORIES).document(categoryId)
@@ -261,7 +261,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
         name: String,
         channelMode: ChannelMode,
         order: Int?
-    ): Result<Channel> = withContext(ioDispatcher) {
+    ): Result<Channel> = withContext(dispatcherProvider.io) {
         try {
             val currentUserId = this@ProjectStructureRemoteDataSourceImpl.currentUserId
 
@@ -334,7 +334,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
         name: String,
         channelMode: ChannelMode,
         order: Int?
-    ): Result<Channel> = withContext(ioDispatcher) {
+    ): Result<Channel> = withContext(dispatcherProvider.io) {
         try {
             val currentUserId = this@ProjectStructureRemoteDataSourceImpl.currentUserId
                 
@@ -407,7 +407,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
         channelId: String, 
         newName: String, 
         newChannelMode: ChannelMode
-    ): Result<Unit> = withContext(ioDispatcher) {
+    ): Result<Unit> = withContext(dispatcherProvider.io) {
         try {
             val channelResult = channelRepository.getChannel(channelId)
             if (channelResult.isFailure) {
@@ -453,7 +453,7 @@ class ProjectStructureRemoteDataSourceImpl @Inject constructor(
         channelId: String, 
         newName: String, 
         newChannelMode: ChannelMode
-    ): Result<Unit> = withContext(ioDispatcher) {
+    ): Result<Unit> = withContext(dispatcherProvider.io) {
         try {
             val channelResult = channelRepository.getChannel(channelId)
             if (channelResult.isFailure) {

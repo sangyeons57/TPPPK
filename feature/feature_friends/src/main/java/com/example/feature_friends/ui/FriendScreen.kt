@@ -21,11 +21,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.R
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.FriendRequestStatus
 import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
 import com.example.feature_friends.viewmodel.FriendsEvent
@@ -203,9 +205,9 @@ fun FriendListItem(
 @Composable
 private fun FriendsListContentPreview() {
     val previewFriends = listOf(
-        FriendItem("u1", "accepted", Date(), null, "Friend: u1"),
-        FriendItem("u2", "pending_sent", Date(), null, "Friend: u2"),
-        FriendItem("u3", "accepted", Date(), Date(), "Friend: u3")
+        FriendItem("u1", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), null, "Friend: u1"),
+        FriendItem("u2", FriendRequestStatus.PENDING_SENT, DateTimeUtil.nowInstant(), null, "Friend: u2"),
+        FriendItem("u3", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), DateTimeUtil.nowInstant(), "Friend: u3")
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Scaffold(

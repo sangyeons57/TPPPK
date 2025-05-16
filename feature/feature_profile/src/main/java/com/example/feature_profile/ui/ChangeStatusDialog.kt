@@ -79,7 +79,7 @@ fun ChangeStatusDialog(
                                     onClick = null // Row의 selectable에서 처리하므로 null
                                 )
                                 Text(
-                                    text = status.displayName, // ★ Enum의 표시 이름 사용
+                                    text = status.name, // ★ Enum의 표시 이름 사용
                                     style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.padding(start = 16.dp)
                                 )
@@ -147,7 +147,7 @@ private fun ChangeStatusDialogPreview() {
                                 onClick = null
                             )
                             Text(
-                                text = status.displayName,
+                                text = status.name,
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(start = 16.dp)
                             )

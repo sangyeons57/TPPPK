@@ -25,25 +25,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.*
-import androidx.navigation.navArgument
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.destination.mainBottomNavItems
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_main.ui.HomeScreen
 import com.example.feature_main.ui.ProfileScreen
 import com.example.feature_main.ui.calendar.CalendarScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.domain.model.ui.MainScreenType
-import com.example.domain.model.ui.MainUiState
 import com.example.feature_main.ui.DmListScreen
 import com.example.feature_main.ui.ProjectListScreen
-import kotlinx.coroutines.launch
 
 /**
  * 메인 화면 관련 상수
@@ -58,7 +54,7 @@ private object MainScreenConstants {
 }
 
 /**
- * 메인 화면: 하단 탭 네비게이션과 각 탭의 콘텐츠를 표시합니다.
+ * 메인 화면: 하단 탭 네비게이션과 각 탭의 콘텐츠를 표시하는 컨트롤러
  * 각 탭은 별도의 백스택을 유지하여 탭 전환 시에도 상태가 보존됩니다.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,8 +123,7 @@ fun MainScreen(
                 AppRoutes.Main.Home.GRAPH_ROOT -> {
                     HomeTabNavHost(
                         navController = homeNavController,
-                        navigationHandler = navigationHandler,
-                        mainViewModel = mainViewModel
+                        navigationHandler = navigationHandler
                     )
                 }
                 AppRoutes.Main.Calendar.GRAPH_ROOT -> {
@@ -166,32 +161,25 @@ private fun getTabStartDestination(tabRoute: String): String {
 @Composable
 private fun HomeTabNavHost(
     navController: NavHostController,
-    navigationHandler: ComposeNavigationHandler,
-    mainViewModel: MainViewModel
+    navigationHandler: ComposeNavigationHandler
 ) {
     // Register this NavController when this NavHost is active
     DisposableEffect(navController, navigationHandler) {
         navigationHandler.setChildNavController(navController)
         onDispose {
-            // Only clear if this is still the active one,
-            // though MainScreen's logic might make this redundant if it switches.
-            // For safety, good to clear.
             if (navigationHandler.getChildNavController() == navController) {
                 navigationHandler.setChildNavController(null)
             }
         }
     }
 
-        NavHost(
+    NavHost(
         navController = navController,
         startDestination = AppRoutes.Main.Home.ROOT_CONTENT
-        ) {
+    ) {
         composable(AppRoutes.Main.Home.ROOT_CONTENT) {
-            HomeContentScreen(
-                viewModel = mainViewModel,
-                    navigationHandler = navigationHandler
-                )
-            }
+            HomeScreen(navigationHandler = navigationHandler)
+        }
     }
 }
 
@@ -235,9 +223,11 @@ private fun HomeContentScreen(
                 // TODO: Handle loading and error states for DMs
                 DmListScreen(
                     dms = uiState.dmConversations,
-                    onDmClick = {
+                    onDmItemClick = {
                         // Navigate to ChatScreen with DM parameters
-                        navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(it)))
+                        navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(
+                            it.toString()
+                        )))
                     },
                     modifier = Modifier.weight(1f) // Fill remaining space
                 )
@@ -246,11 +236,14 @@ private fun HomeContentScreen(
                 // TODO: Handle loading and error states for Projects
                 ProjectListScreen(
                     projects = uiState.projects,
+                    selectedProjectId = uiState.selectedProjectId,
+                    onProfileClick = {
+                        TODO("Profile 클릭 시 처리 DM 표시")
+                    },
                     onProjectClick = { projectId ->
                         // Navigate to Project Detail Screen
                         navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.detail(projectId = projectId)))
                     },
-                    modifier = Modifier.weight(1f) // Fill remaining space
                 )
             }
             else -> {

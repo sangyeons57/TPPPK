@@ -682,6 +682,120 @@ fun ScheduleListItemAllDayPreview() {
     }
 }
 
+// --- New Previews Start ---
+
+/**
+ * DayCell 미리보기: 오늘, 선택됨, 일정 있음
+ */
+@Preview(showBackground = true, name = "DayCell - Today, Selected, Schedule")
+@Composable
+fun DayCellPreview_TodaySelectedWithSchedule() {
+    val today = LocalDate.now()
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        DayCell(
+            date = today,
+            isSelected = true,
+            onClick = {},
+            hasSchedule = true
+        )
+    }
+}
+
+/**
+ * CalendarGrid 미리보기: 데이터 포함 (선택, 오늘, 일정)
+ */
+@Preview(showBackground = true, name = "CalendarGrid - With Data")
+@Composable
+fun CalendarGridPreview_WithData() {
+    val today = LocalDate.now()
+    val dates = (-3..30).map { today.plusDays(it.toLong()) } // Sample dates around today
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        CalendarGrid(
+            dates = dates,
+            selectedDate = today.plusDays(2),
+            onDateClick = {},
+            datesWithSchedules = setOf(today.plusDays(5), today.plusDays(10))
+        )
+    }
+}
+
+/**
+ * CalendarContent 미리보기: 특정 월 (예: 2월)
+ */
+@Preview(showBackground = true, name = "CalendarContent - February")
+@Composable
+fun CalendarContentPreview_February() {
+    val february = LocalDate.of(2024, 2, 1) // Example: February 2024
+    val datesInFebruary = mutableListOf<LocalDate?>()
+    val firstDayOfMonth = february.withDayOfMonth(1)
+    val lastDayOfMonth = february.withDayOfMonth(february.lengthOfMonth())
+    // Add leading nulls for days of week before the 1st
+    var currentDay = firstDayOfMonth
+    while (currentDay.dayOfWeek != DayOfWeek.SUNDAY && datesInFebruary.size < 7) { // Ensure Sunday start for preview
+        datesInFebruary.add(0, null)
+        if (currentDay.dayOfWeek == DayOfWeek.SUNDAY) break
+        currentDay = currentDay.minusDays(1)
+        if (datesInFebruary.size > 7) datesInFebruary.removeAt(0) // safety
+    }
+     // Add actual dates
+    for (i in 1..lastDayOfMonth.dayOfMonth) {
+        datesInFebruary.add(firstDayOfMonth.plusDays((i - 1).toLong()))
+    }
+    // Add trailing nulls
+    while (datesInFebruary.size % 7 != 0 || datesInFebruary.size < 35) { // Fill up to 5 weeks for consistent preview
+        datesInFebruary.add(null)
+        if (datesInFebruary.size >= 42) break // Max 6 weeks
+    }
+
+
+    val uiState = CalendarUiState(
+        currentYearMonth = java.time.YearMonth.from(february),
+        datesInMonth = datesInFebruary.take(35), // Take 5 weeks for preview
+        selectedDate = february.plusDays(10),
+        datesWithSchedules = setOf(february.plusDays(5), february.plusDays(15)),
+    )
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        CalendarContent(
+            uiState = uiState,
+            onPreviousMonthClick = {},
+            onNextMonthClick = {},
+            onDateClick = {}
+        )
+    }
+}
+
+// --- New Previews End ---
+
+// --- Additional Previews Start ---
+
+/**
+ * MonthHeader 미리보기
+ */
+@Preview(showBackground = true, name = "MonthHeader - Default")
+@Composable
+fun MonthHeaderPreview() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        MonthHeader(
+            yearMonthText = "2024년 12월",
+            onPreviousClick = {},
+            onNextClick = {}
+        )
+    }
+}
+
+/**
+ * DayOfWeekHeader 미리보기
+ */
+@Preview(showBackground = true, name = "DayOfWeekHeader - Default")
+@Composable
+fun DayOfWeekHeaderPreview() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        DayOfWeekHeader()
+    }
+}
+
+// --- Additional Previews End ---
+
 /**
  * 프리뷰용 샘플 일정 데이터 생성 유틸리티
  */

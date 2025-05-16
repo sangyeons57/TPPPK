@@ -4,11 +4,10 @@ import android.net.Uri // 이미지 처리를 위해 Uri 사용
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.User
 import com.example.domain.model.UserProfileData
-import com.example.domain.usecase.user.GetUserProfileUseCase
-import com.example.domain.usecase.user.UpdateProfileImageUseCase
+import com.example.domain.usecase.user.GetUserUseCase
 import com.example.domain.usecase.user.RemoveProfileImageUseCase
+import com.example.domain.usecase.user.UpdateImageUseCase
 // Domain UseCase Import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -37,8 +36,8 @@ sealed class EditProfileEvent {
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getUserProfileUseCase: GetUserProfileUseCase,
-    private val updateProfileImageUseCase: UpdateProfileImageUseCase,
+    private val getUserProfileUseCase: GetUserUseCase,
+    private val updateProfileImageUseCase: UpdateImageUseCase,
     private val removeProfileImageUseCase: RemoveProfileImageUseCase
 ) : ViewModel() {
 

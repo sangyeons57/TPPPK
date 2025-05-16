@@ -9,6 +9,8 @@ import com.example.domain.model.ChatMessage
 import com.example.domain.model.MediaImage
 import com.example.domain.model.Channel
 import com.example.domain.model.MessageAttachment
+import com.example.domain.model.channel.DmSpecificData
+import com.example.domain.model.channel.ProjectSpecificData
 import com.example.domain.repository.ChannelRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.usecase.message.DeleteMessageUseCase
@@ -39,6 +41,9 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.core_navigation.destination.AppRoutes
 import android.util.Log
 import com.example.data.model.channel.ChannelLocator
+import com.example.domain.model.AttachmentType
+import com.example.domain.model.ChannelType
+import com.example.core_common.constants.FirestoreConstants
 
 // --- Domain 모델 -> UI 모델 변환 함수 ---
 // ViewModel 내부 또는 별도 Mapper 파일에 위치 가능
@@ -52,9 +57,9 @@ private fun ChatMessage.toUiModel(myUserId: String, tempIdGenerator: () -> Strin
         message = this.text, 
         formattedTimestamp = DateTimeUtil.formatChatTime(this.timestamp),
         isModified = this.isEdited, 
-        attachmentImageUrls = this.attachments?.mapNotNull { it.url } ?: emptyList(),
+        attachmentImageUrls = this.attachments.map { it.url },
         isMyMessage = this.senderId == myUserId,
-        isDeleted = this.isDeleted ?: false,
+        isDeleted = this.isDeleted,
         actualTimestamp = this.timestamp
     )
 }
@@ -70,6 +75,8 @@ private fun MediaImage.toUiModel(): GalleryImageUiModel {
 private const val INITIAL_MESSAGE_LOAD_LIMIT = 30
 private const val PAST_MESSAGE_LOAD_LIMIT = 20
 
+// Channel 클래스에 ProjectSpecificData와 DmSpecificData는 이미 정의되어 있으므로 제거
+
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
@@ -83,10 +90,13 @@ class ChatViewModel @Inject constructor(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
-    private val channelType: String = savedStateHandle.getRequiredString(AppRoutes.Chat.ARG_CHANNEL_TYPE)
+    // 채널 타입 정의 - AppRoutes.Chat에서 ARG_CHANNEL_TYPE 가져오기
     private val channelId: String = savedStateHandle.getRequiredString(AppRoutes.Chat.ARG_CHANNEL_ID)
-    private val projectId: String? = savedStateHandle[AppRoutes.Chat.ARG_PROJECT_ID]
-    private val categoryId: String? = savedStateHandle[AppRoutes.Chat.ARG_CATEGORY_ID]
+    // 프로젝트 채널의 경우 필요한 정보
+    private val projectId: String? = savedStateHandle["projectId"] 
+    private val categoryId: String? = savedStateHandle["categoryId"]
+    // 채널 타입 (dm, project_direct, project_category)
+    private val channelType: String = savedStateHandle["channelType"] ?: "dm"
 
     private val channelLocator: ChannelLocator = run {
         Log.d("ChatViewModel", "Initializing ChannelLocator with type: $channelType, id: $channelId, pId: $projectId, cId: $categoryId")
@@ -119,11 +129,13 @@ class ChatViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            currentUserId = userRepository.getCurrentUser()
+            val currentUser = userRepository.getCurrentUser()
                 .filterNotNull() 
                 .firstOrNull() 
-                ?.getOrNull()?.userId 
-
+                ?.getOrNull()
+                
+            currentUserId = currentUser?.id // userId -> id로 수정
+                
             if (currentUserId == null) {
                 Log.e("ChatViewModel", "Failed to get current user ID.")
                 _uiState.update {
@@ -168,35 +180,44 @@ class ChatViewModel @Inject constructor(
     }
     
     private fun validateChannelContext(channel: Channel) {
-        val metadataSource = channel.metadata?.get(com.example.core_common.constants.FirestoreConstants.ChannelMetadataKeys.SOURCE) as? String
-        val metadataProjectId = channel.metadata?.get(com.example.core_common.constants.FirestoreConstants.ChannelMetadataKeys.PROJECT_ID) as? String
-        val metadataCategoryId = channel.metadata?.get(com.example.core_common.constants.FirestoreConstants.ChannelMetadataKeys.CATEGORY_ID) as? String
-
-        var expectedSource: String? = null
-        when (channelType) {
-            "dm" -> expectedSource = com.example.core_common.constants.FirestoreConstants.ChannelMetadataSourceValues.DM
-            "project_direct", "project_category" -> expectedSource = com.example.core_common.constants.FirestoreConstants.ChannelMetadataSourceValues.PROJECT
+        // 채널 타입 확인 (ChannelType 모델 활용)
+        val channelTypeValue = when (channelType) {
+            "dm" -> ChannelType.DM
+            "project_direct" -> ChannelType.PROJECT
+            "project_category" -> ChannelType.CATEGORY
+            else -> ChannelType.UNKNOWN
         }
-
-        if (expectedSource != null && metadataSource != expectedSource) {
-            Log.w("ChatViewModel", "Channel context mismatch: Expected source '$expectedSource' based on nav arg type '$channelType', but channel metadata source is '$metadataSource'. Channel ID: $channelId")
+        
+        // 채널 타입 일치 여부 확인
+        if (channel.type != channelTypeValue) {
+            Log.w("ChatViewModel", "Channel context mismatch: Expected type '${channelTypeValue.value}' based on nav arg type '$channelType', but channel type is '${channel.type.value}'. Channel ID: $channelId")
         }
-        if (channelType == "project_direct" || channelType == "project_category") {
+        
+        // 프로젝트 ID 확인
+        val metadataProjectId = channel.projectSpecificData?.projectId
+        
+        // 카테고리 ID 확인
+        val metadataCategoryId = channel.projectSpecificData?.categoryId
+        
+        // 프로젝트 ID 일치 여부 확인 (PROJECT 또는 CATEGORY 타입일 때)
+        if (channel.type == ChannelType.PROJECT || channel.type == ChannelType.CATEGORY) {
             if (projectId != metadataProjectId) {
-                 Log.w("ChatViewModel", "Channel context mismatch: Expected projectId '$projectId' from nav arg, but channel metadata projectId is '$metadataProjectId'. Channel ID: $channelId")
+                Log.w("ChatViewModel", "Channel context mismatch: Expected projectId '$projectId' from nav arg, but channel projectId is '$metadataProjectId'. Channel ID: $channelId")
             }
         }
-        if (channelType == "project_category") {
+        
+        // 카테고리 ID 일치 여부 확인 (CATEGORY 타입일 때)
+        if (channel.type == ChannelType.CATEGORY) {
             if (categoryId != metadataCategoryId) {
-                 Log.w("ChatViewModel", "Channel context mismatch: Expected categoryId '$categoryId' from nav arg, but channel metadata categoryId is '$metadataCategoryId'. Channel ID: $channelId")
+                Log.w("ChatViewModel", "Channel context mismatch: Expected categoryId '$categoryId' from nav arg, but channel categoryId is '$metadataCategoryId'. Channel ID: $channelId")
             }
         }
     }
 
     private fun initializeChatFeatures() {
-        val userId = currentUserId ?: return 
+        val myId = currentUserId ?: return 
 
-        observeMessages(userId)
+        observeMessages(myId)
     }
 
     private fun observeMessages(currentUserIdForMapping: String) {
@@ -229,7 +250,7 @@ class ChatViewModel @Inject constructor(
     fun loadMorePastMessages() {
         if (_uiState.value.isLoadingHistory || oldestMessageReached) return
 
-        val userId = currentUserId ?: return
+        val myUserId = currentUserId ?: return
         
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingHistory = true) }
@@ -243,7 +264,7 @@ class ChatViewModel @Inject constructor(
                 val pastMessages = result.getOrThrow()
                 if (pastMessages.isNotEmpty()) {
                     oldestLoadedMessageTimestamp = pastMessages.firstOrNull()?.timestamp
-                     val uiPastMessages = pastMessages.map { it.toUiModel(userId) { (++tempMessageLocalIdCounter).toString() } }
+                     val uiPastMessages = pastMessages.map { it.toUiModel(myUserId) { (++tempMessageLocalIdCounter).toString() } }
                     _uiState.update { currentState ->
                         currentState.copy(
                             messages = uiPastMessages + currentState.messages,
@@ -277,10 +298,12 @@ class ChatViewModel @Inject constructor(
         val attachments = attachmentUris.map { uri ->
             MessageAttachment(
                 id = (++tempMessageLocalIdCounter).toString(),
-                type = mapUriToAttachmentType(uri),
+                type = AttachmentType.fromString("image"),
                 url = uri.toString(),
-                name = uri.lastPathSegment ?: "attachment",
-                metadata = mapOf("localPath" to uri.toString())
+                fileName = uri.lastPathSegment ?: "attachment",
+                size = null,
+                mimeType = null,
+                thumbnailUrl = null
             )
         }
         
@@ -288,12 +311,14 @@ class ChatViewModel @Inject constructor(
             localId = (++tempMessageLocalIdCounter).toString(),
             chatId = tempMessageLocalIdCounter.toString(),
             userId = currentSenderId,
-            userName = _uiState.value.myUserNameDisplay,
+            userName = _uiState.value.myUserNameDisplay ?: "나",
             userProfileUrl = _uiState.value.myUserProfileUrl,
             message = text,
             formattedTimestamp = "전송 중...",
             isMyMessage = true,
-            attachmentImageUrls = attachmentUris.map { it.toString() }
+            attachmentImageUrls = attachmentUris.map { it.toString() },
+            isModified = false,
+            actualTimestamp = Instant.now()
         )
         _uiState.update { it.copy(messages = it.messages + tempUiMessage) }
 
@@ -384,9 +409,25 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingGallery = true) }
             try {
-                val images = getLocalGalleryImagesUseCase(1, 100)
-                    .map { it.toUiModel() }
-                _uiState.update { it.copy(galleryImages = images, isLoadingGallery = false) }
+                // getLocalGalleryImagesUseCase는 Result<List<MediaImage>>를 반환
+                val result = getLocalGalleryImagesUseCase(1, 100)
+                
+                if (result.isSuccess) {
+                    // Result에서 데이터 추출 후 변환
+                    val mediaImages = result.getOrThrow()
+                    val galleryImages = mediaImages.map { mediaImage ->
+                        GalleryImageUiModel(
+                            uri = mediaImage.contentPath, 
+                            id = mediaImage.id,
+                            isSelected = false
+                        )
+                    }
+                    _uiState.update { it.copy(galleryImages = galleryImages, isLoadingGallery = false) }
+                } else {
+                    // 에러 처리
+                    val error = result.exceptionOrNull()?.message ?: "갤러리 이미지를 불러올 수 없습니다."
+                    _uiState.update { it.copy(error = error, isLoadingGallery = false) }
+                }
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Error loading gallery images", e)
                 _uiState.update { it.copy(error = "갤러리 이미지를 불러올 수 없습니다.", isLoadingGallery = false) }
@@ -412,5 +453,100 @@ class ChatViewModel @Inject constructor(
             val updatedImages = currentState.galleryImages.map { it.copy(isSelected = false) }
             currentState.copy(galleryImages = updatedImages)
         }
+    }
+
+    fun onImagesSelected(uris: List<Uri>) {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.ImagesSelected(uris))
+            _uiState.update { it.copy(selectedAttachmentUris = it.selectedAttachmentUris + uris) }
+        }
+    }
+
+    fun loadMoreMessages() {
+        loadMorePastMessages()
+    }
+
+    fun onBackClick() {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.NavigateBack)
+        }
+    }
+
+    fun onMessageInputChange(text: String) {
+        _uiState.update { it.copy(pendingMessageText = text) }
+    }
+
+    fun confirmEditMessage() {
+        val message = _uiState.value.pendingMessageText
+        val messageId = _uiState.value.editingMessageId?.toString() ?: return
+        
+        viewModelScope.launch {
+            editMessage(messageId, message)
+            _uiState.update { it.copy(isEditing = false, editingMessageId = null, pendingMessageText = "") }
+        }
+    }
+
+    fun onSendMessageClick() {
+        val message = _uiState.value.pendingMessageText
+        val attachments = _uiState.value.selectedAttachmentUris
+        
+        if (message.isBlank() && attachments.isEmpty()) return
+        
+        sendMessage(message, attachments)
+        _uiState.update { it.copy(pendingMessageText = "", selectedAttachmentUris = emptyList()) }
+    }
+
+    fun onAttachmentClick() {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.AttachmentClicked)
+            _uiState.update { it.copy(isAttachmentAreaVisible = !it.isAttachmentAreaVisible) }
+            if (_uiState.value.isAttachmentAreaVisible && _uiState.value.galleryImages.isEmpty()) {
+                loadGalleryImages()
+            }
+        }
+    }
+
+    fun onImageSelected(uri: Uri) {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.ImageSelected(uri))
+            _uiState.update { it.copy(selectedAttachmentUris = it.selectedAttachmentUris + uri) }
+        }
+    }
+
+    fun onImageDeselected(uri: Uri) {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.ImageDeselected(uri))
+            _uiState.update { it.copy(selectedAttachmentUris = it.selectedAttachmentUris - uri) }
+        }
+    }
+
+    fun cancelEdit() {
+        _uiState.update { it.copy(isEditing = false, editingMessageId = null, pendingMessageText = "") }
+    }
+
+    fun onMessageLongClick(message: ChatMessageUiModel) {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.ShowMessageActions(message.chatId, message.message))
+        }
+    }
+
+    fun onUserProfileClick(userId: String) {
+        viewModelScope.launch {
+            _eventFlow.emit(ChatEvent.ShowUserProfileDialog(userId))
+        }
+    }
+
+    fun startEditMessage(messageId: String, text: String) {
+        _uiState.update { 
+            it.copy(
+                isEditing = true, 
+                editingMessageId = messageId.toIntOrNull(), 
+                pendingMessageText = text
+            ) 
+        }
+    }
+
+    fun confirmDeleteMessage(messageId: String) {
+        deleteMessage(messageId)
     }
 }

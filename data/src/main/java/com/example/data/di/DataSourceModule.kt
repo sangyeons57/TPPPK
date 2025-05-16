@@ -26,6 +26,8 @@ import com.example.data.datasource.remote.channel.ChannelRemoteDataSource
 import com.example.data.datasource.remote.channel.ChannelRemoteDataSourceImpl
 import com.example.data.datasource.remote.message.MessageRemoteDataSource
 import com.example.data.datasource.remote.message.MessageRemoteDataSourceImpl
+import com.example.data.datasource.remote.projectstructure.ProjectStructureRemoteDataSource
+import com.example.data.datasource.remote.projectstructure.ProjectStructureRemoteDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -127,4 +129,9 @@ abstract class DataSourceModule {
     abstract fun bindMessageRemoteDataSource(messageRemoteDataSourceImpl: MessageRemoteDataSourceImpl): MessageRemoteDataSource
 
     // 다른 데이터 소스 인터페이스/구현체 쌍이 있다면 여기에 추가
-} 
+
+    @Binds
+    @Singleton
+    abstract fun bindProjectStructureDataSource(projectLocalDataSourceImpl: ProjectStructureRemoteDataSourceImpl): ProjectStructureRemoteDataSource
+
+}

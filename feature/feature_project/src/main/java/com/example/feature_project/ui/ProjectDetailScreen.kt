@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
+import com.example.domain.model.ChannelMode
 import com.example.domain.model.ui.CategoryUiModel
 import com.example.domain.model.ui.ChannelUiModel
 import com.example.domain.model.ui.CreateChannelDialogData
@@ -180,7 +181,7 @@ private fun CreateChannelDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     onNameChange: (String) -> Unit,
-    onChannelModeChange: (String) -> Unit
+    onChannelModeChange: (ChannelMode) -> Unit
 ) {
     if (dialogData == null) return
 

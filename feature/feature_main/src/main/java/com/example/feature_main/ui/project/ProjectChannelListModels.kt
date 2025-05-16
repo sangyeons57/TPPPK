@@ -11,7 +11,8 @@ data class ProjectStructureUiState(
     val categories: List<CategoryUiModel> = emptyList(),
     val generalChannels: List<ChannelUiModel> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val selectedChannelId: String? = null
 )
 
 /**

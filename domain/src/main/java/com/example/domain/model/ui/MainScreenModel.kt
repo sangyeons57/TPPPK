@@ -21,12 +21,13 @@ data class MainUiState(
     val isLoadingDms: Boolean = true,
     val dmConversations: List<DmUiModel> = emptyList(),
     val dmsError: String? = null,
+    val selectedProjectId: String? = null,
 
     val isLoadingProjects: Boolean = true,
     val projects: List<ProjectUiModel> = emptyList(),
     val projectsError: String? = null,
 
-    val currentScreen: MainScreenType = MainScreenType.DMS // 기본 화면은 DM 목록
+    val currentScreen: MainScreenType = MainScreenType.DMS, // 기본 화면은 DM 목록
 )
 
 /**

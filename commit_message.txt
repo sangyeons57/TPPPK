@@ -43,3 +43,5 @@ Fix: ChatRepositoryImpl의 ErrorMap 의존성 수정
 - KSP 컴파일 오류 해결
 
 다음 단계로 ChatRemoteDataSourceImpl 관련 추가 오류 수정 필요
+
+Chore: Update project

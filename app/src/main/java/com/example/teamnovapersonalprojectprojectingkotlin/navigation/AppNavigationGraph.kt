@@ -1,6 +1,5 @@
 package com.example.teamnovapersonalprojectprojectingkotlin.navigation
 
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator

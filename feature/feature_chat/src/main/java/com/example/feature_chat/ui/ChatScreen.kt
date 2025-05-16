@@ -63,6 +63,7 @@ import androidx.core.net.toUri
 import com.example.core_navigation.core.ComposeNavigationHandler
 import java.util.Locale
 import android.util.Log // Added for logging
+import java.time.Instant
 
 /**
  * ChatScreen: 채팅 화면 (Stateful)
@@ -81,7 +82,7 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
 
     var showEditDeleteDialog by remember { mutableStateOf<ChatMessageUiModel?>(null) } // ★ 타입 변경
-    var showUserProfileDialog by remember { mutableStateOf<Int?>(null) }
+    var showUserProfileDialog by remember { mutableStateOf<String?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
@@ -103,6 +104,16 @@ fun ChatScreen(
                 is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ClearFocus -> focusManager.clearFocus()
                 is ChatEvent.NavigateBack -> navigationHandler.navigateBack()
+                is ChatEvent.Error -> snackbarHostState.showSnackbar(event.message)
+                is ChatEvent.ShowMessageActions -> {
+                    // 메시지 ID와 텍스트를 사용해 다이얼로그 표시
+                    val message = uiState.messages.find { it.chatId == event.messageId }
+                    message?.let { showEditDeleteDialog = it }
+                }
+                is ChatEvent.ImagesSelected -> {}
+                is ChatEvent.AttachmentClicked -> {}
+                is ChatEvent.ImageSelected -> {}
+                is ChatEvent.ImageDeselected -> {}
             }
         }
     }
@@ -226,7 +237,7 @@ fun ChatScreen(
 
 // 사용자 프로필 다이얼로그 (임시 구현)
 @Composable
-fun UserProfileDialog(userId: Int, onDismiss: () -> Unit) {
+fun UserProfileDialog(userId: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("사용자 프로필") },
@@ -246,7 +257,7 @@ fun ChatMessagesList(
     uiState: ChatUiState,
     listState: LazyListState,
     onMessageLongClick: (ChatMessageUiModel) -> Unit, // ★ 타입 변경
-    onUserProfileClick: (Int) -> Unit
+    onUserProfileClick: (String) -> Unit // Int -> String 타입으로 수정
 ) {
     LazyColumn(
         modifier = modifier.padding(horizontal = 8.dp),
@@ -270,7 +281,7 @@ fun ChatMessagesList(
             ChatMessageItemComposable(
                 message = message, // ★ 타입 변경됨
                 onLongClick = { onMessageLongClick(message) },
-                onUserProfileClick = { onUserProfileClick(message.userId) }
+                onUserProfileClick = { onUserProfileClick(message.userId) } // userId는 String 타입
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -754,7 +765,7 @@ private fun ChatScreenFullPreview() {
             ChatMessageUiModel(
                 localId = (100 + i).toString(),
                 chatId = "100$i",
-                userId = (if (isMy) 1 else i + 2).toString(),
+                userId = (if (isMy) "1" else "${i + 2}"), // Int -> String 타입으로 수정
                 userName = "사용자 ${if (isMy) 1 else i + 2}",
                 userProfileUrl = null,
                 message = "미리보기 메시지 내용입니다. ${15-i}",
@@ -762,10 +773,11 @@ private fun ChatScreenFullPreview() {
                 isModified = i % 5 == 0,
                 isMyMessage = isMy,
                 isSending = false,
-                sendFailed = i == 5 // 5번째 메시지 전송 실패 예시
+                sendFailed = i == 5, // 5번째 메시지 전송 실패 예시
+                actualTimestamp = Instant.now() // 필수 파라미터 추가
             )
         }.reversed(), // 최신 메시지가 아래로 가도록 (LazyColumn reverseLayout=true 이므로)
-        myUserId = 1,
+        myUserId = "1", // Int -> String 타입으로 수정
         galleryImages = List(10) { GalleryImageUiModel(Uri.EMPTY, it.toString()) } // 가짜 갤러리 이미지
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {

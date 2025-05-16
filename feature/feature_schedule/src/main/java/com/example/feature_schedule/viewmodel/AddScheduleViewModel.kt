@@ -3,6 +3,7 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.util.AuthUtil
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.Schedule
 import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
@@ -56,7 +57,7 @@ sealed class AddScheduleEvent {
 class AddScheduleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase,
-    private val addScheduleUseCase: AddScheduleUseCase
+    private val addScheduleUseCase: AddScheduleUseCase,
 ) : ViewModel() {
 
     private val year: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR)
@@ -207,16 +208,30 @@ class AddScheduleViewModel @Inject constructor(
             val instantStartTime = DateTimeUtil.toInstant(localStartTime)
             val instantEndTime = DateTimeUtil.toInstant(localEndTime)
 
+            // 현재 사용자 ID 가져오기
+            val userId = try {
+                AuthUtil.getCurrentUserId()
+            } catch (e: IllegalStateException) {
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        errorMessage = "일정을 저장하려면 로그인이 필요합니다."
+                    ) 
+                }
+                return@launch
+            }
+
             // Schedule 객체 생성 (UTC 시간 사용)
             // project가 null이면 projectId도 null이 됨
             val schedule = Schedule(
                 id = UUID.randomUUID().toString(),
-                creatorId = Fireb,
+                creatorId = userId,
                 projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID },
                 title = title,
                 content = content.takeIf { it.isNotEmpty() }, // 내용 없으면 null
                 startTime = instantStartTime!!,
                 endTime = instantEndTime!!,
+                createdAt = DateTimeUtil.nowInstant()
             )
             
             // Use UseCase to add the schedule

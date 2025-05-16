@@ -3,7 +3,8 @@ package com.example.feature_main.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.Schedule
-import com.example.domain.repository.ScheduleRepository
+import com.example.domain.usecase.schedule.GetScheduleSummaryForMonthUseCase
+import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -42,9 +43,17 @@ sealed class CalendarEvent {
     data class ShowSnackbar(val message: String) : CalendarEvent()
 }
 
+/**
+ * 캘린더 화면의 ViewModel.
+ * 캘린더 UI 상태 관리, 사용자 입력 처리, 일정 데이터 로딩 등을 담당합니다.
+ *
+ * @property getSchedulesForDateUseCase 특정 날짜의 일정을 가져오는 유스케이스
+ * @property getScheduleSummaryForMonthUseCase 특정 월의 일정 요약 정보를 가져오는 유스케이스
+ */
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    private val scheduleRepository: ScheduleRepository // *** Injected Repository ***
+    private val getSchedulesForDateUseCase: GetSchedulesForDateUseCase,
+    private val getScheduleSummaryForMonthUseCase: GetScheduleSummaryForMonthUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState())
@@ -120,28 +129,32 @@ class CalendarViewModel @Inject constructor(
         loadSchedulesForDate(date)
     }
 
-    // 특정 날짜의 스케줄 로드
+    /**
+     * 특정 날짜의 일정을 로드하여 UI 상태를 업데이트합니다.
+     *
+     * @param date 일정을 로드할 날짜
+     */
     private fun loadSchedulesForDate(date: LocalDate) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) } // Set loading, clear error
             try {
-                val result = scheduleRepository.getSchedulesForDate(date)
-                result.onSuccess {
+                val result = getSchedulesForDateUseCase(date)
+                result.onSuccess { schedules ->
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
-                            schedulesForSelectedDate = it // Update with fetched schedules
+                            schedulesForSelectedDate = schedules
                         )
                     }
-                }.onFailure {
+                }.onFailure { exception ->
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
-                            schedulesForSelectedDate = emptyList(), // Clear schedules on error
-                            errorMessage = it.message ?: "일정 로드 중 오류가 발생했습니다."
+                            schedulesForSelectedDate = emptyList(),
+                            errorMessage = exception.message ?: "일정 로드 중 오류가 발생했습니다."
                         )
                     }
-                    _eventFlow.emit(CalendarEvent.ShowSnackbar("일정 로드 실패: ${it.localizedMessage}"))
+                    _eventFlow.emit(CalendarEvent.ShowSnackbar("일정 로드 실패: ${exception.localizedMessage}"))
                 }
             } catch (e: Exception) {
                 // Catch unexpected exceptions during the flow or repository call
@@ -157,26 +170,30 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    // 특정 월의 스케줄 요약 로드
+    /**
+     * 특정 월의 일정 요약 정보(일정이 있는 날짜)를 로드하여 UI 상태를 업데이트합니다.
+     *
+     * @param yearMonth 일정 요약을 로드할 연월
+     */
     private fun loadScheduleSummaryForMonth(yearMonth: YearMonth) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSummaryLoading = true) } // Optional: Separate loading state for summary
             try {
-                val result = scheduleRepository.getScheduleSummaryForMonth(yearMonth)
-                result.onSuccess {
+                val result = getScheduleSummaryForMonthUseCase(yearMonth)
+                result.onSuccess { dates ->
                     _uiState.update { state ->
                         state.copy(
                             isSummaryLoading = false,
-                            datesWithSchedules = it // Update schedule markers
+                            datesWithSchedules = dates
                         )
                     }
-                }.onFailure {
+                }.onFailure { exception ->
                     // Log error or show a subtle indicator, snackbar might be too intrusive
-                    println("월별 요약 로드 실패: ${it.message}")
+                    println("월별 요약 로드 실패: ${exception.message}")
                     _uiState.update { state ->
                         state.copy(
                             isSummaryLoading = false,
-                            datesWithSchedules = emptySet() // Clear markers on error
+                            datesWithSchedules = emptySet()
                         )
                     }
                     // Optional: _eventFlow.emit(CalendarEvent.ShowSnackbar("월별 요약 로드 실패"))
@@ -198,6 +215,7 @@ class CalendarViewModel @Inject constructor(
     /**
      * 스케줄 아이템 클릭 시 호출됩니다.
      * 상세 화면으로 네비게이션 이벤트를 발생시킵니다.
+     * @param scheduleId 선택된 일정의 ID
      */
     fun onScheduleClick(scheduleId: String) {
         viewModelScope.launch {
@@ -225,6 +243,9 @@ class CalendarViewModel @Inject constructor(
         loadScheduleSummaryForMonth(YearMonth.from(currentSelectedDate))
     }
 
+    /**
+     * UI에 표시된 에러 메시지를 해제합니다.
+     */
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
     }
