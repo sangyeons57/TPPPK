@@ -34,7 +34,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    
+
+        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
+
         <!-- Required: set your sentry.io project identifier (DSN) -->
         <meta-data android:name="io.sentry.dsn" android:value="https://0a3d0d1fe57deb2e7baebd1f244a04de@o4509194335223808.ingest.us.sentry.io/4509194511974400" />
 

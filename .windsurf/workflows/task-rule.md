@@ -1,11 +1,8 @@
 ---
 description: Rule to follow when you have a lot of work to do and it is difficult to do it all at once.
-globs: 
-alwaysApply: false
 ---
-# Task Management for Large Changes
 
-*This rule defines how to handle large or complex tasks that require multiple steps.*
+# Task Management for Large Changes
 
 1.  **Identify Large Task:** If a user request involves significant changes that cannot be reliably completed in a single response, activate this process.
 2.  **Break Down Task:** Decompose the overall task into smaller, logical, sequential steps.
@@ -27,5 +24,5 @@ alwaysApply: false
         - [x] Step 1: Description of the first step.
         - [ ] Step 2: Description of the second step.
         ```
-6.  **Confirm and Wait:**
+6.  **Confirm:**
     *   Report the completion of the specific step to the user.

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- FCM 알림 관련 색상 -->
+    <color name="notification_color">#4285F4</color>
+    <color name="notification_color_high_priority">#EA4335</color>
+</resources> 

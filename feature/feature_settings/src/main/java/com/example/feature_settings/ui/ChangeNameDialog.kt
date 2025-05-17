@@ -20,10 +20,10 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun ChangeNameDialog(
     modifier: Modifier = Modifier,
-    viewModel: ChangeNameViewModel = hiltViewModel(), // ★ ViewModel 주입
+    viewModel: ChangeNameViewModel = hiltViewModel(), // ViewModel 주입
     onDismissRequest: () -> Unit // 다이얼로그 닫기 요청 콜백
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle() // ★ 상태 구독
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle() // 상태 구독
 
     // 이벤트 처리 (다이얼로그 닫기 등)
     LaunchedEffect(Unit) {

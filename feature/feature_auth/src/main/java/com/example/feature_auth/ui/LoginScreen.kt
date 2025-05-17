@@ -236,8 +236,13 @@ fun LoginContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            TextButton(onClick = onFindPasswordClick, enabled = !uiState.isLoading) {
-                Text("비밀번호 찾기")
+            // 비밀번호 찾기 버튼
+            TextButton(
+                onClick = onFindPasswordClick,
+                enabled = !uiState.isLoading,
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+                Text("비밀번호를 잊으셨나요?")
             }
             // *** 회원가입 버튼 ***
             TextButton(onClick = onSignUpClick, enabled = !uiState.isLoading) {

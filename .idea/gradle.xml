@@ -13,6 +13,7 @@
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/core/core_common" />
+            <option value="$PROJECT_DIR$/core/core_fcm" />
             <option value="$PROJECT_DIR$/core/core_logging" />
             <option value="$PROJECT_DIR$/core/core_navigation" />
             <option value="$PROJECT_DIR$/core/core_ui" />
