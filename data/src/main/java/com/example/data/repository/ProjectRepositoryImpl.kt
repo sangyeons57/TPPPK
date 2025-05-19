@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import android.util.Log
 import com.example.data.datasource.remote.project.ProjectRemoteDataSource
 import com.example.data.model.remote.project.ProjectDto
 import com.example.data.util.CurrentUserProvider
@@ -43,8 +44,9 @@ class ProjectRepositoryImpl @Inject constructor(
     private val channelRepository: ChannelRepository // Added for createProject
 ) : ProjectRepository {
 
-    override fun getProjectListStream(): Flow<List<Project>> = flow {
+    override suspend fun getProjectListStream(): Flow<List<Project>> = flow {
         val userId = currentUserProvider.getCurrentUserId()
+        Log.d("ProjectRepositoryImpl", "Fetching project list stream for user: $userId")
         val projectsStream = remoteDataSource.getParticipatingProjectsStream(userId)
             .map { result ->
                 result.map { dtos ->

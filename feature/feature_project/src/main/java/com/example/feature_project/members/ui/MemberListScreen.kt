@@ -26,7 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberListScreen(
-    navigationHandler : ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: MemberListViewModel = hiltViewModel()
 ) {
@@ -57,7 +57,11 @@ fun MemberListScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is MemberListEvent.NavigateToEditMember -> {
-                    navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editMember(event.projectId, event.userId)))
+                    appNavigator.navigate(
+                        NavigationCommand.NavigateToRoute.fromRoute(
+                            AppRoutes.Project.editMember(event.projectId, event.userId)
+                        )
+                    )
                 }
                 is MemberListEvent.ShowDeleteConfirm -> {
                     showDeleteConfirmationDialog = event.member
@@ -79,7 +83,7 @@ fun MemberListScreen(
             TopAppBar(
                 title = { Text("멤버 관리") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

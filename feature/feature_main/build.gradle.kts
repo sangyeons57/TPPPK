@@ -49,6 +49,8 @@ dependencies {
     //    (이상적으로는 ViewModel은 UseCase를 주입받고 UseCase가 Repository 인터페이스 사용)
     implementation(project(":data"))
 
+    implementation(project(":feature:feature_schedule"))
+
     // --- 라이브러리 의존성 ---
     // Jetpack Compose UI
     implementation(platform(libs.androidx.compose.bom)) // BOM 버전은 프로젝트와 통일

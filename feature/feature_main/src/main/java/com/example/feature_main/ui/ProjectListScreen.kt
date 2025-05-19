@@ -1,5 +1,6 @@
 package com.example.feature_main.ui
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
@@ -97,6 +99,9 @@ fun ProjectListItem(
     modifier: Modifier = Modifier
 ) {
     val size = 48.dp // Discord 서버 아이콘 크기와 유사
+    
+    // 로그 추가
+    Log.d("ProjectListItem", "Displaying project: id=${project.id}, name=${project.name}")
 
     Box(
         modifier = modifier
@@ -182,16 +187,17 @@ fun ProjectListScreen(
             )
             
             // 구분선 추가
-            Divider(
+            HorizontalDivider(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .fillMaxWidth(),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                thickness = 1.dp
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
             )
         }
 
         // 2. 프로젝트 목록
+        Log.d("ProjectListScreen", "project: $projects")
         items(projects, key = { it.id }) { project ->
             ProjectListItem(
                 project = project,

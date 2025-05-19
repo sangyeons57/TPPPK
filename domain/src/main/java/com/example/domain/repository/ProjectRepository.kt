@@ -13,7 +13,7 @@ import com.example.domain.model.ProjectStructure
 
 interface ProjectRepository {
     // --- 기존 함수들 ---
-    fun getProjectListStream(): Flow<List<Project>>
+    suspend fun getProjectListStream(): Flow<List<Project>>
     suspend fun fetchProjectList(): Result<Unit>
     suspend fun isProjectNameAvailable(name: String): Result<Boolean>
     suspend fun joinProjectWithCode(codeOrLink: String): Result<String>

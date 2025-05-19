@@ -1,9 +1,11 @@
 // 경로: domain/model/Category.kt (ProjectSettingViewModel, ProjectStructure 관련 기반)
 package com.example.domain.model
 
+import com.google.firebase.firestore.DocumentId
 import java.time.Instant // Import Instant
 
 data class Category(
+    @DocumentId
     val id: String,
     val projectId: String,
     val name: String,

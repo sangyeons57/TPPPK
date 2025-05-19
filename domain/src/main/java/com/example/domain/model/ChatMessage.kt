@@ -1,5 +1,6 @@
 package com.example.domain.model
 
+import com.google.firebase.firestore.DocumentId
 import java.time.Instant
 // import java.time.LocalDateTime // 주석 처리된 함수에서만 사용되므로 제거 가능
 // import java.time.ZoneId // 주석 처리된 함수에서만 사용되므로 제거 가능
@@ -11,6 +12,7 @@ data class ChatMessage(
     /**
      * 메시지의 고유 ID입니다.
      */
+    @DocumentId
     val id: String,
     
     /**

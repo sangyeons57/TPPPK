@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.Result
+import java.time.Instant
 
 /**
  * Firebase Authentication을 사용하여 AuthRemoteDataSource를 구현
@@ -122,7 +123,8 @@ class AuthRemoteDataSourceImpl @Inject constructor(
     override suspend fun signUp(
         email: String,
         password: String,
-        nickname: String
+        nickname: String,
+        consentTimeStamp: Instant
     ): Result<UserDto?> = runCatching {
         // Firebase Authentication에 사용자 생성
         val authResult = auth.createUserWithEmailAndPassword(email, password).await()
@@ -138,12 +140,14 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             
             // Firestore에 사용자 정보 저장
             val nowTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
+            val consentTimestampFirebase = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp)
             val userDto = UserDto(
                 id = user.uid,
                 email = email,
                 name = nickname,
                 isEmailVerified = user.isEmailVerified,
-                createdAt = nowTimestamp
+                createdAt = nowTimestamp,
+                consentTimeStamp = consentTimestampFirebase
             )
             
             usersCollection.document(user.uid).set(userDto).await()

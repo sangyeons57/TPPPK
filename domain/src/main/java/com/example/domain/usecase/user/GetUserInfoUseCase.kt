@@ -2,6 +2,7 @@ package com.example.domain.usecase.user
 
 import com.example.domain.model.User
 import com.example.domain.repository.UserRepository
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import kotlin.Result
 
@@ -17,9 +18,9 @@ class GetUserInfoUseCase @Inject constructor(
      * 지정된 사용자 ID에 해당하는 사용자 정보를 반환합니다.
      *
      * @param userId 정보를 가져올 사용자의 ID
-     * @return Result 객체. 성공 시 User 객체를, 실패 시 예외를 포함합니다.
+     * @return Flow<Result<User>> 사용자 정보를 포함한 Flow
      */
-    suspend operator fun invoke(userId: String): Result<User> {
-        return userRepository.getUser(userId)
+    operator fun invoke(userId: String): Flow<Result<User>> {
+        return userRepository.getUserStream(userId)
     }
 } 

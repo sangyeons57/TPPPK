@@ -17,6 +17,7 @@ import javax.inject.Inject
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.ScheduleItem24Hour
 import java.time.Instant
+import android.util.Log
 
 // --- UI 상태 ---
 sealed interface Calendar24HourUiState {
@@ -66,6 +67,7 @@ class Calendar24HourViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
+        Log.d("CalendarVM", "ViewModel initialized. Year: $year, Month: $month, Day: $day")
         loadSchedules(LocalDate.of(year, month, day))
         
         // 특정 프로젝트 ID에 대한 기본 타입 설정 예시
@@ -81,11 +83,15 @@ class Calendar24HourViewModel @Inject constructor(
     private fun loadSchedules(date: LocalDate) {
         viewModelScope.launch {
             _uiState.value = Calendar24HourUiState.Loading
+            Log.d("CalendarVM", "loadSchedules($date) 호출됨. UI 상태: Loading")
             
             val result = getSchedulesForDateUseCase(date)
+            Log.d("CalendarVM", "loadSchedules($date) - getSchedulesForDateUseCase 결과: isSuccess=${result.isSuccess}, data=${if (result.isSuccess) result.getOrNull() else result.exceptionOrNull()}")
             
             if (result.isSuccess) {
-                val schedules = result.getOrThrow().map { schedule ->
+                val schedulesDomain = result.getOrThrow()
+                Log.d("CalendarVM", "loadSchedules($date) - 성공. Domain schedules count: ${schedulesDomain.size}")
+                val schedulesUi = schedulesDomain.map { schedule ->
                     // 기본 색상 계산
                     val color = colorManager.getColorForSchedule(schedule)
                     
@@ -105,9 +111,11 @@ class Calendar24HourViewModel @Inject constructor(
                         endColorAlpha = endAlpha
                     )
                 }
-                _uiState.value = Calendar24HourUiState.Success(date, schedules)
+                _uiState.value = Calendar24HourUiState.Success(date, schedulesUi)
+                Log.d("CalendarVM", "loadSchedules($date) - UI 상태: Success. UI schedules count: ${schedulesUi.size}, 데이터: $schedulesUi")
             } else {
                 _uiState.value = Calendar24HourUiState.Error("스케줄 로딩 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}")
+                Log.e("CalendarVM", "loadSchedules($date) - UI 상태: Error", result.exceptionOrNull())
             }
         }
     }

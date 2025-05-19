@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
 /**
  * AuthRepository 기능 테스트
@@ -120,7 +121,7 @@ class AuthRepositoryTest {
     @Test
     fun `signUp should create new user and login`() = runBlocking {
         // When: 회원가입
-        val result = authRepository.signUp(testEmail, testPassword, testName)
+        val result = authRepository.signUp(testEmail, testPassword, testName, Instant.now())
         
         // Then: 회원가입 성공 확인
         assertTrue(result.isSuccess)
@@ -147,7 +148,7 @@ class AuthRepositoryTest {
         authRepository.addUser(testUser, testPassword)
         
         // When: 같은 이메일로 회원가입 시도
-        val result = authRepository.signUp(testEmail, "newpassword", "새 사용자")
+        val result = authRepository.signUp(testEmail, "newpassword", "새 사용자", Instant.now())
         
         // Then: 회원가입 실패 확인
         assertTrue(result.isFailure)

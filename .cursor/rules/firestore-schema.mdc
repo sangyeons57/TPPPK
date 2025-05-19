@@ -12,6 +12,7 @@ alwaysApply: false
     ├── **Fields:**
     │   ├── `email`: String - User email address
     │   ├── `name`: String (Unique) - User nickname/name
+    │   ├── `consentTimeStamp`: Timestamp - 서비스 정책및 개인정보처리방침 동의 시간
     │   ├── `profileImageUrl`?: String - Profile image URL
     │   ├── `statusMessage`?: String - User status message
     │   ├── `memo`?: String - User's bio or personal memo
@@ -72,7 +73,7 @@ alwaysApply: false
 └── **`projects`** `/{projectId}` [Project/server information] (ID: Auto)
     ├── **Fields:**
     │   ├── `name`: String - Project name
-    │   ├── `description`: String - Project description
+    │   ├── `content`: String - Project content
     │   ├── `imageUrl`: String? - Project image URL
     │   ├── `ownerId`: String - Creator/owner user ID
     │   ├── `memberIds`: Array<String> - List of member user IDs

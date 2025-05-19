@@ -21,7 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_settings.viewmodel.ChangePasswordEvent
 import com.example.feature_settings.viewmodel.ChangePasswordUiState
@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: ChangePasswordViewModel = hiltViewModel()
 ) {
@@ -46,7 +46,7 @@ fun ChangePasswordScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ChangePasswordEvent.NavigateBack -> navigationHandler.navigateBack()
+                is ChangePasswordEvent.NavigateBack -> appNavigator.navigateBack()
                 is ChangePasswordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChangePasswordEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -56,7 +56,7 @@ fun ChangePasswordScreen(
     // 변경 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.changeSuccess) {
         if (uiState.changeSuccess) {
-            navigationHandler.navigateBack()
+            appNavigator.navigateBack()
         }
     }
 
@@ -67,7 +67,7 @@ fun ChangePasswordScreen(
             TopAppBar(
                 title = { Text("비밀번호 변경") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

@@ -5,6 +5,13 @@ package com.example.core_common.constants
  * 문자열 하드코딩을 방지하고 일관된 참조를 보장합니다.
  */
 object FirestoreConstants {
+    // CompoundIndexPaths 객체는 제거됩니다.
+    // 해당 경로가 필요했던 곳에서는 아래의 필드들을 조합하여 사용해야 합니다.
+    // 예: projectSpecificData.projectId -> ChannelFields.PROJECT_SPECIFIC_DATA + "." + ChannelProjectDataFields.PROJECT_ID (실제 사용 시 문자열 조합 필요)
+    // 또는, 쿼리 시 문자열 리터럴로 직접 경로를 작성하는 것을 고려할 수 있습니다. (예: "projectSpecificData.projectId")
+    // 더 나은 방법은 각 DataSource에서 필요한 전체 경로 문자열을 내부적으로 구성하거나,
+    // 특정 복합 경로가 자주 사용된다면 해당 DataSource나 관련 Util 클래스에 상수로 정의하는 것입니다.
+
     /**
      * Firestore 컬렉션 이름
      */
@@ -44,6 +51,7 @@ object FirestoreConstants {
         const val IS_EMAIL_VERIFIED = "isEmailVerified" // 이메일 인증 여부 - Schema: isEmailVerified
         const val PARTICIPATING_PROJECT_IDS = "participatingProjectIds" // 참여중인 프로젝트 ID 목록 - Schema: participatingProjectIds
         const val ACTIVE_DM_IDS = "activeDmIds" // 활성화된 DM 채널 ID 목록 (references /channels/{channelId}) - Schema: activeDmIds
+        const val CONSENT_TIMESTAMP = "consentTimeStamp" // 서비스 정책및 개인정보처리방침 동의 시간 - Schema: consentTimeStamp
         // const val ID = "id" // Removed: User document ID is the Firebase Auth UID, 'id' is not a field within the document per schema.
         // const val LAST_ACTIVE_AT = "lastActiveAt" // Removed: Not in schema
     }
@@ -60,7 +68,6 @@ object FirestoreConstants {
         const val CREATED_AT = "createdAt" // 프로젝트 생성 시간 - Schema: createdAt
         const val UPDATED_AT = "updatedAt" // 프로젝트 마지막 수정 시간 - Schema: updatedAt
         const val IS_PUBLIC = "isPublic" // 프로젝트 공개 여부 - Schema: isPublic
-        const val CATEGORY_ID = "categoryId" // 프로젝트가 속한 카테고리 ID (선택 사항)
         // const val ID = "id" // Removed: Project document ID is auto-generated, 'id' is not a field within the document per schema.
         // const val PARTICIPATING_MEMBERS = "participatingMembers" // Removed: Renamed to MEMBER_IDS based on schema
     }
@@ -128,6 +135,24 @@ object FirestoreConstants {
         // const val PARTICIPANT_IDS = "participantIds" // 제거: dmSpecificData.participantIds로 이동
         // const val METADATA = "metadata" // 제거: 타입별 특화 데이터로 대체
         // const val CHANNEL_MODE = "channelMode" // 제거: projectSpecificData.channelMode로 이동
+
+        /**
+         * `projectSpecificData` 내부의 필드 경로를 반환합니다.
+         * @param fieldName `ChannelProjectDataFields`에 정의된 상수
+         * @return 예: "projectSpecificData.projectId"
+         */
+        fun projectDataPath(fieldName: String): String {
+            return "$PROJECT_SPECIFIC_DATA.$fieldName"
+        }
+
+        /**
+         * `dmSpecificData` 내부의 필드 경로를 반환합니다.
+         * @param fieldName `ChannelDmDataFields`에 정의된 상수
+         * @return 예: "dmSpecificData.participantIds"
+         */
+        fun dmDataPath(fieldName: String): String {
+            return "$DM_SPECIFIC_DATA.$fieldName"
+        }
     }
 
     /**

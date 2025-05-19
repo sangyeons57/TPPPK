@@ -15,6 +15,7 @@ import com.example.data.model.mapper.UserMapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.Result
+import java.time.Instant
 
 class AuthRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth, // FirebaseAuth 주입
@@ -71,8 +72,8 @@ class AuthRepositoryImpl @Inject constructor(
         return authRemoteDataSource.resetPassword(email, code, newPassword)
     }
 
-    override suspend fun signUp(email: String, pass: String, nickname: String): Result<User?> {
-        return authRemoteDataSource.signUp(email, pass, nickname).map { userDto ->
+    override suspend fun signUp(email: String, pass: String, nickname: String, consentTimeStamp: Instant): Result<User?> {
+        return authRemoteDataSource.signUp(email, pass, nickname, consentTimeStamp).map { userDto ->
             userDto?.let { userMapper.mapToDomain(it) }
         }
     }

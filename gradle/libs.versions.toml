@@ -39,9 +39,14 @@ archCoreTesting = "2.2.0"
 mockk = "1.13.11"
 firebaseAuthKtx = "23.2.0"
 gmsPlayServicesBase = "18.7.0"
+workRuntime = "2.10.0"
+firebaseFirestoreKtx = "25.1.4"
 
 [libraries]
+androidx-animation = { module = "androidx.compose.animation:animation" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-foundation-layout = { module = "androidx.compose.foundation:foundation-layout" }
+androidx-foundation = { module = "androidx.compose.foundation:foundation" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
@@ -54,7 +59,8 @@ converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref
 
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx" }
-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx"} # 테스트용 (선택사항)
+firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx"}
+firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
 firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx"}
 
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
@@ -117,6 +123,10 @@ gms-play-services-base = { group = "com.google.android.gms", name = "play-servic
 # Firebase App Check
 firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity" } # BoM이 버전 관리
 firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" } # BoM이 버전 관리
+
+# WorkManager
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
+google-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

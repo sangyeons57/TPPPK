@@ -13,7 +13,7 @@ import com.example.domain.usecase.project.FetchProjectListUseCase
 import com.example.domain.usecase.project.GetProjectListStreamUseCase
 import com.example.domain.usecase.project.GetProjectStructureUseCase
 import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
-import com.example.domain.usecase.user.GetCurrentUserUseCase
+import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetUserInfoUseCase
 import com.example.feature_main.ui.project.CategoryUiModel
 import com.example.feature_main.ui.project.ChannelUiModel
@@ -88,16 +88,16 @@ sealed class HomeEvent {
     object ShowAddFriendDialog : HomeEvent() // 또는 화면 이동
     object NavigateToAddProject : HomeEvent() // 프로젝트 추가 화면
     data class ShowSnackbar(val message: String) : HomeEvent()
+    object EditProjectStructure : HomeEvent() // 프로젝트 구조 편집
 }
 
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val getUserDmChannelsUseCase: GetUserDmChannelsUseCase,
     private val getUserInfoUseCase: GetUserInfoUseCase,
     private val getProjectListStreamUseCase: GetProjectListStreamUseCase,
-    private val fetchProjectListUseCase: FetchProjectListUseCase,
     private val getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase,
     private val getProjectStructureUseCase: GetProjectStructureUseCase
 ) : ViewModel() {
@@ -114,71 +114,55 @@ class HomeViewModel @Inject constructor(
     // 선택된 채널 ID
     private var selectedChannelId: String? = null
     
-    // 현재 사용자 ID (실제로는 인증 서비스 등에서 가져와야 함)
-    // 임시로 ""로 설정. 실제 앱에서는 주입받거나, UserRepository 등을 통해 가져와야 합니다.
-    private var currentUserId: String = "" 
-
-    init {
-        viewModelScope.launch {
-            // 현재 사용자 ID 가져오기
-            getCurrentUserUseCase() // 파라미터 없이 호출
-                .catch { exception -> // Flow 직접 반환 시 여기서 catch
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "사용자 정보 로드 실패: ${exception.localizedMessage}") }
-                    Log.e("HomeViewModel", "Failed to load current user", exception)
-                }
-                .collectLatest { user -> // User 객체 직접 받음
-                    currentUserId = user.id
-                    Log.d("HomeViewModel", "Current User ID set: $currentUserId")
-                    
-                    // 사용자 이니셜과 프로필 이미지 URL 업데이트
-                    _uiState.update { state ->
-                        state.copy(
-                            userInitial = user.name.firstOrNull()?.toString() ?: "U",
-                            userProfileImageUrl = user.profileImageUrl
-                        )
-                    }
-                    
-                    // currentUserId 설정 후 DM 로드 (만약 DMS 탭이 선택되어 있고, dms 목록이 비어있다면)
-                    if (_uiState.value.selectedTopSection == TopSection.DMS) { // && _uiState.value.dms.isEmpty() 불필요, loadDms에서 로딩 상태 관리
-                        loadDms()
-                    }
-                }
+    // 현재 사용자 ID
+    private var currentUserId: String = ""
+        set(value) {
+            Log.d("HomeViewModel", "Setting currentUserId: $value (previous: $field)")
+            field = value
+            if (value.isNotBlank()) {
+                loadDataForUser()
+            }
         }
 
-        loadDataForSelectedSection()
-
+    init {
+        Log.d("HomeViewModel", "HomeViewModel initialized")
         viewModelScope.launch {
-            // projectRepository.getProjectListStream() 대신 UseCase 사용
-            getProjectListStreamUseCase()
-                .catch { e ->
-                     _uiState.update { it.copy(isLoading = false, errorMessage = "프로젝트 스트림 오류: ${e.localizedMessage}") }
+            Log.d("HomeViewModel", "Starting to collect from getCurrentUserStreamUseCase")
+            // userPreferencesRepository 대신 UseCase 사용
+            getCurrentUserStreamUseCase()
+                .catch { exception ->
+                    Log.e("HomeViewModel", "Failed to get current user", exception)
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "사용자 정보 로드 실패: ${exception.localizedMessage}") }
                 }
-                .collectLatest { projects ->
-                    if (_uiState.value.selectedTopSection == TopSection.PROJECTS) {
-                        _uiState.update { state ->
-                            state.copy(
-                                projects = projects.map { it.toProjectItem() },
-                                isLoading = false,
-                                errorMessage = if (projects.isEmpty() && state.errorMessage == "default") "프로젝트가 없습니다." else state.errorMessage
-                            )
-                        }
-                    }
+                .collectLatest { result : Result<User> ->
+                    result.fold(
+                        onSuccess = { user ->
+                            Log.d("HomeViewModel", "User received from UseCase: ${user.id}")
+                            currentUserId = user.id
+
+                            // 사용자 이니셜과 프로필 이미지 URL 업데이트
+                            _uiState.update { state ->
+                                state.copy(
+                                    userInitial = user.name.firstOrNull()?.toString() ?: "U",
+                                    userProfileImageUrl = user.profileImageUrl
+                                )
+                            }
+                        },
+                        onFailure = { exception ->
+                            Log.e("HomeViewModel", "Failed to get current user", exception)
+                        },
+                    )
                 }
         }
     }
 
-    // Helper to format timestamp for UI - Instant를 받도록 수정
-    private fun formatDmTimestamp(timestamp: Instant?): String {
-        if (timestamp == null) return ""
-        val localDateTime = LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault())
-        val now = LocalDateTime.now(ZoneId.systemDefault())
-        return when {
-            ChronoUnit.MINUTES.between(localDateTime, now) < 1 -> "Just now"
-            ChronoUnit.HOURS.between(localDateTime, now) < 1 -> "${ChronoUnit.MINUTES.between(localDateTime, now)} min ago"
-            ChronoUnit.DAYS.between(localDateTime, now) < 1 -> localDateTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
-            ChronoUnit.DAYS.between(localDateTime, now) == 1L -> "Yesterday"
-            else -> localDateTime.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))
-        }
+    /**
+     * 현재 사용자에 대한 모든 데이터를 로드합니다.
+     */
+    private fun loadDataForUser() {
+        Log.d("HomeViewModel", "loadDataForUser called with userId: $currentUserId")
+        loadProjects()
+        loadDms()
     }
 
     // Mapper function Channel -> DmUiModel로 변경
@@ -195,9 +179,11 @@ class HomeViewModel @Inject constructor(
 
         if (partnerId.isNotEmpty()) {
             // GetUserInfoUseCase를 사용하여 파트너 정보를 가져옵니다.
-            getUserInfoUseCase(partnerId).getOrNull()?.let { user -> 
-                partnerName = user.name
-                partnerProfilePic = user.profileImageUrl ?: ""
+            getUserInfoUseCase(partnerId).collectLatest { result : Result<User> ->
+                result.onSuccess { user ->
+                    partnerName = user.name
+                    partnerProfilePic = user.profileImageUrl ?: ""
+                }
             }
         }
 
@@ -219,35 +205,44 @@ class HomeViewModel @Inject constructor(
 
     // 현재 선택된 탭에 맞는 데이터 로드 함수
     private fun loadDataForSelectedSection() {
-        // currentUserId가 필요한 DMS 탭은 init 블록의 collectLatest 이후 또는 onTopSectionSelect에서 로드
-        if (_uiState.value.selectedTopSection == TopSection.DMS && currentUserId.isNotBlank()) {
-            loadDms()
-        } else if (_uiState.value.selectedTopSection == TopSection.PROJECTS) {
-            loadProjects() // 프로젝트는 currentUserId와 무관하게 로드 가능
-        } else if (_uiState.value.selectedTopSection == TopSection.DMS && currentUserId.isBlank()) {
-            // currentUserId가 아직 준비되지 않았음을 알림
-            _uiState.update { it.copy(isLoading = false, errorMessage = "사용자 정보를 가져오는 중입니다. 잠시 후 DMS를 로드합니다.") }
-            Log.d("HomeViewModel", "DMS load deferred until currentUserId is available.")
+        loadProjects() // 프로젝트는 currentUserId와 무관하게 로드 가능
+
+        if (_uiState.value.selectedTopSection == TopSection.DMS) {
+            loadDms() // currentUserId 체크는 이제 usecase 내부에서 처리
         }
     }
 
     // 프로젝트 데이터 로드
     private fun loadProjects() { 
+        Log.d("HomeViewModel", "loadProjects called")
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+            
+            // 기존 일회성 fetchProjectListUseCase() 호출 대신 스트림 방식으로 변경
             try {
-                // projectRepository.fetchProjectList() 대신 UseCase 사용
-                fetchProjectListUseCase().onFailure { e -> // Result를 반환하므로 onFailure 처리
+                // 스트림 방식으로 프로젝트 목록을 가져오는 Flow를 수집
+                getProjectListStreamUseCase()
+                    .catch { e ->
+                        Log.e("HomeViewModel", "프로젝트 목록 스트림 오류", e)
                      _uiState.update {
                         it.copy(
                             errorMessage = "프로젝트 목록 동기화 실패: ${e.localizedMessage ?: "알 수 없는 오류"}",
-                            // isLoading = false // 실패 시에도 로딩은 끝난 것으로 간주할 수 있음
+                                isLoading = false
                         )
                     }
                 }
-                // 성공 여부와 관계없이 로딩 상태는 아래 스트림에서 처리하거나, 여기서 명시적으로 false로 설정
-                 _uiState.update { it.copy(isLoading = false) } 
-            } catch (e: Exception) { // UseCase가 Result를 반환하면 이 catch는 불필요할 수 있음
+                    .collectLatest { projects ->
+                        Log.d("HomeViewModel", "프로젝트 목록 스트림 업데이트: ${projects.size}개")
+                        _uiState.update { state ->
+                            state.copy(
+                                projects = projects.map { it.toProjectItem() },
+                                isLoading = false,
+                                errorMessage = if (projects.isEmpty()) "프로젝트가 없습니다." else ""
+                            )
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "프로젝트 목록 로드 중 예외 발생", e)
                 _uiState.update {
                     it.copy(
                         errorMessage = "프로젝트 목록 동기화 중 예측 못한 오류: ${e.localizedMessage ?: "알 수 없는 오류"}",
@@ -260,22 +255,41 @@ class HomeViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadDms() {
-        if (currentUserId.isBlank()) { // 이중 체크
-            Log.w("HomeViewModel", "loadDms called but currentUserId is blank.")
-             _uiState.update { it.copy(isLoading = false, errorMessage = "DM을 로드하려면 사용자 정보가 필요합니다.") }
-            return
-        }
-
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
-            Log.d("HomeViewModel", "Attempting to load DMs for user: $currentUserId")
+            Log.d("HomeViewModel", "Starting to load DMs")
             
-            getUserDmChannelsUseCase(currentUserId) // Flow<List<Channel>> 반환
+            // 로그 추가 - Flow 시작 전
+            Log.d("HomeViewModel", "Starting to collect DM channels Flow from getUserDmChannelsUseCase")
+            
+            // 파라미터 없이 호출하도록 수정
+            getUserDmChannelsUseCase()
+                .onStart { 
+                    Log.d("HomeViewModel", "DM channels Flow started") 
+                }
                 .mapLatest { channels -> // 각 List<Channel>에 대해 List<DmUiModel>로 변환
-                    channels.map { channel -> channel.toDmUiModel(currentUserId) }
+                    Log.d("HomeViewModel", "Raw DM channels received: ${channels.size}, IDs: ${channels.map { it.id }}")
+                    
+                    // 각 채널 세부 정보 로깅
+                    channels.forEach { channel ->
+                        Log.d("HomeViewModel", "DM channel detail: ID=${channel.id}, type=${channel.type}, name=${channel.name}, " +
+                            "participants=${channel.dmSpecificData?.participantIds}, " +
+                            "lastMessage=${channel.lastMessagePreview?.take(20)}")
+                    }
+                    
+                    // 변환 진행 중 로그
+                    Log.d("HomeViewModel", "Converting ${channels.size} DM channels to UI models")
+                    val uiModels = channels.map { channel -> 
+                        Log.d("HomeViewModel", "Processing DM channel: ${channel.id}, participants: ${channel.dmSpecificData?.participantIds}")
+                        channel.toDmUiModel(currentUserId) 
+                    }
+                    
+                    Log.d("HomeViewModel", "DM UI models created: ${uiModels.size}")
+                    uiModels
                 }
                 .catch { exception ->
                     Log.e("HomeViewModel", "Error loading DMs", exception)
+                    exception.printStackTrace() // 스택 트레이스 출력
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
@@ -284,15 +298,19 @@ class HomeViewModel @Inject constructor(
                     }
                 }
                 .collectLatest { dmUiModels ->
-                    Log.d("HomeViewModel", "DMs loaded: ${dmUiModels.size}")
+                    Log.d("HomeViewModel", "DMs loaded: ${dmUiModels.size}, DMs: ${dmUiModels.map { "${it.channelId}(${it.partnerName})" }}")
+                    
+                    // UI 상태 업데이트 전 로그
+                    Log.d("HomeViewModel", "Updating UI state with ${dmUiModels.size} DM models")
+                    
                     _uiState.update { state ->
-                        state.copy(
-                            isLoading = false,
+                        val newState = state.copy(
                             dms = dmUiModels,
-                            errorMessage = if (dmUiModels.isEmpty() && state.errorMessage == "default") "DM이 없습니다." 
-                                           else if (state.errorMessage == "default") "" 
-                                           else state.errorMessage
+                            isLoading = false,
+                            errorMessage = (if (dmUiModels.isEmpty()) "DM이 없습니다." else null).toString()
                         )
+                        Log.d("HomeViewModel", "UI state updated, new DM count: ${newState.dms.size}")
+                        newState
                     }
                 }
         }
@@ -370,12 +388,13 @@ class HomeViewModel @Inject constructor(
             // projectSettingRepository.getProjectStructure(projectId) 대신 UseCase 사용
             val structureResult = getProjectStructureUseCase(projectId)
             
-            structureResult.onSuccess { resultData -> // resultData is Pair<String, List<ProjectCategory>>
-                val (projectNameFromStructure, categories) = resultData // 프로젝트 이름도 함께옴
+            structureResult.onSuccess { projectStructure -> // ProjectStructure 객체 받음
+                // ProjectStructure에는 categories와 directChannels가 포함됨
                 // 프로젝트 구조 UI 모델로 변환
                 val categoriesMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
                 
-                val categoryUiModels = categories.map { category ->
+                // 카테고리에 속한 채널들 처리
+                val categoryUiModels = projectStructure.categories.map { category ->
                     // 카테고리 확장 상태 가져오기 (저장된 상태가 없으면 기본값 true)
                     val isExpanded = categoriesMap.getOrPut(category.id) { true }
                     
@@ -386,7 +405,7 @@ class HomeViewModel @Inject constructor(
                             ChannelUiModel(
                                 id = channel.id,
                                 name = channel.name,
-                                mode = channel.channelMode,
+                                mode = channel.channelMode!!,
                                 isSelected = channel.id == selectedChannelId
                             )
                         },
@@ -394,16 +413,23 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 
-                // 일반 채널 (카테고리에 속하지 않은 채널) - 현재는 미구현
-                val generalChannels = emptyList<ChannelUiModel>()
+                // 카테고리에 속하지 않은 직접 채널들 처리
+                val directChannels = projectStructure.directChannels.map { channel ->
+                    ChannelUiModel(
+                        id = channel.id,
+                        name = channel.name,
+                        mode = channel.channelMode!!,
+                        isSelected = channel.id == selectedChannelId
+                    )
+                }
                 
                 // UI 상태 업데이트
                 _uiState.update { state ->
                     state.copy(
-                        projectName = projectNameFromStructure, // UseCase에서 프로젝트 이름도 가져오므로 업데이트
+                        // 프로젝트 이름은 이미 이전 단계에서 로드되었으므로 그대로 유지
                         projectStructure = ProjectStructureUiState(
                             categories = categoryUiModels,
-                            generalChannels = generalChannels,
+                            directChannel = directChannels,
                             isLoading = false
                         )
                     )
@@ -474,14 +500,14 @@ class HomeViewModel @Inject constructor(
                 category.copy(channels = updatedChannels)
             }
             
-            val updatedGeneralChannels = state.projectStructure.generalChannels.map { ch ->
+            val updatedGeneralChannels = state.projectStructure.directChannel.map { ch ->
                 ch.copy(isSelected = ch.id == channel.id)
             }
             
             state.copy(
                 projectStructure = state.projectStructure.copy(
                     categories = updatedCategories,
-                    generalChannels = updatedGeneralChannels
+                    directChannel = updatedGeneralChannels
                 )
             )
         }
@@ -548,6 +574,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // 프로젝트 구조 편집 버튼 클릭 시
+    fun onEditProjectStructureClick() {
+        viewModelScope.launch {
+            println("ViewModel: 프로젝트 구조 편집 버튼 클릭")
+            _eventFlow.emit(HomeEvent.EditProjectStructure)
+        }
+    }
+
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = "default") }
     }
@@ -557,8 +591,29 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isDetailFullScreen = !it.isDetailFullScreen) }
     }
     
+    /**
+     * 스낵바를 통해 메시지를 표시합니다.
+     * @param message 표시할 메시지
+     */
+    fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowSnackbar(message))
+        }
+    }
+    
+    /**
+     * 프로젝트 구조를 새로고침합니다.
+     * @param projectId 새로고침할 프로젝트 ID
+     */
+    fun refreshProjectStructure(projectId: String) {
+        viewModelScope.launch {
+            loadProjectStructure(projectId)
+        }
+    }
+    
     // Domain 모델을 UI 모델로 변환하는 확장 함수
     private fun Project.toProjectItem(): ProjectItem {
+        Log.d("HomeViewModel", "toProjectItem: id=${this.id}, name=${this.name}")
         return ProjectItem(
             id = this.id,
             name = this.name,
@@ -583,6 +638,47 @@ class HomeViewModel @Inject constructor(
     fun onDmItemClick(dmUiModel: DmUiModel) {
         viewModelScope.launch {
             _eventFlow.emit(HomeEvent.NavigateToDmChat(dmUiModel.channelId))
+        }
+    }
+
+    /**
+     * 저장된 상태로부터 확장된 카테고리 목록을 복원합니다.
+     * 화면 전환 시 이전 상태 복원에 사용됩니다.
+     *
+     * @param expandedCategoryIdsList 복원할 확장된 카테고리 ID 목록
+     */
+    fun restoreExpandedCategories(expandedCategoryIdsList: List<String>) {
+        Log.d("HomeViewModel", "Restoring expanded categories: $expandedCategoryIdsList")
+        val projectId = _uiState.value.selectedProjectId
+        if (projectId != null) {
+            _uiState.update { currentState ->
+                val currentProjectStructure = currentState.projectStructure
+                val updatedCategories = currentProjectStructure.categories.map { category ->
+                    // category.id가 expandedCategoryIdsList에 포함되어 있으면 isExpanded를 true로 설정
+                    category.copy(isExpanded = category.id in expandedCategoryIdsList)
+                }
+                
+                // 내부 categoryExpandedStates 캐시도 업데이트
+                val categoryMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
+                updatedCategories.forEach { category ->
+                    categoryMap[category.id] = category.isExpanded
+                }
+
+                currentState.copy(
+                    projectStructure = currentProjectStructure.copy(categories = updatedCategories)
+                )
+            }
+        }
+    }
+    
+    /**
+     * 에러 메시지를 UI에 표시합니다.
+     *
+     * @param message 표시할 에러 메시지
+     */
+    fun showErrorMessage(message: String) {
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowSnackbar(message))
         }
     }
 }

@@ -3,9 +3,8 @@ package com.example.domain.model
 
 import com.example.domain.model.channel.DmSpecificData
 import com.example.domain.model.channel.ProjectSpecificData
+import com.google.firebase.firestore.DocumentId
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 /**
  * 채널 정보를 나타내는 데이터 클래스입니다.
@@ -15,6 +14,7 @@ data class Channel(
     /**
      * 채널의 고유 ID (Firestore Document ID)
      */
+    @DocumentId
     val id: String,
     
     /**
@@ -32,13 +32,6 @@ data class Channel(
      * FirestoreConstants.ChannelTypeValues의 값 중 하나여야 합니다.
      */
     val type: ChannelType,
-
-    /**
-     * 채널 모드입니다. TEXT, VOICE 등 채널의 실제 형식을 나타냅니다.
-     * 프로젝트/카테고리 채널의 경우 projectSpecificData에서 가져오며,
-     * DM 채널의 경우 항상 "TEXT"로 간주합니다.
-     */
-    val channelMode: ChannelMode = ChannelMode.TEXT,
 
     /**
      * 마지막 메시지 미리보기입니다.
@@ -95,10 +88,21 @@ data class Channel(
     
     /**
      * 이 채널이 카테고리 채널인지 확인합니다.
+     * 참고: 카테고리는 제거되고 프로젝트로 통합되었습니다.
+     * @deprecated 사용하지 않음
      */
-    val isCategoryChannel: Boolean
-        get() = type == ChannelType.CATEGORY
-    
+    @Deprecated("카테고리는 PROJECT로 통합되었습니다. isProjectChannel을 사용하세요.")
+    val isPROJECTChannel: Boolean
+        get() = type == ChannelType.PROJECT
+
+    /**
+     * 채널 모드입니다. TEXT, VOICE 등 채널의 실제 형식을 나타냅니다.
+     * 프로젝트/카테고리 채널의 경우 projectSpecificData에서 가져오며,
+     * DM 채널의 경우 항상 "TEXT"로 간주합니다.
+     */
+    val channelMode: ChannelMode? = projectSpecificData?.channelMode
+
+
     /**
      * 채널이 속한 프로젝트 ID를 가져옵니다(프로젝트/카테고리 채널인 경우).
      */
@@ -164,6 +168,25 @@ data class Channel(
     // fun getLastMessageTimestampLocal(zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime? {
     //     return lastMessageTimestamp?.let { LocalDateTime.ofInstant(it, zoneId) }
     // }
+
+    companion object {
+        /**
+         * 프로젝트 채널 또는 카테고리 채널에 대한 ProjectSpecificData를 생성하는 헬퍼 함수
+         */
+        fun createProjectSpecificData(
+            projectId: String,
+            categoryId: String? = null,
+            order: Int = 0,
+            channelMode: ChannelMode
+        ): ProjectSpecificData {
+            return ProjectSpecificData(
+                projectId = projectId,
+                categoryId = categoryId,
+                order = order,
+                channelMode = channelMode
+            )
+        }
+    }
 }
 
 /**
@@ -183,7 +206,7 @@ object ChannelBackwardCompatibility {
             projectData.categoryId?.let { map["categoryId"] = it }
             
             // source 필드 추가
-            if (channel.type == ChannelType.CATEGORY || channel.type == ChannelType.PROJECT) {
+            if (channel.type == ChannelType.PROJECT || channel.type == ChannelType.PROJECT) {
                 map["source"] = "project"
             }
         }

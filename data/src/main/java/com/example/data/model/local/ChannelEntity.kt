@@ -2,7 +2,6 @@ package com.example.data.model.local
 
 import androidx.room.Entity
 import androidx.room.Index
-import com.example.core_common.constants.FirestoreConstants
 import com.example.domain.model.Channel
 import com.example.domain.model.ChannelMode
 import com.example.domain.model.ChannelType
@@ -119,7 +118,7 @@ data class ChannelEntity(
         }
         
         // 프로젝트 특화 데이터
-        val projectData = if (channelType == ChannelType.PROJECT || channelType == ChannelType.CATEGORY) {
+        val projectData = if (channelType == ChannelType.PROJECT || channelType == ChannelType.PROJECT) {
             projectId?.let {
                 ProjectSpecificData(
                     projectId = it,

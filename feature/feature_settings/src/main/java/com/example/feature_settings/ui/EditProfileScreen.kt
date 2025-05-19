@@ -28,7 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.User
@@ -45,7 +45,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: EditProfileViewModel = hiltViewModel(),
     onChangeNameClick: () -> Unit, // 이름 변경 다이얼로그 표시 콜백
@@ -67,7 +67,7 @@ fun EditProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditProfileEvent.NavigateBack -> navigationHandler.navigateBack()
+                is EditProfileEvent.NavigateBack -> appNavigator.navigateBack()
                 is EditProfileEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditProfileEvent.RequestImagePicker -> {
                     // 이미지 선택기 실행
@@ -89,7 +89,7 @@ fun EditProfileScreen(
             TopAppBar(
                 title = { Text("프로필 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }
@@ -277,7 +277,6 @@ fun ProfileInfoRow(
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, name = "Edit Profile Loading")

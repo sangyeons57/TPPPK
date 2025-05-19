@@ -4,6 +4,7 @@ package com.example.domain.repository
 import com.example.domain.model.User
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
+import java.time.Instant
 
 /**
  * 인증 관련 데이터 처리를 위한 인터페이스 (Contract)
@@ -30,7 +31,7 @@ interface AuthRepository {
     suspend fun resetPassword(email: String, code: String, newPassword: String): Result<Unit>
 
     // --- 회원가입 관련 (SignUp) ---
-    suspend fun signUp(email: String, pass: String, nickname: String): Result<User?> // 회원가입
+    suspend fun signUp(email: String, pass: String, nickname: String, consentTimeStamp: Instant = Instant.now()): Result<User?> // 회원가입
     
     suspend fun sendEmailVerification(): Result<Unit> // 이메일 인증 전송
     

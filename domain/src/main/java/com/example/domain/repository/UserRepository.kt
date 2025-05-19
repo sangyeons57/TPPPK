@@ -15,23 +15,31 @@ import kotlin.Result
  */
 interface UserRepository {
 
-    /** 특정 사용자의 프로필 정보 가져오기 */
-    suspend fun getUser(userId: String): Result<User>
+    /**
+     * 현재 로그인한 사용자 프로필 정보를 실시간 스트림으로 가져오기
+     * @return 현재 사용자 정보를 실시간으로 제공하는 Flow
+     */
+    fun getCurrentUserStream(): Flow<Result<User>>
 
-    /** 현재 로그인한 사용자 프로필 정보 가져오기 (Flow 형태로 실시간 업데이트) */
-    fun getCurrentUser(): Flow<Result<User?>>
-
-    /** 현재 로그인한 사용자 프로필 정보 스트림 (실시간 업데이트) */
-    fun getCurrentUserProfileStream(): Flow<User>
-
-    /** 특정 사용자의 프로필 정보 스트림 (실시간 업데이트) */
-    fun getUserProfileStream(userId: String): Flow<User>
+    /** 
+     * 특정 사용자의 프로필 정보 스트림 (실시간 업데이트) 
+     * @param userId 조회할 사용자의 ID
+     * @return 사용자 정보를 실시간으로 제공하는 Flow
+     */
+    fun getUserStream(userId: String): Flow<Result<User>>
 
     /** 현재 로그인한 사용자의 상태를 가져옵니다. */
     suspend fun getCurrentStatus(): Result<UserStatus>
 
     /** 닉네임 중복 확인 */
     suspend fun checkNicknameAvailability(nickname: String): Result<Boolean>
+    
+    /**
+     * 이름(닉네임)으로 사용자를 검색합니다.
+     * @param name 검색할 이름
+     * @return 검색 결과에 해당하는 사용자 목록 또는 에러를 포함하는 Result
+     */
+    suspend fun searchUsersByName(name: String): Result<List<User>>
 
     /** 사용자 프로필 생성 */
     suspend fun createUserProfile(user: User): Result<Unit>

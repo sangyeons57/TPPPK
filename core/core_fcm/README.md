@@ -6,9 +6,15 @@
 
 - FCM 서비스 설정 (알림 수신 및 처리)
 - FCM 토큰 관리 (생성, 저장, 조회)
+- 토큰 변경 리스너 지원
+- 서버 토큰 등록 관리
+- WorkManager를 통한 주기적 토큰 갱신
 - 알림 채널 생성 및 관리
 - 토픽 구독 관리
 - 알림 권한 요청 및 처리 (Android 13+)
+- 메시지 타입별 처리 로직
+- 장기 실행 작업 처리
+- 자체 테스트 기능 (Compose UI)
 
 ## 설정 방법
 
@@ -34,42 +40,42 @@ dependencies {
 class MyApplication : Application() {
 
     @Inject
-    lateinit var fcmInitializer: FCMInitializer
-    
-    @Inject
-    lateinit var notificationHelper: NotificationHelper
+    lateinit var fcmManager: FCMManager
     
     override fun onCreate() {
         super.onCreate()
         
         // FCM 초기화
-        fcmInitializer.initialize()
-        
-        // 알림 채널 생성
-        notificationHelper.createNotificationChannels()
+        fcmManager.initialize()
     }
 }
 ```
 
-## 사용 예시
+## 사용 방법
 
-### 알림 권한 요청 (Android 13+)
+### 토큰 관리
 
 ```kotlin
-// 액티비티 또는 프래그먼트에서
-private fun requestNotificationPermission() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        PermissionUtils.requestNotificationPermission(
-            this,
-            onGranted = {
-                // 권한이 허용된 경우의 처리
-                Toast.makeText(this, "알림 권한이 허용되었습니다", Toast.LENGTH_SHORT).show()
-            },
-            onDenied = {
-                // 권한이 거부된 경우의 처리
-                Toast.makeText(this, "알림 권한이 필요합니다", Toast.LENGTH_SHORT).show()
-            }
-        )
+// FCM 토큰 가져오기
+val token = fcmManager.getCurrentToken()
+
+// 토큰 변경 리스너 등록
+tokenManager.addTokenChangeListener(object : FCMTokenManager.TokenChangeListener {
+    override fun onTokenChanged(oldToken: String?, newToken: String?) {
+        // 토큰 변경 시 처리
+    }
+})
+```
+
+### 서버에 토큰 등록
+
+```kotlin
+// 사용자 로그인 성공 후 토큰 등록
+fcmManager.registerTokenWithServer(userId) { success, message ->
+    if (success) {
+        // 성공 처리
+    } else {
+        // 실패 처리
     }
 }
 ```
@@ -77,70 +83,117 @@ private fun requestNotificationPermission() {
 ### 토픽 구독
 
 ```kotlin
-@Inject
-lateinit var fcmTopicManager: FCMTopicManager
-
-// 토픽 구독
-fun subscribeToNotifications() {
-    fcmTopicManager.subscribeTopic(FCMTopicManager.TOPIC_GENERAL) { success ->
-        if (success) {
-            Toast.makeText(context, "알림 구독이 완료되었습니다", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(context, "알림 구독에 실패했습니다", Toast.LENGTH_SHORT).show()
-        }
+// 특정 토픽 구독
+fcmManager.subscribeTopic("news") { success ->
+    if (success) {
+        // 구독 성공
+    } else {
+        // 구독 실패
     }
 }
 
-// 여러 토픽 구독
-fun subscribeToMultipleTopics() {
-    val topics = listOf(
-        FCMTopicManager.TOPIC_GENERAL,
-        FCMTopicManager.TOPIC_UPDATES
-    )
-    
-    fcmTopicManager.subscribeToTopics(topics) { successCount ->
-        Toast.makeText(
-            context, 
-            "$successCount/${topics.size} 토픽 구독 완료", 
-            Toast.LENGTH_SHORT
-        ).show()
+// 토픽 구독 취소
+fcmManager.unsubscribeTopic("news") { success ->
+    // 처리 로직
+}
+```
+
+### 알림 권한 처리 (Android 13+)
+
+```kotlin
+// 권한 확인
+val hasPermission = fcmManager.hasNotificationPermission()
+
+// 권한 요청
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    // ActivityResultLauncher를 사용한 권한 요청
+    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+}
+```
+
+### 로그아웃 시 FCM 비활성화
+
+```kotlin
+// 사용자 로그아웃 시 FCM 비활성화
+fcmManager.deactivate(
+    userId = currentUserId,
+    clearLocalToken = true,
+    disableAutoInit = true
+)
+```
+
+## 커스텀 알림 처리
+
+FCM에서 받은 메시지를 처리하려면 메시지 유형에 따라 `FCMService` 클래스의 `handleNow()` 메서드에서 적절한 처리를 구현하세요:
+
+```kotlin
+private fun handleNow(data: Map<String, String>) {
+    when (data["type"]) {
+        "chat" -> handleChatMessage(data)
+        "notification" -> handleNotificationMessage(data)
+        // 추가 유형 처리
+        else -> handleDefaultMessage(data)
     }
 }
 ```
 
-### FCM 토큰 가져오기
+## 장기 실행 작업 처리
+
+데이터 동기화와 같은 장기 실행 작업을 위해 WorkManager를 사용합니다:
 
 ```kotlin
-@Inject
-lateinit var fcmInitializer: FCMInitializer
-
-@Inject
-lateinit var fcmTokenManager: FCMTokenManager
-
-// FCM 토큰 가져오기 (비동기)
-fun getFCMToken() {
-    fcmInitializer.getToken()
-}
-
-// 저장된 토큰 가져오기
-fun getStoredToken(): String? {
-    return fcmTokenManager.getToken()
+// FCMService에서
+private fun needsToBeScheduled(): Boolean {
+    // 작업의 복잡성에 따라 WorkManager 사용 여부 결정
+    return data["operation"] == "sync_data"
 }
 ```
 
-## 사용자 정의 알림 처리
+## 테스트 방법
 
-FCM 메시지 처리를 사용자 정의하려면 다음과 같이 커스텀 확장 함수를 구현할 수 있습니다:
+### Compose 기반 테스트 화면 사용
+
+모듈에는 기능 테스트를 위한 Compose 기반 테스트 화면이 포함되어 있습니다. 다음 단계에 따라 테스트 화면에 액세스할 수 있습니다:
+
+1. AppRoutes.kt 파일에 FCM 테스트 경로가 정의되어 있는지 확인:
+   ```kotlin
+   object FCM {
+       const val TEST = "fcm/test"
+   }
+   ```
+
+2. AppNavigationGraph.kt 파일에 FCM 테스트 화면이 추가되어 있는지 확인:
+   ```kotlin
+   composable(AppRoutes.FCM.TEST) {
+       FCMTestScreen(navigationHandler = navigationHandler)
+   }
+   ```
+
+3. 테스트 화면으로 이동하기 위해 다음 코드를 사용:
+   ```kotlin
+   // 버튼 클릭 등의 이벤트에서
+   navigationHandler.navigate(AppRoutes.FCM.TEST)
+   ```
+
+또는 앱 실행 시 테스트 화면부터 시작하려면 AppNavigationGraph에서 startDestination을 변경:
 
 ```kotlin
-// 특정 타입의 알림을 처리하는 확장 함수
-fun FCMService.handleCustomNotification(data: Map<String, String>) {
-    // data["type"], data["title"], data["message"] 등의 정보를 활용해 처리
+@Composable
+fun AppNavigationGraph(
+    navController: NavHostController,
+    navigationHandler: ComposeNavigationHandler,
+    startDestination: String = AppRoutes.FCM.TEST // 테스트용으로 변경
+) {
+    // ...
 }
 ```
 
-## 주의사항
+## 파이어베이스 콘솔에서 테스트 메시지 전송
 
-1. Android 13(API 33) 이상에서는 알림 권한을 런타임에 요청해야 합니다.
-2. FCM 메시지는 앱의 상태(포그라운드/백그라운드)에 따라 다르게 처리됩니다.
-3. 백그라운드 메시지 처리는 20초로 제한되므로 장기 실행 작업은 WorkManager를 사용하세요. 
+1. [Firebase 콘솔](https://console.firebase.google.com/)에서 프로젝트 선택
+2. 왼쪽 메뉴에서 '메시징(Cloud Messaging)' 선택
+3. '첫 번째 메시지 전송' 또는 '메시지 보내기' 버튼 클릭
+4. 알림 제목, 본문 등 입력
+5. 데이터 메시지를 추가하려면 '사용자 지정 데이터' 섹션에 키-값 쌍 추가
+   - 예: `type` - `chat`, `message` - `안녕하세요`
+6. 대상 지정 후 메시지 보내기 

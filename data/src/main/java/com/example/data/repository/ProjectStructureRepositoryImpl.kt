@@ -161,4 +161,26 @@ class ProjectStructureRepositoryImpl @Inject constructor(
             return Result.failure(e)
         }
     }
+
+    /**
+     * 프로젝트 구조 전체를 업데이트합니다.
+     * 이 작업은 카테고리 추가/삭제/수정 및 카테고리 내 채널 추가/삭제/수정을 모두 포함합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param projectStructure 업데이트할 프로젝트 구조
+     * @return 작업 결과
+     */
+    override suspend fun updateProjectStructure(projectId: String, projectStructure: ProjectStructure): Result<Unit> {
+        return try {
+            // 원격 데이터 소스를 통해 서버에 프로젝트 구조 업데이트
+            val result = remoteDataSource.updateProjectStructure(projectId, projectStructure)
+            
+            // 로컬 캐싱이 필요한 경우 여기에 구현
+            // 현재 구현에서는 필요 없음 (getProjectStructure 호출 시 새로 가져옴)
+            
+            result
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

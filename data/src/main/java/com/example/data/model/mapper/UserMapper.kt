@@ -69,7 +69,8 @@ fun UserDto.toDomainModelWithTime(dateTimeUtil: DateTimeUtil): User {
         createdAt = this.createdAt?.let { dateTimeUtil.firebaseTimestampToInstant(it) } 
             ?: basicDomain.createdAt, // Use existing instant from domain if DTO's is null (e.g. Instant.EPOCH or User.kt default)
         updatedAt = this.updatedAt?.let { dateTimeUtil.firebaseTimestampToInstant(it) }, // Nullable Instant
-        accountStatus = this.accountStatus // Uses AccountStatus.fromString
+        accountStatus = this.accountStatus, // Uses AccountStatus.fromString
+        consentTimeStamp = this.consentTimeStamp?.let { dateTimeUtil.firebaseTimestampToInstant(it) }
     )
 }
 
@@ -85,6 +86,7 @@ fun User.toDtoWithTime(dateTimeUtil: DateTimeUtil): UserDto {
         status = this.status, // Convert enum to string for Firestore
         createdAt = this.createdAt?.let { dateTimeUtil.instantToFirebaseTimestamp(it) }, // Respect domain's createdAt
         updatedAt = this.updatedAt?.let { dateTimeUtil.instantToFirebaseTimestamp(it) }, // Nullable Timestamp
-        accountStatus = this.accountStatus // Convert enum to string for Firestore
+        accountStatus = this.accountStatus, // Convert enum to string for Firestore
+        consentTimeStamp = this.consentTimeStamp?.let { dateTimeUtil.instantToFirebaseTimestamp(it) }
     )
 }

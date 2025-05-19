@@ -62,13 +62,16 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.appcheck.playintegrity)
     debugImplementation(libs.firebase.appcheck.debug)
-    
-    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging.ktx)
+
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
     // Task.await() 사용을 위한 의존성 추가
     implementation(libs.kotlinx.coroutines.play.services) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
+
+    // app_api 모듈 추가 - app에서 구현을 제공할 API를 정의
+    implementation(project(":app_api"))
 
     implementation(project(":data"))
     implementation(project(":domain"))
@@ -77,6 +80,8 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":core:core_logging"))
     implementation(project(":core:core_navigation"))
+    implementation(project(":core:core_fcm"))
+
 
     // ★ 네비게이션 그래프에서 직접 호출하는 모든 Feature 모듈 의존성 추가
     implementation(project(":feature:feature_main"))
@@ -88,7 +93,6 @@ dependencies {
     implementation(project(":feature:feature_schedule"))
     implementation(project(":feature:feature_search"))
     implementation(project(":feature:feature_dev")) // DevMenuScreen 호출 시
-    implementation(project(":core:core_ui")) // 공통 UI 요소(아이콘 등) 사용 시
 
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 

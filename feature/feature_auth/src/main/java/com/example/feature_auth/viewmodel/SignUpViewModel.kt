@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.time.Instant
 
 /**
  * 회원가입 화면의 UI 상태를 정의하는 데이터 클래스
@@ -24,6 +25,14 @@ data class SignUpUiState(
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val signUpSuccess: Boolean = false,
+    val isNotUnder14: Boolean = false, // 만 14세 미만 여부
+    val agreeWithTerms: Boolean = false, // 이용약관 및 개인정보처리방침 동의 여부
+
+    // Email Verification States
+    val isEmailVerificationSent: Boolean = false, // 이메일 인증 메일 발송 여부
+    val isEmailVerified: Boolean = false, // 이메일 인증 완료 여부
+    val emailVerificationError: String? = null, // 이메일 인증 관련 에러 메시지
+    val isVerifyingEmail: Boolean = false, // 이메일 인증 시도 중 (로딩) 상태
 
     // 필드별 에러 상태
     val emailError: String? = null,
@@ -46,13 +55,23 @@ sealed class SignUpEvent {
      * 로그인 화면으로 이동 이벤트
      */
     object NavigateToLogin : SignUpEvent()
-    
+
+    /**
+     * 서비스 이용약관 화면으로 이동 이벤트
+     */
+    object NavigateToTermsOfService : SignUpEvent()
+
+    /**
+     * 개인정보 처리방침 화면으로 이동 이벤트
+     */
+    object NavigateToPrivacyPolicy : SignUpEvent()
+
     /**
      * 스낵바 메시지 표시 이벤트
      * @param message 표시할 메시지
      */
     data class ShowSnackbar(val message: String) : SignUpEvent()
-    
+
     /**
      * 특정 입력 필드로 포커스 요청 이벤트
      * @param target 포커스 대상 필드
@@ -117,11 +136,55 @@ class SignUpViewModel @Inject constructor(
     }
 
     /**
+     * 만 14세 미만 체크박스 상태 변경 처리
+     * @param isChecked 변경된 체크 상태
+     */
+    fun onUnder14CheckedChange(isChecked: Boolean) {
+        _uiState.update { it.copy(isNotUnder14 = isChecked) }
+    }
+
+    /**
+     * 이용약관 및 개인정보처리방침 동의 체크박스 상태 변경 처리
+     * @param isChecked 변경된 체크 상태
+     */
+    fun onAgreeWithTermsChange(isChecked: Boolean) {
+        _uiState.update { it.copy(agreeWithTerms = isChecked) }
+    }
+
+    /**
+     * 서비스 이용약관 클릭 처리
+     */
+    fun onTermsOfServiceClick() {
+        viewModelScope.launch {
+            _eventFlow.emit(SignUpEvent.NavigateToTermsOfService)
+        }
+    }
+
+    /**
+     * 개인정보 처리방침 클릭 처리
+     */
+    fun onPrivacyPolicyClick() {
+        viewModelScope.launch {
+            _eventFlow.emit(SignUpEvent.NavigateToPrivacyPolicy)
+        }
+    }
+
+    /**
      * 회원가입 처리 함수
      * 각 필드 유효성 검사 후 회원가입 UseCase 실행
      */
     fun signUp() {
         val state = _uiState.value
+
+        // 필수 조건 검사 (나이, 약관)
+        if (!state.isNotUnder14) {
+            viewModelScope.launch { _eventFlow.emit(SignUpEvent.ShowSnackbar("만 14세 미만은 가입할 수 없습니다.")) }
+            return
+        }
+        if (!state.agreeWithTerms) {
+            viewModelScope.launch { _eventFlow.emit(SignUpEvent.ShowSnackbar("이용약관 및 개인정보처리방침에 동의해주세요.")) }
+            return
+        }
 
         // 유효성 검사 (순서 중요: 첫 번째 오류에서 멈추고 포커스 이동)
         var focusTarget: SignUpFormFocusTarget? = null
@@ -145,7 +208,7 @@ class SignUpViewModel @Inject constructor(
             }
             return
         }
-        
+
         // 유효성 검사 통과 시 회원가입 로직 진행
         viewModelScope.launch {
             // 로딩 시작 및 모든 필드 에러 초기화
@@ -156,7 +219,7 @@ class SignUpViewModel @Inject constructor(
                 passwordConfirmError = null,
                 nameError = null
             )}
-            
+
             // 닉네임 중복 확인
             val nicknameCheck = checkNicknameAvailabilityUseCase(state.name)
             if (nicknameCheck.isFailure || nicknameCheck.getOrNull() == false) {
@@ -167,9 +230,12 @@ class SignUpViewModel @Inject constructor(
                 _eventFlow.emit(SignUpEvent.RequestFocus(SignUpFormFocusTarget.NAME))
                 return@launch
             }
-            
+
+            // 정책 동의 시간 기록
+            val consentTimeStamp = Instant.now()
+
             // SignUpUseCase 호출
-            val result = signUpUseCase(state.email, state.password, state.name)
+            val result = signUpUseCase(state.email, state.password, state.name, consentTimeStamp)
 
             result.onSuccess { newUser ->
                 _uiState.update { it.copy(isLoading = false, signUpSuccess = true) }
@@ -209,7 +275,19 @@ class SignUpViewModel @Inject constructor(
             checkEmail(uiState.value)
         }
     }
-    
+
+    /**
+     * 비밀번호 포커스 상태 변경 처리   
+     * @param focusState 포커스 상태
+     */
+    fun onPasswordFocus(focusState: FocusState) {
+        if (focusState.isFocused) {
+            _uiState.update { it.copy(isPasswordTouched = true) }
+        } else if (!focusState.isFocused && uiState.value.isPasswordTouched) {
+            checkPassword(uiState.value)
+        }
+    }
+
     /**
      * 비밀번호 유효성 검사
      * @param state 현재 UI 상태
@@ -250,18 +328,6 @@ class SignUpViewModel @Inject constructor(
     }
 
     /**
-     * 비밀번호 포커스 상태 변경 처리
-     * @param focusState 포커스 상태
-     */
-    fun onPasswordFocus(focusState: FocusState) {
-        if (focusState.isFocused) {
-            _uiState.update { it.copy(isPasswordTouched = true) }
-        } else if (!focusState.isFocused && uiState.value.isPasswordTouched) {
-            checkPassword(uiState.value)
-        }
-    }
-
-    /**
      * 비밀번호 확인 유효성 검사
      * @param state 현재 UI 상태
      * @return 유효성 검사 실패 여부 (true: 실패, false: 성공)
@@ -296,11 +362,20 @@ class SignUpViewModel @Inject constructor(
             _uiState.update { it.copy(nameError = "이름을 입력해주세요.") }
             return true
         }
+        // TODO: 이름(닉네임) 정책에 따른 추가 검사 (길이, 특수문자 등)
+        if (state.name.length < 2) {
+            _uiState.update { it.copy(nameError = "이름은 최소 2자 이상이어야 합니다.") }
+            return true
+        }
+        if (state.name.length > 20) {
+            _uiState.update { it.copy(nameError = "이름은 최대 20자까지 가능합니다.") }
+            return true
+        }
         return false
     }
 
     /**
-     * 이름 포커스 상태 변경 처리
+     * 이름(닉네임) 포커스 상태 변경 처리
      * @param focusState 포커스 상태
      */
     fun onNameFocus(focusState: FocusState) {

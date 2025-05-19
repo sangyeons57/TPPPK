@@ -5,17 +5,83 @@ rules_version = '2';
 //    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    // 기본적으로 인증된 사용자만 접근 허용
+    // === 유틸리티 함수 ===
+    
+    // 사용자 인증 여부 확인
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // 요청 사용자와 ID 일치 여부 확인
+    function isCurrentUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // 프로젝트 소유자 여부 확인 (Firestore 데이터 기반)
+    function isProjectOwner(projectId) {
+      return isAuthenticated() && 
+             firestore.get(/databases/(default)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+    }
+    
+    // 프로젝트 멤버 여부 확인 (Firestore 데이터 기반)
+    function isProjectMember(projectId) {
+      return isAuthenticated() && 
+             firestore.exists(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid));
+    }
+    
+    // === 기본 규칙 ===
+    
+    // 기본적으로 모든 접근 거부
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
-
-    // 사용자는 자신의 폴더(/users/{userId}/) 하위 파일만 읽고 쓸 수 있음
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    
+    // === 사용자 관련 규칙 ===
+    
+    // 사용자 프로필 이미지
+    match /users/{userId}/profile/{imageId} {
+      allow read: if isAuthenticated(); // 모든 인증된 사용자가 읽기 가능
+      allow write: if isCurrentUser(userId); // 본인만 쓰기 가능
     }
-
-    // 참고: 프로젝트 관련 파일 등 다른 경로에 대한 규칙은 필요에 따라 추가
-    // 예: match /projects/{projectId}/{allPaths=**} { ... }
+    
+    // 사용자 개인 파일
+    match /users/{userId}/files/{allPaths=**} {
+      allow read, write: if isCurrentUser(userId); // 본인만 읽기/쓰기 가능
+    }
+    
+    // === 프로젝트 관련 규칙 ===
+    
+    // 프로젝트 파일
+    match /projects/{projectId}/{allPaths=**} {
+      // 멤버는 읽기만 가능
+      allow read: if isProjectMember(projectId);
+      // 소유자는 읽기/쓰기 가능
+      allow write: if isProjectOwner(projectId);
+    }
+    
+    // === 임시 파일 관련 규칙 ===
+    
+    // 임시 업로드 폴더 (유효 시간 24시간 이내의 파일, maxAge 메타데이터 기반)
+    match /temp/{userId}/{fileName} {
+      // 본인만 접근 가능하며 maxAge 메타데이터 설정 필요
+      allow read: if isCurrentUser(userId);
+      
+      // 업로드 시 maxAge 메타데이터 설정 (24시간) 강제
+      allow create: if isCurrentUser(userId) && 
+                       request.resource.metadata.maxAge is number &&
+                       request.resource.metadata.maxAge <= 86400000;
+                       
+      // 본인이 생성한 파일만 삭제 가능
+      allow delete: if isCurrentUser(userId);
+    }
+    
+    // === 공개 파일 관련 규칙 ===
+    
+    // 공개 파일 (모든 인증된 사용자 읽기 가능, 관리자만 쓰기 가능)
+    match /public/{fileName} {
+      allow read: if isAuthenticated();
+      // 쓰기 불가 (Admin SDK를 통해서만 가능)
+      allow write: if false;
+    }
   }
 }

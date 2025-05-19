@@ -60,7 +60,7 @@ import com.example.feature_chat.viewmodel.ChatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import java.util.Locale
 import android.util.Log // Added for logging
 import java.time.Instant
@@ -72,7 +72,7 @@ import java.time.Instant
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,7 +103,7 @@ fun ChatScreen(
                 is ChatEvent.ShowUserProfileDialog -> showUserProfileDialog = event.userId
                 is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ClearFocus -> focusManager.clearFocus()
-                is ChatEvent.NavigateBack -> navigationHandler.navigateBack()
+                is ChatEvent.NavigateBack -> appNavigator.navigateBack()
                 is ChatEvent.Error -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ShowMessageActions -> {
                     // 메시지 ID와 텍스트를 사용해 다이얼로그 표시

@@ -1,10 +1,7 @@
 package com.example.core_navigation.di
 
-import android.content.Context
-import com.example.core_navigation.core.ComposeNavigationHandler
-import com.example.core_navigation.core.NavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationManager
-import com.example.core_navigation.core.NavigationResultListener
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -19,34 +16,13 @@ import javax.inject.Singleton
 abstract class NavigationModule {
     
     /**
-     * 통합된 NavigationManager를 ComposeNavigationHandler로 바인딩
+     * 통합된 NavigationManager를 AppNavigator로 바인딩
      */
     @Binds
     @Singleton
-    abstract fun bindComposeNavigationHandler(
+    abstract fun bindAppNavigator(
         manager: NavigationManager
-    ): ComposeNavigationHandler
-    
-    /**
-     * 통합된 NavigationManager를 NavigationHandler로 바인딩
-     */
-    @Binds
-    @Singleton
-    abstract fun bindNavigationHandler(
-        manager: NavigationManager
-    ): NavigationHandler
-    
-    /**
-     * 통합된 NavigationManager를 NavigationResultListener로 바인딩
-     */
-    @Binds
-    @Singleton
-    abstract fun bindNavigationResultListener(
-        manager: NavigationManager
-    ): NavigationResultListener
-    
-    // NavigationManager 자체는 @Singleton @Inject constructor()를 가지므로
-    // Hilt가 자동으로 인스턴스를 생성하고 관리합니다.
+    ): AppNavigator
 }
 
 // companion object를 제거하거나 내부의 불필요한 @Provides 함수들을 제거합니다.

@@ -11,43 +11,97 @@ alwaysApply: false
 - **모듈화**: 세분화된 모듈로 빌드 성능 최적화 및 코드 관리 용이성 확보
 - **테스트 용이성**: 모든 레이어가 독립적으로 테스트 가능하도록 설계
 - **오프라인 우선 (전략 변경 중)**: Firestore 캐시를 우선 활용하며, 필요시 Room DB를 통한 고도화된 로컬 캐싱 전략 적용 ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md) 참조)
+- **Data흐름 구조**: data -> datasource -> repository -> viewmodel -> ui (또한 각 계층은 추상화 되어있음)
 
 ## 모듈 구조 및 의존성
 
+현재 프로젝트는 다음과 같은 모듈로 구성되어 있습니다 (settings.gradle.kts 기준):
+
+```
+:app                    # 앱 진입점 및 통합 모듈
+:navigation             # 앱 전체 네비게이션 관리
+:data                   # 데이터 레이어
+:domain                 # 도메인 레이어
+:core:core_common       # 공통 유틸리티 및 기본 기능
+:core:core_logging      # 로깅 관련 기능
+:core:core_ui           # UI 공통 컴포넌트
+:core:core_navigation   # 네비게이션 관련 핵심 기능
+:core:core_fcm          # Firebase Cloud Messaging 관련 기능
+:feature:feature_chat   # 채팅 기능
+:feature:feature_auth   # 인증 기능
+:feature:feature_dev    # 개발자 전용 기능
+:feature:feature_friends # 친구 관리 기능
+:feature:feature_main   # 메인 화면 기능
+:feature:feature_profile # 프로필 관리 기능
+:feature:feature_project # 프로젝트 관리 기능
+:feature:feature_schedule # 일정 관리 기능
+:feature:feature_search # 검색 기능
+:feature:feature_settings # 설정 기능
+:app_api                # 앱 API 모듈
+```
+
+각 모듈의 책임과 의존성은 다음과 같습니다:
+
 - **도메인 레이어 (`:domain`)**
-  - **`:domain:model`**: 순수 비즈니스 엔티티/모델 (Kotlin data classes)
-  - **`:domain:repository`**: 데이터 소스 접근을 위한 인터페이스 정의
-  - **`:domain:usecase`**: 비즈니스 로직을 캡슐화한 유스케이스
+  - **모델**: 순수 비즈니스 엔티티/모델 (Kotlin data classes)
+  - **repository**: 데이터 소스 접근을 위한 인터페이스 정의
+  - **usecase**: 비즈니스 로직을 캡슐화한 유스케이스
+  - **util**: 도메인 레이어 유틸리티
   - 특징: 프레임워크 독립적, 외부 레이어에 대한 의존성 없음
 
 - **데이터 레이어 (`:data`)**
-  - **`:data:remote`**: 원격 데이터 소스 구현 (Firebase Firestore, Retrofit)
-  - **`:data:local`**: 로컬 데이터 소스 구현 (Room, DataStore)
-    - 로컬 엔티티 (Room Entity)
-    - DAO (Data Access Object) 인터페이스
-    - `AppTypeConverters`: 커스텀 타입 변환 (Date, LocalDateTime, List<String>)
-    - **참고**: 현재 Room DB는 기능적으로 분리되어 비활성 상태이며, Firestore 캐시를 우선 사용합니다. ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md))
-  - **`:data:repository`**: 도메인 레이어의 레포지토리 인터페이스 구현
-  - 의존성: `:domain:model`, `:domain:repository`, `:core:network`
+  - **datasource**: 데이터 소스 구현
+    - **local**: 로컬 데이터 소스 (Room, DataStore, Firestore 캐시)
+    - **remote**: 원격 데이터 소스 (Firebase Firestore, Retrofit)
+  - **db**: 로컬 데이터베이스 관련 코드
+    - **converter**: 데이터 타입 변환기
+    - **dao**: 데이터 액세스 객체
+    - **migration**: 데이터베이스 마이그레이션
+  - **di**: 의존성 주입 모듈
+  - **migration**: 데이터 마이그레이션 관련 코드
+  - **model**: 데이터 모델
+    - **local**: 로컬 데이터 모델
+    - **remote**: 원격 API 모델
+    - **mapper**: 모델 변환 로직
+  - **repository**: 도메인 레이어의 레포지토리 인터페이스 구현
+  - **util**: 데이터 레이어 유틸리티
+  - 의존성: `:domain:model`, `:domain:repository`, `:core:core_common`
 
 - **프레젠테이션 레이어 (`:feature`)**
   - **`:feature:{feature_name}`**: 개별 기능별 모듈
   - 각 기능 모듈은 내부적으로 다음과 같은 패키지 구조를 가짐:
     - `ui`: Composable 컴포넌트, 화면
     - `viewmodel`: 화면별 ViewModel
-    - `mapper`: 도메인 모델 → UI 모델 변환 로직
-    - `di`: 기능별 의존성 주입 모듈
-  - 의존성: `:domain:usecase`, `:domain:model`, `:core:ui`
+    - `model`: UI 모델 (일부 모듈)
+  - 의존성: `:domain:usecase`, `:domain:model`, `:core:core_ui`, `:core:core_navigation`
   - **중요**: ViewModel은 Repository를 직접 사용할 수 없고, 반드시 UseCase를 통해서만 도메인 로직에 접근해야 함
 
 - **코어 레이어 (`:core`)**
-  - **`:core:ui`**: 공통 UI 컴포넌트, 테마, 스타일
-  - **`:core:common`**: 프레임워크 독립적 유틸리티
-  - **`:core:logging`**: 로깅 추상화 (Sentry)
-  - **`:core:testing`**: 테스트 관련 공통 코드
-  - **`:core:network`**: 네트워크 공통 구성 요소
-  - **`:core:di`**: 의존성 주입 공통 설정
-  - **`:core:analytics`**: 분석 관련 공통 코드
+  - **`:core:core_ui`**: 공통 UI 컴포넌트, 테마, 스타일
+    - `components`: 재사용 가능한 UI 컴포넌트
+    - `theme`: 앱 테마 및 스타일 정의
+  - **`:core:core_common`**: 프레임워크 독립적 유틸리티
+    - `di`: 공통 의존성 주입 모듈
+    - `util`: 유틸리티 클래스
+    - `constants`: 상수 정의
+    - `dispatcher`: 코루틴 디스패처
+    - `error`: 오류 처리
+    - `network`: 네트워크 관련 공통 코드
+    - `result`: 결과 래퍼 클래스
+  - **`:core:core_logging`**: 로깅 추상화 (Sentry)
+  - **`:core:core_navigation`**: 네비게이션 관련 핵심 기능
+    - `compose`: Compose 네비게이션 관련 코드
+    - `core`: 핵심 네비게이션 로직
+    - `destination`: 네비게이션 목적지 정의
+    - `di`: 네비게이션 의존성 주입
+    - `extension`: 네비게이션 확장 함수
+  - **`:core:core_fcm`**: Firebase Cloud Messaging 관련 기능
+    - `di`: FCM 의존성 주입
+    - `notification`: 알림 관리
+    - `topic`: FCM 토픽 관리
+    - `utils`: FCM 유틸리티
+    - `viewmodel`: FCM 관련 ViewModel
+    - `worker`: 백그라운드 작업
 
 - **앱 레이어 (`:app`)**
   - 모든 모듈 통합 지점
@@ -55,10 +109,20 @@ alwaysApply: false
   - 메인 네비게이션 그래프 설정
   - 의존성: 모든 필요 모듈
 
-- **네비게이션 레이어 (`:navigation`)**
-  - 앱 전체 네비게이션 정의, 라우트, 인자
-  - 타입 안전한 네비게이션 제공 (Jetpack Navigation Compose)
-  - 의존성: `:core:common`
+- **네비게이션 구조**
+  - **`:core:core_navigation`**: 핵심 네비게이션 아키텍처 및 구현
+    - 네비게이션 컴포넌트 기본 설정 및 확장 기능
+    - 공통 네비게이션 인터페이스 및 유틸리티
+    - 모듈 간 타입 안전한 네비게이션 지원
+  - **`:navigation`**: 앱 수준 네비게이션 설정
+    - 전체 네비게이션 그래프 정의
+    - 화면 간 라우팅 및 인자 정의
+    - 의존성: `:core:core_common`, `:core:core_navigation`
+
+- **API 레이어 (`:app_api`)**
+  - 앱의 API 인터페이스 및 구현 정의
+  - 외부 시스템과의 통신 인터페이스 관리
+  - 의존성: `:domain`, `:core:core_common`
 
 ## 아키텍처 패턴
 
@@ -145,12 +209,29 @@ alwaysApply: false
   - 채팅 관련 필터링 및 정렬
   - 프로젝트 멤버/역할 관련 필터링 및 정렬
 
-### 로컬 데이터 관리 (Room)
-- **(현재 비활성 상태)**: 아래 구조는 유지되지만, 현재는 기능적으로 분리되어 Firestore 캐시를 우선 사용합니다. ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md))
-- **엔티티**:
+### 로컬 데이터 관리 전략
+
+#### Firestore 캐시 (주 전략)
+- 현재 프로젝트는 주로 Firestore의 내장 캐싱 기능을 활용하여 오프라인 데이터 액세스를 제공합니다.
+- **장점**:
+  - 별도의 로컬 DB 관리 로직 최소화
+  - 자동 동기화 지원
+  - 구현 복잡성 감소
+- **적용 영역**:
+  - 대부분의 읽기 작업 (프로젝트, 채팅 기록, 사용자 정보 등)
+  - 간단한 오프라인 작업
+
+#### Room DB (제한적 사용)
+- **(현재 비활성 상태)**: Room DB 구조는 유지되지만, 현재는 기능적으로 분리되어 제한적으로 사용됩니다. ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md))
+- **적용 예정 영역**:
+  - 복잡한 로컬 검색이 필요한 기능
+  - 오프라인 퍼시스턴스가 중요한 기능
+  - Firestore 캐시로 해결하기 어려운 고급 오프라인 작업
+
+- **엔티티 구조** (참조용):
   - 사용자 관련: `UserEntity`, `FriendEntity`, `FriendRequestEntity`
-  - 프로젝트 관련: `ProjectEntity`, `ProjectMemberEntity`, `RoleEntity`, `RolePermissionEntity`
-  - 커뮤니케이션 관련: `ChatEntity`, `ChatMessageEntity`, `DmConversationEntity`
+  - 프로젝트 관련: `ProjectEntity`, `ProjectMemberEntity`, `RoleEntity` 
+  - 커뮤니케이션 관련: `ChatEntity`, `MessageEntity`, `DmConversationEntity`
   - 기타: `ScheduleEntity`, `CategoryEntity`, `ChannelEntity`, `InviteEntity`
 
 - **TypeConverters**:

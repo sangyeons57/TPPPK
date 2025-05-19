@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.viewmodel.AddProjectEvent
 import com.example.feature_project.viewmodel.AddProjectMode
@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class) // Scaffold, TopAppBar 등 사용
 @Composable
 fun AddProjectScreen(
-    navigationManager: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: AddProjectViewModel = hiltViewModel()
 ) {
@@ -59,7 +59,7 @@ fun AddProjectScreen(
     // 프로젝트 추가 성공 시 뒤로 가기
     LaunchedEffect(uiState.projectAddedSuccessfully) {
         if (uiState.projectAddedSuccessfully) {
-            navigationManager.navigateBack()
+            appNavigator.navigateBack()
         }
     }
 
@@ -71,7 +71,7 @@ fun AddProjectScreen(
                 title = { Text("프로젝트 추가") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navigationManager.navigateBack()
+                        appNavigator.navigateBack()
                     }) { // 뒤로가기 버튼
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }

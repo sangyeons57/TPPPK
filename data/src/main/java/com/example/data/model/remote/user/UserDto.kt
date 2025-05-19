@@ -59,7 +59,10 @@ data class UserDto(
     var activeDmIds: List<String> = emptyList(),
 
     @PropertyName(FirestoreConstants.UserFields.IS_EMAIL_VERIFIED)
-    var isEmailVerified: Boolean = false
+    var isEmailVerified: Boolean = false,
+    
+    @PropertyName(FirestoreConstants.UserFields.CONSENT_TIMESTAMP)
+    var consentTimeStamp: Timestamp? = null
 ) {
     fun toMap(): Map<String, Any?> {
         return mapOf(
@@ -75,7 +78,8 @@ data class UserDto(
             FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS to participatingProjectIds,
             FirestoreConstants.UserFields.ACCOUNT_STATUS to accountStatus,
             FirestoreConstants.UserFields.ACTIVE_DM_IDS to activeDmIds,
-            FirestoreConstants.UserFields.IS_EMAIL_VERIFIED to isEmailVerified
+            FirestoreConstants.UserFields.IS_EMAIL_VERIFIED to isEmailVerified,
+            FirestoreConstants.UserFields.CONSENT_TIMESTAMP to consentTimeStamp
         ).filterValues { it != null }
     }
 
@@ -93,7 +97,8 @@ data class UserDto(
             participatingProjectIds = this.participatingProjectIds,
             accountStatus = this.accountStatus,
             activeDmIds = this.activeDmIds,
-            isEmailVerified = this.isEmailVerified
+            isEmailVerified = this.isEmailVerified,
+            consentTimeStamp = Instant.EPOCH
         )
     }
 
@@ -114,7 +119,8 @@ data class UserDto(
                 participatingProjectIds = (map[FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 accountStatus = map[FirestoreConstants.UserFields.ACCOUNT_STATUS] as? AccountStatus ?: AccountStatus.UNKNOWN,
                 activeDmIds = (map[FirestoreConstants.UserFields.ACTIVE_DM_IDS] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                isEmailVerified = map[FirestoreConstants.UserFields.IS_EMAIL_VERIFIED] as? Boolean ?: false
+                isEmailVerified = map[FirestoreConstants.UserFields.IS_EMAIL_VERIFIED] as? Boolean ?: false,
+                consentTimeStamp = map[FirestoreConstants.UserFields.CONSENT_TIMESTAMP] as? Timestamp
             )
         }
 
@@ -133,7 +139,8 @@ data class UserDto(
                 participatingProjectIds = domain.participatingProjectIds,
                 accountStatus = domain.accountStatus,
                 activeDmIds = domain.activeDmIds,
-                isEmailVerified = domain.isEmailVerified
+                isEmailVerified = domain.isEmailVerified,
+                consentTimeStamp = null
             )
         }
     }

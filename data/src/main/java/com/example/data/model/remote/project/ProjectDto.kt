@@ -25,9 +25,6 @@ data class ProjectDto(
     @PropertyName(FirestoreConstants.ProjectFields.IMAGE_URL)
     var imageUrl: String? = null,
     
-    @PropertyName(FirestoreConstants.ProjectFields.CATEGORY_ID)
-    var categoryId: String? = null,
-    
     @PropertyName(FirestoreConstants.ProjectFields.OWNER_ID)
     var ownerId: String = "",
     
@@ -57,7 +54,6 @@ data class ProjectDto(
             FirestoreConstants.ProjectFields.CREATED_AT to createdAt,
             FirestoreConstants.ProjectFields.UPDATED_AT to updatedAt,
             FirestoreConstants.ProjectFields.IS_PUBLIC to isPublic,
-            FirestoreConstants.ProjectFields.CATEGORY_ID to categoryId
         )
     }
 
@@ -99,7 +95,6 @@ data class ProjectDto(
                 createdAt = map[FirestoreConstants.ProjectFields.CREATED_AT] as? Timestamp,
                 updatedAt = map[FirestoreConstants.ProjectFields.UPDATED_AT] as? Timestamp,
                 isPublic = map[FirestoreConstants.ProjectFields.IS_PUBLIC] as? Boolean ?: false,
-                categoryId = map[FirestoreConstants.ProjectFields.CATEGORY_ID] as? String
             )
         }
 
@@ -121,10 +116,6 @@ data class ProjectDto(
                 createdAt = null, // Placeholder, to be overwritten by mapper
                 updatedAt = null, // Placeholder, to be overwritten by mapper
                 isPublic = domain.isPublic,
-                // Project domain model doesn't have categoryId. Defaulting to null.
-                // The mapper's toFirestore currently sets it to "". This DTO will set to null.
-                // Mapper logic will need to decide final value if domain model doesn't provide it.
-                categoryId = null 
             )
         }
     }

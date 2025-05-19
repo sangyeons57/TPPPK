@@ -18,7 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.structure.viewmodel.CreateChannelEvent
 import com.example.feature_project.structure.viewmodel.CreateChannelUiState
@@ -32,7 +32,7 @@ import com.example.domain.model.ChannelMode
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun CreateChannelScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: CreateChannelViewModel = hiltViewModel()
 ) {
@@ -44,7 +44,7 @@ fun CreateChannelScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is CreateChannelEvent.NavigateBack -> navigationHandler.navigateBack()
+                is CreateChannelEvent.NavigateBack -> appNavigator.navigateBack()
                 is CreateChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is CreateChannelEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -54,7 +54,7 @@ fun CreateChannelScreen(
     // 생성 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.createSuccess) {
         if (uiState.createSuccess) {
-            navigationHandler.navigateBack()
+            appNavigator.navigateBack()
         }
     }
 
@@ -65,7 +65,7 @@ fun CreateChannelScreen(
             TopAppBar(
                 title = { Text("채널 추가") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

@@ -40,7 +40,7 @@ fun Channel.isDirectProjectChannel(): Boolean =
  * 카테고리에 속한 채널인지 확인합니다.
  */
 fun Channel.isBelongToCategory(): Boolean = 
-    type == ChannelType.CATEGORY && projectSpecificData?.categoryId != null
+    type == ChannelType.PROJECT && projectSpecificData?.categoryId != null
 
 /**
  * 지정된 사용자가 DM 채널에 참여자인지 확인합니다.

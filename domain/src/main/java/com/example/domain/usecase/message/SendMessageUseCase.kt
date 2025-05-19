@@ -38,7 +38,7 @@ class SendMessageUseCase @Inject constructor(
         replyToMessageId: String? = null
     ): Result<ChatMessage> {
         // 현재 로그인된 사용자 정보 가져오기
-        val currentUserResult: Result<User?> = userRepository.getCurrentUser().first()
+        val currentUserResult: Result<User?> = userRepository.getCurrentUserStream().first()
         
         val currentUser: User = currentUserResult.getOrNull() 
             ?: return Result.failure(

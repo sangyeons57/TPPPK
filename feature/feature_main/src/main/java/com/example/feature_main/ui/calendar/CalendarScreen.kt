@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -63,14 +63,14 @@ import com.example.core_common.util.DateTimeUtil
  * - CalendarDimens: UI 크기 상수
  *
  * @param modifier 이 컴포넌트에 적용할 Modifier
- * @param navigationHandler 네비게이션 관리자
+ * @param appNavigator 네비게이션 관리자
  * @param viewModel 캘린더 화면의 상태와 로직을 관리하는 ViewModel 인스턴스
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -119,24 +119,13 @@ fun CalendarScreen(
                     // FAB 클릭 애니메이션
                     isFabVisible = false
                     delay(150) // 애니메이션 효과 지연
-                    navigationHandler.navigate(
-                        NavigationCommand.NavigateToRoute(
-                            AppRoutes.Main.Calendar.addSchedule(
-                                uiState.selectedDate.year,
-                                uiState.selectedDate.monthValue,
-                                uiState.selectedDate.dayOfMonth
-                            )
-                        )
-                    )
+                    viewModel.onAddSchedule()
                     delay(50) // 애니메이션 효과 지연
                     isFabVisible = true
                 }
                 is CalendarEvent.NavigateToScheduleDetail -> {
-                    navigationHandler.navigate(
-                        NavigationCommand.NavigateToRoute(
-                            AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId)
-                        )
-                    )
+                    // 이벤트가 발생하면 ViewModel의 onScheduleClick 함수가 호출되므로 이 블록은 더 이상 사용되지 않습니다.
+                    // 이벤트 흐름은 유지하되 네비게이션 코드는 ScheduleService로 이동했습니다.
                 }
             }
         }
@@ -181,17 +170,7 @@ fun CalendarScreen(
             ScheduleSection(
                 uiState = uiState,
                 onScheduleClick = viewModel::onScheduleClick,
-                onDateClick24Hour = { date ->
-                    navigationHandler.navigate(
-                        NavigationCommand.NavigateToRoute(
-                            AppRoutes.Main.Calendar.calendar24Hour(
-                                date.year,
-                                date.monthValue,
-                                date.dayOfMonth
-                            )
-                        )
-                    )
-                }
+                onDateClick24Hour = viewModel::onDate24HourClick
             )
         }
     }

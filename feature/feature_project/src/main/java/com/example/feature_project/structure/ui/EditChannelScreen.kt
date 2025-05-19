@@ -19,7 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.structure.viewmodel.EditChannelEvent
 import com.example.feature_project.structure.viewmodel.EditChannelUiState
@@ -33,7 +33,7 @@ import com.example.domain.model.ChannelMode
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun EditChannelScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: EditChannelViewModel = hiltViewModel()
 ) {
@@ -46,7 +46,7 @@ fun EditChannelScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditChannelEvent.NavigateBack -> navigationHandler.navigateBack()
+                is EditChannelEvent.NavigateBack -> appNavigator.navigateBack()
                 is EditChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditChannelEvent.ClearFocus -> focusManager.clearFocus()
                 is EditChannelEvent.ShowDeleteConfirmation -> showDeleteConfirmationDialog = true
@@ -57,7 +57,7 @@ fun EditChannelScreen(
     // 수정 또는 삭제 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.updateSuccess, uiState.deleteSuccess) {
         if (uiState.updateSuccess || uiState.deleteSuccess) {
-            navigationHandler.navigateBack()
+            appNavigator.navigateBack()
         }
     }
 
@@ -68,7 +68,7 @@ fun EditChannelScreen(
             TopAppBar(
                 title = { Text("채널 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

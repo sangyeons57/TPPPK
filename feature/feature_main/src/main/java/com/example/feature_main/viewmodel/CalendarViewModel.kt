@@ -2,6 +2,10 @@ package com.example.feature_main.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
+import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.Schedule
 import com.example.domain.usecase.schedule.GetScheduleSummaryForMonthUseCase
 import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
@@ -13,7 +17,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.time.format.TextStyle
+import java.time.temporal.WeekFields
+import java.util.*
 import javax.inject.Inject
 
 // 캘린더 UI 상태
@@ -49,11 +55,13 @@ sealed class CalendarEvent {
  *
  * @property getSchedulesForDateUseCase 특정 날짜의 일정을 가져오는 유스케이스
  * @property getScheduleSummaryForMonthUseCase 특정 월의 일정 요약 정보를 가져오는 유스케이스
+ * @property appNavigator 네비게이션을 처리하는 핸들러
  */
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val getSchedulesForDateUseCase: GetSchedulesForDateUseCase,
-    private val getScheduleSummaryForMonthUseCase: GetScheduleSummaryForMonthUseCase
+    private val getScheduleSummaryForMonthUseCase: GetScheduleSummaryForMonthUseCase,
+    private val appNavigator: AppNavigator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState())
@@ -218,9 +226,11 @@ class CalendarViewModel @Inject constructor(
      * @param scheduleId 선택된 일정의 ID
      */
     fun onScheduleClick(scheduleId: String) {
-        viewModelScope.launch {
-            _eventFlow.emit(CalendarEvent.NavigateToScheduleDetail(scheduleId))
-        }
+        appNavigator.navigate(
+            NavigationCommand.NavigateToRoute(
+                NavDestination.fromRoute(AppRoutes.Main.Calendar.scheduleDetail(scheduleId))
+            )
+        )
     }
 
     /**
@@ -231,6 +241,24 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch {
             _eventFlow.emit(CalendarEvent.ShowAddScheduleDialog)
         }
+    }
+
+    /**
+     * 24시간 보기 버튼 클릭 시 호출됩니다.
+     * 24시간 보기 화면으로 이동합니다.
+     * 
+     * @param date 표시할 날짜
+     */
+    fun onDate24HourClick(date: LocalDate) {
+        appNavigator.navigate(
+            NavigationCommand.NavigateToRoute(
+                NavDestination.fromRoute(AppRoutes.Main.Calendar.calendar24Hour(
+                    date.year,
+                    date.monthValue,
+                    date.dayOfMonth
+                ))
+            )
+        )
     }
 
     /**
@@ -248,5 +276,21 @@ class CalendarViewModel @Inject constructor(
      */
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    /**
+     * 일정 추가 화면으로 이동합니다.
+     * 선택된 날짜를 기준으로 일정 추가 화면으로 네비게이션합니다.
+     */
+    fun onAddSchedule() {
+        appNavigator.navigate(
+            NavigationCommand.NavigateToRoute(
+                NavDestination.fromRoute(AppRoutes.Main.Calendar.addSchedule(
+                    uiState.value.selectedDate.year,
+                    uiState.value.selectedDate.monthValue,
+                    uiState.value.selectedDate.dayOfMonth
+                ))
+            )
+        )
     }
 }

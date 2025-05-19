@@ -21,7 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.ProjectMember
@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditMemberScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: EditMemberViewModel = hiltViewModel()
 ) {
@@ -49,7 +49,7 @@ fun EditMemberScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditMemberEvent.NavigateBack -> navigationHandler.navigateBack()
+                is EditMemberEvent.NavigateBack -> appNavigator.navigateBack()
                 is EditMemberEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -58,7 +58,7 @@ fun EditMemberScreen(
     // 저장 성공 시 뒤로가기 (LaunchedEffect 키를 uiState.saveSuccess로)
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
-            navigationHandler.navigateBack()
+            appNavigator.navigateBack()
         }
     }
 
@@ -69,7 +69,7 @@ fun EditMemberScreen(
             TopAppBar(
                 title = { Text("멤버 역할 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

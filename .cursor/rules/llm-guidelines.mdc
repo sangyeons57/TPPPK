@@ -1,7 +1,7 @@
 ---
-description: Character and Behavior Rules Document.
+description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # Projecting Kotlin: LLM Interaction Guidelines
 

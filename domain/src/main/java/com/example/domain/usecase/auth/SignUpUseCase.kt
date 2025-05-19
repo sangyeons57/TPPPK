@@ -3,6 +3,7 @@ package com.example.domain.usecase.auth
 import com.example.domain.model.User
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.UserRepository
+import java.time.Instant
 import javax.inject.Inject
 import kotlin.Result
 
@@ -25,12 +26,14 @@ class SignUpUseCase @Inject constructor(
      * @param email 사용자 이메일
      * @param password 사용자 비밀번호
      * @param nickname 사용자 닉네임
+     * @param consentTimeStamp 서비스 정책및 개인정보처리방침 동의 시간 (기본값은 현재 시간)
      * @return 성공 시 사용자 정보가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
     suspend operator fun invoke(
         email: String, 
         password: String, 
-        nickname: String
+        nickname: String,
+        consentTimeStamp: Instant = Instant.now()
     ): Result<User?> {
         // 닉네임 중복 확인 (선택적)
         val nicknameCheck = userRepository.checkNicknameAvailability(nickname)
@@ -39,6 +42,6 @@ class SignUpUseCase @Inject constructor(
         }
         
         // 회원가입 수행
-        return authRepository.signUp(email, password, nickname)
+        return authRepository.signUp(email, password, nickname, consentTimeStamp)
     }
 } 

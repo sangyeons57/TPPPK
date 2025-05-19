@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_auth.viewmodel.FindPasswordEvent
 import com.example.feature_auth.viewmodel.FindPasswordUiState
@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FindPasswordScreen(
-    navigationManager: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: FindPasswordViewModel = hiltViewModel()
 ) {
@@ -48,7 +48,7 @@ fun FindPasswordScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FindPasswordEvent.NavigateBack -> navigationManager.navigateBack()
+                is FindPasswordEvent.NavigateBack -> appNavigator.navigateBack()
                 is FindPasswordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
                     message = event.message,
                     duration = SnackbarDuration.Short

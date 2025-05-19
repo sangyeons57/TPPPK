@@ -4,7 +4,11 @@ import android.net.Uri // 이미지 처리를 위해 Uri 사용
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.User
 import com.example.domain.model.UserProfileData
+import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
+import com.example.domain.usecase.user.GetCurrentUserUseCase
+import com.example.domain.usecase.user.GetUserStreamUseCase
 import com.example.domain.usecase.user.GetUserUseCase
 import com.example.domain.usecase.user.RemoveProfileImageUseCase
 import com.example.domain.usecase.user.UpdateImageUseCase
@@ -35,8 +39,7 @@ sealed class EditProfileEvent {
 // --- ViewModel ---
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
-    private val getUserProfileUseCase: GetUserUseCase,
+    private val getCurrUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val updateProfileImageUseCase: UpdateImageUseCase,
     private val removeProfileImageUseCase: RemoveProfileImageUseCase
 ) : ViewModel() {
@@ -57,17 +60,26 @@ class EditProfileViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading user profile")
             
-            // 현재 로그인된 사용자의 ID 또는 특정 ID 가져오기
-            val userId = savedStateHandle.get<String>("userId") ?: "current"
-            val result = getUserProfileUseCase() // ★ UseCase 호출
-
-            if (result.isSuccess) {
-                _uiState.update { it.copy(isLoading = false, userProfile = result.getOrThrow()) }
-            } else {
-                val errorMsg = "프로필 정보를 불러오지 못했습니다: ${result.exceptionOrNull()?.message}"
+            getCurrUserStreamUseCase() // Flow<User> 반환
+                .catch { exception ->
+                    val errorMsg = "프로필 정보를 불러오지 못했습니다: ${exception.message}"
                 _uiState.update { it.copy(isLoading = false, error = errorMsg) }
                 _eventFlow.emit(EditProfileEvent.ShowSnackbar(errorMsg))
-            }
+                }
+                .collectLatest { result : Result<User>  ->
+                    // User 객체를 UserProfileData로 변환
+                    result.fold(
+                        onFailure = { exception ->
+                            val errorMsg = "프로필 정보를 불러오지 못했습니다: ${exception.message}"
+                            _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                            _eventFlow.emit(EditProfileEvent.ShowSnackbar(errorMsg)) }
+                        ,
+                        onSuccess = { user ->
+                            val profileData = user.toUserProfileData()
+                            _uiState.update { it.copy(isLoading = false, userProfile = profileData) }
+                        }
+                    )
+                }
         }
     }
 

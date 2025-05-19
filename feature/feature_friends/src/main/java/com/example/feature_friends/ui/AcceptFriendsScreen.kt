@@ -22,7 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.feature_friends.viewmodel.AcceptFriendsEvent
 import com.example.feature_friends.viewmodel.AcceptFriendsViewModel
 import com.example.feature_friends.viewmodel.FriendRequestItem
@@ -37,7 +37,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AcceptFriendsScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: AcceptFriendsViewModel = hiltViewModel()
 ) {
@@ -49,7 +49,7 @@ fun AcceptFriendsScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AcceptFriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is AcceptFriendsEvent.NavigateBack -> navigationHandler.navigateBack()
+                is AcceptFriendsEvent.NavigateBack -> appNavigator.navigateBack()
                 // NavigateBack 이벤트는 Screen에서 처리하지 않고, 필요 시 ViewModel에서 직접 호출 가능
             }
         }
@@ -62,7 +62,7 @@ fun AcceptFriendsScreen(
             TopAppBar(
                 title = { Text("친구 요청 수락하기") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }
@@ -182,20 +182,20 @@ fun FriendRequestItemComposable(
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-private fun AcceptFriendsListContentPreview() {
-    // Preview용 가짜 데이터 (UI 모델 사용)
-    val previewRequests = listOf(
-        FriendRequestItem("u10", "요청자1", null),
-        FriendRequestItem("u11", "요청자2", "url..."),
-        FriendRequestItem("u12", "요청자3", null)
+private fun AcceptFriendsScreenPreview() {
+    // 미리보기용 가짜 데이터 생성
+    val sampleRequests = listOf(
+        FriendRequestItem("user1", "사용자1", null),
+        FriendRequestItem("user2", "사용자2", null)
     )
+    
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Scaffold(
             topBar = { TopAppBar(title = { Text("친구 요청 수락하기") }) }
         ) { padding ->
             AcceptFriendsListContent(
                 modifier = Modifier.padding(padding),
-                requests = previewRequests,
+                requests = sampleRequests, // previewRequests -> sampleRequests
                 onAcceptClick = {},
                 onDenyClick = {}
             )

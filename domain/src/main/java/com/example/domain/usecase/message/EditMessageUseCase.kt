@@ -30,7 +30,7 @@ class EditMessageUseCase @Inject constructor(
         messageId: String,
         newText: String
     ): Result<Unit> {
-        val currentUserResult = userRepository.getCurrentUser().first()
+        val currentUserResult = userRepository.getCurrentUserStream().first()
 
         if (currentUserResult.isFailure) {
             return Result.failure(currentUserResult.exceptionOrNull() ?: IllegalStateException("Failed to get current user"))

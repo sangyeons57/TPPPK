@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.ChannelMode
@@ -27,7 +27,7 @@ import com.example.feature_project.viewmodel.ProjectDetailViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectDetailScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     viewModel: ProjectDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -47,7 +47,7 @@ fun ProjectDetailScreen(
             TopAppBar(
                 title = { Text(uiState.projectName.ifEmpty { "프로젝트 상세" }) }, // TODO: Use actual project name
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },
@@ -74,11 +74,11 @@ fun ProjectDetailScreen(
                 onChannelClick = { channel ->
                     // Navigate to ChatScreen
                     val command = when {
-                        channel.isDirect -> NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(channel.id))
-                        channel.categoryId != null -> NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(channel.id))
+                        channel.isDirect -> NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channel.id))
+                        channel.categoryId != null -> NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channel.id))
                         else -> null // Should not happen if isDirect or categoryId is consistent
                     }
-                    command?.let { navigationHandler.navigate(it) }
+                    command?.let { appNavigator.navigate(it) }
                 },
                 onAddChannelInCategoryClick = { categoryId ->
                     viewModel.showCreateCategoryChannelDialog(categoryId)

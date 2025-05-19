@@ -5,11 +5,9 @@ import com.example.core_common.constants.FirestoreConstants.ChannelFields
 import com.example.core_common.constants.FirestoreConstants.Collections
 import com.example.core_common.constants.FirestoreConstants.ChannelDmDataFields
 import com.example.core_common.constants.FirestoreConstants.ChannelProjectDataFields
-import com.example.core_common.constants.FirestoreConstants.MessageFields
 import com.example.data.model.mapper.ChannelMapper
 import com.example.domain.model.Channel
 import com.example.domain.model.ChannelType
-import com.example.domain.model.ChatMessage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -20,13 +18,13 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
-import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.example.core_common.util.DateTimeUtil
 import com.google.firebase.firestore.FieldValue
 import com.example.data.model.mapper.toDtoWithTime
+import com.example.core_common.constants.FirestoreConstants
 
 /**
  * 채널 관련 원격 데이터 소스 구현체
@@ -132,17 +130,33 @@ class ChannelRemoteDataSourceImpl @Inject constructor(
         projectId: String? = null,
         categoryId: String? = null
     ): Query {
+        Log.d(TAG, "buildChannelsQuery: type=$type, userId=$userId, projectId=$projectId, categoryId=$categoryId")
         var query = baseQuery
         type?.let { query = query.whereEqualTo(ChannelFields.CHANNEL_TYPE, it.name) }
         
-            if (type == ChannelType.DM && userId != null) {
-                query = query.whereArrayContains("${ChannelFields.DM_SPECIFIC_DATA}.${ChannelDmDataFields.PARTICIPANT_IDS}", userId)
-            }
-            
-        if (type == ChannelType.PROJECT || type == ChannelType.CATEGORY) {
-            projectId?.let { query = query.whereEqualTo("${ChannelFields.PROJECT_SPECIFIC_DATA}.${ChannelProjectDataFields.PROJECT_ID}", it) }
-            categoryId?.let { query = query.whereEqualTo("${ChannelFields.PROJECT_SPECIFIC_DATA}.${ChannelProjectDataFields.CATEGORY_ID}", it) }
+        if (type == ChannelType.DM && userId != null) {
+            Log.d(TAG, "buildChannelsQuery: Adding DM filter for userId=$userId")
+            query = query.whereArrayContains( 
+                ChannelFields.dmDataPath(ChannelDmDataFields.PARTICIPANT_IDS),
+                userId
+            )
         }
+            
+        if (type == ChannelType.PROJECT) {
+            projectId?.let { 
+                query = query.whereEqualTo(
+                    ChannelFields.projectDataPath(ChannelProjectDataFields.PROJECT_ID), 
+                    it
+                ) 
+            }
+            categoryId?.let { 
+                query = query.whereEqualTo(
+                    ChannelFields.projectDataPath(ChannelProjectDataFields.CATEGORY_ID),
+                    it
+                ) 
+            }
+        }
+        Log.d(TAG, "buildChannelsQuery: Final query created for type=$type")
         return query
     }
 
@@ -155,9 +169,6 @@ class ChannelRemoteDataSourceImpl @Inject constructor(
             }
             if (type == null || type == ChannelType.PROJECT) {
                 queries.add(buildChannelsQuery(firestore.collection(Collections.CHANNELS), ChannelType.PROJECT))
-            }
-            if (type == null || type == ChannelType.CATEGORY) {
-                queries.add(buildChannelsQuery(firestore.collection(Collections.CHANNELS), ChannelType.CATEGORY))
             }
             
             val allChannels = mutableListOf<Channel>()
@@ -197,14 +208,30 @@ class ChannelRemoteDataSourceImpl @Inject constructor(
     }
 
     override fun getChannelsByTypeStream(type: ChannelType, userId: String?): Flow<List<Channel>> = callbackFlow {
+        Log.d(TAG, "getChannelsByTypeStream: Starting for type=$type, userId=$userId")
         val query = buildChannelsQuery(firestore.collection(Collections.CHANNELS), type, userId = if (type == ChannelType.DM) userId else null)
+        Log.d(TAG, "getChannelsByTypeStream: Query built, adding snapshot listener")
+        
         val listener = query.addSnapshotListener { snapshot, error ->
-            if (error != null) { close(error); return@addSnapshotListener }
+            if (error != null) { 
+                Log.e(TAG, "getChannelsByTypeStream: Error in snapshot listener", error)
+                close(error); 
+                return@addSnapshotListener 
+            }
             if (snapshot != null) {
-                trySend(snapshot.documents.mapNotNull { channelMapper.mapToDomain(it) }).isSuccess
+                Log.d(TAG, "getChannelsByTypeStream: Snapshot received with ${snapshot.documents.size} documents")
+                val channels = snapshot.documents.mapNotNull { channelMapper.mapToDomain(it) }
+                Log.d(TAG, "getChannelsByTypeStream: Mapped to ${channels.size} channels, IDs: ${channels.map { it.id }}")
+                trySend(channels).isSuccess
+            } else {
+                Log.w(TAG, "getChannelsByTypeStream: Null snapshot received")
+                trySend(emptyList()).isSuccess
             }
         }
-        awaitClose { listener.remove() }
+        awaitClose { 
+            Log.d(TAG, "getChannelsByTypeStream: Flow cancelled, removing listener")
+            listener.remove() 
+        }
     }
 
     override suspend fun addDmParticipant(channelId: String, userId: String): Result<Unit> = withContext(ioDispatcher) {
@@ -214,9 +241,9 @@ class ChannelRemoteDataSourceImpl @Inject constructor(
              if (channelType != ChannelType.DM.name) { 
                  throw IllegalArgumentException("Channel $channelId is not a DM channel. Type is $channelType")
              }
-
+             val dmParticipantIdsPath = FirestoreConstants.ChannelFields.dmDataPath(ChannelDmDataFields.PARTICIPANT_IDS)
             firestore.collection(Collections.CHANNELS).document(channelId).update(
-                "${ChannelFields.DM_SPECIFIC_DATA}.${ChannelDmDataFields.PARTICIPANT_IDS}", 
+                dmParticipantIdsPath, 
                 FieldValue.arrayUnion(userId)
             ).await()
             Unit
@@ -230,8 +257,9 @@ class ChannelRemoteDataSourceImpl @Inject constructor(
              if (channelType != ChannelType.DM.name) { 
                  throw IllegalArgumentException("Channel $channelId is not a DM channel. Type is $channelType")
              }
+             val dmParticipantIdsPath = FirestoreConstants.ChannelFields.dmDataPath(ChannelDmDataFields.PARTICIPANT_IDS)
             firestore.collection(Collections.CHANNELS).document(channelId).update(
-                "${ChannelFields.DM_SPECIFIC_DATA}.${ChannelDmDataFields.PARTICIPANT_IDS}", 
+                dmParticipantIdsPath, 
                 FieldValue.arrayRemove(userId)
             ).await()
             Unit

@@ -22,7 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.R
@@ -40,7 +40,7 @@ import java.util.Date // Preview용 Date 임포트
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendsScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: FriendViewModel = hiltViewModel()
 ) {
@@ -51,8 +51,12 @@ fun FriendsScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FriendsEvent.NavigateToAcceptFriends -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Friends.ACCEPT_REQUESTS))
-                is FriendsEvent.NavigateToChat -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(event.channelId)))
+                is FriendsEvent.NavigateToAcceptFriends -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Friends.ACCEPT_REQUESTS)
+                )
+                is FriendsEvent.NavigateToChat -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(event.channelId))
+                )
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -65,7 +69,7 @@ fun FriendsScreen(
             TopAppBar(
                 title = { Text("친구") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

@@ -113,16 +113,6 @@
       ]
     },
     {
-      "collectionGroup": "categories",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "order",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "channels",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
@@ -132,6 +122,38 @@
         },
         {
           "fieldPath": "order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "channels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectSpecificData.projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectSpecificData.order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "channels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectSpecificData.projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectSpecificData.categoryId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectSpecificData.order",
           "order": "ASCENDING"
         }
       ]
@@ -165,12 +187,34 @@
       ]
     },
     {
-      "collectionGroup": "invites",
+      "collectionGroup": "channels",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "expiresAt",
+          "fieldPath": "type",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dmSpecificData.participantIds",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "channels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dmSpecificData.participantIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
         }
       ]
     }

@@ -4,9 +4,11 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.User
 import com.example.domain.model.UserProfileData
 import com.example.domain.usecase.user.GetUserUseCase
 import com.example.domain.usecase.auth.LogoutUseCase
+import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserImageUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,8 +38,7 @@ sealed class ProfileEvent {
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val getUserProfileUseCase: GetUserUseCase,
+    private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val updateUserStatusUseCase: UpdateUserStatusUseCase,
     private val updateUserProfileImageUseCase: UpdateUserImageUseCase
@@ -60,32 +61,19 @@ class ProfileViewModel @Inject constructor(
             println("ViewModel: 사용자 프로필 로드 시도 (UseCase 사용)")
 
             // --- UseCase 호출 ---
-            val profileResult: Result<UserProfileData> = getUserProfileUseCase() // Call UseCase
-
-            profileResult.fold(
-                onSuccess = { userProfileData ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            userProfile = userProfileData,
-                            errorMessage = null
-                        )
-                    }
-                    println("ViewModel: 프로필 로드 성공 - ${userProfileData.name}")
-                },
-                onFailure = { exception ->
-                    println("ViewModel: 프로필 로드 실패 - ${exception.message}")
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            userProfile = null, // Or keep existing value based on policy
-                            errorMessage = "프로필을 불러오는데 실패했습니다."
-                        )
-                    }
-                    // SentryUtil.captureException(exception, "Failed to load user profile") // Error logging
+            getCurrentUserStreamUseCase()
+                .catch { exception ->
+                    val errorMsg = "프로필 정보를 불러오지 못했습니다: ${exception.message}"
+                    _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar(errorMsg))
                 }
-            )
-            // --------------------------
+                .collectLatest  { user: Result<User> ->
+                    // User 객체를 UserProfileData로 변환
+                    user.onSuccess { user ->
+                        _uiState.update { it.copy(isLoading = false, userProfile = user.toUserProfileData()) }
+                        println("ViewModel: 프로필 로드 성공 - ${user.name}")
+                    }
+                }
         }
     }
 

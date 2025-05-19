@@ -22,18 +22,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.Channel
 import com.example.domain.model.ChannelType
-import com.example.domain.model.ProjectCategory
+import com.example.domain.model.Category
 import com.example.feature_project.setting.viewmodel.ProjectSettingEvent
 import com.example.feature_project.setting.viewmodel.ProjectSettingUiState
 import com.example.feature_project.setting.viewmodel.ProjectSettingViewModel
 import kotlinx.coroutines.flow.collectLatest
-import com.example.core_common.constants.FirestoreConstants
 import com.example.domain.model.ChannelMode
 import com.example.domain.model.channel.ProjectSpecificData
 import java.time.Instant
@@ -45,7 +44,7 @@ import java.time.Instant
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectSettingScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: ProjectSettingViewModel = hiltViewModel()
 ) {
@@ -53,7 +52,7 @@ fun ProjectSettingScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 다이얼로그 상태
-    var showDeleteCategoryDialog by remember { mutableStateOf<ProjectCategory?>(null) }
+    var showDeleteCategoryDialog by remember { mutableStateOf<Category?>(null) }
     var showDeleteChannelDialog by remember { mutableStateOf<Channel?>(null) }
     var showRenameProjectDialog by remember { mutableStateOf(false) } // 프로젝트 이름 변경 다이얼로그
     var showDeleteProjectDialog by remember { mutableStateOf(false) } // 프로젝트 삭제 확인 다이얼로그
@@ -62,14 +61,14 @@ fun ProjectSettingScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProjectSettingEvent.NavigateBack -> navigationHandler.navigateBack()
+                is ProjectSettingEvent.NavigateBack -> appNavigator.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is ProjectSettingEvent.NavigateToEditCategory -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToCreateCategory -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createCategory(event.projectId)))
-                is ProjectSettingEvent.NavigateToEditChannel -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
-                is ProjectSettingEvent.NavigateToCreateChannel -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToMemberList -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.memberList(event.projectId)))
-                is ProjectSettingEvent.NavigateToRoleList -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.roleList(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditCategory -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToCreateCategory -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createCategory(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditChannel -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
+                is ProjectSettingEvent.NavigateToCreateChannel -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToMemberList -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.memberList(event.projectId)))
+                is ProjectSettingEvent.NavigateToRoleList -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.roleList(event.projectId)))
                 is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
                 is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
                 is ProjectSettingEvent.ShowRenameProjectDialog -> showRenameProjectDialog = true
@@ -85,7 +84,7 @@ fun ProjectSettingScreen(
             TopAppBar(
                 title = { Text("프로젝트 설정") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }
@@ -198,7 +197,7 @@ fun ProjectSettingContent(
     modifier: Modifier = Modifier,
     uiState: ProjectSettingUiState,
     onCategoryEditClick: (String) -> Unit, // categoryId
-    onCategoryDeleteClick: (ProjectCategory) -> Unit, // category 객체 전달
+    onCategoryDeleteClick: (Category) -> Unit, // category 객체 전달
     onChannelEditClick: (String, String) -> Unit, // categoryId, channelId
     onChannelDeleteClick: (Channel) -> Unit, // channel 객체 전달
     onAddCategoryClick: () -> Unit,
@@ -333,7 +332,7 @@ fun SettingMenuItem(
 // 카테고리 헤더
 @Composable
 fun CategoryHeader(
-    category: ProjectCategory,
+    category: Category,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onAddChannelClick: () -> Unit,
@@ -461,22 +460,30 @@ private fun ProjectSettingContentPreview() {
         projectId = "p1",
         projectName = "샘플 프로젝트",
         categories = listOf(
-            ProjectCategory(
+            Category(
                 id = "c1",
+                projectId = "p1",
                 name = "일반",
+                order = 0,
                 channels = listOf(
-                    Channel(id = "ch1", name = "잡담", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT)),
-                    Channel(id = "ch2", name = "공지사항", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT))
-                )
+                    Channel(id = "ch1", name = "잡담", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT)),
+                    Channel(id = "ch2", name = "공지사항", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT))
+                ),
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
             ),
-            ProjectCategory(
+            Category(
                 id = "c2",
+                projectId = "p1",
                 name = "개발",
+                order = 1,
                 channels = listOf(
-                    Channel(id = "ch3", name = "프론트엔드", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
-                    Channel(id = "ch4", name = "백엔드", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
-                    Channel(id = "ch5", name = "개발 회의", type = ChannelType.CATEGORY, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.VOICE))
-                )
+                    Channel(id = "ch3", name = "프론트엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
+                    Channel(id = "ch4", name = "백엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
+                    Channel(id = "ch5", name = "개발 회의", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.VOICE))
+                ),
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
             )
         )
     )

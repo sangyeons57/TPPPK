@@ -1,6 +1,5 @@
 package com.example.data.model.mapper
 
-import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.local.ChannelEntity
 import com.example.data.model.remote.project.ChannelDto
@@ -9,7 +8,6 @@ import com.example.domain.model.ChannelMode
 import com.example.domain.model.ChannelType
 import com.example.domain.model.channel.DmSpecificData
 import com.example.domain.model.channel.ProjectSpecificData
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
 import java.time.Instant
 import javax.inject.Inject
@@ -38,6 +36,14 @@ class ChannelMapper @Inject constructor(
     }
 
     /**
+     * Firestore DocumentSnapshot을 Channel 도메인 모델로 변환합니다.
+     * mapToDomain 메서드와 동일한 기능을 수행하지만 다른 이름으로 제공합니다.
+     */
+    fun fromFirestore(document: DocumentSnapshot): Channel? {
+        return mapToDomain(document)
+    }
+
+    /**
      * ChannelDto (Firestore 데이터)를 Channel 도메인 모델로 변환합니다.
      */
     fun mapToDomain(dto: ChannelDto): Channel {
@@ -62,7 +68,7 @@ class ChannelMapper @Inject constructor(
         // Updated to use ChannelType.fromString
         val channelType = ChannelType.fromString(entity.type)
 
-        val projectData = if (channelType == ChannelType.PROJECT || channelType == ChannelType.CATEGORY) {
+        val projectData = if (channelType == ChannelType.PROJECT || channelType == ChannelType.PROJECT) {
             entity.projectId?.let {
                 ProjectSpecificData(
                     projectId = it,

@@ -26,7 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -46,7 +47,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,9 +60,13 @@ fun LoginScreen(
     LaunchedEffect(key1 = Unit) { // Unit key: 화면 진입 시 1회 실행
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is LoginEvent.NavigateToSignUp -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.SignUp.path))
-                is LoginEvent.NavigateToFindPassword -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Auth.FindPassword.path))
-                is LoginEvent.LoginSuccess -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Main.ROOT))
+                is LoginEvent.NavigateToSignUp -> {
+                    appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.SignUp.path))
+                }
+                is LoginEvent.NavigateToFindPassword -> {
+                    appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.FindPassword.path))
+                }
+                is LoginEvent.LoginSuccess -> appNavigator.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Main.ROOT)))
                 is LoginEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
                     event.message,
                     duration = SnackbarDuration.Short
@@ -245,7 +250,11 @@ fun LoginContent(
                 Text("비밀번호를 잊으셨나요?")
             }
             // *** 회원가입 버튼 ***
-            TextButton(onClick = onSignUpClick, enabled = !uiState.isLoading) {
+            TextButton(
+                onClick = onSignUpClick,
+                enabled = !uiState.isLoading,
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
                 Text("회원가입")
             }
         }

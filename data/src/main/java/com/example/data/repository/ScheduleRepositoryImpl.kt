@@ -12,6 +12,7 @@ import javax.inject.Singleton
 import kotlin.Result // Result 클래스 사용
 import com.example.core_common.util.DateTimeUtil // Import DateTimeUtil
 import com.example.data.model.mapper.ScheduleMapper
+import android.util.Log // Log import 추가
 
 /**
  * ScheduleRepository 인터페이스의 구현체입니다.
@@ -33,6 +34,7 @@ class ScheduleRepositoryImpl @Inject constructor(
      * LocalDate를 해당 날짜의 시작과 끝 Timestamp로 변환하여 데이터 소스를 호출합니다.
      */
     override suspend fun getSchedulesForDate(date: LocalDate): Result<List<Schedule>> {
+        Log.d("ScheduleRepoImpl", "getSchedulesForDate 호출됨: date=$date")
         return runCatching {
             // LocalDate를 UTC 기준 해당 날짜의 시작(00:00:00Z)과 끝(23:59:59.999Z) Timestamp로 변환
             val startInstant = date.atStartOfDay(zoneId).toInstant()
@@ -42,7 +44,10 @@ class ScheduleRepositoryImpl @Inject constructor(
 
             // 데이터 소스 호출 및 DTO 리스트를 도메인 모델 리스트로 변환
             val dtoList = remoteDataSource.getSchedulesForDate(startOfDay!!, endOfDay!!)
-            scheduleMapper.mapToDomainList(dtoList)
+            Log.d("ScheduleRepoImpl", "getSchedulesForDate - remoteDataSource 응답 (DTO list size): ${dtoList.size}, 데이터: $dtoList")
+            val domainList = scheduleMapper.mapToDomainList(dtoList)
+            Log.d("ScheduleRepoImpl", "getSchedulesForDate - 최종 반환 (Domain list size): ${domainList.size}, 데이터: $domainList")
+            domainList
         }
         // runCatching은 성공 시 Result.success(value), 실패 시 Result.failure(exception) 반환
     }
@@ -53,6 +58,7 @@ class ScheduleRepositoryImpl @Inject constructor(
      * 결과 DTO 리스트에서 날짜 정보만 추출하여 Set으로 만듭니다.
      */
     override suspend fun getScheduleSummaryForMonth(yearMonth: YearMonth): Result<Set<LocalDate>> {
+        Log.d("ScheduleRepoImpl", "getScheduleSummaryForMonth 호출됨: yearMonth=$yearMonth")
         return runCatching {
             // YearMonth를 UTC 기준 해당 월의 시작일과 종료일의 Timestamp로 변환
             val startDayOfMonth = yearMonth.atDay(1)
@@ -64,9 +70,10 @@ class ScheduleRepositoryImpl @Inject constructor(
 
             // 데이터 소스에서 해당 월의 모든 일정 DTO를 가져옴
             val schedulesDto = remoteDataSource.getSchedulesForMonth(startOfMonth!!, endOfMonth!!)
+            Log.d("ScheduleRepoImpl", "getScheduleSummaryForMonth - remoteDataSource 응답 (DTO list size): ${schedulesDto.size}, 데이터: $schedulesDto")
 
             // DTO 리스트에서 startTime을 LocalDate로 변환하고 중복 제거하여 Set 생성
-            schedulesDto.mapNotNull { it.startTime } // startTime이 null인 경우 제외 (it.startTime is Firebase.Timestamp?)
+            val dateSet = schedulesDto.mapNotNull { it.startTime } // startTime이 null인 경우 제외 (it.startTime is Firebase.Timestamp?)
                 .mapNotNull { timestamp -> // Ensure timestamp is not null before conversion
                     // Timestamp -> Instant -> ZonedDateTime -> LocalDate
                     // LocalDate는 시간대 정보가 없으므로, UTC 기준으로 변환된 날짜를 사용
@@ -74,6 +81,8 @@ class ScheduleRepositoryImpl @Inject constructor(
                         ?.atZone(zoneId)?.toLocalDate() // Apply toLocalDate after conversion
                 }
                 .toSet() // 중복 제거
+            Log.d("ScheduleRepoImpl", "getScheduleSummaryForMonth - 최종 반환 (LocalDate Set size): ${dateSet.size}, 데이터: $dateSet")
+            dateSet
         }
     }
 
@@ -81,10 +90,14 @@ class ScheduleRepositoryImpl @Inject constructor(
      * 특정 ID의 일정 상세 정보를 가져옵니다.
      */
     override suspend fun getScheduleDetail(scheduleId: String): Result<Schedule> {
+        Log.d("ScheduleRepoImpl", "getScheduleDetail 호출됨: scheduleId=$scheduleId")
         return runCatching {
             // 데이터 소스 호출 및 DTO를 도메인 모델로 변환
             val dto = remoteDataSource.getScheduleDetail(scheduleId)
-            scheduleMapper.mapToDomain(dto)
+            Log.d("ScheduleRepoImpl", "getScheduleDetail - remoteDataSource 응답 (DTO): $dto")
+            val domainModel = scheduleMapper.mapToDomain(dto)
+            Log.d("ScheduleRepoImpl", "getScheduleDetail - 최종 반환 (Domain): $domainModel")
+            domainModel
         }
     }
 

@@ -12,15 +12,10 @@ import com.example.domain.model.channel.DmSpecificData
 import com.example.domain.model.channel.ProjectSpecificData
 import com.example.domain.repository.ChannelRepository
 import com.google.firebase.firestore.*
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.time.Instant
-import java.util.*
 import javax.inject.Inject
 import kotlin.Result
 import com.example.core_common.util.DateTimeUtil
@@ -199,7 +194,7 @@ class ChannelRepositoryImpl @Inject constructor(
             id = newChannelId,
             name = name,
             description = description,
-            type = if (categoryId == null) ChannelType.PROJECT else ChannelType.CATEGORY,
+            type = ChannelType.PROJECT,
             projectSpecificData = ProjectSpecificData(
                 projectId = projectId,
                 categoryId = categoryId,
@@ -218,25 +213,36 @@ class ChannelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getOrCreateDmChannel(myUserId: String, otherUserId: String): Result<Channel> = withContext(dispatcherProvider.io) {
+        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Finding or creating DM for users $myUserId and $otherUserId")
         val sortedUserIds = listOf(myUserId, otherUserId).sorted()
         val potentialChannelId = "dm_${sortedUserIds[0]}_${sortedUserIds[1]}"
+        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Potential channel ID: $potentialChannelId")
 
         val channelsCollection = firestore.collection(FirestoreConstants.Collections.CHANNELS)
         val query = channelsCollection
             .whereEqualTo("type", ChannelType.DM.name)
             .whereArrayContainsAny("dmSpecificData.participantIds", listOf(myUserId, otherUserId))
-
+        
+        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Executing query to find existing channel")
         val snapshot = query.get().await()
-        val foundChannel = snapshot.documents.mapNotNull { doc -> channelMapper.mapToDomain(doc) }
-            .find { channel -> 
-                channel.dmSpecificData?.participantIds?.let {
-                    it.size == 2 && it.containsAll(listOf(myUserId, otherUserId))
-                } == true
-            }
+        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Query returned ${snapshot.documents.size} documents")
+        
+        val foundChannel = snapshot.documents.mapNotNull { doc -> 
+            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Processing document ID: ${doc.id}")
+            channelMapper.mapToDomain(doc) 
+        }.find { channel -> 
+            val matches = channel.dmSpecificData?.participantIds?.let {
+                it.size == 2 && it.containsAll(listOf(myUserId, otherUserId))
+            } == true
+            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Channel ${channel.id} matches both users: $matches")
+            matches
+        }
 
         if (foundChannel != null) {
+            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Found existing channel ${foundChannel.id}")
             Result.success(foundChannel)
         } else {
+            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: No existing channel found, creating new one")
             val newChannelId = potentialChannelId
             val dmChannel = Channel(
                 id = newChannelId,
@@ -251,6 +257,7 @@ class ChannelRepositoryImpl @Inject constructor(
                 description = null,
                 createdBy = myUserId 
             )
+            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Creating new DM channel with ID: $newChannelId")
             channelRemoteDataSource.createChannel(dmChannel)
         }
     }

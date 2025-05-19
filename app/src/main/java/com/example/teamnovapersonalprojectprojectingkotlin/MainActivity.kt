@@ -1,6 +1,7 @@
 package com.example.teamnovapersonalprojectprojectingkotlin
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,7 +15,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.core_logging.SentryUtil
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.core_navigation.core.ComposeNavigationHandler
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigationGraph
 import com.example.core_navigation.destination.AppRoutes
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,6 +23,7 @@ import io.sentry.Sentry
 import io.sentry.SpanStatus
 import javax.inject.Inject
 import androidx.compose.runtime.LaunchedEffect
+import com.example.core_navigation.core.AppNavigator
 
 @AndroidEntryPoint // Hilt 사용 시 Activity에 추가
 class MainActivity : ComponentActivity() {
@@ -31,7 +32,7 @@ class MainActivity : ComponentActivity() {
     private var appStartTransaction: ITransaction? = null
     
     @Inject
-    lateinit var navigationHandler: ComposeNavigationHandler
+    lateinit var appNavigator: AppNavigator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 앱 시작 성능 측정 시작
@@ -50,25 +51,28 @@ class MainActivity : ComponentActivity() {
         
         // 앱 시작 이벤트 기록
         SentryUtil.addBreadcrumb("lifecycle", "MainActivity onCreate")
-        
+
         setContent {
             // UI 렌더링 성능 측정
             val uiRenderSpan = appStartTransaction?.startChild("ui.render", "Initial UI Rendering")
             
+            // NavController 생성 및 AppNavigator에 설정
+            val navController = rememberNavController()
+            
+            // NavigationHandler에 최상위 NavController 설정 (한 번만 호출)
+            LaunchedEffect(navController) {
+                appNavigator.setNavController(navController)
+                setupNavigationTracking(navController)
+            }
+
             TeamnovaPersonalProjectProjectingKotlinTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val navController = rememberNavController()
-                    navigationHandler.setNavController(navController) // Main NavController 등록
-                    setupNavigationTracking(navController)
-                    
-                    // NavigationCommand 처리는 AppNavigationGraph에서 담당하므로 여기서 제거
-                    
                     AppNavigationGraph(
                         navController = navController,
-                        navigationHandler = navigationHandler,
+                        appNavigator = appNavigator,
                         startDestination = decideStartDestination()
                     )
                 }

@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.Dimens
@@ -62,7 +62,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Calendar24HourScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: Calendar24HourViewModel = hiltViewModel()
 ) {
@@ -92,7 +92,7 @@ fun Calendar24HourScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is Calendar24HourEvent.NavigateBack -> navigationHandler.navigateBack()
+                is Calendar24HourEvent.NavigateBack -> appNavigator.navigateBack()
                 is Calendar24HourEvent.NavigateToAddSchedule -> {
                     // 일정 추가 버튼 애니메이션
                     addButtonScale = 0.8f
@@ -101,8 +101,8 @@ fun Calendar24HourScreen(
                     if (currentUiState is Calendar24HourUiState.Success) {
                         val date = currentUiState.selectedDate
                         if (date != null) {
-                            navigationHandler.navigate(
-                                NavigationCommand.NavigateToRoute(
+                            appNavigator.navigate(
+                                NavigationCommand.NavigateToRoute.fromRoute(
                                     AppRoutes.Main.Calendar.addSchedule(date.year, date.monthValue, date.dayOfMonth)
                                 )
                             )
@@ -112,8 +112,8 @@ fun Calendar24HourScreen(
                     delay(50)
                     addButtonScale = 1f
                 }
-                is Calendar24HourEvent.NavigateToScheduleDetail -> navigationHandler.navigate(
-                    NavigationCommand.NavigateToRoute(AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId))
+                is Calendar24HourEvent.NavigateToScheduleDetail -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId))
                 )
                 is Calendar24HourEvent.ShowScheduleEditDialog -> showEditDialog = event.scheduleId
                 is Calendar24HourEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)

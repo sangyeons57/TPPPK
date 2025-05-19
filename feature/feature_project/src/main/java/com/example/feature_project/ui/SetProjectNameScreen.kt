@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManager
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -29,11 +29,11 @@ import com.example.feature_project.viewmodel.SetProjectNameViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
- * ComposeNavigationHandler에 프로젝트 타입 선택 화면으로 이동하는 확장 함수 추가
+ * AppNavigator에 프로젝트 타입 선택 화면으로 이동하는 확장 함수 추가
  */
-fun ComposeNavigationHandler.navigateToSelectProjectType() {
+fun AppNavigator.navigateToSelectProjectType() {
     // 프로젝트 타입 선택 화면 경로로 이동
-    this.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.SELECT_TYPE))
+    this.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.SELECT_TYPE))
 }
 
 /**
@@ -42,7 +42,7 @@ fun ComposeNavigationHandler.navigateToSelectProjectType() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetProjectNameScreen(
-    navigationManager: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: SetProjectNameViewModel = hiltViewModel()
 ) {
@@ -58,8 +58,8 @@ fun SetProjectNameScreen(
                 is SetProjectNameEvent.ClearFocus -> focusManager.clearFocus()
                 is SetProjectNameEvent.Navigate -> {
                     when (event.destination) {
-                        SetProjectNameNavigationEvent.NavigateBack -> navigationManager.navigateBack()
-                        SetProjectNameNavigationEvent.NavigateToNextStep -> navigationManager.navigateToSelectProjectType()
+                        SetProjectNameNavigationEvent.NavigateBack -> appNavigator.navigateBack()
+                        SetProjectNameNavigationEvent.NavigateToNextStep -> appNavigator.navigateToSelectProjectType()
                     }
                 }
             }
@@ -73,7 +73,7 @@ fun SetProjectNameScreen(
             TopAppBar(
                 title = { Text("프로젝트 이름 설정") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

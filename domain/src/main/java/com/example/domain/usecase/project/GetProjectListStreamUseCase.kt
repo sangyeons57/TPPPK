@@ -18,7 +18,7 @@ class GetProjectListStreamUseCase @Inject constructor(
      *
      * @return 프로젝트 목록을 방출하는 [Flow]
      */
-    operator fun invoke(): Flow<List<Project>> {
+    suspend operator fun invoke(): Flow<List<Project>> {
         return projectRepository.getProjectListStream()
     }
 } 

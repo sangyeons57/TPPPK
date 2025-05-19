@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.gms)
 }
 
 android {
@@ -42,18 +41,36 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:core_navigation"))
+    
+    // Android Core Libraries
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    // Jetpack Compose UI
-    implementation(platform(libs.androidx.compose.bom)) // BOM 버전은 프로젝트와 통일
-    implementation(libs.material3)
+    
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
+    implementation(libs.firebase.messaging.ktx)
 
-    // Hilt Core
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+    
+    // Hilt
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
+
+    // Compose (for test UI)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.material3)
+    
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.android)
+    
+    // Testing
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 }

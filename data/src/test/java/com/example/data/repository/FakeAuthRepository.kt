@@ -3,6 +3,7 @@ package com.example.data.repository
 import com.example.domain.model.User
 import com.example.domain.repository.AuthRepository
 import java.util.concurrent.ConcurrentHashMap
+import java.time.Instant
 
 /**
  * AuthRepository의 가짜(Fake) 구현체
@@ -166,7 +167,7 @@ class FakeAuthRepository : AuthRepository {
         return Result.success(Unit)
     }
     
-    override suspend fun signUp(email: String, pass: String, name: String): Result<User?> {
+    override suspend fun signUp(email: String, pass: String, name: String, consentTimeStamp: Instant): Result<User?> {
         // 에러 시뮬레이션 확인
         simulateErrorIfNeeded<User?>()?.let { return it }
         
@@ -181,7 +182,8 @@ class FakeAuthRepository : AuthRepository {
             email = email,
             name = name,
             profileImageUrl = null,
-            statusMessage = null
+            statusMessage = null,
+            consentTimeStamp = consentTimeStamp
         )
         
         // 사용자 및 비밀번호 저장

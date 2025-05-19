@@ -18,7 +18,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -33,7 +34,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinProjectScreen(
-    navigationManager: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: JoinProjectViewModel = hiltViewModel()
 ) {
@@ -47,7 +48,7 @@ fun JoinProjectScreen(
             when (event) {
                 is JoinProjectEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is JoinProjectEvent.JoinSuccess -> {
-                    navigationManager.navigate(NavigationCommand.NavigateClearingBackStack(AppRoutes.Main.ROOT))
+                    appNavigator.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Main.ROOT)))
                 }
                 is JoinProjectEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -61,7 +62,7 @@ fun JoinProjectScreen(
             TopAppBar(
                 title = { Text("프로젝트 참여하기") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManager.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

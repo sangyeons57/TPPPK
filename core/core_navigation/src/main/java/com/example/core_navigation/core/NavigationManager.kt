@@ -1,5 +1,7 @@
 package com.example.core_navigation.core
 
+import android.os.Bundle
+import android.util.Log
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
@@ -21,23 +23,22 @@ import javax.inject.Singleton
  * Compose 환경에 특화되어 있으며, NavHostController를 직접 제어합니다.
  */
 @Singleton
-class NavigationManager @Inject constructor() : ComposeNavigationHandler {
+class NavigationManager @Inject constructor() : AppNavigator {
 
     // 최상위 네비게이션 컨트롤러 (Activity 레벨 NavHost)
     private var parentNavController: NavHostController? = null
     
     // 현재 활성화된 자식(중첩) 네비게이션 컨트롤러 (NestedNavHost 내부)
-    private var activeChildNavController: NavHostController? = null
-    
-    // 네비게이션 커맨드를 전달하는 Flow (UI 또는 ViewModel에서 방출)
-    private val _navigationCommands = MutableSharedFlow<NavigationCommand>(extraBufferCapacity = 1)
-    override val navigationCommands: Flow<NavigationCommand> = _navigationCommands.asSharedFlow()
+    internal var activeChildNavController: NavHostController? = null
     
     // 결과 데이터 저장소
     private val resultStore = mutableMapOf<String, Any?>()
     
     // 결과 발행 Flow 저장소
     private val resultFlows = mutableMapOf<String, MutableSharedFlow<Any?>>()
+    
+    // 화면 상태 저장소
+    private val screenStates = mutableMapOf<String, Bundle>()
     
     // 내부 작업을 위한 CoroutineScope
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -50,10 +51,15 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
     override fun setNavController(navController: NavHostController) {
         if (parentNavController == null) {
             this.parentNavController = navController
+            //this.activeChildNavController = navController
             println("NavigationManager: Parent NavController set.") // 로그 추가
         } else {
             println("NavigationManager: Parent NavController already set.") // 로그 추가
         }
+    }
+
+    override fun getNavController(): NavHostController? {
+        return parentNavController
     }
 
     /**
@@ -62,7 +68,14 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
      */
     override fun setChildNavController(navController: NavHostController?) {
         this.activeChildNavController = navController
-        println("NavigationManager: Active Child NavController updated: ${navController?.graph?.route}") // 로그 추가
+        // 안전한 로깅으로 변경
+        val graphRoute = try {
+            navController?.graph?.route
+        } catch (e: IllegalStateException) {
+            // 그래프가 아직 설정되지 않았을 때 발생하는 예외 처리
+            null 
+        }
+        println("NavigationManager: Active Child NavController updated. Current graph route: $graphRoute")
     }
 
     /**
@@ -75,19 +88,182 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
     /**
      * 네비게이션 명령 실행
      * ViewModel 등에서 호출되어 네비게이션 이벤트를 내부 스코프에서 발생시킵니다.
-     * 실제 이동은 UI 레벨(NavHost)에서 navigationCommands를 구독하여 처리합니다.
+     * 직접 NavController를 사용하여 네비게이션을 처리합니다.
      */
     override fun navigate(command: NavigationCommand) {
-        scope.launch {
-            _navigationCommands.emit(command)
+        Log.d("NavigationManager", "navigate(command: NavigationCommand) called with: $command  ActiveChildNavController: $activeChildNavController ParentNavController: $parentNavController ")
+        // 자식 NavController가 있으면 먼저 시도
+        activeChildNavController?.let { childNav ->
+            Log.d("NavigationManager", "child \n $activeChildNavController \n $childNav ")
+            if (processCommandInternal(childNav, command)) {
+                Log.d("NavigationManager", "Command processed by activeChildNavController")
+                return
+            }
+            Log.d("NavigationManager", "Command not processed by activeChildNavController, trying parent.")
+        }
+
+        // 부모 NavController 사용
+        parentNavController?.let { parentNav ->
+            Log.d("NavigationManager", "parent \n $parentNavController \n $parentNav ")
+            if (processCommandInternal(parentNav, command)) {
+                Log.d("NavigationManager", "Command processed by parentNavController")
+                return
+            }
+            Log.e("NavigationManager", "Command not processed by parentNavController either. This might be an issue.")
+        } ?: run {
+            Log.e("NavigationManager", "No NavController available to process command: $command")
         }
     }
     
     /**
-     * 특정 경로로 이동
+     * NavigationCommand 처리를 실행하는 내부 메서드
      */
-    fun navigateTo(routePath: String, navOptions: NavOptions?) {
-        navigate(NavigationCommand.NavigateToRoute(routePath, navOptions))
+    private fun processCommandInternal(navController: NavHostController, command: NavigationCommand): Boolean {
+        Log.d("NavigationManager", "processCommandInternal for ${navController.graph.route ?: "unknown graph"} with command: $command")
+        try {
+            when (command) {
+                is NavigationCommand.NavigateToRoute -> {
+                    val routeToNavigate = command.route
+                    val navOptions = command.navOptions
+                    return handleRouteNavigation(navController, routeToNavigate, navOptions)
+                }
+                is NavigationCommand.NavigateBack -> {
+                    return navController.popBackStack()
+                }
+                is NavigationCommand.NavigateClearingBackStack -> {
+                    if (parentNavController == navController) {
+                        navController.navigate(command.route) { 
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        }
+                        return true
+                    }
+                    Log.w("NavigationManager", "NavigateClearingBackStack attempted on non-parent controller.")
+                    return false
+                }
+            }
+        } catch (e: IllegalStateException) {
+            Log.e("NavigationManager", "IllegalStateException in processCommandInternal for ${navController.graph.route ?: "unknown graph"}: ${e.message}", e)
+            return false
+        } catch (e: IllegalArgumentException) {
+            Log.e("NavigationManager", "IllegalArgumentException in processCommandInternal for ${navController.graph.route ?: "unknown graph"}: ${e.message}", e)
+            return false
+        } catch (e: Exception) {
+            Log.e("NavigationManager", "Exception in processCommandInternal for ${navController.graph.route ?: "unknown graph"}: ${e.message}", e)
+            return false
+        }
+    }
+
+    // 경로 이동의 핵심 로직을 담당하는 새로운 private 함수
+    private fun handleRouteNavigation(
+        navController: NavHostController,
+        route: String,
+        navOptions: NavOptions?
+    ): Boolean {
+        Log.d("NavigationManager", "handleRouteNavigation for ${navController.graph.route ?: "unknown graph"} to $route")
+
+        // 1. 현재 NavController에서 해당 route로 직접 이동 시도 (가장 먼저)
+        // NavController.navigate()는 경로를 resolving 할 수 있으면 성공함 (중첩 그래프 내부 경로 포함)
+        try {
+            // navigate 함수는 IllegalArgumentException을 던질 수 있음 (경로 못찾으면)
+            navController.navigate(route, navOptions)
+            Log.d("NavigationManager", "Successfully navigated to $route with ${navController.graph.route ?: "current controller"}.")
+            return true
+        } catch (e: IllegalArgumentException) {
+            Log.w("NavigationManager", "Direct navigation to $route failed with ${navController.graph.route ?: "current controller"}: ${e.message}")
+            // 실패 시 아래의 그래프 전환 로직으로 넘어감
+        } catch (e: IllegalStateException) {
+            Log.e("NavigationManager", "IllegalStateException during direct navigation to $route: ${e.message}")
+            return false // NavController 상태 문제일 수 있으므로 더 이상 진행 안 함
+        }
+
+        // 2. 직접 이동 실패했고, 현재 NavController가 parentNavController일 때, 다른 "최상위" 그래프로의 전환 시도
+        if (navController == parentNavController) {
+            val targetGraphRoot = getGraphRootForRoute(route) // 예: "auth_graph" 또는 "main_host"
+            val currentTopLevelGraph = navController.graph.route // 예: "app_root_graph"
+
+            if (targetGraphRoot != null && targetGraphRoot != currentTopLevelGraph) {
+                val currentNestedGraph = navController.currentDestination?.parent?.route
+                if (targetGraphRoot != currentNestedGraph) {
+                    Log.d("NavigationManager", "Transitioning to graph $targetGraphRoot for route $route.")
+                    setResult("pending_navigation", route) // 최종 목적지 저장
+                    try {
+                        navController.navigate(targetGraphRoot, navOptions) // 새 그래프(예: "auth_graph")의 시작점으로 이동
+                        return true
+                    } catch (e: Exception) {
+                        Log.e("NavigationManager", "Failed to navigate to targetGraphRoot $targetGraphRoot: ${e.message}")
+                    }
+                } else {
+                    Log.w("NavigationManager", "Already in target graph $targetGraphRoot, but direct navigation to $route failed earlier.")
+                }
+            }
+        }
+
+        Log.w("NavigationManager", "${navController.graph.route ?: "unknown graph"} cannot handle route $route.")
+        return false
+    }
+    
+    // 현재 NavController의 그래프 식별자를 가져오는 보조 함수 (parentNavController.graph.route가 null일 경우 대비)
+    private fun getCurrentGraphIdentifier(navController: NavHostController): String? {
+        // navController.currentDestination?.parent?.route 또는 다른 방식으로 현재 그래프의 대표 경로를 찾을 수 있음
+        // 여기서는 AppRoutes의 구조를 알아야 더 정확하게 구현 가능
+        // 임시로 null 반환
+        return navController.currentDestination?.parent?.route // 가장 가까운 그래프의 루트일 수 있음
+    }
+
+    private fun bundleToMap(bundle: Bundle): Map<String, Any> {
+        val map = mutableMapOf<String, Any>()
+        for (key in bundle.keySet()) {
+            bundle.get(key)?.let { map[key] = it }
+        }
+        return map
+    }
+
+    private fun canNavigateDirectly(navController: NavHostController, route: String): Boolean {
+        return try {
+            val cleanRoute = route.substringBefore("?")
+            // 1. ID로 직접 찾아보기 (플레이스홀더 없는 기본 경로에 유용)
+            if (navController.graph.findNode(cleanRoute) != null) return true
+            Log.d("NavigationManager", "cleanRoute: $cleanRoute")
+            Log.d("NavigationManager", "navController.graph.route:  ${navController.graph.route}")
+            Log.d("NavigationManager", "navController.graph.nodes: ${navController.graph.nodes}")
+
+            // 2. 그래프 내 모든 Destination의 route와 비교 (플레이스홀더 포함 경로 비교에 필요)
+            // NavGraph.nodes는 SparseArrayCompat<NavDestination> 타입
+            val nodes = navController.graph.nodes
+            for (i in 0 until nodes.size()) {
+                val destination = nodes.valueAt(i)
+                if (destination.route == cleanRoute) {
+                    return true
+                }
+            }
+
+            // 중첩된 그래프 안의 destination도 찾아야 할 수 있음
+            // 현재 NavController의 그래프에 직접 속한 노드들만 검사함
+            // 필요하다면 재귀적으로 모든 중첩 그래프를 탐색하는 로직 추가 가능
+            false
+        } catch (e: Exception) {
+            Log.w("NavigationManager", "Exception in canNavigateDirectly for route $route: ${e.message}")
+            false
+        }
+    }
+
+    private fun getGraphRootForRoute(route: String): String? {
+        // AppRoutes.kt 파일 내용에 따라 매우 정교하게 작성되어야 함.
+        // 각 최상위 그래프(Auth, Main, Project, Chat 등)의 대표 경로(시작점)를 반환해야 함.
+        val cleanRoute = route.substringBefore("?") // 쿼리 파라미터 제거
+
+        if (cleanRoute.startsWith("auth")) return AppRoutes.Auth.Graph.path
+        // Main 그래프는 여러 진입점이 있을 수 있으므로, 경로 패턴을 잘 확인해야 함.
+        // 예: "home", "friends_list", "calendar_24h/2023/10/26" 등은 모두 Main 그래프 소속일 수 있음.
+        val mainGraphPrefixes = listOf("main_host", "home", "friends", "profile", "schedule") // AppRoutes.Main 하위 경로들의 대표 prefix
+        if (mainGraphPrefixes.any { cleanRoute.startsWith(it) }) return AppRoutes.Main.ROOT
+        
+        if (cleanRoute.startsWith("project")) return AppRoutes.Project.Graph.path 
+        if (cleanRoute.startsWith("chat")) return AppRoutes.Chat.Graph.path
+        // TODO: 다른 최상위 그래프들에 대한 매핑 추가 (예: Settings, User Profile 등)
+        
+        Log.w("NavigationManager", "Cannot determine graph root for route: $route. Add mapping in getGraphRootForRoute.")
+        return null // 매핑되는 그래프가 없으면 null 반환
     }
 
     /**
@@ -123,59 +299,19 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
     }
     
     /**
-     * 특정 탭으로 이동
-     * 
-     * 두 가지 시나리오를 처리합니다:
-     * 1. 자식 NavController가 있는 경우: 자식 NavController로 직접 탭 이동을 실행합니다.
-     * 2. 자식 NavController가 없는 경우: NavigationCommand.NavigateToTab을 발행하여 
-     *    AppNavigationGraph가 먼저 Main 화면으로 이동 후 탭 이동을 준비하도록 합니다.
+     * NavigationCommand를 사용하여 백스택을 모두 비우고 특정 경로로 이동
      */
-    override fun navigateToTab(route: String, saveState: Boolean, restoreState: Boolean) {
-        // 이미 중첩 NavController가 있는 경우 (MainScreen이 활성화됨)
-        activeChildNavController?.let { childNav ->
-            println("NavigationManager: Navigating to tab '$route' using childNavController")
-            try {
-                childNav.navigate(route) {
-                    // 중첩 네비게이션에서의 탭 전환 로직
-                    val startDestinationId = childNav.graph.findStartDestination().id
-                    popUpTo(startDestinationId) {
-                        this.saveState = saveState
-                    }
-                    launchSingleTop = true
-                    this.restoreState = restoreState
-                }
-                return // 성공적으로 이동했으므로 함수 종료
-            } catch (e: Exception) {
-                println("NavigationManager Warning: Failed to navigate to tab '$route' with child controller: ${e.message}")
-                // 실패 시 아래 로직으로 fallback
-            }
-        }
-        
-        // 위의 직접 이동이 실패했거나, 중첩 NavController가 없는 경우
-        // (MainScreen으로 먼저 이동해야 하는 경우)
-        println("NavigationManager: Emitting NavigateToTab command for '$route'")
-        navigate(NavigationCommand.NavigateToTab(route, saveState, restoreState))
-    }
-
-    /**
-     * 백스택을 모두 비우고 특정 경로로 이동
-     */
-    override fun navigateClearingBackStack(route: String) {
-        navigate(NavigationCommand.NavigateClearingBackStack(route))
-    }
-    
-    /**
-     * 중첩된 그래프로 이동
-     */
-    override fun navigateToNestedGraph(parentRoute: String, childRoute: String) {
-        navigate(NavigationCommand.NavigateToNestedGraph(parentRoute, childRoute))
+    override fun navigateClearingBackStack(command: NavigationCommand.NavigateClearingBackStack) {
+        navigate(command as NavigationCommand)
     }
 
     /**
      * 특정 목적지가 현재 활성화되어 있는지 확인
      * 자식 -> 부모 순서로 확인합니다.
      */
-    fun isDestinationActive(routePath: String): Boolean {
+    fun isDestinationActive(destination: NavDestination): Boolean {
+        val routePath = destination.route
+        
         val currentChildRoute = activeChildNavController?.currentDestination?.route
         if (currentChildRoute == routePath) return true
         
@@ -189,22 +325,16 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
      */
     override fun <T> setResult(key: String, result: T) {
         println("NavigationManager: Setting result for key '$key'")
-        // 1. 내부 저장소에 저장 (getResult로 즉시 가져갈 경우 대비)
         resultStore[key] = result
-        
-        // 2. 이전 화면의 SavedStateHandle에 저장 (화면 복원 시 유지)
         val targetNavController = activeChildNavController ?: parentNavController
         try {
             targetNavController?.previousBackStackEntry?.savedStateHandle?.set(key, result)
         } catch (e: IllegalStateException) {
-            // previousBackStackEntry가 없을 경우 발생 가능 (e.g., 첫 화면)
             println("NavigationManager Warning: Could not set result to previousBackStackEntry's SavedStateHandle for key '$key'. ${e.message}")
         }
-        
-        // 3. Flow 발행 (현재 화면에서 즉시 결과를 수신해야 하는 경우)
-        scope.launch { // 안전하게 emit
+        scope.launch {
             val resultFlow = resultFlows.getOrPut(key) { MutableSharedFlow(replay = 1) } as MutableSharedFlow<Any?>
-            resultFlow.emit(result) 
+            resultFlow.emit(result)
         }
     }
 
@@ -215,14 +345,12 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
     @Suppress("UNCHECKED_CAST")
     override fun <T> getResult(key: String): T? {
         println("NavigationManager: Getting result for key '$key'")
-        // 내부 저장소 우선 확인
         if (resultStore.containsKey(key)) {
             val result = resultStore[key] as? T
-            resultStore.remove(key) // 일회성
+            resultStore.remove(key)
             println("NavigationManager: Found result in internal store for key '$key'.")
             return result
         }
-        // SavedStateHandle 확인 (화면 전환 후 복원된 경우)
         val targetNavController = activeChildNavController ?: parentNavController
         return try {
             val result = targetNavController?.currentBackStackEntry?.savedStateHandle?.remove<T>(key)
@@ -247,53 +375,53 @@ class NavigationManager @Inject constructor() : ComposeNavigationHandler {
     }
 
     /**
-     * 프로젝트 상세 화면으로 이동
+     * NavigationCommand를 사용하여 탭 내부에서 프로젝트 상세 화면으로 이동
      */
-    override fun navigateToProjectDetails(projectId: String) {
-        // 자식 NavController가 있는지 확인 (MainScreen 내부인지)
-        activeChildNavController?.let { childNav ->
-            println("NavigationManager: Child NavController 사용하여 프로젝트 상세로 이동: $projectId")
-            try {
-                // Home 탭 내부의 프로젝트 상세로 이동
-                childNav.navigate("project_detail/$projectId")
-                return // 성공적으로 이동했으므로 함수 종료
-            } catch (e: Exception) {
-                println("NavigationManager: 자식 NavController로 이동 실패, 부모 NavController 사용: ${e.message}")
-                // 실패 시 최상위 NavController로 이동 (아래 로직)
-            }
-        }
-        
-        // 자식 NavController가 없거나 이동 실패 시 최상위 NavController로 이동
-        println("NavigationManager: 최상위 NavController 사용하여 프로젝트 상세로 이동: $projectId")
-        navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.detail(projectId)))
-    }
-    
-    /**
-     * 채팅 화면으로 이동
-     * AppRoutes의 chat 경로를 사용합니다.
-     *
-     * @param channelId 이동할 채널의 ID
-     * @param messageId 스크롤할 메시지 ID (옵션)
-     */
-    override fun navigateToChat(channelId: String, messageId: String?) {
-        val route = AppRoutes.Chat.screen(channelId, messageId)
-        navigate(NavigationCommand.NavigateToRoute(route))
+    override fun navigateToProjectDetailsNested(projectId: String, command: NavigationCommand.NavigateToRoute) {
+        navigate(command as NavigationCommand)
     }
 
     /**
-     * 탭 내부에서 프로젝트 상세 화면으로 이동
-     * 
-     * 참고: HomeScreen이 상태 기반으로 업데이트되어 이 메서드는 더 이상 활발히 사용되지 않습니다.
-     * HomeViewModel.onProjectClick은 네비게이션 대신 상태 업데이트를 사용합니다.
-     * 
-     * 이 메서드는 하위 호환성 및 다른 컴포넌트에서의 사용을 위해 유지됩니다.
-     * 
-     * @param projectId 이동할 프로젝트의 ID
+     * 화면 상태 저장
+     * 탭 전환 시 화면 상태를 저장하는 데 사용됩니다.
+     *
+     * @param screenRoute 상태를 저장할 화면의 라우트
+     * @param state 저장할 상태 번들
      */
-    override fun navigateToProjectDetailsNested(projectId: String) {
-        println("NavigationManager: navigateToProjectDetailsNested는 현재 HomeScreen의 상태 기반 업데이트로 대체되었습니다.")
-        // 이전 구현: HomeScreen 내부의 중첩 네비게이션 사용
-        // 현재: 호환성을 위해 유지하되, 표준 네비게이션으로 전환
-        navigateToProjectDetails(projectId)
+    override fun saveScreenState(screenRoute: String, state: Bundle) {
+        println("NavigationManager: Saving screen state for route: $screenRoute")
+        screenStates[screenRoute] = state
     }
-} 
+    
+    /**
+     * 화면 상태 복원
+     * 탭 전환 시 이전에 저장된 화면 상태를 복원하는 데 사용됩니다.
+     *
+     * @param screenRoute 상태를 복원할 화면의 라우트
+     * @return 저장된 상태 번들 (없는 경우 null)
+     */
+    override fun getScreenState(screenRoute: String): Bundle? {
+        println("NavigationManager: Getting screen state for route: $screenRoute")
+        return screenStates[screenRoute]
+    }
+
+    /**
+     * 경로가 유효한지 확인합니다.
+     * 현재 등록된 NavController에서 가능한 경로인지 검사합니다.
+     * 
+     * 참고: 이 메서드는 정확한 유효성 검사가 아닌 기본적인 검사만 수행합니다.
+     * 실제 네비게이션은 navController.navigate 호출 시 검증됩니다.
+     */
+    override fun isValidRoute(routePath: String): Boolean {
+        if (routePath.isBlank()) return false
+        // canNavigateDirectly 또는 getGraphRootForRoute 등을 활용하여 더 정교한 검증 가능
+        // 임시로 true 반환 (실제로는 parentNavController나 activeChildNavController에서 경로 존재 여부 확인 필요)
+        return parentNavController?.let { 
+            canNavigateDirectly(it, routePath) || 
+            getGraphRootForRoute(routePath) != null 
+        } ?: false || activeChildNavController?.let {
+             canNavigateDirectly(it, routePath) 
+        } ?: false
+    }
+
+}

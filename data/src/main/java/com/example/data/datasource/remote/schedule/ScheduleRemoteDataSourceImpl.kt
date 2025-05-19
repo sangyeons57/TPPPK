@@ -12,6 +12,7 @@ import java.util.NoSuchElementException // 예외 추가
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.example.core_common.util.DateTimeUtil // Import DateTimeUtil
+import android.util.Log // Log import 추가
 
 /**
  * Firestore 'schedules' 컬렉션과 상호작용하는 ScheduleRemoteDataSource의 구현체입니다.
@@ -32,6 +33,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
      * 'startTime' 필드를 기준으로 쿼리합니다.
      */
     override suspend fun getSchedulesForDate(startOfDay: Timestamp, endOfDay: Timestamp): List<ScheduleDto> {
+        Log.d("ScheduleRemoteDS", "getSchedulesForDate 호출됨: startOfDay=${DateTimeUtil.firebaseTimestampToLocalDateTime(startOfDay)}, endOfDay=${DateTimeUtil.firebaseTimestampToLocalDateTime(endOfDay)}")
         // startTime이 startOfDay 이후이고 endOfDay 이전인 문서를 쿼리
         val querySnapshot = scheduleCollection
             .whereGreaterThanOrEqualTo(ScheduleFields.START_TIME, startOfDay)
@@ -42,10 +44,12 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
 
         // QuerySnapshot에서 각 DocumentSnapshot을 ScheduleDto로 변환
         // 실패 시 toObject가 예외를 던질 수 있음 (호출 스택으로 전파됨)
-        return querySnapshot.documents.mapNotNull { document ->
+        val schedules = querySnapshot.documents.mapNotNull { document ->
             document.toObject(ScheduleDto::class.java)
             // @DocumentId가 자동으로 id 필드를 채워줌
         }
+        Log.d("ScheduleRemoteDS", "getSchedulesForDate: ${schedules.size}개의 일정을 가져옴. 데이터: $schedules")
+        return schedules
     }
 
     /**
@@ -53,6 +57,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
      * 'startTime' 필드를 기준으로 쿼리합니다.
      */
     override suspend fun getSchedulesForMonth(startOfMonth: Timestamp, endOfMonth: Timestamp): List<ScheduleDto> {
+        Log.d("ScheduleRemoteDS", "getSchedulesForMonth 호출됨: startOfMonth=${DateTimeUtil.firebaseTimestampToLocalDateTime(startOfMonth)}, endOfMonth=${DateTimeUtil.firebaseTimestampToLocalDateTime(endOfMonth)}")
          // startTime이 startOfMonth 이후이고 endOfMonth 이전인 문서를 쿼리
         val querySnapshot = scheduleCollection
             .whereGreaterThanOrEqualTo(ScheduleFields.START_TIME, startOfMonth)
@@ -60,22 +65,27 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
             .get()
             .await()
 
-        return querySnapshot.documents.mapNotNull { document ->
+        val schedules = querySnapshot.documents.mapNotNull { document ->
             document.toObject(ScheduleDto::class.java)
         }
+        Log.d("ScheduleRemoteDS", "getSchedulesForMonth: ${schedules.size}개의 일정을 가져옴. 데이터: $schedules")
+        return schedules
     }
 
     /**
      * Firestore에서 특정 ID를 가진 일정 문서를 가져옵니다.
      */
     override suspend fun getScheduleDetail(scheduleId: String): ScheduleDto {
+        Log.d("ScheduleRemoteDS", "getScheduleDetail 호출됨: scheduleId=$scheduleId")
         val documentSnapshot = scheduleCollection.document(scheduleId)
             .get()
             .await() // Task<DocumentSnapshot> -> DocumentSnapshot
 
         // 문서를 ScheduleDto로 변환, 문서가 없거나 변환 실패 시 예외 발생 가능
-        return documentSnapshot.toObject(ScheduleDto::class.java)
+        val schedule = documentSnapshot.toObject(ScheduleDto::class.java)
             ?: throw NoSuchElementException("Schedule document with id $scheduleId not found or could not be parsed.")
+        Log.d("ScheduleRemoteDS", "getScheduleDetail: 가져온 일정 데이터: $schedule")
+        return schedule
     }
 
     /**

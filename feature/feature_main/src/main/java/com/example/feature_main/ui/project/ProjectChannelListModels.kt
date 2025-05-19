@@ -9,7 +9,7 @@ import com.example.domain.model.ProjectCategory
  */
 data class ProjectStructureUiState(
     val categories: List<CategoryUiModel> = emptyList(),
-    val generalChannels: List<ChannelUiModel> = emptyList(),
+    val directChannel: List<ChannelUiModel> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedChannelId: String? = null
@@ -58,7 +58,7 @@ data class ChannelUiModel(
             return ChannelUiModel(
                 id = channel.id,
                 name = channel.name,
-                mode = channel.channelMode
+                mode = channel.channelMode!!
             )
         }
     }

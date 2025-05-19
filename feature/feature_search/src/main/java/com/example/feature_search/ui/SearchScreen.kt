@@ -31,9 +31,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.NavDestination
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.MessageResult
@@ -55,7 +56,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -68,11 +69,11 @@ fun SearchScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SearchEvent.NavigateToMessage -> navigationHandler.navigate(
-                    NavigationCommand.NavigateToRoute(AppRoutes.Chat.screen(event.channelId, event.messageId))
+                is SearchEvent.NavigateToMessage -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(event.channelId, event.messageId))
                 )
-                is SearchEvent.NavigateToUserProfile -> navigationHandler.navigate(
-                    NavigationCommand.NavigateToRoute(AppRoutes.User.profile(event.userId.toString()))
+                is SearchEvent.NavigateToUserProfile -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.User.profile(event.userId.toString()))
                 )
                 is SearchEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
@@ -90,7 +91,7 @@ fun SearchScreen(
             TopAppBar(
                 title = { Text("검색") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleDetailScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: ScheduleDetailViewModel = hiltViewModel()
 ) {
@@ -50,9 +50,9 @@ fun ScheduleDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ScheduleDetailEvent.NavigateBack -> navigationHandler.navigateBack()
-                is ScheduleDetailEvent.NavigateToEditSchedule -> navigationHandler.navigate(
-                    NavigationCommand.NavigateToRoute(AppRoutes.Main.Calendar.editSchedule(event.scheduleId))
+                is ScheduleDetailEvent.NavigateBack -> appNavigator.navigateBack()
+                is ScheduleDetailEvent.NavigateToEditSchedule -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.editSchedule(event.scheduleId))
                 )
                 is ScheduleDetailEvent.ShowDeleteConfirmDialog -> showDeleteDialog = true
                 is ScheduleDetailEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
@@ -63,7 +63,7 @@ fun ScheduleDetailScreen(
     // 삭제 성공 시 뒤로 가기
     LaunchedEffect(uiState.deleteSuccess) {
         if (uiState.deleteSuccess) {
-            navigationHandler.navigateBack()
+            appNavigator.navigateBack()
         }
     }
 
@@ -74,7 +74,7 @@ fun ScheduleDetailScreen(
             TopAppBar(
                 title = { Text("일정 상세") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },

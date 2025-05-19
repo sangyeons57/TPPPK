@@ -16,7 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleListScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: RoleListViewModel = hiltViewModel()
 ) {
@@ -42,8 +42,16 @@ fun RoleListScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is RoleListEvent.NavigateToAddRole -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.addRole(uiState.projectId)))
-                is RoleListEvent.NavigateToEditRole -> navigationHandler.navigate(NavigationCommand.NavigateToRoute(AppRoutes.Project.editRole(uiState.projectId, event.roleId)))
+                is RoleListEvent.NavigateToAddRole -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(
+                        AppRoutes.Project.addRole(uiState.projectId)
+                    )
+                )
+                is RoleListEvent.NavigateToEditRole -> appNavigator.navigate(
+                    NavigationCommand.NavigateToRoute.fromRoute(
+                        AppRoutes.Project.editRole(uiState.projectId, event.roleId)
+                    )
+                )
                 is RoleListEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -56,7 +64,7 @@ fun RoleListScreen(
             TopAppBar(
                 title = { Text("역할 관리") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

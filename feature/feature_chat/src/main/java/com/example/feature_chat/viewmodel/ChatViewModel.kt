@@ -9,8 +9,6 @@ import com.example.domain.model.ChatMessage
 import com.example.domain.model.MediaImage
 import com.example.domain.model.Channel
 import com.example.domain.model.MessageAttachment
-import com.example.domain.model.channel.DmSpecificData
-import com.example.domain.model.channel.ProjectSpecificData
 import com.example.domain.repository.ChannelRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.usecase.message.DeleteMessageUseCase
@@ -43,7 +41,6 @@ import android.util.Log
 import com.example.data.model.channel.ChannelLocator
 import com.example.domain.model.AttachmentType
 import com.example.domain.model.ChannelType
-import com.example.core_common.constants.FirestoreConstants
 
 // --- Domain 모델 -> UI 모델 변환 함수 ---
 // ViewModel 내부 또는 별도 Mapper 파일에 위치 가능
@@ -129,7 +126,7 @@ class ChatViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val currentUser = userRepository.getCurrentUser()
+            val currentUser = userRepository.getCurrentUserStream()
                 .filterNotNull() 
                 .firstOrNull() 
                 ?.getOrNull()
@@ -184,7 +181,7 @@ class ChatViewModel @Inject constructor(
         val channelTypeValue = when (channelType) {
             "dm" -> ChannelType.DM
             "project_direct" -> ChannelType.PROJECT
-            "project_category" -> ChannelType.CATEGORY
+            "project_category" -> ChannelType.PROJECT
             else -> ChannelType.UNKNOWN
         }
         
@@ -200,14 +197,14 @@ class ChatViewModel @Inject constructor(
         val metadataCategoryId = channel.projectSpecificData?.categoryId
         
         // 프로젝트 ID 일치 여부 확인 (PROJECT 또는 CATEGORY 타입일 때)
-        if (channel.type == ChannelType.PROJECT || channel.type == ChannelType.CATEGORY) {
+        if (channel.type == ChannelType.PROJECT || channel.type == ChannelType.PROJECT) {
             if (projectId != metadataProjectId) {
                 Log.w("ChatViewModel", "Channel context mismatch: Expected projectId '$projectId' from nav arg, but channel projectId is '$metadataProjectId'. Channel ID: $channelId")
             }
         }
         
         // 카테고리 ID 일치 여부 확인 (CATEGORY 타입일 때)
-        if (channel.type == ChannelType.CATEGORY) {
+        if (channel.type == ChannelType.PROJECT) {
             if (categoryId != metadataCategoryId) {
                 Log.w("ChatViewModel", "Channel context mismatch: Expected categoryId '$categoryId' from nav arg, but channel categoryId is '$metadataCategoryId'. Channel ID: $channelId")
             }

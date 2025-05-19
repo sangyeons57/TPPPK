@@ -57,8 +57,8 @@ fun ProjectChannelList(
         modifier = modifier.padding(horizontal = 4.dp)
     ) {
         // 일반 채널 (카테고리에 속하지 않은 채널)
-        if (structureUiState.generalChannels.isNotEmpty()) {
-            items(structureUiState.generalChannels) { channel ->
+        if (structureUiState.directChannel.isNotEmpty()) {
+            items(structureUiState.directChannel) { channel ->
                 ChannelItem(
                     channel = channel,
                     onClick = { onChannelClick(channel) },
@@ -351,7 +351,7 @@ fun ProjectChannelListPreview_Default() {
         isLoading = false,
         error = null,
         categories = categories,
-        generalChannels = generalChannels
+        directChannel = generalChannels
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectChannelList(
@@ -372,7 +372,7 @@ fun ProjectChannelListPreview_Empty() {
         isLoading = false,
         error = null,
         categories = emptyList(),
-        generalChannels = emptyList()
+        directChannel = emptyList()
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectChannelList(

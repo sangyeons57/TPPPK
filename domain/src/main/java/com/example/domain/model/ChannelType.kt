@@ -5,12 +5,12 @@ package com.example.domain.model
 
 /**
  * 채널의 컨텍스트 타입을 나타내는 열거형 (도메인 모델)
+ * 현재 DM과 PROJECT 두 가지 타입만 지원합니다.
  */
 enum class ChannelType(val value: String) { 
-    DM("DM"), // FirestoreConstants.ChannelTypeValues.DM 대신 실제 문자열 값 사용
-    PROJECT("PROJECT"), // FirestoreConstants.ChannelTypeValues.PROJECT 대신 실제 문자열 값 사용
-    CATEGORY("CATEGORY"), // FirestoreConstants.ChannelTypeValues.CATEGORY 대신 실제 문자열 값 사용
-    UNKNOWN("UNKNOWN"); // UNKNOWN 타입 추가
+    DM("DM"), // 직접 메시지 채널
+    PROJECT("PROJECT"), // 프로젝트 채널
+    UNKNOWN("UNKNOWN"); // 알 수 없는 타입
 
     companion object {
         /**
@@ -18,7 +18,7 @@ enum class ChannelType(val value: String) {
          * 일치하는 타입이 없으면 UNKNOWN을 반환합니다.
          */
         fun fromString(typeString: String?): ChannelType {
-            return values().find { it.value.equals(typeString, ignoreCase = true) } 
+            return entries.find { it.value.equals(typeString, ignoreCase = true) }
                 ?: UNKNOWN // 일치하는 값 없으면 UNKNOWN 반환
         }
     }

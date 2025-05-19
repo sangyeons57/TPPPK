@@ -44,38 +44,34 @@ class UserRemoteDataSourceImpl @Inject constructor(
      * @param userId 가져올 사용자의 ID (Firebase Auth UID).
      * @return kotlin.Result 객체. 성공 시 UserDto, 실패 시 Exception 포함.
      */
-    override suspend fun getUserProfile(userId: String): Result<UserDto> = runCatching {
-        val documentSnapshot = userCollection.document(userId).get().await()
-        documentSnapshot.toObject(UserDto::class.java)
-            ?: throw NoSuchElementException("User document with id $userId not found or could not be deserialized.")
-    }
-
-    override fun getCurrentUserProfile(): Flow<Result<UserDto?>> = callbackFlow {
-        val currentUserId = auth.currentUser?.uid ?: run {
-            trySend(Result.success(null))
-            close() // Flow 정상 종료
-            return@callbackFlow
-        }
-        
-        val listenerRegistration = userCollection.document(currentUserId)
+    override suspend fun getUserStream(userId: String): Flow<Result<UserDto?>> = callbackFlow {
+        val listenerRegistration = userCollection.document(userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(Result.failure(error))
-                    close(error) // Flow 에러 종료
+                    close(error)
                     return@addSnapshotListener
                 }
-                
+
                 if (snapshot != null && snapshot.exists()) {
                     val userDto = snapshot.toObject(UserDto::class.java)
                     trySend(Result.success(userDto))
                 } else {
-                    trySend(Result.success(null)) // 문서가 없거나 삭제된 경우
+                    trySend(Result.success(null))
                 }
             }
-        
         awaitClose { listenerRegistration.remove() }
     }.catch { e ->
-        emit(Result.failure(e)) // Flow 스트림 자체의 예외 처리
+        emit(Result.failure(e))
+    }
+
+    override suspend fun getCurrentUserStream(): Flow<Result<UserDto?>> = callbackFlow {
+        val currentUserId = auth.currentUser?.uid ?: run {
+            trySend(Result.success(null))
+            close()
+            return@callbackFlow
+        }
+        getUserStream(currentUserId)
     }
 
     override suspend fun checkNicknameAvailability(nickname: String): Result<Boolean> = runCatching {

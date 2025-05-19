@@ -19,15 +19,15 @@ interface UserRemoteDataSource {
      * @param userId 조회할 사용자의 ID
      * @return 성공 시 UserDto가 포함된 Result, 실패 시 에러가 포함된 Result
      */
-    suspend fun getUserProfile(userId: String): Result<UserDto>
-    
+    suspend fun getUserStream(userId: String): Flow<Result<UserDto?>>
+
     /**
      * 현재 로그인한 사용자의 프로필 정보를 Flow로 가져옵니다.
      *
      * @return UserDto를 포함한 Flow (Firestore 문서 변경 시 실시간 업데이트)
      */
-    fun getCurrentUserProfile(): Flow<Result<UserDto?>>
-    
+    suspend fun getCurrentUserStream(): Flow<Result<UserDto?>>
+
     /**
      * 닉네임 중복 여부를 확인합니다.
      *

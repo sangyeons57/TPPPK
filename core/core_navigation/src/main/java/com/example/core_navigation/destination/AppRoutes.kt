@@ -26,6 +26,12 @@ object AppRoutes {
         object FindPassword {
             const val path = "$ROOT/find_password"
         }
+        object TermsOfService {
+            const val path = "$ROOT/terms_of_service"
+        }
+        object PrivacyPolicy {
+            const val path = "$ROOT/privacy_policy"
+        }
     }
 
     object Main {
@@ -72,14 +78,18 @@ object AppRoutes {
                 navArgument(ARG_MONTH) { type = NavType.Companion.IntType },
                 navArgument(ARG_DAY) { type = NavType.Companion.IntType }
             )
+
+            // 캘린더 그래프 정의
+            object Graph {
+                const val path = "calendar_graph"
+            }
         }
         object Profile {
             const val GRAPH_ROOT = "main_profile_graph"
             const val ROOT_CONTENT = "main_profile_content"
         }
-         object Graph { // For the nested navigation graph for MainScreen itself
+        object Graph { // For the nested navigation graph for MainScreen itself
             const val path = ROOT
-            const val suggestedStartPath = Home.GRAPH_ROOT // Default to home tab's graph
         }
     }
 
@@ -91,6 +101,12 @@ object AppRoutes {
         const val ARG_USER_ID = "userId" // For member editing
         const val ARG_ROLE_ID = "roleId" // For role editing (optional query param)
 
+        // 프로젝트 그래프 정의
+        object Graph {
+            const val path = "project_graph"
+            const val suggestedStartPath = ADD
+        }
+        
         // Project Creation / Joining
         const val ADD = "$ROOT/add"
         const val JOIN = "$ROOT/join"
@@ -218,6 +234,11 @@ object AppRoutes {
         const val ARG_MESSAGE_ID = "messageId" // Optional for scrolling to a message
         // const val ARG_PROJECT_ID = "projectId" // REMOVED: Not needed for unified chat route
 
+        // 채팅 그래프 정의
+        object Graph {
+            const val path = "chat_graph"
+        }
+        
         // 통합 채널 라우트: chat/{channelId}?messageId={messageId}
         /**
          * 지정된 채널 ID와 선택적 메시지 ID를 사용하여 채팅 화면으로 이동하는 경로를 생성합니다.
@@ -267,5 +288,13 @@ object AppRoutes {
     object Dev {
         private const val ROOT = "dev"
         const val MENU = "$ROOT/menu"
+    }
+
+    /**
+     * FCM 관련 경로
+     */
+    object FCM {
+        // FCM 테스트 화면
+        const val TEST = "fcm/test"
     }
 }

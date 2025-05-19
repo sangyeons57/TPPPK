@@ -11,7 +11,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 // Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
 import com.example.domain.model.Channel
-import com.example.domain.model.ProjectCategory
+import com.example.domain.model.Category
+import com.example.domain.model.ProjectStructure
 // import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
 import com.example.domain.usecase.project.* // Import project use cases
 
@@ -19,7 +20,7 @@ import com.example.domain.usecase.project.* // Import project use cases
 data class ProjectSettingUiState(
     val projectId: String = "",
     val projectName: String = "",
-    val categories: List<ProjectCategory> = emptyList(),
+    val categories: List<Category> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -34,7 +35,7 @@ sealed class ProjectSettingEvent {
     data class NavigateToCreateChannel(val projectId: String, val categoryId: String) : ProjectSettingEvent()
     data class NavigateToMemberList(val projectId: String) : ProjectSettingEvent()
     data class NavigateToRoleList(val projectId: String) : ProjectSettingEvent()
-    data class ShowDeleteCategoryConfirm(val category: ProjectCategory) : ProjectSettingEvent()
+    data class ShowDeleteCategoryConfirm(val category: Category) : ProjectSettingEvent()
     data class ShowDeleteChannelConfirm(val channel: Channel) : ProjectSettingEvent()
     object ShowRenameProjectDialog : ProjectSettingEvent()
     object ShowDeleteProjectConfirm : ProjectSettingEvent()
@@ -72,12 +73,12 @@ class ProjectSettingViewModel @Inject constructor(
             // -------------------
             // delay(800) // Remove temporary delay
             if (result.isSuccess) {
-                val (projectName, categories) = result.getOrThrow() // Use result from UseCase
+                val projectStructure = result.getOrThrow() // ProjectStructure 객체 받음
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        projectName = projectName,
-                        categories = categories
+                        // projectName은 ProjectStructure에 포함되지 않으므로 현재 상태 유지
+                        categories = projectStructure.categories
                     )
                 }
             } else {
@@ -96,7 +97,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun requestEditCategory(categoryId: String) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToEditCategory(projectId, categoryId)) }
     }
-    fun requestDeleteCategory(category: ProjectCategory) { // 파라미터 타입은 도메인 모델
+    fun requestDeleteCategory(category: Category) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteCategoryConfirm(category)) }
     }
     fun confirmDeleteCategory(categoryId: String) {
@@ -124,7 +125,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun requestEditChannel(categoryId: String, channelId: String) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToEditChannel(projectId, categoryId, channelId)) }
     }
-    fun requestDeleteChannel(channel: Channel) { // Replaced ProjectChannel with Channel // 파라미터 타입은 도메인 모델
+    fun requestDeleteChannel(channel: Channel) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteChannelConfirm(channel)) }
     }
     fun confirmDeleteChannel(channelId: String) {

@@ -4,12 +4,14 @@ package com.example.domain.model
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.AccountStatus
+import com.google.firebase.firestore.DocumentId
+
 /**
  * 사용자 정보를 담는 도메인 모델.
  * Firestore 'users' 컬렉션에 저장된 사용자 데이터를 표현합니다.
  */
 data class User(
-    val id: String = "", // Renamed from userId to id
+    @DocumentId val id: String = "",
     val email: String = "",
     val name: String = "", // Unique
     val profileImageUrl: String? = null,
@@ -22,7 +24,8 @@ data class User(
     val accountStatus: AccountStatus = AccountStatus.ACTIVE,
     val activeDmIds: List<String> = emptyList(),
     val isEmailVerified: Boolean = false,
-    val updatedAt: Instant? = null // 사용자 정보 마지막 업데이트 시간
+    val updatedAt: Instant? = null, // 사용자 정보 마지막 업데이트 시간
+    val consentTimeStamp: Instant? = null // 서비스 정책및 개인정보처리방침 동의 시간
 ) {
     companion object {
         /**
@@ -42,7 +45,22 @@ data class User(
             accountStatus = AccountStatus.UNKNOWN, // 또는 적절한 기본 AccountStatus
             activeDmIds = emptyList(),
             isEmailVerified = false,
-            updatedAt = null
+            updatedAt = null,
+            consentTimeStamp = null
+        )
+    }
+    
+    /**
+     * User 객체를 UI 표시용 UserProfileData로 변환하는 함수
+     * @return UserProfileData UI에서 사용할 사용자 프로필 데이터
+     */
+     fun toUserProfileData(): UserProfileData {
+        return UserProfileData(
+            userId = this.id,
+            name = this.name,
+            email = this.email,
+            statusMessage = this.statusMessage ?: "상태 메시지 없음",
+            profileImageUrl = this.profileImageUrl
         )
     }
 }

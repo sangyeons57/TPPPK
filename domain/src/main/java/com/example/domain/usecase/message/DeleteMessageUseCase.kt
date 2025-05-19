@@ -22,7 +22,7 @@ class DeleteMessageUseCase @Inject constructor(
      * @return 작업 성공 여부를 담은 [Result].
      */
     suspend operator fun invoke(channelId: String, messageId: String): Result<Unit> {
-        val currentUserResult = userRepository.getCurrentUser().first()
+        val currentUserResult = userRepository.getCurrentUserStream().first()
         
         if (currentUserResult.isFailure) {
             return Result.failure(currentUserResult.exceptionOrNull() ?: IllegalStateException("Failed to get current user"))

@@ -31,7 +31,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import com.example.core_navigation.core.ComposeNavigationHandler
+import com.example.core_navigation.core.AppNavigator
 
 /**
  * AddScheduleScreen: 일정 추가 화면 (Stateful)
@@ -39,7 +39,7 @@ import com.example.core_navigation.core.ComposeNavigationHandler
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddScheduleScreen(
-    navigationHandler: ComposeNavigationHandler,
+    appNavigator: AppNavigator,
     modifier: Modifier = Modifier,
     viewModel: AddScheduleViewModel = hiltViewModel()
 ) {
@@ -50,11 +50,10 @@ fun AddScheduleScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AddScheduleEvent.NavigateBack -> {
-                    navigationHandler.navigateBack()
+                    appNavigator.navigateBack()
                 }
                 is AddScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
-                    navigationHandler.setResult("schedule_added_or_updated", true)
-                    navigationHandler.navigateBack()
+                    appNavigator.navigateBack()
                 }
                 is AddScheduleEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
@@ -93,7 +92,7 @@ fun AddScheduleScreen(
             TopAppBar(
                 title = { Text("일정 추가") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationHandler.navigateBack() }) { // 뒤로가기
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

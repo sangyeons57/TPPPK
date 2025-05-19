@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -31,68 +32,13 @@ class UserRepositoryImpl @Inject constructor(
 
     private val usersCollection = firestore.collection(FirestoreConstants.Collections.USERS)
 
-    override suspend fun getUser(userId: String): Result<User> {
-        return try {
-            val documentSnapshot = usersCollection.document(userId).get().await()
-            val user = documentSnapshot.toObject(User::class.java) // KTX 권장 방식으로 변경
-            if (user != null) {
-                Result.success(user)
-            } else {
-                Result.failure(Exception("User not found or parsing failed"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    // getCurrentUser()는 UserRemoteDataSource를 통해 UserDto를 받고 매핑하는 기존 방식 유지 가능
-    // 또는 아래 스트림 방식을 단일 조회로 변경하여 사용 가능
-    override fun getCurrentUser(): Flow<Result<User?>> {
-        return userRemoteDataSource.getCurrentUserProfile().map { resultDto ->
-            resultDto.map { userDto ->
-                userDto?.let { userMapper.mapToDomain(it) } // UserDto -> User 매핑
-            }
-        }
-    }
-
-    /**
-     * 현재 로그인된 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
-     * Firestore의 스냅샷 리스너를 사용하여 변경 사항을 감지하고 User 객체로 변환하여 Flow로 전달합니다.
-     */
-    override fun getCurrentUserProfileStream(): Flow<User> = callbackFlow {
-        val userId = firebaseAuth.currentUser?.uid
-        if (userId == null) {
-            trySend(User.EMPTY) // 또는 에러 처리, User.EMPTY는 예시이며 실제 모델에 맞게 정의 필요
-            close(IllegalStateException("User not logged in"))
-            return@callbackFlow
-        }
-
-        val docRef = usersCollection.document(userId)
-        val listenerRegistration = docRef.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                close(error)
-                return@addSnapshotListener
-            }
-            if (snapshot != null && snapshot.exists()) {
-                val user = snapshot.toObject(User::class.java) // KTX 권장 방식으로 변경
-                if (user != null) {
-                    trySend(user).isSuccess
-                } else {
-                    trySend(User.EMPTY).isSuccess
-                }
-            } else {
-                trySend(User.EMPTY).isSuccess
-            }
-        }
-        awaitClose { listenerRegistration.remove() }
-    }
-
     /**
      * 특정 ID를 가진 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
      * Firestore의 스냅샷 리스너를 사용하여 변경 사항을 감지하고 User 객체로 변환하여 Flow로 전달합니다.
      * @param userId 조회할 사용자의 ID
+     * @return Flow<User> 사용자 정보 Flow
      */
-    override fun getUserProfileStream(userId: String): Flow<User> = callbackFlow {
+    override fun getUserStream(userId: String): Flow<Result<User>> = callbackFlow {
         val docRef = usersCollection.document(userId)
         val listenerRegistration = docRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -100,19 +46,50 @@ class UserRepositoryImpl @Inject constructor(
                 return@addSnapshotListener
             }
             if (snapshot != null && snapshot.exists()) {
-                val user = snapshot.toObject(User::class.java) // KTX 권장 방식으로 변경
+                val user = snapshot.toObject(User::class.java) 
                 if (user != null) {
-                    trySend(user).isSuccess
+                    trySend(Result.success(user)).isSuccess
                 } else {
-                    trySend(User.EMPTY).isSuccess
+                    trySend(Result.success(User.EMPTY)).isSuccess
                 }
             } else {
-                trySend(User.EMPTY).isSuccess
+                trySend(Result.success(User.EMPTY)).isSuccess
             }
         }
         awaitClose { listenerRegistration.remove() }
     }
 
+    /**
+     * 현재 로그인한 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
+     * @return Flow<User> 현재 사용자 정보 Flow
+     */
+    override fun getCurrentUserStream(): Flow<Result<User>> = callbackFlow {
+        val currentUserId = try {
+            getCurrentUserId()
+        } catch (e: Exception) {
+            close(e)
+            return@callbackFlow
+        }
+
+        val docRef = usersCollection.document(currentUserId)
+        val listenerRegistration = docRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null && snapshot.exists()) {
+                val user = snapshot.toObject(User::class.java)
+                if (user != null) {
+                    trySend(Result.success(user)).isSuccess
+                } else {
+                    trySend(Result.success(User.EMPTY)).isSuccess
+                }
+            } else {
+                trySend(Result.success(User.EMPTY)).isSuccess
+            }
+        }
+        awaitClose { listenerRegistration.remove() }
+    }
 
     override suspend fun getCurrentStatus(): Result<UserStatus> {
         val currentUserId = firebaseAuth.currentUser?.uid
@@ -136,6 +113,43 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun checkNicknameAvailability(nickname: String): Result<Boolean> {
         return userRemoteDataSource.checkNicknameAvailability(nickname)
+    }
+
+    /**
+     * 이름(닉네임)으로 사용자를 검색합니다.
+     * @param name 검색할 이름
+     * @return 검색 결과에 해당하는 사용자 목록 또는 에러를 포함하는 Result
+     */
+    override suspend fun searchUsersByName(name: String): Result<List<User>> {
+        return try {
+            val trimmedName = name.trim()
+            if (trimmedName.isEmpty()) {
+                return Result.success(emptyList())
+            }
+            
+            // 이름이 검색어를 포함하는 사용자 문서 조회
+            val querySnapshot = usersCollection
+                .whereGreaterThanOrEqualTo("name", trimmedName)
+                .whereLessThan("name", trimmedName + "\uf8ff") // 접두사 검색을 위한 기법
+                .limit(10) // 결과 수 제한
+                .get()
+                .await()
+                
+            val users = querySnapshot.documents.mapNotNull { document ->
+                val user = document.toObject(User::class.java)
+                // document.id가 User 모델의 id 필드에 자동 매핑이 안될 수 있으므로
+                // 수동으로 설정 (필요한 경우)
+                if (user != null && user.id.isEmpty()) {
+                    user.copy(id = document.id)
+                } else {
+                    user
+                }
+            }
+            
+            Result.success(users)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun createUserProfile(user: User): Result<Unit> {

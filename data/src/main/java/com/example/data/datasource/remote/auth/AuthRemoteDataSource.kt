@@ -4,6 +4,7 @@ import com.example.data.model.remote.user.UserDto
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
+import java.time.Instant
 
 /**
  * Firebase Authentication과의 상호작용을 추상화하는 데이터 소스 인터페이스
@@ -87,9 +88,10 @@ interface AuthRemoteDataSource {
      * @param email 사용자 이메일
      * @param password 사용자 비밀번호
      * @param nickname 사용자 닉네임
+     * @param consentTimeStamp 서비스 정책및 개인정보처리방침 동의 시간
      * @return 성공 시 UserDto가 포함된 Result, 실패 시 에러가 포함된 Result
      */
-    suspend fun signUp(email: String, password: String, nickname: String): Result<UserDto?>
+    suspend fun signUp(email: String, password: String, nickname: String, consentTimeStamp: Instant): Result<UserDto?>
     
     /**
      * 현재 사용자에게 이메일 인증 메일을 발송합니다.
