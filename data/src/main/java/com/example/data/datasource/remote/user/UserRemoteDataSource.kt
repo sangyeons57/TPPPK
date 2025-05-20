@@ -37,6 +37,14 @@ interface UserRemoteDataSource {
     suspend fun checkNicknameAvailability(nickname: String): Result<Boolean>
 
     /**
+     * 이름(닉네임)으로 사용자를 검색합니다.
+     *
+     * @param name 검색할 이름
+     * @return 성공 시 UserDto 목록이 포함된 Result, 실패 시 에러가 포함된 Result
+     */
+    suspend fun searchUsersByName(name: String): Result<List<UserDto>>
+
+    /**
      * 사용자 프로필을 생성합니다.
      *
      * @param userDto 생성할 사용자 정보

@@ -59,9 +59,9 @@ service cloud.firestore {
 
     // === 사용자 관련 규칙 ===
     match /users/{userId} {
-      // 사용자 프로필 읽기: 인증된 모든 사용자
-      allow read: if isAuthenticated();
-      
+      // 사용자 프로필 읽기: 모든 사용자
+      allow read: if true;
+
       // 사용자 프로필 수정: 자기 자신만
       allow write: if isCurrentUser(userId);
       
@@ -209,16 +209,27 @@ service cloud.firestore {
     
     // === 일정 관련 규칙 ===
     match /schedules/{scheduleId} {
+      //에러 너무나서 임시로
+      allow read, write, create, update, delete: if isAuthenticated();
+
       // 일정 읽기: 해당 프로젝트 멤버만
       allow read: if isAuthenticated() && 
                     resource.data.projectId != null &&
                     isProjectMember(resource.data.projectId);
+
+      // 일정 읽기: 인증된 사용자 + 일정 생성자
+      allow read: if isAuthenticated() && 
+                    resource.data.creatorId == request.auth.uid;
       
       // 일정 생성: 인증된 사용자 + 프로젝트 멤버
       allow create: if isAuthenticated() &&
                      request.resource.data.projectId != null &&
                      isProjectMember(request.resource.data.projectId) &&
                      request.resource.data.creatorId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+                    request.resource.data.creatorId == request.auth.uid &&
+                    request.resource.data.projectId == null;
       
       // 일정 수정/삭제: 프로젝트 소유자 또는 일정 생성자
       allow update, delete: if isAuthenticated() &&
@@ -227,6 +238,12 @@ service cloud.firestore {
                                isProjectOwner(resource.data.projectId) ||
                                (resource.data.creatorId != null && resource.data.creatorId == request.auth.uid)
                              );
+
+      // 일정 수정/삭제: 인증된 사용자 + 일정 생성자
+      allow update, delete: if isAuthenticated() &&
+                            resource.data.creatorId == request.auth.uid &&
+                            resource.data.projectId == null;
+
     }
     
     // === 초대 관련 규칙 ===

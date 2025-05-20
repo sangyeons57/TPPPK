@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.core_common.util.DateTimeUtil
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -132,7 +133,7 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         
         if (user != null) {
             // 닉네임 설정을 위한 프로필 업데이트
-            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+            val profileUpdates = UserProfileChangeRequest.Builder()
                 .setDisplayName(nickname)
                 .build()
             

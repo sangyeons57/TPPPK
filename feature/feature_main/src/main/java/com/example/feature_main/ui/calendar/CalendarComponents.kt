@@ -1,10 +1,27 @@
 package com.example.feature_main.ui.calendar
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,18 +44,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.Schedule
+import com.example.feature_main.R
 import com.example.feature_main.viewmodel.CalendarUiState
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -47,6 +73,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * 캘린더 관련 UI 컴포넌트 모음
@@ -74,6 +102,7 @@ object CalendarColors {
  * 달력 컨텐츠 UI 렌더링 (Stateless)
  *
  * 달력 그리드와 월 이동 네비게이션 UI를 표시합니다.
+ * 좌우 스와이프로 달력을 이동할 수 있습니다.
  *
  * @param modifier 이 컴포넌트에 적용할 Modifier
  * @param uiState 현재 캘린더 UI 상태 (현재월, 선택된 날짜, 일정 목록 등)
@@ -89,16 +118,84 @@ fun CalendarContent(
     onNextMonthClick: () -> Unit,
     onDateClick: (LocalDate) -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    // 스와이프 관련 상태 변수
+    var offsetX by remember { mutableStateOf(0f) }
+    var isAnimating by remember { mutableStateOf(false) }
+    
+    // 화면 너비 측정 (임계값 계산을 위해)
+    val density = LocalDensity.current
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val screenWidthPx = with(density) { screenWidth.toPx() }
+    val dragThreshold = screenWidthPx * 0.2f // 화면 너비의 20%를 임계값으로 설정
+    
+    // 드래그 진행률에 따른 알파 값 (시각적 피드백)
+    val dragProgress = (abs(offsetX) / screenWidthPx).coerceIn(0f, 1f)
+    val contentAlpha = 1f - (dragProgress * 0.3f) // 최소 알파값은 0.7
+    
+    // 애니메이션 값
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = offsetX,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        finishedListener = {
+            // 애니메이션이 끝났을 때 상태 초기화
+            if (isAnimating) {
+                offsetX = 0f
+                isAnimating = false
+            }
+        },
+        label = "Calendar Swipe Animation"
+    )
+    
+    // 드래그 제스처 감지와 애니메이션을 적용한 Column
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+            .alpha(contentAlpha) // 드래그 진행에 따른 알파값 적용
+            .semantics { 
+                // 접근성 설명 추가
+                contentDescription = R.string.calendar_swipe_hint.toString()
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = {
+                        isAnimating = true
+                        // 임계값을 넘었는지 확인
+                        if (abs(offsetX) > dragThreshold) {
+                            if (offsetX > 0) {
+                                // 오른쪽으로 스와이프 - 이전 달로 이동
+                                onPreviousMonthClick()
+                            } else {
+                                // 왼쪽으로 스와이프 - 다음 달로 이동
+                                onNextMonthClick()
+                            }
+                        }
+                        // 원위치로 애니메이션 적용
+                        offsetX = 0f
+                    },
+                    onDragCancel = {
+                        isAnimating = true
+                        offsetX = 0f // 원위치로 애니메이션 적용
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        if (!isAnimating) {
+                            // 수평 드래그만 처리하고, 최대 드래그 거리 제한
+                            val newOffsetX = offsetX + dragAmount.x
+                            offsetX = newOffsetX.coerceIn(-screenWidthPx / 2, screenWidthPx / 2)
+                        }
+                    }
+                )
+            }
+    ) {
         // 1. 월 이동 헤더
         MonthHeader(
             yearMonthText = uiState.currentYearMonth.format(uiState.monthYearFormatter),
-            onPreviousClick = { 
-                onPreviousMonthClick() 
-            },
-            onNextClick = { 
-                onNextMonthClick() 
-            },
+            onPreviousClick = onPreviousMonthClick,
+            onNextClick = onNextMonthClick,
             modifier = Modifier.padding(vertical = Dimens.paddingMedium, horizontal = Dimens.paddingXLarge)
         )
 
@@ -218,11 +315,11 @@ fun DayOfWeekHeader(modifier: Modifier = Modifier) {
  */
 @Composable
 fun CalendarGrid(
+    modifier: Modifier = Modifier,
     dates: List<LocalDate?>,
     selectedDate: LocalDate,
     onDateClick: (LocalDate) -> Unit,
     datesWithSchedules: Set<LocalDate> = emptySet(),
-    modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),

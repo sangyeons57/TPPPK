@@ -1,7 +1,9 @@
 package com.example.data.datasource.remote.user
 
 import android.net.Uri
+import android.util.Log
 import com.example.core_common.constants.FirestoreConstants.Collections
+import com.example.core_common.constants.FirestoreConstants.UserFields
 import com.example.data.model.remote.user.UserDto
 import com.example.domain.model.AccountStatus
 import com.example.domain.model.UserStatus
@@ -76,11 +78,12 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun checkNicknameAvailability(nickname: String): Result<Boolean> = runCatching {
         val querySnapshot = userCollection
-            .whereEqualTo("name", nickname) // DTO의 @PropertyName("name")과 일치해야 함
+            .whereEqualTo(UserFields.NAME, nickname) // DTO의 @PropertyName("name")과 일치해야 함
             .limit(1)
             .get()
             .await()
-        querySnapshot.isEmpty
+        Log.d("checkNicknameAvailability", "Query result: $querySnapshot ${querySnapshot.isEmpty}")
+        return Result.success(querySnapshot.isEmpty)
     }
 
     override suspend fun createUserProfile(userDto: UserDto): Result<Unit> = runCatching {
@@ -165,6 +168,35 @@ class UserRemoteDataSourceImpl @Inject constructor(
     override suspend fun getUserStatus(userId: String): Result<String> = runCatching {
         val document = userCollection.document(userId).get().await()
         document.getString("status") ?: UserStatus.OFFLINE.name
+    }
+
+    /**
+     * 이름(닉네임)으로 사용자를 검색합니다.
+     * 
+     * @param name 검색할 이름
+     * @return 성공 시 UserDto 목록이 포함된 Result, 실패 시 에러가 포함된 Result
+     */
+    override suspend fun searchUsersByName(name: String): Result<List<UserDto>> = runCatching {
+        val trimmedName = name.trim()
+        
+        // 이름이 검색어를 포함하는 사용자 문서 조회
+        val querySnapshot = userCollection
+            .whereGreaterThanOrEqualTo(UserFields.NAME, trimmedName)
+            .whereLessThan(UserFields.NAME, trimmedName + "\uf8ff") // 접두사 검색을 위한 기법
+            .limit(10) // 결과 수 제한
+            .get()
+            .await()
+            
+        querySnapshot.documents.mapNotNull { document ->
+            val userDto = document.toObject(UserDto::class.java)
+            // document.id가 UserDto 모델의 id 필드에 자동 매핑이 안될 수 있으므로
+            // 수동으로 설정 (필요한 경우)
+            if (userDto != null && userDto.id.isEmpty()) {
+                userDto.copy(id = document.id)
+            } else {
+                userDto
+            }
+        }
     }
 
     override suspend fun updateUserStatus(userId: String, status: UserStatus): Result<Unit> = runCatching {

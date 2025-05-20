@@ -15,7 +15,6 @@ import kotlin.Result
  */
 class SignUpUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
 ) {
     /**
      * 이메일, 비밀번호, 닉네임을 이용하여 회원가입을 수행합니다.
@@ -35,12 +34,7 @@ class SignUpUseCase @Inject constructor(
         nickname: String,
         consentTimeStamp: Instant = Instant.now()
     ): Result<User?> {
-        // 닉네임 중복 확인 (선택적)
-        val nicknameCheck = userRepository.checkNicknameAvailability(nickname)
-        if (nicknameCheck.isFailure || nicknameCheck.getOrNull() == false) {
-            return Result.failure(IllegalArgumentException("이미 사용 중인 닉네임입니다."))
-        }
-        
+
         // 회원가입 수행
         return authRepository.signUp(email, password, nickname, consentTimeStamp)
     }

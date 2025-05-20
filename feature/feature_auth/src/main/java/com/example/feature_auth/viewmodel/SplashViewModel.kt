@@ -69,15 +69,8 @@ class SplashViewModel @Inject constructor(
                 Log.d("SplashViewModel", "Auth check result: $result")
 
                 result.onSuccess { (isAuthenticated, isEmailVerified) ->
-                    if (isAuthenticated) {
-                        if (isEmailVerified) {
-                            _eventFlow.emit(SplashEvent.NavigateToMain)
-                        } else {
-                            // TODO: Navigate to email verification screen? Or Login?
-                            // For now, matching original logic: navigate to Login
-                            _eventFlow.emit(SplashEvent.NavigateToMain)
-                            //_eventFlow.emit(SplashEvent.NavigateToLogin)
-                        }
+                    if (isAuthenticated && isEmailVerified) {
+                        _eventFlow.emit(SplashEvent.NavigateToMain)
                     } else {
                         _eventFlow.emit(SplashEvent.NavigateToLogin)
                     }

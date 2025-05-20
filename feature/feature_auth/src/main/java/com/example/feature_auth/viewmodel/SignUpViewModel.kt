@@ -1,11 +1,14 @@
 package com.example.feature_auth.viewmodel
 
+import android.util.Log
 import android.util.Patterns
 import androidx.compose.ui.focus.FocusState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.SignUpFormFocusTarget
+import com.example.domain.usecase.auth.CheckEmailVerificationUseCase
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
+import com.example.domain.usecase.auth.SendEmailVerificationUseCase
 import com.example.domain.usecase.auth.SignUpUseCase
 import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -86,6 +89,7 @@ sealed class SignUpEvent {
 class SignUpViewModel @Inject constructor(
     private val signUpUseCase: SignUpUseCase,
     private val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
+    private val sendEmailVerificationUseCase: SendEmailVerificationUseCase,
     private val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
 ) : ViewModel() {
 
@@ -222,6 +226,7 @@ class SignUpViewModel @Inject constructor(
 
             // 닉네임 중복 확인
             val nicknameCheck = checkNicknameAvailabilityUseCase(state.name)
+            Log.d("nicknameCheck", "nicknameCheck: [ ${state.name} ] $nicknameCheck")
             if (nicknameCheck.isFailure || nicknameCheck.getOrNull() == false) {
                 _uiState.update { it.copy(
                     isLoading = false,
@@ -239,6 +244,7 @@ class SignUpViewModel @Inject constructor(
 
             result.onSuccess { newUser ->
                 _uiState.update { it.copy(isLoading = false, signUpSuccess = true) }
+                sendEmailVerificationUseCase()
                 _eventFlow.emit(SignUpEvent.ShowSnackbar("회원가입 성공! 로그인해주세요."))
                 _eventFlow.emit(SignUpEvent.NavigateToLogin)
                 println("회원가입 성공: ${newUser!!.email}")

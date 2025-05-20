@@ -1,6 +1,7 @@
 package com.example.data.repository
 
 import android.net.Uri
+import android.util.Log
 import com.example.core_common.constants.FirestoreConstants
 import com.example.data.datasource.remote.user.UserRemoteDataSource
 import com.example.data.model.mapper.UserMapper
@@ -34,84 +35,64 @@ class UserRepositoryImpl @Inject constructor(
 
     /**
      * 특정 ID를 가진 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
-     * Firestore의 스냅샷 리스너를 사용하여 변경 사항을 감지하고 User 객체로 변환하여 Flow로 전달합니다.
+     * UserRemoteDataSource를 통해 Firestore의 스냅샷 리스너를 사용하여 변경 사항을 감지하고
+     * UserDto를 User 객체로 변환하여 Flow로 전달합니다.
      * @param userId 조회할 사용자의 ID
      * @return Flow<User> 사용자 정보 Flow
      */
-    override fun getUserStream(userId: String): Flow<Result<User>> = callbackFlow {
-        val docRef = usersCollection.document(userId)
-        val listenerRegistration = docRef.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                close(error)
-                return@addSnapshotListener
-            }
-            if (snapshot != null && snapshot.exists()) {
-                val user = snapshot.toObject(User::class.java) 
-                if (user != null) {
-                    trySend(Result.success(user)).isSuccess
-                } else {
-                    trySend(Result.success(User.EMPTY)).isSuccess
-                }
-            } else {
-                trySend(Result.success(User.EMPTY)).isSuccess
+    override fun getUserStream(userId: String): Flow<Result<User>> {
+        return flow {
+            userRemoteDataSource.getUserStream(userId).collect { result ->
+                emit(result.map { userDto ->
+                    if (userDto != null) {
+                        userMapper.mapToDomain(userDto)
+                    } else {
+                        User.EMPTY
+                    }
+                })
             }
         }
-        awaitClose { listenerRegistration.remove() }
     }
 
     /**
      * 현재 로그인한 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
      * @return Flow<User> 현재 사용자 정보 Flow
      */
-    override fun getCurrentUserStream(): Flow<Result<User>> = callbackFlow {
-        val currentUserId = try {
-            getCurrentUserId()
-        } catch (e: Exception) {
-            close(e)
-            return@callbackFlow
-        }
-
-        val docRef = usersCollection.document(currentUserId)
-        val listenerRegistration = docRef.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                close(error)
-                return@addSnapshotListener
-            }
-            if (snapshot != null && snapshot.exists()) {
-                val user = snapshot.toObject(User::class.java)
-                if (user != null) {
-                    trySend(Result.success(user)).isSuccess
-                } else {
-                    trySend(Result.success(User.EMPTY)).isSuccess
+    override fun getCurrentUserStream(): Flow<Result<User>> {
+        return flow {
+            try {
+                val currentUserId = getCurrentUserId()
+                userRemoteDataSource.getUserStream(currentUserId).collect { result ->
+                    emit(result.map { userDto ->
+                        if (userDto != null) {
+                            userMapper.mapToDomain(userDto)
+                        } else {
+                            User.EMPTY
+                        }
+                    })
                 }
-            } else {
-                trySend(Result.success(User.EMPTY)).isSuccess
+            } catch (e: Exception) {
+                emit(Result.failure(e))
             }
         }
-        awaitClose { listenerRegistration.remove() }
     }
 
     override suspend fun getCurrentStatus(): Result<UserStatus> {
         val currentUserId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-            
-        return try {
-            val document = usersCollection.document(currentUserId).get().await()
-            val statusString = document.getString(FirestoreConstants.UserFields.STATUS) ?: UserStatus.OFFLINE.name
-            
-            Result.success(
-                try {
-                    UserStatus.valueOf(statusString.uppercase())
-                } catch (e: IllegalArgumentException) {
-                    UserStatus.OFFLINE
-                }
-            )
-        } catch (e: Exception) {
-            Result.failure(e)
+        
+        // DataSource를 통해 사용자 상태 가져오기
+        return userRemoteDataSource.getUserStatus(currentUserId).map { statusString ->
+            try {
+                UserStatus.valueOf(statusString.uppercase())
+            } catch (e: IllegalArgumentException) {
+                UserStatus.OFFLINE
+            }
         }
     }
 
     override suspend fun checkNicknameAvailability(nickname: String): Result<Boolean> {
+        Log.d("UserRepositoryImpl", "checkNicknameAvailability called with nickname: $nickname")
         return userRemoteDataSource.checkNicknameAvailability(nickname)
     }
 
@@ -121,50 +102,41 @@ class UserRepositoryImpl @Inject constructor(
      * @return 검색 결과에 해당하는 사용자 목록 또는 에러를 포함하는 Result
      */
     override suspend fun searchUsersByName(name: String): Result<List<User>> {
+        // UserRemoteDataSource를 통해 데이터 접근하고 UserMapper로 변환
         return try {
             val trimmedName = name.trim()
             if (trimmedName.isEmpty()) {
                 return Result.success(emptyList())
             }
             
-            // 이름이 검색어를 포함하는 사용자 문서 조회
-            val querySnapshot = usersCollection
-                .whereGreaterThanOrEqualTo("name", trimmedName)
-                .whereLessThan("name", trimmedName + "\uf8ff") // 접두사 검색을 위한 기법
-                .limit(10) // 결과 수 제한
-                .get()
-                .await()
-                
-            val users = querySnapshot.documents.mapNotNull { document ->
-                val user = document.toObject(User::class.java)
-                // document.id가 User 모델의 id 필드에 자동 매핑이 안될 수 있으므로
-                // 수동으로 설정 (필요한 경우)
-                if (user != null && user.id.isEmpty()) {
-                    user.copy(id = document.id)
-                } else {
-                    user
+            // DataSource를 통해 데이터를 가져오고, 결과를 매핑
+            val userDtosResult = userRemoteDataSource.searchUsersByName(trimmedName)
+            
+            userDtosResult.map { userDtos ->
+                userDtos.map { userDto ->
+                    userMapper.mapToDomain(userDto)
                 }
             }
-            
-            Result.success(users)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     override suspend fun createUserProfile(user: User): Result<Unit> {
+        // User 도메인 모델을 UserDto로 변환 후 DataSource를 통해 저장
         return try {
-            usersCollection.document(user.id).set(user).await()
-            Result.success(Unit)
+            val userDto = userMapper.mapToDto(user)
+            userRemoteDataSource.createUserProfile(userDto)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
     
     override suspend fun updateUserProfile(user: User): Result<Unit> {
+        // User 도메인 모델을 UserDto로 변환 후 DataSource를 통해 업데이트
         return try {
-            usersCollection.document(user.id).set(user, com.google.firebase.firestore.SetOptions.merge()).await()
-            Result.success(Unit)
+            val userDto = userMapper.mapToDto(user)
+            userRemoteDataSource.updateUserProfile(userDto)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -187,66 +159,47 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun updateNickname(newNickname: String): Result<Unit> {
         val userId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        return try {
-            usersCollection.document(userId).update(FirestoreConstants.UserFields.NAME, newNickname).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // DataSource를 통해 닉네임 업데이트
+        return userRemoteDataSource.updateNickname(userId, newNickname)
     }
 
     override suspend fun updateUserMemo(newMemo: String): Result<Unit> {
         val userId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        return try {
-            usersCollection.document(userId).update(FirestoreConstants.UserFields.STATUS_MESSAGE, newMemo).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // DataSource를 통해 메모 업데이트
+        return userRemoteDataSource.updateUserMemo(userId, newMemo)
     }
 
     override suspend fun getUserStatus(userId: String): Result<UserStatus> {
-        return try {
-            val document = usersCollection.document(userId).get().await()
-            val statusString = document.getString(FirestoreConstants.UserFields.STATUS) ?: UserStatus.OFFLINE.name
-            Result.success(UserStatus.valueOf(statusString.uppercase()))
-        } catch (e: Exception) {
-            Result.failure(e)
+        // DataSource를 통해 사용자 상태 가져오기
+        return userRemoteDataSource.getUserStatus(userId).map { statusString ->
+            try {
+                UserStatus.valueOf(statusString.uppercase())
+            } catch (e: IllegalArgumentException) {
+                UserStatus.OFFLINE
+            }
         }
     }
 
     override suspend fun updateUserStatus(status: UserStatus): Result<Unit> {
         val userId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        return try {
-            usersCollection.document(userId).update(FirestoreConstants.UserFields.STATUS, status.name).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // DataSource를 통해 사용자 상태 업데이트
+        return userRemoteDataSource.updateUserStatus(userId, status)
     }
     
     override suspend fun updateAccountStatus(accountStatus: AccountStatus): Result<Unit> {
         val userId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        return try {
-            usersCollection.document(userId).update(FirestoreConstants.UserFields.ACCOUNT_STATUS, accountStatus.name).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // DataSource를 통해 계정 상태 업데이트
+        return userRemoteDataSource.updateAccountStatus(userId, accountStatus)
     }
     
     override suspend fun updateFcmToken(token: String): Result<Unit> {
         val userId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        return try {
-            usersCollection.document(userId).update(FirestoreConstants.UserFields.FCM_TOKEN, token).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // DataSource를 통해 FCM 토큰 업데이트
+        return userRemoteDataSource.updateFcmToken(userId, token)
     }
     
     override suspend fun getParticipatingProjects(userId: String): Result<List<String>> {
@@ -256,12 +209,8 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun updateParticipatingProjects(projectIds: List<String>): Result<Unit> {
         val userId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        return try {
-            usersCollection.document(userId).update(FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS, projectIds).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // DataSource를 통해 참여 프로젝트 업데이트
+        return userRemoteDataSource.updateParticipatingProjects(userId, projectIds)
     }
     
     override suspend fun getActiveDmChannels(userId: String): Result<List<String>> {
@@ -271,12 +220,8 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun updateActiveDmChannels(dmIds: List<String>): Result<Unit> {
         val userId = firebaseAuth.currentUser?.uid
             ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        return try {
-            usersCollection.document(userId).update(FirestoreConstants.UserFields.ACTIVE_DM_IDS, dmIds).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // DataSource를 통해 활성 DM 채널 업데이트
+        return userRemoteDataSource.updateActiveDmChannels(userId, dmIds)
     }
 
     override suspend fun ensureUserProfileExists(firebaseUser: FirebaseUser): Result<User> {

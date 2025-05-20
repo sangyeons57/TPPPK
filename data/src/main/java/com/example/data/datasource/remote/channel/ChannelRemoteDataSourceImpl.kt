@@ -241,9 +241,8 @@ class ChannelRemoteDataSourceImpl @Inject constructor(
              if (channelType != ChannelType.DM.name) { 
                  throw IllegalArgumentException("Channel $channelId is not a DM channel. Type is $channelType")
              }
-             val dmParticipantIdsPath = FirestoreConstants.ChannelFields.dmDataPath(ChannelDmDataFields.PARTICIPANT_IDS)
-            firestore.collection(Collections.CHANNELS).document(channelId).update(
-                dmParticipantIdsPath, 
+             firestore.collection(Collections.CHANNELS).document(channelId).update(
+                ChannelFields.dmDataPath(ChannelDmDataFields.PARTICIPANT_IDS), 
                 FieldValue.arrayUnion(userId)
             ).await()
             Unit
@@ -257,9 +256,8 @@ class ChannelRemoteDataSourceImpl @Inject constructor(
              if (channelType != ChannelType.DM.name) { 
                  throw IllegalArgumentException("Channel $channelId is not a DM channel. Type is $channelType")
              }
-             val dmParticipantIdsPath = FirestoreConstants.ChannelFields.dmDataPath(ChannelDmDataFields.PARTICIPANT_IDS)
             firestore.collection(Collections.CHANNELS).document(channelId).update(
-                dmParticipantIdsPath, 
+                ChannelFields.dmDataPath(ChannelDmDataFields.PARTICIPANT_IDS), 
                 FieldValue.arrayRemove(userId)
             ).await()
             Unit
