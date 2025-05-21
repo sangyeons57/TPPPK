@@ -1,6 +1,5 @@
 package com.example.feature_settings.viewmodel
 
-import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import com.example.data.repository.FakeUserRepository
 import com.example.feature_settings.utils.CoroutinesTestRule
@@ -9,7 +8,6 @@ import com.example.feature_settings.utils.FlowTestExtensions.getValue
 import com.example.feature_settings.utils.TestUri
 import com.example.domain.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
@@ -30,7 +28,7 @@ class EditProfileViewModelTest {
     val coroutinesTestRule = CoroutinesTestRule()
 
     // 테스트 대상 (System Under Test)
-    private lateinit var viewModel: EditProfileViewModel
+    private lateinit var viewModel: com.example.feature_auth.viewmodel.EditProfileViewModel
     
     // SavedStateHandle Mock
     private lateinit var savedStateHandle: SavedStateHandle
@@ -64,7 +62,10 @@ class EditProfileViewModelTest {
         fakeUserRepository.addUser(testUser)
         
         // ViewModel 초기화
-        viewModel = EditProfileViewModel(savedStateHandle, fakeUserRepository)
+        viewModel = com.example.feature_auth.viewmodel.EditProfileViewModel(
+            savedStateHandle,
+            fakeUserRepository
+        )
     }
 
     /**
@@ -93,7 +94,7 @@ class EditProfileViewModelTest {
         fakeUserRepository.setShouldSimulateError(true)
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         
         // When: ViewModel 초기화
         viewModel = EditProfileViewModel(savedStateHandle, fakeUserRepository)
@@ -110,8 +111,8 @@ class EditProfileViewModelTest {
         // 스낵바 이벤트 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is EditProfileEvent.ShowSnackbar)
-        assertTrue((event as EditProfileEvent.ShowSnackbar).message.contains("프로필 정보를 불러오지 못했습니다"))
+        assertTrue(event is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar)
+        assertTrue((event as com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar).message.contains("프로필 정보를 불러오지 못했습니다"))
     }
 
     /**
@@ -122,7 +123,7 @@ class EditProfileViewModelTest {
         // Given: 초기화된 ViewModel
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 이미지 선택 버튼 클릭
@@ -131,7 +132,7 @@ class EditProfileViewModelTest {
         // Then: 이벤트 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is EditProfileEvent.RequestImagePicker)
+        assertTrue(event is com.example.feature_auth.viewmodel.EditProfileEvent.RequestImagePicker)
     }
 
     /**
@@ -142,7 +143,7 @@ class EditProfileViewModelTest {
         // Given: 초기화된 ViewModel
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 이미지 선택
@@ -156,7 +157,7 @@ class EditProfileViewModelTest {
         // 업로드 중 스낵바 이벤트 확인
         assertTrue(eventCollector.events.isNotEmpty())
         assertTrue(eventCollector.events.any { 
-            it is EditProfileEvent.ShowSnackbar && 
+            it is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar &&
             it.message.contains("업로드 중") 
         })
         
@@ -169,7 +170,7 @@ class EditProfileViewModelTest {
         
         // 업로드 성공 스낵바 이벤트 확인
         assertTrue(eventCollector.events.any { 
-            it is EditProfileEvent.ShowSnackbar && 
+            it is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar &&
             it.message.contains("업데이트되었습니다") 
         })
     }
@@ -183,7 +184,7 @@ class EditProfileViewModelTest {
         fakeUserRepository.setShouldSimulateError(true)
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 이미지 선택
@@ -201,7 +202,7 @@ class EditProfileViewModelTest {
         
         // 업로드 실패 스낵바 이벤트 확인
         assertTrue(eventCollector.events.any { 
-            it is EditProfileEvent.ShowSnackbar && 
+            it is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar &&
             it.message.contains("업로드 실패") 
         })
     }
@@ -214,7 +215,7 @@ class EditProfileViewModelTest {
         // Given: 초기화된 ViewModel (프로필 이미지가 있는 상태)
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 이미지 제거 버튼 클릭
@@ -223,7 +224,7 @@ class EditProfileViewModelTest {
         // Then: 제거 확인 요청 이벤트 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is EditProfileEvent.RequestProfileImageRemoveConfirm)
+        assertTrue(event is com.example.feature_auth.viewmodel.EditProfileEvent.RequestProfileImageRemoveConfirm)
     }
 
     /**
@@ -234,7 +235,7 @@ class EditProfileViewModelTest {
         // Given: 초기화된 ViewModel
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 이미지 제거 확인
@@ -242,7 +243,7 @@ class EditProfileViewModelTest {
         
         // 업로드 중 스낵바 이벤트 확인
         assertTrue(eventCollector.events.any { 
-            it is EditProfileEvent.ShowSnackbar && 
+            it is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar &&
             it.message.contains("제거 중") 
         })
         
@@ -257,7 +258,7 @@ class EditProfileViewModelTest {
         
         // 제거 성공 스낵바 이벤트 확인
         assertTrue(eventCollector.events.any { 
-            it is EditProfileEvent.ShowSnackbar && 
+            it is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar &&
             it.message.contains("제거되었습니다") 
         })
     }
@@ -271,7 +272,7 @@ class EditProfileViewModelTest {
         fakeUserRepository.setShouldSimulateError(true)
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 이미지 제거 확인
@@ -288,7 +289,7 @@ class EditProfileViewModelTest {
         
         // 제거 실패 스낵바 이벤트 확인
         assertTrue(eventCollector.events.any { 
-            it is EditProfileEvent.ShowSnackbar && 
+            it is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar &&
             it.message.contains("제거 실패") 
         })
     }
@@ -307,7 +308,7 @@ class EditProfileViewModelTest {
         viewModel = EditProfileViewModel(savedStateHandle, fakeUserRepository)
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<EditProfileEvent>()
+        val eventCollector = EventCollector<com.example.feature_auth.viewmodel.EditProfileEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 이미지 제거 버튼 클릭
@@ -316,7 +317,7 @@ class EditProfileViewModelTest {
         // Then: 에러 메시지 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is EditProfileEvent.ShowSnackbar)
-        assertTrue((event as EditProfileEvent.ShowSnackbar).message.contains("제거할 프로필 이미지가 없습니다"))
+        assertTrue(event is com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar)
+        assertTrue((event as com.example.feature_auth.viewmodel.EditProfileEvent.ShowSnackbar).message.contains("제거할 프로필 이미지가 없습니다"))
     }
 } 

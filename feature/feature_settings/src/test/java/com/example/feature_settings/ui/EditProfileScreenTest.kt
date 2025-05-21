@@ -1,11 +1,9 @@
 package com.example.feature_settings.ui
 
-import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.example.domain.model.User
-import com.example.feature_settings.viewmodel.EditProfileUiState
-import com.example.feature_settings.viewmodel.EditProfileViewModel
+import com.example.feature_auth.viewmodel.EditProfileUiState
 import org.junit.Rule
 import org.junit.Test
 
@@ -34,7 +32,7 @@ class EditProfileScreenTest {
             statusMessage = "테스트 중입니다"
         )
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = false
@@ -42,7 +40,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = {},
                 onRemoveImageClick = {},
@@ -71,7 +69,7 @@ class EditProfileScreenTest {
             statusMessage = "테스트 중입니다"
         )
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = false
@@ -79,7 +77,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = {},
                 onRemoveImageClick = {},
@@ -115,7 +113,7 @@ class EditProfileScreenTest {
         
         var changeNameClicked = false
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = false
@@ -123,7 +121,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = {},
                 onRemoveImageClick = {},
@@ -157,7 +155,7 @@ class EditProfileScreenTest {
         
         var changeStatusClicked = false
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = false
@@ -165,7 +163,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = {},
                 onRemoveImageClick = {},
@@ -199,7 +197,7 @@ class EditProfileScreenTest {
         
         var selectImageClicked = false
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = false
@@ -207,7 +205,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = { selectImageClicked = true },
                 onRemoveImageClick = {},
@@ -239,7 +237,7 @@ class EditProfileScreenTest {
         
         var removeImageClicked = false
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = false
@@ -247,7 +245,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = {},
                 onRemoveImageClick = { removeImageClicked = true },
@@ -277,7 +275,7 @@ class EditProfileScreenTest {
             statusMessage = "테스트 중입니다"
         )
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = true // 업로드 중 상태
@@ -285,7 +283,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = {},
                 onRemoveImageClick = {},
@@ -312,7 +310,7 @@ class EditProfileScreenTest {
             statusMessage = "테스트 중입니다"
         )
         
-        val uiState = EditProfileUiState(
+        val uiState = com.example.feature_auth.viewmodel.EditProfileUiState(
             user = user,
             isLoading = false,
             isUploading = false
@@ -320,7 +318,7 @@ class EditProfileScreenTest {
         
         // When: EditProfileContent 렌더링
         composeTestRule.setContent {
-            EditProfileContent(
+            com.example.feature_profile.ui.EditProfileContent(
                 uiState = uiState,
                 onSelectImageClick = {},
                 onRemoveImageClick = {},

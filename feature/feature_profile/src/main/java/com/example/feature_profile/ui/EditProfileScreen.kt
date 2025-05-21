@@ -1,4 +1,4 @@
-package com.example.feature_settings.ui
+package com.example.feature_profile.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,15 +20,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.example.core_common.dispatcher.DispatcherProvider // For MockViewModel
 import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.User // For MockViewModel and Previews
-import com.example.feature_settings.viewmodel.EditProfileEvent
-import com.example.feature_settings.viewmodel.EditProfileUiState
-import com.example.feature_settings.viewmodel.EditProfileViewModel
+import com.example.feature_profile.viewmodel.EditProfileEvent
+import com.example.feature_profile.viewmodel.EditProfileUiState
+import com.example.feature_profile.viewmodel.EditProfileViewModel
 // AppRoutes and other navigation imports are fine if AppNavigator handles them
 import kotlinx.coroutines.flow.collectLatest
 

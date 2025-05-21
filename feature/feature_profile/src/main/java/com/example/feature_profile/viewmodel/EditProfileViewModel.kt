@@ -1,23 +1,15 @@
-package com.example.feature_settings.viewmodel
+package com.example.feature_profile.viewmodel
 
 import android.net.Uri
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.dispatcher.DispatcherProvider
-import com.example.domain.model.Result
 import com.example.domain.model.User
-import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
-import com.example.domain.usecase.user.GetCurrentUserUseCase
-import com.example.domain.usecase.user.GetUserStreamUseCase
-import com.example.domain.usecase.user.GetUserUseCase
-import com.example.domain.usecase.user.RemoveProfileImageUseCase
-import com.example.domain.usecase.user.UpdateImageUseCase
 import com.example.domain.usecase.user.GetMyProfileUseCase
 import com.example.domain.usecase.user.UpdateUserProfileParams
 import com.example.domain.usecase.user.UpdateUserProfileUseCase
 import com.example.domain.usecase.user.UploadProfileImageUseCase
-import com.example.feature_settings.viewmodel.EditProfileEvent.*
+import com.example.feature_profile.viewmodel.EditProfileEvent.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
