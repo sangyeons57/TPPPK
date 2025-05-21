@@ -29,6 +29,7 @@ sealed class ProfileEvent {
     object NavigateToSettings : ProfileEvent() // 설정 화면으로 이동
     object NavigateToStatus: ProfileEvent()
     object NavigateToFriends: ProfileEvent()
+    object NavigateToEditProfile : ProfileEvent() // 프로필 수정 화면으로 이동
     object ShowEditStatusDialog : ProfileEvent() // 상태 메시지 변경 다이얼로그 표시
     object PickProfileImage : ProfileEvent() // 이미지 선택기 실행 요청
     object LogoutCompleted : ProfileEvent() // 로그아웃 완료 알림 -> 화면 전환용
@@ -52,6 +53,13 @@ class ProfileViewModel @Inject constructor(
 
     init {
         loadUserProfile()
+    }
+
+    // 프로필 수정 버튼 클릭
+    fun onEditProfileClicked() {
+        viewModelScope.launch {
+            _eventFlow.emit(ProfileEvent.NavigateToEditProfile)
+        }
     }
 
     // 프로필 정보 로드

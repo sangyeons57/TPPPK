@@ -39,6 +39,7 @@ import com.example.feature_auth.ui.FindPasswordScreen
 import com.example.feature_auth.ui.PrivacyPolicyScreen
 import com.example.feature_auth.ui.SignUpScreen
 import com.example.feature_auth.ui.TermsOfServiceScreen
+import com.example.feature_main.ui.EditProfileScreen // Added import
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 
@@ -70,6 +71,11 @@ fun AppNavigationGraph(
         projectGraph(appNavigator)
         chatGraph(appNavigator)
         scheduleGraph(appNavigator)
+
+        // 프로필 수정 화면 (Settings Route)
+        composable(AppRoutes.Settings.EDIT_MY_PROFILE) {
+            EditProfileScreen(appNavigator = appNavigator)
+        }
     }
 }
 
