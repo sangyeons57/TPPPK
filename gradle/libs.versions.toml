@@ -41,6 +41,7 @@ firebaseAuthKtx = "23.2.1"
 gmsPlayServicesBase = "18.7.0"
 workRuntime = "2.10.1"
 firebaseFirestoreKtx = "25.1.4"
+accompanistPermissions = "0.34.0"
 
 [libraries]
 androidx-animation = { module = "androidx.compose.animation:animation" }
@@ -59,7 +60,7 @@ converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref
 
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx" }
-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx"}
+firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
 firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx"}
 
@@ -127,6 +128,9 @@ firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appc
 # WorkManager
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
 google-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
+
+# Accompanist Permissions 라이브러리 별칭 추가
+accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

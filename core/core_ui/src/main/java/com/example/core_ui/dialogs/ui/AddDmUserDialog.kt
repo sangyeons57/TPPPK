@@ -144,7 +144,7 @@ fun AddDmUserDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("친구 찾기")
+                        Text("찾기")
                     }
                 }
             }
