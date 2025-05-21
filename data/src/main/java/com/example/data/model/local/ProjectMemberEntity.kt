@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.domain.model.ProjectMember
+import java.time.Instant
 
 /**
  * 프로젝트 멤버 데이터를 로컬 데이터베이스에 저장하기 위한 엔티티
@@ -61,7 +62,8 @@ data class ProjectMemberEntity(
             userId = userId,
             userName = userName,
             profileImageUrl = profileImageUrl,
-            roleIds = roleIds
+            roleIds = roleIds,
+            joinedAt = Instant.EPOCH
         )
     }
 

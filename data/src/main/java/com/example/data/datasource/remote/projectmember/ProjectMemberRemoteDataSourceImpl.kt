@@ -15,6 +15,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.util.Log
@@ -69,7 +70,7 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
             if (!userDoc.exists()) continue
 
             val joinedAtTimestamp = memberDoc.getTimestamp(MemberFields.JOINED_AT)
-            val joinedAtLong = joinedAtTimestamp?.toDate()?.time ?: 0L
+            val joinedAtInstant = joinedAtTimestamp?.let { DateTimeUtil.firebaseTimestampToInstant(it) } ?: Instant.EPOCH
             
             // 멤버 객체 생성 시 roleIds 직접 사용
             val member = ProjectMember(
@@ -77,7 +78,7 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                 userName = userDoc.getString(UserFields.NAME) ?: "사용자",
                 profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
                 roleIds = roleIds, // roleNames 대신 roleIds 사용
-                joinedAt = joinedAtLong
+                joinedAt = joinedAtInstant
             )
             
             members.add(member)
@@ -132,7 +133,7 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                     if (!userDoc.exists()) continue
 
                     val joinedAtTimestamp = memberDoc.getTimestamp(MemberFields.JOINED_AT)
-                    val joinedAtLong = joinedAtTimestamp?.toDate()?.time ?: 0L
+                    val joinedAtInstant = joinedAtTimestamp?.let { DateTimeUtil.firebaseTimestampToInstant(it) } ?: Instant.EPOCH
                     
                     // 멤버 객체 생성 시 roleIds 직접 사용
                     val member = ProjectMember(
@@ -140,7 +141,7 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                         userName = userDoc.getString(UserFields.NAME) ?: "사용자",
                         profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
                         roleIds = roleIds, // roleNames 대신 roleIds 사용
-                        joinedAt = joinedAtLong
+                        joinedAt = joinedAtInstant
                     )
                     
                     members.add(member)
@@ -195,14 +196,14 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                 Result.failure(IllegalStateException("멤버에 연결된 사용자 정보($userId)를 찾을 수 없습니다."))
             } else {
                 val joinedAtTimestamp = memberDoc.getTimestamp(MemberFields.JOINED_AT)
-                val joinedAtLong = joinedAtTimestamp?.toDate()?.time ?: 0L
+                val joinedAtInstant = joinedAtTimestamp?.let { DateTimeUtil.firebaseTimestampToInstant(it) } ?: Instant.EPOCH
 
                 val member = ProjectMember(
                     userId = userId,
                     userName = userDoc.getString(UserFields.NAME) ?: "사용자",
                     profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
                     roleIds = roleIds,
-                    joinedAt = joinedAtLong
+                    joinedAt = joinedAtInstant
                 )
                 Result.success(member)
             }
@@ -243,7 +244,7 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                 // 멤버 추가
                 val memberData = hashMapOf(
                     MemberFields.ROLE_IDS to roleIds,
-                    MemberFields.JOINED_AT to DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant()),
+                    MemberFields.JOINED_AT to DateTimeUtil.instantToFirebaseTimestamp(Instant.now()),
                     MemberFields.CHANNEL_IDS to emptyList<String>() // 채널 접근 권한 목록 초기화
                 )
                 

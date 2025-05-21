@@ -12,7 +12,12 @@ import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
+import com.example.core_common.util.DateTimeUtil
 
 /**
  * 프로젝트 멤버 아이템 UI 모델
@@ -22,12 +27,14 @@ import javax.inject.Inject
  * @param userName 사용자 이름
  * @param profileImageUrl 프로필 이미지 URL (nullable)
  * @param rolesText 역할 목록을 표시할 문자열
+ * @param joinedAtText 가입일자를 표시할 문자열 (추가)
  */
 data class ProjectMemberItem(
     val userId: String,
     val userName: String,
     val profileImageUrl: String?,
-    val rolesText: String
+    val rolesText: String,
+    val joinedAtText: String
 )
 
 /**
@@ -120,11 +127,16 @@ class MemberListViewModel @Inject constructor(
      * Domain 모델을 UI 모델로 변환하는 확장 함수
      */
     private fun ProjectMember.toUiModel(): ProjectMemberItem {
+        val localJoinedDate = LocalDateTime.ofInstant(this.joinedAt, ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val formattedJoinedAt = localJoinedDate.format(formatter)
+
         return ProjectMemberItem(
             userId = this.userId,
             userName = this.userName,
             profileImageUrl = this.profileImageUrl,
-            rolesText = this.roleIds.joinToString(", ") { roleId -> roleId }
+            rolesText = this.roleIds.joinToString(", ") { roleId -> roleId },
+            joinedAtText = formattedJoinedAt
         )
     }
 
