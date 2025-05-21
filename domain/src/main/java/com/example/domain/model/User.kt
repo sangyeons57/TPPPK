@@ -56,11 +56,23 @@ data class User(
      */
      fun toUserProfileData(): UserProfileData {
         return UserProfileData(
-            userId = this.id,
+            id = this.id,
             name = this.name,
-            email = this.email,
-            statusMessage = this.statusMessage ?: "상태 메시지 없음",
-            profileImageUrl = this.profileImageUrl
+            email = this.email, // User.email is non-nullable, UserProfileData.email is nullable. This is fine.
+            profileImageUrl = this.profileImageUrl,
+            statusMessage = this.statusMessage // User.statusMessage is nullable, UserProfileData.statusMessage is nullable.
         )
     }
 }
+
+/**
+ * UI-specific representation of a user's profile, derived from the User domain model.
+ * Its constructor is internal to ensure it's created via User.toUserProfileData().
+ */
+data class UserProfileData internal constructor(
+    val id: String,
+    val name: String,
+    val email: String?, // Email might be nullable or not always available from all sources
+    val profileImageUrl: String?,
+    val statusMessage: String?
+)

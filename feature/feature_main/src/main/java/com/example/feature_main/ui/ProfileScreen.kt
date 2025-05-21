@@ -15,11 +15,13 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit // 편집 아이콘
 import androidx.compose.material.icons.filled.PhotoCamera // 카메라/갤러리 아이콘
 import androidx.compose.material.icons.filled.Settings // 설정 아이콘
+import androidx.compose.material.icons.filled.Person // 사용자 아이콘 (프로필 수정용으로 사용 가능)
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -64,6 +66,10 @@ fun ProfileScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is ProfileEvent.NavigateToSettings -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)))
+                is ProfileEvent.NavigateToEditProfile -> {
+                    Log.d("ProfileScreen", "Navigating to Edit Profile Screen")
+                    appNavigator.navigate(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE))
+                }
                 is ProfileEvent.NavigateToFriends -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Friends.LIST)))
                 is ProfileEvent.NavigateToStatus -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.CHANGE_MY_PASSWORD)))
                 is ProfileEvent.ShowEditStatusDialog -> {
@@ -107,6 +113,7 @@ fun ProfileScreen(
                 onLogoutClick = viewModel::onLogoutClick,
                 onFriendsClick = viewModel::onFriendsClick,
                 onStatusClick = viewModel::onStatusClick,
+                onEditProfileClick = viewModel::onEditProfileClicked, // 추가된 부분
             )
         }
         // 전체 화면 로딩 인디케이터 (선택 사항)
@@ -132,6 +139,7 @@ fun ProfileContent(
     onLogoutClick: () -> Unit,
     onFriendsClick: () -> Unit,
     onStatusClick: () -> Unit,
+    onEditProfileClick: () -> Unit, // 추가된 파라미터
 ) {
     Column(
         modifier = modifier
@@ -197,6 +205,13 @@ fun ProfileContent(
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
         // 메뉴 아이템들
+        ProfileMenuItem(
+            text = "프로필 수정",
+            icon = Icons.Filled.Edit, // 또는 Icons.Filled.Person
+            onClick = onEditProfileClick,
+            enabled = !isLoading
+        )
+
         ProfileMenuItem(
             text = "상태 표시",
             icon = Icons.Filled.Settings,
@@ -274,6 +289,7 @@ fun ProfileContentPreview() {
             onLogoutClick = {},
             onFriendsClick = {},
             onStatusClick = {},
+            onEditProfileClick = {}, // Preview에 추가
         )
     }
 }
@@ -291,6 +307,7 @@ fun ProfileContentLoadingPreview() {
             onLogoutClick = {},
             onFriendsClick = {},
             onStatusClick = {},
+            onEditProfileClick = {}, // Preview에 추가
         )
     }
 }

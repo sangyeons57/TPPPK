@@ -20,9 +20,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.tasks.await
 import java.util.NoSuchElementException
 import java.util.UUID
+import com.example.core_common.dispatcher.DispatcherProvider // Added
+import com.example.domain.model.UserProfileData // Added
+import kotlinx.coroutines.withContext // Added
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.Result
+import kotlin.Result // For existing methods
+import com.example.domain.model.Result as DomainResult // For new methods
 import com.example.core_common.util.DateTimeUtil
 
 /**
@@ -32,10 +36,14 @@ import com.example.core_common.util.DateTimeUtil
 class UserRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val storage: FirebaseStorage
+    private val storage: FirebaseStorage,
+    private val dispatcherProvider: DispatcherProvider // Added
 ) : UserRemoteDataSource {
 
-    private val userCollection = firestore.collection(Collections.USERS) // 'users' 컬렉션 참조 예시
+    // Define a simple internal DTO for Firestore interactions if UserDto is not suitable
+    // For now, assuming UserDto can be partially used or direct map access.
+    // Let's use UserFields constants for consistency.
+    private val userCollection = firestore.collection(Collections.USERS)
     
     // 프로필 이미지 저장소 참조
     private val profileImagesRef = storage.reference.child("profile_images")
@@ -275,4 +283,111 @@ class UserRemoteDataSourceImpl @Inject constructor(
             newUserDto
         }
     }
-} 
+
+    // --- Implementation of new methods ---
+
+    override suspend fun getMyProfile(): DomainResult<com.example.domain.model.User> = withContext(dispatcherProvider.io) {
+        try {
+            val firebaseUser = auth.currentUser ?: return@withContext DomainResult.Error(Exception("User not logged in"), "User not logged in")
+            val userId = firebaseUser.uid
+
+            val firestoreDoc = userCollection.document(userId).get().await()
+            
+            val nameFromFirestore = firestoreDoc.getString(UserFields.NAME)
+            val imageUrlFromFirestore = firestoreDoc.getString(UserFields.PROFILE_IMAGE_URL)
+            
+            // Default values from User.kt companion object or constructor defaults
+            val defaultUser = com.example.domain.model.User.EMPTY 
+
+            DomainResult.Success(
+                com.example.domain.model.User(
+                    id = userId,
+                    email = firebaseUser.email ?: defaultUser.email,
+                    name = nameFromFirestore ?: firebaseUser.displayName ?: firebaseUser.email?.substringBefore('@') ?: defaultUser.name,
+                    profileImageUrl = imageUrlFromFirestore ?: firebaseUser.photoUrl?.toString(),
+                    memo = firestoreDoc.getString(UserFields.MEMO) ?: defaultUser.memo,
+                    statusMessage = firestoreDoc.getString(UserFields.STATUS_MESSAGE) ?: defaultUser.statusMessage,
+                    status = firestoreDoc.getString(UserFields.STATUS)?.let {
+                        try { com.example.domain.model.UserStatus.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { defaultUser.status }
+                    } ?: defaultUser.status,
+                    createdAt = firestoreDoc.getTimestamp(UserFields.CREATED_AT)?.toDate()?.toInstant() ?: defaultUser.createdAt,
+                    fcmToken = firestoreDoc.getString(UserFields.FCM_TOKEN) ?: defaultUser.fcmToken,
+                    participatingProjectIds = (firestoreDoc.get(UserFields.PARTICIPATING_PROJECT_IDS) as? List<String>) ?: defaultUser.participatingProjectIds,
+                    accountStatus = firestoreDoc.getString(UserFields.ACCOUNT_STATUS)?.let {
+                        try { com.example.domain.model.AccountStatus.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { defaultUser.accountStatus }
+                    } ?: defaultUser.accountStatus,
+                    activeDmIds = (firestoreDoc.get(UserFields.ACTIVE_DM_IDS) as? List<String>) ?: defaultUser.activeDmIds,
+                    isEmailVerified = firebaseUser.isEmailVerified,
+                    updatedAt = firestoreDoc.getTimestamp(UserFields.UPDATED_AT)?.toDate()?.toInstant(), // Nullable, so no default from EMPTY needed if null
+                    consentTimeStamp = firestoreDoc.getTimestamp(UserFields.CONSENT_TIMESTAMP)?.toDate()?.toInstant() // Nullable
+                )
+            )
+        } catch (e: Exception) {
+            Log.e("UserRemoteDataSource", "Error in getMyProfile: ${e.message}", e)
+            DomainResult.Error(e, e.message ?: "Failed to get profile")
+        }
+    }
+
+    override suspend fun getUserProfileImageUrl(userId: String): DomainResult<String?> = withContext(dispatcherProvider.io) {
+        try {
+            val document = userCollection.document(userId).get().await()
+            if (document.exists()) {
+                DomainResult.Success(document.getString(UserFields.PROFILE_IMAGE_URL))
+            } else {
+                DomainResult.Error(Exception("User document not found for userId: $userId"), "User not found")
+            }
+        } catch (e: Exception) {
+            Log.e("UserRemoteDataSource", "Error in getUserProfileImageUrl: ${e.message}", e)
+            DomainResult.Error(e, e.message ?: "Failed to get profile image URL")
+        }
+    }
+
+    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): DomainResult<Unit> = withContext(dispatcherProvider.io) {
+        try {
+            val firebaseUser = auth.currentUser ?: return@withContext DomainResult.Error(Exception("User not logged in"))
+            val userId = firebaseUser.uid
+
+            // 1. Update Firebase Auth
+            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                .setDisplayName(name)
+            profileImageUrl?.let { profileUpdates.setPhotoUri(Uri.parse(it)) }
+            firebaseUser.updateProfile(profileUpdates.build()).await()
+
+            // 2. Update Firestore
+            val userDocRef = userCollection.document(userId)
+            val updates = mutableMapOf<String, Any?>(
+                UserFields.NAME to name,
+                UserFields.UPDATED_AT to FieldValue.serverTimestamp() // Or DateTimeUtil.nowFirebaseTimestamp()
+            )
+            if (profileImageUrl != null) {
+                updates[UserFields.PROFILE_IMAGE_URL] = profileImageUrl
+            } else {
+                // If profileImageUrl is explicitly null, consider removing it or setting to null in Firestore
+                 updates[UserFields.PROFILE_IMAGE_URL] = FieldValue.delete() // Or null
+            }
+            userDocRef.set(updates, SetOptions.merge()).await()
+            
+            DomainResult.Success(Unit)
+        } catch (e: Exception) {
+            Log.e("UserRemoteDataSource", "Error in updateUserProfile: ${e.message}", e)
+            DomainResult.Error(e, e.message ?: "Failed to update profile")
+        }
+    }
+
+    override suspend fun uploadProfileImage(imageUri: Uri): DomainResult<String> = withContext(dispatcherProvider.io) {
+        try {
+            val userId = auth.currentUser?.uid ?: return@withContext DomainResult.Error(Exception("User not logged in"))
+            
+            val imageFileName = "${userId}_${UUID.randomUUID()}" // Unique file name
+            val imageRef = profileImagesRef.child(imageFileName) // Using existing profileImagesRef
+
+            imageRef.putFile(imageUri).await()
+            val downloadUrl = imageRef.downloadUrl.await().toString()
+            
+            DomainResult.Success(downloadUrl)
+        } catch (e: Exception) {
+            Log.e("UserRemoteDataSource", "Error in uploadProfileImage: ${e.message}", e)
+            DomainResult.Error(e, e.message ?: "Failed to upload image")
+        }
+    }
+}
