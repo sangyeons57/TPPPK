@@ -67,13 +67,17 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
             // 사용자 정보 가져오기
             val userDoc = firestore.collection(Collections.USERS).document(userId).get().await()
             if (!userDoc.exists()) continue
+
+            val joinedAtTimestamp = memberDoc.getTimestamp(MemberFields.JOINED_AT)
+            val joinedAtLong = joinedAtTimestamp?.toDate()?.time ?: 0L
             
             // 멤버 객체 생성 시 roleIds 직접 사용
             val member = ProjectMember(
                 userId = userId,
                 userName = userDoc.getString(UserFields.NAME) ?: "사용자",
                 profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
-                roleIds = roleIds // roleNames 대신 roleIds 사용
+                roleIds = roleIds, // roleNames 대신 roleIds 사용
+                joinedAt = joinedAtLong
             )
             
             members.add(member)
@@ -126,13 +130,17 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                     // 사용자 정보 가져오기
                     val userDoc = transaction.get(firestore.collection(Collections.USERS).document(userId))
                     if (!userDoc.exists()) continue
+
+                    val joinedAtTimestamp = memberDoc.getTimestamp(MemberFields.JOINED_AT)
+                    val joinedAtLong = joinedAtTimestamp?.toDate()?.time ?: 0L
                     
                     // 멤버 객체 생성 시 roleIds 직접 사용
                     val member = ProjectMember(
                         userId = userId,
                         userName = userDoc.getString(UserFields.NAME) ?: "사용자",
                         profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
-                        roleIds = roleIds // roleNames 대신 roleIds 사용
+                        roleIds = roleIds, // roleNames 대신 roleIds 사용
+                        joinedAt = joinedAtLong
                     )
                     
                     members.add(member)
@@ -151,6 +159,56 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
         
         // 구독 취소 시 스냅샷 리스너 제거
         awaitClose { subscription.remove() }
+    }
+
+    /**
+     * 특정 프로젝트의 특정 멤버 정보를 가져옵니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @return 프로젝트 멤버 정보 또는 null (에러 발생 시 Result.failure)
+     */
+    override suspend fun getProjectMember(projectId: String, userId: String): Result<ProjectMember?> = try {
+        val memberDocRef = firestore.collection(Collections.PROJECTS).document(projectId)
+            .collection(Collections.MEMBERS).document(userId)
+        val memberDoc = memberDocRef.get().await()
+
+        if (!memberDoc.exists()) {
+            Result.success(null) // 멤버가 존재하지 않으면 null 반환
+        } else {
+            // 역할 ID 목록 안전하게 가져오기
+            val roleIds = memberDoc.get(MemberFields.ROLE_IDS)?.let { data ->
+                if (data is List<*>) {
+                    data.mapNotNull { it as? String }
+                } else {
+                    emptyList()
+                }
+            } ?: emptyList()
+
+            // 사용자 정보 가져오기
+            val userDocRef = firestore.collection(Collections.USERS).document(userId)
+            val userDoc = userDocRef.get().await()
+
+            if (!userDoc.exists()) {
+                // 사용자가 존재하지 않는 경우, 오류로 처리하거나 ProjectMember의 userName 등을 nullable로 처리할 수 있습니다.
+                // 여기서는 오류로 간주합니다.
+                Result.failure(IllegalStateException("멤버에 연결된 사용자 정보($userId)를 찾을 수 없습니다."))
+            } else {
+                val joinedAtTimestamp = memberDoc.getTimestamp(MemberFields.JOINED_AT)
+                val joinedAtLong = joinedAtTimestamp?.toDate()?.time ?: 0L
+
+                val member = ProjectMember(
+                    userId = userId,
+                    userName = userDoc.getString(UserFields.NAME) ?: "사용자",
+                    profileImageUrl = userDoc.getString(UserFields.PROFILE_IMAGE_URL),
+                    roleIds = roleIds,
+                    joinedAt = joinedAtLong
+                )
+                Result.success(member)
+            }
+        }
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
     /**
@@ -198,6 +256,11 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                 // 사용자의 참여 프로젝트 목록에 추가
                 firestore.collection(Collections.USERS).document(userId)
                     .update(UserFields.PARTICIPATING_PROJECT_IDS, FieldValue.arrayUnion(projectId))
+                    .await()
+
+                // 프로젝트 문서의 memberIds 필드에 사용자 ID 추가
+                firestore.collection(Collections.PROJECTS).document(projectId)
+                    .update(ProjectFields.MEMBER_IDS, FieldValue.arrayUnion(userId))
                     .await()
                 
                 Result.success(Unit)
@@ -248,6 +311,11 @@ class ProjectMemberRemoteDataSourceImpl @Inject constructor(
                     // 사용자의 참여 프로젝트 목록에서 제거
                     firestore.collection(Collections.USERS).document(userId)
                         .update(UserFields.PARTICIPATING_PROJECT_IDS, FieldValue.arrayRemove(projectId))
+                        .await()
+
+                    // 프로젝트 문서의 memberIds 필드에서 사용자 ID 제거
+                    firestore.collection(Collections.PROJECTS).document(projectId)
+                        .update(ProjectFields.MEMBER_IDS, FieldValue.arrayRemove(userId))
                         .await()
                     
                     Result.success(Unit)

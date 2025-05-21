@@ -32,42 +32,49 @@ interface ProjectRoleRemoteDataSource {
     
     /**
      * 특정 역할의 상세 정보를 가져옵니다.
-     * @param roleId 역할 ID
-     * @return 역할 이름과 권한 맵 Pair 또는 에러
+     * @param projectId 프로젝트 ID
+     * @param roleId 역할 ID (실제 문서 ID)
+     * @return 역할 정보 또는 null (에러 발생 시 Result.failure)
      */
-    suspend fun getRoleDetails(roleId: String): Result<Pair<String, Map<RolePermission, Boolean>>>
+    suspend fun getRoleDetails(projectId: String, roleId: String): Result<Role?>
     
     /**
      * 새 역할을 생성합니다.
      * @param projectId 프로젝트 ID
      * @param name 역할 이름
      * @param permissions 권한 맵
+     * @param isDefault 기본 역할 여부
      * @return 새로 생성된 역할 ID
      */
     suspend fun createRole(
         projectId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>
+        permissions: Map<RolePermission, Boolean>,
+        isDefault: Boolean
     ): Result<String>
     
     /**
      * 역할을 업데이트합니다.
+     * @param projectId 프로젝트 ID
      * @param roleId 역할 ID
      * @param name 새 역할 이름
      * @param permissions 새 권한 맵
+     * @param isDefault 기본 역할 여부 (null이면 변경하지 않음)
      * @return 작업 성공 여부
      */
     suspend fun updateRole(
         projectId: String,
         roleId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>
+        permissions: Map<RolePermission, Boolean>,
+        isDefault: Boolean?
     ): Result<Unit>
     
     /**
      * 역할을 삭제합니다.
-     * @param roleId 역할 ID
+     * @param projectId 프로젝트 ID
+     * @param roleId 역할 ID (실제 문서 ID)
      * @return 작업 성공 여부
      */
-    suspend fun deleteRole(roleId: String): Result<Unit>
+    suspend fun deleteRole(projectId: String, roleId: String): Result<Unit>
 } 

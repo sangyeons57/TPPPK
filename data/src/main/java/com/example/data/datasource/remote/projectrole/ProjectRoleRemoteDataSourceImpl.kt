@@ -62,7 +62,8 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
                     id = doc.id,
                     projectId = projectId,
                     name = doc.getString(RoleFields.NAME) ?: "역할",
-                    permissions = permissionMap
+                    permissions = permissionMap,
+                    isDefault = doc.getBoolean(RoleFields.IS_DEFAULT) ?: false
                 )
             } catch (e: Exception) {
                 null
@@ -115,7 +116,8 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
                         id = doc.id,
                         projectId = projectId,
                         name = doc.getString(RoleFields.NAME) ?: "역할",
-                        permissions = permissionMap
+                        permissions = permissionMap,
+                        isDefault = doc.getBoolean(RoleFields.IS_DEFAULT) ?: false
                     )
                 } catch (e: Exception) {
                     null
@@ -147,44 +149,33 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
     /**
      * 특정 역할의 상세 정보를 가져옵니다.
      * @param roleId 역할 ID
-     * @return 역할 이름과 권한 맵 Pair 또는 에러
+     * @return 역할 정보 또는 null (에러 발생 시 Result.failure)
      */
-    override suspend fun getRoleDetails(roleId: String): Result<Pair<String, Map<RolePermission, Boolean>>> {
+    override suspend fun getRoleDetails(projectId: String, roleId: String): Result<Role?> {
         return try {
-            // roleId에서 프로젝트 ID 추출 (구현에 따라 다를 수 있음)
-            // 여기서는 간단히 roleId의 형식이 "projectId_roleId"라고 가정
-            val parts = roleId.split("_")
-            if (parts.size < 2) {
-                Result.failure(IllegalArgumentException("유효하지 않은 역할 ID 형식입니다."))
+            val roleDoc = firestore.collection(Collections.PROJECTS).document(projectId)
+                .collection(Collections.ROLES).document(roleId)
+                .get()
+                .await()
+
+            if (!roleDoc.exists()) {
+                Result.success(null) // 역할이 없으면 null 반환
             } else {
-                val projectId = parts[0]
-                val actualRoleId = parts[1]
-                
-                // 역할 문서 가져오기
-                val roleDoc = firestore.collection(Collections.PROJECTS).document(projectId)
-                    .collection(Collections.ROLES).document(actualRoleId)
-                    .get()
-                    .await()
-                
-                if (!roleDoc.exists()) {
-                    Result.failure(IllegalArgumentException("존재하지 않는 역할입니다."))
-                } else {
-                    // 역할 이름 가져오기
-                    val name = roleDoc.getString(RoleFields.NAME) ?: "역할"
-                    
-                    // 권한 맵 변환
-                    val permissionsMap = (roleDoc.get(RoleFields.PERMISSIONS) as? Map<*, *>)?.mapNotNull { (key, value) ->
-                        val permission = try {
-                            RolePermission.valueOf(key.toString())
-                        } catch (e: Exception) {
-                            null
-                        }
-                        val enabled = value as? Boolean ?: false
-                        permission?.let { it to enabled }
-                    }?.toMap() ?: emptyMap()
-                    
-                    Result.success(name to permissionsMap)
-                }
+                val permissionsMap = (roleDoc.get(RoleFields.PERMISSIONS) as? Map<*, *>)?.mapNotNull { (key, value) ->
+                    val permission = try { RolePermission.valueOf(key.toString()) } catch (e: Exception) { null }
+                    val enabled = value as? Boolean ?: false
+                    permission?.let { it to enabled }
+                }?.toMap() ?: emptyMap()
+
+                val role = Role(
+                    id = roleId,
+                    projectId = projectId,
+                    name = roleDoc.getString(RoleFields.NAME) ?: "역할",
+                    permissions = permissionsMap,
+                    isDefault = roleDoc.getBoolean(RoleFields.IS_DEFAULT) ?: false,
+                    // memberCount는 여기서는 로드하지 않음. 필요시 별도 로직 또는 getRoles에서 집계
+                )
+                Result.success(role)
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -196,12 +187,14 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
      * @param projectId 프로젝트 ID
      * @param name 역할 이름
      * @param permissions 권한 맵
+     * @param isDefault 기본 역할 여부
      * @return 새로 생성된 역할 ID
      */
     override suspend fun createRole(
         projectId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>
+        permissions: Map<RolePermission, Boolean>,
+        isDefault: Boolean
     ): Result<String> {
         return try {
             val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId).get().await()
@@ -214,6 +207,7 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
                 val roleData = mapOf(
                     RoleFields.NAME to name,
                     RoleFields.PERMISSIONS to permissionsMap,
+                    RoleFields.IS_DEFAULT to isDefault,
                     RoleFields.CREATED_AT to nowTimestamp,
                     RoleFields.UPDATED_AT to nowTimestamp
                 )
@@ -234,13 +228,15 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
      * @param roleId 역할 ID
      * @param name 새 역할 이름
      * @param permissions 새 권한 맵
+     * @param isDefault 기본 역할 여부 (null이면 변경하지 않음)
      * @return 작업 성공 여부
      */
     override suspend fun updateRole(
-        projectId: String, 
+        projectId: String,
         roleId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>
+        permissions: Map<RolePermission, Boolean>,
+        isDefault: Boolean?
     ): Result<Unit> {
         return try {
             // Simplified permission check (ensure user has rights to update role in this project)
@@ -263,6 +259,7 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
                 RoleFields.PERMISSIONS to permissionsMap,
                 RoleFields.UPDATED_AT to FieldValue.serverTimestamp()
             )
+            isDefault?.let { updateData[RoleFields.IS_DEFAULT] = it }
             // createdAt should not be changed on update
 
             roleRef.update(updateData).await()
@@ -278,53 +275,50 @@ class ProjectRoleRemoteDataSourceImpl @Inject constructor(
      * @param roleId 역할 ID
      * @return 작업 성공 여부
      */
-    override suspend fun deleteRole(roleId: String): Result<Unit> {
+    override suspend fun deleteRole(projectId: String, roleId: String): Result<Unit> {
         return try {
-            // roleId에서 프로젝트 ID 추출 (구현에 따라 다를 수 있음)
-            val parts = roleId.split("_")
-            if (parts.size < 2) {
-                Result.failure(IllegalArgumentException("유효하지 않은 역할 ID 형식입니다."))
-            } else {
-                val projectId = parts[0]
-                val actualRoleId = parts[1]
-                
-                // 현재 사용자 권한 확인 (프로젝트 소유자 또는 관리자인지)
-                val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId)
-                    .get()
-                    .await()
-                
-                if (!projectDoc.exists()) {
-                    Result.failure(IllegalArgumentException("존재하지 않는 프로젝트입니다."))
-                } else {
-                    val ownerId = projectDoc.getString(ProjectFields.OWNER_ID)
-                    
-                    // 소유자가 아닌 경우 권한 확인 (간소화된 예시)
-                    if (ownerId != currentUserId) {
-                        Result.failure(IllegalArgumentException("역할을 삭제할 권한이 없습니다."))
-                    } else {
-                        // 역할 문서 삭제
-                        val roleRef = firestore.collection(Collections.PROJECTS).document(projectId)
-                            .collection(Collections.ROLES).document(actualRoleId)
-                        
-                        // 해당 역할을 가진 멤버가 있는지 확인 (선택적)
-                        val members = firestore.collection(Collections.PROJECTS).document(projectId)
-                            .collection(Collections.MEMBERS)
-                            .whereArrayContains(MemberFields.ROLE_IDS, actualRoleId)
-                            .get()
-                            .await()
-                        
-                        if (!members.isEmpty) {
-                            Result.failure(IllegalArgumentException("이 역할을 가진 멤버가 있습니다. 먼저 멤버의 역할을 변경해주세요."))
-                        } else {
-                            roleRef.delete().await()
-                            
-                            Result.success(Unit)
-                        }
-                    }
-                }
+            // 현재 사용자 권한 확인 (프로젝트 소유자 또는 관리자인지)
+            val projectDoc = firestore.collection(Collections.PROJECTS).document(projectId)
+                .get()
+                .await()
+
+            if (!projectDoc.exists()) {
+                return Result.failure(IllegalArgumentException("존재하지 않는 프로젝트입니다."))
             }
+
+            val ownerId = projectDoc.getString(ProjectFields.OWNER_ID)
+            // 소유자가 아닌 경우 권한 확인 (간소화된 예시)
+            // TODO: 실제 구현에서는 사용자의 역할에 따른 권한 확인 로직 추가 (e.g., 프로젝트 관리자 권한)
+            if (ownerId != currentUserId) {
+                return Result.failure(IllegalArgumentException("역할을 삭제할 권한이 없습니다."))
+            }
+
+            // 역할 문서 참조
+            val roleRef = firestore.collection(Collections.PROJECTS).document(projectId)
+                .collection(Collections.ROLES).document(roleId)
+
+            // 역할 존재 여부 확인
+            if (!roleRef.get().await().exists()) {
+                return Result.failure(IllegalArgumentException("삭제하려는 역할(ID: $roleId)이 프로젝트(ID: $projectId)에 존재하지 않습니다."))
+            }
+            
+            // 해당 역할을 가진 멤버가 있는지 확인
+            val members = firestore.collection(Collections.PROJECTS).document(projectId)
+                .collection(Collections.MEMBERS)
+                .whereArrayContains(MemberFields.ROLE_IDS, roleId) // 실제 역할 ID 사용
+                .limit(1) // 하나라도 있는지 확인하면 충분
+                .get()
+                .await()
+
+            if (!members.isEmpty) {
+                return Result.failure(IllegalArgumentException("이 역할(ID: $roleId)을 가진 멤버가 프로젝트(ID: $projectId)에 존재합니다. 먼저 멤버의 역할을 변경해주세요."))
+            }
+
+            roleRef.delete().await()
+            Result.success(Unit)
+
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-} 
+}
