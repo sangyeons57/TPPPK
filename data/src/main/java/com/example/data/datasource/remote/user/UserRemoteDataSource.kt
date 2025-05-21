@@ -3,25 +3,25 @@ package com.example.data.datasource.remote.user
 import android.net.Uri
 import com.example.data.model.remote.user.UserDto
 import com.example.domain.model.AccountStatus
-import com.example.domain.model.UserProfileData // Import UserProfileData
+// import com.example.domain.model.UserProfileData // UserProfileData는 User 모델에 통합되었거나 사용되지 않는 것으로 가정
 import com.example.domain.model.UserStatus
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
-import kotlin.Result // For existing methods
-import com.example.domain.model.Result as DomainResult // For new methods
+import kotlin.Result // kotlin.Result를 명시적으로 사용
+// import com.example.domain.model.Result as DomainResult // 이 줄을 삭제합니다.
 
 /**
  * Firestore 'users' 컬렉션과의 상호작용을 추상화하는 데이터 소스 인터페이스
  */
 interface UserRemoteDataSource {
 
-    // --- New methods required by the subtask ---
-    suspend fun getMyProfile(): DomainResult<com.example.domain.model.User> // Changed to User
-    suspend fun getUserProfileImageUrl(userId: String): DomainResult<String?>
-    suspend fun updateUserProfile(name: String, profileImageUrl: String?): DomainResult<Unit>
-    suspend fun uploadProfileImage(imageUri: Uri): DomainResult<String> // Returns download URL
+    // --- New methods required by the subtask --- (모두 kotlin.Result 사용)
+    suspend fun getMyProfile(): Result<com.example.domain.model.User>
+    suspend fun getUserProfileImageUrl(userId: String): Result<String?>
+    suspend fun updateUserProfile(name: String, profileImageUrl: String?): Result<Unit>
+    suspend fun uploadProfileImage(imageUri: Uri): Result<String> // Returns download URL
 
-    // --- Existing methods ---
+    // --- Existing methods --- (모두 kotlin.Result 사용)
     /**
      * 특정 사용자의 프로필 정보를 가져옵니다.
      *
