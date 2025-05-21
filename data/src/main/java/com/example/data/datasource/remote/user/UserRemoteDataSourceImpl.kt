@@ -26,6 +26,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.Result
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model.User
 
 /**
  * UserRemoteDataSource 인터페이스의 Firestore 구현체입니다.
@@ -234,9 +235,9 @@ class UserRemoteDataSourceImpl @Inject constructor(
             val userId = firebaseUser.uid
             val firestoreDoc = userCollection.document(userId).get().await()
             
-            val defaultUser = com.example.domain.model.User.EMPTY 
+            val defaultUser = User.EMPTY 
 
-            com.example.domain.model.User(
+            User(
                 id = userId,
                 email = firebaseUser.email ?: defaultUser.email,
                 name = firestoreDoc.getString(UserFields.NAME) ?: firebaseUser.displayName ?: firebaseUser.email?.substringBefore('@') ?: defaultUser.name,
@@ -244,20 +245,20 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 memo = firestoreDoc.getString(UserFields.MEMO) ?: defaultUser.memo,
                 statusMessage = firestoreDoc.getString(UserFields.STATUS_MESSAGE) ?: defaultUser.statusMessage,
                 status = firestoreDoc.getString(UserFields.STATUS)?.let {
-                    try { com.example.domain.model.UserStatus.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { defaultUser.status }
+                    try { UserStatus.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { defaultUser.status }
                 } ?: defaultUser.status,
                 createdAt = firestoreDoc.getTimestamp(UserFields.CREATED_AT)?.toDate()?.toInstant() ?: defaultUser.createdAt,
                 fcmToken = firestoreDoc.getString(UserFields.FCM_TOKEN) ?: defaultUser.fcmToken,
                 participatingProjectIds = (firestoreDoc.get(UserFields.PARTICIPATING_PROJECT_IDS) as? List<String>) ?: defaultUser.participatingProjectIds,
                 accountStatus = firestoreDoc.getString(UserFields.ACCOUNT_STATUS)?.let {
-                    try { com.example.domain.model.AccountStatus.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { defaultUser.accountStatus }
+                    try { AccountStatus.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { defaultUser.accountStatus }
                 } ?: defaultUser.accountStatus,
                 activeDmIds = (firestoreDoc.get(UserFields.ACTIVE_DM_IDS) as? List<String>) ?: defaultUser.activeDmIds,
                 isEmailVerified = firebaseUser.isEmailVerified,
                 updatedAt = firestoreDoc.getTimestamp(UserFields.UPDATED_AT)?.toDate()?.toInstant(),
                 consentTimeStamp = firestoreDoc.getTimestamp(UserFields.CONSENT_TIMESTAMP)?.toDate()?.toInstant()
             )
-        }.onFailure { Log.e("UserRemoteDataSource", "Error in getMyProfile: ${it.message}", it) }
+        }.onFailure { Log.e("UserRemoteDataSourceImpl", "Error in getMyProfile: ${it.message}", it) }
     }
 
     override suspend fun getUserProfileImageUrl(userId: String): Result<String?> = withContext(dispatcherProvider.io) {
@@ -268,7 +269,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
             } else {
                 throw NoSuchElementException("User document not found for userId: $userId")
             }
-        }.onFailure { Log.e("UserRemoteDataSource", "Error in getUserProfileImageUrl: ${it.message}", it) }
+        }.onFailure { Log.e("UserRemoteDataSourceImpl", "Error in getUserProfileImageUrl: ${it.message}", it) }
     }
 
     override suspend fun updateUserProfile(name: String, profileImageUrl: String?): Result<Unit> = withContext(dispatcherProvider.io) {
@@ -292,7 +293,8 @@ class UserRemoteDataSourceImpl @Inject constructor(
                  updates[UserFields.PROFILE_IMAGE_URL] = FieldValue.delete()
             }
             userDocRef.set(updates, SetOptions.merge()).await()
-        }.onFailure { Log.e("UserRemoteDataSource", "Error in updateUserProfile: ${it.message}", it) }
+        }.map { /* Unit */ }
+        .onFailure { Log.e("UserRemoteDataSourceImpl", "Error in updateUserProfile: ${it.message}", it) }
     }
 
     override suspend fun uploadProfileImage(imageUri: Uri): Result<String> = withContext(dispatcherProvider.io) {
@@ -303,6 +305,6 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
             imageRef.putFile(imageUri).await()
             imageRef.downloadUrl.await().toString()
-        }.onFailure { Log.e("UserRemoteDataSource", "Error in uploadProfileImage: ${it.message}", it) }
+        }.onFailure { Log.e("UserRemoteDataSourceImpl", "Error in uploadProfileImage: ${it.message}", it) }
     }
 }
