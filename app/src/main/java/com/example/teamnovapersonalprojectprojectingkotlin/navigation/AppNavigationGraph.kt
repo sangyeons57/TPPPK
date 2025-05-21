@@ -61,6 +61,7 @@ fun AppNavigationGraph(
         navController = navController,
         startDestination = startDestination
     ) {
+
         // 인증 관련 네비게이션 그래프 (로그인, 가입 등)
         authGraph(appNavigator)
         
