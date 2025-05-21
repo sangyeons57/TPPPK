@@ -70,7 +70,7 @@ data class User(
  * Its constructor is internal to ensure it's created via User.toUserProfileData().
  */
 @ConsistentCopyVisibility
-data class UserProfileData internal constructor(
+data class UserProfileData constructor(
     val id: String,
     val name: String,
     val email: String?, // Email might be nullable or not always available from all sources
