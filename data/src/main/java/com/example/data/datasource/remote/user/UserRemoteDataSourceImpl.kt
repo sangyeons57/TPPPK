@@ -228,7 +228,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
     // --- Implementation of new methods (이제 kotlin.Result 사용) ---
 
-    override suspend fun getMyProfile(): Result<com.example.domain.model.User> = withContext(dispatcherProvider.io) {
+    override suspend fun getMyProfile(): Result<User> = withContext(dispatcherProvider.io) {
         runCatching {
             val firebaseUser = auth.currentUser ?: throw IllegalStateException("User not logged in")
             val userId = firebaseUser.uid
