@@ -38,4 +38,4 @@ COPY . /app
 RUN chmod +x gradlew
 
 # 7. 컨테이너 실행 시 기본 명령 설정
-CMD ["./gradlew", "build", "--stacktrace"]
+CMD ["sudo", "./gradlew", "build", "--stacktrace"]
