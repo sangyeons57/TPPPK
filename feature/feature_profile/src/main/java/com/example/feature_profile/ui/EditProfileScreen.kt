@@ -31,11 +31,22 @@ import com.example.feature_profile.viewmodel.EditProfileUiState
 import com.example.feature_profile.viewmodel.EditProfileViewModel
 // AppRoutes and other navigation imports are fine if AppNavigator handles them
 import kotlinx.coroutines.flow.collectLatest
+import android.Manifest // 권한 import
+import android.os.Build // Build version 확인
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext // Context 접근
+import com.google.accompanist.permissions.ExperimentalPermissionsApi // Accompanist
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 
 /**
  * EditProfileScreen: 프로필 편집 화면 (Stateful)
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class) // ExperimentalPermissionsApi 추가
 @Composable
 fun EditProfileScreen(
     appNavigator: AppNavigator,
@@ -43,6 +54,14 @@ fun EditProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // 이미지 읽기 권한 설정 (Android 버전에 따라 분기)
+    val readImagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    val permissionState = rememberPermissionState(permission = readImagePermission)
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -64,9 +83,35 @@ fun EditProfileScreen(
                     )
                 }
                 is EditProfileEvent.RequestImagePick -> {
-                    imagePickerLauncher.launch("image/*")
+                    // 권한 상태에 따라 이미지 선택기 실행 또는 권한 요청
+                    if (permissionState.status.isGranted) {
+                        imagePickerLauncher.launch("image/*")
+                    } else {
+                        // 권한이 없다면 요청
+                        // shouldShowRationale은 사용자가 이전에 권한 요청을 거부한 경우 true를 반환
+                        // 이 경우 사용자에게 왜 권한이 필요한지 설명하는 것이 좋음
+                        permissionState.launchPermissionRequest()
+                    }
                 }
             }
+        }
+    }
+
+    // 권한 상태 변경 시 스낵바 알림 (선택 사항)
+    LaunchedEffect(permissionState.status) {
+        if (!permissionState.status.isGranted && permissionState.status.shouldShowRationale) {
+            // 사용자가 권한을 거부했지만, 설명을 다시 보여줄 수 있는 경우
+            snackbarHostState.showSnackbar(
+                message = "프로필 이미지 변경을 위해 사진 접근 권한이 필요합니다.",
+                duration = SnackbarDuration.Long
+            )
+        } else if (!permissionState.status.isGranted && !permissionState.status.shouldShowRationale && permissionState.permissionRequested) {
+            // 사용자가 권한을 영구적으로 거부한 경우 (다시 묻지 않음 선택)
+            // 이 경우 설정 앱으로 이동하여 권한을 직접 변경하도록 안내할 수 있음
+            snackbarHostState.showSnackbar(
+                message = "사진 접근 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.",
+                duration = SnackbarDuration.Long
+            )
         }
     }
 
