@@ -52,25 +52,23 @@ class EditProfileViewModel @Inject constructor(
     private fun loadUserProfile() {
         viewModelScope.launch(dispatcherProvider.io) {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = getMyProfileUseCase()) {
-                is Result.Success -> {
+            getMyProfileUseCase()
+                .onSuccess {
                     _uiState.update {
                         it.copy(
-                            user = result.data,
+                            user = it,
                             isLoading = false
                         )
                     }
                 }
-                is Result.Error -> {
+                .onFailure {
                     _uiState.update {
                         it.copy(
-                            errorMessage = result.message ?: "Failed to load profile",
+                            errorMessage = it.message ?: "Failed to load profile",
                             isLoading = false
                         )
                     }
                 }
-                is Result.Loading -> TODO()
-            }
         }
     }
 
@@ -96,9 +94,9 @@ class EditProfileViewModel @Inject constructor(
 
         viewModelScope.launch(dispatcherProvider.io) {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = uploadProfileImageUseCase(uri)) {
-                is Result.Success -> {
-                    val newImageUrl = result.data
+            uploadProfileImageUseCase(uri)
+                .onSuccess {
+                    val newImageUrl = it
                     _uiState.update { currentState ->
                         currentState.copy(
                             user = currentState.user?.copy(profileImageUrl = newImageUrl),
@@ -106,16 +104,14 @@ class EditProfileViewModel @Inject constructor(
                         )
                     }
                 }
-                is Result.Error -> {
+                .onFailure {
                     _uiState.update {
                         it.copy(
-                            errorMessage = result.message ?: "Image upload failed",
+                            errorMessage = it.message ?: "Image upload failed",
                             isLoading = false
                         )
                     }
                 }
-                is Result.Loading -> TODO()
-            }
         }
     }
 
@@ -127,22 +123,20 @@ class EditProfileViewModel @Inject constructor(
                     name = currentUser.name,
                     profileImageUrl = currentUser.profileImageUrl
                 )
-                when (val result = updateUserProfileUseCase(params)) {
-                    is Result.Success -> {
+                updateUserProfileUseCase(params)
+                    .onSuccess {
                         _uiState.update { it.copy(isLoading = false) }
                         _eventFlow.emit(ShowSnackbar("Profile updated successfully"))
                         _eventFlow.emit(EditProfileEvent.NavigateBack)
                     }
-                    is Result.Error -> {
+                    .onFailure {
                         _uiState.update {
                             it.copy(
-                                errorMessage = result.message ?: "Failed to update profile",
+                                errorMessage = it.message ?: "Failed to update profile",
                                 isLoading = false
                             )
                         }
                     }
-                    is Result.Loading -> TODO()
-                }
             } ?: run {
                 _eventFlow.emit(EditProfileEvent.ShowSnackbar("Cannot save, user data is missing."))
             }
