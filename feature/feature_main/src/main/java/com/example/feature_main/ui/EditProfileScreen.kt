@@ -14,21 +14,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.core_common.dispatcher.DispatcherProvider // For MockViewModel
+import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
+import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.User // For MockViewModel and Previews
 import com.example.feature_main.viewmodel.EditProfileEvent
 import com.example.feature_main.viewmodel.EditProfileUiState
 import com.example.feature_main.viewmodel.EditProfileViewModel
-import com.example.navigation.AppNavigator
 // AppRoutes and other navigation imports are fine if AppNavigator handles them
-import com.example.navigation.NavigationCommand
-import com.example.navigation.NavDestination
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,13 +113,7 @@ fun EditProfileContent(
         AsyncImage(
             model = uiState.user?.profileImageUrl, // Use uiState.user directly
             contentDescription = "Profile Image",
-            error = { // Fallback for error or if model is null
-                Icon(
-                    imageVector = Icons.Filled.AccountCircle,
-                    contentDescription = "Default Profile Image",
-                    modifier = Modifier.size(120.dp)
-                )
-            },
+            error = rememberVectorPainter(Icons.Filled.AccountCircle),
             modifier = Modifier
                 .size(120.dp)
                 .clip(CircleShape)
@@ -136,7 +131,7 @@ fun EditProfileContent(
             enabled = uiState.user != null // Disable if user data is not loaded
         )
 
-        Spacer(modifier = Modifier.weight(1.f)) // Pushes save button to bottom
+        Spacer(modifier = Modifier.weight(1F)) // Pushes save button to bottom
 
         Button(
             onClick = onSaveProfileClicked,
@@ -160,48 +155,6 @@ fun EditProfileContent(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun EditProfileScreenPreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        // Mock AppNavigator for preview
-        val mockAppNavigator = object : AppNavigator {
-            override val navigationChannel = kotlinx.coroutines.channels.Channel<NavigationCommand>(kotlinx.coroutines.channels.Channel.CONFLATED)
-            override fun navigate(command: NavigationCommand) {}
-            override fun navigate(destination: NavDestination) {}
-            override fun popBackStack() {}
-        }
-        // Mock ViewModel for preview
-        val mockUser = User(id = "previewId", name = "임시사용자", email = "preview@example.com")
-
-        // Required to mock the constructor of EditProfileViewModel for preview
-        class MockEditProfileViewModel : EditProfileViewModel(
-            org.mockito.kotlin.mock(), org.mockito.kotlin.mock(), org.mockito.kotlin.mock(), // Mock UseCases
-            object : DispatcherProvider { // Mock DispatcherProvider
-                override val main = kotlinx.coroutines.Dispatchers.Unconfined
-                override val io = kotlinx.coroutines.Dispatchers.Unconfined
-                override val default = kotlinx.coroutines.Dispatchers.Unconfined
-                override val unconfined = kotlinx.coroutines.Dispatchers.Unconfined
-            }
-        ) {
-            override val uiState: StateFlow<EditProfileUiState> =
-                MutableStateFlow(EditProfileUiState(user = mockUser)) // Use mockUser
-                    .asStateFlow()
-            override val eventFlow: SharedFlow<EditProfileEvent> =
-                MutableSharedFlow()
-
-            override fun onNameChanged(newName: String) {}
-            override fun onProfileImageClicked() {}
-            override fun onSaveProfileClicked() {}
-            override fun handleImageSelection(uri: Uri?) {} // Add mock for new method
-        }
-
-        EditProfileScreen(
-            appNavigator = mockAppNavigator,
-            viewModel = MockEditProfileViewModel()
-        )
-    }
-}
 
 @Preview(showBackground = true)
 @Composable

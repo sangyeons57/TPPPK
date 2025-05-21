@@ -4,11 +4,10 @@ import android.net.Uri
 import android.util.Log
 import com.example.core_common.constants.FirestoreConstants
 import com.example.data.datasource.remote.user.UserRemoteDataSource
-import com.example.core_common.dispatcher.DispatcherProvider // Added
+import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.data.model.mapper.UserMapper
 import com.example.domain.model.AccountStatus
 import com.example.domain.model.User
-import com.example.domain.model.UserProfileData // Added
 import com.example.domain.model.UserStatus
 import com.example.domain.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -20,11 +19,9 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext // Added
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
-// Assuming com.example.domain.model.Result is the one created in the domain module
-import com.example.domain.model.Result as DomainResult // Added for new methods
-// Keep kotlin.Result for existing methods if they are not being changed in this step
+import kotlin.Result
 
 /**
  * UserRepository 인터페이스의 실제 구현체
@@ -32,13 +29,13 @@ import com.example.domain.model.Result as DomainResult // Added for new methods
  */
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
-    private val userMapper: UserMapper, // UserMapper might not be needed for new UserProfileData methods
-    private val firestore: FirebaseFirestore, // May not be needed if all calls go via dataSource
-    private val firebaseAuth: FirebaseAuth, // May not be needed if all calls go via dataSource
-    private val dispatcherProvider: DispatcherProvider // Added
+    private val userMapper: UserMapper,
+    private val firestore: FirebaseFirestore,
+    private val firebaseAuth: FirebaseAuth,
+    private val dispatcherProvider: DispatcherProvider
 ) : UserRepository {
 
-    private val usersCollection = firestore.collection(FirestoreConstants.Collections.USERS) // This might be redundant if dataSource handles all
+    private val usersCollection = firestore.collection(FirestoreConstants.Collections.USERS)
 
     /**
      * 특정 ID를 가진 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
@@ -49,13 +46,9 @@ class UserRepositoryImpl @Inject constructor(
      */
     override fun getUserStream(userId: String): Flow<Result<User>> {
         return flow {
-            userRemoteDataSource.getUserStream(userId).collect { result ->
-                emit(result.map { userDto ->
-                    if (userDto != null) {
-                        userMapper.mapToDomain(userDto)
-                    } else {
-                        User.EMPTY
-                    }
+            userRemoteDataSource.getUserStream(userId).collect { resultDto ->
+                emit(resultDto.map { userDto ->
+                    userDto?.let { userMapper.mapToDomain(it) } ?: User.EMPTY
                 })
             }
         }
@@ -69,13 +62,9 @@ class UserRepositoryImpl @Inject constructor(
         return flow {
             try {
                 val currentUserId = getCurrentUserId()
-                userRemoteDataSource.getUserStream(currentUserId).collect { result ->
-                    emit(result.map { userDto ->
-                        if (userDto != null) {
-                            userMapper.mapToDomain(userDto)
-                        } else {
-                            User.EMPTY
-                        }
+                userRemoteDataSource.getUserStream(currentUserId).collect { resultDto ->
+                    emit(resultDto.map { userDto ->
+                        userDto?.let { userMapper.mapToDomain(it) } ?: User.EMPTY
                     })
                 }
             } catch (e: Exception) {
@@ -147,13 +136,6 @@ class UserRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
-    }
-
-    override suspend fun updateProfileImage(imageUri: Uri): Result<String?> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-            
-        return userRemoteDataSource.updateProfileImage(userId, imageUri)
     }
 
     override suspend fun removeProfileImage(): Result<Unit> {
@@ -244,42 +226,39 @@ class UserRepositoryImpl @Inject constructor(
 
     // --- Implementation of new methods from UserRepository interface ---
 
-    override suspend fun getMyProfile(): DomainResult<User> = withContext(dispatcherProvider.io) { // Changed to User
+    override suspend fun getMyProfile(): Result<User> = withContext(dispatcherProvider.io) {
         try {
-            // userRemoteDataSource.getMyProfile() now returns DomainResult<User>
-            // No mapping needed here if UserMapper is not involved for this specific path.
-            // The UserMapper in the constructor is for other methods that map UserDto to User.
-            userRemoteDataSource.getMyProfile() 
+            userRemoteDataSource.getMyProfile()
         } catch (e: Exception) {
             Log.e("UserRepositoryImpl", "Error in getMyProfile: ${e.message}", e)
-            DomainResult.Error(e, "Failed to get profile from repository")
+            Result.failure(e)
         }
     }
 
-    override suspend fun getUserProfileImageUrl(userId: String): DomainResult<String?> = withContext(dispatcherProvider.io) {
+    override suspend fun getUserProfileImageUrl(userId: String): Result<String?> = withContext(dispatcherProvider.io) {
         try {
-            userRemoteDataSource.getUserProfileImageUrl(userId) // This now returns DomainResult<String?>
+            userRemoteDataSource.getUserProfileImageUrl(userId)
         } catch (e: Exception) {
             Log.e("UserRepositoryImpl", "Error in getUserProfileImageUrl: ${e.message}", e)
-            DomainResult.Error(e, "Failed to get profile image URL from repository")
+            Result.failure(Exception("Failed to get profile image URL from repository", e))
         }
     }
 
-    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): DomainResult<Unit> = withContext(dispatcherProvider.io) {
+    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): Result<Unit> = withContext(dispatcherProvider.io) {
         try {
-            userRemoteDataSource.updateUserProfile(name, profileImageUrl) // This now returns DomainResult<Unit>
+            userRemoteDataSource.updateUserProfile(name, profileImageUrl)
         } catch (e: Exception) {
             Log.e("UserRepositoryImpl", "Error in updateUserProfile: ${e.message}", e)
-            DomainResult.Error(e, "Failed to update profile from repository")
+            Result.failure(Exception("Failed to update profile from repository", e))
         }
     }
 
-    override suspend fun uploadProfileImage(imageUri: Uri): DomainResult<String> = withContext(dispatcherProvider.io) {
+    override suspend fun uploadProfileImage(imageUri: Uri): Result<String> = withContext(dispatcherProvider.io) {
         try {
-            userRemoteDataSource.uploadProfileImage(imageUri) // This now returns DomainResult<String>
+            userRemoteDataSource.uploadProfileImage(imageUri)
         } catch (e: Exception) {
             Log.e("UserRepositoryImpl", "Error in uploadProfileImage: ${e.message}", e)
-            DomainResult.Error(e, "Failed to upload profile image from repository")
+            Result.failure(Exception("Failed to upload profile image from repository", e))
         }
     }
 }

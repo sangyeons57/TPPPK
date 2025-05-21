@@ -69,6 +69,7 @@ data class User(
  * UI-specific representation of a user's profile, derived from the User domain model.
  * Its constructor is internal to ensure it's created via User.toUserProfileData().
  */
+@ConsistentCopyVisibility
 data class UserProfileData internal constructor(
     val id: String,
     val name: String,

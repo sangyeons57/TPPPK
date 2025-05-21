@@ -112,29 +112,6 @@ class UserRemoteDataSourceImpl @Inject constructor(
         Result.success(Unit) // 명시적 반환 및 TODO 제거
     }
 
-    override suspend fun updateProfileImage(userId: String, imageUri: Uri): Result<String?> = runCatching {
-        val userDoc = userCollection.document(userId).get().await()
-        val currentUserDto = userDoc.toObject(UserDto::class.java)
-        val previousImageUrl = currentUserDto?.profileImageUrl
-        
-        if (previousImageUrl != null && previousImageUrl.startsWith("gs://")) { // Firebase Storage URL인지 확인
-            try {
-                val previousImageRef = storage.getReferenceFromUrl(previousImageUrl)
-                previousImageRef.delete().await()
-            } catch (e: Exception) { /* 이전 이미지 삭제 실패는 무시 */ }
-        }
-        
-        val imageFileName = "${userId}_${UUID.randomUUID()}"
-        val imageRef = profileImagesRef.child(imageFileName)
-        imageRef.putFile(imageUri).await()
-        val downloadUrl = imageRef.downloadUrl.await().toString()
-        
-        userCollection.document(userId).update(mapOf(
-            "profileImageUrl" to downloadUrl,
-            "updatedAt" to DateTimeUtil.nowFirebaseTimestamp()
-        )).await()
-        downloadUrl
-    }
 
     override suspend fun removeProfileImage(userId: String): Result<Unit> = runCatching {
         val userDoc = userCollection.document(userId).get().await()

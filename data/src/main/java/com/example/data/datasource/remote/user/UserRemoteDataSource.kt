@@ -70,15 +70,6 @@ interface UserRemoteDataSource {
     suspend fun updateUserProfile(userDto: UserDto): Result<Unit>
 
     /**
-     * 사용자 프로필 이미지를 업데이트합니다.
-     *
-     * @param userId 사용자 ID
-     * @param imageUri 업로드할 이미지 URI
-     * @return 성공 시 이미지 URL(String)이 포함된 Result, 실패 시 에러가 포함된 Result
-     */
-    suspend fun updateProfileImage(userId: String, imageUri: Uri): Result<String?>
-
-    /**
      * 사용자 프로필 이미지를 제거합니다.
      *
      * @param userId 사용자 ID

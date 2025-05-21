@@ -10,6 +10,7 @@ import com.example.domain.usecase.user.GetMyProfileUseCase // Import actual GetM
 import com.example.domain.usecase.user.UpdateUserProfileParams // Import actual UpdateUserProfileParams
 import com.example.domain.usecase.user.UpdateUserProfileUseCase // Import actual UpdateUserProfileUseCase
 import com.example.domain.usecase.user.UploadProfileImageUseCase // Import actual UploadProfileImageUseCase
+import com.example.feature_main.viewmodel.EditProfileEvent.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 // UserProfileData import is removed
@@ -79,6 +80,7 @@ class EditProfileViewModel @Inject constructor(
                         )
                     }
                 }
+                is Result.Loading -> TODO()
             }
         }
     }
@@ -123,6 +125,7 @@ class EditProfileViewModel @Inject constructor(
                         )
                     }
                 }
+                is Result.Loading -> TODO()
             }
         }
     }
@@ -140,7 +143,7 @@ class EditProfileViewModel @Inject constructor(
                         _uiState.update { it.copy(isLoading = false) }
                         // Optionally reload profile or assume local state is source of truth post-save
                         // loadUserProfile() // To get completely fresh data from server if needed
-                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("Profile updated successfully"))
+                        _eventFlow.emit(ShowSnackbar("Profile updated successfully"))
                         _eventFlow.emit(EditProfileEvent.NavigateBack)
                     }
                     is Result.Error -> {
@@ -151,26 +154,11 @@ class EditProfileViewModel @Inject constructor(
                             )
                         }
                     }
+                    is Result.Loading -> TODO()
                 }
             } ?: run {
                 // Handle case where user is null, though should ideally not happen if save is enabled
                 _eventFlow.emit(EditProfileEvent.ShowSnackbar("Cannot save, user data is missing."))
-            }
-        }
-    }
-
-    fun errorMessageShown() { // Renamed from onErrorShown to match convention
-                    _eventFlow.emit(EditProfileEvent.ShowSnackbar("Profile updated successfully"))
-                    _eventFlow.emit(EditProfileEvent.NavigateBack)
-                }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            errorMessage = result.message ?: "Failed to update profile",
-                            isLoading = false
-                        )
-                    }
-                }
             }
         }
     }

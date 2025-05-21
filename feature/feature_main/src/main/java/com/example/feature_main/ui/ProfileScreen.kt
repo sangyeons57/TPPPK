@@ -37,6 +37,7 @@ import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.User
 import com.example.domain.model.UserProfileData
 
 /**
@@ -68,7 +69,7 @@ fun ProfileScreen(
                 is ProfileEvent.NavigateToSettings -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)))
                 is ProfileEvent.NavigateToEditProfile -> {
                     Log.d("ProfileScreen", "Navigating to Edit Profile Screen")
-                    appNavigator.navigate(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE))
+                    appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)))
                 }
                 is ProfileEvent.NavigateToFriends -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Friends.LIST)))
                 is ProfileEvent.NavigateToStatus -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.CHANGE_MY_PASSWORD)))
@@ -278,7 +279,7 @@ fun ProfileMenuItem(
 @Preview(showBackground = true)
 @Composable
 fun ProfileContentPreview() {
-    val previewProfile = UserProfileData("id", "김미리", "preview@example.com", "Compose 공부 중!", null)
+    val previewProfile = User("id", "김미리", "preview@example.com", "Compose 공부 중!", null).toUserProfileData()
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProfileContent(
             isLoading = false,
