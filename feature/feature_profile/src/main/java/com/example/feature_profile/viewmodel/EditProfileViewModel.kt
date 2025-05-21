@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.domain.model.User
-import com.example.domain.usecase.user.GetMyProfileUseCase
+import com.example.domain.usecase.user.GetCurrentUserUseCase
 import com.example.domain.usecase.user.UpdateUserProfileParams
 import com.example.domain.usecase.user.UpdateUserProfileUseCase
 import com.example.domain.usecase.user.UploadProfileImageUseCase
@@ -31,13 +31,13 @@ sealed interface EditProfileEvent {
 // --- ViewModel ---
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    private val getMyProfileUseCase: GetMyProfileUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val updateUserProfileUseCase: UpdateUserProfileUseCase,
     private val uploadProfileImageUseCase: UploadProfileImageUseCase,
     private val dispatcherProvider: DispatcherProvider
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(EditProfileUiState())
+    private val _uiState = MutableStateFlow(EditProfileUiState(isLoading = true))
     val uiState: StateFlow<EditProfileUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<EditProfileEvent>()
@@ -50,22 +50,28 @@ class EditProfileViewModel @Inject constructor(
     /** 사용자 프로필 정보 로드 */
     private fun loadUserProfile() {
         viewModelScope.launch(dispatcherProvider.io) {
-            _uiState.update { it.copy(isLoading = true) }
-            getMyProfileUseCase()
-                .onSuccess {
-                    _uiState.update {
-                        it.copy(
-                            user = it.user,
-                            isLoading = false
+            getCurrentUserUseCase()
+                .collectLatest { result ->
+                    _uiState.update { currentState ->
+                        result.fold(
+                            onSuccess = { loadedUser ->
+                                currentState.copy(
+                                    user = loadedUser,
+                                    isLoading = false,
+                                    errorMessage = null
+                                )
+                            },
+                            onFailure = { exception ->
+                                currentState.copy(
+                                    user = null,
+                                    isLoading = false,
+                                    errorMessage = exception.message ?: "Failed to load profile"
+                                )
+                            }
                         )
                     }
-                }
-                .onFailure {
-                    _uiState.update {
-                        it.copy(
-                            errorMessage = it.errorMessage ?: "Failed to load profile",
-                            isLoading = false
-                        )
+                    if (result.isFailure) {
+                        _eventFlow.emit(ShowSnackbar("Profile load failed: ${result.exceptionOrNull()?.message}"))
                     }
                 }
         }
@@ -99,17 +105,20 @@ class EditProfileViewModel @Inject constructor(
                     _uiState.update { currentState ->
                         currentState.copy(
                             user = currentState.user?.copy(profileImageUrl = newImageUrl),
-                            isLoading = false
+                            isLoading = false,
+                            errorMessage = null
                         )
                     }
+                    _eventFlow.emit(ShowSnackbar("Image uploaded successfully."))
                 }
                 .onFailure {
                     _uiState.update {
                         it.copy(
-                            errorMessage = it.errorMessage ?: "Image upload failed",
+                            errorMessage = it.message ?: "Image upload failed",
                             isLoading = false
                         )
                     }
+                    _eventFlow.emit(ShowSnackbar("Image upload failed: ${it.message}"))
                 }
         }
     }
@@ -117,7 +126,12 @@ class EditProfileViewModel @Inject constructor(
     fun onSaveProfileClicked() {
         viewModelScope.launch(dispatcherProvider.io) {
             _uiState.value.user?.let { currentUser ->
-                _uiState.update { it.copy(isLoading = true) }
+                if (currentUser.name.isBlank()) {
+                    _eventFlow.emit(ShowSnackbar("Name cannot be empty."))
+                    return@launch
+                }
+
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
                 val params = UpdateUserProfileParams(
                     name = currentUser.name,
                     profileImageUrl = currentUser.profileImageUrl
@@ -128,13 +142,14 @@ class EditProfileViewModel @Inject constructor(
                         _eventFlow.emit(ShowSnackbar("Profile updated successfully"))
                         _eventFlow.emit(EditProfileEvent.NavigateBack)
                     }
-                    .onFailure {
+                    .onFailure { exception ->
                         _uiState.update {
                             it.copy(
-                                errorMessage = it.errorMessage ?: "Failed to update profile",
+                                errorMessage = exception.message ?: "Failed to update profile",
                                 isLoading = false
                             )
                         }
+                        _eventFlow.emit(ShowSnackbar("Failed to update profile: ${exception.message}"))
                     }
             } ?: run {
                 _eventFlow.emit(EditProfileEvent.ShowSnackbar("Cannot save, user data is missing."))
