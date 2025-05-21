@@ -1,16 +1,15 @@
 // 경로: domain/repository/UserRepository.kt
 package com.example.domain.repository
 
+// Replace kotlin.Result with our domain specific Result for new methods
 import android.net.Uri
-import android.net.Uri // Ensure Uri is imported if not already
-import com.example.domain.model.User
-import com.example.domain.model.UserProfileData // Import UserProfileData
-import com.example.domain.model.UserStatus
 import com.example.domain.model.AccountStatus
+import com.example.domain.model.Result
+import com.example.domain.model.User
+import com.example.domain.model.UserStatus
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
-// Replace kotlin.Result with our domain specific Result for new methods
-import com.example.domain.model.Result // Import our Result
+
 // Keep kotlin.Result for existing methods if they are not being changed in this step
 // For clarity, it's better to migrate all to the same Result type, but let's stick to the subtask for now.
 // The subtask implies new methods should use the specified Result.

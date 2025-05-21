@@ -1,17 +1,24 @@
 package com.example.teamnovapersonalprojectprojectingkotlin.navigation
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -49,14 +56,37 @@ import kotlinx.coroutines.flow.collect
  * 앱의 모든 최상위 경로들을 정의하고, NavigationManager와 연결하여 탐색을 처리합니다.
  * 중첩 네비게이션 구조를 사용하여 기능별로 화면들을 그룹화합니다.
  */
+@SuppressLint("ContextCastToActivity")
 @Composable
 fun AppNavigationGraph(
     navController: NavHostController,
     appNavigator: AppNavigator,
     startDestination: String = AppRoutes.Auth.Graph.path
 ) {
-    // NavigationManager는 navController를 직접 사용하여 네비게이션 처리
-    
+
+    val activity = (LocalContext.current as? Activity)
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() } // 스낵바 사용 시
+    var backPressedTime by remember { mutableStateOf(0L) }
+    val context = LocalContext.current // Toast 사용 시
+
+    BackHandler(enabled = navController.previousBackStackEntry == null) {
+        if ((System.currentTimeMillis() - backPressedTime) < 2000L) { // 2초 안에 다시 누르면
+            activity?.finish()
+        } else {
+            backPressedTime = System.currentTimeMillis()
+            // 스낵바 또는 토스트 메시지 표시
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "한 번 더 누르면 종료됩니다.",
+                    duration = SnackbarDuration.Short
+                )
+            }
+            // 또는 Toast.makeText(context, "한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
     NavHost(
         navController = navController,
         startDestination = startDestination
