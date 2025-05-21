@@ -102,7 +102,7 @@ class ChangeStatusViewModel @Inject constructor(
             _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태 변경 중..."))
 
             // UseCase는 String 매개변수를 기대하므로 displayName 사용
-            val result = updateUserStatusUseCase(statusToUpdate.displayName)
+            val result = updateUserStatusUseCase(statusToUpdate.name)
 
             if (result.isSuccess) {
                 _uiState.update {
@@ -112,7 +112,7 @@ class ChangeStatusViewModel @Inject constructor(
                         updateSuccess = true
                     )
                 }
-                _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태가 '${statusToUpdate.displayName}'(으)로 변경되었습니다."))
+                _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태가 '${statusToUpdate.name}'(으)로 변경되었습니다."))
                 _eventFlow.emit(ChangeStatusEvent.DismissDialog) // 성공 시 다이얼로그 닫기
             } else {
                 val errorMsg = "상태 변경 실패: ${result.exceptionOrNull()?.message}"

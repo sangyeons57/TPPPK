@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// --- UI 상태 ---
 data class EditProfileUiState(
     val user: User? = null,
     val isLoading: Boolean = false,
@@ -56,7 +55,7 @@ class EditProfileViewModel @Inject constructor(
                 .onSuccess {
                     _uiState.update {
                         it.copy(
-                            user = it,
+                            user = it.user,
                             isLoading = false
                         )
                     }
@@ -64,7 +63,7 @@ class EditProfileViewModel @Inject constructor(
                 .onFailure {
                     _uiState.update {
                         it.copy(
-                            errorMessage = it.message ?: "Failed to load profile",
+                            errorMessage = it.errorMessage ?: "Failed to load profile",
                             isLoading = false
                         )
                     }
@@ -107,7 +106,7 @@ class EditProfileViewModel @Inject constructor(
                 .onFailure {
                     _uiState.update {
                         it.copy(
-                            errorMessage = it.message ?: "Image upload failed",
+                            errorMessage = it.errorMessage ?: "Image upload failed",
                             isLoading = false
                         )
                     }
@@ -132,7 +131,7 @@ class EditProfileViewModel @Inject constructor(
                     .onFailure {
                         _uiState.update {
                             it.copy(
-                                errorMessage = it.message ?: "Failed to update profile",
+                                errorMessage = it.errorMessage ?: "Failed to update profile",
                                 isLoading = false
                             )
                         }

@@ -8,14 +8,17 @@ import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,9 +49,10 @@ import com.example.feature_auth.ui.FindPasswordScreen
 import com.example.feature_auth.ui.PrivacyPolicyScreen
 import com.example.feature_auth.ui.SignUpScreen
 import com.example.feature_auth.ui.TermsOfServiceScreen
-import com.example.feature_main.ui.EditProfileScreen // Added import
+import com.example.feature_profile.ui.EditProfileScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 /**
  * 앱의 최상위 네비게이션 그래프
