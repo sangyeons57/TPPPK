@@ -2,8 +2,12 @@
 .gitignore
 .gradle
 .idea
+.cursor
+.windsurf
+.kotlin
+.vscode
 build
-gradle
+#gradle
 local.properties
 *.iml
 *.DS_Store
