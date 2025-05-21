@@ -49,6 +49,7 @@ import com.example.feature_auth.ui.FindPasswordScreen
 import com.example.feature_auth.ui.PrivacyPolicyScreen
 import com.example.feature_auth.ui.SignUpScreen
 import com.example.feature_auth.ui.TermsOfServiceScreen
+import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_profile.ui.EditProfileScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -101,6 +102,9 @@ fun AppNavigationGraph(
         
         // 메인 화면 (MainContainerScreen이 자체적으로 탭 네비게이션 처리)
         mainGraph(appNavigator)
+        
+        // 친구 화면 그래프 추가
+        friendsGraph(appNavigator)
         
         // 독립적인 화면들의 그래프 - 메인 탭 외부에서 접근하는 화면들
         projectGraph(appNavigator)
@@ -170,6 +174,22 @@ fun NavGraphBuilder.authGraph(appNavigator: AppNavigator) {
 fun NavGraphBuilder.mainGraph(appNavigator: AppNavigator) {
     composable(AppRoutes.Main.ROOT) {
         MainContainerScreen(appNavigator = appNavigator)
+    }
+}
+
+/**
+ * 친구 관련 화면들의 네비게이션 그래프
+ */
+fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
+    navigation(
+        route = AppRoutes.Friends.Graph.path,
+        startDestination = AppRoutes.Friends.LIST
+    ) {
+        composable(AppRoutes.Friends.LIST) {
+            FriendsScreen(appNavigator = appNavigator)
+        }
+        // TODO: 친구 요청 수락 화면 등 추가 경로 정의
+        // composable(AppRoutes.Friends.ACCEPT_REQUESTS) { ... }
     }
 }
 
