@@ -60,11 +60,10 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * 특정 역할의 상세 정보를 가져옵니다.
      * 
      * @param roleId 역할 ID
-     * @return 역할 이름과 권한 맵 Pair 또는 에러
+     * @return 역할 정보 또는 에러
      */
-    override suspend fun getRoleDetails(roleId: String): Result<Pair<String, Map<RolePermission, Boolean>>> {
-        // 원격에서 직접 가져오기 (Firestore 캐시 활용)
-        return remoteDataSource.getRoleDetails(roleId)
+    override suspend fun getRoleDetails(projectId: String, roleId: String): Result<Role?> {
+        return remoteDataSource.getRoleDetails(projectId, roleId)
     }
 
     /**
@@ -73,57 +72,48 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * @param projectId 역할이 생성될 프로젝트 ID
      * @param name 새 역할 이름
      * @param permissions 새 역할의 권한 맵
-     * @return 성공/실패 결과
+     * @param isDefault 기본 역할 여부
+     * @return 생성된 역할 ID 또는 에러
      */
     override suspend fun createRole(
         projectId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>
-    ): Result<Unit> {
-        // 원격 데이터 소스에서 역할 생성
-        val result = remoteDataSource.createRole(projectId, name, permissions)
-        // 로컬 저장 로직 제거
-        // createRole이 ID 대신 Unit을 반환하도록 remoteDataSource가 변경되었다고 가정, 또는 ID를 받아도 사용 안 함.
-        // 성공 시 Unit을 반환하거나, remoteDataSource의 Result를 그대로 반환할 수 있음.
-        return if (result.isSuccess) Result.success(Unit) 
-               else Result.failure(result.exceptionOrNull() ?: Exception("역할 생성 실패"))
+        permissions: Map<RolePermission, Boolean>,
+        isDefault: Boolean
+    ): Result<String> {
+        return remoteDataSource.createRole(projectId, name, permissions, isDefault)
     }
 
     /**
      * 기존 역할을 업데이트합니다.
      * 
+     * @param projectId 프로젝트 ID
      * @param roleId 수정할 역할 ID
      * @param name 새 역할 이름
      * @param permissions 새 권한 맵
+     * @param isDefault 기본 역할 여부 (null이면 변경하지 않음)
      * @return 성공/실패 결과
      */
     override suspend fun updateRole(
-        roleId: String, // This is expected to be a composite ID "projectId_actualRoleId"
+        projectId: String,
+        roleId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>
+        permissions: Map<RolePermission, Boolean>,
+        isDefault: Boolean?
     ): Result<Unit> {
-        // Parse roleId to get projectId and actualRoleId
-        val parts = roleId.split('_')
-        if (parts.size < 2) { // Basic validation for "projectId_roleId" format
-            return Result.failure(IllegalArgumentException("Invalid roleId format. Expected 'projectId_roleId'."))
-        }
-        val projectId = parts[0]
-        val actualRoleId = parts.subList(1, parts.size).joinToString("_") // Handle roleIds that might contain underscores
-
-        // 원격 데이터 소스에서 역할 업데이트
-        // 로컬 저장 로직 제거
-        return remoteDataSource.updateRole(projectId, actualRoleId, name, permissions)
+        // The remoteDataSource.updateRole expects non-nullable name and permissions.
+        // The isDefault parameter is optional for the remote source.
+        return remoteDataSource.updateRole(projectId, roleId, name, permissions, isDefault)
     }
 
     /**
      * 역할을 삭제합니다.
      * 
+     * @param projectId 프로젝트 ID
      * @param roleId 삭제할 역할 ID
      * @return 성공/실패 결과
      */
-    override suspend fun deleteRole(roleId: String): Result<Unit> {
-        // 원격 데이터 소스에서 역할 삭제
-        // 로컬 삭제 로직 제거
-        return remoteDataSource.deleteRole(roleId)
+    override suspend fun deleteRole(projectId: String, roleId: String): Result<Unit> {
+        return remoteDataSource.deleteRole(projectId, roleId)
     }
 }
