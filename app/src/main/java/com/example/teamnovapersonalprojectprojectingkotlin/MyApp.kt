@@ -1,7 +1,6 @@
 package com.example.teamnovapersonalprojectprojectingkotlin
 
 import android.app.Application
-import com.example.core_logging.SentryUtil
 import com.google.firebase.BuildConfig
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
