@@ -7,7 +7,7 @@ import javax.inject.Inject
  * 역할을 삭제하는 유스케이스 인터페이스
  */
 interface DeleteRoleUseCase {
-    suspend operator fun invoke(roleId: String): Result<Unit>
+    suspend operator fun invoke(projectId: String, roleId: String): Result<Unit>
 }
 
 /**
@@ -23,7 +23,7 @@ class DeleteRoleUseCaseImpl @Inject constructor(
      * @param roleId 삭제할 역할의 ID
      * @return Result<Unit> 역할 삭제 처리 결과
      */
-    override suspend fun invoke(roleId: String): Result<Unit> {
-        return projectRoleRepository.deleteRole(roleId)
+    override suspend fun invoke(projectId: String, roleId: String): Result<Unit> {
+        return projectRoleRepository.deleteRole(projectId, roleId)
     }
-} 
+}
