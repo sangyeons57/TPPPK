@@ -19,6 +19,7 @@ import com.example.core_logging.SentryUtil
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import kotlinx.coroutines.launch
 
 /**
@@ -41,9 +42,7 @@ fun DevMenuScreen(
                 navigationIcon = {
                     // showBackButton이 true일 때만 뒤로가기 버튼 표시
                     if (showBackButton) {
-                        IconButton(onClick = { appNavigator.navigateBack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                        }
+                        DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                     }
                 }
             )

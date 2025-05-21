@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.structure.viewmodel.EditChannelEvent
 import com.example.feature_project.structure.viewmodel.EditChannelUiState
@@ -68,9 +69,7 @@ fun EditChannelScreen(
             TopAppBar(
                 title = { Text("채널 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                 },
                 actions = {
                     IconButton(

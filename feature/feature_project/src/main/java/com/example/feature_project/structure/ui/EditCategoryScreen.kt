@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.structure.viewmodel.EditCategoryEvent
 import com.example.feature_project.structure.viewmodel.EditCategoryUiState
@@ -66,9 +67,7 @@ fun EditCategoryScreen(
             TopAppBar(
                 title = { Text("카테고리 편집") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                 },
                 actions = {
                     // 삭제 버튼 (로딩 중 아닐 때만 활성화)

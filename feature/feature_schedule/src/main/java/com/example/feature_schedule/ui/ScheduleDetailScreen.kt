@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_schedule.viewmodel.ScheduleDetailEvent
 import com.example.feature_schedule.viewmodel.ScheduleDetailItem
@@ -74,9 +75,7 @@ fun ScheduleDetailScreen(
             TopAppBar(
                 title = { Text("일정 상세") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                 },
                 actions = {
                     // 로딩 중이 아니고, 스케줄 정보가 있을 때만 버튼 표시

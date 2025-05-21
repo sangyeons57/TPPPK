@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.feature_settings.viewmodel.MigrationToolViewModel
 
 /**
@@ -32,12 +33,7 @@ fun MigrationToolScreen(
             TopAppBar(
                 title = { Text("채널 마이그레이션 도구") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "뒤로 가기"
-                        )
-                    }
+                    DebouncedBackButton(onClick = onBackClick)
                 }
             )
         }

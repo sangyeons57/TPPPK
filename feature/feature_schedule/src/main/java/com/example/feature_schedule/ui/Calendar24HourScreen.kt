@@ -41,6 +41,7 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.ScheduleColor1
 import com.example.core_ui.theme.ScheduleColor3
@@ -144,32 +145,9 @@ fun Calendar24HourScreen(
                     }
                 },
                 navigationIcon = {
-                    var backButtonPressed by remember { mutableStateOf(false) }
-                    val backScale by animateFloatAsState(
-                        targetValue = if (backButtonPressed) 0.8f else 1f,
-                        animationSpec = tween(150),
-                        label = "Back Button Scale"
-                    )
-                    
-                    IconButton(
-                        onClick = {
-                            backButtonPressed = true
-                            viewModel.onBackClick()
-                        }
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack, 
-                            contentDescription = "뒤로 가기",
-                            modifier = Modifier.scale(backScale)
-                        )
-                    }
-                    
-                    LaunchedEffect(backButtonPressed) {
-                        if (backButtonPressed) {
-                            delay(150)
-                            backButtonPressed = false
-                        }
-                    }
+                    DebouncedBackButton(onClick = {
+                        viewModel.onBackClick()
+                    })
                 },
                 actions = {
                     IconButton(

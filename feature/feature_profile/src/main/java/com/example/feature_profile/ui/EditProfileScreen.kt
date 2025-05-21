@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.User // For MockViewModel and Previews
 import com.example.feature_profile.viewmodel.EditProfileEvent
@@ -75,12 +76,7 @@ fun EditProfileScreen(
             TopAppBar(
                 title = { Text("프로필 수정") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigate(NavigationCommand.NavigateBack) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "뒤로 가기"
-                        )
-                    }
+                    DebouncedBackButton(onClick = { appNavigator.navigate(NavigationCommand.NavigateBack) })
                 }
             )
         },

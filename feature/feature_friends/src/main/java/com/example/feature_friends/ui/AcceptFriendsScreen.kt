@@ -29,6 +29,7 @@ import com.example.feature_friends.viewmodel.FriendRequestItem
 // ViewModel 및 관련 상태/이벤트/UI 모델 Import
 import kotlinx.coroutines.flow.collectLatest
 import com.example.core_ui.R
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 
 /**
@@ -62,9 +63,7 @@ fun AcceptFriendsScreen(
             TopAppBar(
                 title = { Text("친구 요청 수락하기") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                 }
             )
         }

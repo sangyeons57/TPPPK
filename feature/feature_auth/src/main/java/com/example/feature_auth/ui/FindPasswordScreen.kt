@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_auth.viewmodel.FindPasswordEvent
 import com.example.feature_auth.viewmodel.FindPasswordUiState
@@ -73,12 +74,7 @@ fun FindPasswordScreen(
             TopAppBar(
                 title = { Text("비밀번호 찾기") },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.onBackClick() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "뒤로 가기"
-                        )
-                    }
+                    DebouncedBackButton(onClick = { viewModel.onBackClick() })
                 }
             )
         },

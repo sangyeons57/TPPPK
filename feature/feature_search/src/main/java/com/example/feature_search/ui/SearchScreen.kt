@@ -37,6 +37,7 @@ import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.core.NavDestination
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.domain.model.MessageResult
 import com.example.domain.model.SearchResultItem
 import com.example.domain.model.SearchScope
@@ -91,9 +92,7 @@ fun SearchScreen(
             TopAppBar(
                 title = { Text("검색") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                 },
                 scrollBehavior = scrollBehavior
             )

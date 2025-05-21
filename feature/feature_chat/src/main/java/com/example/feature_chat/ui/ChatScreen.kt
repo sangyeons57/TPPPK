@@ -63,6 +63,7 @@ import androidx.core.net.toUri
 import com.example.core_navigation.core.AppNavigator
 import java.util.Locale
 import android.util.Log // Added for logging
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import java.time.Instant
 
 /**
@@ -727,7 +728,7 @@ private fun ChatContentPreview(uiState: ChatUiState){
         topBar = {
             TopAppBar(
                 title = { Text(uiState.channelName) },
-                navigationIcon = { IconButton({}) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "") } }
+                navigationIcon = { DebouncedBackButton(onClick = {}) } // Preview, so no actual navigation
             )
         },
         bottomBar = {

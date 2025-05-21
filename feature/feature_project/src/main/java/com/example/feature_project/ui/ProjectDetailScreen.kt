@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.domain.model.ChannelMode
 import com.example.domain.model.ui.CategoryUiModel
 import com.example.domain.model.ui.ChannelUiModel
@@ -47,9 +48,7 @@ fun ProjectDetailScreen(
             TopAppBar(
                 title = { Text(uiState.projectName.ifEmpty { "프로젝트 상세" }) }, // TODO: Use actual project name
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                 },
                 actions = {
                     // TODO: Add Project Settings Button
