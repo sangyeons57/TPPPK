@@ -17,7 +17,7 @@ alwaysApply: false
     │   ├── `statusMessage`?: String - User status message
     │   ├── `memo`?: String - User's bio or personal memo
     │   ├── `status`: String - Current status (`ONLINE`, `OFFLINE`)
-    │   ├── `createdAt`: Instant - Account creation time
+    │   ├── `createdAt`: Timestamp - Account creation time
     │   ├── `fcmToken`?: String - Firebase Cloud Messaging token
     │   ├── `participatingProjectIds`[]?: Array<String> - Projects user is part of
     │   ├── `accountStatus`: String - Account status (`ACTIVE`, `SUSPENDED`, `DELETED`)
@@ -27,8 +27,8 @@ alwaysApply: false
         └── **`friends`** `/{friendId}` [Friend relationships/status] (ID: Friend UID)
             └── **Fields:**
                 ├── `status`: String - Relationship status (`accepted`, `pending_sent`, `pending_received`)
-                ├── `timestamp`: Instant - When the relationship was created
-                └── `acceptedAt`: Instant? - When the relationship was accepted (nullable)
+                ├── `timestamp`: Timestamp - When the relationship was created
+                └── `acceptedAt`: Timestamp? - When the relationship was accepted (nullable)
 
 └── **`channels`** `/{channelId}` [GLOBAL COLLECTION: All types of chat channels - DM, Project, etc.] (ID: Auto)
     ├── **Fields:**
@@ -38,9 +38,9 @@ alwaysApply: false
     │   ├── `type`: String - Channel type (`DM`, `PROJECT`, `CATEGORY`) - Helps determine the structure quickly
     │   ├── `channelMode`: String? - Channel subtype (e.g., `TEXT`, `VOICE`)
     │   ├── `lastMessagePreview`: String? - Preview of the last message
-    │   ├── `lastMessageTimestamp`: Instant? - When the last message was sent
-    │   ├── `createdAt`: Instant - Creation time
-    │   ├── `updatedAt`: Instant - Last update time
+    │   ├── `lastMessageTimestamp`: Timestamp? - When the last message was sent
+    │   ├── `createdAt`: Timestamp - Creation time
+    │   ├── `updatedAt`: Timestamp - Last update time
     │   ├── `createdBy`: String? - User ID of the creator (if applicable)
     │   ├── `projectSpecificData`: Map - Only for PROJECT/CATEGORY type channels
     │   │   ├── `projectId`: String - Associated project ID
@@ -77,14 +77,14 @@ alwaysApply: false
     │   ├── `imageUrl`: String? - Project image URL
     │   ├── `ownerId`: String - Creator/owner user ID
     │   ├── `memberIds`: Array<String> - List of member user IDs
-    │   ├── `createdAt`: Instant - Creation time
-    │   ├── `updatedAt`: Instant - Last update time
+    │   ├── `createdAt`: Timestamp - Creation time
+    │   ├── `updatedAt`: Timestamp - Last update time
     │   └── `isPublic`: Boolean - Whether project is publicly visible
     └── **Subcollections:**
         ├── **`members`** `/{userId}` [Project members & roles] (ID: User UID)
         │   └── **Fields:**
         │       ├── `roleIds`: Array<String> - List of role IDs
-        │       ├── `joinedAt`: Instant - When the user joined
+        │       ├── `joinedAt`: Timestamp - When the user joined
         │       └── `channelIds`: Array<String> - List of channel IDs this member has access to
         ├── **`roles`** `/{roleId}` [Project roles & permissions] (ID: Auto)
         │   └── **Fields:**
@@ -100,15 +100,15 @@ alwaysApply: false
     └── **Fields:**
         ├── `title`: String - Schedule title
         ├── `content`: String - Schedule content
-        ├── `startTime`: Instant - Start time
-        ├── `endTime`: Instant - End time
+        ├── `startTime`: Timestamp - Start time
+        ├── `endTime`: Timestamp - End time
         ├── `projectId`: String? - Associated project ID (null for personal schedules)
         ├── `creatorId`: String - Creator user ID
         ├── `status`: String - Status (`SCHEDULED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`)
-        ├── `reminderTime`: Instant? - When to send reminder
+        ├── `reminderTime`: Timestamp? - When to send reminder
         ├── `color`: String? - Display color
-        ├── `createdAt`: Instant - Creation time
-        └── `updatedAt`: Instant - Last update time
+        ├── `createdAt`: Timestamp - Creation time
+        └── `updatedAt`: Timestamp - Last update time
 
 └── **`invites`** `/{inviteToken}` [Temporary invite tokens] (ID: Auto unique token)
     └── **Fields:**
@@ -117,14 +117,14 @@ alwaysApply: false
         ├── `inviterName`: String - Name of user who created the invite
         ├── `projectId`: String? - Target project ID (for project invites)
         ├── `projectName`: String - Name of target project
-        ├── `expiresAt`: Instant - When the invite expires
-        └── `createdAt`: Instant - When the invite was created
+        ├── `expiresAt`: Timestamp - When the invite expires
+        └── `createdAt`: Timestamp - When the invite was created
 
 └── **`passwordResetTokens`** `/{tokenId}` [Temporary password reset tokens] (ID: Auto)
     └── **Fields:**
         ├── `userId`: String - Associated user ID
         ├── `token`: String - Unique reset token
-        └── `expiresAt`: Instant - When the token expires
+        └── `expiresAt`: Timestamp - When the token expires
 
 # 변경 이력:
 - 2023-07-XX: `participants` 컬렉션 제거, 채널 접근 권한을 `members.channelIds`로 통합

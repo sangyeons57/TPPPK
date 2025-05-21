@@ -27,6 +27,8 @@ data class EditScheduleUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val error: String? = null,
+    val isShowStartTimePicker: Boolean = false, // 시간 선택 다이얼로그 표시 여부
+    val isShowEndTimePicker: Boolean = false, // 시간 선택 다이얼로그 표시 여부
     // val saveSuccess: Boolean = false // REMOVE
     // 프로젝트 선택, 알림 설정 등 추가 필드
 )
@@ -95,7 +97,50 @@ class EditScheduleViewModel @Inject constructor(
     fun onContentChanged(newContent: String) {
         _uiState.update { it.copy(content = newContent) }
     }
+
+    fun onTimeClick() {
+        _uiState.update { it.copy(isShowStartTimePicker = true) }
+    }
+
     // date, time 등 변경 함수 추가
+
+    fun requestStartTimePicker(show: Boolean) {
+        _uiState.update { it.copy(isShowStartTimePicker = show) }
+    }
+
+    fun requestEndTimePicker(show: Boolean) {
+        _uiState.update { it.copy(isShowEndTimePicker = show) }
+    }
+
+    fun onStartTimeSelected(hour: Int, minute: Int) {
+        val selectedTime = LocalTime.of(hour, minute)
+        _uiState.update {
+            it.copy(
+                startTime = selectedTime,
+                isShowStartTimePicker = false, // 시작 시간 선택 후 닫기
+                isShowEndTimePicker = true    // 종료 시간 선택 열기
+            )
+        }
+    }
+
+    fun onEndTimeSelected(hour: Int, minute: Int) {
+        val selectedTime = LocalTime.of(hour, minute)
+        // 시작 시간보다 이전이거나 같으면 유효성 검사 실패 처리 (예시)
+        if (_uiState.value.startTime != null && selectedTime.isBefore(_uiState.value.startTime)) {
+            // TODO: 사용자에게 오류 메시지 표시 (예: Snackbar)
+            viewModelScope.launch {
+                _eventFlow.emit(EditScheduleEvent.ShowSnackbar("종료 시간은 시작 시간 이후여야 합니다."))
+            }
+            _uiState.update { it.copy(isShowEndTimePicker = false) } // 에러 발생 시에도 닫기는 해야 함
+            return
+        }
+        _uiState.update {
+            it.copy(
+                endTime = selectedTime,
+                isShowEndTimePicker = false // 종료 시간 선택 후 닫기
+            )
+        }
+    }
 
     fun onSaveClicked() {
         viewModelScope.launch {

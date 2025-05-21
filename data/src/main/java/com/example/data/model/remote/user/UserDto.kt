@@ -22,46 +22,46 @@ data class UserDto(
     @DocumentId
     var id: String = "",
 
-    @PropertyName(FirestoreConstants.UserFields.EMAIL)
+    @get:PropertyName(FirestoreConstants.UserFields.EMAIL) @set:PropertyName(FirestoreConstants.UserFields.EMAIL)
     var email: String = "",
 
-    @PropertyName(FirestoreConstants.UserFields.NAME)
+    @get:PropertyName(FirestoreConstants.UserFields.NAME) @set:PropertyName(FirestoreConstants.UserFields.NAME)
     var name: String = "",
 
-    @PropertyName(FirestoreConstants.UserFields.PROFILE_IMAGE_URL)
+    @get:PropertyName(FirestoreConstants.UserFields.PROFILE_IMAGE_URL) @set:PropertyName(FirestoreConstants.UserFields.PROFILE_IMAGE_URL)
     var profileImageUrl: String? = null,
 
-    @PropertyName(FirestoreConstants.UserFields.STATUS_MESSAGE)
+    @get:PropertyName(FirestoreConstants.UserFields.STATUS_MESSAGE) @set:PropertyName(FirestoreConstants.UserFields.STATUS_MESSAGE)
     var statusMessage: String? = null,
 
-    @PropertyName(FirestoreConstants.UserFields.MEMO)
+    @get:PropertyName(FirestoreConstants.UserFields.MEMO) @set:PropertyName(FirestoreConstants.UserFields.MEMO)
     var memo: String? = null,
 
-    @PropertyName(FirestoreConstants.UserFields.STATUS)
+    @get:PropertyName(FirestoreConstants.UserFields.STATUS) @set:PropertyName(FirestoreConstants.UserFields.STATUS)
     var status: UserStatus = UserStatus.UNKNOWN,
 
-    @PropertyName(FirestoreConstants.UserFields.CREATED_AT)
-    var createdAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.UserFields.CREATED_AT) @set:PropertyName(FirestoreConstants.UserFields.CREATED_AT)
+    var createdAt: Timestamp? = null, // Firebase Auth의 메타데이터로 대체 가능성 검토
 
-    @PropertyName(FirestoreConstants.UserFields.UPDATED_AT)
+    @get:PropertyName(FirestoreConstants.UserFields.UPDATED_AT) @set:PropertyName(FirestoreConstants.UserFields.UPDATED_AT)
     var updatedAt: Timestamp? = null,
 
-    @PropertyName(FirestoreConstants.UserFields.FCM_TOKEN)
+    @get:PropertyName(FirestoreConstants.UserFields.FCM_TOKEN) @set:PropertyName(FirestoreConstants.UserFields.FCM_TOKEN)
     var fcmToken: String? = null,
 
-    @PropertyName(FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS)
+    @get:PropertyName(FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS) @set:PropertyName(FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS)
     var participatingProjectIds: List<String> = emptyList(),
 
-    @PropertyName(FirestoreConstants.UserFields.ACCOUNT_STATUS)
+    @get:PropertyName(FirestoreConstants.UserFields.ACCOUNT_STATUS) @set:PropertyName(FirestoreConstants.UserFields.ACCOUNT_STATUS)
     var accountStatus: AccountStatus = AccountStatus.UNKNOWN,
 
-    @PropertyName(FirestoreConstants.UserFields.ACTIVE_DM_IDS)
+    @get:PropertyName(FirestoreConstants.UserFields.ACTIVE_DM_IDS) @set:PropertyName(FirestoreConstants.UserFields.ACTIVE_DM_IDS)
     var activeDmIds: List<String> = emptyList(),
 
-    @PropertyName(FirestoreConstants.UserFields.IS_EMAIL_VERIFIED)
-    var isEmailVerified: Boolean = false,
+    @get:PropertyName(FirestoreConstants.UserFields.IS_EMAIL_VERIFIED) @set:PropertyName(FirestoreConstants.UserFields.IS_EMAIL_VERIFIED)
+    var isEmailVerified: Boolean = false, // Firebase Auth에서 직접 확인
     
-    @PropertyName(FirestoreConstants.UserFields.CONSENT_TIMESTAMP)
+    @get:PropertyName(FirestoreConstants.UserFields.CONSENT_TIMESTAMP) @set:PropertyName(FirestoreConstants.UserFields.CONSENT_TIMESTAMP)
     var consentTimeStamp: Timestamp? = null
 ) {
     fun toMap(): Map<String, Any?> {
@@ -83,22 +83,24 @@ data class UserDto(
         ).filterValues { it != null }
     }
 
-    fun toBasicDomainModel(): User {
+    // UserDto의 필드만 사용하여 User 도메인 모델을 생성합니다.
+    fun toDomainModel(): User {
         return User(
             id = this.id,
             email = this.email,
             name = this.name,
             profileImageUrl = this.profileImageUrl,
+            statusMessage = this.statusMessage,
             memo = this.memo,
             status = this.status,
-            createdAt = Instant.EPOCH,
-            updatedAt = Instant.EPOCH,
+            createdAt = this.createdAt?.toDate()?.toInstant() ?: Instant.EPOCH,
+            updatedAt = this.updatedAt?.toDate()?.toInstant(),
             fcmToken = this.fcmToken,
             participatingProjectIds = this.participatingProjectIds,
             accountStatus = this.accountStatus,
             activeDmIds = this.activeDmIds,
             isEmailVerified = this.isEmailVerified,
-            consentTimeStamp = Instant.EPOCH
+            consentTimeStamp = this.consentTimeStamp?.toDate()?.toInstant()
         )
     }
 
@@ -112,19 +114,20 @@ data class UserDto(
                 profileImageUrl = map[FirestoreConstants.UserFields.PROFILE_IMAGE_URL] as? String,
                 statusMessage = map[FirestoreConstants.UserFields.STATUS_MESSAGE] as? String,
                 memo = map[FirestoreConstants.UserFields.MEMO] as? String,
-                status = map[FirestoreConstants.UserFields.STATUS] as? UserStatus ?: UserStatus.UNKNOWN,
+                status = (map[FirestoreConstants.UserFields.STATUS] as? String)?.let { UserStatus.valueOf(it) } ?: UserStatus.UNKNOWN,
                 createdAt = map[FirestoreConstants.UserFields.CREATED_AT] as? Timestamp,
                 updatedAt = map[FirestoreConstants.UserFields.UPDATED_AT] as? Timestamp,
                 fcmToken = map[FirestoreConstants.UserFields.FCM_TOKEN] as? String,
                 participatingProjectIds = (map[FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                accountStatus = map[FirestoreConstants.UserFields.ACCOUNT_STATUS] as? AccountStatus ?: AccountStatus.UNKNOWN,
+                accountStatus = (map[FirestoreConstants.UserFields.ACCOUNT_STATUS] as? String)?.let { AccountStatus.valueOf(it) } ?: AccountStatus.UNKNOWN,
                 activeDmIds = (map[FirestoreConstants.UserFields.ACTIVE_DM_IDS] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 isEmailVerified = map[FirestoreConstants.UserFields.IS_EMAIL_VERIFIED] as? Boolean ?: false,
                 consentTimeStamp = map[FirestoreConstants.UserFields.CONSENT_TIMESTAMP] as? Timestamp
             )
         }
 
-        fun fromBasicDomainModel(domain: User): UserDto {
+        // User 도메인 모델을 UserDto로 변환합니다. (Firestore 저장용)
+        fun fromDomainModel(domain: User): UserDto {
             return UserDto(
                 id = domain.id,
                 email = domain.email,
@@ -133,14 +136,14 @@ data class UserDto(
                 statusMessage = domain.statusMessage,
                 memo = domain.memo,
                 status = domain.status,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = domain.createdAt?.let { Timestamp(it.epochSecond, it.nano) },
+                updatedAt = domain.updatedAt?.let { Timestamp(it.epochSecond, it.nano) },
                 fcmToken = domain.fcmToken,
                 participatingProjectIds = domain.participatingProjectIds,
                 accountStatus = domain.accountStatus,
                 activeDmIds = domain.activeDmIds,
                 isEmailVerified = domain.isEmailVerified,
-                consentTimeStamp = null
+                consentTimeStamp = domain.consentTimeStamp?.let { Timestamp(it.epochSecond, it.nano) }
             )
         }
     }

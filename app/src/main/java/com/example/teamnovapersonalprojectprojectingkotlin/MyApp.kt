@@ -2,8 +2,10 @@ package com.example.teamnovapersonalprojectprojectingkotlin
 
 import android.app.Application
 import com.example.core_logging.SentryUtil
-import com.google.firebase.FirebaseApp
 import com.google.firebase.BuildConfig
+import com.google.firebase.FirebaseApp
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+// import com.google.firebase.BuildConfig // Firebase 라이브러리의 BuildConfig가 아님
 import dagger.hilt.android.HiltAndroidApp
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 
@@ -35,9 +37,10 @@ class MyApp : Application() {
     private fun initializeFirebase() {
         FirebaseApp.initializeApp(this)
         val firebaseAppCheck = com.google.firebase.appcheck.FirebaseAppCheck.getInstance()
-        if (false) {
+        // 앱 모듈의 BuildConfig.DEBUG를 사용해야 합니다.
+        if (BuildConfig.DEBUG) {
             firebaseAppCheck.installAppCheckProviderFactory(
-                com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory.getInstance()
+                DebugAppCheckProviderFactory.getInstance()
             )
         } else {
             firebaseAppCheck.installAppCheckProviderFactory(

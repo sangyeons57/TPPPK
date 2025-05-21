@@ -6,7 +6,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.example.domain.model.User
 import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
 import com.example.data.util.FirebaseAuthWrapper
 import kotlinx.coroutines.tasks.await // await() 사용 위해 임포트
 import javax.inject.Inject

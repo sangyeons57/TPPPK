@@ -21,7 +21,7 @@ import java.time.Instant
 class AuthRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val userRemoteDataSource: UserRemoteDataSource
+    // private val userRemoteDataSource: UserRemoteDataSource // UserRemoteDataSource는 직접 사용하지 않는 것으로 보임
 ) : AuthRemoteDataSource {
 
     // users 컬렉션 참조
@@ -59,13 +59,16 @@ class AuthRemoteDataSourceImpl @Inject constructor(
                 if (documentSnapShot.exists()) {
                     documentSnapShot.toObject(UserDto::class.java)
                 } else {
-                    // 문서가 없으면 기본 UserDto 생성
+                    // Firestore에 문서가 없으면 Firebase Auth 정보 기반으로 기본 UserDto 생성
                     UserDto(
                         id = currentUser.uid,
                         email = currentUser.email ?: "",
-                        name = currentUser.displayName ?: "",
+                        name = currentUser.displayName ?: "", // Auth의 displayName 사용
+                        profileImageUrl = currentUser.photoUrl?.toString(),
                         isEmailVerified = currentUser.isEmailVerified,
-                        createdAt = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
+                        createdAt = currentUser.metadata?.creationTimestamp?.let { com.google.firebase.Timestamp(it / 1000, ((it % 1000) * 1_000_000).toInt()) } ?: DateTimeUtil.nowFirebaseTimestamp(),
+                        updatedAt = DateTimeUtil.nowFirebaseTimestamp() // 최초 생성 시 updatedAt도 설정
+                        // 나머지 필드는 기본값 사용
                     )
                 }
             } catch (e: Exception) {
@@ -86,13 +89,16 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             if (document.exists()) {
                 document.toObject(UserDto::class.java)
             } else {
-                // 문서가 없으면 기본 UserDto 생성
+                 // Firestore에 문서가 없으면 Firebase Auth 정보 기반으로 기본 UserDto 생성
                 UserDto(
                     id = user.uid,
                     email = user.email ?: "",
-                    name = user.displayName ?: "",
+                    name = user.displayName ?: "", // Auth의 displayName 사용
+                    profileImageUrl = user.photoUrl?.toString(),
                     isEmailVerified = user.isEmailVerified,
-                    createdAt = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
+                    createdAt = user.metadata?.creationTimestamp?.let { com.google.firebase.Timestamp(it / 1000, ((it % 1000) * 1_000_000).toInt()) } ?: DateTimeUtil.nowFirebaseTimestamp(),
+                    updatedAt = DateTimeUtil.nowFirebaseTimestamp()
+                    // 나머지 필드는 기본값 사용
                 )
             }
         } else {
@@ -129,29 +135,33 @@ class AuthRemoteDataSourceImpl @Inject constructor(
     ): Result<UserDto?> = runCatching {
         // Firebase Authentication에 사용자 생성
         val authResult = auth.createUserWithEmailAndPassword(email, password).await()
-        val user = authResult.user
+        val firebaseUser = authResult.user
         
-        if (user != null) {
+        if (firebaseUser != null) {
             // 닉네임 설정을 위한 프로필 업데이트
             val profileUpdates = UserProfileChangeRequest.Builder()
                 .setDisplayName(nickname)
+                // 회원가입 시 프로필 이미지는 없으므로 null 또는 기본값
                 .build()
             
-            user.updateProfile(profileUpdates).await()
+            firebaseUser.updateProfile(profileUpdates).await()
             
             // Firestore에 사용자 정보 저장
-            val nowTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
+            val nowTimestamp = DateTimeUtil.nowFirebaseTimestamp()
             val consentTimestampFirebase = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp)
             val userDto = UserDto(
-                id = user.uid,
-                email = email,
-                name = nickname,
-                isEmailVerified = user.isEmailVerified,
-                createdAt = nowTimestamp,
+                id = firebaseUser.uid,
+                email = email, // 생성 시 사용한 이메일
+                name = nickname, // 사용자가 입력한 닉네임 (Auth에도 반영됨)
+                profileImageUrl = firebaseUser.photoUrl?.toString(), // Auth에서 가져오지만 초기엔 null
+                isEmailVerified = firebaseUser.isEmailVerified, // 초기엔 false
+                createdAt = firebaseUser.metadata?.creationTimestamp?.let { com.google.firebase.Timestamp(it / 1000, ((it % 1000) * 1_000_000).toInt()) } ?: nowTimestamp,
+                updatedAt = nowTimestamp, // 생성 시 createdAt과 동일하게 설정
                 consentTimeStamp = consentTimestampFirebase
+                // 나머지 필드는 UserDto의 기본값 사용
             )
             
-            usersCollection.document(user.uid).set(userDto).await()
+            usersCollection.document(firebaseUser.uid).set(userDto).await()
             userDto
         } else {
             null
@@ -172,7 +182,8 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         val user = auth.currentUser
         if (user != null) {
             user.reload().await()
-            user.isEmailVerified
+            // reload 후 다시 auth.currentUser를 사용해야 최신 상태 반영
+            auth.currentUser!!.isEmailVerified
         } else {
             throw IllegalStateException("No user logged in")
         }

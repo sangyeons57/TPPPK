@@ -41,7 +41,7 @@ fun SplashScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 SplashEvent.NavigateToLogin -> appNavigator.navigate(NavigationCommand.NavigateToRoute(destination = NavDestination.fromRoute(AppRoutes.Auth.Login.path)))
-                SplashEvent.NavigateToMain -> appNavigator.navigate(NavigationCommand.NavigateToRoute(destination = NavDestination.fromRoute(AppRoutes.Main.ROOT)))
+                SplashEvent.NavigateToMain -> appNavigator.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Main.ROOT)))
             }
         }
     }

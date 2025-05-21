@@ -26,8 +26,8 @@ object MapperModule {
      */
     @Provides
     @Singleton
-    fun provideUserMapper(dateTimeUtil: DateTimeUtil): UserMapper {
-        return UserMapper(dateTimeUtil)
+    fun provideUserMapper(): UserMapper {
+        return UserMapper()
     }
 
     @Provides
