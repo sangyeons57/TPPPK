@@ -62,21 +62,21 @@ class EditRoleViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
-        if (roleId != null) {
-            loadRoleDetails(roleId)
+        if (roleId != null && projectId != null) {
+            loadRoleDetails(projectId, roleId)
         }
     }
 
     /**
      * 수정 모드 시 역할 상세 정보 로드
      */
-    private fun loadRoleDetails(id: String) {
+    private fun loadRoleDetails(projectId: String, roleId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Loading details for role $id (UseCase)")
+            println("ViewModel: Loading details for role $roleId (UseCase)")
 
             // --- UseCase 호출 ---
-            val result = getRoleDetailsUseCase(id)
+            val result = getRoleDetailsUseCase(projectId, roleId)
 
             if (result.isSuccess) {
                 val (loadedName, loadedPermissions) = result.getOrThrow()

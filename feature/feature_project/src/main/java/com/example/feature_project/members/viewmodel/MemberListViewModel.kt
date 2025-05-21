@@ -20,24 +20,6 @@ import javax.inject.Inject
 import com.example.core_common.util.DateTimeUtil
 
 /**
- * 프로젝트 멤버 아이템 UI 모델
- * UI 표시에 필요한 정보를 담고 있는 데이터 클래스
- *
- * @param userId 사용자 ID
- * @param userName 사용자 이름
- * @param profileImageUrl 프로필 이미지 URL (nullable)
- * @param rolesText 역할 목록을 표시할 문자열
- * @param joinedAtText 가입일자를 표시할 문자열 (추가)
- */
-data class ProjectMemberItem(
-    val userId: String,
-    val userName: String,
-    val profileImageUrl: String?,
-    val rolesText: String,
-    val joinedAtText: String
-)
-
-/**
  * 멤버 목록 화면의 UI 상태
  *
  * @param members 멤버 UI 아이템 목록
@@ -48,7 +30,7 @@ data class ProjectMemberItem(
  * @param projectId 프로젝트 ID
  */
 data class MemberListUiState(
-    val members: List<ProjectMemberItem> = emptyList(),
+    val members: List<ProjectMember> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
@@ -124,23 +106,6 @@ class MemberListViewModel @Inject constructor(
     }
 
     /**
-     * Domain 모델을 UI 모델로 변환하는 확장 함수
-     */
-    private fun ProjectMember.toUiModel(): ProjectMemberItem {
-        val localJoinedDate = LocalDateTime.ofInstant(this.joinedAt, ZoneId.systemDefault())
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        val formattedJoinedAt = localJoinedDate.format(formatter)
-
-        return ProjectMemberItem(
-            userId = this.userId,
-            userName = this.userName,
-            profileImageUrl = this.profileImageUrl,
-            rolesText = this.roleIds.joinToString(", ") { roleId -> roleId },
-            joinedAtText = formattedJoinedAt
-        )
-    }
-
-    /**
      * 멤버 목록 실시간 관찰 및 검색 필터링 함수
      */
     private fun observeMembers() {
@@ -150,7 +115,7 @@ class MemberListViewModel @Inject constructor(
                 .combine(observeProjectMembersUseCase(projectId)) { query, members ->
                     members.filter { member ->
                         member.userName.contains(query, ignoreCase = true)
-                    }.map { it.toUiModel() } // Map to UI model after filtering
+                    }
                 }
                 .catch { e ->
                     _uiState.update { it.copy(error = "멤버 목록 스트림 오류: ${e.message}", isLoading = false) }

@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
@@ -222,7 +223,7 @@ fun RoleCheckboxRow(
 @Preview(showBackground = true)
 @Composable
 private fun EditMemberContentPreview() {
-    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf("관리자", "팀원"))
+    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf("관리자", "팀원"), DateTimeUtil.nowInstant())
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
         RoleSelectionItem("r2", "팀원", true),
@@ -244,7 +245,7 @@ private fun EditMemberContentPreview() {
 @Preview(showBackground = true, name="Edit Member Saving")
 @Composable
 private fun EditMemberContentSavingPreview() {
-    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf("관리자", "팀원"))
+    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf("관리자", "팀원"), DateTimeUtil.nowInstant())
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
         RoleSelectionItem("r2", "팀원", true),

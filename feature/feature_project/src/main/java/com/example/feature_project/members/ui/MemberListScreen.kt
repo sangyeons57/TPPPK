@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
@@ -35,7 +36,6 @@ import com.example.feature_project.members.viewmodel.MemberListEvent
 import com.example.feature_project.members.viewmodel.MemberListUiState
 import com.example.feature_project.members.viewmodel.MemberListViewModel
 import com.example.domain.model.ProjectMember // Import domain model
-import com.example.feature_project.members.viewmodel.ProjectMemberItem
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -207,7 +207,7 @@ fun MemberListContent(
                         //     println("Error: Could not find original ProjectMember for clicked item")
                         // }
                         // Temporary: Pass a dummy or handle error if original list isn't available
-                         val dummyMember = ProjectMember(item.userId, item.userName, item.profileImageUrl, emptyList()) // DUMMY
+                         val dummyMember = ProjectMember(item.userId, item.userName, item.profileImageUrl, emptyList(), item.joi) // DUMMY
                          onMemberClick(dummyMember)
                     },
                     onMoreClick = { item ->
@@ -234,9 +234,9 @@ fun MemberListContent(
  */
 @Composable
 fun ProjectMemberListItemComposable(
-    member: ProjectMemberItem,
-    onClick: (ProjectMemberItem) -> Unit,
-    onMoreClick: (ProjectMemberItem) -> Unit,
+    member: ProjectMember,
+    onClick: (ProjectMember) -> Unit,
+    onMoreClick: (ProjectMember) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -287,10 +287,10 @@ fun ProjectMemberListItemComposable(
 @Composable
 private fun MemberListContentPreview() {
     val previewMembers = listOf(
-        ProjectMemberItem("u1", "멤버1 (관리자)", null, "관리자"),
-        ProjectMemberItem("u2", "멤버2 멤버2 멤버2 멤버2", "url...", "팀원"),
-        ProjectMemberItem("u3", "멤버3", null, "뷰어, 게스트"),
-        ProjectMemberItem("u4", "멤버4", null, "") // 역할 없음
+        ProjectMember("u1", "멤버1 (관리자)", null, ),
+        ProjectMember("u2", "멤버2 멤버2 멤버2 멤버2", "url...", "팀원"),
+        ProjectMember("u3", "멤버3", null, "뷰어, 게스트"),
+        ProjectMember("u4", "멤버4", null, "") // 역할 없음
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
