@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -74,21 +75,32 @@ fun EditProfileScreen(
             TopAppBar(
                 title = { Text("프로필 수정") },
                 navigationIcon = {
-                    // IconButton(onClick = { appNavigator.navigate(NavigationCommand.NavigateBack) }) {
-                    //     Icon(Icons.Filled.ArrowBack, contentDescription = "뒤로가기")
-                    // }
-                    // For now, let ViewModel handle navigation back on save or if a dedicated back button in UI is pressed
+                    IconButton(onClick = { appNavigator.navigate(NavigationCommand.NavigateBack) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "뒤로 가기"
+                        )
+                    }
                 }
             )
         },
         content = { paddingValues ->
-            EditProfileContent(
-                modifier = Modifier.padding(paddingValues),
-                uiState = uiState,
-                onNameChanged = viewModel::onNameChanged,
-                onProfileImageClicked = viewModel::onProfileImageClicked,
-                onSaveProfileClicked = viewModel::onSaveProfileClicked
-            )
+            if (uiState.isLoading && uiState.user == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                EditProfileContent(
+                    modifier = Modifier.padding(paddingValues),
+                    uiState = uiState,
+                    onNameChanged = viewModel::onNameChanged,
+                    onProfileImageClicked = viewModel::onProfileImageClicked,
+                    onSaveProfileClicked = viewModel::onSaveProfileClicked
+                )
+            }
         }
     )
 }
