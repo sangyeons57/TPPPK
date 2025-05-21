@@ -114,7 +114,7 @@ class EditProfileViewModel @Inject constructor(
                 .onFailure {
                     _uiState.update {
                         it.copy(
-                            errorMessage = it.message ?: "Image upload failed",
+                            errorMessage = it.errorMessage ?: "Image upload failed",
                             isLoading = false
                         )
                     }
