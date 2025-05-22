@@ -5,13 +5,13 @@ import com.example.domain.repository.ProjectRoleRepository
 import javax.inject.Inject
 
 interface CreateRoleUseCase {
-    suspend operator fun invoke(projectId: String, roleName: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean): Result<String> // Return Role ID string
+    suspend operator fun invoke(projectId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean): Result<String> // Return Role ID string
 }
 
 class CreateRoleUseCaseImpl @Inject constructor(
     private val projectRoleRepository: ProjectRoleRepository
 ) : CreateRoleUseCase {
-    override suspend operator fun invoke(projectId: String, roleName: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean): Result<String> {
+    override suspend operator fun invoke(projectId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean): Result<String> {
         if (roleName.isBlank()) {
             return Result.failure(IllegalArgumentException("Role name cannot be blank."))
         }

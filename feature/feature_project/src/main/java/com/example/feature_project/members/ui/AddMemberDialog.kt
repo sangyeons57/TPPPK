@@ -245,8 +245,6 @@ fun AddMemberDialogPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         // Preview now calls AddMemberDialogContent directly
         AddMemberDialogContent(
-        AddMemberDialogContent(
-        AddMemberDialogContent(
             onDismissRequest = {},
             onAddMembers = {},
             searchQuery = "김",
@@ -273,47 +271,6 @@ fun AddMemberDialogPreview() {
     }
 }
 
-/**
- * 미리보기: 로딩 중인 멤버 추가 다이얼로그
- */
-@Preview(showBackground = true)
-@Composable
-fun AddMemberDialogLoadingPreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        AddMemberDialog(
-            onDismissRequest = {},
-            onAddMembers = {},
-            searchQuery = "김",
-            onSearchQueryChange = {},
-            searchResults = emptyList(),
-            selectedUsers = emptySet(),
-            onUserSelectionChange = { _, _ -> },
-            isLoading = true,
-            error = null
-        )
-    }
-}
-
-/**
- * 미리보기: 오류가 발생한 멤버 추가 다이얼로그
- */
-@Preview(showBackground = true)
-@Composable
-fun AddMemberDialogErrorPreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        AddMemberDialog(
-            onDismissRequest = {},
-            onAddMembers = {},
-            searchQuery = "김",
-            onSearchQueryChange = {},
-            searchResults = emptyList(),
-            selectedUsers = emptySet(),
-            onUserSelectionChange = { _, _ -> },
-            isLoading = false,
-            error = "사용자 검색 중 오류가 발생했습니다."
-        )
-    }
-}
 
 /**
  * 멤버 추가 다이얼로그 컴포넌트의 간편한 버전
