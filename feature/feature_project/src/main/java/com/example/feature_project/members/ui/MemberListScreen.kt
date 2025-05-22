@@ -35,7 +35,6 @@ import com.example.core_ui.R
 import com.example.feature_project.members.viewmodel.MemberListEvent
 import com.example.feature_project.members.viewmodel.MemberListUiState
 import com.example.feature_project.members.viewmodel.MemberListViewModel
-import com.example.feature_project.members.viewmodel.ProjectMemberUiItem // Added import
 import com.example.domain.model.ProjectMember // Import domain model for dialog
 import kotlinx.coroutines.flow.collectLatest
 
@@ -145,10 +144,10 @@ fun MemberListScreen(
 @Composable
 fun MemberListContent(
     paddingValues: PaddingValues,
-    uiState: MemberListUiState, // This uiState now contains List<ProjectMemberUiItem>
+    uiState: MemberListUiState, // This uiState now contains List<ProjectMember>
     onSearchQueryChanged: (String) -> Unit,
-    onMemberClick: (ProjectMemberUiItem) -> Unit, // Changed
-    onDeleteMemberClick: (ProjectMemberUiItem) -> Unit, // Changed
+    onMemberClick: (ProjectMember) -> Unit, // Changed
+    onDeleteMemberClick: (ProjectMember) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -195,7 +194,7 @@ fun MemberListContent(
         } else {
             items(uiState.members, key = { it.userId }) { member ->
                 ProjectMemberListItemComposable(
-                    member = member,
+                    member = member, // Pass ProjectMember directly
                     onClick = { onMemberClick(member) },
                     onMoreClick = { onDeleteMemberClick(member) }
                 )
@@ -209,15 +208,15 @@ fun MemberListContent(
  */
 @Composable
 fun ProjectMemberListItemComposable(
-    memberUiItem: ProjectMemberUiItem, // Changed parameter
-    onClick: (ProjectMemberUiItem) -> Unit, // Changed
-    onMoreClick: (ProjectMemberUiItem) -> Unit, // Changed
+    member: ProjectMember, // Changed parameter to ProjectMember
+    onClick: (ProjectMember) -> Unit, // Changed
+    onMoreClick: (ProjectMember) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick(memberUiItem) } // Use memberUiItem
+            .clickable { onClick(member) } // Use member
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -242,9 +241,9 @@ fun ProjectMemberListItemComposable(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (member.roles.isNotEmpty()) {
+            if (member.roleIds.isNotEmpty()) { // Changed from member.roles to member.roleIds
                 Text(
-                    text = member.roles.joinToString { it.name.ifEmpty { "이름 없는 역할" } },
+                    text = "역할 ID: " + member.roleIds.joinToString(), // Display role IDs
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -274,10 +273,10 @@ private fun MemberListContentPreview() {
     val previewRoleViewer = com.example.domain.model.Role(id = "r_viewer", projectId = "p_preview", name = "뷰어", permissions = emptyList(), memberCount = 5)
 
     val previewMembers = listOf(
-        ProjectMember("u1", "Alice Wonderland", "url_to_image_1", listOf(previewRoleAdmin), DateTimeUtil.nowInstant()),
-        ProjectMember("u2", "Bob The Builder", null, listOf(previewRoleAdmin, previewRoleMember), DateTimeUtil.nowInstant()),
-        ProjectMember("u3", "Charlie Brown", "url_to_image_3", listOf(previewRoleMember, previewRoleSupporter), DateTimeUtil.nowInstant()),
-        ProjectMember("u4", "Diana Prince", null, listOf(previewRoleViewer), DateTimeUtil.nowInstant())
+        ProjectMember("u1", "Alice Wonderland", "url_to_image_1", listOf("r_admin"), DateTimeUtil.nowInstant()),
+        ProjectMember("u2", "Bob The Builder", null, listOf("r_admin", "r_member"), DateTimeUtil.nowInstant()),
+        ProjectMember("u3", "Charlie Brown", "url_to_image_3", listOf("r_member", "r_supporter"), DateTimeUtil.nowInstant()),
+        ProjectMember("u4", "Diana Prince", null, listOf("r_viewer"), DateTimeUtil.nowInstant())
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
@@ -286,7 +285,7 @@ private fun MemberListContentPreview() {
                 uiState = MemberListUiState(
                     isLoading = false,
                     error = null,
-                    members = previewMemberItems, // Use ProjectMemberUiItem list
+                    members = previewMembers, // Use ProjectMember list directly
                     searchQuery = ""
                 ),
                 onSearchQueryChanged = {},
