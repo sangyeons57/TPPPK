@@ -17,6 +17,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.destination.AppRoutes // Keep this if other AppRoutes are used
+import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY // Add this
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_schedule.viewmodel.AddScheduleEvent
 import com.example.feature_schedule.viewmodel.AddScheduleUiState
@@ -53,6 +55,7 @@ fun AddScheduleScreen(
                     appNavigator.navigateBack()
                 }
                 is AddScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
+                    appNavigator.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
                     appNavigator.navigateBack()
                 }
                 is AddScheduleEvent.ShowSnackbar -> {

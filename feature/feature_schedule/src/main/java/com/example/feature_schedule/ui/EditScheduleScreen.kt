@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.destination.AppRoutes // Keep this if other AppRoutes are used
+import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY // Add this
 import com.example.feature_schedule.viewmodel.EditScheduleEvent
 import com.example.feature_schedule.viewmodel.EditScheduleUiState
 import com.example.feature_schedule.viewmodel.EditScheduleViewModel
@@ -72,6 +74,7 @@ fun EditScheduleScreen(
                     appNavigator.navigateBack()
                 }
                 is EditScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
+                    appNavigator.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
                     appNavigator.navigateBack()
                 }
                 is EditScheduleEvent.ShowSnackbar -> {
