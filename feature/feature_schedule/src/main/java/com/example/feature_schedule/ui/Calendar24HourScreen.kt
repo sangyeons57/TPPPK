@@ -40,8 +40,10 @@ import androidx.lifecycle.Observer // Added import
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.AppRoutes // Keep this if other AppRoutes are used
 import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
+import com.example.core_navigation.extension.ObserveNavigationResult // Add this
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.ScheduleColor1
@@ -142,6 +144,15 @@ fun Calendar24HourScreen(
                 is Calendar24HourEvent.ShowScheduleEditDialog -> showEditDialog = event.scheduleId
                 is Calendar24HourEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
+        }
+    }
+
+    ObserveNavigationResult<Boolean>(
+        appNavigator = appNavigator,
+        resultKey = REFRESH_SCHEDULE_LIST_KEY
+    ) { needsRefresh ->
+        if (needsRefresh == true) { // Explicitly check for true
+            viewModel.refreshSchedules()
         }
     }
 

@@ -80,7 +80,7 @@ class Calendar24HourViewModel @Inject constructor(
      * 
      * @param date 로드할 일정 날짜
      */
-    private fun loadSchedules(date: LocalDate) {
+    internal fun loadSchedules(date: LocalDate) { // Changed visibility from private to internal
         viewModelScope.launch {
             _uiState.value = Calendar24HourUiState.Loading
             Log.d("CalendarVM", "loadSchedules($date) 호출됨. UI 상태: Loading")
@@ -201,18 +201,25 @@ class Calendar24HourViewModel @Inject constructor(
     fun onScheduleLongClick(scheduleId: String) {
         viewModelScope.launch { _eventFlow.emit(Calendar24HourEvent.ShowScheduleEditDialog(scheduleId)) }
     }
-
-    fun refreshSchedulesForCurrentDate() {
-        val currentUiState = _uiState.value
-        val dateToReload = if (currentUiState is Calendar24HourUiState.Success) {
-            currentUiState.selectedDate
-        } else {
-            // Fallback to the initial date if current state is not Success or selectedDate is null
-            LocalDate.of(year, month, day)
+    fun refreshSchedules() {
+        viewModelScope.launch {
+            val currentSuccessState = _uiState.value as? Calendar24HourUiState.Success
+            val dateToRefresh = currentSuccessState?.selectedDate
+            if (dateToRefresh != null) {
+                // Call the existing loadSchedules function.
+                // If loadSchedules was private, you'd need to change its visibility or call it internally.
+                // For this subtask, assume loadSchedules can be called if it was private.
+                // If it's already public/internal, this is fine.
+                // The task is to ensure loadSchedules is called with the current date.
+                // Forcing it to be public if it was private:
+                loadSchedules(dateToRefresh)
+            } else {
+                // Fallback: If no selectedDate in success state, try reloading with initial date from SavedStateHandle
+                // This handles cases where refresh is called before initial load or after an error.
+                Log.d("CalendarVM", "refreshSchedules called but no selectedDate in Success state. Re-loading with initial date.")
+                loadSchedules(LocalDate.of(year, month, day))
+            }
         }
-        // Ensure dateToReload is not null before calling loadSchedules
-        // Although in this logic, it should always be non-null due to LocalDate.of fallback
-        dateToReload?.let { loadSchedules(it) }
     }
 }
 

@@ -8,7 +8,7 @@ import javax.inject.Inject
  * 새로운 역할을 생성하는 유스케이스 인터페이스
  */
 interface CreateRoleUseCase {
-    suspend operator fun invoke(projectId: String, roleName: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean = false): Result<String>
+    suspend operator fun invoke(projectId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean = false): Result<String>
 }
 
 /**
@@ -26,7 +26,7 @@ class CreateRoleUseCaseImpl @Inject constructor(
      * @param permissions 생성할 역할의 권한 맵
      * @return Result<Unit> 역할 생성 처리 결과
      */
-    override suspend fun invoke(projectId: String, roleName: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean): Result<String> {
+    override suspend fun invoke(projectId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean): Result<String> {
         return projectRoleRepository.createRole(projectId, roleName, permissions, isDefault)
     }
 }

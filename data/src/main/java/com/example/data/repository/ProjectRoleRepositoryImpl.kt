@@ -71,14 +71,14 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * 
      * @param projectId 역할이 생성될 프로젝트 ID
      * @param name 새 역할 이름
-     * @param permissions 새 역할의 권한 맵
+     * @param permissions 새 역할의 권한 리스트
      * @param isDefault 기본 역할 여부
      * @return 생성된 역할 ID 또는 에러
      */
     override suspend fun createRole(
         projectId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>,
+        permissions: List<RolePermission>,
         isDefault: Boolean
     ): Result<String> {
         return remoteDataSource.createRole(projectId, name, permissions, isDefault)
@@ -90,7 +90,7 @@ class ProjectRoleRepositoryImpl @Inject constructor(
      * @param projectId 프로젝트 ID
      * @param roleId 수정할 역할 ID
      * @param name 새 역할 이름
-     * @param permissions 새 권한 맵
+     * @param permissions 새 권한 리스트
      * @param isDefault 기본 역할 여부 (null이면 변경하지 않음)
      * @return 성공/실패 결과
      */
@@ -98,11 +98,12 @@ class ProjectRoleRepositoryImpl @Inject constructor(
         projectId: String,
         roleId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>,
+        permissions: List<RolePermission>,
         isDefault: Boolean?
     ): Result<Unit> {
         // The remoteDataSource.updateRole expects non-nullable name and permissions.
         // The isDefault parameter is optional for the remote source.
+        // remoteDataSource의 updateRole은 nullable을 허용하도록 수정되었으므로, 그대로 전달합니다.
         return remoteDataSource.updateRole(projectId, roleId, name, permissions, isDefault)
     }
 

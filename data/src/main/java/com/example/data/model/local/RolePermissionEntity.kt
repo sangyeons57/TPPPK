@@ -30,18 +30,18 @@ data class RolePermissionEntity(
 ) {
     companion object {
         /**
-         * 역할 ID와 권한 맵에서 RolePermissionEntity 목록 생성
+         * 역할 ID와 권한 리스트에서 RolePermissionEntity 목록 생성
          * 
          * @param roleId 역할 ID
-         * @param permissions 권한 맵
+         * @param permissions 권한 리스트
          * @return RolePermissionEntity 목록
          */
-        fun fromPermissionMap(roleId: String, permissions: Map<RolePermission, Boolean>): List<RolePermissionEntity> {
-            return permissions.map { (permission, isEnabled) ->
+        fun fromPermissionList(roleId: String, permissions: List<RolePermission>): List<RolePermissionEntity> {
+            return permissions.map { permission ->
                 RolePermissionEntity(
                     roleId = roleId,
                     permission = permission.name,
-                    isEnabled = isEnabled
+                    isEnabled = true // List에 있다는 것은 권한이 활성화된 것으로 간주
                 )
             }
         }

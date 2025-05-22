@@ -8,7 +8,7 @@ import javax.inject.Inject
  * 기존 역할을 수정하는 유스케이스 인터페이스
  */
 interface UpdateRoleUseCase {
-    suspend operator fun invoke(projectId: String, roleId: String, roleName: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean?): Result<Unit>
+    suspend operator fun invoke(projectId: String, roleId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean?): Result<Unit>
 }
 
 /**
@@ -26,7 +26,7 @@ class UpdateRoleUseCaseImpl @Inject constructor(
      * @param permissions 수정할 역할의 새 권한 맵
      * @return Result<Unit> 역할 수정 처리 결과
      */
-    override suspend fun invoke(projectId: String, roleId: String, roleName: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean?): Result<Unit> {
+    override suspend fun invoke(projectId: String, roleId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean?): Result<Unit> {
         return projectRoleRepository.updateRole(projectId, roleId, roleName, permissions, isDefault)
     }
 }

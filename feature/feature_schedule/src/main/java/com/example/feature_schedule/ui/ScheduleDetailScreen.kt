@@ -18,8 +18,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.AppRoutes // Keep this if other AppRoutes are used
 import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY // Add this
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_schedule.util.SCHEDULE_DATA_CHANGED_RESULT_KEY // Added import
@@ -65,7 +66,7 @@ fun ScheduleDetailScreen(
     // 삭제 성공 시 뒤로 가기
     LaunchedEffect(uiState.deleteSuccess) {
         if (uiState.deleteSuccess) {
-            appNavigator.getNavController()?.previousBackStackEntry?.savedStateHandle?.set(SCHEDULE_DATA_CHANGED_RESULT_KEY, true)
+            appNavigator.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
             appNavigator.navigateBack()
         }
     }

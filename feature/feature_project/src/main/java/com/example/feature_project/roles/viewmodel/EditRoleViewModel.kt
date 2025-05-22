@@ -23,14 +23,15 @@ data class EditRoleUiState(
     val roleId: String? = null,
     val roleName: String = "",
     val permissions: Map<RolePermission, Boolean> = RolePermission.entries.associateWith { false },
+    val isDefault: Boolean = false,
     val originalRoleName: String = "",
     val originalPermissions: Map<RolePermission, Boolean> = emptyMap(),
-    val originalIsDefault: Boolean = false, // Added
+    val originalIsDefault: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveSuccess: Boolean = false,
     val deleteSuccess: Boolean = false,
-    val hasChanges: Boolean = false // ★ 변경 사항 유무 플래그 추가
+    val hasChanges: Boolean = false
 )
 
 // --- 이벤트 (기존 정의 사용, ShowDeleteConfirmation 추가) ---
@@ -38,7 +39,7 @@ sealed class EditRoleEvent {
     object NavigateBack : EditRoleEvent()
     data class ShowSnackbar(val message: String) : EditRoleEvent()
     object ClearFocus : EditRoleEvent()
-    object ShowDeleteConfirmation : EditRoleEvent() // ★ 삭제 확인 다이얼로그 표시 이벤트
+    object ShowDeleteConfirmation : EditRoleEvent()
 }
 
 @HiltViewModel
@@ -54,9 +55,9 @@ class EditRoleViewModel @Inject constructor(
     // 역할 ID는 수정 시에만 전달되므로 옵셔널로 처리
     private val roleId: String? = savedStateHandle.getOptionalString(AppRoutes.Project.ARG_ROLE_ID)
     
-    val isEditMode = roleId != null // 수정 모드 여부
+    val isEditMode = roleId != null
 
-    private val _uiState = MutableStateFlow(EditRoleUiState(roleId = roleId, isLoading = roleId != null)) // 수정 모드면 초기 로딩
+    private val _uiState = MutableStateFlow(EditRoleUiState(roleId = roleId, isLoading = roleId != null))
     val uiState: StateFlow<EditRoleUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<EditRoleEvent>()
@@ -80,16 +81,19 @@ class EditRoleViewModel @Inject constructor(
             val result = getRoleDetailsUseCase(projectId, roleId) // UseCase returns Result<Role?>
 
             if (result.isSuccess) {
-                val role = result.getOrThrow() // role is Role?
+
+                val role = result.getOrNull() // Role? 타입
                 if (role != null) {
+                    val loadedPermissionsMap = RolePermission.entries.associateWith { role.permissions.contains(it) }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             roleName = role.name,
                             originalRoleName = role.name,
-                            permissions = role.permissions,
-                            originalPermissions = role.permissions,
-                            originalIsDefault = role.isDefault, // Store original isDefault
+                            permissions = loadedPermissionsMap,
+                            originalPermissions = loadedPermissionsMap,
+                            isDefault = role.isDefault,             // isDefault 로드
+                            originalIsDefault = role.isDefault,     // originalIsDefault 로드
                             hasChanges = false
                         )
                     }
@@ -116,8 +120,10 @@ class EditRoleViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 roleName = name,
-                error = null, // 에러 초기화
-                hasChanges = name != it.originalRoleName || it.permissions != it.originalPermissions // ★ 변경 여부 확인
+                error = null,
+                hasChanges = name != it.originalRoleName || 
+                             it.permissions != it.originalPermissions || 
+                             it.isDefault != it.originalIsDefault // isDefault 변경 감지 추가
             )
         }
     }
@@ -130,7 +136,23 @@ class EditRoleViewModel @Inject constructor(
             val newPermissions = it.permissions.toMutableMap().apply { put(permission, isChecked) }
             it.copy(
                 permissions = newPermissions,
-                hasChanges = it.roleName != it.originalRoleName || newPermissions != it.originalPermissions // ★ 변경 여부 확인
+                hasChanges = it.roleName != it.originalRoleName || 
+                             newPermissions != it.originalPermissions ||
+                             it.isDefault != it.originalIsDefault // isDefault 변경 감지 추가
+            )
+        }
+    }
+    
+    /**
+     * 기본 역할 여부 스위치 변경 시 호출
+     */
+    fun onIsDefaultChange(isDefault: Boolean) {
+        _uiState.update {
+            it.copy(
+                isDefault = isDefault,
+                hasChanges = it.roleName != it.originalRoleName || 
+                             it.permissions != it.originalPermissions ||
+                             isDefault != it.originalIsDefault
             )
         }
     }
@@ -142,13 +164,11 @@ class EditRoleViewModel @Inject constructor(
         val currentState = _uiState.value
         val currentName = currentState.roleName.trim()
 
-        // 이름 유효성 검사
         if (currentName.isBlank()) {
             _uiState.update { it.copy(error = "역할 이름을 입력해주세요.") }
             return
         }
 
-        // 수정 모드일 때 변경 사항 없으면 저장 안 함
         if (currentState.roleId != null && !currentState.hasChanges) {
             viewModelScope.launch {
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("변경된 내용이 없습니다."))
@@ -157,24 +177,22 @@ class EditRoleViewModel @Inject constructor(
             return
         }
 
-        if (currentState.isLoading) return // 로딩 중 중복 방지
+        if (currentState.isLoading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             _eventFlow.emit(EditRoleEvent.ClearFocus)
 
             val nameToSave = currentName
-            val permissionsToSave = currentState.permissions
+            val permissionsListToSave = currentState.permissions.filterValues { it }.keys.toList()
+            val isDefaultToSave = currentState.isDefault
 
-            // --- UseCase 호출 (생성 또는 수정) ---
-            val result: Result<Any> = if (currentState.roleId == null) { // Result<Any> to handle different success types
+            val result = if (currentState.roleId == null) {
                 println("ViewModel: Creating role '$nameToSave' in project $projectId (UseCase)")
-                // Assume new roles are not default by default, or add UI for this if needed
-                createRoleUseCase(projectId, nameToSave, permissionsToSave, isDefault = false) // isDefault added
+                createRoleUseCase(projectId, nameToSave, permissionsListToSave, isDefaultToSave)
             } else {
                 println("ViewModel: Updating role ${currentState.roleId} to '$nameToSave' (UseCase)")
-                // Pass projectId. Pass originalIsDefault if not changing, or get from a UI element if editable.
-                updateRoleUseCase(projectId, currentState.roleId, nameToSave, permissionsToSave, isDefault = currentState.originalIsDefault)
+                updateRoleUseCase(projectId, currentState.roleId, nameToSave, permissionsListToSave, isDefaultToSave)
             }
 
             if (result.isSuccess) {
@@ -198,7 +216,7 @@ class EditRoleViewModel @Inject constructor(
      * 삭제 버튼 클릭 시 (삭제 확인 다이얼로그 표시 요청)
      */
     fun requestDeleteRoleConfirmation() {
-        if (uiState.value.roleId != null && !uiState.value.isLoading) { // 수정 모드이고 로딩 중 아닐 때만
+        if (uiState.value.roleId != null && !uiState.value.isLoading) {
             viewModelScope.launch {
                 _eventFlow.emit(EditRoleEvent.ShowDeleteConfirmation)
             }
@@ -210,7 +228,7 @@ class EditRoleViewModel @Inject constructor(
      */
     fun confirmDeleteRole() {
         val roleIdToDelete = uiState.value.roleId
-        if (roleIdToDelete == null || uiState.value.isLoading) return // 생성 모드이거나 로딩 중이면 무시
+        if (roleIdToDelete == null || uiState.value.isLoading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -221,11 +239,11 @@ class EditRoleViewModel @Inject constructor(
 
             if (result.isSuccess) {
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할이 삭제되었습니다."))
-                _uiState.update { it.copy(isLoading = false, deleteSuccess = true) } // 성공 및 네비게이션 트리거
+                _uiState.update { it.copy(isLoading = false, deleteSuccess = true) }
             } else {
                 val errorDetail = result.exceptionOrNull()?.message
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 삭제 실패" + (errorDetail?.let { ": $it" } ?: "")))
-                _uiState.update { it.copy(isLoading = false) } // 로딩만 해제
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

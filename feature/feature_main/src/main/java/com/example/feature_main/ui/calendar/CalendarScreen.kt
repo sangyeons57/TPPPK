@@ -22,8 +22,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.destination.AppRoutes
+// import com.example.core_navigation.destination.AppRoutes // No longer needed for REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.extension.NavigationResultKeys
+import com.example.core_navigation.extension.ObserveNavigationResult
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -76,18 +78,6 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     
-    // Observe schedule update results via navigationManager
-    // 주석 처리: getResultFlow 메서드가 더 이상 존재하지 않음
-    // LaunchedEffect(navigationManager) {
-    //     navigationManager.getResultFlow<Boolean>("schedule_added_or_updated").collectLatest { isUpdated ->
-    //         if (isUpdated) {
-    //             viewModel.refreshSchedules()
-    //             // 결과 소비 후 다시 false로 설정하여 반복적인 새로고침 방지
-    //             navigationManager.setResult("schedule_added_or_updated", false)
-    //         }
-    //     }
-    // }
-    
     // FAB 애니메이션 상태
     var isFabVisible by remember { mutableStateOf(true) }
     val fabScale by animateFloatAsState(
@@ -95,21 +85,18 @@ fun CalendarScreen(
         animationSpec = spring(),
         label = "FAB Scale Animation"
     )
-    
-    // "refresh_calendar" 키로 전달된 결과 관찰
-    // 주석 처리: getResultFlow 메서드가 더 이상 존재하지 않음
-    // LaunchedEffect(navigationManager) {
-    //     navigationManager.getResultFlow<Boolean>("refresh_calendar").collectLatest { refresh ->
-    //         if (refresh) {
-    //             viewModel.refreshSchedules()
-    //             // 결과 소비 후 다시 false로 설정하여 반복적인 새로고침 방지
-    //             navigationManager.setResult("refresh_calendar", false)
-    //         }
-    //     }
-    // }
+
+    ObserveNavigationResult<Boolean>(
+        appNavigator = appNavigator,
+        resultKey = NavigationResultKeys.REFRESH_SCHEDULE_LIST_KEY
+    ) { needsRefresh ->
+        if (needsRefresh == true) { // Explicitly check for true
+            viewModel.refreshSchedules() // Call the existing refresh method
+        }
+    }
 
     // 이벤트 처리
-    LaunchedEffect(viewModel) { 
+    LaunchedEffect(viewModel) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is CalendarEvent.ShowSnackbar -> {

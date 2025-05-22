@@ -22,7 +22,7 @@ class GetMembersInRoleUseCaseImpl @Inject constructor(
      */
     override operator fun invoke(projectId: String, roleId: String): Flow<List<ProjectMember>> {
         return projectMemberRepository.getProjectMembersStream(projectId).map { members ->
-            members.filter { it.roleIds.contains(roleId) }
+            members.filter { member -> member.roles.any { role -> role.id == roleId } }
         }
     }
 }

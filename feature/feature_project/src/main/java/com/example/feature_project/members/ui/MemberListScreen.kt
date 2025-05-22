@@ -193,11 +193,11 @@ fun MemberListContent(
                 )
             }
         } else {
-            items(uiState.members, key = { it.userId }) { memberUiItem -> // memberUiItem is ProjectMemberUiItem
+            items(uiState.members, key = { it.userId }) { member ->
                 ProjectMemberListItemComposable(
-                    memberUiItem = memberUiItem, // Pass the UiItem
-                    onClick = { item -> onMemberClick(item) }, // Pass ProjectMemberUiItem
-                    onMoreClick = { item -> onDeleteMemberClick(item) } // Pass ProjectMemberUiItem
+                    member = member,
+                    onClick = { onMemberClick(member) },
+                    onMoreClick = { onDeleteMemberClick(member) }
                 )
             }
         }
@@ -223,37 +223,38 @@ fun ProjectMemberListItemComposable(
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(memberUiItem.profileImageUrl ?: R.drawable.ic_account_circle_24) // Use memberUiItem
+                .data(member.profileImageUrl)
                 .error(R.drawable.ic_account_circle_24)
                 .placeholder(R.drawable.ic_account_circle_24)
                 .build(),
-            contentDescription = "${memberUiItem.userName} 프로필", // Use memberUiItem
-            modifier = Modifier.size(48.dp).clip(CircleShape),
+            contentDescription = "${member.userName}님의 프로필 사진",
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = memberUiItem.userName, // Use memberUiItem
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                text = member.userName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            // Display rolesText from memberUiItem
-            if (memberUiItem.rolesText.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+            if (member.roles.isNotEmpty()) {
                 Text(
-                    text = memberUiItem.rolesText, // Use memberUiItem.rolesText
+                    text = member.roles.joinToString { it.name.ifEmpty { "이름 없는 역할" } },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         }
-        IconButton(onClick = { onMoreClick(memberUiItem) }) { // Use memberUiItem
-             Icon(Icons.Default.MoreVert, contentDescription = "더보기")
+
+        IconButton(onClick = { onMoreClick(member) }) {
+            Icon(Icons.Filled.MoreVert, contentDescription = "더 보기")
         }
     }
 }
@@ -266,14 +267,17 @@ fun ProjectMemberListItemComposable(
 @Preview(showBackground = true)
 @Composable
 private fun MemberListContentPreview() {
-    // This preview will likely break because MemberListUiState expects List<ProjectMemberUiItem>
-    // and ProjectMemberListItemComposable expects ProjectMemberUiItem.
-    // To fix, create ProjectMemberUiItem instances for previewMembers.
-    val previewMemberItems = listOf(
-        ProjectMemberUiItem("u1", "멤버1", null, "관리자, 팀원", java.time.Instant.now(), ProjectMember("u1", "멤버1", null, listOf("role1", "role2"), java.time.Instant.now())),
-        ProjectMemberUiItem("u2", "멤버2 멤버2", "url...", "팀원", java.time.Instant.now(), ProjectMember("u2", "멤버2 멤버2", "url...", listOf("role2"), java.time.Instant.now())),
-        ProjectMemberUiItem("u3", "멤버3", null, "뷰어", java.time.Instant.now(), ProjectMember("u3", "멤버3", null, listOf("role3"), java.time.Instant.now())),
-        ProjectMemberUiItem("u4", "멤버4", null, "역할 없음", java.time.Instant.now(), ProjectMember("u4", "멤버4", null, emptyList(), java.time.Instant.now()))
+    // Preview용 Role 객체 생성
+    val previewRoleAdmin = com.example.domain.model.Role(id = "r_admin", projectId = "p_preview", name = "관리자", permissions = listOf(com.example.domain.model.RolePermission.MANAGE_MEMBERS), memberCount = 1)
+    val previewRoleMember = com.example.domain.model.Role(id = "r_member", projectId = "p_preview", name = "팀원", permissions = listOf(com.example.domain.model.RolePermission.READ_MESSAGES), memberCount = 3)
+    val previewRoleSupporter = com.example.domain.model.Role(id = "r_supporter", projectId = "p_preview", name = "서포터", permissions = emptyList(), memberCount = 2)
+    val previewRoleViewer = com.example.domain.model.Role(id = "r_viewer", projectId = "p_preview", name = "뷰어", permissions = emptyList(), memberCount = 5)
+
+    val previewMembers = listOf(
+        ProjectMember("u1", "Alice Wonderland", "url_to_image_1", listOf(previewRoleAdmin), DateTimeUtil.nowInstant()),
+        ProjectMember("u2", "Bob The Builder", null, listOf(previewRoleAdmin, previewRoleMember), DateTimeUtil.nowInstant()),
+        ProjectMember("u3", "Charlie Brown", "url_to_image_3", listOf(previewRoleMember, previewRoleSupporter), DateTimeUtil.nowInstant()),
+        ProjectMember("u4", "Diana Prince", null, listOf(previewRoleViewer), DateTimeUtil.nowInstant())
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {

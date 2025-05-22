@@ -29,7 +29,7 @@ class GetProjectMembersUseCaseImpl @Inject constructor(
     ): Flow<List<ProjectMember>> {
         return projectMemberRepository.getProjectMembersStream(projectId).map { members ->
             val filteredMembers = if (roleIdFilter != null) {
-                members.filter { it.roleIds.contains(roleIdFilter) }
+                members.filter { member -> member.roles.any { role -> role.id == roleIdFilter } }
             } else {
                 members
             }
