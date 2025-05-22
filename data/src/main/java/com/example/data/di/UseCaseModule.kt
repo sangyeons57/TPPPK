@@ -4,6 +4,8 @@ import com.example.domain.usecase.user.* // 생성한 UseCase 임포트
 import com.example.domain.usecase.project.* // project 패키지 UseCase 임포트
 import com.example.domain.usecase.schedule.* // schedule 패키지 UseCase 임포트
 import com.example.domain.usecase.auth.* // auth 패키지 UseCase 임포트
+import com.example.domain.usecase.project.member.*
+import com.example.domain.usecase.project.role.*
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

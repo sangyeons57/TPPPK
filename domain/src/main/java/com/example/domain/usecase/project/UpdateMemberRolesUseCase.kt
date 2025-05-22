@@ -26,7 +26,7 @@ class UpdateMemberRolesUseCaseImpl @Inject constructor(
      * @param roleIds 업데이트할 역할 ID 목록
      * @return Result<Unit> 업데이트 처리 결과
      */
-    override suspend fun invoke(projectId: String, userId: String, roles: List<String>): Result<Unit> {
-        return projectMemberRepository.updateMemberRoles(projectId, userId, roles)
+    override suspend fun invoke(projectId: String, userId: String, rolesId: List<String>): Result<Unit> {
+        return projectMemberRepository.updateMemberRoles(projectId, userId, rolesId)
     }
 } 

@@ -9,7 +9,7 @@ import com.example.domain.model.ProjectMember
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.FetchProjectMembersUseCase
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
-import com.example.domain.usecase.project.GetProjectRolesUseCase // Added import
+import com.example.domain.usecase.project.role.GetProjectRolesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

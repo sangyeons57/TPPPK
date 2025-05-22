@@ -10,8 +10,8 @@ import com.example.domain.model.Role
 // import com.example.domain.repository.ProjectMemberRepository // Remove Repo import
 // import com.example.domain.repository.ProjectRoleRepository // Remove Repo import
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase // Import UseCase
-import com.example.domain.usecase.project.GetProjectRolesUseCase // Import UseCase
 import com.example.domain.usecase.project.UpdateMemberRolesUseCase // Import UseCase
+import com.example.domain.usecase.project.role.GetProjectRolesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

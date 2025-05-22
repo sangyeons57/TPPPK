@@ -7,10 +7,10 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.RolePermission
-import com.example.domain.usecase.project.CreateRoleUseCase
 import com.example.domain.usecase.project.DeleteRoleUseCase
-import com.example.domain.usecase.project.GetRoleDetailsUseCase
-import com.example.domain.usecase.project.UpdateRoleUseCase
+import com.example.domain.usecase.project.role.CreateRoleUseCase
+import com.example.domain.usecase.project.role.GetRoleDetailsUseCase
+import com.example.domain.usecase.project.role.UpdateRoleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
