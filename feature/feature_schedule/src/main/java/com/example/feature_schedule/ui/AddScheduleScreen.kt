@@ -34,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import com.example.core_navigation.core.AppNavigator
-import com.example.feature_schedule.util.SCHEDULE_DATA_CHANGED_RESULT_KEY // Added import
 
 /**
  * AddScheduleScreen: 일정 추가 화면 (Stateful)

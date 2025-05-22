@@ -241,9 +241,9 @@ fun ProjectMemberListItemComposable(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (member.roleIds.isNotEmpty()) { // Changed from member.roles to member.roleIds
+            if (member.roles.isNotEmpty()) { // Changed from member.roles to member.roleIds
                 Text(
-                    text = "역할 ID: " + member.roleIds.joinToString(), // Display role IDs
+                    text = "역할 ID: " + member.roles.joinToString(), // Display role IDs
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -273,10 +273,10 @@ private fun MemberListContentPreview() {
     val previewRoleViewer = com.example.domain.model.Role(id = "r_viewer", projectId = "p_preview", name = "뷰어", permissions = emptyList(), memberCount = 5)
 
     val previewMembers = listOf(
-        ProjectMember("u1", "Alice Wonderland", "url_to_image_1", listOf("r_admin"), DateTimeUtil.nowInstant()),
-        ProjectMember("u2", "Bob The Builder", null, listOf("r_admin", "r_member"), DateTimeUtil.nowInstant()),
-        ProjectMember("u3", "Charlie Brown", "url_to_image_3", listOf("r_member", "r_supporter"), DateTimeUtil.nowInstant()),
-        ProjectMember("u4", "Diana Prince", null, listOf("r_viewer"), DateTimeUtil.nowInstant())
+        ProjectMember("u1", "Alice Wonderland", "url_to_image_1", listOf(previewRoleAdmin), DateTimeUtil.nowInstant()),
+        ProjectMember("u2", "Bob The Builder", null, listOf(previewRoleAdmin, previewRoleMember), DateTimeUtil.nowInstant()),
+        ProjectMember("u3", "Charlie Brown", "url_to_image_3", listOf(previewRoleMember, previewRoleSupporter), DateTimeUtil.nowInstant()),
+        ProjectMember("u4", "Diana Prince", null, listOf(previewRoleViewer), DateTimeUtil.nowInstant())
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
