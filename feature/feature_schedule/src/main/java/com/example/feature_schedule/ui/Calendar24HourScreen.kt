@@ -101,7 +101,7 @@ fun Calendar24HourScreen(
 
         val observer = Observer<Boolean> { result ->
             if (result == true) {
-                viewModel.refreshSchedulesForCurrentDate()
+                viewModel.loadSchedules()
                 savedStateHandle?.remove<Boolean>(REFRESH_SCHEDULE_LIST_KEY)
             }
         }
