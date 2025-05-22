@@ -3,7 +3,10 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
+import com.example.domain.model.Schedule // Ensure this import
+import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,8 +48,9 @@ sealed class EditScheduleEvent {
  */
 @HiltViewModel
 class EditScheduleViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle
-    // TODO: GetScheduleDetailsUseCase, UpdateScheduleUseCase 주입
+    private val savedStateHandle: SavedStateHandle,
+    private val getScheduleDetailUseCase: GetScheduleDetailUseCase // Added
+    // UpdateScheduleUseCase would be here
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditScheduleUiState())
@@ -64,28 +68,42 @@ class EditScheduleViewModel @Inject constructor(
                 // NavigateBack 처리는 Screen에서 eventFlow를 구독하여 처리 가능
                 return@launch
             }
-            _uiState.update { it.copy(scheduleId = scheduleId, isLoading = true) }
+            // _uiState.update { it.copy(scheduleId = scheduleId, isLoading = true) } // Done in loadScheduleDetails
             loadScheduleDetails(scheduleId)
         }
     }
 
     private fun loadScheduleDetails(scheduleId: String) {
         viewModelScope.launch {
-            // TODO: 실제 일정 상세 정보 로드 (GetScheduleDetailsUseCase 사용)
-            // 성공 시: _uiState.update { it.copy(title = details.title, ..., isLoading = false) }
-            // 실패 시: _uiState.update { it.copy(error = "정보 로드 실패", isLoading = false) }
-
-            // 임시 데이터 (실제 구현 시 삭제)
-            kotlinx.coroutines.delay(1000)
-            _uiState.update {
-                it.copy(
-                    title = "기존 일정 '$scheduleId' (수정)",
-                    content = "기존 내용입니다.",
-                    date = LocalDate.now(),
-                    startTime = LocalTime.of(10, 0),
-                    endTime = LocalTime.of(11, 0),
-                    isLoading = false
-                )
+            _uiState.update { it.copy(scheduleId = scheduleId, isLoading = true, error = null) }
+            try {
+                val result = getScheduleDetailUseCase(scheduleId)
+                result.onSuccess { schedule ->
+                    _uiState.update {
+                        it.copy(
+                            title = schedule.title,
+                            content = schedule.content,
+                            date = DateTimeUtil.toLocalDate(schedule.startTime),
+                            startTime = DateTimeUtil.toLocalTime(schedule.startTime),
+                            endTime = DateTimeUtil.toLocalTime(schedule.endTime),
+                            isLoading = false
+                        )
+                    }
+                }.onFailure { exception ->
+                    _uiState.update {
+                        it.copy(
+                            error = "일정 정보 로드 실패: ${exception.message ?: "알 수 없는 오류"}",
+                            isLoading = false
+                        )
+                    }
+                }
+            } catch (e: Exception) { // Catch any other unexpected errors
+                _uiState.update {
+                    it.copy(
+                        error = "일정 정보 로드 중 알 수 없는 오류: ${e.message}",
+                        isLoading = false
+                    )
+                }
             }
         }
     }
