@@ -201,22 +201,23 @@ class Calendar24HourViewModel @Inject constructor(
     fun onScheduleLongClick(scheduleId: String) {
         viewModelScope.launch { _eventFlow.emit(Calendar24HourEvent.ShowScheduleEditDialog(scheduleId)) }
     }
+
+    /**
+     * 현재 선택된 날짜의 일정을 새로고침합니다.
+     * 화면을 아래로 당겨 새로고침(pull-to-refresh)하거나, 다른 화면에서 데이터 변경 후
+     * 돌아왔을 때 호출될 수 있습니다.
+     */
     fun refreshSchedules() {
         viewModelScope.launch {
             val currentSuccessState = _uiState.value as? Calendar24HourUiState.Success
             val dateToRefresh = currentSuccessState?.selectedDate
             if (dateToRefresh != null) {
-                // Call the existing loadSchedules function.
-                // If loadSchedules was private, you'd need to change its visibility or call it internally.
-                // For this subtask, assume loadSchedules can be called if it was private.
-                // If it's already public/internal, this is fine.
-                // The task is to ensure loadSchedules is called with the current date.
-                // Forcing it to be public if it was private:
+                Log.d("CalendarVM", "refreshSchedules() 호출됨. 현재 선택된 날짜: $dateToRefresh")
                 loadSchedules(dateToRefresh)
             } else {
-                // Fallback: If no selectedDate in success state, try reloading with initial date from SavedStateHandle
-                // This handles cases where refresh is called before initial load or after an error.
-                Log.d("CalendarVM", "refreshSchedules called but no selectedDate in Success state. Re-loading with initial date.")
+                // 현재 상태가 Success가 아니거나 selectedDate가 없는 경우,
+                // 초기 날짜로 다시 로드 시도
+                Log.d("CalendarVM", "refreshSchedules() 호출됨. 현재 선택된 날짜 없음. 초기 날짜로 로드 시도.")
                 loadSchedules(LocalDate.of(year, month, day))
             }
         }
