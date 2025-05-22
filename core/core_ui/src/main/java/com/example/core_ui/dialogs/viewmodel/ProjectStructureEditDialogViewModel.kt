@@ -25,6 +25,25 @@ import java.util.UUID
 import javax.inject.Inject
 
 /**
+ * 삭제할 아이템의 유형 (카테고리 또는 채널) -> ChannelType으로 변경
+ */
+enum class ChannelTypeForDeletion { // 이름 충돌 방지를 위해 임시로 ChannelTypeForDeletion으로 변경
+    CATEGORY,
+    CHANNEL
+}
+
+/**
+ * 삭제 확인 다이얼로그에 필요한 정보를 담는 데이터 클래스
+ */
+data class DeleteConfirmationInfo(
+    val title: String,
+    val message: String,
+    val itemType: ChannelTypeForDeletion, // DeleteItemType -> ChannelTypeForDeletion
+    val categoryId: String,
+    val channelId: String? = null // 채널 삭제 시에만 사용
+)
+
+/**
  * 프로젝트 구조 편집 화면의 상태를 관리하는 ViewModel
  */
 @HiltViewModel
@@ -511,6 +530,70 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
     fun closeContextMenu() {
         _uiState.update { it.copy(contextMenuState = null) }
     }
+
+    /**
+     * 카테고리 삭제 요청 시 확인 다이얼로그를 표시하도록 UI 상태를 업데이트합니다.
+     * @param categoryId 삭제할 카테고리 ID
+     */
+    fun requestRemoveCategory(categoryId: String) {
+        val categoryToRemove = _uiState.value.categories.find { it.id == categoryId }
+        categoryToRemove?.let {
+            _uiState.update {
+                it.copy(
+                    deleteConfirmationInfo = DeleteConfirmationInfo(
+                        title = "카테고리 삭제",
+                        message = "\'${categoryToRemove.name}\' 카테고리를 정말 삭제하시겠습니까? 카테고리 내의 모든 채널도 함께 삭제됩니다.",
+                        itemType = ChannelTypeForDeletion.CATEGORY, // DeleteItemType -> ChannelTypeForDeletion
+                        categoryId = categoryId
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * 채널 삭제 요청 시 확인 다이얼로그를 표시하도록 UI 상태를 업데이트합니다.
+     * @param categoryId 채널이 속한 카테고리 ID
+     * @param channelId 삭제할 채널 ID
+     */
+    fun requestRemoveChannel(categoryId: String, channelId: String) {
+        val category = _uiState.value.categories.find { it.id == categoryId }
+        val channelToRemove = category?.channels?.find { it.id == channelId }
+
+        if (category != null && channelToRemove != null) {
+            _uiState.update {
+                it.copy(
+                    deleteConfirmationInfo = DeleteConfirmationInfo(
+                        title = "채널 삭제",
+                        message = "\'${channelToRemove.name}\' 채널을 정말 삭제하시겠습니까?",
+                        itemType = ChannelTypeForDeletion.CHANNEL, // DeleteItemType -> ChannelTypeForDeletion
+                        categoryId = categoryId,
+                        channelId = channelId
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * 확인 다이얼로그에서 '확인'을 눌렀을 때 실제 삭제 로직을 실행합니다.
+     */
+    fun confirmDelete() {
+        _uiState.value.deleteConfirmationInfo?.let { info ->
+            when (info.itemType) {
+                ChannelTypeForDeletion.CATEGORY -> deleteCategory(info.categoryId)
+                ChannelTypeForDeletion.CHANNEL -> deleteChannel(info.categoryId, info.channelId!!)
+            }
+            _uiState.update { it.copy(deleteConfirmationInfo = null) }
+        }
+    }
+
+    /**
+     * 확인 다이얼로그에서 '취소'를 눌렀을 때 다이얼로그를 닫습니다.
+     */
+    fun cancelDelete() {
+        _uiState.update { it.copy(deleteConfirmationInfo = null) }
+    }
 }
 
 /**
@@ -529,7 +612,8 @@ data class ProjectStructureEditUiState(
     val expandedCategories: Map<String, Boolean> = emptyMap(),
     val renameDialogState: RenameDialogState? = null,
     val addChannelDialogTargetCategoryId: String? = null,
-    val contextMenuState: ContextMenuState? = null
+    val contextMenuState: ContextMenuState? = null,
+    val deleteConfirmationInfo: DeleteConfirmationInfo? = null // 삭제 확인 정보 추가
 )
 
 /**

@@ -46,15 +46,18 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.domain.model.ChannelMode
 import com.example.domain.model.Category
 import com.example.domain.model.Channel
 import com.example.core_ui.dialogs.viewmodel.*
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -71,8 +74,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProjectStructureEditDialog(
     onDismiss: () -> Unit,
-    viewModel: ProjectStructureEditDialogViewModel,
-    projectId: String
+    projectId: String,
+    viewModel: ProjectStructureEditDialogViewModel = hiltViewModel(),
 ) {
     val scope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
@@ -81,6 +84,7 @@ fun ProjectStructureEditDialog(
     // ViewModel의 상태 구독
     val uiState by viewModel.uiState.collectAsState()
     
+
     // 로드 시 프로젝트 구조 가져오기
     LaunchedEffect(projectId) {
         viewModel.loadProjectStructure(projectId)
@@ -95,6 +99,21 @@ fun ProjectStructureEditDialog(
                 else -> {} // 다른 이벤트는 컴포저블 내에서 처리
             }
         }
+    }
+    
+    // ConfirmationDialog 표시 (새로운 방식으로 변경)
+    uiState.deleteConfirmationInfo?.let { confirmationInfo ->
+        ConfirmationDialog(
+            state = ConfirmationDialogState( // 직접 ConfirmationDialogState 구성
+                isVisible = true,
+                title = confirmationInfo.title,
+                message = confirmationInfo.message,
+                confirmButtonText = "삭제", // 필요에 따라 변경 가능
+                dismissButtonText = "취소" // 필요에 따라 변경 가능
+            ),
+            onConfirm = { viewModel.confirmDelete() },
+            onDismiss = { viewModel.cancelDelete() }
+        )
     }
     
     ModalBottomSheet(
@@ -370,16 +389,28 @@ fun ProjectStructureEditDialog(
             onDelete = {
                 when(state) {
                     is ContextMenuState.Category -> {
-                        viewModel.deleteCategory(state.categoryId)
+                        viewModel.requestRemoveCategory(state.categoryId)
                     }
                     is ContextMenuState.Channel -> {
-                        viewModel.deleteChannel(state.categoryId, state.channelId)
+                        viewModel.requestRemoveChannel(state.categoryId, state.channelId)
                     }
                 }
                 viewModel.closeContextMenu()
             }
         )
     }
+
+    /**
+    // 카테고리 추가 다이얼로그
+    if (showAddCategoryDialog) {
+        AddCategoryDialog(
+            onDismiss = { viewModel.closeAddCategoryDialog() },
+            onConfirm = { categoryName ->
+                viewModel.performAddCategory(categoryName)
+            }
+        )
+    }
+    **/
 }
 
 // hasChanges 함수: 원본 카테고리와 현재 카테고리를 비교하여 변경사항이 있는지 확인
@@ -467,69 +498,62 @@ private fun ChannelListItem(
     channel: Channel,
     isDragging: Boolean,
     onLongPress: () -> Unit,
-    onDrop: (categoryId: String, index: Int) -> Unit = { _, _ -> },
-    onContextMenu: (Offset) -> Unit,
+    onDrop: (targetCategoryId: String, targetIndex: Int) -> Unit,
+    onContextMenu: (offset: Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val elevation by animateDpAsState(
-        targetValue = if (isDragging) 8.dp else 0.dp,
-        label = "channel_elevation"
-    )
-    
+    val hapticFeedback = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val alpha by animateFloatAsState(if (isDragging) 0.5f else 1f, label = "channelAlpha")
+    val elevation by animateDpAsState(if (isDragging) 8.dp else 1.dp, label = "channelElevation")
+
     Surface(
         modifier = modifier
-            .shadow(elevation)
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
+            .shadow(elevation, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .alpha(alpha)
             .combinedClickable(
-                onClick = { /* 채널 클릭 시 작업 (예: 채널 진입) */ },
-                onLongClick = onLongPress,
-                onLongClickLabel = "드래그하여 이동"
+                interactionSource = interactionSource,
+                indication = null, // 기본 인디케이션 제거
+                onClick = { /* 채널 클릭 시 동작 (예: 채널로 이동) */ },
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongPress()
+                }
             )
-            .pointerInput(Unit) {
+            .pointerInput(Unit) { // 드래그 앤 드롭 감지
                 detectDragGesturesAfterLongPress(
-                    onDragStart = { onLongPress() },
-                    onDragEnd = { /* 드래그 종료 처리 */ },
-                    onDragCancel = { /* 드래그 취소 처리 */ },
-                    onDrag = { change, _ -> change.consume() }
+                    onDragStart = { 
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongPress() 
+                    },
+                    onDrag = { change, _ -> change.consume() },
+                    onDragEnd = { /* 드롭은 LazyColumn 레벨에서 처리 */ },
+                    onDragCancel = { /* 드롭은 LazyColumn 레벨에서 처리 */ }
                 )
             },
+        shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val iconText = when (channel.channelMode) {
-                ChannelMode.TEXT -> "#"
-                ChannelMode.VOICE -> "\uD83D\uDD0A" // 예시: 스피커 아이콘
-                else -> "?"
-            }
-            Text(
-                text = iconText,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            
             Text(
                 text = channel.name,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                overflow = TextOverflow.Ellipsis
             )
-            
-            IconButton(
-                onClick = { onContextMenu(Offset.Zero) },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "더보기",
-                    modifier = Modifier.size(16.dp)
-                )
+            Spacer(modifier = Modifier.weight(1f))
+            // 컨텍스트 메뉴 버튼 (채널용)
+            IconButton(onClick = { onContextMenu(Offset.Zero /* 정확한 위치는 필요에 따라 조정 */) }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "채널 옵션")
             }
         }
     }
@@ -717,4 +741,43 @@ private fun ContextMenu(
             }
         }
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ProjectStructureEditDialogPreview() {
+    val mockViewModel = viewModel<ProjectStructureEditDialogViewModel>()
+    // Mock 데이터 설정 (필요한 경우)
+    LaunchedEffect(Unit) {
+        // 테스트용 프로젝트 ID (실제 존재하지 않아도 됨)
+        val testProjectId = "preview-project-id"
+        // ViewModel의 public 함수를 통해 상태 변경 시도
+        mockViewModel.loadProjectStructure(testProjectId)
+        // mockViewModel.openAddCategoryDialog() // 예시: 카테고리 추가 다이얼로그 표시
+
+        // 미리보기를 위한 목업 데이터 강제 주입 (옵션)
+        val sampleCategories = listOf(
+            Category(
+                id = "cat1", projectId = testProjectId, name = "일반", order = 0, channels = listOf(
+                    Channel(id = "chan1-1", name = "채팅", type = com.example.domain.model.ChannelType.PROJECT, projectSpecificData = com.example.domain.model.channel.ProjectSpecificData(projectId = testProjectId, categoryId = "cat1", order = 0, channelMode = ChannelMode.TEXT), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant()),
+                    Channel(id = "chan1-2", name = "공지사항", type = com.example.domain.model.ChannelType.PROJECT, projectSpecificData = com.example.domain.model.channel.ProjectSpecificData(projectId = testProjectId, categoryId = "cat1", order = 1, channelMode = ChannelMode.TEXT), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant())
+                ), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant()
+            ),
+            Category(
+                id = "cat2", projectId = testProjectId, name = "음성 채널", order = 1, channels = listOf(
+                    Channel(id = "chan2-1", name = "음성 대화 1", type = com.example.domain.model.ChannelType.PROJECT, projectSpecificData = com.example.domain.model.channel.ProjectSpecificData(projectId = testProjectId, categoryId = "cat2", order = 0, channelMode = ChannelMode.VOICE), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant())
+                ), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant()
+            )
+        )
+        // ViewModel 내부 상태 직접 조작은 private 멤버 접근으로 인해 Preview에서 불안정할 수 있습니다.
+        // mockViewModel의 public 메소드를 사용하거나, Preview 전용 ViewModel을 만드는 것을 고려하세요.
+    }
+
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        ProjectStructureEditDialog(
+            onDismiss = {},
+            viewModel = mockViewModel,
+            projectId = "preview-project-id"
+        )
+    }
 } 

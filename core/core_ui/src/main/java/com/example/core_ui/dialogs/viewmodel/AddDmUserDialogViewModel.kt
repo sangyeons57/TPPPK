@@ -3,7 +3,7 @@ package com.example.core_ui.dialogs.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.User
-import com.example.domain.usecase.friend.GetDmChannelIdUseCase
+import com.example.domain.usecase.dm.GetDmChannelIdUseCase
 import com.example.domain.usecase.friend.SendFriendRequestUseCase
 import com.example.domain.usecase.user.SearchUserByNameUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -92,7 +92,7 @@ class AddDmUserDialogViewModel @Inject constructor(
                             shouldDismiss = true
                         )
                     }
-                    _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(channelId))
+                    _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(channelId!!))
                 },
                 onFailure = { dmError ->
                     _uiState.update { state ->

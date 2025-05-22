@@ -24,14 +24,6 @@ interface FriendRemoteDataSource {
     suspend fun fetchFriendsList(): Result<Unit>
     
     /**
-     * 특정 친구와의 DM 채널 ID를 가져옵니다.
-     * 이제 DM 메시지는 Channel 컬렉션에서 type이 'DM'인 채널로 관리됩니다.
-     * @param friendUserId 친구 사용자 ID
-     * @return DM 채널 ID
-     */
-    suspend fun getDmChannelId(friendUserId: String): Result<String>
-    
-    /**
      * 사용자 이름으로 친구 요청을 보냅니다.
      * @param username 친구 요청을 보낼 사용자 이름
      * @return 성공 시 메시지 또는 실패 시 예외

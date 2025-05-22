@@ -28,6 +28,8 @@ import com.example.data.datasource.remote.message.MessageRemoteDataSource
 import com.example.data.datasource.remote.message.MessageRemoteDataSourceImpl
 import com.example.data.datasource.remote.projectstructure.ProjectStructureRemoteDataSource
 import com.example.data.datasource.remote.projectstructure.ProjectStructureRemoteDataSourceImpl
+import com.example.data.datasource.remote.dm.DmRemoteDataSource
+import com.example.data.datasource.remote.dm.DmRemoteDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -133,5 +135,11 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindProjectStructureDataSource(projectLocalDataSourceImpl: ProjectStructureRemoteDataSourceImpl): ProjectStructureRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindDmRemoteDataSource(
+        dmRemoteDataSourceImpl: DmRemoteDataSourceImpl
+    ): DmRemoteDataSource
 
 }

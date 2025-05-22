@@ -116,40 +116,6 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     }
 
     /**
-     * 특정 친구와의 DM 채널 ID를 가져옵니다.
-     * @param friendUserId 친구 사용자 ID
-     * @return DM 채널 ID
-     */
-    override suspend fun getDmChannelId(friendUserId: String): Result<String> = try {
-        val sortedUserIds = listOf(currentUserId, friendUserId).sorted()
-        val dmId = "${sortedUserIds[0]}_${sortedUserIds[1]}"
-        
-        val channelDoc = firestore.collection(Collections.CHANNELS).document(dmId).get().await()
-        
-        if (channelDoc.exists()) {
-            Result.success(dmId)
-        } else {
-            val channelData = hashMapOf(
-                "type" to "DM",
-                "participantIds" to sortedUserIds,
-                "createdAt" to DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant()),
-                "isActive" to true
-            )
-            
-            firestore.collection(Collections.CHANNELS).document(dmId).set(channelData).await()
-            
-            sortedUserIds.forEach { userId ->
-                firestore.collection(Collections.USERS).document(userId)
-                    .update("activeDmIds", FieldValue.arrayUnion(dmId))
-                    .await()
-            }
-            Result.success(dmId)
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
-
-    /**
      * 사용자 이름으로 친구 요청을 보냅니다.
      * @param username 친구 요청을 보낼 사용자 이름
      * @return 성공 시 메시지 또는 실패 시 예외

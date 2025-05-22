@@ -86,17 +86,4 @@ class FriendRepositoryImpl @Inject constructor(
         // TODO: 로컬 데이터 업데이트 로직 (필요하다면)
         return friendRemoteDataSource.removeOrDenyFriend(currentUserId, friendId)
     }
-
-    /**
-     * 친구와의 DM 채널 ID 가져오기
-     * 채널 정보는 이제 채널 시스템으로 통합되어 관리됩니다.
-     * 채널 타입이 'DM'인 채널을 사용합니다.
-     */
-    override suspend fun getDmChannelId(friendUserId: String): Result<String> {
-        val currentUserId = getCurrentUserId()
-            ?: return Result.failure(IllegalStateException("User not logged in."))
-        
-        // FriendRemoteDataSource의 구현을 사용하여 채널 ID를 가져오거나 새로 생성
-        return friendRemoteDataSource.getDmChannelId(friendUserId)
-    }
 }

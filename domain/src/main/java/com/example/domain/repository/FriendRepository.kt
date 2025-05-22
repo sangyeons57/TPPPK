@@ -49,13 +49,4 @@ interface FriendRepository {
      * @return Result<Unit> 성공 또는 실패.
      */
     suspend fun removeOrDenyFriend(friendId: String): Result<Unit>
-
-    /** 
-     * 친구와의 DM 채널 ID 가져오기
-     * 채널 정보는 이제 채널 시스템으로 통합되어 관리됩니다.
-     * 채널 타입이 'DM'인 채널을 사용합니다.
-     * @param friendUserId 친구의 사용자 ID
-     * @return 채널 ID 또는 오류
-     */
-    suspend fun getDmChannelId(friendUserId: String): Result<String>
 }

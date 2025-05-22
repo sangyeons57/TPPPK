@@ -4,6 +4,7 @@ import com.example.domain.usecase.user.* // 생성한 UseCase 임포트
 import com.example.domain.usecase.project.* // project 패키지 UseCase 임포트
 import com.example.domain.usecase.schedule.* // schedule 패키지 UseCase 임포트
 import com.example.domain.usecase.auth.* // auth 패키지 UseCase 임포트
+import com.example.domain.usecase.friend.*
 import com.example.domain.usecase.project.member.*
 import com.example.domain.usecase.project.role.*
 import dagger.Binds
@@ -46,12 +47,22 @@ abstract class UseCaseModule {
 
     @Binds
     @Singleton
+    abstract fun bindGetRolesUseCase(impl: GetRoleDetailsUseCaseImpl): GetRoleDetailsUseCase
+
+
+    @Binds
+    @Singleton
     abstract fun bindUpdateMemberRolesUseCase(impl: UpdateMemberRolesUseCaseImpl): UpdateMemberRolesUseCase
 
     // --- Project Role UseCases ---
     @Binds
     @Singleton
-    abstract fun bindGetRoleDetailsUseCase(impl: GetRoleDetailsUseCaseImpl): GetRoleDetailsUseCase
+    abstract fun bindDeleteRoleUseCase(impl: DeleteRoleUseCaseImpl): DeleteRoleUseCase
+
+
+    @Binds
+    @Singleton
+    abstract fun bindDeleteProjectRoleUseCase(impl: DeleteProjectRoleUseCaseImpl): DeleteProjectRoleUseCase
 
     @Binds
     @Singleton
@@ -61,14 +72,6 @@ abstract class UseCaseModule {
     @Singleton
     abstract fun bindUpdateRoleUseCase(impl: UpdateRoleUseCaseImpl): UpdateRoleUseCase
 
-    @Binds
-    @Singleton
-    abstract fun bindDeleteRoleUseCase(impl: DeleteRoleUseCaseImpl): DeleteRoleUseCase
-
-
-    @Binds
-    @Singleton
-    abstract fun bindDeleteProjectRoleUseCase(impl: DeleteProjectRoleUseCaseImpl): DeleteProjectRoleUseCase
 
     // --- Project Member List UseCases ---
     @Binds
@@ -134,11 +137,20 @@ abstract class UseCaseModule {
     @Singleton
     abstract fun bindUpdateScheduleUseCase(impl: UpdateScheduleUseCaseImpl): UpdateScheduleUseCase
 
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchUserByNameUseCase(impl: SearchUserByNameUseCaseImpl): SearchUserByNameUseCase
+
     // --- Auth UseCases ---
     @Binds
     @Singleton
     abstract fun bindCheckAuthenticationStatusUseCase(impl: CheckAuthenticationStatusUseCaseImpl): CheckAuthenticationStatusUseCase
 
     // TODO: 다른 UseCase들도 여기에 바인딩 추가
+
+    @Binds
+    @Singleton
+    abstract fun bindSendFriendRequestUseCase(impl: SendFriendRequestUseCaseImpl): SendFriendRequestUseCase
 
 } 

@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.FriendRelationship
 import com.example.domain.model.FriendRequestStatus
-import com.example.domain.usecase.friend.GetDmChannelIdUseCase
+import com.example.domain.usecase.dm.GetDmChannelIdUseCase
 import com.example.domain.usecase.friend.GetFriendRelationshipsStreamUseCase
 import com.example.domain.usecase.friend.RefreshFriendRelationshipsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -118,13 +118,14 @@ class FriendViewModel @Inject constructor(
      */
     fun onFriendClick(friendId: String) {
         viewModelScope.launch {
-            val result = getDmChannelIdUseCase(friendId)
-            if (result.isSuccess) {
-                _eventFlow.emit(FriendsEvent.NavigateToChat(result.getOrThrow()))
-            } else {
-                val errorMessage = result.exceptionOrNull()?.localizedMessage ?: "알 수 없는 오류"
-                _eventFlow.emit(FriendsEvent.ShowSnackbar("채팅방 정보를 가져올 수 없습니다: $errorMessage"))
-            }
+            getDmChannelIdUseCase(friendId).fold(
+                onSuccess = { channelId ->
+                    _eventFlow.emit(FriendsEvent.NavigateToChat(channelId!!))
+                },
+                onFailure = { error ->
+                    _eventFlow.emit(FriendsEvent.ShowSnackbar("채팅방 정보를 가져올 수 없습니다: $error"))
+                }
+            )
         }
     }
 

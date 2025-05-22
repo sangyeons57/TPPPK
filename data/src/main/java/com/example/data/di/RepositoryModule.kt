@@ -34,6 +34,8 @@ import com.example.domain.repository.ScheduleRepository
 import com.example.domain.repository.SearchRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.repository.MessageRepository
+import com.example.domain.repository.DmRepository
+import com.example.data.repository.DmRepositoryImpl
 import com.example.domain.util.NetworkConnectivityMonitor
 import dagger.Binds
 import dagger.Module
@@ -95,4 +97,9 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindMessageRepository(messageRepositoryImpl: MessageRepositoryImpl): MessageRepository
+
+    // 추가: DmRepository 바인딩
+    @Binds
+    @Singleton
+    abstract fun bindDmRepository(impl: DmRepositoryImpl): DmRepository
 }
