@@ -15,8 +15,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant // Added
 import java.time.LocalDate
+import java.time.LocalDateTime // Added
 import java.time.LocalTime
+// import java.time.ZoneId // ZoneId might not be directly needed here if DateTimeUtil handles it
 import javax.inject.Inject
 
 // 일정 수정 화면 UI 상태
@@ -49,8 +52,8 @@ sealed class EditScheduleEvent {
 @HiltViewModel
 class EditScheduleViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getScheduleDetailUseCase: GetScheduleDetailUseCase // Added
-    // UpdateScheduleUseCase would be here
+    private val getScheduleDetailUseCase: GetScheduleDetailUseCase, // Added
+    private val updateScheduleUseCase: UpdateScheduleUseCase   // Added
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditScheduleUiState())
@@ -161,28 +164,62 @@ class EditScheduleViewModel @Inject constructor(
     }
 
     fun onSaveClicked() {
+        val currentState = _uiState.value
+        if (currentState.scheduleId == null) {
+            viewModelScope.launch { _eventFlow.emit(EditScheduleEvent.ShowSnackbar("오류: 일정 ID가 없습니다.")) }
+            return
+        }
+        if (currentState.title.isBlank()) {
+            viewModelScope.launch { _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정 제목을 입력해주세요.")) }
+            return
+        }
+        if (currentState.date == null || currentState.startTime == null || currentState.endTime == null) {
+            viewModelScope.launch { _eventFlow.emit(EditScheduleEvent.ShowSnackbar("날짜와 시간을 모두 설정해주세요.")) }
+            return
+        }
+        if (currentState.endTime.isBefore(currentState.startTime)) {
+            viewModelScope.launch { _eventFlow.emit(EditScheduleEvent.ShowSnackbar("종료 시간은 시작 시간 이후여야 합니다.")) }
+            return
+        }
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true) }
-            val currentState = _uiState.value
-            // TODO: 유효성 검사
-            // TODO: 실제 일정 업데이트 로직 (UpdateScheduleUseCase 사용)
-            // val result = updateScheduleUseCase(scheduleId = currentState.scheduleId!!, title = currentState.title, ...)
-            // 성공 시:
-            // _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
-            // _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정이 저장되었습니다."))
-            // _eventFlow.emit(EditScheduleEvent.NavigateBack) // 저장 후 뒤로가기
-            // 실패 시:
-            // _uiState.update { it.copy(isSaving = false, error = "저장 실패") }
-            // _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정 저장에 실패했습니다."))
+            _uiState.update { it.copy(isSaving = true, error = null) }
 
+            // Convert LocalDate/LocalTime from UI back to Instant for domain model
+            val startInstant = DateTimeUtil.toInstant(LocalDateTime.of(currentState.date, currentState.startTime))
+            val endInstant = DateTimeUtil.toInstant(LocalDateTime.of(currentState.date, currentState.endTime))
 
-            // 임시 저장 로직
-            kotlinx.coroutines.delay(1500)
-            // _uiState.update { it.copy(isSaving = false, saveSuccess = true) } // REMOVE
-            _uiState.update { it.copy(isSaving = false) } // ADDED - update isSaving
-            _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정 '$currentState.title' 저장됨 (임시)"))
-            // _eventFlow.emit(EditScheduleEvent.NavigateBack) // REMOVE - Handled by new event
-            _eventFlow.emit(EditScheduleEvent.SaveSuccessAndRequestBackNavigation) // ADDED
+            if (startInstant == null || endInstant == null) {
+                 _uiState.update { it.copy(isSaving = false, error = "시간 변환 오류") }
+                 _eventFlow.emit(EditScheduleEvent.ShowSnackbar("시간 변환 중 오류가 발생했습니다."))
+                 return@launch
+            }
+            
+            val updatedSchedule = Schedule(
+                id = currentState.scheduleId,
+                creatorId = "", // Per instruction for now
+                projectId = null, // Per instruction for now
+                title = currentState.title,
+                content = currentState.content,
+                startTime = startInstant,
+                endTime = endInstant,
+                createdAt = Instant.now() // Per instruction, or fetch original
+            )
+
+            val result = updateScheduleUseCase(updatedSchedule)
+            result.onSuccess {
+                _uiState.update { it.copy(isSaving = false) }
+                _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정이 저장되었습니다."))
+                _eventFlow.emit(EditScheduleEvent.SaveSuccessAndRequestBackNavigation)
+            }.onFailure { exception ->
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        error = "저장 실패: ${exception.localizedMessage}"
+                    )
+                }
+                _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정 저장에 실패했습니다: ${exception.localizedMessage}"))
+            }
         }
     }
 

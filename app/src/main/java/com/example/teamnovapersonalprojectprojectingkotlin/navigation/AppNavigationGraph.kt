@@ -123,7 +123,7 @@ fun AppNavigationGraph(
  */
 fun NavGraphBuilder.authGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Auth.Graph.path,
+        route = AppRoutes.Auth.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Auth.Splash.path
     ) {
 
@@ -182,7 +182,9 @@ fun NavGraphBuilder.mainGraph(appNavigator: AppNavigator) {
  */
 fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Friends.ROOT,
+      
+        route = AppRoutes.Friends.ROOT, // Changed to use ROOT
+
         startDestination = AppRoutes.Friends.LIST
     ) {
         composable(AppRoutes.Friends.LIST) {
@@ -198,7 +200,7 @@ fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
  */
 fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Project.Graph.path,
+        route = AppRoutes.Project.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Project.ADD
     ) {
         // 프로젝트 생성 화면
@@ -267,7 +269,7 @@ fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
  */
 fun NavGraphBuilder.chatGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Chat.Graph.path,
+        route = AppRoutes.Chat.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Chat.route
     ) {
         // 채팅 화면
@@ -288,7 +290,7 @@ fun NavGraphBuilder.chatGraph(appNavigator: AppNavigator) {
  */
 fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Main.Calendar.Graph.path,
+        route = AppRoutes.Main.Calendar.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Main.Calendar.calendar24HourRoute()
     ) {
         // 24시간 캘린더 화면

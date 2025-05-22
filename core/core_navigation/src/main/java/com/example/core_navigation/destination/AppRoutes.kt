@@ -6,12 +6,11 @@ import androidx.navigation.navArgument
 object AppRoutes {
 
     object Auth {
-        private const val ROOT = "auth"
+        const val ROOT = "auth"
         object Graph { // For the nested navigation graph
-            const val path = ROOT_GRAPH
+            const val path = ROOT
             const val suggestedStartPath = Splash.path
         }
-        private const val ROOT_GRAPH = "auth_graph"
 
 
         object Splash {
@@ -42,7 +41,8 @@ object AppRoutes {
             const val ROOT_CONTENT = "main_home_content" // Actual content screen for home
         }
         object Calendar {
-            const val GRAPH_ROOT = "main_calendar_graph"
+            const val ROOT = "calendar" // Added ROOT for Calendar
+            const val GRAPH_ROOT = "main_calendar_graph" // This might be redundant or used for specific grouping
             const val ROOT_CONTENT = "main_calendar_content"
             // ARG_SCHEDULE_ID is used by EditSchedule, ScheduleDetail
             const val ARG_SCHEDULE_ID = "scheduleId"
@@ -81,7 +81,7 @@ object AppRoutes {
 
             // 캘린더 그래프 정의
             object Graph {
-                const val path = "calendar_graph"
+                const val path = ROOT // Changed to use Calendar.ROOT
             }
         }
         object Profile {
@@ -94,7 +94,7 @@ object AppRoutes {
     }
 
     object Project {
-        private const val ROOT = "project"
+        const val ROOT = "project"
         const val ARG_PROJECT_ID = "projectId"
         const val ARG_CATEGORY_ID = "categoryId"
         const val ARG_CHANNEL_ID = "channelId"
@@ -103,7 +103,7 @@ object AppRoutes {
 
         // 프로젝트 그래프 정의
         object Graph {
-            const val path = "project_graph"
+            const val path = ROOT
             const val suggestedStartPath = ADD
         }
         
@@ -223,10 +223,13 @@ object AppRoutes {
 
     object Friends {
         const val ROOT = "friends"
-
         const val LIST = "$ROOT/list"
         const val ACCEPT_REQUESTS = "$ROOT/accept"
         // Add friend might be a dialog or a simple screen, not requiring complex routing here initially
+        object Graph {
+            const val path = ROOT
+            const val suggestedStartPath = LIST
+        }
     }
 
     object Chat {
@@ -237,7 +240,7 @@ object AppRoutes {
 
         // 채팅 그래프 정의
         object Graph {
-            const val path = "chat_graph"
+            const val path = ROOT
         }
         
         // 통합 채널 라우트: chat/{channelId}?messageId={messageId}

@@ -78,9 +78,10 @@ class EditRoleViewModel @Inject constructor(
             println("ViewModel: Loading details for role $roleId (UseCase)")
 
             // --- UseCase 호출 ---
-            val result = getRoleDetailsUseCase(projectId, roleId)
+            val result = getRoleDetailsUseCase(projectId, roleId) // UseCase returns Result<Role?>
 
             if (result.isSuccess) {
+
                 val role = result.getOrNull() // Role? 타입
                 if (role != null) {
                     val loadedPermissionsMap = RolePermission.entries.associateWith { role.permissions.contains(it) }
@@ -97,15 +98,14 @@ class EditRoleViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    _uiState.update {
-                        it.copy(isLoading = false, error = "역할 정보를 찾을 수 없습니다.")
-                    }
+                    // Role not found
+                    _uiState.update { it.copy(isLoading = false, error = "역할 정보를 찾을 수 없습니다.") }
                     _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 정보를 찾을 수 없습니다."))
                     _eventFlow.emit(EditRoleEvent.NavigateBack)
                 }
-            } else {
+            } else { // Failure case
                 _uiState.update {
-                    it.copy(isLoading = false, error = "역할 정보를 불러오지 못했습니다: ${result.exceptionOrNull()?.message}")
+                    it.copy(isLoading = false, error = "역할 정보를 불러오지 못했습니다: ${result.exceptionOrNull()?.localizedMessage}")
                 }
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 정보를 불러오지 못했습니다."))
                 _eventFlow.emit(EditRoleEvent.NavigateBack)
@@ -196,12 +196,17 @@ class EditRoleViewModel @Inject constructor(
             }
 
             if (result.isSuccess) {
-                val message = if (currentState.roleId == null) "역할이 생성되었습니다." else "역할이 수정되었습니다."
+                val message = if (currentState.roleId == null) {
+                    // val newRoleId = (result as Result.Success<String>).value // If you need the new ID
+                    "역할이 생성되었습니다."
+                } else {
+                    "역할이 수정되었습니다."
+                }
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar(message))
                 _uiState.update { it.copy(isLoading = false, saveSuccess = true) }
             } else {
                 val errorMessage = if (currentState.roleId == null) "역할 생성 실패" else "역할 수정 실패"
-                val errorDetail = result.exceptionOrNull()?.message
+                val errorDetail = result.exceptionOrNull()?.localizedMessage
                 _uiState.update { it.copy(isLoading = false, error = errorMessage + (errorDetail?.let { ": $it" } ?: "")) }
             }
         }
@@ -229,7 +234,8 @@ class EditRoleViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Deleting role $roleIdToDelete (UseCase)")
 
-            val result = deleteRoleUseCase(projectId, roleIdToDelete)
+            // --- UseCase 호출 ---
+            val result = deleteRoleUseCase(projectId, roleIdToDelete) // Pass projectId
 
             if (result.isSuccess) {
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할이 삭제되었습니다."))

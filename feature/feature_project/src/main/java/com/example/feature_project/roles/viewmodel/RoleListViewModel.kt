@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.Role // Added
+import com.example.domain.usecase.project.role.DeleteProjectRoleUseCase // Added
+import com.example.domain.usecase.project.role.GetProjectRolesUseCase // Added
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,6 +32,7 @@ data class RoleListUiState(
 sealed class RoleListEvent {
     object NavigateToAddRole : RoleListEvent() // 역할 추가 화면으로 이동
     data class NavigateToEditRole(val roleId: String) : RoleListEvent() // 역할 수정 화면으로 이동
+    data class ShowDeleteRoleConfirmDialog(val roleItem: RoleItem) : RoleListEvent() // Added
     data class ShowSnackbar(val message: String) : RoleListEvent()
 }
 
@@ -37,7 +40,8 @@ sealed class RoleListEvent {
 @HiltViewModel
 class RoleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    // TODO: private val repository: ProjectRoleRepository
+    private val getProjectRolesUseCase: GetProjectRolesUseCase, // Added
+    private val deleteProjectRoleUseCase: DeleteProjectRoleUseCase // Added
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
@@ -49,39 +53,23 @@ class RoleListViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
-        loadRoles()
-    }
-
-    /**
-     * 프로젝트 역할 목록 로드
-     */
-    private fun loadRoles() {
+        _uiState.update { it.copy(projectId = projectId) } // Ensure projectId is set
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Loading roles for project $projectId")
-            // --- TODO: 실제 역할 목록 로드 (repository.getRoles) ---
-            delay(700) // 임시 딜레이
-            val success = true
-            // val result = repository.getRoles(projectId)
-            // ---------------------------------------------------
-            if (success /*result.isSuccess*/) {
-                // 임시 데이터
-                val roles = listOf(
-                    RoleItem("r1", "관리자 (Owner)"),
-                    RoleItem("r2", "운영진 (Moderator)"),
-                    RoleItem("r3", "정회원 (Member)"),
-                    RoleItem("r4", "특별 회원 (VIP)")
-                )
-                // val roles = result.getOrThrow()
-                _uiState.update { it.copy(isLoading = false, roles = roles) }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "역할 목록을 불러오지 못했습니다." // result.exceptionOrNull()?.message
-                    )
+            getProjectRolesUseCase(projectId)
+                .catch { e ->
+                    _uiState.update {
+                        it.copy(isLoading = false, error = "역할 로드 실패: ${e.localizedMessage}")
+                    }
                 }
-            }
+                .collect { domainRoles ->
+                    val roleItems = domainRoles.map { domainRole ->
+                        RoleItem(id = domainRole.id ?: "", name = domainRole.name) // Handle nullable id
+                    }
+                    _uiState.update {
+                        it.copy(isLoading = false, roles = roleItems, error = null)
+                    }
+                }
         }
     }
 
@@ -100,6 +88,26 @@ class RoleListViewModel @Inject constructor(
     fun onRoleClick(roleId: String) {
         viewModelScope.launch {
             _eventFlow.emit(RoleListEvent.NavigateToEditRole(roleId))
+        }
+    }
+
+    fun requestDeleteRole(roleItem: RoleItem) {
+        viewModelScope.launch {
+            _eventFlow.emit(RoleListEvent.ShowDeleteRoleConfirmDialog(roleItem))
+        }
+    }
+
+    fun confirmDeleteRole(roleId: String) {
+        viewModelScope.launch {
+            // Optional: _uiState.update { it.copy(isLoading = true) } // Indicate loading for delete
+            val result = deleteProjectRoleUseCase(projectId, roleId)
+            if (result.isSuccess) {
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할이 삭제되었습니다."))
+                // List will auto-update due to observing GetProjectRolesUseCase
+            } else {
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할 삭제 실패: ${result.exceptionOrNull()?.localizedMessage}"))
+            }
+            // Optional: _uiState.update { it.copy(isLoading = false) }
         }
     }
 }

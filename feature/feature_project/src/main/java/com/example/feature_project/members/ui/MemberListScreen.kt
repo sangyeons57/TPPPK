@@ -35,7 +35,8 @@ import com.example.core_ui.R
 import com.example.feature_project.members.viewmodel.MemberListEvent
 import com.example.feature_project.members.viewmodel.MemberListUiState
 import com.example.feature_project.members.viewmodel.MemberListViewModel
-import com.example.domain.model.ProjectMember // Import domain model
+import com.example.feature_project.members.viewmodel.ProjectMemberUiItem // Added import
+import com.example.domain.model.ProjectMember // Import domain model for dialog
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -144,10 +145,10 @@ fun MemberListScreen(
 @Composable
 fun MemberListContent(
     paddingValues: PaddingValues,
-    uiState: MemberListUiState,
+    uiState: MemberListUiState, // This uiState now contains List<ProjectMemberUiItem>
     onSearchQueryChanged: (String) -> Unit,
-    onMemberClick: (ProjectMember) -> Unit,
-    onDeleteMemberClick: (ProjectMember) -> Unit,
+    onMemberClick: (ProjectMemberUiItem) -> Unit, // Changed
+    onDeleteMemberClick: (ProjectMemberUiItem) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -208,15 +209,15 @@ fun MemberListContent(
  */
 @Composable
 fun ProjectMemberListItemComposable(
-    member: ProjectMember,
-    onClick: (ProjectMember) -> Unit,
-    onMoreClick: (ProjectMember) -> Unit,
+    memberUiItem: ProjectMemberUiItem, // Changed parameter
+    onClick: (ProjectMemberUiItem) -> Unit, // Changed
+    onMoreClick: (ProjectMemberUiItem) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick(member) }
+            .clickable { onClick(memberUiItem) } // Use memberUiItem
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -251,6 +252,7 @@ fun ProjectMemberListItemComposable(
                 )
             }
         }
+
         IconButton(onClick = { onMoreClick(member) }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "더 보기")
         }
@@ -258,6 +260,10 @@ fun ProjectMemberListItemComposable(
 }
 
 // --- Preview ---
+// Preview might need adjustment if ProjectMemberUiItem is not directly constructible here
+// or if the dummy data for ProjectMember in MemberListUiState is not compatible.
+// For now, keeping the preview as is, but it might show errors or require updates
+// to use ProjectMemberUiItem for the 'members' list in the preview UiState.
 @Preview(showBackground = true)
 @Composable
 private fun MemberListContentPreview() {
@@ -280,7 +286,7 @@ private fun MemberListContentPreview() {
                 uiState = MemberListUiState(
                     isLoading = false,
                     error = null,
-                    members = previewMembers,
+                    members = previewMemberItems, // Use ProjectMemberUiItem list
                     searchQuery = ""
                 ),
                 onSearchQueryChanged = {},
