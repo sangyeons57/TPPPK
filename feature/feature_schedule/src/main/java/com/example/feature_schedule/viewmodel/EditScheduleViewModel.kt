@@ -7,6 +7,7 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.Schedule // Ensure this import
 import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
+import com.example.domain.usecase.schedule.UpdateScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,7 +87,7 @@ class EditScheduleViewModel @Inject constructor(
                         it.copy(
                             title = schedule.title,
                             content = schedule.content,
-                            date = DateTimeUtil.toLocalDate(schedule.startTime),
+                            date = DateTimeUtil.toLocalDateTime(schedule.startTime)?.toLocalDate(),
                             startTime = DateTimeUtil.toLocalTime(schedule.startTime),
                             endTime = DateTimeUtil.toLocalTime(schedule.endTime),
                             isLoading = false

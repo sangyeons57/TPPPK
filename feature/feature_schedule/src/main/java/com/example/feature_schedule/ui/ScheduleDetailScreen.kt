@@ -23,7 +23,6 @@ import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY // Add this
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_schedule.util.SCHEDULE_DATA_CHANGED_RESULT_KEY // Added import
 import com.example.feature_schedule.viewmodel.ScheduleDetailEvent
 import com.example.feature_schedule.viewmodel.ScheduleDetailItem
 import com.example.feature_schedule.viewmodel.ScheduleDetailUiState

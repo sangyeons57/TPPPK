@@ -54,7 +54,6 @@ import com.example.domain.model.ScheduleItem24Hour
 import com.example.feature_schedule.viewmodel.Calendar24HourEvent
 import com.example.feature_schedule.viewmodel.Calendar24HourUiState
 import com.example.feature_schedule.viewmodel.Calendar24HourViewModel
-import com.example.feature_schedule.util.SCHEDULE_DATA_CHANGED_RESULT_KEY // Added import
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
@@ -98,12 +97,12 @@ fun Calendar24HourScreen(
     // Result listener from AddScheduleScreen or ScheduleDetailScreen
     DisposableEffect(navController) {
         val savedStateHandle = navController?.currentBackStackEntry?.savedStateHandle
-        val liveData = savedStateHandle?.getLiveData<Boolean>(SCHEDULE_DATA_CHANGED_RESULT_KEY)
+        val liveData = savedStateHandle?.getLiveData<Boolean>(REFRESH_SCHEDULE_LIST_KEY)
 
         val observer = Observer<Boolean> { result ->
             if (result == true) {
                 viewModel.refreshSchedulesForCurrentDate()
-                savedStateHandle.remove<Boolean>(SCHEDULE_DATA_CHANGED_RESULT_KEY)
+                savedStateHandle?.remove<Boolean>(REFRESH_SCHEDULE_LIST_KEY)
             }
         }
 
