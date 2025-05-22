@@ -7,7 +7,6 @@ import javax.inject.Inject
 interface UpdateScheduleUseCase {
     suspend operator fun invoke(schedule: Schedule): Result<Unit>
 }
-
 class UpdateScheduleUseCaseImpl @Inject constructor(
     private val scheduleRepository: ScheduleRepository
 ) : UpdateScheduleUseCase {
@@ -22,3 +21,4 @@ class UpdateScheduleUseCaseImpl @Inject constructor(
         return scheduleRepository.updateSchedule(schedule)
     }
 }
+

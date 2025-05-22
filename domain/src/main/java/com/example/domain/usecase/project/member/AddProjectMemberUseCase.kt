@@ -18,7 +18,6 @@ interface AddProjectMemberUseCase {
      */
     suspend operator fun invoke(projectId: String, userId: String, initialRoleIds: List<String>): Result<Unit>
 }
-
 /**
  * Implementation of [AddProjectMemberUseCase].
  */

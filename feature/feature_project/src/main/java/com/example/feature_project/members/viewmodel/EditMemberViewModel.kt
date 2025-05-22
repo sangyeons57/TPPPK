@@ -63,10 +63,11 @@ class EditMemberViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     // 초기 선택된 역할 ID 저장용 (변경 여부 확인)
-    private var originalSelectedRoleIds: Set<String?> = emptySet()
+    private var originalSelectedRoleIds: Set<String> = emptySet()
 
     init {
         loadInitialData()
+        observeProjectRoles()
     }
 
     private fun loadInitialData() {
@@ -76,37 +77,50 @@ class EditMemberViewModel @Inject constructor(
             // 1. 멤버 정보 가져오기 (UseCase 사용)
             val memberResult = getProjectMemberDetailsUseCase(projectId, userId)
 
-            // 2. 전체 역할 목록 가져오기 (UseCase 사용)
-            val rolesResult = getProjectRolesUseCase(projectId)
-
-            if (memberResult.isSuccess && rolesResult.isSuccess) {
+            if (memberResult.isSuccess) {
                 val member = memberResult.getOrThrow()
-                val allRoles = rolesResult.getOrThrow()
 
                 // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roles 필드 사용)
-                originalSelectedRoleIds = member?.roles?.map { it.id }?.filter { it != null }?.toSet().orEmpty() // Null-safe 처리
+                originalSelectedRoleIds = member.roles?.map { it.id }?.filterNotNull()?.toSet().orEmpty() // Null-safe, filterNotNull
 
-                // 전체 역할 목록을 UI 모델(RoleSelectionItem)로 변환하고, 현재 멤버의 역할 선택 상태 반영
-                val roleSelectionItems = allRoles.map { role ->
-                    RoleSelectionItem(
-                        id = role.id ?: "", // Null-safe
-                        name = role.name,
-                        isSelected = role.id in originalSelectedRoleIds // 멤버가 가진 역할인지 확인
-                    )
-                }
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        memberInfo = member,
-                        availableRoles = roleSelectionItems
-                    )
-                }
+                _uiState.update { it.copy(memberInfo = member, isLoading = false) }
             } else {
-                val errorMsg = memberResult.exceptionOrNull()?.message ?: rolesResult.exceptionOrNull()?.message ?: "데이터 로드 실패"
+                val errorMsg = memberResult.exceptionOrNull()?.message ?: "데이터 로드 실패"
                 _uiState.update { it.copy(isLoading = false, error = errorMsg) }
-                _eventFlow.emit(EditMemberEvent.ShowSnackbar("정보를 불러오는 데 실패했습니다: $errorMsg"))
+                _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 정보를 불러오는 데 실패했습니다: $errorMsg"))
             }
+        }
+    }
+
+    /**
+     * 프로젝트 역할 목록을 관찰하고 UI 상태를 업데이트합니다.
+     */
+    private fun observeProjectRoles() {
+        viewModelScope.launch {
+            getProjectRolesUseCase(projectId)
+                .catch { e ->
+                    // Handle errors in the Flow
+                    _uiState.update { it.copy(error = "역할 목록 로딩 실패: ${e.message}") }
+                    _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할 목록을 불러오는 데 실패했습니다."))
+                }
+                .collect { roles ->
+                    // Convert List<Role> to List<RoleSelectionItem>
+                    val roleSelectionItems = roles.map { role ->
+                         RoleSelectionItem(
+                             id = role.id ?: "", // Null-safe
+                             name = role.name,
+                             isSelected = originalSelectedRoleIds.contains(role.id) // Check against original selected IDs
+                         )
+                     }
+
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            availableRoles = roleSelectionItems,
+                            // Keep memberInfo, isLoading, etc. as updated by loadInitialData()
+                            error = null // Clear previous role loading errors on success
+                        )
+                    }
+                }
         }
     }
 
