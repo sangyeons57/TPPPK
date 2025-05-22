@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.example.core_navigation.core.AppNavigator
 // import com.example.core_navigation.destination.AppRoutes // No longer needed for REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.extension.NavigationResultKeys
+import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_navigation.extension.ObserveNavigationResult
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import java.time.LocalDate
@@ -88,7 +88,7 @@ fun CalendarScreen(
 
     ObserveNavigationResult<Boolean>(
         appNavigator = appNavigator,
-        resultKey = NavigationResultKeys.REFRESH_SCHEDULE_LIST_KEY
+        resultKey = REFRESH_SCHEDULE_LIST_KEY
     ) { needsRefresh ->
         if (needsRefresh == true) { // Explicitly check for true
             viewModel.refreshSchedules() // Call the existing refresh method
