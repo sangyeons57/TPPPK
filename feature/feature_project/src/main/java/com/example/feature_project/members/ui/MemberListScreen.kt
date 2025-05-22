@@ -35,7 +35,8 @@ import com.example.core_ui.R
 import com.example.feature_project.members.viewmodel.MemberListEvent
 import com.example.feature_project.members.viewmodel.MemberListUiState
 import com.example.feature_project.members.viewmodel.MemberListViewModel
-import com.example.domain.model.ProjectMember // Import domain model
+import com.example.feature_project.members.viewmodel.ProjectMemberUiItem // Added import
+import com.example.domain.model.ProjectMember // Import domain model for dialog
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -144,10 +145,10 @@ fun MemberListScreen(
 @Composable
 fun MemberListContent(
     paddingValues: PaddingValues,
-    uiState: MemberListUiState,
+    uiState: MemberListUiState, // This uiState now contains List<ProjectMemberUiItem>
     onSearchQueryChanged: (String) -> Unit,
-    onMemberClick: (ProjectMember) -> Unit,
-    onDeleteMemberClick: (ProjectMember) -> Unit,
+    onMemberClick: (ProjectMemberUiItem) -> Unit, // Changed
+    onDeleteMemberClick: (ProjectMemberUiItem) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -192,37 +193,11 @@ fun MemberListContent(
                 )
             }
         } else {
-            items(uiState.members, key = { it.userId }) { memberItem ->
+            items(uiState.members, key = { it.userId }) { memberUiItem -> // memberUiItem is ProjectMemberUiItem
                 ProjectMemberListItemComposable(
-                    member = memberItem,
-                    onClick = { item ->
-                        println("WARN: Need originalMembers list from ViewModel to pass full ProjectMember object. Passing dummy for now.")
-                        // Find the original ProjectMember corresponding to the clicked item.userId
-                        // This requires the ViewModel to expose the original list or a lookup function.
-                        // Example lookup (requires originalMembers):
-                        // val originalMember = originalMembers.find { it.userId == item.userId }
-                        // if (originalMember != null) {
-                        //     onMemberClick(originalMember)
-                        // } else {
-                        //     println("Error: Could not find original ProjectMember for clicked item")
-                        // }
-                        // Temporary: Pass a dummy or handle error if original list isn't available
-                         val dummyMember = ProjectMember(item.userId, item.userName, item.profileImageUrl, emptyList(), item.joi) // DUMMY
-                         onMemberClick(dummyMember)
-                    },
-                    onMoreClick = { item ->
-                        println("WARN: Need originalMembers list from ViewModel to pass full ProjectMember object. Passing dummy for now.")
-                        // Similar lookup as above
-                        // val originalMember = originalMembers.find { it.userId == item.userId }
-                        // if (originalMember != null) {
-                        //     onDeleteMemberClick(originalMember)
-                        // } else {
-                        //     println("Error: Could not find original ProjectMember for delete action")
-                        // }
-                        // Temporary: Pass a dummy or handle error
-                        val dummyMember = ProjectMember(item.userId, item.userName, item.profileImageUrl, emptyList()) // DUMMY
-                        onDeleteMemberClick(dummyMember)
-                    }
+                    memberUiItem = memberUiItem, // Pass the UiItem
+                    onClick = { item -> onMemberClick(item) }, // Pass ProjectMemberUiItem
+                    onMoreClick = { item -> onDeleteMemberClick(item) } // Pass ProjectMemberUiItem
                 )
             }
         }
@@ -234,41 +209,42 @@ fun MemberListContent(
  */
 @Composable
 fun ProjectMemberListItemComposable(
-    member: ProjectMember,
-    onClick: (ProjectMember) -> Unit,
-    onMoreClick: (ProjectMember) -> Unit,
+    memberUiItem: ProjectMemberUiItem, // Changed parameter
+    onClick: (ProjectMemberUiItem) -> Unit, // Changed
+    onMoreClick: (ProjectMemberUiItem) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick(member) }
+            .clickable { onClick(memberUiItem) } // Use memberUiItem
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(member.profileImageUrl ?: R.drawable.ic_account_circle_24)
+                .data(memberUiItem.profileImageUrl ?: R.drawable.ic_account_circle_24) // Use memberUiItem
                 .error(R.drawable.ic_account_circle_24)
                 .placeholder(R.drawable.ic_account_circle_24)
                 .build(),
-            contentDescription = "${member.userName} 프로필",
+            contentDescription = "${memberUiItem.userName} 프로필", // Use memberUiItem
             modifier = Modifier.size(48.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = member.userName,
+                text = memberUiItem.userName, // Use memberUiItem
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (member.rolesText.isNotEmpty()) {
+            // Display rolesText from memberUiItem
+            if (memberUiItem.rolesText.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = member.rolesText,
+                    text = memberUiItem.rolesText, // Use memberUiItem.rolesText
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     maxLines = 1,
@@ -276,21 +252,28 @@ fun ProjectMemberListItemComposable(
                 )
             }
         }
-        IconButton(onClick = { onMoreClick(member) }) {
+        IconButton(onClick = { onMoreClick(memberUiItem) }) { // Use memberUiItem
              Icon(Icons.Default.MoreVert, contentDescription = "더보기")
         }
     }
 }
 
 // --- Preview ---
+// Preview might need adjustment if ProjectMemberUiItem is not directly constructible here
+// or if the dummy data for ProjectMember in MemberListUiState is not compatible.
+// For now, keeping the preview as is, but it might show errors or require updates
+// to use ProjectMemberUiItem for the 'members' list in the preview UiState.
 @Preview(showBackground = true)
 @Composable
 private fun MemberListContentPreview() {
-    val previewMembers = listOf(
-        ProjectMember("u1", "멤버1 (관리자)", null, ),
-        ProjectMember("u2", "멤버2 멤버2 멤버2 멤버2", "url...", "팀원"),
-        ProjectMember("u3", "멤버3", null, "뷰어, 게스트"),
-        ProjectMember("u4", "멤버4", null, "") // 역할 없음
+    // This preview will likely break because MemberListUiState expects List<ProjectMemberUiItem>
+    // and ProjectMemberListItemComposable expects ProjectMemberUiItem.
+    // To fix, create ProjectMemberUiItem instances for previewMembers.
+    val previewMemberItems = listOf(
+        ProjectMemberUiItem("u1", "멤버1", null, "관리자, 팀원", java.time.Instant.now(), ProjectMember("u1", "멤버1", null, listOf("role1", "role2"), java.time.Instant.now())),
+        ProjectMemberUiItem("u2", "멤버2 멤버2", "url...", "팀원", java.time.Instant.now(), ProjectMember("u2", "멤버2 멤버2", "url...", listOf("role2"), java.time.Instant.now())),
+        ProjectMemberUiItem("u3", "멤버3", null, "뷰어", java.time.Instant.now(), ProjectMember("u3", "멤버3", null, listOf("role3"), java.time.Instant.now())),
+        ProjectMemberUiItem("u4", "멤버4", null, "역할 없음", java.time.Instant.now(), ProjectMember("u4", "멤버4", null, emptyList(), java.time.Instant.now()))
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
@@ -299,7 +282,7 @@ private fun MemberListContentPreview() {
                 uiState = MemberListUiState(
                     isLoading = false,
                     error = null,
-                    members = previewMembers,
+                    members = previewMemberItems, // Use ProjectMemberUiItem list
                     searchQuery = ""
                 ),
                 onSearchQueryChanged = {},

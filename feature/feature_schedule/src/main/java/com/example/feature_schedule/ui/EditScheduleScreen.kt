@@ -31,7 +31,9 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker // Added
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState // Added
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -248,11 +250,10 @@ fun CustomAlertDialogTimePicker(
     initialMinute: Int // 초기 분 추가
 ) {
     if (showDialog) {
-        /**
-        val timePickerState = remeberTimePickerState(
+        val timePickerState = rememberTimePickerState( // Corrected typo and uncommented
             initialHour = initialHour, // 전달받은 초기 시간 사용
             initialMinute = initialMinute, // 전달받은 초기 분 사용
-            is24Hour = false // 24시간 형식이면 true
+            is24Hour = false // 24시간 형식이면 true, or true if you prefer
         )
 
         AlertDialog(
@@ -266,7 +267,7 @@ fun CustomAlertDialogTimePicker(
                         .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    TimePicker(state = timePickerState)
+                    TimePicker(state = timePickerState) // Uncommented
                 }
             },
             confirmButton = {
@@ -280,7 +281,6 @@ fun CustomAlertDialogTimePicker(
                 TextButton(onClick = onDismissRequest) { Text("취소") }
             }
         )
-         **/
     }
 }
 

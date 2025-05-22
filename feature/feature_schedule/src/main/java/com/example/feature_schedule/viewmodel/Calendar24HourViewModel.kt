@@ -201,6 +201,19 @@ class Calendar24HourViewModel @Inject constructor(
     fun onScheduleLongClick(scheduleId: String) {
         viewModelScope.launch { _eventFlow.emit(Calendar24HourEvent.ShowScheduleEditDialog(scheduleId)) }
     }
+
+    fun refreshSchedulesForCurrentDate() {
+        val currentUiState = _uiState.value
+        val dateToReload = if (currentUiState is Calendar24HourUiState.Success) {
+            currentUiState.selectedDate
+        } else {
+            // Fallback to the initial date if current state is not Success or selectedDate is null
+            LocalDate.of(year, month, day)
+        }
+        // Ensure dateToReload is not null before calling loadSchedules
+        // Although in this logic, it should always be non-null due to LocalDate.of fallback
+        dateToReload?.let { loadSchedules(it) }
+    }
 }
 
 /**

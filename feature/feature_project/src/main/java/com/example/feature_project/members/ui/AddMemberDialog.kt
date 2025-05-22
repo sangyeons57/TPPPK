@@ -24,7 +24,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel // Added
+import androidx.lifecycle.compose.collectAsStateWithLifecycle // Added
 import coil.compose.AsyncImage
+import com.example.feature_project.members.viewmodel.AddMemberViewModel // Added
+import com.example.feature_project.members.viewmodel.AddMemberDialogEvent // Added
+import kotlinx.coroutines.flow.collectLatest // Added
 import coil.request.ImageRequest
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
@@ -57,10 +62,11 @@ data class UserSearchResult(
  * @param isLoading 검색 로딩 상태
  * @param error 검색 에러 메시지
  */
+// Renamed from AddMemberDialog to AddMemberDialogContent
 @Composable
-fun AddMemberDialog(
+fun AddMemberDialogContent(
     onDismissRequest: () -> Unit,
-    onAddMembers: (Set<String>) -> Unit,
+    onAddMembers: (Set<String>) -> Unit, // This will be called by the ViewModel-driven AddMemberDialog
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     searchResults: List<UserSearchResult>,
@@ -237,7 +243,10 @@ fun UserSearchResultItem(
 @Composable
 fun AddMemberDialogPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        AddMemberDialog(
+        // Preview now calls AddMemberDialogContent directly
+        AddMemberDialogContent(
+        AddMemberDialogContent(
+        AddMemberDialogContent(
             onDismissRequest = {},
             onAddMembers = {},
             searchQuery = "김",
@@ -313,66 +322,46 @@ fun AddMemberDialogErrorPreview() {
  * @param onDismissRequest 다이얼로그 닫기 요청 콜백
  * @param onMemberAdded 멤버 추가 완료 후 콜백
  */
+// This is the new AddMemberDialog that uses the ViewModel
 @Composable
-fun AddMemberDialog(
+fun AddMemberDialog( // This is the one called by MemberListScreen
     projectId: String,
     onDismissRequest: () -> Unit,
-    onMemberAdded: () -> Unit
+    onMemberAdded: () -> Unit, // Callback when members are successfully added
+    viewModel: AddMemberViewModel = hiltViewModel() // Inject ViewModel
 ) {
-    // 실제 구현에서는 ViewModel을 사용하여 검색 및 추가 기능 구현
-    // 여기서는 간단한 구현으로 대체
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // val snackbarHostState = remember { SnackbarHostState() } // Requires Scaffold or another SnackbarHost
 
-    var searchQuery by remember { mutableStateOf("") }
-    val searchResults = remember { mutableStateListOf<UserSearchResult>() }
-    val selectedUsers = remember { mutableStateSetOf<String>() }
-    var isLoading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    // 검색어 변경 핸들러
-    val onSearchQueryChange = { query: String ->
-        searchQuery = query
-        // 실제로는 ViewModel에서 검색 기능 구현
-        if (query.length >= 2) {
-            isLoading = true
-            error = null
-            
-            // 더미 데이터로 대체 (실제로는 API 호출)
-            searchResults.clear()
-            searchResults.addAll(listOf(
-                UserSearchResult("user1", "김영희", "kim@example.com", null),
-                UserSearchResult("user2", "이철수", "lee@example.com", null)
-            ))
-            isLoading = false
-        } else {
-            searchResults.clear()
+    LaunchedEffect(Unit) {
+        viewModel.eventFlow.collectLatest { event ->
+            when (event) {
+                is AddMemberDialogEvent.ShowSnackbar -> {
+                    // snackbarHostState.showSnackbar(event.message) // Requires SnackbarHostState
+                    println("Snackbar: ${event.message}") // Placeholder
+                }
+                AddMemberDialogEvent.DismissDialog -> onDismissRequest() // Dialog might be dismissed by parent too
+                AddMemberDialogEvent.MembersAddedSuccessfully -> {
+                    onMemberAdded() // Call parent's callback
+                    // onDismissRequest() // Parent screen (MemberListScreen) will handle dismissal
+                }
+            }
         }
     }
 
-    // 멤버 추가 핸들러
-    val onAddMembers = { selected: Set<String> ->
-        // 실제로는 ViewModel을 통해 서버 API 호출
-        println("Adding members to project $projectId: $selected")
-        onMemberAdded()
-    }
-
-    // 사용자 선택 핸들러를 래핑하여 Boolean 대신 Unit을 반환하는 새 핸들러 생성
-    val wrappedOnUserSelectionChange: (String, Boolean) -> Unit = { userId, isSelected ->
-        if (isSelected) {
-            selectedUsers.add(userId)
-        } else {
-            selectedUsers.remove(userId)
-        }
-    }
-
-    AddMemberDialog(
+    // Use the more detailed AddMemberDialogContent composable, passing state and event handlers
+    AddMemberDialogContent(
         onDismissRequest = onDismissRequest,
-        onAddMembers = onAddMembers,
-        searchQuery = searchQuery,
-        onSearchQueryChange = onSearchQueryChange,
-        searchResults = searchResults,
-        selectedUsers = selectedUsers,
-        onUserSelectionChange = wrappedOnUserSelectionChange,
-        isLoading = isLoading,
-        error = error
+        onAddMembers = { _ -> // selectedUserIds Set<String> - ViewModel handles selected users
+            viewModel.addSelectedMembers(projectId) // Pass default roles if any, e.g., emptyList()
+        },
+        searchQuery = uiState.searchQuery,
+        onSearchQueryChange = viewModel::onSearchQueryChanged,
+        searchResults = uiState.searchResults,
+        selectedUsers = uiState.selectedUsers,
+        onUserSelectionChange = viewModel::onUserSelectionChanged,
+        isLoading = uiState.isLoading,
+        error = uiState.error
     )
 } 
+// Removed the simpler, overloaded AddMemberDialog function with dummy logic

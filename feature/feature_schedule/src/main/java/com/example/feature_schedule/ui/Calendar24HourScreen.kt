@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Observer // Added import
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
@@ -51,6 +52,7 @@ import com.example.domain.model.ScheduleItem24Hour
 import com.example.feature_schedule.viewmodel.Calendar24HourEvent
 import com.example.feature_schedule.viewmodel.Calendar24HourUiState
 import com.example.feature_schedule.viewmodel.Calendar24HourViewModel
+import com.example.feature_schedule.util.SCHEDULE_DATA_CHANGED_RESULT_KEY // Added import
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
@@ -71,7 +73,8 @@ fun Calendar24HourScreen(
     var currentUiState = uiState
     val snackbarHostState = remember { SnackbarHostState() }
     var showEditDialog by remember { mutableStateOf<String?>(null) } // 편집 다이얼로그 표시 상태
-    
+    val navController = appNavigator.getNavController() // Get NavController
+
     // 애니메이션 상태
     var addButtonScale by remember { mutableStateOf(1f) }
     val addButtonScaleAnim by animateFloatAsState(
@@ -90,6 +93,26 @@ fun Calendar24HourScreen(
     }
 
     // 이벤트 처리
+    // Result listener from AddScheduleScreen or ScheduleDetailScreen
+    DisposableEffect(navController) {
+        val savedStateHandle = navController?.currentBackStackEntry?.savedStateHandle
+        val liveData = savedStateHandle?.getLiveData<Boolean>(SCHEDULE_DATA_CHANGED_RESULT_KEY)
+
+        val observer = Observer<Boolean> { result ->
+            if (result == true) {
+                viewModel.refreshSchedulesForCurrentDate()
+                savedStateHandle.remove<Boolean>(SCHEDULE_DATA_CHANGED_RESULT_KEY)
+            }
+        }
+
+        liveData?.observeForever(observer)
+
+        onDispose {
+            liveData?.removeObserver(observer)
+        }
+    }
+
+    // Event handling from ViewModel
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
