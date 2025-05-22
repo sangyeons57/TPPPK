@@ -62,10 +62,10 @@ class ProjectMemberRepositoryImpl @Inject constructor(
         userId: String,
         forceRefresh: Boolean 
     ): Result<ProjectMember?> {
-        val result = remoteDataSource.getProjectMembers(projectId)
-        return result.map { members ->
-            members.find { it.userId == userId }
-        }
+        // The forceRefresh parameter is ignored as the remote data source's
+        // getProjectMember method does not support it directly.
+        // Firestore's caching mechanism handles data freshness.
+        return remoteDataSource.getProjectMember(projectId, userId)
     }
 
     /**

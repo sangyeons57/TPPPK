@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Edit // 편집 아이콘
 import androidx.compose.material.icons.filled.PhotoCamera // 카메라/갤러리 아이콘
 import androidx.compose.material.icons.filled.Settings // 설정 아이콘
 import androidx.compose.material.icons.filled.Person // 사용자 아이콘 (프로필 수정용으로 사용 가능)
+import androidx.compose.material.icons.filled.People // 친구 아이콘
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -222,7 +223,7 @@ fun ProfileContent(
 
         ProfileMenuItem(
             text = "친구",
-            icon = Icons.Filled.Settings,
+            icon = Icons.Filled.People, // 아이콘 변경
             onClick = onFriendsClick,
             enabled = !isLoading // 로딩 중 아닐 때만 클릭 가능
         )

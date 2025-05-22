@@ -100,7 +100,7 @@ data class ChannelPermission(
 
             // Check if any of the user's roles grant the permission
             val hasPerm = userRoles.any { role ->
-                role.permissions[permission] == true
+                role.permissions.contains(permission)
             }
             Result.success(hasPerm)
 

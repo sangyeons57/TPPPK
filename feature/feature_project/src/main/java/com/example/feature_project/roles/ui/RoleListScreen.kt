@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete // Added
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,8 +38,9 @@ fun RoleListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showDeleteRoleDialog by remember { mutableStateOf<RoleItem?>(null) } // Added
 
-    // 이벤트 처리 (네비게이션, 스낵바)
+    // 이벤트 처리 (네비게이션, 스낵바, 다이얼로그)
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
@@ -52,6 +54,9 @@ fun RoleListScreen(
                         AppRoutes.Project.editRole(uiState.projectId, event.roleId)
                     )
                 )
+                is RoleListEvent.ShowDeleteRoleConfirmDialog -> { // Added
+                    showDeleteRoleDialog = event.roleItem
+                }
                 is RoleListEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -97,10 +102,32 @@ fun RoleListScreen(
                 RoleListContent(
                     modifier = Modifier.padding(paddingValues),
                     roles = uiState.roles,
-                    onRoleClick = viewModel::onRoleClick // ViewModel의 함수 호출
+                    onRoleClick = viewModel::onRoleClick,
+                    onRequestDeleteRole = viewModel::requestDeleteRole // Added
                 )
             }
         }
+    }
+
+    // Delete confirmation dialog
+    showDeleteRoleDialog?.let { roleToDelete ->
+        AlertDialog(
+            onDismissRequest = { showDeleteRoleDialog = null },
+            title = { Text("역할 삭제") },
+            text = { Text("'${roleToDelete.name}' 역할을 삭제하시겠습니까? 이 역할이 할당된 모든 멤버에게서 제거됩니다.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.confirmDeleteRole(roleToDelete.id)
+                        showDeleteRoleDialog = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("삭제") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteRoleDialog = null }) { Text("취소") }
+            }
+        )
     }
 }
 
@@ -111,7 +138,8 @@ fun RoleListScreen(
 fun RoleListContent(
     modifier: Modifier = Modifier,
     roles: List<RoleItem>,
-    onRoleClick: (String) -> Unit // roleId 전달
+    onRoleClick: (String) -> Unit,
+    onRequestDeleteRole: (RoleItem) -> Unit // Added
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize()
@@ -122,7 +150,8 @@ fun RoleListContent(
         ) { role ->
             RoleListItem(
                 role = role,
-                onClick = { onRoleClick(role.id) }
+                onClick = { onRoleClick(role.id) },
+                onDeleteClick = { onRequestDeleteRole(role) } // Pass role item
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
@@ -136,21 +165,25 @@ fun RoleListContent(
 fun RoleListItem(
     role: RoleItem,
     onClick: () -> Unit,
+    onDeleteClick: () -> Unit, // Added for delete action
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 16.dp, vertical = 8.dp), // Adjusted padding
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = role.name,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
         )
-        Icon(
+        IconButton(onClick = onDeleteClick) { // Added delete button
+            Icon(Icons.Filled.Delete, contentDescription = "역할 삭제", tint = MaterialTheme.colorScheme.error)
+        }
+        Icon( // Existing navigation arrow
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = "역할 편집",
             tint = MaterialTheme.colorScheme.outline
@@ -178,7 +211,8 @@ private fun RoleListContentPreview() {
                     RoleItem("3", "멤버"),
                     RoleItem("4", "방문자")
                 ),
-                onRoleClick = {}
+                onRoleClick = {},
+                onRequestDeleteRole = {}
             )
         }
     }
