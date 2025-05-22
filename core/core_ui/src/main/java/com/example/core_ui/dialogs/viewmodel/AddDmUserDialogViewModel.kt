@@ -1,9 +1,10 @@
 package com.example.core_ui.dialogs.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.User
-import com.example.domain.usecase.dm.GetDmChannelIdUseCase
+import com.example.domain.usecase.dm.CreateDmChannelUseCase
 import com.example.domain.usecase.friend.SendFriendRequestUseCase
 import com.example.domain.usecase.user.SearchUserByNameUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,7 +47,7 @@ sealed class AddDmUserEvent {
 class AddDmUserDialogViewModel @Inject constructor(
     private val searchUserByNameUseCase: SearchUserByNameUseCase,
     private val sendFriendRequestUseCase: SendFriendRequestUseCase,
-    private val getDmChannelIdUseCase: GetDmChannelIdUseCase
+    private val createDmChannelUseCase: CreateDmChannelUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddDmUserUiState())
@@ -80,11 +81,11 @@ class AddDmUserDialogViewModel @Inject constructor(
      */
     private fun startDmWithUser(userId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
             
-            // 친구 추가 과정 생략하고 바로 DM 채널 ID 가져오기
-            getDmChannelIdUseCase(userId).fold(
-                onSuccess = { channelId ->
+            createDmChannelUseCase(userId)
+            .fold(
+                onSuccess = { channel ->
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
@@ -92,15 +93,17 @@ class AddDmUserDialogViewModel @Inject constructor(
                             shouldDismiss = true
                         )
                     }
-                    _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(channelId!!))
+                    _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(channel.id))
                 },
                 onFailure = { dmError ->
+                    val errorMsg = "DM 채널 연결 중 오류: ${dmError.message ?: "알 수 없는 오류"}"
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = "DM 채널 생성 중 오류가 발생했습니다: ${dmError.message ?: "알 수 없는 오류"}"
+                            errorMessage = errorMsg
                         )
                     }
+                    _eventFlow.emit(AddDmUserEvent.ShowSnackbar(errorMsg))
                 }
             )
         }
@@ -113,35 +116,42 @@ class AddDmUserDialogViewModel @Inject constructor(
         val username = _uiState.value.username.trim()
         
         if (username.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "사용자 이름을 입력해주세요.") }
+            val errorMsg = "사용자 이름을 입력해주세요."
+            _uiState.update { it.copy(errorMessage = errorMsg) }
+            viewModelScope.launch { _eventFlow.emit(AddDmUserEvent.ShowSnackbar(errorMsg)) }
             return
         }
         
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
             
             searchUserByNameUseCase(username).fold(
                 onSuccess = { users ->
                     if (users.isEmpty()) {
+                        val errorMsg = "일치하는 사용자를 찾을 수 없습니다."
                         _uiState.update { 
                             it.copy(
                                 isLoading = false,
-                                errorMessage = "일치하는 사용자를 찾을 수 없습니다."
+                                errorMessage = errorMsg
                             )
                         }
+                        _eventFlow.emit(AddDmUserEvent.ShowSnackbar(errorMsg))
                     } else {
                         val firstUser = users.first()
                         // 사용자를 찾으면 바로 DM 시작
+                        Log.d("AddDmUserDialogViewModel", "User found: $firstUser, starting DM...")
                         startDmWithUser(firstUser.id)
                     }
                 },
                 onFailure = { error ->
+                    val errorMsg = "사용자 검색 중 오류가 발생했습니다: ${error.message ?: "알 수 없는 오류"}"
                     _uiState.update { 
                         it.copy(
                             isLoading = false,
-                            errorMessage = "사용자 검색 중 오류가 발생했습니다: ${error.message ?: "알 수 없는 오류"}"
+                            errorMessage = errorMsg
                         )
                     }
+                    _eventFlow.emit(AddDmUserEvent.ShowSnackbar(errorMsg))
                 }
             )
         }

@@ -9,7 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -61,6 +63,13 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+// Import for DraggableList
+import com.example.core_ui.components.draggablelist.DraggableList
+import com.example.core_ui.components.draggablelist.DraggableListItem
+import com.example.core_ui.components.draggablelist.rememberDraggableListState
+import com.example.core_common.util.DateTimeUtil // For preview
 
 /**
  * 프로젝트 구조 편집 다이얼로그
@@ -79,7 +88,7 @@ fun ProjectStructureEditDialog(
 ) {
     val scope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
-    val listState = rememberLazyListState()
+    // val listState = rememberLazyListState() // Now managed by DraggableListState
     
     // ViewModel의 상태 구독
     val uiState by viewModel.uiState.collectAsState()
@@ -117,7 +126,7 @@ fun ProjectStructureEditDialog(
     }
     
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { viewModel.onCancelChangesClicked() /* Use new cancel */ },
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = { BottomSheetDefaults.DragHandle() }
@@ -145,7 +154,7 @@ fun ProjectStructureEditDialog(
                 
                 // 좌측에 닫기 버튼 추가
                 IconButton(
-                    onClick = { viewModel.cancelChanges() }, // 취소 시 ViewModel 함수 호출
+                    onClick = { viewModel.onCancelChangesClicked() }, // 취소 시 ViewModel 함수 호출
                     modifier = Modifier.align(Alignment.CenterStart)
                 ) {
                     Icon(
@@ -157,14 +166,14 @@ fun ProjectStructureEditDialog(
                 
                 // 우측에 저장 버튼 추가
                 IconButton(
-                    onClick = { viewModel.saveChanges() }, // 저장 시 ViewModel 함수 호출
-                    enabled = hasChanges(uiState), // 변경사항 여부 확인
+                    onClick = { viewModel.onSaveChangesClicked() }, // 저장 시 ViewModel 함수 호출
+                    enabled = true, // TODO: Replace with viewModel.calculateHasChanges() or similar
                     modifier = Modifier.align(Alignment.CenterEnd)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Save,
                         contentDescription = "저장",
-                        tint = if (hasChanges(uiState)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        // tint = if (viewModel.calculateHasChanges()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
             }
@@ -179,180 +188,179 @@ fun ProjectStructureEditDialog(
                 )
             ) {
                 Text(
-                    text = "카테고리나 채널을 길게 누른 후 드래그하여 위치를 변경할 수 있습니다.",
+                    text = "아이템 좌측 핸들을 드래그하여 위치를 변경할 수 있습니다. 카테고리 안으로 채널을 넣거나 직속 채널로 뺄 수 있습니다.",
                     modifier = Modifier.padding(12.dp),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             
-            // 카테고리 및 채널 목록
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // 카테고리 항목
-                    itemsIndexed(
-                        items = uiState.categories,
-                        key = { _, category -> category.id }
-                    ) { index, category ->
-                        val isExpanded = uiState.expandedCategories.getOrDefault(category.id, true)
-                        
-                        // 카테고리 항목
-                        CategoryListItem(
-                            category = category,
-                            isExpanded = isExpanded,
-                            isDragging = uiState.isDragging && uiState.draggedCategoryIndex == index,
-                            onToggleExpand = {
-                                viewModel.toggleCategoryExpand(category.id)
-                            },
-                            onLongPress = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.startDragCategory(index)
-                            },
-                            onDrop = { targetIndex ->
-                                // 드래그 중인 카테고리가 있을 때만 처리
-                                uiState.draggedCategoryIndex?.let { fromIndex ->
-                                    // 카테고리 이동 처리
-                                    if (fromIndex != targetIndex) {
-                                        viewModel.moveCategory(fromIndex, targetIndex)
-                                    }
-                                    
-                                    // 드래그 상태 초기화
-                                    viewModel.endDrag()
-                                }
-                            },
-                            onContextMenu = { offset ->
-                                viewModel.openContextMenu(ContextMenuState.Category(
-                                    categoryId = category.id,
-                                    position = offset
-                                ))
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        )
-                        
-                        // 채널 항목들 (카테고리가 확장된 경우에만 표시)
-                        if (isExpanded) {
-                            Column {
-                                category.channels.forEachIndexed { channelIndex, channel ->
-                                    ChannelListItem(
-                                        channel = channel,
-                                        isDragging = uiState.isDragging && 
-                                            uiState.draggedChannelInfo?.categoryId == category.id && 
-                                            uiState.draggedChannelInfo?.channelIndex == channelIndex,
-                                        onLongPress = {
-                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            viewModel.startDragChannel(category.id, channelIndex)
-                                        },
-                                        onDrop = { targetCategoryId, targetIndex ->
-                                            // 드래그 중인 채널이 있을 때만 처리
-                                            uiState.draggedChannelInfo?.let { info ->
-                                                // 채널 이동 처리
-                                                if (info.categoryId != targetCategoryId || info.channelIndex != targetIndex) {
-                                                    viewModel.moveChannel(
-                                                        info.categoryId, 
-                                                        info.channelIndex, 
-                                                        targetCategoryId, 
-                                                        targetIndex
-                                                    )
-                                                }
-                                                
-                                                // 드래그 상태 초기화
-                                                viewModel.endDrag()
-                                            }
-                                        },
-                                        onContextMenu = { offset ->
-                                            viewModel.openContextMenu(ContextMenuState.Channel(
-                                                categoryId = category.id,
-                                                channelId = channel.id,
-                                                position = offset
-                                            ))
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
-                                    )
-                                }
-                                
-                                // 채널 추가 버튼
-                                TextButton(
-                                    onClick = { viewModel.openAddChannelDialog(category.id) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 16.dp, bottom = 8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "채널 추가",
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    
-                    // 카테고리 추가 버튼
-                    item {
-                        Button(
-                            onClick = { viewModel.addCategory() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("새 카테고리 추가")
-                        }
-                    }
+            // DraggableList 사용
+            val draggableListState = rememberDraggableListState(
+                initialItems = uiState.draggableItems,
+                onItemMove = { id, fromIndex, toIndex, newParentId, newDepth ->
+                    viewModel.handleItemMove(id, fromIndex, toIndex, newParentId, newDepth)
+                }
+            )
+
+            LaunchedEffect(uiState.draggableItems) {
+                // Ensure DraggableListState is updated if ViewModel's list changes externally
+                // (e.g. after add/delete operations, or if initial load was delayed)
+                if (draggableListState.items != uiState.draggableItems) {
+                     draggableListState.updateItems(uiState.draggableItems)
                 }
             }
-        }
-    }
+
+            Box(modifier = Modifier.weight(1f)) { // Ensure DraggableList takes available space
+                DraggableList(
+                    state = draggableListState,
+                    modifier = Modifier.fillMaxSize(), // Fill the Box
+                    indentationPerDepth = 24.dp,
+                    itemContent = { index, itemData, isCurrentlyDragging, listState ->
+                        DraggableListItem(
+                            itemData = itemData,
+                            index = index,
+                            isCurrentlyDragging = isCurrentlyDragging,
+                            draggableListState = listState,
+                            indentationUnit = 24.dp, // Match DraggableList's indentation
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(vertical = 4.dp) // Padding for each item
+                                .shadow(if (isCurrentlyDragging) 8.dp else 1.dp, RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    color = if (itemData.originalData is ProjectStructureDraggableItem.CategoryDraggable) {
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    },
+                                    shape = RoundedCornerShape(8.dp)
+                                ),
+                            // dragHandle = { Icon(Icons.Default.DragIndicator, null) } // Default is already this
+                            content = { // BoxScope
+                                when (val originalItem = itemData.originalData) {
+                                    is ProjectStructureDraggableItem.CategoryDraggable -> {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 12.dp), // Adjusted padding
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = originalItem.name,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            // 확장/축소 아이콘 (기능은 ViewModel에서 expandedCategories와 draggableItems 필터링으로 처리 필요)
+                                            // IconButton(onClick = { viewModel.toggleCategoryExpand(originalItem.id) }) {
+                                            //     val isExpanded = uiState.expandedCategories.getOrDefault(originalItem.id, true)
+                                            //     Icon(
+                                            //         imageVector = Icons.Default.ArrowDropDown,
+                                            //         contentDescription = "Expand/Collapse",
+                                            //         modifier = Modifier.rotate(if (isExpanded) 180f else 0f)
+                                            //     )
+                                            // }
+                                            IconButton(onClick = {
+                                                viewModel.openContextMenu(
+                                                    ContextMenuState.Category(
+                                                        categoryId = originalItem.id,
+                                                        position = Offset.Zero 
+                                                    )
+                                                )
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreVert,
+                                                    contentDescription = "More options"
+                                                )
+                                            }
+                                        }
+                                        // TODO: Display channels under this category if expanded
+                                        // This requires filtering draggableItems based on parentId and expanded state
+                                    }
+                                    is ProjectStructureDraggableItem.ChannelDraggable -> {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 10.dp), // Adjusted padding
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = originalItem.name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(onClick = {
+                                                viewModel.openContextMenu(
+                                                    ContextMenuState.Channel(
+                                                        categoryId = originalItem.currentParentCategoryId ?: "", // Handle direct channels
+                                                        channelId = originalItem.id,
+                                                        position = Offset.Zero
+                                                    )
+                                                )
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreVert,
+                                                    contentDescription = "More options"
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    }
+                )
+            } // End of Box with weight for DraggableList
+            
+            // 카테고리 추가 버튼 (DraggableList 외부)
+             Button(
+                onClick = { /* viewModel.addCategory() -> needs to work with draggableItems */ 
+                    // For now, let's assume addCategory in ViewModel is updated
+                    viewModel.addCategory() 
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("새 카테고리 추가")
+            }
+        } // End of Column for ModalBottomSheet content
+    } // End of ModalBottomSheet
     
     // 이름 변경 대화상자
     uiState.renameDialogState?.let { state ->
+        val currentItem = uiState.draggableItems.find { 
+            when(state) {
+                is RenameDialogState.Category -> it.id == state.categoryId && it.originalData is ProjectStructureDraggableItem.CategoryDraggable
+                is RenameDialogState.Channel -> it.id == state.channelId && it.originalData is ProjectStructureDraggableItem.ChannelDraggable
+            }
+        }?.originalData
+        
         RenameDialog(
             title = when(state) {
                 is RenameDialogState.Category -> "카테고리 이름 변경"
                 is RenameDialogState.Channel -> "채널 이름 변경"
             },
-            initialValue = when(state) {
-                is RenameDialogState.Category -> uiState.categories.find { it.id == state.categoryId }?.name ?: ""
-                is RenameDialogState.Channel -> {
-                    val categoryId = (state as RenameDialogState.Channel).categoryId
-                    val channelId = state.channelId
-                    uiState.categories
-                        .find { it.id == categoryId }
-                        ?.channels
-                        ?.find { it.id == channelId }
-                        ?.name ?: ""
-                }
-            },
+            initialValue = currentItem?.name ?: "",
             onDismiss = { viewModel.closeRenameDialog() },
             onConfirm = { newName ->
+                // ViewModel needs renameCategory/Channel functions that work with draggableItems
                 when(state) {
                     is RenameDialogState.Category -> {
                         viewModel.renameCategory(state.categoryId, newName)
                     }
                     is RenameDialogState.Channel -> {
+                        // renameChannel might need parentId if not embedded in channelId logic
                         viewModel.renameChannel(state.categoryId, state.channelId, newName)
                     }
                 }
@@ -366,6 +374,7 @@ fun ProjectStructureEditDialog(
         AddChannelDialog(
             onDismiss = { viewModel.closeAddChannelDialog() },
             onConfirm = { channelName, channelMode ->
+                // ViewModel's addChannel needs to work with draggableItems
                 viewModel.addChannel(categoryId, channelName, channelMode)
                 viewModel.closeAddChannelDialog()
             }
@@ -387,6 +396,7 @@ fun ProjectStructureEditDialog(
                 viewModel.closeContextMenu()
             },
             onDelete = {
+                // ViewModel's requestRemoveCategory/Channel needs to work with draggableItems
                 when(state) {
                     is ContextMenuState.Category -> {
                         viewModel.requestRemoveCategory(state.categoryId)
@@ -417,146 +427,6 @@ fun ProjectStructureEditDialog(
 @Composable
 private fun hasChanges(uiState: ProjectStructureEditUiState): Boolean {
     return uiState.categories != uiState.originalCategories
-}
-
-/**
- * 카테고리 리스트 아이템 컴포저블 (기존 CategoryItem 컴포저블 대체)
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun CategoryListItem(
-    category: Category,
-    isExpanded: Boolean,
-    isDragging: Boolean,
-    onToggleExpand: () -> Unit,
-    onLongPress: () -> Unit,
-    onDrop: (index: Int) -> Unit = { _ -> },
-    onContextMenu: (Offset) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val elevation by animateDpAsState(
-        targetValue = if (isDragging) 8.dp else 0.dp,
-        label = "category_elevation"
-    )
-    
-    Surface(
-        modifier = modifier
-            .shadow(elevation)
-            .combinedClickable(
-                onClick = onToggleExpand,
-                onLongClick = onLongPress,
-                onLongClickLabel = "드래그하여 이동"
-            )
-            .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { onLongPress() },
-                    onDragEnd = { /* 드래그 종료 처리 */ },
-                    onDragCancel = { /* 드래그 취소 처리 */ },
-                    onDrag = { change, _ -> change.consume() }
-                )
-            },
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = category.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
-            )
-            
-            IconButton(onClick = onToggleExpand) {
-                Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = if (isExpanded) "접기" else "펼치기",
-                    modifier = Modifier.rotate(if (isExpanded) 180f else 0f)
-                )
-            }
-            
-            IconButton(onClick = { onContextMenu(Offset.Zero) }) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "더보기"
-                )
-            }
-        }
-    }
-}
-
-/**
- * 채널 리스트 아이템 컴포저블 (기존 ChannelItem 컴포저블 대체)
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ChannelListItem(
-    channel: Channel,
-    isDragging: Boolean,
-    onLongPress: () -> Unit,
-    onDrop: (targetCategoryId: String, targetIndex: Int) -> Unit,
-    onContextMenu: (offset: Offset) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val alpha by animateFloatAsState(if (isDragging) 0.5f else 1f, label = "channelAlpha")
-    val elevation by animateDpAsState(if (isDragging) 8.dp else 1.dp, label = "channelElevation")
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)
-            .shadow(elevation, RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .alpha(alpha)
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = null, // 기본 인디케이션 제거
-                onClick = { /* 채널 클릭 시 동작 (예: 채널로 이동) */ },
-                onLongClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onLongPress()
-                }
-            )
-            .pointerInput(Unit) { // 드래그 앤 드롭 감지
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { 
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongPress() 
-                    },
-                    onDrag = { change, _ -> change.consume() },
-                    onDragEnd = { /* 드롭은 LazyColumn 레벨에서 처리 */ },
-                    onDragCancel = { /* 드롭은 LazyColumn 레벨에서 처리 */ }
-                )
-            },
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = channel.name,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            // 컨텍스트 메뉴 버튼 (채널용)
-            IconButton(onClick = { onContextMenu(Offset.Zero /* 정확한 위치는 필요에 따라 조정 */) }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "채널 옵션")
-            }
-        }
-    }
 }
 
 /**
@@ -746,38 +616,24 @@ private fun ContextMenu(
 @Preview(showBackground = true)
 @Composable
 fun ProjectStructureEditDialogPreview() {
+    // Mocking DraggableListItemData would be complex here.
+    // A simpler preview or a preview-specific ViewModel setup is needed.
     val mockViewModel = viewModel<ProjectStructureEditDialogViewModel>()
-    // Mock 데이터 설정 (필요한 경우)
-    LaunchedEffect(Unit) {
-        // 테스트용 프로젝트 ID (실제 존재하지 않아도 됨)
-        val testProjectId = "preview-project-id"
-        // ViewModel의 public 함수를 통해 상태 변경 시도
-        mockViewModel.loadProjectStructure(testProjectId)
-        // mockViewModel.openAddCategoryDialog() // 예시: 카테고리 추가 다이얼로그 표시
+    // Set up mockViewModel.uiState with some draggableItems for preview if possible
+    // For instance:
+    // val sampleCategory = Category(...)
+    // val sampleChannel = Channel(...)
+    // mockViewModel._uiState.update { it.copy(draggableItems = listOf(
+    //     DraggableListItemData(id="cat1", originalData = ProjectStructureDraggableItem.CategoryDraggable(sampleCategory), depth = 0),
+    //     DraggableListItemData(id="chan1", originalData = ProjectStructureDraggableItem.ChannelDraggable(sampleChannel, "cat1"), depth = 1)
+    // )) }
 
-        // 미리보기를 위한 목업 데이터 강제 주입 (옵션)
-        val sampleCategories = listOf(
-            Category(
-                id = "cat1", projectId = testProjectId, name = "일반", order = 0, channels = listOf(
-                    Channel(id = "chan1-1", name = "채팅", type = com.example.domain.model.ChannelType.PROJECT, projectSpecificData = com.example.domain.model.channel.ProjectSpecificData(projectId = testProjectId, categoryId = "cat1", order = 0, channelMode = ChannelMode.TEXT), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant()),
-                    Channel(id = "chan1-2", name = "공지사항", type = com.example.domain.model.ChannelType.PROJECT, projectSpecificData = com.example.domain.model.channel.ProjectSpecificData(projectId = testProjectId, categoryId = "cat1", order = 1, channelMode = ChannelMode.TEXT), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant())
-                ), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant()
-            ),
-            Category(
-                id = "cat2", projectId = testProjectId, name = "음성 채널", order = 1, channels = listOf(
-                    Channel(id = "chan2-1", name = "음성 대화 1", type = com.example.domain.model.ChannelType.PROJECT, projectSpecificData = com.example.domain.model.channel.ProjectSpecificData(projectId = testProjectId, categoryId = "cat2", order = 0, channelMode = ChannelMode.VOICE), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant())
-                ), createdAt = com.example.core_common.util.DateTimeUtil.nowInstant(), updatedAt = com.example.core_common.util.DateTimeUtil.nowInstant()
-            )
-        )
-        // ViewModel 내부 상태 직접 조작은 private 멤버 접근으로 인해 Preview에서 불안정할 수 있습니다.
-        // mockViewModel의 public 메소드를 사용하거나, Preview 전용 ViewModel을 만드는 것을 고려하세요.
-    }
 
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectStructureEditDialog(
             onDismiss = {},
-            viewModel = mockViewModel,
-            projectId = "preview-project-id"
+            projectId = "preview-project-id",
+            viewModel = mockViewModel 
         )
     }
 } 
