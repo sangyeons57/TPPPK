@@ -20,28 +20,9 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 // import com.example.core_common.util.DateTimeUtil // Already imported if needed, or remove if not used in this diff
 
-/**
- * 멤버 목록 화면의 UI 상태
- *
- * @param members 멤버 UI 아이템 목록
- * @param isLoading 로딩 중 여부
- * @param error 오류 메시지 (nullable)
- * @param searchQuery 검색 쿼리
- * @param selectedMember 선택된 멤버 (멤버 편집/삭제 등을 위한 상태)
- * @param projectId 프로젝트 ID
- */
-// Define this data class inside MemberListViewModel.kt or in a separate UiModel file
-data class ProjectMemberUiItem(
-    val userId: String,
-    val userName: String,
-    val profileImageUrl: String?,
-    val rolesText: String, // Combined role names
-    val joinedAt: Instant,
-    val originalMember: ProjectMember // Keep original for actions
-)
 
 data class MemberListUiState(
-    val members: List<ProjectMemberUiItem> = emptyList(), // Changed from ProjectMember
+    val members: List<ProjectMember> = emptyList(), // Changed from ProjectMemberUiItem
     val isLoading: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
@@ -122,38 +103,16 @@ class MemberListViewModel @Inject constructor(
      */
     private fun observeMembers() {
         viewModelScope.launch {
-            // Fetch all project roles once
-            val rolesResult = getProjectRolesUseCase(projectId)
-            if (rolesResult.isFailure) {
-                _uiState.update { it.copy(error = "역할 목록 로드 실패: ${rolesResult.exceptionOrNull()?.message}", isLoading = false) }
-                return@launch
-            }
-            val allRolesMap = rolesResult.getOrThrow().associateBy({ it.id }, { it.name })
-
             uiState.map { it.searchQuery }.distinctUntilChanged()
                 .combine(observeProjectMembersUseCase(projectId)) { query, members ->
                     members.filter { member ->
                         member.userName.contains(query, ignoreCase = true)
-                    }.map { domainMember ->
-                        val rolesText = domainMember.roleIds
-                            .mapNotNull { roleId -> allRolesMap[roleId] } // Get names for existing role IDs
-                            .joinToString(", ")
-                        ProjectMemberUiItem(
-                            userId = domainMember.userId,
-                            userName = domainMember.userName,
-                            profileImageUrl = domainMember.profileImageUrl,
-                            rolesText = rolesText.ifEmpty { "역할 없음" }, // "No roles" or similar
-                            joinedAt = domainMember.joinedAt,
-                            originalMember = domainMember // Store original for actions
-                        )
                     }
                 }
                 .catch { e ->
                     _uiState.update { it.copy(error = "멤버 목록 스트림 오류: ${e.message}", isLoading = false) }
                 }
                 .collect { filteredUiMembers ->
-                    // Make sure MemberListUiState is updated to expect List<ProjectMemberUiItem>
-                    // This change requires MemberListUiState.members to be of type List<ProjectMemberUiItem>
                     _uiState.update { it.copy(members = filteredUiMembers, isLoading = false, error = null) }
                 }
         }
@@ -173,8 +132,7 @@ class MemberListViewModel @Inject constructor(
                     isLoading = false
                 ) }
             }
-            // If successful, observeMembers will handle the update. Just turn off loading.
-             _uiState.update { it.copy(isLoading = false) }
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
@@ -183,18 +141,17 @@ class MemberListViewModel @Inject constructor(
      */
     fun onSearchQueryChanged(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        // The combine operator in observeMembers will automatically react to this state change.
     }
 
     /**
      * 멤버 클릭 이벤트 처리 함수
      * 멤버 편집 화면으로 이동하는 이벤트를 발생시킵니다.
      *
-     * @param memberUiItem 클릭한 멤버 UI 아이템
+     * @param member 클릭한 멤버 객체 (Domain 모델)
      */
-    fun onMemberClick(memberUiItem: ProjectMemberUiItem) { // Parameter changed
+    fun onMemberClick(member: ProjectMember) {
         viewModelScope.launch {
-            _eventFlow.emit(MemberListEvent.NavigateToEditMember(projectId, memberUiItem.userId))
+            _eventFlow.emit(MemberListEvent.NavigateToEditMember(projectId, member.userId))
         }
     }
 
@@ -211,9 +168,9 @@ class MemberListViewModel @Inject constructor(
     /**
      * ★ 멤버 삭제 요청 처리 함수 추가
      */
-    fun requestDeleteMember(memberUiItem: ProjectMemberUiItem) { // Parameter changed
+    fun requestDeleteMember(member: ProjectMember) {
         viewModelScope.launch {
-            _eventFlow.emit(MemberListEvent.ShowDeleteConfirm(memberUiItem.originalMember)) // Use originalMember
+            _eventFlow.emit(MemberListEvent.ShowDeleteConfirm(member))
         }
     }
 
