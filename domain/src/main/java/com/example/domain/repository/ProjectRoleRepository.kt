@@ -36,7 +36,7 @@ interface ProjectRoleRepository {
      * @param isDefault 기본 역할 여부
      * @return 생성된 역할 ID 또는 에러
      */
-    suspend fun createRole(projectId: String, name: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean): Result<String>
+    suspend fun createRole(projectId: String, name: String, permissions: List<RolePermission>, isDefault: Boolean): Result<String>
 
     /**
      * 기존 역할 업데이트 (이름 또는 권한)
@@ -47,7 +47,7 @@ interface ProjectRoleRepository {
      * @param isDefault 기본 역할 여부 (null이면 변경하지 않음)
      * @return 성공/실패 결과
      */
-    suspend fun updateRole(projectId: String, roleId: String, name: String, permissions: Map<RolePermission, Boolean>, isDefault: Boolean?): Result<Unit>
+    suspend fun updateRole(projectId: String, roleId: String, name: String, permissions: List<RolePermission>, isDefault: Boolean?): Result<Unit>
 
     /**
      * 역할 삭제

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.ProjectMember
+import com.example.domain.model.Role
 // import com.example.domain.repository.ProjectMemberRepository // Remove Repo import
 // import com.example.domain.repository.ProjectRoleRepository // Remove Repo import
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase // Import UseCase
@@ -62,7 +63,7 @@ class EditMemberViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     // 초기 선택된 역할 ID 저장용 (변경 여부 확인)
-    private var originalSelectedRoleIds: Set<String> = emptySet()
+    private var originalSelectedRoleIds: Set<String?> = emptySet()
 
     init {
         loadInitialData()
@@ -82,8 +83,8 @@ class EditMemberViewModel @Inject constructor(
                 val member = memberResult.getOrThrow()
                 val allRoles = rolesResult.getOrThrow()
 
-                // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roleIds 필드 사용 가정)
-                originalSelectedRoleIds = member?.roleIds?.toSet() ?: emptySet() // Null-safe
+                // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roles 필드 사용)
+                originalSelectedRoleIds = member?.roles?.map { it.id }?.filter { it != null }?.toSet().orEmpty() // Null-safe 처리
 
                 // 전체 역할 목록을 UI 모델(RoleSelectionItem)로 변환하고, 현재 멤버의 역할 선택 상태 반영
                 val roleSelectionItems = allRoles.map { role ->

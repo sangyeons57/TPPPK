@@ -42,14 +42,14 @@ interface ProjectRoleRemoteDataSource {
      * 새 역할을 생성합니다.
      * @param projectId 프로젝트 ID
      * @param name 역할 이름
-     * @param permissions 권한 맵
+     * @param permissions 권한 리스트
      * @param isDefault 기본 역할 여부
      * @return 새로 생성된 역할 ID
      */
     suspend fun createRole(
         projectId: String,
         name: String,
-        permissions: Map<RolePermission, Boolean>,
+        permissions: List<RolePermission>,
         isDefault: Boolean
     ): Result<String>
     
@@ -57,16 +57,16 @@ interface ProjectRoleRemoteDataSource {
      * 역할을 업데이트합니다.
      * @param projectId 프로젝트 ID
      * @param roleId 역할 ID
-     * @param name 새 역할 이름
-     * @param permissions 새 권한 맵
+     * @param name 새 역할 이름 (null이면 변경하지 않음)
+     * @param permissions 새 권한 리스트 (null이면 변경하지 않음)
      * @param isDefault 기본 역할 여부 (null이면 변경하지 않음)
      * @return 작업 성공 여부
      */
     suspend fun updateRole(
         projectId: String,
         roleId: String,
-        name: String,
-        permissions: Map<RolePermission, Boolean>,
+        name: String?,
+        permissions: List<RolePermission>?,
         isDefault: Boolean?
     ): Result<Unit>
     
@@ -77,4 +77,22 @@ interface ProjectRoleRemoteDataSource {
      * @return 작업 성공 여부
      */
     suspend fun deleteRole(projectId: String, roleId: String): Result<Unit>
+
+    /**
+     * 역할에 멤버를 추가하고 해당 역할의 memberCount를 1 증가시킵니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @param roleId 역할 ID
+     * @return 작업 성공 여부
+     */
+    suspend fun addMemberToRoleAndUpdateCount(projectId: String, userId: String, roleId: String): Result<Unit>
+
+    /**
+     * 역할에서 멤버를 제거하고 해당 역할의 memberCount를 1 감소시킵니다.
+     * @param projectId 프로젝트 ID
+     * @param userId 사용자 ID
+     * @param roleId 역할 ID
+     * @return 작업 성공 여부
+     */
+    suspend fun removeMemberFromRoleAndUpdateCount(projectId: String, userId: String, roleId: String): Result<Unit>
 } 

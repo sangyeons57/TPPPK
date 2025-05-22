@@ -182,7 +182,7 @@ fun NavGraphBuilder.mainGraph(appNavigator: AppNavigator) {
  */
 fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Friends.Graph.path,
+        route = AppRoutes.Friends.ROOT,
         startDestination = AppRoutes.Friends.LIST
     ) {
         composable(AppRoutes.Friends.LIST) {

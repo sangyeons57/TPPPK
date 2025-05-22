@@ -22,15 +22,15 @@ data class RoleEntity(
     /**
      * RoleEntity를 도메인 모델 Role로 변환
      * 
-     * @param permissions 이 역할과 연관된 권한 맵
+     * @param permissionsMap 이 역할과 연관된 권한 맵
      * @return Role 도메인 모델
      */
-    fun toDomain(permissions: Map<RolePermission, Boolean>): Role {
+    fun toDomain(permissionsMap: Map<RolePermission, Boolean>): Role {
         return Role(
             id = id,
             projectId = projectId,
             name = name,
-            permissions = permissions,
+            permissions = permissionsMap.filterValues { it }.keys.toList(),
             memberCount = memberCount
         )
     }

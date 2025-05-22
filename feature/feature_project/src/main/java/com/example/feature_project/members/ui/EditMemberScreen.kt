@@ -26,6 +26,7 @@ import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.ProjectMember
+import com.example.domain.model.Role
 // ViewModel 및 관련 요소 Import
 import com.example.feature_project.members.viewmodel.EditMemberEvent
 import com.example.feature_project.members.viewmodel.EditMemberViewModel
@@ -223,7 +224,11 @@ fun RoleCheckboxRow(
 @Preview(showBackground = true)
 @Composable
 private fun EditMemberContentPreview() {
-    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf("관리자", "팀원"), DateTimeUtil.nowInstant())
+    // Preview용 Role 객체 생성
+    val previewRole1 = Role(id = "role1", projectId = "p1", name = "관리자", permissions = listOf(com.example.domain.model.RolePermission.MANAGE_MEMBERS), isDefault = false, memberCount = 1)
+    val previewRole2 = Role(id = "role2", projectId = "p1", name = "팀원", permissions = listOf(com.example.domain.model.RolePermission.READ_MESSAGES), isDefault = true, memberCount = 5)
+    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf(previewRole1, previewRole2), DateTimeUtil.nowInstant())
+
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
         RoleSelectionItem("r2", "팀원", true),
@@ -245,7 +250,11 @@ private fun EditMemberContentPreview() {
 @Preview(showBackground = true, name="Edit Member Saving")
 @Composable
 private fun EditMemberContentSavingPreview() {
-    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf("관리자", "팀원"), DateTimeUtil.nowInstant())
+    // Preview용 Role 객체 생성
+    val previewRole1Saving = Role(id = "role1_saving", projectId = "p1_saving", name = "관리자", permissions = listOf(com.example.domain.model.RolePermission.MANAGE_MEMBERS), isDefault = false, memberCount = 1)
+    val previewRole2Saving = Role(id = "role2_saving", projectId = "p1_saving", name = "팀원", permissions = listOf(com.example.domain.model.RolePermission.READ_MESSAGES), isDefault = true, memberCount = 5)
+    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf(previewRole1Saving, previewRole2Saving), DateTimeUtil.nowInstant())
+
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
         RoleSelectionItem("r2", "팀원", true),

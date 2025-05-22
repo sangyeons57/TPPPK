@@ -222,14 +222,15 @@ object AppRoutes {
     }
 
     object Friends {
-        private const val ROOT = "friends"
+        const val ROOT = "friends"
+
         const val LIST = "$ROOT/list"
         const val ACCEPT_REQUESTS = "$ROOT/accept"
         // Add friend might be a dialog or a simple screen, not requiring complex routing here initially
     }
 
     object Chat {
-        private const val ROOT = "chat"
+        const val ROOT = "chat"
         const val ARG_CHANNEL_ID = "channelId"
         const val ARG_MESSAGE_ID = "messageId" // Optional for scrolling to a message
         // const val ARG_PROJECT_ID = "projectId" // REMOVED: Not needed for unified chat route

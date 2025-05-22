@@ -105,7 +105,7 @@ fun EditProfileScreen(
                 message = "프로필 이미지 변경을 위해 사진 접근 권한이 필요합니다.",
                 duration = SnackbarDuration.Long
             )
-        } else if (!permissionState.status.isGranted && !permissionState.status.shouldShowRationale && permissionState.permissionRequested) {
+        } else if (!permissionState.status.isGranted && !permissionState.status.shouldShowRationale) {
             // 사용자가 권한을 영구적으로 거부한 경우 (다시 묻지 않음 선택)
             // 이 경우 설정 앱으로 이동하여 권한을 직접 변경하도록 안내할 수 있음
             snackbarHostState.showSnackbar(
