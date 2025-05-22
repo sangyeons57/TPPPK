@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.People // Added import
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -37,10 +36,5 @@ val mainBottomNavItems: List<BottomNavItem> = listOf(
         route = AppRoutes.Main.Profile.GRAPH_ROOT,
         title = "프로필",
         icon = Icons.Default.Person
-    ),
-    BottomNavItem(
-        route = AppRoutes.Friends.ROOT, // Assuming AppRoutes.Friends.ROOT is "friends"
-        title = "친구",
-        icon = Icons.Default.People
     )
 ) 

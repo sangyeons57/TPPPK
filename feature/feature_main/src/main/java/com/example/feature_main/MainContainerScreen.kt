@@ -27,7 +27,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavControllerSaver
-import com.example.feature_friends.ui.FriendsScreen // Added import
 import com.example.core_navigation.core.NavControllerState
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.destination.mainBottomNavItems
@@ -57,15 +56,13 @@ fun MainContainerScreen(
     val homeNavController = rememberNavController()
     val calendarNavController = rememberNavController()
     val profileNavController = rememberNavController()
-    val friendsNavController = rememberNavController() // Added
     
     // 탭 라우트 -> NavController 맵핑
     val navControllers = remember {
         mapOf(
             AppRoutes.Main.Home.GRAPH_ROOT to homeNavController,
             AppRoutes.Main.Calendar.GRAPH_ROOT to calendarNavController,
-            AppRoutes.Main.Profile.GRAPH_ROOT to profileNavController,
-            AppRoutes.Friends.ROOT to friendsNavController // Added
+            AppRoutes.Main.Profile.GRAPH_ROOT to profileNavController
         )
     }
 
@@ -74,8 +71,7 @@ fun MainContainerScreen(
         mutableStateMapOf(
             AppRoutes.Main.Home.GRAPH_ROOT to NavControllerState(),
             AppRoutes.Main.Calendar.GRAPH_ROOT to NavControllerState(),
-            AppRoutes.Main.Profile.GRAPH_ROOT to NavControllerState(),
-            AppRoutes.Friends.ROOT to NavControllerState() // Added
+            AppRoutes.Main.Profile.GRAPH_ROOT to NavControllerState()
         )
     }
 
@@ -191,13 +187,6 @@ fun MainContainerScreen(
                         savedState = navControllerStates[selectedTab]?.screenState
                     )
                 }
-                AppRoutes.Friends.ROOT -> { // Added case
-                    FriendsTabNavHost(
-                        navController = friendsNavController,
-                        appNavigator = appNavigator,
-                        savedState = navControllerStates[selectedTab]?.screenState
-                    )
-                }
             }
         }
     }
@@ -211,7 +200,6 @@ private fun getTabStartDestination(tabRoute: String): String {
         AppRoutes.Main.Home.GRAPH_ROOT -> AppRoutes.Main.Home.ROOT_CONTENT
         AppRoutes.Main.Calendar.GRAPH_ROOT -> AppRoutes.Main.Calendar.ROOT_CONTENT
         AppRoutes.Main.Profile.GRAPH_ROOT -> AppRoutes.Main.Profile.ROOT_CONTENT
-        AppRoutes.Friends.ROOT -> AppRoutes.Friends.LIST // Added
         else -> AppRoutes.Main.Home.ROOT_CONTENT
     }
 }
@@ -245,39 +233,6 @@ private fun HomeTabNavHost(
                 savedState = savedState
             )
         }
-    }
-}
-
-/**
- * Friends 탭의 네비게이션 호스트
- */
-@Composable
-private fun FriendsTabNavHost(
-    navController: NavHostController,
-    appNavigator: AppNavigator,
-    savedState: android.os.Bundle? = null
-) {
-    DisposableEffect(navController, appNavigator) {
-        appNavigator.setChildNavController(navController)
-        onDispose {
-            if (appNavigator.getChildNavController() == navController) {
-                appNavigator.setChildNavController(null)
-            }
-        }
-    }
-
-    NavHost(
-        navController = navController,
-        startDestination = AppRoutes.Friends.LIST
-    ) {
-        composable(AppRoutes.Friends.LIST) {
-            FriendsScreen(
-                appNavigator = appNavigator
-            )
-        }
-        // TODO: Add other destinations for the Friends tab if needed,
-        // e.g., AppRoutes.Friends.ACCEPT_REQUESTS
-        // composable(AppRoutes.Friends.ACCEPT_REQUESTS) { ... }
     }
 }
 

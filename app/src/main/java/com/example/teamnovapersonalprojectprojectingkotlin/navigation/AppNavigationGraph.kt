@@ -49,7 +49,6 @@ import com.example.feature_auth.ui.FindPasswordScreen
 import com.example.feature_auth.ui.PrivacyPolicyScreen
 import com.example.feature_auth.ui.SignUpScreen
 import com.example.feature_auth.ui.TermsOfServiceScreen
-import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_profile.ui.EditProfileScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -103,9 +102,6 @@ fun AppNavigationGraph(
         // 메인 화면 (MainContainerScreen이 자체적으로 탭 네비게이션 처리)
         mainGraph(appNavigator)
         
-        // 친구 화면 그래프 추가
-        friendsGraph(appNavigator)
-        
         // 독립적인 화면들의 그래프 - 메인 탭 외부에서 접근하는 화면들
         projectGraph(appNavigator)
         chatGraph(appNavigator)
@@ -123,7 +119,7 @@ fun AppNavigationGraph(
  */
 fun NavGraphBuilder.authGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Auth.ROOT, // Changed to use ROOT
+        route = AppRoutes.Auth.Graph.path,
         startDestination = AppRoutes.Auth.Splash.path
     ) {
 
@@ -178,29 +174,11 @@ fun NavGraphBuilder.mainGraph(appNavigator: AppNavigator) {
 }
 
 /**
- * 친구 관련 화면들의 네비게이션 그래프
- */
-fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
-    navigation(
-      
-        route = AppRoutes.Friends.ROOT, // Changed to use ROOT
-
-        startDestination = AppRoutes.Friends.LIST
-    ) {
-        composable(AppRoutes.Friends.LIST) {
-            FriendsScreen(appNavigator = appNavigator)
-        }
-        // TODO: 친구 요청 수락 화면 등 추가 경로 정의
-        // composable(AppRoutes.Friends.ACCEPT_REQUESTS) { ... }
-    }
-}
-
-/**
  * 프로젝트 관련 화면들의 네비게이션 그래프
  */
 fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Project.ROOT, // Changed to use ROOT
+        route = AppRoutes.Project.Graph.path,
         startDestination = AppRoutes.Project.ADD
     ) {
         // 프로젝트 생성 화면
@@ -269,7 +247,7 @@ fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
  */
 fun NavGraphBuilder.chatGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Chat.ROOT, // Changed to use ROOT
+        route = AppRoutes.Chat.Graph.path,
         startDestination = AppRoutes.Chat.route
     ) {
         // 채팅 화면
@@ -290,7 +268,7 @@ fun NavGraphBuilder.chatGraph(appNavigator: AppNavigator) {
  */
 fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
     navigation(
-        route = AppRoutes.Main.Calendar.ROOT, // Changed to use ROOT
+        route = AppRoutes.Main.Calendar.Graph.path,
         startDestination = AppRoutes.Main.Calendar.calendar24HourRoute()
     ) {
         // 24시간 캘린더 화면

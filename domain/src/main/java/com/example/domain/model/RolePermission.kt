@@ -7,7 +7,6 @@ package com.example.domain.model
  */
 enum class RolePermission(val description: String) {
     // --- 멤버 관련 ---
-    MANAGE_MEMBERS("멤버 전체 관리 권한"),         // 멤버관련 전체 권한
     INVITE_MEMBERS("멤버 초대 권한"),         // 새 멤버를 프로젝트에 초대할 수 있는 권한
     KICK_MEMBERS("멤버 추방 권한"),           // 다른 멤버를 프로젝트에서 추방할 수 있는 권한 (신중히 사용)
 

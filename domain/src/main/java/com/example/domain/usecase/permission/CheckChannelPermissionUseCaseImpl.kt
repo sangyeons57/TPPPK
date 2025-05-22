@@ -2,11 +2,11 @@ package com.example.domain.usecase.permission
 
 import com.example.domain.model.ChannelType
 import com.example.domain.model.RolePermission
-import com.example.domain.model.ProjectMember
-import com.example.domain.model.Role
+import com.example.domain.model.ProjectMember // Correct model
+import com.example.domain.model.Role // Correct model
 import com.example.domain.repository.ChannelRepository
-import com.example.domain.repository.ProjectMemberRepository
-// import com.example.domain.repository.ProjectRoleRepository // ProjectRoleRepository는 이제 직접 사용하지 않음
+import com.example.domain.repository.ProjectMemberRepository // Correct repository for members
+import com.example.domain.repository.ProjectRoleRepository // Assumed: domain/repository/ProjectRoleRepository.kt
 import javax.inject.Inject
 // Use Kotlin's standard Result type
 
@@ -15,12 +15,12 @@ import javax.inject.Inject
  *
  * @property channelRepository 채널 데이터 접근 리포지토리.
  * @property projectMemberRepository 프로젝트 멤버 데이터 접근 리포지토리.
- * @property projectRoleRepository 프로젝트 역할 데이터 접근 리포지토리. (이제 사용 안 함)
+ * @property projectRoleRepository 프로젝트 역할 데이터 접근 리포지토리.
  */
 class CheckChannelPermissionUseCaseImpl @Inject constructor(
     private val channelRepository: ChannelRepository,
-    private val projectMemberRepository: ProjectMemberRepository
-    // private val projectRoleRepository: ProjectRoleRepository // 더 이상 필요 없음
+    private val projectMemberRepository: ProjectMemberRepository,
+    private val projectRoleRepository: ProjectRoleRepository
 ) : CheckChannelPermissionUseCase {
 
     /**
@@ -66,21 +66,33 @@ class CheckChannelPermissionUseCaseImpl @Inject constructor(
             }
 
             // 2b. 사용자 역할 기반 권한 확인
+            // Use ProjectMemberRepository.getProjectMember which returns Result<ProjectMember?>
             val memberResult = projectMemberRepository.getProjectMember(projectId, userId)
             val member = memberResult.getOrNull()
+                ?: return Result.failure(memberResult.exceptionOrNull() ?: IllegalStateException("User $userId member data fetch failed for project $projectId"))
             
-            // 멤버 정보가 없거나 (프로젝트에 속하지 않음) memberResult가 실패한 경우
-            if (memberResult.isFailure || member == null) {
-                 // memberResult.exceptionOrNull()이 null일 경우를 대비하여 기본 예외 제공
-                return Result.failure(memberResult.exceptionOrNull() ?: IllegalStateException("User $userId not found in project $projectId or failed to fetch member data"))
+            // if member is null (user not found in project), no role-based permissions.
+            if (member == null) return Result.success(false)
+
+            // Use ProjectMember model's roleIds: List<String> (non-nullable based on definition)
+            val userRoleIds = member.roleIds
+            if (userRoleIds.isEmpty()) {
+                return Result.success(false) // No roles assigned, no permission by default
             }
+
+            // Use ProjectRoleRepository.getRoles which returns Result<List<Role>>
+            val allRolesResult = projectRoleRepository.getRoles(projectId)
+            val allProjectRoles = allRolesResult.getOrNull() 
+                ?: return Result.failure(allRolesResult.exceptionOrNull() ?: IllegalStateException("Failed to fetch roles for project $projectId"))
+
+            // Filter the project roles to only those the user has
+            val userRoles = allProjectRoles.filter { it.id in userRoleIds }
             
-            // 사용자의 역할 목록 (ProjectMember.roles는 List<Role>)
-            val userRoles = member.roles 
-            
+            // Iterate through the user's roles
             for (role in userRoles) {
-                if (role.permissions.contains(permission)) {
-                    return Result.success(true)
+                 // Use Role model's permissions: Map<RolePermission, Boolean>
+                if (role.permissions[permission] == true) { // Check using RolePermission enum key
+                    return Result.success(true) // Permission granted by at least one role
                 }
             }
             

@@ -9,7 +9,7 @@ import javax.inject.Inject
  */
 interface GetRoleDetailsUseCase {
     // 역할 이름과 권한 맵을 Pair로 반환
-    suspend operator fun invoke(projectId: String, roleId: String): Result<com.example.domain.model.Role?>
+    suspend operator fun invoke(roleId: String): Result<Pair<String, Map<RolePermission, Boolean>>>
 }
 
 /**
@@ -25,7 +25,7 @@ class GetRoleDetailsUseCaseImpl @Inject constructor(
      * @param roleId 역할 ID
      * @return Result<Pair<String, Map<RolePermission, Boolean>>> 역할 상세 정보 로드 결과
      */
-    override suspend fun invoke(projectId: String, roleId: String): Result<com.example.domain.model.Role?> {
-        return projectRoleRepository.getRoleDetails(projectId, roleId)
+    override suspend fun invoke(roleId: String): Result<Pair<String, Map<RolePermission, Boolean>>> {
+        return projectRoleRepository.getRoleDetails(roleId)
     }
-}
+} 

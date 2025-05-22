@@ -69,7 +69,7 @@ class ProjectRoleLocalDataSourceImpl @Inject constructor(
     override suspend fun saveRole(role: Role) {
         // Role ID가 null이 아닌지 확인
         val roleEntity = RoleEntity.fromDomain(role)
-        val permissionEntities = RolePermissionEntity.fromPermissionList(roleEntity.id, role.permissions)
+        val permissionEntities = RolePermissionEntity.fromPermissionMap(roleEntity.id, role.permissions)
         roleDao.insertRoleWithPermissions(roleEntity, permissionEntities)
     }
 
@@ -94,7 +94,7 @@ class ProjectRoleLocalDataSourceImpl @Inject constructor(
         if (role.id == null) return false
         
         val roleEntity = RoleEntity.fromDomain(role)
-        val permissionEntities = RolePermissionEntity.fromPermissionList(roleEntity.id, role.permissions)
+        val permissionEntities = RolePermissionEntity.fromPermissionMap(roleEntity.id, role.permissions)
         
         return try {
             roleDao.updateRoleWithPermissions(roleEntity, permissionEntities)

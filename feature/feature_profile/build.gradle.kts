@@ -77,9 +77,6 @@ dependencies {
     // 기타 ChatScreen, ChatViewModel에서 사용하는 라이브러리 (예: Activity Result API)
     implementation(libs.androidx.activity.compose)
 
-    // Accompanist Permissions
-    implementation(libs.accompanist.permissions)
-
     // 테스트 의존성 (필요 시 추가)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

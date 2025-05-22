@@ -9,20 +9,39 @@ import com.example.domain.model.ProjectMember
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.FetchProjectMembersUseCase
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
-import com.example.domain.usecase.project.GetProjectRolesUseCase // Added import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
-// import com.example.core_common.util.DateTimeUtil // Already imported if needed, or remove if not used in this diff
 
+/**
+ * 프로젝트 멤버 아이템 UI 모델
+ * UI 표시에 필요한 정보를 담고 있는 데이터 클래스
+ *
+ * @param userId 사용자 ID
+ * @param userName 사용자 이름
+ * @param profileImageUrl 프로필 이미지 URL (nullable)
+ * @param rolesText 역할 목록을 표시할 문자열
+ */
+data class ProjectMemberItem(
+    val userId: String,
+    val userName: String,
+    val profileImageUrl: String?,
+    val rolesText: String
+)
 
+/**
+ * 멤버 목록 화면의 UI 상태
+ *
+ * @param members 멤버 UI 아이템 목록
+ * @param isLoading 로딩 중 여부
+ * @param error 오류 메시지 (nullable)
+ * @param searchQuery 검색 쿼리
+ * @param selectedMember 선택된 멤버 (멤버 편집/삭제 등을 위한 상태)
+ * @param projectId 프로젝트 ID
+ */
 data class MemberListUiState(
-    val members: List<ProjectMember> = emptyList(), // Changed from ProjectMemberUiItem
+    val members: List<ProjectMemberItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
@@ -67,8 +86,7 @@ class MemberListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val observeProjectMembersUseCase: ObserveProjectMembersUseCase,
     private val fetchProjectMembersUseCase: FetchProjectMembersUseCase,
-    private val deleteProjectMemberUseCase: DeleteProjectMemberUseCase,
-    private val getProjectRolesUseCase: GetProjectRolesUseCase // Added
+    private val deleteProjectMemberUseCase: DeleteProjectMemberUseCase
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
@@ -99,15 +117,28 @@ class MemberListViewModel @Inject constructor(
     }
 
     /**
+     * Domain 모델을 UI 모델로 변환하는 확장 함수
+     */
+    private fun ProjectMember.toUiModel(): ProjectMemberItem {
+        return ProjectMemberItem(
+            userId = this.userId,
+            userName = this.userName,
+            profileImageUrl = this.profileImageUrl,
+            rolesText = this.roleIds.joinToString(", ") { roleId -> roleId }
+        )
+    }
+
+    /**
      * 멤버 목록 실시간 관찰 및 검색 필터링 함수
      */
     private fun observeMembers() {
         viewModelScope.launch {
+            // Combine search query and member stream
             uiState.map { it.searchQuery }.distinctUntilChanged()
                 .combine(observeProjectMembersUseCase(projectId)) { query, members ->
                     members.filter { member ->
                         member.userName.contains(query, ignoreCase = true)
-                    }
+                    }.map { it.toUiModel() } // Map to UI model after filtering
                 }
                 .catch { e ->
                     _uiState.update { it.copy(error = "멤버 목록 스트림 오류: ${e.message}", isLoading = false) }
@@ -132,7 +163,8 @@ class MemberListViewModel @Inject constructor(
                     isLoading = false
                 ) }
             }
-            _uiState.update { it.copy(isLoading = false) }
+            // If successful, observeMembers will handle the update. Just turn off loading.
+             _uiState.update { it.copy(isLoading = false) }
         }
     }
 
@@ -141,6 +173,7 @@ class MemberListViewModel @Inject constructor(
      */
     fun onSearchQueryChanged(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
+        // The combine operator in observeMembers will automatically react to this state change.
     }
 
     /**

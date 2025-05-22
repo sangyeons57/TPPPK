@@ -1,7 +1,6 @@
 package com.example.domain.repository
 
 import com.example.domain.model.ProjectMember
-import com.example.domain.model.Role
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
 
@@ -58,7 +57,7 @@ interface ProjectMemberRepository {
      * @param roleIds 새로운 역할 ID 목록
      * @return 작업 성공 여부
      */
-    suspend fun updateMemberRoles(projectId: String, userId: String, roles: List<String>): Result<Unit>
+    suspend fun updateMemberRoles(projectId: String, userId: String, roleIds: List<String>): Result<Unit>
     
     /**
      * 특정 프로젝트의 모든 멤버 데이터를 동기화합니다.

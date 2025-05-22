@@ -153,27 +153,7 @@ class ChatViewModel @Inject constructor(
             if (result.isSuccess) {
                 val channel = result.getOrThrow()
                 Log.d("ChatViewModel", "Channel details fetched: ${channel.name}")
-
-                // --- BEGINNING OF ADDED/MODIFIED CODE ---
-                if (channel.type == com.example.domain.model.ChannelType.DM) {
-                    val isCurrentUserParticipant = channel.dmSpecificData?.participantIds?.contains(currentUserId) == true
-                    if (!isCurrentUserParticipant) {
-                        Log.e("ChatViewModel", "Access Denied: Current user $currentUserId is not a participant in DM channel ${channel.id}. Participants: ${channel.dmSpecificData?.participantIds}")
-                        _uiState.update {
-                            it.copy(
-                                error = "채팅방에 접근 권한이 없습니다.", // "No permission to access this chat room."
-                                channelName = "접근 불가", // "Inaccessible"
-                                isLoadingHistory = false
-                            )
-                        }
-                        // Potentially emit an event to navigate back or show a more prominent error UI
-                        // _eventFlow.emit(ChatEvent.NavigateBack) // Example
-                        return@launch // Stop further processing for this channel
-                    }
-                }
-                // --- END OF ADDED/MODIFIED CODE ---
-
-                validateChannelContext(channel) // Existing validation
+                validateChannelContext(channel)
 
                 _uiState.update {
                     it.copy(

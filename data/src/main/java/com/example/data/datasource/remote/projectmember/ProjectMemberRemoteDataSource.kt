@@ -21,14 +21,6 @@ interface ProjectMemberRemoteDataSource {
      * @return 프로젝트 멤버 목록의 Flow
      */
     fun getProjectMembersStream(projectId: String): Flow<List<ProjectMember>>
-
-    /**
-     * 특정 프로젝트의 특정 멤버 정보를 가져옵니다.
-     * @param projectId 프로젝트 ID
-     * @param userId 사용자 ID
-     * @return 프로젝트 멤버 정보 또는 null (에러 발생 시 Result.failure)
-     */
-    suspend fun getProjectMember(projectId: String, userId: String): Result<ProjectMember?>
     
     /**
      * 프로젝트에 새 멤버를 추가합니다.

@@ -15,7 +15,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavOptions // Added import
 import androidx.navigation.compose.rememberNavController
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavDestination
@@ -41,17 +40,7 @@ fun SplashScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                SplashEvent.NavigateToLogin -> {
-                    val navOptions = NavOptions.Builder()
-                        .setPopUpTo(AppRoutes.Auth.ROOT, inclusive = true)
-                        .build()
-                    appNavigator.navigate(
-                        NavigationCommand.NavigateToRoute(
-                            destination = NavDestination.fromRoute(AppRoutes.Auth.Login.path),
-                            navOptions = navOptions
-                        )
-                    )
-                }
+                SplashEvent.NavigateToLogin -> appNavigator.navigate(NavigationCommand.NavigateToRoute(destination = NavDestination.fromRoute(AppRoutes.Auth.Login.path)))
                 SplashEvent.NavigateToMain -> appNavigator.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Main.ROOT)))
             }
         }

@@ -201,6 +201,7 @@ class Calendar24HourViewModel @Inject constructor(
     fun onScheduleLongClick(scheduleId: String) {
         viewModelScope.launch { _eventFlow.emit(Calendar24HourEvent.ShowScheduleEditDialog(scheduleId)) }
     }
+
     fun refreshSchedules() {
         viewModelScope.launch {
             val currentSuccessState = _uiState.value as? Calendar24HourUiState.Success

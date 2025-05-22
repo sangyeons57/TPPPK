@@ -89,7 +89,7 @@ alwaysApply: false
         ├── **`roles`** `/{roleId}` [Project roles & permissions] (ID: Auto)
         │   └── **Fields:**
         │       ├── `name`: String - Role name
-        │       ├── `permissions`: Map<String> - Permission List
+        │       ├── `permissions`: Map<String, Boolean> - Permission map
         │       └── `isDefault`: Boolean - Whether this is a default role
         └── **`categories`** `/{categoryId}` [Channel categories within a project] (ID: Auto)
             └── **Fields:**
