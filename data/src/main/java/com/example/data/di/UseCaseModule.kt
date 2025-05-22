@@ -65,6 +65,11 @@ abstract class UseCaseModule {
     @Singleton
     abstract fun bindDeleteRoleUseCase(impl: DeleteRoleUseCaseImpl): DeleteRoleUseCase
 
+
+    @Binds
+    @Singleton
+    abstract fun bindDeleteProjectRoleUseCase(impl: DeleteProjectRoleUseCaseImpl): DeleteProjectRoleUseCase
+
     // --- Project Member List UseCases ---
     @Binds
     @Singleton
@@ -77,6 +82,10 @@ abstract class UseCaseModule {
     @Binds
     @Singleton
     abstract fun bindDeleteProjectMemberUseCase(impl: DeleteProjectMemberUseCaseImpl): DeleteProjectMemberUseCase
+
+    @Binds
+    @Singleton
+    abstract fun bindAddProjectMemberUseCase(impl: AddProjectMemberUseCaseImpl): AddProjectMemberUseCase
 
     // --- Project UseCases (Common? AddSchedule) ---
     @Binds
@@ -120,6 +129,10 @@ abstract class UseCaseModule {
     @Binds
     @Singleton
     abstract fun bindGetScheduleDetailUseCase(impl: GetScheduleDetailUseCaseImpl): GetScheduleDetailUseCase
+
+    @Binds
+    @Singleton
+    abstract fun bindUpdateScheduleUseCase(impl: UpdateScheduleUseCaseImpl): UpdateScheduleUseCase
 
     // --- Auth UseCases ---
     @Binds

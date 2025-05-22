@@ -81,7 +81,7 @@ class EditMemberViewModel @Inject constructor(
                 val member = memberResult.getOrThrow()
 
                 // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roles 필드 사용)
-                originalSelectedRoleIds = member.roles?.map { it.id }?.filterNotNull()?.toSet().orEmpty() // Null-safe, filterNotNull
+                originalSelectedRoleIds = member?.roles?.map { it.id }?.filterNotNull()?.toSet().orEmpty() // Null-safe, filterNotNull
 
                 _uiState.update { it.copy(memberInfo = member, isLoading = false) }
             } else {
