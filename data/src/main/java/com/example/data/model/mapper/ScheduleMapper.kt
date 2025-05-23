@@ -106,6 +106,7 @@ fun Schedule.toDtoWithTime(dateTimeUtil: DateTimeUtil): ScheduleDto {
     val basicDto = ScheduleDto.fromBasicDomainModel(this) // Handles basic field mapping
     Log.d("ScheduleMapperExt", "Schedule.toDtoWithTime - fromBasicDomainModel 결과: $basicDto")
     val finalDto = basicDto.copy(
+        creatorId = this.creatorId,
         startTime = dateTimeUtil.instantToFirebaseTimestamp(this.startTime),
         endTime = dateTimeUtil.instantToFirebaseTimestamp(this.endTime),
         status = this.status,     // Enum to String
