@@ -29,10 +29,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+// Removed direct Coil imports
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.destination.AppRoutes
+import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.core.NavDestination
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -269,15 +269,10 @@ fun UserResultItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(userResult.profileImageUrl ?: R.drawable.ic_account_circle_24)
-                .error(R.drawable.ic_account_circle_24)
-                .placeholder(R.drawable.ic_account_circle_24)
-                .build(),
+        UserProfileImage(
+            profileImageUrl = userResult.profileImageUrl,
             contentDescription = "${userResult.userName} 프로필",
-            modifier = Modifier.size(40.dp).clip(CircleShape),
-            contentScale = ContentScale.Crop
+            modifier = Modifier.size(40.dp).clip(CircleShape)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {

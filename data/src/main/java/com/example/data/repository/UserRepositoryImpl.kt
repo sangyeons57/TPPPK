@@ -261,4 +261,39 @@ class UserRepositoryImpl @Inject constructor(
             Result.failure(Exception("Failed to upload profile image from repository", e))
         }
     }
+
+    override suspend fun clearSensitiveUserDataAndMarkAsWithdrawn(): Result<Unit> = withContext(dispatcherProvider.io) {
+        val currentUserId = firebaseAuth.currentUser?.uid
+            ?: return@withContext Result.failure(IllegalStateException("User not logged in or UID not available"))
+
+        val userDocumentRef = usersCollection.document(currentUserId)
+
+        // Define the updates, keeping displayName and uid.
+        // Other PII fields are set to null or a placeholder.
+        // profileImageUrl is set to a specific marker or a default image URL.
+        val updates = mapOf<String, Any?>(
+            FirestoreConstants.UserFields.EMAIL to null,
+            // FirestoreConstants.UserFields.PASSWORD_HASH to null, // Example if it existed
+            FirestoreConstants.UserFields.PROFILE_IMAGE_URL to "DEFAULT_PROFILE_IMAGE_MARKER",
+            FirestoreConstants.UserFields.STATUS_MESSAGE to null,
+            // FirestoreConstants.UserFields.PHONE_NUMBER to null, // Example if it existed in constants
+            // FirestoreConstants.UserFields.DATE_OF_BIRTH to null, // Example if it existed in constants
+            FirestoreConstants.UserFields.FCM_TOKEN to null,
+            FirestoreConstants.UserFields.ACCOUNT_STATUS to AccountStatus.WITHDRAWN.name,
+            FirestoreConstants.UserFields.MEMO to null // Added based on User.kt and UserDto.kt
+            // Add any other sensitive fields that need to be cleared, using constants
+            // Fields like FirestoreConstants.UserFields.NAME (displayName) and FirestoreConstants.UserFields.USER_ID (uid)
+            // are intentionally NOT updated.
+        )
+
+        try {
+            userDocumentRef.update(updates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("UserRepositoryImpl", "Error clearing sensitive user data: ${e.message}", e)
+            // Optionally, use SentryUtil or similar for error reporting
+            // SentryUtil.sendError(e, mapOf("context" to "clearSensitiveUserDataAndMarkAsWithdrawn"))
+            Result.failure(e)
+        }
+    }
 }

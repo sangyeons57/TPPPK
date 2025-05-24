@@ -15,17 +15,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
+// Removed direct Coil imports, will use UserProfileImage
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
+// Import R class for drawables - already handled by UserProfileImage if needed
 import com.example.core_ui.components.buttons.DebouncedBackButton
+import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.User // For MockViewModel and Previews
+import com.example.domain.model.User
 import com.example.feature_profile.viewmodel.EditProfileEvent
 import com.example.feature_profile.viewmodel.EditProfileUiState
 import com.example.feature_profile.viewmodel.EditProfileViewModel
@@ -167,10 +168,9 @@ fun EditProfileContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Profile Image
-        AsyncImage(
-            model = uiState.user?.profileImageUrl, // Use uiState.user directly
+        UserProfileImage(
+            profileImageUrl = uiState.user?.profileImageUrl,
             contentDescription = "Profile Image",
-            error = rememberVectorPainter(Icons.Filled.AccountCircle),
             modifier = Modifier
                 .size(120.dp)
                 .clip(CircleShape)

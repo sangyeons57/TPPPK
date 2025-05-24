@@ -26,12 +26,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel // Added
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Added
-import coil.compose.AsyncImage
+// Removed direct Coil imports
+import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.feature_project.members.viewmodel.AddMemberViewModel // Added
 import com.example.feature_project.members.viewmodel.AddMemberDialogEvent // Added
 import kotlinx.coroutines.flow.collectLatest // Added
-import coil.request.ImageRequest
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+// R import might be removed if UserProfileImage handles it all.
 import com.example.core_ui.R
 
 /**
@@ -198,17 +199,13 @@ fun UserSearchResultItem(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(user.profileImageUrl ?: R.drawable.ic_account_circle_24)
-                .error(R.drawable.ic_account_circle_24)
-                .placeholder(R.drawable.ic_account_circle_24)
-                .build(),
+        UserProfileImage(
+            profileImageUrl = user.profileImageUrl,
             contentDescription = "${user.userName} 프로필",
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
+                .clip(CircleShape)
+            // contentScale is handled by UserProfileImage by default
         )
 
         Spacer(modifier = Modifier.width(16.dp))
