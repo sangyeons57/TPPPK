@@ -1,19 +1,28 @@
 package com.example.feature_profile.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
-import com.example.data.repository.FakeUserRepository
+import app.cash.turbine.test
 import com.example.data.util.CoroutinesTestRule
-import com.example.data.util.FlowTestExtensions.EventCollector
-import com.example.data.util.FlowTestExtensions.getValue
-import com.example.domain.model.User
+// import com.example.data.util.FlowTestExtensions.getValue // May not be needed with Turbine
 import com.example.domain.model.UserStatus
+import com.example.domain.usecase.user.GetCurrentStatusUseCase
+import com.example.domain.usecase.user.UpdateUserStatusUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertNull
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runBlockingTest
-import org.junit.Assert.*
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.mockito.Mockito.mock
+// import org.mockito.Mockito.mock // Replaced by MockK
 
 /**
  * ChangeStatusViewModel 테스트
@@ -21,242 +30,196 @@ import org.mockito.Mockito.mock
  * 이 테스트는 순수 JUnit 환경에서 ChangeStatusViewModel의 기능을 검증합니다.
  * FakeUserRepository를 사용하여 외부 의존성 없이 테스트합니다.
  */
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChangeStatusViewModelTest {
 
-    // Coroutines 테스트 환경 설정
     @get:Rule
     val coroutinesTestRule = CoroutinesTestRule()
 
-    // 테스트 대상 (System Under Test)
     private lateinit var viewModel: ChangeStatusViewModel
-
-    // Fake Repository
-    private lateinit var fakeUserRepository: FakeUserRepository
-    
-    // SavedStateHandle Mock
+    private lateinit var getCurrentStatusUseCase: GetCurrentStatusUseCase
+    private lateinit var updateUserStatusUseCase: UpdateUserStatusUseCase
     private lateinit var savedStateHandle: SavedStateHandle
 
-    // 테스트 데이터
-    private val testUserId = "test-user-123"
-    private val testUser = User(
-        userId = testUserId,
-        email = "test@example.com",
-        name = "Test User",
-        profileImageUrl = null,
-        statusMessage = "테스트 중",
-        status = UserStatus.ONLINE.name
-    )
-
-    /**
-     * 테스트 초기화
-     */
     @Before
     fun setup() {
-        // SavedStateHandle Mock 설정
-        savedStateHandle = mock(SavedStateHandle::class.java)
-        
-        // Fake Repository 초기화
-        fakeUserRepository = FakeUserRepository()
-        
-        // 테스트 사용자 설정
-        fakeUserRepository.addUser(testUser)
-        fakeUserRepository.setCurrentUserId(testUserId)
+        getCurrentStatusUseCase = mockk()
+        updateUserStatusUseCase = mockk()
+        savedStateHandle = mockk(relaxed = true) // relaxed = true if not testing SavedStateHandle interactions
+
+        // Default success for initial status load
+        coEvery { getCurrentStatusUseCase() } returns Result.success(UserStatus.ONLINE)
+
+        viewModel = ChangeStatusViewModel(
+            savedStateHandle,
+            getCurrentStatusUseCase,
+            updateUserStatusUseCase
+        )
+        // Ensure initial coroutines like loadCurrentStatus complete for consistent state before each test
+        runCurrent()
     }
 
-    /**
-     * 초기 상태 로딩 성공 테스트
-     */
     @Test
-    fun `초기화 시 현재 사용자 상태를 성공적으로 로드해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 설정된 테스트 환경 (setup에서 설정됨)
-
-        // When: ViewModel 초기화 (loadCurrentStatus 호출)
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        // Then: 로드된 상태 정보 확인
-        val uiState = viewModel.uiState.getValue()
+    fun `초기화 시 현재 사용자 상태를 성공적으로 로드해야 함`() = runTest {
+        // ViewModel is initialized in setup, which calls loadCurrentStatus
+        // runCurrent() in setup ensures this is done
+        val uiState = viewModel.uiState.value
         assertFalse(uiState.isLoading)
         assertEquals(UserStatus.ONLINE, uiState.currentStatus)
-        assertEquals(UserStatus.ONLINE, uiState.selectedStatus) // 초기 선택 상태는 현재 상태와 동일
+        assertEquals(UserStatus.ONLINE, uiState.selectedStatus)
         assertNull(uiState.error)
     }
 
-    /**
-     * 초기 상태 로딩 실패 테스트
-     */
     @Test
-    fun `상태 로딩 중 오류 발생 시 에러 상태로 업데이트되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 에러를 시뮬레이션하도록 설정
-        fakeUserRepository.setShouldSimulateError(true)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ChangeStatusEvent>()
-        
-        // When: ViewModel 초기화 (loadCurrentStatus 호출)
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        // 이벤트 수집 시작
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // Then: 에러 상태 확인
-        val uiState = viewModel.uiState.getValue()
-        assertFalse(uiState.isLoading)
-        assertNull(uiState.currentStatus)
-        assertNull(uiState.selectedStatus)
-        assertNotNull(uiState.error)
-        assertTrue(uiState.error!!.contains("현재 상태를 불러오지 못했습니다"))
-        
-        // 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ChangeStatusEvent.ShowSnackbar)
-        assertTrue((event as ChangeStatusEvent.ShowSnackbar).message.contains("현재 상태를 불러오지 못했습니다"))
+    fun `상태 로딩 중 오류 발생 시 에러 상태로 업데이트되어야 함`() = runTest {
+        val exception = RuntimeException("상태 로드 실패")
+        coEvery { getCurrentStatusUseCase() } returns Result.failure(exception)
+
+        // Re-initialize for this specific scenario
+        viewModel = ChangeStatusViewModel(savedStateHandle, getCurrentStatusUseCase, updateUserStatusUseCase)
+        runCurrent()
+
+        viewModel.eventFlow.test {
+            val uiState = viewModel.uiState.value
+            assertFalse(uiState.isLoading)
+            assertNull(uiState.currentStatus)
+            assertNull(uiState.selectedStatus) // selectedStatus might also be null or previous if load fails
+            assertEquals("현재 상태를 불러오지 못했습니다: ${exception.message}", uiState.error)
+
+            val event = awaitItem()
+            assertTrue(event is ChangeStatusEvent.ShowSnackbar)
+            assertEquals("현재 상태를 불러오지 못했습니다: ${exception.message}", (event as ChangeStatusEvent.ShowSnackbar).message)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    /**
-     * 상태 선택 테스트
-     */
     @Test
-    fun `상태를 선택하면 SelectedStatus가 업데이트되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        // 초기 상태 확인
-        val initialState = viewModel.uiState.getValue()
-        assertEquals(UserStatus.ONLINE, initialState.selectedStatus)
-        
-        // When: 새 상태 선택
-        viewModel.onStatusSelected(UserStatus.AWAY)
-        
-        // Then: selectedStatus 업데이트 확인
-        val updatedState = viewModel.uiState.getValue()
-        assertEquals(UserStatus.AWAY, updatedState.selectedStatus)
-        // 다른 상태는 변경되지 않음
-        assertEquals(UserStatus.ONLINE, updatedState.currentStatus)
-        assertFalse(updatedState.isLoading)
-        assertFalse(updatedState.isUpdating)
+    fun `상태를 선택하면 SelectedStatus가 업데이트되어야 함`() = runTest {
+        // Initial state is ONLINE
+        viewModel.onStatusSelected(UserStatus.OFFLINE)
+        assertEquals(UserStatus.OFFLINE, viewModel.uiState.value.selectedStatus)
+        assertEquals(UserStatus.ONLINE, viewModel.uiState.value.currentStatus) // Current status should not change yet
     }
 
-    /**
-     * 상태 업데이트 성공 테스트
-     */
     @Test
-    fun `상태 업데이트 성공 시 현재 상태가 업데이트되고 성공 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel 및 이벤트 수집기
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        val eventCollector = EventCollector<ChangeStatusEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // 상태 변경
-        viewModel.onStatusSelected(UserStatus.DO_NOT_DISTURB)
-        
-        // When: 상태 업데이트
-        viewModel.updateStatus()
-        
-        // Then: UI 상태 업데이트 확인
-        val updatedState = viewModel.uiState.getValue()
-        assertEquals(UserStatus.DO_NOT_DISTURB, updatedState.currentStatus)
-        assertEquals(UserStatus.DO_NOT_DISTURB, updatedState.selectedStatus)
-        assertFalse(updatedState.isUpdating)
-        assertTrue(updatedState.updateSuccess)
-        
-        // 이벤트 확인
-        assertTrue(eventCollector.events.size >= 2)
-        val snackbarEvent = eventCollector.events.find { it is ChangeStatusEvent.ShowSnackbar && 
-            (it as ChangeStatusEvent.ShowSnackbar).message.contains("상태가") && 
-            (it as ChangeStatusEvent.ShowSnackbar).message.contains("변경되었습니다") }
-        assertNotNull(snackbarEvent)
-        
-        // 다이얼로그 닫기 이벤트 확인
-        val dismissEvent = eventCollector.events.find { it is ChangeStatusEvent.DismissDialog }
-        assertNotNull(dismissEvent)
+    fun `상태 업데이트 성공 시 현재 상태 업데이트 및 이벤트 발생`() = runTest {
+        val initialStatus = UserStatus.ONLINE
+        val newStatus = UserStatus.OFFLINE
+        coEvery { getCurrentStatusUseCase() } returns Result.success(initialStatus) // Ensure initial state
+        viewModel = ChangeStatusViewModel(savedStateHandle, getCurrentStatusUseCase, updateUserStatusUseCase)
+        runCurrent()
+
+
+        viewModel.onStatusSelected(newStatus)
+        coEvery { updateUserStatusUseCase(newStatus.value) } returns Result.success(Unit)
+
+        viewModel.eventFlow.test {
+            viewModel.updateStatus()
+            runCurrent()
+
+            val uiState = viewModel.uiState.value
+            assertEquals(newStatus, uiState.currentStatus)
+            assertEquals(newStatus, uiState.selectedStatus)
+            assertFalse(uiState.isUpdating)
+            assertTrue(uiState.updateSuccess)
+            assertNull(uiState.error)
+
+            // Expecting Snackbar("상태 변경 중...") then Snackbar("상태가 'OFFLINE'(으)로 변경되었습니다.") then DismissDialog
+            assertEquals(ChangeStatusEvent.ShowSnackbar("상태 변경 중..."), awaitItem())
+            assertEquals(ChangeStatusEvent.ShowSnackbar("상태가 '${newStatus.name}'(으)로 변경되었습니다."), awaitItem())
+            assertEquals(ChangeStatusEvent.DismissDialog, awaitItem())
+            
+            coVerify { updateUserStatusUseCase(newStatus.value) } // Verify .value is used
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    /**
-     * 상태 업데이트 실패 테스트
-     */
     @Test
-    fun `상태 업데이트 실패 시 에러 메시지가 표시되고 현재 상태는 변경되지 않아야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel 및 이벤트 수집기
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        // 상태 변경
-        viewModel.onStatusSelected(UserStatus.AWAY)
-        
-        // 에러 설정
-        fakeUserRepository.setShouldSimulateError(true)
-        
-        val eventCollector = EventCollector<ChangeStatusEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 상태 업데이트
-        viewModel.updateStatus()
-        
-        // Then: UI 상태 확인
-        val updatedState = viewModel.uiState.getValue()
-        assertEquals(UserStatus.ONLINE, updatedState.currentStatus) // 원래 상태 유지
-        assertEquals(UserStatus.AWAY, updatedState.selectedStatus) // 선택된 상태는 유지
-        assertFalse(updatedState.isUpdating)
-        assertFalse(updatedState.updateSuccess)
-        assertNotNull(updatedState.error)
-        
-        // 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val errorEvents = eventCollector.events.filter { it is ChangeStatusEvent.ShowSnackbar && 
-            (it as ChangeStatusEvent.ShowSnackbar).message.contains("상태 변경 실패") }
-        assertTrue(errorEvents.isNotEmpty())
+    fun `상태 업데이트 실패 시 에러 메시지 표시 및 현재 상태 유지`() = runTest {
+        val initialStatus = UserStatus.ONLINE
+        val newStatus = UserStatus.OFFLINE
+        val exception = RuntimeException("업데이트 실패")
+
+        coEvery { getCurrentStatusUseCase() } returns Result.success(initialStatus)
+        viewModel = ChangeStatusViewModel(savedStateHandle, getCurrentStatusUseCase, updateUserStatusUseCase)
+        runCurrent()
+
+        viewModel.onStatusSelected(newStatus)
+        coEvery { updateUserStatusUseCase(newStatus.value) } returns Result.failure(exception)
+
+        viewModel.eventFlow.test {
+            viewModel.updateStatus()
+            runCurrent()
+
+            val uiState = viewModel.uiState.value
+            assertEquals(initialStatus, uiState.currentStatus) // Should remain initial status
+            assertEquals(newStatus, uiState.selectedStatus) // Selected should be the new one
+            assertFalse(uiState.isUpdating)
+            assertFalse(uiState.updateSuccess)
+            assertEquals("상태 변경 실패: ${exception.message}", uiState.error)
+
+            assertEquals(ChangeStatusEvent.ShowSnackbar("상태 변경 중..."), awaitItem())
+            assertEquals(ChangeStatusEvent.ShowSnackbar("상태 변경 실패: ${exception.message}"), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    /**
-     * 동일한 상태로 업데이트 시도 테스트
-     */
     @Test
-    fun `현재 상태와 동일한 상태로 업데이트 시도 시 적절한 메시지가 표시되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel 및 이벤트 수집기
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        val eventCollector = EventCollector<ChangeStatusEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 현재 상태와 동일한 상태로 업데이트 시도
-        viewModel.onStatusSelected(UserStatus.ONLINE) // 현재 상태와 동일
-        viewModel.updateStatus()
-        
-        // Then: 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val snackbarEvent = eventCollector.events.first()
-        assertTrue(snackbarEvent is ChangeStatusEvent.ShowSnackbar)
-        assertEquals("현재 상태와 동일합니다.", (snackbarEvent as ChangeStatusEvent.ShowSnackbar).message)
-    }
+    fun `현재 상태와 동일한 상태로 업데이트 시도 시 스낵바 메시지 표시`() = runTest {
+        coEvery { getCurrentStatusUseCase() } returns Result.success(UserStatus.ONLINE)
+        viewModel = ChangeStatusViewModel(savedStateHandle, getCurrentStatusUseCase, updateUserStatusUseCase)
+        runCurrent()
 
-    /**
-     * 상태 선택 없이 업데이트 시도 테스트
-     */
-    @Test
-    fun `상태 선택 없이 업데이트 시도 시 적절한 메시지가 표시되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 상태 선택이 null인 ViewModel
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        // selectedStatus를 null로 설정 (private 필드이므로 직접 변경 불가, 대신 반영 방법을 찾아야 함)
-        // 여기서는 초기화 시 에러가 있는 경우를 가정하여 테스트
-        fakeUserRepository.setShouldSimulateError(true)
-        viewModel = ChangeStatusViewModel(savedStateHandle, fakeUserRepository)
-        
-        // 에러 시뮬레이션 해제 (업데이트는 성공하게)
-        fakeUserRepository.setShouldSimulateError(false)
-        
-        val eventCollector = EventCollector<ChangeStatusEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 상태 업데이트 시도
-        viewModel.updateStatus()
-        
-        // Then: 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val snackbarEvent = eventCollector.events.first()
-        assertTrue(snackbarEvent is ChangeStatusEvent.ShowSnackbar)
-        assertEquals("상태를 선택해주세요.", (snackbarEvent as ChangeStatusEvent.ShowSnackbar).message)
+        viewModel.onStatusSelected(UserStatus.ONLINE) // Same as current
+
+        viewModel.eventFlow.test {
+            viewModel.updateStatus()
+            runCurrent()
+
+            assertEquals(ChangeStatusEvent.ShowSnackbar("현재 상태와 동일합니다."), awaitItem())
+            coVerify(exactly = 0) { updateUserStatusUseCase(any()) } // Ensure use case not called
+            cancelAndIgnoreRemainingEvents()
+        }
     }
-} 
+    
+    @Test
+    fun `상태 선택 없이 업데이트 시도 시 스낵바 메시지 표시`() = runTest {
+        // To achieve selectedStatus == null, we simulate an initial load failure
+        coEvery { getCurrentStatusUseCase() } returns Result.failure(RuntimeException("Initial load failed"))
+        viewModel = ChangeStatusViewModel(savedStateHandle, getCurrentStatusUseCase, updateUserStatusUseCase)
+        // Skip runCurrent() after viewModel init to keep selectedStatus potentially null if init logic relies on it.
+        // Or, more directly, ensure the state is as expected.
+        // The ViewModel's init logic sets selectedStatus = currentStatus. If currentStatus is null, selectedStatus is null.
+        runCurrent() // Let init run. If load fails, currentStatus and selectedStatus will be null.
+        
+        assertNull(viewModel.uiState.value.selectedStatus) // Verify precondition
+
+        viewModel.eventFlow.test {
+            viewModel.updateStatus()
+            runCurrent()
+            
+            // Consume ShowSnackbar from failed initial load if any, then check for the target snackbar.
+            // This depends on how strictly events are consumed or if a fresh collector is used.
+            // For this test, we expect "상태를 선택해주세요."
+            // If init failure snackbar is also there, need to handle it.
+            // Let's assume the init failure snackbar was already handled or we filter.
+            
+            // awaitItem() might be the init failure snackbar.
+            // Better: filter for the specific message or ensure the test setup isolates this.
+            // For now, assuming it's the primary event after updateStatus.
+            
+            var eventFound = false
+            for (i in 0..1) { // Check first few events if init also posts one
+                val event = awaitItem()
+                if (event == ChangeStatusEvent.ShowSnackbar("상태를 선택해주세요.")) {
+                    eventFound = true
+                    break
+                }
+            }
+            assertTrue("Event '상태를 선택해주세요.' not found", eventFound)
+
+            coVerify(exactly = 0) { updateUserStatusUseCase(any()) }
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+}

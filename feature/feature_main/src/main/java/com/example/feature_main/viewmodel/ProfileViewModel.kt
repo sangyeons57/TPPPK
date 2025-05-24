@@ -21,16 +21,16 @@ import javax.inject.Inject
 data class ProfileUiState(
     val isLoading: Boolean = false,
     val userProfile: UserProfileData? = null, // 사용자 프로필 데이터 (null 가능)
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val showChangeStatusDialog: Boolean = false // Dialog visibility state
 )
 
 // 프로필 화면 이벤트
 sealed class ProfileEvent {
     object NavigateToSettings : ProfileEvent() // 설정 화면으로 이동
-    object NavigateToStatus: ProfileEvent()
+    // NavigateToStatus is now handled by showChangeStatusDialog in UiState
     object NavigateToFriends: ProfileEvent()
     object NavigateToEditProfile : ProfileEvent() // 프로필 수정 화면으로 이동
-    object ShowEditStatusDialog : ProfileEvent() // 상태 메시지 변경 다이얼로그 표시
     object PickProfileImage : ProfileEvent() // 이미지 선택기 실행 요청
     object LogoutCompleted : ProfileEvent() // 로그아웃 완료 알림 -> 화면 전환용
     data class ShowSnackbar(val message: String) : ProfileEvent()
@@ -94,18 +94,35 @@ class ProfileViewModel @Inject constructor(
 
     // 상태 메시지 변경 버튼 클릭
     fun onEditStatusClick() {
+        // No longer emits ShowEditStatusDialog. 
+        // This function can be used if any specific ViewModel logic is needed when editing starts,
+        // but for now, it might not be strictly necessary as ProfileScreen will handle the edit state.
+        // Keeping it for now in case future logic needs it.
         viewModelScope.launch {
-            _eventFlow.emit(ProfileEvent.ShowEditStatusDialog)
+            // Placeholder for any future logic if needed when status editing begins.
         }
     }
 
-    // 설정 버튼 클릭
-    fun onStatusClick() {
+    // "상태 표시" 메뉴 아이템 클릭 시 (기존 onStatusClick)
+    fun onChangeStatusClick() { // Renamed for clarity
+        _uiState.update { it.copy(showChangeStatusDialog = true) }
+    }
+
+    fun onDismissChangeStatusDialog() {
+        _uiState.update { it.copy(showChangeStatusDialog = false) }
+    }
+
+    fun onChangeStatusSuccess(statusName: String) {
+        // Dismiss the dialog first
+        _uiState.update { it.copy(showChangeStatusDialog = false) }
+        // Then show snackbar and reload profile
         viewModelScope.launch {
-            _eventFlow.emit(ProfileEvent.NavigateToStatus)
+            _eventFlow.emit(ProfileEvent.ShowSnackbar("상태가 '$statusName'(으)로 변경되었습니다."))
+            loadUserProfile() // Refresh user profile to show updated status
         }
     }
-    // 설정 버튼 클릭
+
+    // 친구 목록 버튼 클릭 (기존 onFriendsClick)
     fun onFriendsClick() {
         viewModelScope.launch {
             _eventFlow.emit(ProfileEvent.NavigateToFriends)
@@ -139,11 +156,12 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 상태 메시지 변경 시도 (UseCase 사용) - $newStatus")
-            // val result = userRepository.updateStatusMessage(newStatus) // Remove direct repository call
-            val result = updateUserStatusUseCase(newStatus) // Call UseCase
+            // This updateUserStatusUseCase is for the status *message*, not UserStatus (ONLINE/OFFLINE)
+            // Ensure this is not confused with the one for UserStatus.
+            val result = updateUserStatusUseCase(newStatus) 
             result.onSuccess {
                 // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
-                loadUserProfile()
+                loadUserProfile() // This reloads the whole profile, including user status and status message
                 _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨"))
             }.onFailure { exception ->
                  _uiState.update { it.copy(isLoading = false) }

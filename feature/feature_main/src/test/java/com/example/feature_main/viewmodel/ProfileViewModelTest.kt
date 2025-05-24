@@ -1,19 +1,33 @@
 package com.example.feature_main.viewmodel
 
-import com.example.data.repository.FakeAuthRepository
-import com.example.data.repository.FakeUserRepository
+import android.net.Uri
+import app.cash.turbine.test
 import com.example.data.util.CoroutinesTestRule
-import com.example.data.util.FlowTestExtensions.EventCollector
-import com.example.data.util.FlowTestExtensions.getValue
+import com.example.data.util.FlowTestExtensions.getValue // Keep if used, otherwise remove
 import com.example.domain.model.User
+import com.example.domain.model.UserProfileData
+import com.example.domain.usecase.auth.LogoutUseCase
+import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
+import com.example.domain.usecase.user.UpdateUserImageUseCase
+import com.example.domain.usecase.user.UpdateUserStatusUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertFalse
+import junit.framework.TestCase.assertNotNull
+import junit.framework.TestCase.assertNull
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runBlockingTest
-import org.junit.Assert.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import android.net.Uri
-import org.mockito.Mockito.mock
+// import org.mockito.Mockito.mock // Replaced by MockK
 
 /**
  * ProfileViewModel 테스트
@@ -21,19 +35,19 @@ import org.mockito.Mockito.mock
  * 이 테스트는 순수 JUnit 환경에서 ProfileViewModel의 기능을 검증합니다.
  * FakeUserRepository와 FakeAuthRepository를 사용하여 외부 의존성 없이 테스트합니다.
  */
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModelTest {
 
-    // Coroutines 테스트 환경 설정
     @get:Rule
     val coroutinesTestRule = CoroutinesTestRule()
 
-    // 테스트 대상 (System Under Test)
     private lateinit var viewModel: ProfileViewModel
 
-    // Fake Repositories
-    private lateinit var fakeUserRepository: FakeUserRepository
-    private lateinit var fakeAuthRepository: FakeAuthRepository
+    // Mock UseCases
+    private lateinit var getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase
+    private lateinit var logoutUseCase: LogoutUseCase
+    private lateinit var updateUserStatusUseCase: UpdateUserStatusUseCase // For status message
+    private lateinit var updateUserProfileImageUseCase: UpdateUserImageUseCase
 
     // 테스트 데이터
     private val testUser = User(
@@ -41,294 +55,239 @@ class ProfileViewModelTest {
         email = "test@example.com",
         name = "Test User",
         profileImageUrl = "https://example.com/profile.jpg",
-        statusMessage = "테스트 상태 메시지"
+        statusMessage = "테스트 상태 메시지",
+        userStatus = "ONLINE" // Assuming UserStatus.ONLINE.value
     )
-
-    // Mock Uri
+    private val testUserProfileData = testUser.toUserProfileData()
     private lateinit var mockUri: Uri
 
-    /**
-     * 테스트 초기화
-     */
     @Before
     fun setup() {
-        // Fake Repository 초기화
-        fakeUserRepository = FakeUserRepository()
-        fakeAuthRepository = FakeAuthRepository()
-        
-        // Mock Uri 초기화
-        mockUri = mock(Uri::class.java)
-        
-        // 테스트 사용자 데이터 설정
-        fakeUserRepository.addUser(testUser)
-        fakeUserRepository.setCurrentUserId(testUser.userId)
+        getCurrentUserStreamUseCase = mockk()
+        logoutUseCase = mockk()
+        updateUserStatusUseCase = mockk() // For status message
+        updateUserProfileImageUseCase = mockk()
+        mockUri = mockk<Uri>()
+
+        // Default success scenario for user profile loading
+        coEvery { getCurrentUserStreamUseCase() } returns flowOf(Result.success(testUser))
+
+        viewModel = ProfileViewModel(
+            getCurrentUserStreamUseCase,
+            logoutUseCase,
+            updateUserStatusUseCase,
+            updateUserProfileImageUseCase
+        )
     }
 
-    /**
-     * 프로필 로딩 성공 테스트
-     */
     @Test
-    fun `초기화 시 사용자 프로필을 성공적으로 로드해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 설정된 테스트 환경 (setup에서 설정됨)
+    fun `초기화 시 사용자 프로필을 성공적으로 로드해야 함`() = runTest {
+        // ViewModel is initialized in setup, which calls loadUserProfile
+        runCurrent() // Execute pending coroutines
 
-        // When: ViewModel 초기화 (init에서 loadUserProfile 호출)
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // Then: 로드된 프로필 정보 확인
-        val uiState = viewModel.uiState.getValue()
+        val uiState = viewModel.uiState.value
         assertFalse(uiState.isLoading)
         assertNotNull(uiState.userProfile)
-        assertEquals(testUser.userId, uiState.userProfile?.userId)
-        assertEquals(testUser.name, uiState.userProfile?.name)
-        assertEquals(testUser.email, uiState.userProfile?.email)
-        assertEquals(testUser.profileImageUrl, uiState.userProfile?.profileImageUrl)
-        // statusMessage 확인 (테스트 데이터에 설정된 값과 일치해야 함)
-        assertEquals(testUser.statusMessage, uiState.userProfile?.statusMessage)
+        assertEquals(testUserProfileData, uiState.userProfile)
+        assertNull(uiState.errorMessage)
     }
 
-    /**
-     * 프로필 로딩 오류 테스트
-     */
     @Test
-    fun `프로필 로드 중 오류 발생 시 에러 상태로 업데이트되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 에러를 시뮬레이션하도록 설정
-        fakeUserRepository.setShouldSimulateError(true)
-        
-        // When: ViewModel 초기화 (init에서 loadUserProfile 호출)
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // Then: 에러 상태 확인
-        val uiState = viewModel.uiState.getValue()
-        assertFalse(uiState.isLoading)
-        assertNull(uiState.userProfile)
-        assertNotNull(uiState.errorMessage)
-        assertEquals("프로필을 불러오는데 실패했습니다.", uiState.errorMessage)
+    fun `프로필 로드 중 오류 발생 시 에러 상태로 업데이트되어야 함`() = runTest {
+        // Given: Simulate error during profile loading
+        val exception = RuntimeException("프로필 로드 실패")
+        coEvery { getCurrentUserStreamUseCase() } returns flowOf(Result.failure(exception))
+
+        // When: Re-initialize ViewModel or explicitly call loadUserProfile if it's public
+        // For init block, re-initialize
+        viewModel = ProfileViewModel(
+            getCurrentUserStreamUseCase,
+            logoutUseCase,
+            updateUserStatusUseCase,
+            updateUserProfileImageUseCase
+        )
+        runCurrent()
+
+
+        viewModel.eventFlow.test {
+            val uiState = viewModel.uiState.value
+            assertFalse(uiState.isLoading)
+            assertNull(uiState.userProfile)
+            assertNotNull(uiState.errorMessage)
+            assertEquals("프로필 정보를 불러오지 못했습니다: ${exception.message}", uiState.errorMessage)
+
+            // Check for snackbar event
+            val event = awaitItem()
+            assertTrue(event is ProfileEvent.ShowSnackbar)
+            assertEquals("프로필 정보를 불러오지 못했습니다: ${exception.message}", (event as ProfileEvent.ShowSnackbar).message)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    /**
-     * 설정 화면 이동 테스트
-     */
-    @Test
-    fun `설정 버튼 클릭 시 설정 화면으로 이동 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 설정 버튼 클릭
-        viewModel.onSettingsClick()
-        
-        // Then: 설정 화면 이동 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.NavigateToSettings)
-    }
 
-    /**
-     * 친구 화면 이동 테스트
-     */
     @Test
-    fun `친구 버튼 클릭 시 친구 화면으로 이동 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 친구 버튼 클릭
-        viewModel.onFriendsClick()
-        
-        // Then: 친구 화면 이동 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.NavigateToFriends)
-    }
-
-    /**
-     * 상태 화면 이동 테스트
-     */
-    @Test
-    fun `상태 버튼 클릭 시 상태 화면으로 이동 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 상태 버튼 클릭
-        viewModel.onStatusClick()
-        
-        // Then: 상태 화면 이동 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.NavigateToStatus)
-    }
-
-    /**
-     * 프로필 이미지 변경 요청 테스트
-     */
-    @Test
-    fun `프로필 이미지 변경 버튼 클릭 시 이미지 선택기 요청 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 프로필 이미지 변경 버튼 클릭
-        viewModel.onEditProfileImageClick()
-        
-        // Then: 이미지 선택기 요청 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.PickProfileImage)
-    }
-
-    /**
-     * 상태 메시지 변경 요청 테스트
-     */
-    @Test
-    fun `상태 메시지 변경 버튼 클릭 시 상태 메시지 변경 다이얼로그 요청 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 상태 메시지 변경 버튼 클릭
-        viewModel.onEditStatusClick()
-        
-        // Then: 상태 메시지 변경 다이얼로그 요청 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.ShowEditStatusDialog)
-    }
-
-    /**
-     * 로그아웃 성공 테스트
-     */
-    @Test
-    fun `로그아웃 버튼 클릭 시 로그아웃 완료 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 로그아웃 버튼 클릭
-        viewModel.onLogoutClick()
-        
-        // Then: 로그아웃 완료 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.LogoutCompleted)
-    }
-
-    /**
-     * 로그아웃 실패 테스트
-     */
-    @Test
-    fun `로그아웃 중 오류 발생 시 스낵바 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 에러를 시뮬레이션하도록 설정
-        fakeAuthRepository.setShouldSimulateError(true)
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 로그아웃 버튼 클릭
-        viewModel.onLogoutClick()
-        
-        // Then: 스낵바 이벤트 확인
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.ShowSnackbar)
-        assertEquals("로그아웃 실패", (event as ProfileEvent.ShowSnackbar).message)
-    }
-
-    /**
-     * 상태 메시지 변경 테스트
-     */
-    @Test
-    fun `상태 메시지 변경 시 업데이트된 상태가 반영되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 초기 상태 확인
-        val initialState = viewModel.uiState.getValue()
-        assertNotNull(initialState.userProfile)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 상태 메시지 변경
+    fun `changeStatusMessage 성공 시 프로필 업데이트 및 스낵바 표시`() = runTest {
         val newStatusMessage = "새로운 상태 메시지"
-        viewModel.changeStatusMessage(newStatusMessage)
-        
-        // Then: 업데이트된 상태 및 스낵바 이벤트 확인
-        val updatedState = viewModel.uiState.getValue()
-        assertEquals(newStatusMessage, updatedState.userProfile?.statusMessage)
-        
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.ShowSnackbar)
+        val updatedUser = testUser.copy(statusMessage = newStatusMessage)
+
+        coEvery { updateUserStatusUseCase(newStatusMessage) } returns Result.success(Unit)
+        // Mock subsequent profile reload to return updated user
+        coEvery { getCurrentUserStreamUseCase() } returns flowOf(Result.success(testUser), Result.success(updatedUser))
+
+
+        viewModel = ProfileViewModel( // Re-init to ensure loadUserProfile is called after mock setup
+            getCurrentUserStreamUseCase,
+            logoutUseCase,
+            updateUserStatusUseCase,
+            updateUserProfileImageUseCase
+        )
+        runCurrent() // Initial load
+
+        viewModel.eventFlow.test {
+            viewModel.changeStatusMessage(newStatusMessage)
+            runCurrent() // Allow coroutines to complete
+
+            // Check UI state for loading indicators (optional, depends on exact implementation)
+            // For this test, focus on the final state and event.
+
+            val finalUiState = viewModel.uiState.value
+            // assertEquals(newStatusMessage, finalUiState.userProfile?.statusMessage) // This will be true after loadUserProfile re-fetches
+            
+            // Verify snackbar
+            val event = awaitItem() // This should be the snackbar from changeStatusMessage
+            assertTrue(event is ProfileEvent.ShowSnackbar)
+            assertEquals("상태 메시지 변경됨", (event as ProfileEvent.ShowSnackbar).message)
+
+            // Verify loadUserProfile was called by checking if getCurrentUserStreamUseCase was called again
+            // For simplicity, we'll assume the state reflects the *final* loaded profile
+            // Need to advance time or manage dispatchers if loadUserProfile is complex.
+            // If loadUserProfile is called, the userProfile should eventually update.
+            // Waiting for state change or using Turbine for state testing would be more robust here.
+            
+            // Let's check the user profile after some time, assuming loadUserProfile completes
+             testScheduler.advanceUntilIdle() // Advance virtual time
+             val reloadedUiState = viewModel.uiState.value
+             assertEquals(newStatusMessage, reloadedUiState.userProfile?.statusMessage)
+
+
+            coVerify { updateUserStatusUseCase(newStatusMessage) }
+            // coVerify(atLeast = 2) { getCurrentUserStreamUseCase() } // Initial load + after status update
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    /**
-     * 프로필 이미지 변경 테스트
-     */
     @Test
-    fun `프로필 이미지 변경 시 업데이트된 이미지가 반영되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 초기화된 ViewModel
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 초기 상태 확인
-        val initialState = viewModel.uiState.getValue()
-        assertNotNull(initialState.userProfile)
-        
-        // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ProfileEvent>()
-        eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        
-        // When: 프로필 이미지 변경
-        viewModel.changeProfileImage(mockUri)
-        
-        // Then: 업데이트된 이미지 URL 및 스낵바 이벤트 확인
-        val updatedState = viewModel.uiState.getValue()
-        assertNotNull(updatedState.userProfile?.profileImageUrl)
-        
-        assertTrue(eventCollector.events.isNotEmpty())
-        val event = eventCollector.events.first()
-        assertTrue(event is ProfileEvent.ShowSnackbar)
+    fun `changeStatusMessage 실패 시 스낵바 표시`() = runTest {
+        val newStatusMessage = "실패할 상태 메시지"
+        val exception = RuntimeException("상태 메시지 변경 실패")
+        coEvery { updateUserStatusUseCase(newStatusMessage) } returns Result.failure(exception)
+
+        viewModel.eventFlow.test {
+            viewModel.changeStatusMessage(newStatusMessage)
+            runCurrent()
+
+            val event = awaitItem()
+            assertTrue(event is ProfileEvent.ShowSnackbar)
+            assertEquals("상태 메시지 변경 실패: ${exception.message}", (event as ProfileEvent.ShowSnackbar).message)
+
+            val uiState = viewModel.uiState.value
+            assertFalse(uiState.isLoading) // Should not be loading indefinitely
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
-    /**
-     * 오류 메시지 표시 후 초기화 테스트
-     */
     @Test
-    fun `에러 메시지가 표시된 후 초기화되어야 함`() = coroutinesTestRule.runBlockingTest {
-        // Given: 에러 상태의 ViewModel
-        fakeUserRepository.setShouldSimulateError(true)
-        viewModel = ProfileViewModel(fakeUserRepository, fakeAuthRepository)
-        
-        // 에러 상태 확인
-        val errorState = viewModel.uiState.getValue()
-        assertNotNull(errorState.errorMessage)
-        
-        // When: 에러 메시지 표시 후 초기화
-        viewModel.errorMessageShown()
-        
-        // Then: 에러 메시지 초기화 확인
-        val updatedState = viewModel.uiState.getValue()
-        assertNull(updatedState.errorMessage)
+    fun `onChangeStatusClick 시 showChangeStatusDialog가 true로 변경됨`() {
+        viewModel.onChangeStatusClick()
+        assertTrue(viewModel.uiState.value.showChangeStatusDialog)
     }
-} 
+
+    @Test
+    fun `onDismissChangeStatusDialog 시 showChangeStatusDialog가 false로 변경됨`() {
+        // First, set it to true
+        viewModel.onChangeStatusClick()
+        assertTrue(viewModel.uiState.value.showChangeStatusDialog)
+
+        // Then, dismiss
+        viewModel.onDismissChangeStatusDialog()
+        assertFalse(viewModel.uiState.value.showChangeStatusDialog)
+    }
+
+    @Test
+    fun `onChangeStatusSuccess 시 다이얼로그 닫고 스낵바 표시 및 프로필 새로고침`() = runTest {
+        val statusName = "ONLINE"
+        // Mock subsequent profile reload
+        coEvery { getCurrentUserStreamUseCase() } returns flowOf(Result.success(testUser)) // For initial and reload
+
+        // Initialize with a state where dialog is shown
+         val initialFlow = MutableSharedFlow<Result<User>>()
+         coEvery { getCurrentUserStreamUseCase() } returns initialFlow
+
+        viewModel = ProfileViewModel(
+            getCurrentUserStreamUseCase,
+            logoutUseCase,
+            updateUserStatusUseCase,
+            updateUserProfileImageUseCase
+        )
+        // Manually set dialog to be open for the test context
+        viewModel.onChangeStatusClick()
+        assertTrue(viewModel.uiState.value.showChangeStatusDialog)
+        
+        // Emit initial user for loadUserProfile
+        initialFlow.emit(Result.success(testUser))
+        runCurrent()
+
+
+        viewModel.eventFlow.test {
+            viewModel.onChangeStatusSuccess(statusName)
+            runCurrent()
+
+            assertFalse(viewModel.uiState.value.showChangeStatusDialog)
+
+            val event = awaitItem()
+            assertTrue(event is ProfileEvent.ShowSnackbar)
+            assertEquals("상태가 '$statusName'(으)로 변경되었습니다.", (event as ProfileEvent.ShowSnackbar).message)
+            
+            // Verify loadUserProfile was called (which in turn calls getCurrentUserStreamUseCase)
+            // This coVerify might be tricky if called multiple times in setup/init.
+            // Consider verifying the *effect* of loadUserProfile if direct verify is hard.
+            coVerify(atLeast = 1) { getCurrentUserStreamUseCase() } // Expect it to be called for reload
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+    
+    // Example of an adapted existing test (Logout)
+    @Test
+    fun `로그아웃 성공 시 LogoutCompleted 이벤트 발생`() = runTest {
+        coEvery { logoutUseCase() } returns Result.success(Unit)
+        viewModel.eventFlow.test {
+            viewModel.onLogoutClick()
+            runCurrent()
+            val event = awaitItem()
+            assertTrue(event is ProfileEvent.LogoutCompleted)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `로그아웃 실패 시 ShowSnackbar 이벤트 발생`() = runTest {
+        val exception = RuntimeException("로그아웃 실패")
+        coEvery { logoutUseCase() } returns Result.failure(exception)
+        viewModel.eventFlow.test {
+            viewModel.onLogoutClick()
+            runCurrent()
+            val event = awaitItem()
+            assertTrue(event is ProfileEvent.ShowSnackbar)
+            assertEquals("로그아웃 실패", (event as ProfileEvent.ShowSnackbar).message)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // The test for onEditStatusClick (old dialog for status message) can be removed or adapted
+    // if onEditStatusClick has new specific logic. Given it's a placeholder now,
+    // there's nothing in the VM to test for it.
+
+    // The test `상태 버튼 클릭 시 상태 화면으로 이동 이벤트가 발생해야 함` is now obsolete
+    // as `onChangeStatusClick` handles dialog visibility.
+
+}

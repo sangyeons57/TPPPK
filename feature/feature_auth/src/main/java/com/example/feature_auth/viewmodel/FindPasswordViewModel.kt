@@ -17,15 +17,11 @@ import javax.inject.Inject
  */
 data class FindPasswordUiState(
     val email: String = "",
-    val authCode: String = "",
-    val newPassword: String = "",
-    val newPasswordConfirm: String = "",
-    val isPasswordVisible: Boolean = false,
+    // Removed: authCode, newPassword, newPasswordConfirm, isPasswordVisible, 
+    // isEmailVerified, passwordChangeSuccess
     val isEmailSent: Boolean = false,
-    val isEmailVerified: Boolean = false,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val passwordChangeSuccess: Boolean = false
+    val errorMessage: String? = null
 )
 
 /**
@@ -50,8 +46,7 @@ sealed class FindPasswordEvent {
 @HiltViewModel
 class FindPasswordViewModel @Inject constructor(
     private val requestPasswordResetUseCase: RequestPasswordResetUseCase,
-    private val verifyPasswordResetCodeUseCase: VerifyPasswordResetCodeUseCase,
-    private val resetPasswordUseCase: ResetPasswordUseCase,
+    // Removed: verifyPasswordResetCodeUseCase, resetPasswordUseCase
     private val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
 ) : ViewModel() {
 
@@ -69,42 +64,13 @@ class FindPasswordViewModel @Inject constructor(
         _uiState.update { it.copy(email = email, errorMessage = null) }
     }
 
-    /**
-     * 인증코드 입력값 변경 처리
-     * @param code 변경된 인증코드 값
-     */
-    fun onAuthCodeChange(code: String) {
-        _uiState.update { it.copy(authCode = code, errorMessage = null) }
-    }
+    // Removed: onAuthCodeChange, onNewPasswordChange, onNewPasswordConfirmChange, onPasswordVisibilityToggle
 
     /**
-     * 새 비밀번호 입력값 변경 처리
-     * @param password 변경된 비밀번호 값
+     * 비밀번호 재설정 이메일 요청 버튼 클릭 처리
+     * 이메일 유효성 검사 후 비밀번호 재설정 이메일 요청 UseCase 실행
      */
-    fun onNewPasswordChange(password: String) {
-        _uiState.update { it.copy(newPassword = password, errorMessage = null) }
-    }
-
-    /**
-     * 새 비밀번호 확인 입력값 변경 처리
-     * @param passwordConfirm 변경된 비밀번호 확인 값
-     */
-    fun onNewPasswordConfirmChange(passwordConfirm: String) {
-        _uiState.update { it.copy(newPasswordConfirm = passwordConfirm, errorMessage = null) }
-    }
-
-    /**
-     * 비밀번호 표시/숨김 상태 토글
-     */
-    fun onPasswordVisibilityToggle() {
-        _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
-    }
-
-    /**
-     * 인증코드 요청 버튼 클릭 처리
-     * 이메일 유효성 검사 후 인증코드 요청 UseCase 실행
-     */
-    fun onRequestAuthCodeClick() {
+    fun requestPasswordResetEmail() { // Renamed from onRequestAuthCodeClick
         val email = _uiState.value.email
         if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             _uiState.update { it.copy(errorMessage = "올바른 이메일 형식이 아닙니다.") }
@@ -119,7 +85,7 @@ class FindPasswordViewModel @Inject constructor(
 
             result.onSuccess {
                 _uiState.update { it.copy(isLoading = false, isEmailSent = true) }
-                _eventFlow.emit(FindPasswordEvent.ShowSnackbar("인증코드가 이메일로 전송되었습니다."))
+                _eventFlow.emit(FindPasswordEvent.ShowSnackbar("이메일이 전송되었습니다.")) // Updated message
             }.onFailure { exception ->
                 val errorMessage = getAuthErrorMessageUseCase.getPasswordResetErrorMessage(exception)
                 _uiState.update { it.copy(isLoading = false, errorMessage = errorMessage) }
@@ -127,71 +93,14 @@ class FindPasswordViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 인증코드 확인 버튼 클릭 처리
-     * 인증코드 유효성 검사 후 코드 확인 UseCase 실행
-     */
-    fun onConfirmAuthCodeClick() {
-        val email = _uiState.value.email
-        val code = _uiState.value.authCode
-        if (code.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "인증번호를 입력해주세요.") }
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-
-            // VerifyPasswordResetCodeUseCase 호출
-            val result = verifyPasswordResetCodeUseCase(email, code)
-
-            result.onSuccess {
-                _uiState.update { it.copy(isLoading = false, isEmailVerified = true) }
-                _eventFlow.emit(FindPasswordEvent.ShowSnackbar("인증되었습니다. 새 비밀번호를 입력하세요."))
-            }.onFailure { exception ->
-                val errorMessage = getAuthErrorMessageUseCase.getPasswordResetErrorMessage(exception)
-                _uiState.update { it.copy(isLoading = false, errorMessage = errorMessage) }
-            }
-        }
-    }
+    // Removed: onConfirmAuthCodeClick, onCompletePasswordChangeClick
 
     /**
-     * 비밀번호 재설정 완료 버튼 클릭 처리
-     * 비밀번호 유효성 검사 후 비밀번호 재설정 UseCase 실행
+     * "완료" 버튼 클릭 처리 (이메일 전송 후)
      */
-    fun onCompletePasswordChangeClick() {
-        val email = _uiState.value.email
-        val code = _uiState.value.authCode
-        val newPassword = _uiState.value.newPassword
-        val confirmPassword = _uiState.value.newPasswordConfirm
-
-        // 비밀번호 유효성 검사
-        if (newPassword.length < 8) {
-            _uiState.update { it.copy(errorMessage = "비밀번호는 최소 8자 이상이어야 합니다.") }
-            return
-        }
-        // 영문자, 숫자, 특수문자 포함 여부 검사 로직 (SignUpViewModel과 유사한 로직으로 구현 가능)
-
-        // 비밀번호 일치 확인
-        if (newPassword != confirmPassword) {
-            _uiState.update { it.copy(errorMessage = "비밀번호가 일치하지 않습니다.") }
-            return
-        }
-
+    fun onDoneClicked() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            
-            // ResetPasswordUseCase 호출
-            val result = resetPasswordUseCase(email, code, newPassword)
-            
-            result.onSuccess {
-                _uiState.update { it.copy(isLoading = false, passwordChangeSuccess = true) }
-                _eventFlow.emit(FindPasswordEvent.ShowSnackbar("비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 로그인해주세요."))
-                _eventFlow.emit(FindPasswordEvent.NavigateBack)
-            }.onFailure { exception ->
-                val errorMessage = getAuthErrorMessageUseCase.getPasswordResetErrorMessage(exception)
-                _uiState.update { it.copy(isLoading = false, errorMessage = errorMessage) }
-            }
+            _eventFlow.emit(FindPasswordEvent.NavigateBack)
         }
     }
 
@@ -205,6 +114,6 @@ class FindPasswordViewModel @Inject constructor(
     }
 
     fun errorMessageShown() {
-        TODO("Not yet implemented")
+        _uiState.update { it.copy(errorMessage = null) } // Implemented
     }
 }
