@@ -40,6 +40,9 @@ interface AuthRepository {
     // --- 비밀번호 변경 관련 ---
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> // 현재 로그인된 사용자의 비밀번호 변경
 
+    // --- 회원 탈퇴 ---
+    suspend fun deleteCurrentUser(): Result<Unit> // 현재 Firebase Auth 사용자 삭제
+
     // --- 에러 처리 ---
     suspend fun getLoginErrorMessage(exception: Throwable): String
     suspend fun getSignUpErrorMessage(exception: Throwable): String

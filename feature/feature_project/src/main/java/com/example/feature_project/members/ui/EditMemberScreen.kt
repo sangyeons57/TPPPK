@@ -19,10 +19,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+// Removed direct Coil imports
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.ProjectMember
@@ -130,15 +130,10 @@ fun EditMemberContent(
     ) {
         // 멤버 정보 표시
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(memberInfo.profileImageUrl ?: R.drawable.ic_account_circle_24)
-                    .error(R.drawable.ic_account_circle_24)
-                    .placeholder(R.drawable.ic_account_circle_24)
-                    .build(),
+            UserProfileImage(
+                profileImageUrl = memberInfo.profileImageUrl,
                 contentDescription = "${memberInfo.userName} 프로필",
-                modifier = Modifier.size(64.dp).clip(CircleShape),
-                contentScale = ContentScale.Crop
+                modifier = Modifier.size(64.dp).clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(

@@ -19,10 +19,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+// Removed direct Coil imports
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.R
@@ -173,15 +173,10 @@ fun FriendListItem(
             .padding(vertical = 12.dp), // 아이템 상하 패딩
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(R.drawable.ic_account_circle_24) // 기본 이미지 사용
-                .error(R.drawable.ic_account_circle_24)
-                .placeholder(R.drawable.ic_account_circle_24)
-                .build(),
-            contentDescription = "${friend.displayName} 프로필", // 변경
-            modifier = Modifier.size(48.dp).clip(CircleShape), // 크기 조절
-            contentScale = ContentScale.Crop
+        UserProfileImage(
+            profileImageUrl = friend.profileImageUrl, // Use the actual profile image URL
+            contentDescription = "${friend.displayName} 프로필",
+            modifier = Modifier.size(48.dp).clip(CircleShape)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -209,9 +204,9 @@ fun FriendListItem(
 @Composable
 private fun FriendsListContentPreview() {
     val previewFriends = listOf(
-        FriendItem("u1", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), null, "Friend: u1"),
-        FriendItem("u2", FriendRequestStatus.PENDING_SENT, DateTimeUtil.nowInstant(), null, "Friend: u2"),
-        FriendItem("u3", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), DateTimeUtil.nowInstant(), "Friend: u3")
+        FriendItem("u1", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), null, "Friend: u1", profileImageUrl = null), // Added profileImageUrl for preview
+        FriendItem("u2", FriendRequestStatus.PENDING_SENT, DateTimeUtil.nowInstant(), null, "Friend: u2", profileImageUrl = "some_url"),
+        FriendItem("u3", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), DateTimeUtil.nowInstant(), "Friend: u3", profileImageUrl = "DEFAULT_PROFILE_IMAGE_MARKER")
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Scaffold(

@@ -106,4 +106,13 @@ interface UserRepository {
      * @throws IllegalStateException 사용자를 찾을 수 없거나 인증되지 않은 경우.
      */
     suspend fun getCurrentUserId(): String
+
+    /**
+     * 사용자의 민감한 정보를 제거하고 계정을 '탈퇴' 상태로 표시합니다.
+     * Firestore/RTDB의 사용자 문서를 완전히 삭제하지 않고, 개인 식별 정보(PII)를 제거하거나 null 처리하며,
+     * 계정 상태를 'WITHDRAWN' 또는 유사한 값으로 업데이트합니다.
+     * 사용자 이름, 채팅 기록 등은 유지될 수 있습니다.
+     * @return 성공 시 Unit, 실패 시 에러를 포함하는 Result
+     */
+    suspend fun clearSensitiveUserDataAndMarkAsWithdrawn(): Result<Unit>
 }

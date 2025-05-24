@@ -159,4 +159,20 @@ class AuthRepositoryImpl @Inject constructor(
             Result.failure(Exception(errorMessage))
         }
     }
+
+    override suspend fun deleteCurrentUser(): Result<Unit> {
+        val firebaseUser = auth.currentUser
+        if (firebaseUser == null) {
+            return Result.failure(Exception("User not logged in"))
+        }
+        return try {
+            firebaseUser.delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            // Log the exception for debugging purposes
+            Log.e("AuthRepositoryImpl", "Error deleting user: ${e.message}", e)
+            SentryUtil.sendError(e, mapOf("context" to "deleteCurrentUser"))
+            Result.failure(e)
+        }
+    }
 }

@@ -47,9 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage // Coil 라이브러리 사용
-import coil.request.ImageRequest
+import coil.compose.AsyncImage // Coil 라이브러리 사용 for attachments
+import coil.request.ImageRequest // Used by AsyncImage for attachments
+import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+// R import might be removed if UserProfileImage handles it all and no other direct R.drawable is used.
+// For now, assume it might still be needed for fallbacks in UserProfileImage or other icons.
 import com.example.core_ui.R
 // ViewModel 및 관련 모델 Import
 import com.example.feature_chat.model.ChatEvent
@@ -318,19 +321,14 @@ fun ChatMessageItemComposable(
         ) {
             // 프로필 이미지 (내가 보낸 메시지에는 숨길 수도 있음)
             if (!message.isMyMessage) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(message.userProfileUrl)
-                        .fallback(R.drawable.ic_account_circle_24) // TODO: 올바른 리소스 ID 확인
-                        .error(R.drawable.ic_account_circle_24)
-                        .placeholder(R.drawable.ic_account_circle_24)
-                        .build(),
+                UserProfileImage(
+                    profileImageUrl = message.userProfileUrl,
                     contentDescription = "${message.userName} 프로필",
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
                         .clickable(onClick = onUserProfileClick),
-                    contentScale = ContentScale.Crop
+                    // contentScale is handled by UserProfileImage default or can be passed if needed
                 )
             }
 

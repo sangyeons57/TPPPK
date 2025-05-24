@@ -24,10 +24,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+// Removed direct Coil imports
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -220,17 +220,12 @@ fun ProjectMemberListItemComposable(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(member.profileImageUrl)
-                .error(R.drawable.ic_account_circle_24)
-                .placeholder(R.drawable.ic_account_circle_24)
-                .build(),
+        UserProfileImage(
+            profileImageUrl = member.profileImageUrl,
             contentDescription = "${member.userName}님의 프로필 사진",
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
+                .clip(CircleShape)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
