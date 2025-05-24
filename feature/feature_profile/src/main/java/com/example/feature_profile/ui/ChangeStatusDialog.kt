@@ -1,13 +1,19 @@
 package com.example.feature_profile.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+// import androidx.compose.foundation.selection.selectable // Keep if still needed for Row, but primary selection is via clickable
+// import androidx.compose.foundation.selection.selectableGroup // Keep if still needed for Column, but primary selection is via clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role // May not be needed if RadioButtons are fully removed
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -26,18 +32,41 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun ChangeStatusDialog(
     modifier: Modifier = Modifier,
-    viewModel: ChangeStatusViewModel = hiltViewModel(), // ★ ViewModel 주입
-    onDismissRequest: () -> Unit
+    viewModel: ChangeStatusViewModel = hiltViewModel(),
+    onDismissRequest: () -> Unit,
+    onSuccess: (statusName: String) -> Unit // Callback for successful status change
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle() // ★ 상태 구독
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // 이벤트 처리
+    // 이벤트 처리 및 성공 콜백 호출
+    LaunchedEffect(uiState.updateSuccess, uiState.selectedStatus) {
+        if (uiState.updateSuccess) {
+            // Ensure selectedStatus is not null before calling onSuccess
+            uiState.selectedStatus?.name?.let { statusName ->
+                onSuccess(statusName)
+            }
+            // Dialog dismissal is now handled by ProfileViewModel after success
+            // or can still be handled here if preferred, but ProfileViewModel also needs to know.
+            // For now, let ProfileViewModel handle dismissal via onChangeStatusSuccess.
+        }
+    }
+
+    // Handle general events like snackbar messages from ChangeStatusViewModel (optional)
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ChangeStatusEvent.DismissDialog -> onDismissRequest()
+                is ChangeStatusEvent.DismissDialog -> {
+                    // This is tricky. If success, ProfileViewModel dismisses.
+                    // If user cancels, this onDismissRequest is called.
+                    // If update fails, it stays open.
+                    // Let's assume DismissDialog from eventFlow is for user-initiated dismisses or explicit VM dismisses.
+                    if (!uiState.updateSuccess) { // Only call if not already handled by success path
+                        onDismissRequest()
+                    }
+                }
                 is ChangeStatusEvent.ShowSnackbar -> {
-                    // TODO: 스낵바 처리 (보통 다이얼로그를 띄운 화면에서 처리)
+                    // This dialog doesn't show its own snackbar, ProfileScreen does.
+                    // However, this event could be used for other purposes if needed.
                 }
             }
         }
@@ -61,28 +90,39 @@ fun ChangeStatusDialog(
                 else -> {
                     // 상태 선택 라디오 버튼 그룹
                     Column(Modifier.selectableGroup()) { // 라디오 그룹 접근성 지원
-                        uiState.availableStatuses.forEach { status ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp) // 적절한 높이
-                                    .selectable(
-                                        selected = (uiState.selectedStatus == status),
-                                        onClick = { viewModel.onStatusSelected(status) }, // ★ 콜백 연결
-                                        role = Role.RadioButton
+                        // Column remains for layout, selectableGroup might be optional without RadioButtons
+                        // but doesn't harm if kept for accessibility structure.
+                        Column(Modifier.selectableGroup()) {
+                            uiState.availableStatuses.forEach { status ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp) // 적절한 높이
+                                        .selectable(
+                                            selected = (uiState.selectedStatus == status),
+                                            onClick = { viewModel.onStatusSelected(status) },
+                                            role = Role.RadioButton // Keep for accessibility, even without visible radio button
+                                        )
+                                        .background(
+                                            color = if (uiState.selectedStatus == status) {
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            } else {
+                                                Color.Transparent // Or MaterialTheme.colorScheme.surface
+                                            }
+                                        )
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // RadioButton is removed.
+                                    Text(
+                                        text = status.name, // Displaying status.name as per instruction
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        // Modifier.padding(start = 16.dp) // Adjust padding if RadioButton was removed
                                     )
-                                    .padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = (uiState.selectedStatus == status), // ★ 상태 바인딩
-                                    onClick = null // Row의 selectable에서 처리하므로 null
-                                )
-                                Text(
-                                    text = status.name, // ★ Enum의 표시 이름 사용
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
+                                }
+                                if (status != uiState.availableStatuses.last()) {
+                                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                                }
                             }
                         }
                     }
@@ -91,8 +131,7 @@ fun ChangeStatusDialog(
         },
         confirmButton = {
             Button(
-                onClick = viewModel::updateStatus, // ★ 콜백 연결
-                // 선택된 상태가 있고, 로딩/업데이트 중이 아닐 때 활성화
+                onClick = viewModel::updateStatus,
                 enabled = uiState.selectedStatus != null && !uiState.isLoading && !uiState.isUpdating
             ) {
                 if (uiState.isUpdating) {
@@ -128,29 +167,33 @@ private fun ChangeStatusDialogPreview() {
             onDismissRequest = { },
             title = { Text("상태 변경") },
             text = {
-                Column(Modifier.selectableGroup()) {
+                Column(Modifier.selectableGroup()) { // Keep selectableGroup for structure
                     previewUiState.availableStatuses.forEach { status ->
                         Row(
                             Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                                .selectable(
+                                .selectable( // Use selectable on the Row
                                     selected = (previewUiState.selectedStatus == status),
-                                    onClick = { /* Preview에선 동작 안 함 */ },
-                                    role = Role.RadioButton
+                                    onClick = { /* Preview: Update selectedStatus for visual feedback */ },
+                                    role = Role.RadioButton // Keep for accessibility
+                                )
+                                .background(
+                                    if (previewUiState.selectedStatus == status) MaterialTheme.colorScheme.primaryContainer
+                                    else Color.Transparent
                                 )
                                 .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = (previewUiState.selectedStatus == status),
-                                onClick = null
-                            )
+                            // RadioButton removed
                             Text(
                                 text = status.name,
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
+                                // modifier = Modifier.padding(start = 16.dp) // Padding adjusted
                             )
+                        }
+                         if (status != previewUiState.availableStatuses.last()) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
                 }

@@ -101,8 +101,8 @@ class ChangeStatusViewModel @Inject constructor(
             _uiState.update { it.copy(isUpdating = true, error = null) }
             _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태 변경 중..."))
 
-            // UseCase는 String 매개변수를 기대하므로 displayName 사용
-            val result = updateUserStatusUseCase(statusToUpdate.name)
+            // UseCase는 UserStatus.value (e.g., "ONLINE")를 사용해야 합니다.
+            val result = updateUserStatusUseCase(statusToUpdate.value)
 
             if (result.isSuccess) {
                 _uiState.update {
@@ -112,6 +112,7 @@ class ChangeStatusViewModel @Inject constructor(
                         updateSuccess = true
                     )
                 }
+                // The snackbar can still use .name for display as per instructions
                 _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태가 '${statusToUpdate.name}'(으)로 변경되었습니다."))
                 _eventFlow.emit(ChangeStatusEvent.DismissDialog) // 성공 시 다이얼로그 닫기
             } else {

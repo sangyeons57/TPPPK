@@ -17,15 +17,24 @@ import androidx.compose.material.icons.filled.PhotoCamera // 카메라/갤러리
 import androidx.compose.material.icons.filled.Settings // 설정 아이콘
 import androidx.compose.material.icons.filled.Person // 사용자 아이콘 (프로필 수정용으로 사용 가능)
 import androidx.compose.material.icons.filled.People // 친구 아이콘
+import androidx.compose.material.icons.filled.Done // 완료 아이콘
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import android.util.Log
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.feature_main.viewmodel.ProfileEvent
@@ -40,6 +49,7 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.User
 import com.example.domain.model.UserProfileData
+import com.example.feature_profile.ui.ChangeStatusDialog // Import ChangeStatusDialog
 
 /**
  * ProfileScreen: 상태 관리 및 이벤트 처리 (Stateful)
@@ -53,6 +63,17 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+
+    // State for in-place status editing
+    var isEditingStatusMessage by rememberSaveable { mutableStateOf(false) }
+    var editableStatusMessage by rememberSaveable { mutableStateOf(uiState.userProfile?.statusMessage ?: "") }
+
+    // Initialize editableStatusMessage when profile data is loaded or changed
+    LaunchedEffect(uiState.userProfile?.statusMessage) {
+        if (!isEditingStatusMessage) {
+            editableStatusMessage = uiState.userProfile?.statusMessage ?: ""
+        }
+    }
 
     // 이미지 선택기를 위한 ActivityResultLauncher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -73,11 +94,7 @@ fun ProfileScreen(
                     appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)))
                 }
                 is ProfileEvent.NavigateToFriends -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Friends.LIST)))
-                is ProfileEvent.NavigateToStatus -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.CHANGE_MY_PASSWORD)))
-                is ProfileEvent.ShowEditStatusDialog -> {
-                    // TODO: 상태 메시지 변경 다이얼로그 표시
-                    snackbarHostState.showSnackbar("상태 메시지 변경 다이얼로그 (미구현)")
-                }
+                // NavigateToStatus event is removed, dialog is shown via UiState
                 is ProfileEvent.PickProfileImage -> {
                     // 이미지 선택기 실행 (MIME 타입 지정)
                     imagePickerLauncher.launch("image/*")
@@ -110,18 +127,48 @@ fun ProfileScreen(
                 isLoading = uiState.isLoading, // 부분 로딩 상태 전달
                 profile = uiState.userProfile,
                 onEditProfileImageClick = viewModel::onEditProfileImageClick,
-                onEditStatusClick = viewModel::onEditStatusClick,
+                // onEditStatusClick = viewModel::onEditStatusClick, // Replaced by direct state manipulation
                 onSettingsClick = viewModel::onSettingsClick,
                 onLogoutClick = viewModel::onLogoutClick,
                 onFriendsClick = viewModel::onFriendsClick,
-                onStatusClick = viewModel::onStatusClick,
+                onStatusClick = viewModel::onChangeStatusClick, // Updated to call renamed function
                 onEditProfileClick = viewModel::onEditProfileClicked, // 추가된 부분
+                // Pass state and event handlers for status editing
+                isEditingStatusMessage = isEditingStatusMessage,
+                editableStatusMessage = editableStatusMessage,
+                onStatusMessageChange = { newMessage ->
+                    if (newMessage.length <= 50) { // Character limit
+                        editableStatusMessage = newMessage
+                    }
+                },
+                onToggleEditStatus = {
+                    isEditingStatusMessage = !isEditingStatusMessage
+                    if (isEditingStatusMessage) {
+                        // When starting to edit, sync with the latest profile status
+                        editableStatusMessage = uiState.userProfile?.statusMessage ?: ""
+                    }
+                },
+                onSubmitStatusMessage = {
+                    if (editableStatusMessage != uiState.userProfile?.statusMessage) {
+                        viewModel.changeStatusMessage(editableStatusMessage)
+                    }
+                    isEditingStatusMessage = false
+                }
             )
         }
         // 전체 화면 로딩 인디케이터 (선택 사항)
         if (uiState.isLoading && uiState.userProfile != null) { // 데이터가 있는데 업데이트 중일 때
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center).size(40.dp) // 중앙에 작게
+            )
+        }
+
+        // Conditionally display ChangeStatusDialog
+        if (uiState.showChangeStatusDialog) {
+            ChangeStatusDialog(
+                onDismissRequest = viewModel::onDismissChangeStatusDialog,
+                onSuccess = viewModel::onChangeStatusSuccess // Pass the success callback
+                // viewModel for ChangeStatusDialog is Hilt-injected by default
             )
         }
     }
@@ -136,13 +183,22 @@ fun ProfileContent(
     isLoading: Boolean, // 부분 로딩 상태 (예: 버튼 비활성화용)
     profile: UserProfileData?, // Nullable 사용자 프로필
     onEditProfileImageClick: () -> Unit,
-    onEditStatusClick: () -> Unit,
+    // onEditStatusClick: () -> Unit, // Replaced
     onSettingsClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onFriendsClick: () -> Unit,
     onStatusClick: () -> Unit,
     onEditProfileClick: () -> Unit, // 추가된 파라미터
+    // Parameters for in-place status editing
+    isEditingStatusMessage: Boolean,
+    editableStatusMessage: String,
+    onStatusMessageChange: (String) -> Unit,
+    onToggleEditStatus: () -> Unit,
+    onSubmitStatusMessage: () -> Unit
 ) {
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -183,23 +239,56 @@ fun ProfileContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 상태 메시지
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = profile?.statusMessage ?: "상태 메시지 없음",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            // 상태 메시지 편집 버튼
-            IconButton(onClick = onEditStatusClick, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = "상태 메시지 변경",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+        // 상태 메시지 (In-place Editable)
+        OutlinedTextField(
+            value = editableStatusMessage,
+            onValueChange = onStatusMessageChange,
+            label = { Text("상태 메시지") },
+            singleLine = true,
+            readOnly = !isEditingStatusMessage,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .focusRequester(focusRequester)
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused && isEditingStatusMessage) {
+                        onSubmitStatusMessage() // Submit when focus is lost
+                    }
+                },
+            trailingIcon = {
+                IconButton(onClick = {
+                    if (isEditingStatusMessage) {
+                        onSubmitStatusMessage() // Submit if already editing (acts as a save button)
+                        focusManager.clearFocus() // Clear focus after submit
+                    } else {
+                        onToggleEditStatus() // Start editing
+                        // It's good practice to request focus *after* the field becomes editable
+                        // LaunchedEffect can be used here if focusRequester.requestFocus() needs to be called
+                        // after the recomposition that makes the field editable.
+                        // For simplicity, direct call might work on some Compose versions or scenarios.
+                        // If focus is not reliably gained, use LaunchedEffect(isEditingStatusMessage) { ... }
+                        if (isEditingStatusMessage) { // Check again as onToggleEditStatus changes it
+                             LaunchedEffect(Unit) { // Request focus after recomposition
+                                focusRequester.requestFocus()
+                            }
+                        }
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (isEditingStatusMessage) Icons.Filled.Done else Icons.Filled.Edit,
+                        contentDescription = if (isEditingStatusMessage) "상태 메시지 저장" else "상태 메시지 변경"
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                onSubmitStatusMessage()
+                focusManager.clearFocus() // Clear focus after submitting with Done action
+            }),
+            supportingText = {
+                Text(text = "${editableStatusMessage.length} / 50")
             }
-        }
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -286,15 +375,45 @@ fun ProfileContentPreview() {
             isLoading = false,
             profile = previewProfile,
             onEditProfileImageClick = {},
-            onEditStatusClick = {},
+            // onEditStatusClick = {}, // Removed
             onSettingsClick = {},
             onLogoutClick = {},
             onFriendsClick = {},
             onStatusClick = {},
             onEditProfileClick = {}, // Preview에 추가
+            // Preview parameters for status editing
+            isEditingStatusMessage = false,
+            editableStatusMessage = previewProfile.statusMessage ?: "Compose 공부 중!",
+            onStatusMessageChange = {},
+            onToggleEditStatus = {},
+            onSubmitStatusMessage = {}
         )
     }
 }
+
+@Preview(showBackground = true, name = "ProfileContent Editing Status")
+@Composable
+fun ProfileContentEditingPreview() {
+    val previewProfile = User("id", "김미리", "preview@example.com", "Compose 공부 중!", null).toUserProfileData()
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        ProfileContent(
+            isLoading = false,
+            profile = previewProfile,
+            onEditProfileImageClick = {},
+            onSettingsClick = {},
+            onLogoutClick = {},
+            onFriendsClick = {},
+            onStatusClick = {},
+            onEditProfileClick = {},
+            isEditingStatusMessage = true, // Editing mode
+            editableStatusMessage = "새로운 상태 메시지 입력 중...",
+            onStatusMessageChange = {},
+            onToggleEditStatus = {},
+            onSubmitStatusMessage = {}
+        )
+    }
+}
+
 
 @Preview(showBackground = true, name = "Profile Loading")
 @Composable
@@ -304,12 +423,18 @@ fun ProfileContentLoadingPreview() {
             isLoading = true, // 로딩 상태
             profile = null, // 데이터 없는 상태
             onEditProfileImageClick = {},
-            onEditStatusClick = {},
+            // onEditStatusClick = {}, // Removed
             onSettingsClick = {},
             onLogoutClick = {},
             onFriendsClick = {},
             onStatusClick = {},
             onEditProfileClick = {}, // Preview에 추가
+            // Preview parameters for status editing
+            isEditingStatusMessage = false,
+            editableStatusMessage = "",
+            onStatusMessageChange = {},
+            onToggleEditStatus = {},
+            onSubmitStatusMessage = {}
         )
     }
 }
