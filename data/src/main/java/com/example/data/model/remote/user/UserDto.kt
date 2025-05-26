@@ -55,7 +55,7 @@ data class UserDto(
     @get:PropertyName(FirestoreConstants.UserFields.ACCOUNT_STATUS) @set:PropertyName(FirestoreConstants.UserFields.ACCOUNT_STATUS)
     var accountStatus: AccountStatus = AccountStatus.UNKNOWN,
 
-    @get:PropertyName(FirestoreConstants.UserFields.ACTIVE_DM_IDS) @set:PropertyName(FirestoreConstants.UserFields.ACTIVE_DM_IDS)
+    @get:PropertyName(FirestoreConstants.UserFields.PARTICIPATING_DM_IDS) @set:PropertyName(FirestoreConstants.UserFields.PARTICIPATING_DM_IDS)
     var activeDmIds: List<String> = emptyList(),
 
     @get:PropertyName(FirestoreConstants.UserFields.IS_EMAIL_VERIFIED) @set:PropertyName(FirestoreConstants.UserFields.IS_EMAIL_VERIFIED)
@@ -77,7 +77,7 @@ data class UserDto(
             FirestoreConstants.UserFields.FCM_TOKEN to fcmToken,
             FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS to participatingProjectIds,
             FirestoreConstants.UserFields.ACCOUNT_STATUS to accountStatus,
-            FirestoreConstants.UserFields.ACTIVE_DM_IDS to activeDmIds,
+            FirestoreConstants.UserFields.PARTICIPATING_DM_IDS to activeDmIds,
             FirestoreConstants.UserFields.IS_EMAIL_VERIFIED to isEmailVerified,
             FirestoreConstants.UserFields.CONSENT_TIMESTAMP to consentTimeStamp
         ).filterValues { it != null }
@@ -120,7 +120,7 @@ data class UserDto(
                 fcmToken = map[FirestoreConstants.UserFields.FCM_TOKEN] as? String,
                 participatingProjectIds = (map[FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 accountStatus = (map[FirestoreConstants.UserFields.ACCOUNT_STATUS] as? String)?.let { AccountStatus.valueOf(it) } ?: AccountStatus.UNKNOWN,
-                activeDmIds = (map[FirestoreConstants.UserFields.ACTIVE_DM_IDS] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                activeDmIds = (map[FirestoreConstants.UserFields.PARTICIPATING_DM_IDS] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                 isEmailVerified = map[FirestoreConstants.UserFields.IS_EMAIL_VERIFIED] as? Boolean ?: false,
                 consentTimeStamp = map[FirestoreConstants.UserFields.CONSENT_TIMESTAMP] as? Timestamp
             )

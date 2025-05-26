@@ -35,7 +35,7 @@ class FirestoreConstantsTest {
         assertEquals("participatingProjectIds", FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS)
         assertEquals("createdAt", FirestoreConstants.UserFields.CREATED_AT)
         assertEquals("lastActiveAt", FirestoreConstants.UserFields.LAST_ACTIVE_AT)
-        assertEquals("activeDmIds", FirestoreConstants.UserFields.ACTIVE_DM_IDS)
+        assertEquals("activeDmIds", FirestoreConstants.UserFields.PARTICIPATING_DM_IDS)
     }
 
     @Test

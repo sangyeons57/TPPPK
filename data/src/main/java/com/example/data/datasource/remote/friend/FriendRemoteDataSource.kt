@@ -15,7 +15,7 @@ interface FriendRemoteDataSource {
      * 친구 목록 실시간 스트림을 가져옵니다.
      * @return 친구 목록의 Flow
      */
-    fun getFriendsListStream(): Flow<List<Friend>>
+    fun getFriendsStream(): Flow<Friend>
     
     /**
      * 친구 목록을 Firestore에서 가져옵니다.

@@ -14,44 +14,41 @@ alwaysApply: false
     │   ├── `name`: String (Unique) - User nickname/name
     │   ├── `consentTimeStamp`: Timestamp - 서비스 정책및 개인정보처리방침 동의 시간
     │   ├── `profileImageUrl`?: String - Profile image URL
-    │   ├── `statusMessage`?: String - User status message
     │   ├── `memo`?: String - User's bio or personal memo
     │   ├── `status`: String - Current status (`ONLINE`, `OFFLINE`)
     │   ├── `createdAt`: Timestamp - Account creation time
     │   ├── `fcmToken`?: String - Firebase Cloud Messaging token
     │   ├── `participatingProjectIds`[]?: Array<String> - Projects user is part of
+    │   ├── `participatingDmIds`[]?: Array<String> - IDs of active DM channels (references `/dms/{channelId}` which in turn references `/channels/{channelId}`)
     │   ├── `accountStatus`: String - Account status (`ACTIVE`, `SUSPENDED`, `DELETED`)
-    │   ├── `activeDmIds`[]?: Array<String> - IDs of active DM channels (references `/channels/{channelId}`)
     │   └── `isEmailVerified`: Boolean - Email verification status
     └── **Subcollections:**
         └── **`friends`** `/{friendId}` [Friend relationships/status] (ID: Friend UID)
             └── **Fields:**
                 ├── `status`: String - Relationship status (`accepted`, `pending_sent`, `pending_received`)
                 ├── `timestamp`: Timestamp - When the relationship was created
-                └── `acceptedAt`: Timestamp? - When the relationship was accepted (nullable)
+                └── `acceptedAt`: Timestamp? - When the relationship was accepted
 
 └── **`channels`** `/{channelId}` [GLOBAL COLLECTION: All types of chat channels - DM, Project, etc.] (ID: Auto)
     ├── **Fields:**
-    │   ├── `id`: String - Unique channel ID (matches document ID)
-    │   ├── `name`: String - Channel name (e.g., "General", "User One & User Two", "Project Alpha Chat")
     │   ├── `description`: String? - Channel description/topic
-    │   ├── `type`: String - Channel type (`DM`, `PROJECT`, `CATEGORY`) - Helps determine the structure quickly
     │   ├── `channelMode`: String? - Channel subtype (e.g., `TEXT`, `VOICE`)
     │   ├── `lastMessagePreview`: String? - Preview of the last message
     │   ├── `lastMessageTimestamp`: Timestamp? - When the last message was sent
     │   ├── `createdAt`: Timestamp - Creation time
     │   ├── `updatedAt`: Timestamp - Last update time
     │   ├── `createdBy`: String? - User ID of the creator (if applicable)
-    │   ├── `projectSpecificData`: Map - Only for PROJECT/CATEGORY type channels
-    │   │   ├── `projectId`: String - Associated project ID
-    │   │   ├── `categoryId`: String? - Associated category ID (null for direct project channels)
-    │   │   └── `order`: Number - Display order within project/category
-    │   └── `dmSpecificData`: Map - Only for DM type channels
-    │       └── `participantIds`: Array<String> - List of participant user IDs
+    │   ├── `projectId`: String? - Associated project ID (if channel is project-specific, null for pure DM channels not tied to a project context if any)
+    │   └── ~~`projectSpecificData`: Map? - Only for PROJECT/CATEGORY type channels~~ (Removed, project/category context is now managed by wrapper collections and `projectId` field above)
+    │       ~~├── `name`: String - Channel name~~
+    │       ~~├── `projectId`: String - Associated project ID~~
+    │       ~~├── `categoryId`: String? - Associated category ID (null for direct project channels or if category is not applicable)~~
+    │       ~~└── `order`: Number - Display order within project/category~~
+    │   └── ~~`dmSpecificData`: Map - Only for DM type channels~~ (Removed, see `dms` collection)
+    │       ~~└── `participantIds`: Array<String> - List of participant user IDs~~
     └── **Subcollections:**
         └── **`messages`** `/{messageId}` [Channel messages] (ID: Auto)
             └── **Fields:**
-                ├── `id`: String - Message ID
                 ├── `senderId`: String - Sender ID
                 ├── `text`: String - Message content
                 ├── `sentAt`: Timestamp - When the message was sent (creation time)
@@ -67,7 +64,6 @@ alwaysApply: false
                 │   └── `thumbnailUrl`: String? - Thumbnail URL (optional)
                 ├── `metadata`: Map<String, Any>?
                 ├── `replyToMessageId`: String?
-                ├── `isEdited`: Boolean - Whether the message has been edited
                 └── `isDeleted`: Boolean - Whether the message has been soft-deleted
 
 └── **`projects`** `/{projectId}` [Project/server information] (ID: Auto)
@@ -76,7 +72,6 @@ alwaysApply: false
     │   ├── `content`: String - Project content
     │   ├── `imageUrl`: String? - Project image URL
     │   ├── `ownerId`: String - Creator/owner user ID
-    │   ├── `memberIds`: Array<String> - List of member user IDs
     │   ├── `createdAt`: Timestamp - Creation time
     │   ├── `updatedAt`: Timestamp - Last update time
     │   └── `isPublic`: Boolean - Whether project is publicly visible
@@ -91,10 +86,24 @@ alwaysApply: false
         │       ├── `name`: String - Role name
         │       ├── `permissions`: Map<String> - Permission List
         │       └── `isDefault`: Boolean - Whether this is a default role
-        └── **`categories`** `/{categoryId}` [Channel categories within a project] (ID: Auto)
+        ├── **`categories`** `/{categoryId}` [Channel categories within a project] (ID: Auto)
+        │   └── **Fields:**
+        │       ├── `name`: String - Category name
+        │       └── `order`: Number - Display order
+        │   └── **Subcollections:**
+        │       └── **`channel_wrappers`** `/{channelId}` [Category-specific channel structure] (ID: Channel UID from global `channels`)
+        │           └── **Fields:**
+        │               ├── `channelName`: String - Display name for the channel in this category (can override global channel name)
+        │               └── `order`: Number - Display order within this category
+        ├── **`project_channel_wrappers`** `/{channelId}` [Project-direct channel structure] (ID: Channel UID from global `channels`)
+        │   └── **Fields:**
+        │       ├── `channelName`: String - Display name for the channel directly in project (can override global channel name)
+        │       └── `order`: Number - Display order within project-direct channels
+        └── **`invites`** `/{inviteToken}` [Temporary Project invite tokens] (ID: Auto unique token)
             └── **Fields:**
-                ├── `name`: String - Category name
-                └── `order`: Number - Display order
+                ├── `inviterId`: String - User ID who created the invite
+                ├── `expiresAt`: Timestamp - When the invite expires
+                └── `createdAt`: Timestamp - When the invite was created
 
 └── **`schedules`** `/{scheduleId}` [Personal & project schedules] (ID: Auto)
     └── **Fields:**
@@ -110,24 +119,21 @@ alwaysApply: false
         ├── `createdAt`: Timestamp - Creation time
         └── `updatedAt`: Timestamp - Last update time
 
-└── **`invites`** `/{inviteToken}` [Temporary invite tokens] (ID: Auto unique token)
-    └── **Fields:**
-        ├── `type`: String - Invite type (e.g., `project_invite`)
-        ├── `inviterId`: String - User ID who created the invite
-        ├── `inviterName`: String - Name of user who created the invite
-        ├── `projectId`: String? - Target project ID (for project invites)
-        ├── `projectName`: String - Name of target project
-        ├── `expiresAt`: Timestamp - When the invite expires
-        └── `createdAt`: Timestamp - When the invite was created
-
-└── **`passwordResetTokens`** `/{tokenId}` [Temporary password reset tokens] (ID: Auto)
-    └── **Fields:**
-        ├── `userId`: String - Associated user ID
-        ├── `token`: String - Unique reset token
-        └── `expiresAt`: Timestamp - When the token expires
+└── **`dms`** `/{channelId}` [DM Channel Information] (ID: Channel UID from global `channels`)
+    ├── **Fields:**
+    │   └── `participantIds`: Array<String> - List of participant user IDs (references `/users/{userId}`)
+    └── **Subcollections:** (None currently defined, but could hold DM-specific settings in future)
 
 # 변경 이력:
 - 2023-07-XX: `participants` 컬렉션 제거, 채널 접근 권한을 `members.channelIds`로 통합
 - 2023-09-XX: DM 채널과 프로젝트 채널을 글로벌 `channels` 컬렉션으로 통합, `type` 필드 도입
 - 2023-10-XX: `channelReferences`/`projectChannelReferences` 제거, 채널 순서 및 소속 정보를 채널 자체의 `order`/`metadata` 필드로 이동
 - 2024-XX-XX: `metadata`, `participantIds`, `order` 필드 제거 및 타입별 특화 데이터 구조 도입 (`projectSpecificData`, `dmSpecificData`)
+- 필드에 작성된 id 제거 (documentId사용)
+- 불필요하게 겹치는 내용제거 및 passwordResetToken firebase사용으로 불필요함으로 제거
+- 2024-08-02: (ERD 기반 변경)
+    - `channels.dmSpecificData` 제거.
+    - `dms` 최상위 컬렉션 추가 (`/{channelId}`), `participantIds` 필드 포함. DM 메타데이터 관리.
+    - `users.participatingDmIds`가 `dms` 컬렉션 참조하도록 변경.
+    - `projects` 하위에 `channel_wrappers/{channelId}` (Category의 SubCollection) 및 `project_channel_wrappers/{channelId}` (Project의 SubCollection) 추가. 이들은 각각 카테고리/프로젝트 내 채널 구조(순서, 이름 등) 관리. 문서 ID는 참조하는 글로벌 채널의 ID.
+    - `invites` 컬렉션을 `projects`의 하위 컬렉션으로 이동. `inviterName`, `projectName` 필드 제거 (조회로 대체).

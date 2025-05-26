@@ -50,7 +50,7 @@ object FirestoreConstants {
         const val ACCOUNT_STATUS = "accountStatus" // 계정 상태 (ACTIVE, SUSPENDED, DELETED 등) - Schema: accountStatus
         const val IS_EMAIL_VERIFIED = "isEmailVerified" // 이메일 인증 여부 - Schema: isEmailVerified
         const val PARTICIPATING_PROJECT_IDS = "participatingProjectIds" // 참여중인 프로젝트 ID 목록 - Schema: participatingProjectIds
-        const val ACTIVE_DM_IDS = "activeDmIds" // 활성화된 DM 채널 ID 목록 (references /channels/{channelId}) - Schema: activeDmIds
+        const val PARTICIPATING_DM_IDS = "participatingDmIds" // 활성화된 DM 채널 ID 목록 (references /channels/{channelId}) - Schema: activeDmIds
         const val CONSENT_TIMESTAMP = "consentTimeStamp" // 서비스 정책및 개인정보처리방침 동의 시간 - Schema: consentTimeStamp
         // const val ID = "id" // Removed: User document ID is the Firebase Auth UID, 'id' is not a field within the document per schema.
         // const val LAST_ACTIVE_AT = "lastActiveAt" // Removed: Not in schema

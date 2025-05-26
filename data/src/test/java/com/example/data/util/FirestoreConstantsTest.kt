@@ -43,7 +43,7 @@ class FirestoreConstantsTest {
         assertEquals("status", FirestoreConstants.UserFields.STATUS)
         assertEquals("participatingProjectIds", FirestoreConstants.UserFields.PARTICIPATING_PROJECT_IDS)
         assertEquals("createdAt", FirestoreConstants.UserFields.CREATED_AT)
-        assertEquals("activeDmIds", FirestoreConstants.UserFields.ACTIVE_DM_IDS)
+        assertEquals("activeDmIds", FirestoreConstants.UserFields.PARTICIPATING_DM_IDS)
         assertEquals("fcmToken", FirestoreConstants.UserFields.FCM_TOKEN)
         assertEquals("accountStatus", FirestoreConstants.UserFields.ACCOUNT_STATUS)
         assertEquals("isEmailVerified", FirestoreConstants.UserFields.IS_EMAIL_VERIFIED)

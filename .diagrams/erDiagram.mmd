@@ -1,0 +1,175 @@
+classDiagram
+    %% StructureItem Path: projects/{projectId}/structure_items/{structureItemId}
+    %% StructureItem can also be nested: projects/{projectId}/structure_items/{parentId}/structure_items/{childId}
+
+    namespace namespace_user {
+        class User["users/{userId}"] {
+            <<Collection>>
+            +String email
+            +String name
+            +Timestamp consentTimeStamp
+            +String? profileImageUrl
+            +String? memo
+            +String status
+            +Timestamp createdAt
+            +String fcmToken
+            +String accountStatus
+        }
+
+        class Friend["friends/{friendId(userId)}"] {
+            <<SubCollection>>
+            +String friendName
+            +String? friendProfileImageUrl
+            +String status
+            +Timestamp requestedAt
+            +Timestamp? acceptedAt
+        }
+
+        class DMWrapper["dm_wrapper/{dmChannelId}"] {
+            <<SubCollection>>
+            +String otherUserId
+            +String otherUserName
+            +String? otherUserProfileImageUrl
+            +String? lastMessagePreview
+            +Timestamp? lastMessageTimestamp 
+        }
+
+        class ProjectsWrapper["projects_wrapper/{projectId}"] {
+            <<SubCollection>>
+            +String projectName
+            +String? projectImageUrl
+        }
+
+    }
+
+    namespace namespace_channel {
+        class DMChannel["dm_channels/{dmChannelId}"] {
+            <<Collection>>
+            +String userId1
+            +String userId2
+            +String? lastMessagePreview
+            +Timestamp? lastMessageTimestamp
+            +Timestamp createdAt
+            +Timestamp updatedAt
+        }
+
+        class ProjectChannel["project_channels/{projectChannelId}"] {
+            <<SubCollection>>
+            +String channelName
+            +String channelType // MESSAGES, TASKS 등
+            +Timestamp createdAt
+            +Timestamp updatedAt
+        }
+
+        class Message["messages/{messageId}"] {
+            <<SubCollection>>
+            +String senderId
+            +String senderName
+            +String senderProfileImageUrl?
+            +String sendMessage
+            +Timestamp sentAt
+            +Timestamp updatedAt
+            +String? replyToMessageId
+            +Boolean isDeleted
+        }
+
+        class MessageAttachment["message_attachments/{messageAttachmentId}"] {
+            <<SubCollection>>
+            +String attachmentType
+            +String attachmentUrl
+        }
+    }
+
+    namespace namespace_project {
+        class Project["projects/{projectId}"] {
+            <<Collection>>
+            +String name
+            +String? imageUrl
+            +String ownerId // User document ID
+            +Timestamp createdAt
+            +Timestamp updatedAt
+            +Boolean isPublic
+        }
+
+
+        class Members["members/{userId}"] {
+            <<SubCollection>>
+            // userId is the User document ID
+            +Timestamp joinedAt
+        }
+
+        class Role["roles/{roleId}"] {
+            <<SubCollection>>
+            +String name
+            +Boolean isDefault
+        }
+
+        class Permission["permissions/{permissionId}"] {
+            <<SubCollection>>
+            +String name
+            +String description
+        }
+
+        class Invite["invites/{inviteId}"] {
+            <<SubCollection>>
+            // Document ID is auto-generated
+            +String inviteLink // Unique invite link or identifier
+            +String status // e.g., "ACTIVE", "INACTIVE", "EXPIRED"
+            +String createdBy // User document ID (who created the link)
+            +Timestamp createdAt
+            +Timestamp? expiresAt // Optional: For links that expire
+        }
+
+        class Category["categories/{categoryId}"] {
+            <<SubCollection>>
+            +String name
+            +Number order
+            +String createdBy
+            +Timestamp createdAt
+            +Timestamp updatedAt
+        }
+
+    }
+
+
+    class Schedule["schedules/{scheduleId}"] {
+        <<Collection>>
+        +String title
+        +String content
+        +Timestamp startTime
+        +Timestamp endTime
+        +String projectId // Project document ID
+        +String creatorId // User document ID
+        +String status
+        +String? color
+        +Timestamp createdAt
+        +Timestamp updatedAt
+    }
+
+    User *-- Friend : SubCollection
+    User *-- ProjectsWrapper : SubCollection
+    User *-- DMWrapper : SubCollectio
+
+    ProjectsWrapper --> Project : projectId
+    DMWrapper --> DMChannel : dmChannelId / otherUserId
+
+    Message *-- MessageAttachment : SubCollection
+    DMChannel "1" *-- "0..*" Message : contains
+    ProjectChannel "1" *-- "0..*" Message : contains
+    Members *-- Role : SubCollection
+
+    Role *-- Permission : SubCollection
+
+
+    Project *-- Members : SubCollection
+    Project *-- Invite : SubCollection
+    Project *-- Category : SubCollection
+    Category *-- ProjectChannel : SubCollection 
+
+
+    Schedule --> User : creatorId
+    Schedule --> Project : projectId
+
+
+    Members --> User : userId
+

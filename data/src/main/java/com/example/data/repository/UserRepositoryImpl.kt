@@ -279,7 +279,7 @@ class UserRepositoryImpl @Inject constructor(
             // FirestoreConstants.UserFields.PHONE_NUMBER to null, // Example if it existed in constants
             // FirestoreConstants.UserFields.DATE_OF_BIRTH to null, // Example if it existed in constants
             FirestoreConstants.UserFields.FCM_TOKEN to null,
-            FirestoreConstants.UserFields.ACCOUNT_STATUS to AccountStatus.WITHDRAWN.name,
+            FirestoreConstants.UserFields.ACCOUNT_STATUS to AccountStatus.UNKNOWN.name,
             FirestoreConstants.UserFields.MEMO to null // Added based on User.kt and UserDto.kt
             // Add any other sensitive fields that need to be cleared, using constants
             // Fields like FirestoreConstants.UserFields.NAME (displayName) and FirestoreConstants.UserFields.USER_ID (uid)

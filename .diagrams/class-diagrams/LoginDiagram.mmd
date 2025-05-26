@@ -1,0 +1,88 @@
+classDiagram
+    title 로그인 기능 아키텍처
+    
+    %% 1. UI Layer
+    %% 사용자와 직접 상호작용하는 화면을 담당합니다.
+    %% 사용자 입력(이메일, 비밀번호)을 ViewModel에 전달하고, ViewModel의 상태 변화를 관찰하여 UI를 업데이트합니다.
+    subgraph UI Layer
+        LoginScreen
+    end
+
+    %% 2. ViewModel Layer
+    %% UI에 표시될 데이터를 관리하고, UseCase를 통해 비즈니스 로직을 실행합니다.
+    %% UI의 생명주기와 상태를 관리하며, UI와 Domain 계층을 연결하는 역할을 합니다.
+    subgraph ViewModel Layer
+        LoginViewModel
+    end
+
+    %% 3. Domain Layer (UseCase & Repository Interface)
+    %% 애플리케이션의 핵심 비즈니스 로직을 포함합니다.
+    %% UseCase는 특정 기능(예: 로그인)을 수행하고, Repository 인터페이스는 데이터 소스에 대한 추상화를 제공합니다.
+    subgraph Domain Layer
+        LoginUseCase
+        AuthRepository
+    end
+
+    %% 4. Data Layer (Repository Implementation & DataSource)
+    %% Domain 계층의 Repository 인터페이스를 구현하고, 실제 데이터 소스(로컬 DB, 원격 API)와 통신합니다.
+    %% 데이터의 출처를 결정하고, 필요한 데이터를 가져오거나 저장하는 역할을 합니다.
+    subgraph Data Layer
+        AuthRepositoryImpl
+        AuthRemoteDataSource
+        UserLocalDataSource
+    end
+
+    %% Class Definitions
+    class LoginScreen {
+        + viewModel: LoginViewModel
+        + onLoginButtonClicked(email, password)
+        + displayLoginSuccess()
+        + displayError(message)
+    }
+    note for LoginScreen "사용자 인터페이스(UI)를 표시하고<br/>사용자 입력을 ViewModel로 전달합니다."
+
+    class LoginViewModel {
+        - loginUseCase: LoginUseCase
+        + uiState: StateFlow
+        + login(email, password)
+    }
+    note for LoginViewModel "UI 상태를 관리하고<br/>UseCase를 호출하여 비즈니스 로직을 실행합니다."
+
+    class LoginUseCase {
+        - authRepository: AuthRepository
+        + invoke(email, password): Result<User>
+    }
+    note for LoginUseCase "로그인이라는 단일 비즈니스 로직을 캡슐화합니다."
+
+    class AuthRepository {
+        <<Interface>>
+        +login(email, password): Result<User>
+    }
+    note for AuthRepository "데이터 계층에 대한 추상화된 접근 방법을 제공합니다."
+
+    class AuthRepositoryImpl {
+        - remoteDataSource: AuthRemoteDataSource
+        - localDataSource: UserLocalDataSource
+        +login(email, password): Result<User>
+    }
+    note for AuthRepositoryImpl "AuthRepository의 구현체로,<br/>원격 및 로컬 데이터 소스를 조합하여 데이터를 제공합니다."
+
+    class AuthRemoteDataSource {
+        <<Interface>>
+        +login(email, password): Result<UserDTO>
+    }
+    note for AuthRemoteDataSource "원격 서버(Firebase Auth, API 등)와<br/>통신하여 데이터를 가져옵니다."
+
+    class UserLocalDataSource {
+        <<Interface>>
+        +saveUser(user: User)
+    }
+    note for UserLocalDataSource "로컬 데이터베이스(Room, DataStore 등)에<br/>데이터를 저장하거나 조회합니다."
+
+    %% Relationships (Dependencies)
+    LoginScreen --o LoginViewModel : "1. uses"
+    LoginViewModel --o LoginUseCase : "2. uses"
+    LoginUseCase --o AuthRepository : "3. uses"
+    AuthRepository <|.. AuthRepositoryImpl : "implements"
+    AuthRepositoryImpl --o AuthRemoteDataSource : "4. uses"
+    AuthRepositoryImpl --o UserLocalDataSource : "5. uses (optional)"

@@ -198,29 +198,6 @@ fun FriendListItem(
 }
 
 
-// --- Preview ---
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true)
-@Composable
-private fun FriendsListContentPreview() {
-    val previewFriends = listOf(
-        FriendItem("u1", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), null, "Friend: u1", profileImageUrl = null), // Added profileImageUrl for preview
-        FriendItem("u2", FriendRequestStatus.PENDING_SENT, DateTimeUtil.nowInstant(), null, "Friend: u2", profileImageUrl = "some_url"),
-        FriendItem("u3", FriendRequestStatus.ACCEPTED, DateTimeUtil.nowInstant(), DateTimeUtil.nowInstant(), "Friend: u3", profileImageUrl = "DEFAULT_PROFILE_IMAGE_MARKER")
-    )
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        Scaffold(
-            topBar = { TopAppBar(title = { Text("친구") }) },
-            bottomBar = { Button(onClick = {}, modifier = Modifier.fillMaxWidth().padding(16.dp)) { Text("친구 요청 수락하기") } }
-        ) { padding ->
-            FriendsListContent(
-                modifier = Modifier.padding(padding),
-                friends = previewFriends,
-                onFriendClick = {}
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, name = "Friends List Empty")

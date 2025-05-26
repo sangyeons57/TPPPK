@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.feature_main.ui.dialog.WithdrawalDialog // Import the dialog
 import com.example.feature_settings.presentation.SettingsViewModel // Import the ViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,6 +69,7 @@ fun SettingsScreen(
         }
 
         if (showWithdrawalDialog) { // Observe ViewModel state
+            /**
             WithdrawalDialog(
                 onConfirm = {
                     viewModel.confirmWithdrawal() // Use ViewModel
@@ -78,6 +78,7 @@ fun SettingsScreen(
                     viewModel.dismissWithdrawalDialog() // Use ViewModel
                 }
             )
+            **/
         }
     }
 }

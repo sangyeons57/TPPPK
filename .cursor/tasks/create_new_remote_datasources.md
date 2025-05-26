@@ -1,0 +1,60 @@
+# Task: 신규 원격 데이터 소스 15개 구현
+
+ER 다이어그램(`.diagrams/erDiagram.mmd`)을 참조하여, 각 Firestore 엔티티에 대응하는 새로운 원격 데이터 소스 인터페이스와 구현체를 `data` 모듈의 `src/main/java/com/example/data/datasource/remote/` 경로 하위에 생성합니다. 각 데이터 소스는 특정 엔티티의 CRUD 및 관련 기능을 담당하며, DTO와 도메인 모델 간의 변환 또는 간단한 데이터 접근 기능을 제공합니다.
+
+## 사용자 관련 (User-Related)
+
+- [ ] 1.  `UserRemoteDataSource` 구현 (대상: `users/{userId}`)
+    -   [ ] 인터페이스 정의 (`UserRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`UserRemoteDataSourceImpl.kt`)
+- [ ] 2.  `FriendRemoteDataSource` 구현 (대상: `users/{userId}/friends/{friendId}`)
+    -   [ ] 인터페이스 정의 (`FriendRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`FriendRemoteDataSourceImpl.kt`)
+- [ ] 3.  `DMWrapperRemoteDataSource` 구현 (대상: `users/{userId}/dm_wrapper/{dmChannelId}`)
+    -   [ ] 인터페이스 정의 (`DMWrapperRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`DMWrapperRemoteDataSourceImpl.kt`)
+- [ ] 4.  `ProjectsWrapperRemoteDataSource` 구현 (대상: `users/{userId}/projects_wrapper/{projectId}`)
+    -   [ ] 인터페이스 정의 (`ProjectsWrapperRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`ProjectsWrapperRemoteDataSourceImpl.kt`)
+
+## 프로젝트 관련 (Project-Related)
+
+- [ ] 5.  `ProjectRemoteDataSource` 구현 (대상: `projects/{projectId}`)
+    -   [ ] 인터페이스 정의 (`ProjectRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`ProjectRemoteDataSourceImpl.kt`)
+- [ ] 6.  `MemberRemoteDataSource` 구현 (대상: `projects/{projectId}/members/{userId}`)
+    -   [ ] 인터페이스 정의 (`MemberRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`MemberRemoteDataSourceImpl.kt`)
+- [ ] 7.  `RoleRemoteDataSource` 구현 (대상: `projects/{projectId}/roles/{roleId}`)
+    -   [ ] 인터페이스 정의 (`RoleRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`RoleRemoteDataSourceImpl.kt`)
+- [ ] 8.  `PermissionRemoteDataSource` 구현 (대상: `projects/{projectId}/roles/{roleId}/permissions/{permissionId}`)
+    -   [ ] 인터페이스 정의 (`PermissionRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`PermissionRemoteDataSourceImpl.kt`)
+- [ ] 9.  `InviteRemoteDataSource` 구현 (대상: `projects/{projectId}/invites/{inviteId}`)
+    -   [ ] 인터페이스 정의 (`InviteRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`InviteRemoteDataSourceImpl.kt`)
+- [ ] 10. `CategoryRemoteDataSource` 구현 (대상: `projects/{projectId}/categories/{categoryId}`)
+    -   [ ] 인터페이스 정의 (`CategoryRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`CategoryRemoteDataSourceImpl.kt`)
+
+## 채널/메시지 관련 (Channel/Message-Related)
+
+- [ ] 11. `DMChannelRemoteDataSource` 구현 (대상: `dm_channels/{dmChannelId}`)
+    -   [ ] 인터페이스 정의 (`DMChannelRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`DMChannelRemoteDataSourceImpl.kt`)
+- [ ] 12. `ProjectChannelRemoteDataSource` 구현 (대상: `projects/{projectId}/categories/{categoryId}/project_channels/{projectChannelId}`)
+    -   [ ] 인터페이스 정의 (`ProjectChannelRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`ProjectChannelRemoteDataSourceImpl.kt`)
+- [ ] 13. `MessageRemoteDataSource` 구현 (대상: `dm_channels/{dmChannelId}/messages/{messageId}` 또는 `.../project_channels/{projectChannelId}/messages/{messageId}`)
+    -   [ ] 인터페이스 정의 (`MessageRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`MessageRemoteDataSourceImpl.kt`)
+- [ ] 14. `MessageAttachmentRemoteDataSource` 구현 (대상: `.../messages/{messageId}/message_attachments/{messageAttachmentId}`)
+    -   [ ] 인터페이스 정의 (`MessageAttachmentRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`MessageAttachmentRemoteDataSourceImpl.kt`)
+
+## 독립 엔티티 (Independent Entities)
+
+- [ ] 15. `ScheduleRemoteDataSource` 구현 (대상: `schedules/{scheduleId}`)
+    -   [ ] 인터페이스 정의 (`ScheduleRemoteDataSource.kt`)
+    -   [ ] 구현체 정의 (`ScheduleRemoteDataSourceImpl.kt`) 

@@ -171,7 +171,6 @@ class AuthRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             // Log the exception for debugging purposes
             Log.e("AuthRepositoryImpl", "Error deleting user: ${e.message}", e)
-            SentryUtil.sendError(e, mapOf("context" to "deleteCurrentUser"))
             Result.failure(e)
         }
     }

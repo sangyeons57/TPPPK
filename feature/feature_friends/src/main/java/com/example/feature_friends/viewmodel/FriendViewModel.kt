@@ -1,13 +1,17 @@
 package com.example.feature_friends.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.FriendRelationship
 import com.example.domain.model.FriendRequestStatus
+import com.example.domain.model.User
 import com.example.domain.usecase.dm.GetDmChannelIdUseCase
 import com.example.domain.usecase.friend.GetFriendRelationshipsStreamUseCase
 import com.example.domain.usecase.friend.RefreshFriendRelationshipsUseCase
+import com.example.domain.usecase.user.GetUserUseCase
+import com.example.feature_friends.ui.FriendListItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,16 +20,20 @@ import javax.inject.Inject
 
 // --- 데이터 모델 ---
 data class FriendItem(
+    val user: User?,
     val friendId: String,
+    val profileImageUrl: String?,
     val status: FriendRequestStatus,
     val relationshipTimestamp: Instant,
     val acceptedAt: Instant?,
     val displayName: String // UI에 표시될 이름 (실제로는 User 정보와 조합 필요)
 )
 
-fun FriendRelationship.toUiModel(): FriendItem {
+fun FriendRelationship.toUiModel(user: User?): FriendItem {
     return FriendItem(
+        user = user,
         friendId = this.friendUserId,
+        profileImageUrl = null,
         status = this.status,
         relationshipTimestamp = this.timestamp,
         acceptedAt = this.acceptedAt,
@@ -51,6 +59,7 @@ sealed class FriendsEvent {
 @HiltViewModel
 class FriendViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
+    private val getUserUserCase: GetUserUseCase,
     private val getFriendRelationshipsStreamUseCase: GetFriendRelationshipsStreamUseCase,
     private val refreshFriendRelationshipsUseCase: RefreshFriendRelationshipsUseCase,
     private val getDmChannelIdUseCase: GetDmChannelIdUseCase
@@ -74,17 +83,36 @@ class FriendViewModel @Inject constructor(
             getFriendRelationshipsStreamUseCase()
                 .onStart { _uiState.update { it.copy(isLoading = true, error = null) } }
                 .map { result: Result<List<FriendRelationship>> ->
-                    result.map { relationships -> relationships.map { it.toUiModel() } }
+                    result.map { relationships ->
+                        relationships.map {
+                            getUserUserCase(it.friendUserId).map { userResult ->
+                                userResult.onSuccess { user ->
+                                    it.toUiModel(user)
+                                }.onFailure {
+                                    it.toUiModel(null)
+                                }
+                            }
+                        }
+                    }
                 }
-                .catch { e -> 
+                .catch { e ->
                     val errorMessage = e.localizedMessage ?: "알 수 없는 스트림 오류"
-                    _uiState.update { it.copy(error = "목록 로딩 중 오류: $errorMessage", isLoading = false) }
+                    _uiState.update {
+                        it.copy(
+                            error = "목록 로딩 중 오류: $errorMessage",
+                            isLoading = false
+                        )
+                    }
                     _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 목록 로딩 실패: $errorMessage"))
                 }
                 .collect { uiResult: Result<List<FriendItem>> ->
                     if (uiResult.isSuccess) {
                         _uiState.update {
-                            it.copy(friends = uiResult.getOrThrow(), isLoading = false, error = null)
+                            it.copy(
+                                friends = uiResult.getOrThrow(),
+                                isLoading = false,
+                                error = null
+                            )
                         }
                     } else {
                         val errorMessage = uiResult.exceptionOrNull()?.localizedMessage ?: "알 수 없는 오류"

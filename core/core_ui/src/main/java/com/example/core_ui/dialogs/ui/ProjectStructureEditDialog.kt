@@ -70,6 +70,7 @@ import com.example.core_ui.components.draggablelist.DraggableList
 import com.example.core_ui.components.draggablelist.DraggableListItem
 import com.example.core_ui.components.draggablelist.rememberDraggableListState
 import com.example.core_common.util.DateTimeUtil // For preview
+import com.example.core_ui.components.buttons.DebouncedBackButton
 
 /**
  * 프로젝트 구조 편집 다이얼로그
@@ -126,7 +127,7 @@ fun ProjectStructureEditDialog(
     }
     
     ModalBottomSheet(
-        onDismissRequest = { viewModel.onCancelChangesClicked() /* Use new cancel */ },
+        onDismissRequest = { viewModel.onCancelChangesClicked() },
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = { BottomSheetDefaults.DragHandle() }
@@ -153,20 +154,15 @@ fun ProjectStructureEditDialog(
                 )
                 
                 // 좌측에 닫기 버튼 추가
-                IconButton(
-                    onClick = { viewModel.onCancelChangesClicked() }, // 취소 시 ViewModel 함수 호출
-                    modifier = Modifier.align(Alignment.CenterStart)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "닫기",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                
+                DebouncedBackButton(
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    onClick = { viewModel.onCancelChangesClicked() },
+                    contentDescription = "닫기"
+                )
+
                 // 우측에 저장 버튼 추가
                 IconButton(
-                    onClick = { viewModel.onSaveChangesClicked() }, // 저장 시 ViewModel 함수 호출
+                    onClick = { viewModel.onSaveChangesClicked() },
                     enabled = true, // TODO: Replace with viewModel.calculateHasChanges() or similar
                     modifier = Modifier.align(Alignment.CenterEnd)
                 ) {
@@ -263,7 +259,7 @@ fun ProjectStructureEditDialog(
                                                 viewModel.openContextMenu(
                                                     ContextMenuState.Category(
                                                         categoryId = originalItem.id,
-                                                        position = Offset.Zero 
+                                                        position = Offset.Zero
                                                     )
                                                 )
                                             }) {
@@ -315,9 +311,11 @@ fun ProjectStructureEditDialog(
             
             // 카테고리 추가 버튼 (DraggableList 외부)
              Button(
-                onClick = { /* viewModel.addCategory() -> needs to work with draggableItems */ 
-                    // For now, let's assume addCategory in ViewModel is updated
-                    viewModel.addCategory() 
+                onClick = { 
+                    // TODO: Implement a dialog to get category name, then call:
+                    // viewModel.addCategory("새 카테고리 이름 입력받아야 함") 
+                    // For now, using a placeholder name. In a real app, you'd open an input dialog first.
+                    viewModel.addCategory("새 카테고리") 
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -354,17 +352,7 @@ fun ProjectStructureEditDialog(
             initialValue = currentItem?.name ?: "",
             onDismiss = { viewModel.closeRenameDialog() },
             onConfirm = { newName ->
-                // ViewModel needs renameCategory/Channel functions that work with draggableItems
-                when(state) {
-                    is RenameDialogState.Category -> {
-                        viewModel.renameCategory(state.categoryId, newName)
-                    }
-                    is RenameDialogState.Channel -> {
-                        // renameChannel might need parentId if not embedded in channelId logic
-                        viewModel.renameChannel(state.categoryId, state.channelId, newName)
-                    }
-                }
-                viewModel.closeRenameDialog()
+                viewModel.handleRenameConfirm(newName)
             }
         )
     }
@@ -374,9 +362,7 @@ fun ProjectStructureEditDialog(
         AddChannelDialog(
             onDismiss = { viewModel.closeAddChannelDialog() },
             onConfirm = { channelName, channelMode ->
-                // ViewModel's addChannel needs to work with draggableItems
-                viewModel.addChannel(categoryId, channelName, channelMode)
-                viewModel.closeAddChannelDialog()
+                viewModel.handleAddChannelConfirm(channelName, channelMode)
             }
         )
     }
@@ -387,25 +373,10 @@ fun ProjectStructureEditDialog(
             state = state,
             onDismiss = { viewModel.closeContextMenu() },
             onRename = {
-                when(state) {
-                    is ContextMenuState.Category -> 
-                        viewModel.openRenameCategoryDialog(state.categoryId)
-                    is ContextMenuState.Channel -> 
-                        viewModel.openRenameChannelDialog(state.categoryId, state.channelId)
-                }
-                viewModel.closeContextMenu()
+                viewModel.handleContextMenuRename()
             },
             onDelete = {
-                // ViewModel's requestRemoveCategory/Channel needs to work with draggableItems
-                when(state) {
-                    is ContextMenuState.Category -> {
-                        viewModel.requestRemoveCategory(state.categoryId)
-                    }
-                    is ContextMenuState.Channel -> {
-                        viewModel.requestRemoveChannel(state.categoryId, state.channelId)
-                    }
-                }
-                viewModel.closeContextMenu()
+                viewModel.handleContextMenuDelete()
             }
         )
     }

@@ -32,7 +32,7 @@ class FriendRepositoryImpl @Inject constructor(
         val currentUserId = getCurrentUserId()
             ?: return kotlinx.coroutines.flow.flowOf(Result.failure(IllegalStateException("User not logged in.")))
 
-        return friendRemoteDataSource.getFriendRelationshipsStream(currentUserId).map { result ->
+        return friendRemoteDataSource.getFriendsStream().map { result ->
             result.mapCatching { dtoListWithIds -> // Result 내에서 map 수행
                 dtoListWithIds.map { (friendId, dto) ->
                     friendMapper.mapToDomain(dto, currentUserId)
