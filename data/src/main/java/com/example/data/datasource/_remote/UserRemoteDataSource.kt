@@ -25,7 +25,7 @@ interface UserRemoteDataSource {
     suspend fun createUser(user: UserDTO): Result<Unit>
 
     /**
-     * 사용자의 프로필 정보를 업데이트합니다.
+     * 사용자의 프로필 주요 정보를 업데이트합니다. (이름, 프로필 이미지)
      * @param name 변경할 이름
      * @param profileImageUrl 변경할 프로필 이미지 URL
      */
@@ -57,5 +57,23 @@ interface UserRemoteDataSource {
      * @return 사용 가능하면 true, 아니면 false
      */
     suspend fun checkNicknameAvailability(nickname: String): Result<Boolean>
+
+    /**
+     * 현재 로그인된 사용자의 상태 메시지를 업데이트합니다.
+     * @param status 새로운 상태 메시지
+     */
+    suspend fun updateUserStatus(status: String): Result<Unit>
+
+    /**
+     * 현재 로그인된 사용자의 계정 상태를 업데이트합니다.
+     * @param accountStatus 새로운 계정 상태
+     */
+    suspend fun updateUserAccountStatus(accountStatus: String): Result<Unit>
+
+    /**
+     * 현재 로그인된 사용자의 메모를 업데이트합니다.
+     * @param memo 새로운 메모
+     */
+    suspend fun updateUserMemo(memo: String): Result<Unit>
 }
 

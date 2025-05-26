@@ -21,8 +21,10 @@ interface MemberRemoteDataSource {
 
     /**
      * 프로젝트에 새로운 멤버를 추가합니다.
+     * Firestore Class Diagram의 Members 엔티티에는 joinedAt 필드만 명시되어 있지만,
+     * 일반적으로 멤버를 추가할 때 역할을 지정하므로 roleId 파라미터를 추가합니다.
      * @param projectId 멤버를 추가할 프로젝트의 ID
-     * @param userId 추가할 사용자의 ID
+     * @param userId 추가할 사용자의 ID (이것이 members 서브컬렉션의 문서 ID가 됨)
      * @param roleId 부여할 역할의 ID
      */
     suspend fun addMember(projectId: String, userId: String, roleId: String): Result<Unit>

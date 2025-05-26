@@ -2,6 +2,7 @@
 package com.example.data.datasource._remote
 
 import com.example.data.model._remote.MemberDTO
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,9 @@ class MemberRemoteDataSourceImpl @Inject constructor(
         userId: String
     ): Result<MemberDTO?> = withContext(Dispatchers.IO) {
         resultTry {
+            if (projectId.isBlank() || userId.isBlank()) {
+                throw IllegalArgumentException("Project ID and User ID cannot be empty.")
+            }
             val document = getMembersCollection(projectId).document(userId).get().await()
             document.toObject(MemberDTO::class.java)
         }
@@ -45,7 +49,9 @@ class MemberRemoteDataSourceImpl @Inject constructor(
         roleId: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         resultTry {
-            val newMember = MemberDTO(roleId = roleId)
+            // MemberDTO에는 joinedAt (ServerTimestamp)과 roleId만 저장됩니다.
+            // Class Diagram에 따르면 Members 엔티티의 문서 ID는 userId 입니다.
+            val newMember = MemberDTO(roleId = roleId) // joinedAt은 DTO의 @ServerTimestamp로 자동 설정
             getMembersCollection(projectId).document(userId)
                 .set(newMember).await()
             Unit
@@ -58,8 +64,17 @@ class MemberRemoteDataSourceImpl @Inject constructor(
         newRoleId: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         resultTry {
+            // Class Diagram의 Members 엔티티에는 roleId 필드가 명시되어 있지 않지만,
+            // 멤버의 역할을 변경하는 기능이 필요하므로, MemberDTO에 roleId 필드를 추가했고,
+            // 이 필드를 업데이트합니다.
+            val updateData = mapOf(
+                "roleId" to newRoleId,
+                // 역할 변경 시 joinedAt은 변경하지 않으므로, 업데이트 맵에 포함하지 않습니다.
+                // 만약 joinedAt도 업데이트해야 한다면 FieldValue.serverTimestamp()를 사용할 수 있으나,
+                // 보통 역할 변경 시 가입 시간은 유지됩니다.
+            )
             getMembersCollection(projectId).document(userId)
-                .update("roleId", newRoleId).await()
+                .update(updateData).await()
             Unit
         }
     }

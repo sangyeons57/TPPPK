@@ -13,6 +13,12 @@ interface ProjectRemoteDataSource {
     fun observeProject(projectId: String): Flow<ProjectDTO?>
 
     /**
+     * 특정 프로젝트의 정보를 한 번 가져옵니다.
+     * @param projectId 조회할 프로젝트의 ID
+     */
+    suspend fun getProject(projectId: String): Result<ProjectDTO?>
+
+    /**
      * 새로운 프로젝트를 생성합니다.
      * @param name 생성할 프로젝트의 이름
      * @param isPublic 공개 여부

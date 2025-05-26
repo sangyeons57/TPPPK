@@ -4,7 +4,6 @@ package com.example.data.datasource._remote
 import com.example.data.model._remote.FriendDTO
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
 import kotlinx.coroutines.Dispatchers
@@ -30,56 +29,79 @@ class FriendRemoteDataSourceImpl @Inject constructor(
         return if (uid != null) Result.success(uid) else Result.failure(Exception("User not logged in."))
     }
 
-    private fun getMyFriendsCollection() = auth.currentUser?.uid?.let { uid ->
+    // 현재 로그인한 사용자의 friends 컬렉션 참조
+    private fun getMyFriendsCollectionRef() = auth.currentUser?.uid?.let { uid ->
         firestore.collection(USERS_COLLECTION).document(uid).collection(FRIENDS_COLLECTION)
     }
 
+    // 특정 사용자의 friends 컬렉션 참조 (상대방의 컬렉션을 조작할 때 사용)
+    private fun getOthersFriendsCollectionRef(otherUserId: String) =
+        firestore.collection(USERS_COLLECTION).document(otherUserId).collection(FRIENDS_COLLECTION)
+
+
     override fun observeFriends(): Flow<List<FriendDTO>> {
-        return getMyFriendsCollection()?.whereEqualTo("status", "accepted")?.dataObjects()
-            ?: kotlinx.coroutines.flow.flow { throw Exception("User not logged in.") }
+        return getMyFriendsCollectionRef()
+            ?.whereEqualTo("status", "accepted")
+            ?.dataObjects()
+            ?: kotlinx.coroutines.flow.flow { throw Exception("User not logged in or collection path is invalid.") }
     }
 
     override fun observeFriendRequests(): Flow<List<FriendDTO>> {
-        return getMyFriendsCollection()?.whereEqualTo("status", "pending")?.dataObjects()
-            ?: kotlinx.coroutines.flow.flow { throw Exception("User not logged in.") }
+        // 이 함수는 "나에게 온 친구 요청"을 의미합니다.
+        // 즉, 내 friends 컬렉션에서 status가 "pending"인 문서를 찾습니다.
+        // 이 문서의 friendName, friendProfileImageUrl 필드에는 나에게 요청을 보낸 사람의 정보가 들어있어야 합니다.
+        return getMyFriendsCollectionRef()
+            ?.whereEqualTo("status", "pending")
+            ?.dataObjects()
+            ?: kotlinx.coroutines.flow.flow { throw Exception("User not logged in or collection path is invalid.") }
     }
 
     override suspend fun requestFriend(
-        friendId: String,
-        myName: String,
-        myProfileImageUrl: String?
+        friendId: String, // 내가 요청을 보내는 상대방의 User ID
+        myName: String,   // 상대방의 friends 컬렉션에 저장될 나의 이름
+        myProfileImageUrl: String? // 상대방의 friends 컬렉션에 저장될 나의 프로필 이미지
     ): Result<Unit> = withContext(Dispatchers.IO) {
         resultTry {
-            val myUid = getCurrentUserId().getOrThrow()
+            val myUid = getCurrentUserId().getOrThrow() // 나의 User ID
 
             firestore.runTransaction { transaction ->
                 val now = Timestamp.now()
-                // 내 친구 목록에 상대방 추가 (상태: requested)
-                val myFriendDocRef = firestore.collection(USERS_COLLECTION).document(myUid)
-                    .collection(FRIENDS_COLLECTION).document(friendId)
+                
+                // 1. 나의 friends 컬렉션에 상대방 정보를 저장 (상태: requested)
+                //    문서 ID는 상대방의 UID (friendId)
+                //    friendName, friendProfileImageUrl 필드에는 상대방의 정보를 저장해야 하나,
+                //    이 단계에서는 알 수 없으므로 Repository에서 User 정보를 조회 후 업데이트하거나,
+                //    Cloud Function으로 처리하는 것이 좋습니다. 여기서는 임시값을 넣습니다.
+                val myFriendDocRef = getMyFriendsCollectionRef()?.document(friendId)
+                    ?: throw Exception("Failed to get my friends collection reference.")
                 val myFriendData = FriendDTO(
-                    friendUid = friendId,
+                    friendName = "Loading...", // 상대방 이름, 추후 업데이트 필요
+                    friendProfileImageUrl = null, // 상대방 프로필 이미지, 추후 업데이트 필요
                     status = "requested",
-                    requestedAt = now
+                    requestedAt = now,
+                    acceptedAt = null
                 )
                 transaction.set(myFriendDocRef, myFriendData)
 
-                // 상대방의 친구 목록에 나를 추가 (상태: pending)
-                val theirFriendDocRef = firestore.collection(USERS_COLLECTION).document(friendId)
-                    .collection(FRIENDS_COLLECTION).document(myUid)
+                // 2. 상대방의 friends 컬렉션에 나의 정보를 저장 (상태: pending)
+                //    문서 ID는 나의 UID (myUid)
+                //    friendName, friendProfileImageUrl 필드에는 나의 정보를 저장.
+                val theirFriendDocRef = getOthersFriendsCollectionRef(friendId).document(myUid)
                 val theirFriendData = FriendDTO(
-                    friendUid = myUid,
                     friendName = myName,
                     friendProfileImageUrl = myProfileImageUrl,
                     status = "pending",
-                    requestedAt = now
+                    requestedAt = now,
+                    acceptedAt = null
                 )
                 transaction.set(theirFriendDocRef, theirFriendData)
             }.await()
         }
     }
 
-    override suspend fun acceptFriend(friendId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun acceptFriendRequest(
+        requesterId: String // 나에게 친구 요청을 보낸 사람의 User ID (내 friends 컬렉션의 문서 ID)
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         resultTry {
             val myUid = getCurrentUserId().getOrThrow()
             
@@ -87,32 +109,32 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 val now = Timestamp.now()
                 val updateData = mapOf("status" to "accepted", "acceptedAt" to now)
 
-                // 내 목록에서 친구 상태 변경
-                val myFriendDocRef = firestore.collection(USERS_COLLECTION).document(myUid)
-                    .collection(FRIENDS_COLLECTION).document(friendId)
+                // 1. 나의 friends 컬렉션에서 해당 요청 문서의 상태를 "accepted"로 변경
+                val myFriendDocRef = getMyFriendsCollectionRef()?.document(requesterId)
+                    ?: throw Exception("Failed to get my friends collection reference for requester.")
                 batch.update(myFriendDocRef, updateData)
 
-                // 상대방 목록에서 내 상태 변경
-                val theirFriendDocRef = firestore.collection(USERS_COLLECTION).document(friendId)
-                    .collection(FRIENDS_COLLECTION).document(myUid)
+                // 2. 상대방(요청자)의 friends 컬렉션에서 나의 문서 상태를 "accepted"로 변경
+                val theirFriendDocRef = getOthersFriendsCollectionRef(requesterId).document(myUid)
                 batch.update(theirFriendDocRef, updateData)
             }.await()
         }
     }
 
-    override suspend fun removeFriend(friendId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun removeOrDenyFriend(
+        friendId: String // 나와의 관계를 끊을 상대방 User ID (내 friends 컬렉션의 문서 ID)
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         resultTry {
             val myUid = getCurrentUserId().getOrThrow()
 
             firestore.runBatch { batch ->
-                // 내 목록에서 친구 삭제
-                val myFriendDocRef = firestore.collection(USERS_COLLECTION).document(myUid)
-                    .collection(FRIENDS_COLLECTION).document(friendId)
+                // 1. 나의 friends 컬렉션에서 상대방 문서 삭제
+                val myFriendDocRef = getMyFriendsCollectionRef()?.document(friendId)
+                    ?: throw Exception("Failed to get my friends collection reference for friend.")
                 batch.delete(myFriendDocRef)
                 
-                // 상대방 목록에서 나를 삭제
-                val theirFriendDocRef = firestore.collection(USERS_COLLECTION).document(friendId)
-                    .collection(FRIENDS_COLLECTION).document(myUid)
+                // 2. 상대방의 friends 컬렉션에서 나의 문서 삭제
+                val theirFriendDocRef = getOthersFriendsCollectionRef(friendId).document(myUid)
                 batch.delete(theirFriendDocRef)
             }.await()
         }

@@ -36,14 +36,24 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         return schedulesCollection
             .whereEqualTo("projectId", projectId)
             .whereGreaterThanOrEqualTo("startTime", startAt)
-            .whereLessThanOrEqualTo("startTime", endAt)
+            .whereLessThanOrEqualTo("startTime", endAt) // endTime으로 필터링하는 것이 더 정확할 수 있으나, startTime 기준으로 조회
             .dataObjects()
+    }
+
+    override suspend fun getSchedule(scheduleId: String): Result<ScheduleDTO?> = withContext(Dispatchers.IO) {
+        resultTry {
+            if (scheduleId.isBlank()) {
+                throw IllegalArgumentException("Schedule ID cannot be empty.")
+            }
+            val document = schedulesCollection.document(scheduleId).get().await()
+            document.toObject(ScheduleDTO::class.java)
+        }
     }
 
     override suspend fun createSchedule(schedule: ScheduleDTO): Result<String> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
-            // 생성자 ID를 주입
+            // 생성자 ID와 생성 시간을 주입 (DTO에 ServerTimestamp가 있으므로 Firestore에서 자동 설정됨)
             val newScheduleWithCreator = schedule.copy(creatorId = uid)
             val docRef = schedulesCollection.add(newScheduleWithCreator).await()
             docRef.id
@@ -55,17 +65,18 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
             if (schedule.id.isBlank()) {
                 throw IllegalArgumentException("Schedule ID cannot be empty for an update.")
             }
-            // 전체 객체로 set하는 대신 update할 필드만 Map으로 만들어 전달하여
-            // createdAt 같은 불변 필드를 보호하고 updatedAt 타임스탬프를 확실하게 찍습니다.
-            val updateData = mapOf(
-                "title" to schedule.title,
-                "content" to schedule.content,
-                "startTime" to schedule.startTime,
-                "endTime" to schedule.endTime,
-                "status" to schedule.status,
-                "color" to schedule.color,
-                "updatedAt" to FieldValue.serverTimestamp()
-            )
+            // 업데이트할 필드만 Map으로 만들어 전달하여 createdAt 같은 불변 필드를 보호하고
+            // updatedAt 타임스탬프를 확실하게 찍습니다.
+            val updateData = mutableMapOf<String, Any?>()
+            updateData["title"] = schedule.title
+            updateData["content"] = schedule.content
+            updateData["startTime"] = schedule.startTime
+            updateData["endTime"] = schedule.endTime
+            updateData["projectId"] = schedule.projectId // projectId도 업데이트 가능하도록 유지 (선택사항)
+            updateData["status"] = schedule.status
+            updateData["color"] = schedule.color
+            updateData["updatedAt"] = FieldValue.serverTimestamp()
+            
             schedulesCollection.document(schedule.id).update(updateData).await()
             Unit
         }

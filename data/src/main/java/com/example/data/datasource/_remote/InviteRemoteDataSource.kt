@@ -28,5 +28,13 @@ interface InviteRemoteDataSource {
      * @param newStatus 새로운 상태
      */
     suspend fun updateInviteStatus(projectId: String, inviteId: String, newStatus: String): Result<Unit>
+
+    /**
+     * 프로젝트 ID와 초대 코드로 특정 초대 정보를 가져옵니다.
+     * @param projectId 대상 프로젝트의 ID
+     * @param inviteCode 조회할 초대 코드
+     * @return 조회된 초대 정보 DTO를 포함한 Result 객체, 없으면 null
+     */
+    suspend fun getInviteByCode(projectId: String, inviteCode: String): Result<InviteDTO?>
 }
 

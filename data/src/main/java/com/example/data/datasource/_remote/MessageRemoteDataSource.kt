@@ -15,6 +15,13 @@ interface MessageRemoteDataSource {
     fun observeMessages(channelPath: String, limit: Long): Flow<List<MessageDTO>>
 
     /**
+     * 특정 채널의 특정 메시지 정보를 한 번 가져옵니다.
+     * @param channelPath 메시지를 가져올 채널의 전체 경로
+     * @param messageId 가져올 메시지의 ID
+     */
+    suspend fun getMessage(channelPath: String, messageId: String): Result<MessageDTO?>
+
+    /**
      * 특정 채널에 메시지를 전송합니다.
      * @param channelPath 메시지를 보낼 채널의 전체 경로
      * @param content 보낼 메시지의 내용

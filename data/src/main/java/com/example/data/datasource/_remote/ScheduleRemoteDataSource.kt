@@ -20,6 +20,12 @@ interface ScheduleRemoteDataSource {
     ): Flow<List<ScheduleDTO>>
 
     /**
+     * 특정 일정 하나의 상세 정보를 가져옵니다.
+     * @param scheduleId 조회할 일정의 ID
+     */
+    suspend fun getSchedule(scheduleId: String): Result<ScheduleDTO?>
+
+    /**
      * 새로운 일정을 생성합니다.
      * @param schedule 생성할 일정 정보 DTO
      * @return 생성된 일정의 ID를 포함한 Result 객체

@@ -29,6 +29,16 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
         return projectsCollection.document(projectId).dataObjects()
     }
 
+    override suspend fun getProject(projectId: String): Result<ProjectDTO?> = withContext(Dispatchers.IO) {
+        resultTry {
+            if (projectId.isBlank()) {
+                throw IllegalArgumentException("Project ID cannot be empty.")
+            }
+            val document = projectsCollection.document(projectId).get().await()
+            document.toObject(ProjectDTO::class.java)
+        }
+    }
+
     override suspend fun createProject(name: String, isPublic: Boolean): Result<String> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
@@ -37,6 +47,7 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
                 name = name,
                 isPublic = isPublic,
                 ownerId = uid
+                // createdAt, updatedAt은 DTO에서 @ServerTimestamp로 자동 설정됩니다.
             )
 
             val documentReference = projectsCollection.add(newProject).await()
@@ -50,11 +61,14 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
         imageUrl: String?
     ): Result<Unit> = withContext(Dispatchers.IO) {
         resultTry {
-            val updateData = mapOf(
-                "name" to name,
-                "imageUrl" to imageUrl,
-                "updatedAt" to FieldValue.serverTimestamp()
-            )
+            val updateData = mutableMapOf<String, Any?>()
+            updateData["name"] = name
+            updateData["updatedAt"] = FieldValue.serverTimestamp()
+            // imageUrl이 null이면 업데이트하지 않거나, 명시적으로 null로 설정할 수 있습니다.
+            // 여기서는 전달된 값 그대로 사용합니다. (필드가 nullable이므로)
+            updateData["imageUrl"] = imageUrl
+
+
             projectsCollection.document(projectId).update(updateData).await()
             Unit // 성공 시 Unit 반환
         }

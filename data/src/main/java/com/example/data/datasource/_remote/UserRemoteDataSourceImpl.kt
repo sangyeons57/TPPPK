@@ -4,6 +4,7 @@ package com.example.data.datasource._remote
 import android.net.Uri
 import com.example.data.model._remote.UserDTO
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.toObjects
 import com.google.firebase.storage.FirebaseStorage
@@ -21,7 +22,7 @@ import javax.inject.Singleton
 class UserRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val storage: FirebaseStorage // FirebaseStorage 의존성 추가
+    private val storage: FirebaseStorage
 ) : UserRemoteDataSource {
 
     companion object {
@@ -30,10 +31,14 @@ class UserRemoteDataSourceImpl @Inject constructor(
     }
 
     private val usersCollection = firestore.collection(USERS_COLLECTION)
+    
+    private fun getCurrentUserIdOrThrow(): String {
+        return auth.currentUser?.uid ?: throw Exception("User not logged in.")
+    }
 
-    override suspend fun getMyUserInfo(): Result<UserDTO> {
-        return resultTry {
-            val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
+    override suspend fun getMyUserInfo(): Result<UserDTO> = withContext(Dispatchers.IO) {
+        resultTry {
+            val uid = getCurrentUserIdOrThrow()
             val document = usersCollection.document(uid).get().await()
             document.toObject(UserDTO::class.java)
                 ?: throw Exception("User data could not be parsed.")
@@ -55,33 +60,36 @@ class UserRemoteDataSourceImpl @Inject constructor(
                     } else {
                         trySend(Result.failure(Exception("Failed to parse user data.")))
                     }
+                } else {
+                     trySend(Result.failure(Exception("User document does not exist.")))
                 }
             }
         awaitClose { listenerRegistration.remove() }
     }
 
-    override suspend fun createUser(user: UserDTO): Result<Unit> {
-        return resultTry {
+    override suspend fun createUser(user: UserDTO): Result<Unit> = withContext(Dispatchers.IO) {
+        resultTry {
             usersCollection.document(user.uid).set(user).await()
             Unit
         }
     }
 
-    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): Result<Unit> {
-        return resultTry {
-            val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
-            val updates = mapOf(
-                "name" to name,
-                "profileImageUrl" to profileImageUrl
-            )
+    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): Result<Unit> = withContext(Dispatchers.IO) {
+        resultTry {
+            val uid = getCurrentUserIdOrThrow()
+            val updates = mutableMapOf<String, Any?>()
+            updates["name"] = name
+            updates["updatedAt"] = FieldValue.serverTimestamp()
+            profileImageUrl?.let { updates["profileImageUrl"] = it }
+
             usersCollection.document(uid).update(updates).await()
             Unit
         }
     }
     
-    override suspend fun updateFcmToken(token: String): Result<Unit> {
-        return resultTry {
-            val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
+    override suspend fun updateFcmToken(token: String): Result<Unit> = withContext(Dispatchers.IO) {
+        resultTry {
+            val uid = getCurrentUserIdOrThrow()
             usersCollection.document(uid).update("fcmToken", token).await()
             Unit
         }
@@ -89,9 +97,8 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun uploadProfileImage(imageUri: Uri): Result<String> = withContext(Dispatchers.IO) {
         resultTry {
-            val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
+            val uid = getCurrentUserIdOrThrow()
             val storageRef = storage.reference
-            // 파일 경로를 "profile_images/{userId}/{randomUuid}.jpg" 와 같이 하여 중복을 피합니다.
             val imageRef = storageRef.child("$PROFILE_IMAGES_PATH/$uid/${UUID.randomUUID()}.jpg")
 
             imageRef.putFile(imageUri).await()
@@ -102,13 +109,13 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun searchUsersByName(nameQuery: String): Result<List<UserDTO>> = withContext(Dispatchers.IO) {
         resultTry {
-            // 참고: Firestore에서 효율적인 검색을 구현하려면 Algolia 같은 외부 검색 서비스를 연동하는 것이 좋습니다.
-            // 아래는 간단한 "시작 문자열" 검색 예시이며, `name` 필드에 대한 색인이 필요합니다.
+            // Firestore에서 효율적인 검색을 구현하려면 Algolia 같은 외부 검색 서비스를 연동하는 것이 좋습니다.
+            // "name" 필드에 대한 색인이 필요합니다.
             val querySnapshot = usersCollection
                 .orderBy("name")
                 .startAt(nameQuery)
                 .endAt(nameQuery + "\uf8ff")
-                .limit(20) // 검색 결과 개수 제한
+                .limit(20) 
                 .get()
                 .await()
             
@@ -125,6 +132,39 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 .await()
             
             querySnapshot.isEmpty
+        }
+    }
+
+    override suspend fun updateUserStatus(status: String): Result<Unit> = withContext(Dispatchers.IO) {
+        resultTry {
+            val uid = getCurrentUserIdOrThrow()
+            usersCollection.document(uid).update(mapOf(
+                "status" to status,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )).await()
+            Unit
+        }
+    }
+
+    override suspend fun updateUserAccountStatus(accountStatus: String): Result<Unit> = withContext(Dispatchers.IO) {
+        resultTry {
+            val uid = getCurrentUserIdOrThrow()
+            usersCollection.document(uid).update(mapOf(
+                "accountStatus" to accountStatus,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )).await()
+            Unit
+        }
+    }
+
+    override suspend fun updateUserMemo(memo: String): Result<Unit> = withContext(Dispatchers.IO) {
+        resultTry {
+            val uid = getCurrentUserIdOrThrow()
+            usersCollection.document(uid).update(mapOf(
+                "memo" to memo,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )).await()
+            Unit
         }
     }
 

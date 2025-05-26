@@ -40,6 +40,16 @@ class MessageRemoteDataSourceImpl @Inject constructor(
             .dataObjects()
     }
 
+    override suspend fun getMessage(channelPath: String, messageId: String): Result<MessageDTO?> = withContext(Dispatchers.IO) {
+        resultTry {
+            if (channelPath.isBlank() || messageId.isBlank()) {
+                throw IllegalArgumentException("Channel path and message ID cannot be empty.")
+            }
+            val document = getMessagesCollection(channelPath).document(messageId).get().await()
+            document.toObject(MessageDTO::class.java)
+        }
+    }
+
     override suspend fun sendMessage(
         channelPath: String,
         content: String
@@ -100,9 +110,9 @@ class MessageRemoteDataSourceImpl @Inject constructor(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
-            // 사용자가 동일한 이모지를 중복해서 추가할 수 없도록, (userId, emoji) 조합으로 쿼리하여 확인 후 추가하는 로직이
-            // Repository 계층에 필요할 수 있습니다. DataSource는 단순 추가 기능만 담당합니다.
             val newReaction = ReactionDTO(userId = uid, emoji = emoji)
+            // 동일 유저가 동일 이모지 중복 추가 방지 로직은 Repository에서 처리 (쿼리 후 추가)
+            // 여기서는 단순 추가. 문서 ID는 Firestore 자동 생성
             getReactionsCollection(channelPath, messageId).add(newReaction).await()
             Unit
         }
@@ -116,17 +126,17 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             
-            // 내가 남긴 특정 이모지 리액션을 찾아서 삭제
             val snapshot = getReactionsCollection(channelPath, messageId)
                 .whereEqualTo("userId", uid)
                 .whereEqualTo("emoji", emoji)
-                .limit(1)
+                .limit(1) // 특정 유저가 남긴 특정 이모지는 하나라고 가정
                 .get()
                 .await()
 
             if (!snapshot.isEmpty) {
                 snapshot.documents.first().reference.delete().await()
             }
+            // 삭제할 리액션이 없어도 성공으로 처리 (멱등성)
             Unit
         }
     }

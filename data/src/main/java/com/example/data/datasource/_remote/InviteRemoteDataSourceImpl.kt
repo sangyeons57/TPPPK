@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.tasks.await
@@ -39,16 +40,14 @@ class InviteRemoteDataSourceImpl @Inject constructor(
     ): Result<InviteDTO> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
-
-            // Firestore 문서 ID를 미리 생성하여 inviteId와 inviteCode로 활용
             val newDocumentRef = getInvitesCollection(projectId).document()
             
             val newInvite = InviteDTO(
                 id = newDocumentRef.id,
-                // 간단한 랜덤 코드를 생성, 실제로는 더 복잡한 코드 생성 로직이 필요할 수 있음
-                inviteCode = UUID.randomUUID().toString().substring(0, 8),
+                inviteCode = UUID.randomUUID().toString().substring(0, 8).uppercase(),
                 createdBy = uid,
-                expiresAt = expirationDate
+                expiresAt = expirationDate,
+                status = "ACTIVE" // 생성 시 기본 상태는 ACTIVE
             )
             
             newDocumentRef.set(newInvite).await()
@@ -65,6 +64,25 @@ class InviteRemoteDataSourceImpl @Inject constructor(
             getInvitesCollection(projectId).document(inviteId)
                 .update("status", newStatus).await()
             Unit
+        }
+    }
+
+    override suspend fun getInviteByCode(
+        projectId: String,
+        inviteCode: String
+    ): Result<InviteDTO?> = withContext(Dispatchers.IO) {
+        resultTry {
+            val querySnapshot = getInvitesCollection(projectId)
+                .whereEqualTo("inviteCode", inviteCode)
+                .limit(1)
+                .get()
+                .await()
+            
+            if (!querySnapshot.isEmpty) {
+                querySnapshot.documents.firstOrNull()?.toObject<InviteDTO>()
+            } else {
+                null
+            }
         }
     }
 
