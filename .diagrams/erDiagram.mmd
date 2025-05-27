@@ -45,8 +45,7 @@ classDiagram
     namespace namespace_channel {
         class DMChannel["dm_channels/{dmChannelId}"] {
             <<Collection>>
-            +String userId1
-            +String userId2
+            +List<String> participants
             +String? lastMessagePreview
             +Timestamp? lastMessageTimestamp
             +Timestamp createdAt
@@ -88,7 +87,6 @@ classDiagram
             +String ownerId // User document ID
             +Timestamp createdAt
             +Timestamp updatedAt
-            +Boolean isPublic
         }
 
 

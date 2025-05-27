@@ -1,15 +1,15 @@
-
-package com.example.data.model._remote
+package com.example.domain.model.base
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 
-data class ProjectDTO(
+data class Project(
     @DocumentId val id: String = "",
     val name: String = "",
     val imageUrl: String? = null,
     val ownerId: String = "",
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null,
+    val createdAt: Instant? = null,
+    val updatedAt: Instant? = null,
 )
+
