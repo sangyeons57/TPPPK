@@ -1,6 +1,11 @@
+// Required new interface:
+// interface ProjectChannelRepository {
+//     // ... other methods
+//     fun deleteProjectChannel(channelId: String): Result<Unit>
+// }
 package com.example.domain.usecase.project
 
-import com.example.domain.repository.ProjectSettingRepository // Assuming this repo exists
+import com.example.domain.repository.ProjectChannelRepository // Changed from ProjectSettingRepository
 import javax.inject.Inject
 
 /**
@@ -11,12 +16,11 @@ interface DeleteChannelUseCase {
 }
 
 /**
- * DeleteChannelUseCase의 구현체
- * @param projectSettingRepository 프로젝트 설정 관련 데이터 접근을 위한 Repository (가정)
+ * DeleteChannelUseCase의 구현체. This Usecase is for deleting a *Project Channel*.
+ * @param projectChannelRepository 프로젝트 채널 관련 데이터 접근을 위한 Repository.
  */
 class DeleteChannelUseCaseImpl @Inject constructor(
-    // TODO: ProjectSettingRepository 또는 ChannelRepository 주입 필요
-    // private val projectSettingRepository: ProjectSettingRepository
+    private val projectChannelRepository: ProjectChannelRepository
 ) : DeleteChannelUseCase {
 
     /**
@@ -25,9 +29,6 @@ class DeleteChannelUseCaseImpl @Inject constructor(
      * @return Result<Unit> 삭제 처리 결과
      */
     override suspend fun invoke(channelId: String): Result<Unit> {
-        // TODO: Repository 호출 로직 구현 필요
-        // return projectSettingRepository.deleteChannel(channelId)
-        println("UseCase: DeleteChannelUseCase - $channelId (TODO: Implement actual logic)")
-        return Result.success(Unit) // Return success for now
+        return projectChannelRepository.deleteProjectChannel(channelId)
     }
-} 
+}

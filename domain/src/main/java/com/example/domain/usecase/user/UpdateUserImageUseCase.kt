@@ -1,14 +1,33 @@
+// UserRepository method used:
+// interface UserRepository {
+//     // ... other methods
+//     suspend fun updateUserProfileImage(
+//         userId: String,
+//         imageInputStream: InputStream,
+//         imageMimeType: String
+//     ): Result<String?> // Returns new image URL or null
+// }
+// Note: This UseCase's signature has been changed from (imageUri: Uri) to
+// (userId: String, imageInputStream: InputStream, imageMimeType: String)
+// to align with UserRepository and keep domain layer free of Android-specific Uri processing.
 package com.example.domain.usecase.user
 
-import android.net.Uri
-import com.example.domain.repository.UserRepository
+import com.example.domain._repository.UserRepository // Ensure correct import path
+import java.io.InputStream
 import javax.inject.Inject
 
 /**
- * 사용자 이미지 업데이트 유스케이스 인터페이스
+ * 사용자 프로필 이미지를 업데이트하는 유스케이스 인터페이스.
+ * The responsibility of converting Uri to InputStream lies with the caller (e.g., ViewModel).
  */
 interface UpdateUserImageUseCase {
-    suspend operator fun invoke(imageUri: Uri): Result<String> // 성공 시 새 이미지 URL 반환
+    /**
+     * @param userId 업데이트할 사용자의 ID
+     * @param imageInputStream 업데이트할 이미지의 InputStream
+     * @param imageMimeType 이미지의 MIME 타입 (e.g., "image/jpeg")
+     * @return Result<String?> 성공 시 새 이미지 URL (nullable), 실패 시 Exception
+     */
+    suspend operator fun invoke(userId: String, imageInputStream: InputStream, imageMimeType: String): Result<String?>
 }
 
 /**
@@ -20,18 +39,22 @@ class UpdateUserImageUseCaseImpl @Inject constructor(
 ) : UpdateUserImageUseCase {
 
     /**
-     * 유스케이스를 실행하여 사용자 이미지를 업데이트합니다.
-     * @param imageUri 업데이트할 이미지의 Uri
-     * @return Result<String> 업데이트 처리 결과 (성공 시 새로운 이미지 URL, 실패 시 Exception)
+     * 유스케이스를 실행하여 사용자 프로필 이미지를 업데이트합니다.
+     * @param userId 업데이트할 사용자의 ID
+     * @param imageInputStream 업데이트할 이미지의 InputStream
+     * @param imageMimeType 이미지의 MIME 타입
+     * @return Result<String?> 업데이트 처리 결과 (성공 시 새로운 이미지 URL (nullable), 실패 시 Exception)
      */
-    override suspend fun invoke(imageUri: Uri): Result<String> {
-        // TODO: UserRepository에 updateProfileImage(imageUri) 함수 구현 필요 (이미지 업로드 및 URL 반환)
-        // return userRepository.updateProfileImage(imageUri)
-        
-        // 임시 구현 (성공 및 임시 URL 반환)
-        // kotlin.coroutines.delay(1000) // Remove delay
-        val newImageUrl = "https://picsum.photos/seed/${System.currentTimeMillis()}/100" // 임시 URL
-        println("UseCase: UpdateUserImageUseCase - $newImageUrl (TODO: Implement actual logic)")
-        return Result.success(newImageUrl)
+    override suspend fun invoke(userId: String, imageInputStream: InputStream, imageMimeType: String): Result<String?> {
+        if (userId.isBlank()) {
+            return Result.failure(IllegalArgumentException("User ID cannot be blank."))
+        }
+        // imageMimeType can be validated further if necessary (e.g., specific supported types)
+
+        return userRepository.updateUserProfileImage(
+            userId = userId,
+            imageInputStream = imageInputStream,
+            imageMimeType = imageMimeType
+        )
     }
-} 
+}

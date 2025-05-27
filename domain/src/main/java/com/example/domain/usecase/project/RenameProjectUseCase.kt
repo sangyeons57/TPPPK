@@ -1,6 +1,6 @@
 package com.example.domain.usecase.project
 
-import com.example.domain.repository.ProjectSettingRepository // Assuming this repo exists
+import com.example.domain._repository.ProjectRepository // Corrected import path
 import javax.inject.Inject
 
 /**
@@ -11,12 +11,12 @@ interface RenameProjectUseCase {
 }
 
 /**
- * RenameProjectUseCase의 구현체
- * @param projectSettingRepository 프로젝트 설정 관련 데이터 접근을 위한 Repository (가정)
+ * RenameProjectUseCase의 구현체. This Usecase now relies on ProjectRepository.
+ * It uses the `updateProjectInfo` method to change the project's name.
+ * @param projectRepository 프로젝트 관련 데이터 접근을 위한 Repository.
  */
 class RenameProjectUseCaseImpl @Inject constructor(
-    // TODO: ProjectSettingRepository 또는 ProjectRepository 주입 필요
-    // private val projectSettingRepository: ProjectSettingRepository
+    private val projectRepository: ProjectRepository
 ) : RenameProjectUseCase {
 
     /**
@@ -26,9 +26,13 @@ class RenameProjectUseCaseImpl @Inject constructor(
      * @return Result<Unit> 이름 변경 처리 결과
      */
     override suspend fun invoke(projectId: String, newName: String): Result<Unit> {
-        // TODO: Repository 호출 로직 구현 필요
-        // return projectSettingRepository.renameProject(projectId, newName)
-        println("UseCase: RenameProjectUseCase - $projectId -> $newName (TODO: Implement actual logic)")
-        return Result.success(Unit) // Return success for now
+        // Using updateProjectInfo to rename the project. Other fields (description, isPublic) are set to null
+        // to indicate they should not be changed by this specific use case.
+        return projectRepository.updateProjectInfo(
+            projectId = projectId,
+            name = newName,
+            description = null,
+            isPublic = null
+        )
     }
-} 
+}

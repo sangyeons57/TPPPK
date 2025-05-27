@@ -1,6 +1,6 @@
 package com.example.domain.usecase.project
 
-import com.example.domain.repository.ProjectSettingRepository // Assuming this repo exists
+import com.example.domain._repository.CategoryRepository // Corrected import path
 import javax.inject.Inject
 
 /**
@@ -11,12 +11,11 @@ interface DeleteCategoryUseCase {
 }
 
 /**
- * DeleteCategoryUseCase의 구현체
- * @param projectSettingRepository 프로젝트 설정 관련 데이터 접근을 위한 Repository (가정)
+ * DeleteCategoryUseCase의 구현체. This Usecase now relies on CategoryRepository.
+ * @param categoryRepository 카테고리 관련 데이터 접근을 위한 Repository.
  */
 class DeleteCategoryUseCaseImpl @Inject constructor(
-    // TODO: ProjectSettingRepository 또는 CategoryRepository 주입 필요
-    // private val projectSettingRepository: ProjectSettingRepository
+    private val categoryRepository: CategoryRepository
 ) : DeleteCategoryUseCase {
 
     /**
@@ -25,9 +24,6 @@ class DeleteCategoryUseCaseImpl @Inject constructor(
      * @return Result<Unit> 삭제 처리 결과
      */
     override suspend fun invoke(categoryId: String): Result<Unit> {
-        // TODO: Repository 호출 로직 구현 필요
-        // return projectSettingRepository.deleteCategory(categoryId)
-        println("UseCase: DeleteCategoryUseCase - $categoryId (TODO: Implement actual logic)")
-        return Result.success(Unit) // Return success for now
+        return categoryRepository.deleteCategory(categoryId)
     }
-} 
+}

@@ -8,13 +8,17 @@ import javax.inject.Inject
 import kotlin.Result
 
 /**
+ * @Deprecated This Usecase is too broad as it tries to fetch multiple types of channels (DM, Project).
+ * It should be replaced by more specific Usecases like `GetUserProjectChannelsUseCase` and `GetUserDmChannelsStreamUseCase`.
+ *
  * 사용자가 참여한 모든 채널 (DM, 프로젝트, 카테고리) 목록 스트림을 가져오는 유스케이스입니다.
  *
  * @property channelRepository 채널 관련 데이터를 제공하는 리포지토리
  */
-class GetUserChannelsUseCase @Inject constructor(
+@Deprecated("This Usecase is too broad. Use GetUserProjectChannelsUseCase or GetUserDmChannelsStreamUseCase instead.")
+class GetUserChannelsUseCase /* @Inject constructor(
     private val channelRepository: ChannelRepository
-) {
+) */ {
     /**
      * 지정된 사용자가 참여한 모든 채널 목록 스트림을 반환합니다.
      * Repository에서 Flow<List<Channel>>을 받아 Flow<Result<List<Channel>>>로 변환합니다.
@@ -22,6 +26,7 @@ class GetUserChannelsUseCase @Inject constructor(
      * @param userId 사용자의 ID
      * @return 채널 목록 또는 에러를 포함한 Result를 방출하는 [Flow]
      */
+    /*
     operator fun invoke(userId: String): Flow<Result<List<Channel>>> {
         // type = null 을 전달하여 모든 타입의 채널을 가져옵니다.
         return channelRepository.getUserChannelsStream(userId, null)
@@ -29,4 +34,17 @@ class GetUserChannelsUseCase @Inject constructor(
         // 에러 처리는 Repository나 DataSource 단계에서 이루어지거나, ViewModel에서 .catch를 통해 처리합니다.
         // 여기서는 단순 매핑만 수행합니다.
     }
-} 
+    */
+}
+
+// Requirements for new Usecases:
+//
+// 1. GetUserProjectChannelsUseCase:
+//    - Location: com.example.domain.usecase.project or com.example.domain.usecase.channel
+//    - Dependencies: ProjectChannelRepository, potentially UserRepository.
+//    - Purpose: Fetch all project channels a user is part of.
+//    - Comment: "ProjectChannelRepository would need a method like `getChannelsForUser(userId: String): Flow<Result<List<ProjectChannelModel>>>` or provide channels per project which this Usecase would aggregate."
+//
+// 2. GetUserDmChannelsStreamUseCase:
+//    - Location: com.example.domain.usecase.dm.GetUserDmChannelsUseCase.kt (already exists)
+//    - Task: Ensure it's correctly refactored (this will be handled in a subsequent Usecase).
