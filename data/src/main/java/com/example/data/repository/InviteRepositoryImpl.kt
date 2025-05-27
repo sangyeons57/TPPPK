@@ -1,126 +1,119 @@
-package com.example.data.repository
+package com.example.data._repository
 
-import com.example.data.datasource.remote.invite.InviteRemoteDataSource
+import com.example.core_common.result.resultTry
+import com.example.data.datasource._remote.InviteRemoteDataSource
+import com.example.data.model._remote.InviteDTO
+import com.example.data.model.mapper.toDomain
+import com.example.data.model.mapper.toDto // Invite -> InviteDTO (필요시)
 import com.example.domain.model.Invite
-import com.example.domain.model.ProjectInfo
-import com.example.domain.repository.InviteRepository
-import com.example.domain.util.NetworkConnectivityMonitor
-import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.flow.first
-import java.time.Instant
+import com.example.domain.model.InviteType
+import com.example.domain._repository.InviteRepository
+import com.google.firebase.Timestamp // Timestamp 사용 시
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.util.UUID // 초대 코드 생성용
 import javax.inject.Inject
-import javax.inject.Singleton
+import kotlin.Result
 
-/**
- * 초대 관련 저장소 구현체
- * 원격 데이터 소스를 사용하여 초대 데이터를 관리하고 Firestore 캐시를 활용합니다.
- * 
- * @param remoteDataSource 초대 원격 데이터 소스
- * @param auth Firebase 인증 인스턴스
- * @param networkMonitor 네트워크 연결 상태 모니터
- */
-@Singleton
 class InviteRepositoryImpl @Inject constructor(
-    private val remoteDataSource: InviteRemoteDataSource,
-    private val auth: FirebaseAuth,
-    private val networkMonitor: NetworkConnectivityMonitor
+    private val inviteRemoteDataSource: InviteRemoteDataSource
+    // private val inviteMapper: InviteMapper // 개별 매퍼 사용시
 ) : InviteRepository {
 
-    private val currentUserId: String
-        get() = auth.currentUser?.uid ?: throw IllegalStateException("사용자가 로그인되어 있지 않습니다.")
-    
-    private suspend fun isNetworkConnected(): Boolean {
-        return networkMonitor.isNetworkAvailable.first()
-    }
-    
-    /**
-     * 새 초대 토큰을 생성합니다.
-     * 
-     * @param projectId 프로젝트 ID
-     * @param expiresAt 만료 시간 (null인 경우 기본값 사용)
-     * @return 생성된 초대 토큰 결과
-     */
-    override suspend fun createInviteToken(
-        projectId: String,
-        expiresAt: Instant?
-    ): Result<String> {
-        if (!isNetworkConnected()) {
-            return Result.failure(Exception("네트워크 연결이 필요합니다."))
-        }
-        return remoteDataSource.createInviteToken(
-            projectId = projectId,
-            inviterId = currentUserId,
-            expiresAt = expiresAt
+    override suspend fun createInvite(
+        type: InviteType,
+        targetId: String,
+        creatorId: String,
+        expiresInMillis: Long?,
+        maxUses: Int?
+    ): Result<Invite> = resultTry {
+        val uniqueCode = UUID.randomUUID().toString().take(8).uppercase() // 예시: 8자리 랜덤 코드
+        val currentTime = Timestamp.now().seconds * 1000 // 현재 시간을 millis로
+        val expiryTime = expiresInMillis?.let { currentTime + it }
+
+        val inviteDto = InviteDTO(
+            // id는 DataSource에서 자동 생성되거나 code 자체가 ID가 될 수 있음
+            code = uniqueCode,
+            type = type.name,
+            targetId = targetId,
+            creatorId = creatorId,
+            createdAt = Timestamp.now(),
+            expiresAt = expiryTime?.let { Timestamp(it / 1000, ((it % 1000) * 1_000_000).toInt()) },
+            maxUses = maxUses,
+            currentUses = 0,
+            isActive = true
+            // targetName 등 비정규화 데이터는 DataSource에서 채울 수 있음
         )
+        // DataSource의 createInvite 함수는 생성된 InviteDTO (ID 포함)를 반환하거나, 생성된 Invite의 ID를 반환할 수 있음.
+        // 여기서는 DataSource가 생성된 DTO를 반환하고, 그것을 도메인 모델로 변환한다고 가정
+        inviteRemoteDataSource.createInvite(inviteDto).getOrThrow().toDomain()
     }
-    
-    /**
-     * 초대 토큰의 유효성을 검사합니다.
-     * 
-     * @param token 초대 토큰
-     * @return 유효성 검사 결과 (true: 유효, false: 무효)
-     */
-    override suspend fun validateInviteToken(token: String): Result<Boolean> {
-        if (!isNetworkConnected()) {
-            // Firestore 캐시가 있을 경우 오프라인에서도 유효성 검사 시도 가능 (서버에서 만료되지 않았다는 가정하에)
-            // 다만, 여기서는 네트워크 연결 강제
-            return Result.failure(Exception("네트워크 연결이 필요합니다."))
+
+    override suspend fun getInviteByCode(inviteCode: String): Result<Invite> = resultTry {
+        val inviteDto = inviteRemoteDataSource.getInviteByCode(inviteCode).getOrThrow()
+        if (!inviteDto.isActive) {
+            throw IllegalStateException(\
+Invite
+code
+is
+no
+longer
+active.\)
         }
-        return remoteDataSource.validateInviteToken(token)
-    }
-    
-    /**
-     * 초대를 수락하고, 사용자를 프로젝트에 추가합니다.
-     * 
-     * @param token 초대 토큰
-     * @return 프로젝트 ID 결과
-     */
-    override suspend fun acceptInvite(token: String): Result<String> {
-        if (!isNetworkConnected()) {
-            return Result.failure(Exception("네트워크 연결이 필요합니다."))
+        inviteDto.expiresAt?.let {
+            if (Timestamp.now().seconds > it.seconds) {
+                // TODO: 만료된 경우 DataSource에서 isActive를 false로 업데이트하는 로직이 있으면 좋음
+                throw IllegalStateException(\Invite
+code
+has
+expired.\)
+            }
         }
-        return remoteDataSource.acceptInvite(token, currentUserId)
-    }
-    
-    /**
-     * 초대 정보를 가져옵니다. Firestore 캐시를 활용합니다.
-     * forceRefresh 파라미터는 Firestore의 get(Source.SERVER) 옵션으로 대체 가능하나, 여기서는 단순화.
-     */
-    override suspend fun getInviteDetails(token: String, forceRefresh: Boolean): Result<Invite> {
-        // forceRefresh는 Firestore의 get(Source.SERVER)로 처리하거나, 
-        // 여기서는 네트워크 연결 시 항상 최신 데이터를 가져오도록 remoteDataSource에 의존한다고 가정.
-        // Firestore 캐시가 활성화되어 있으므로, 네트워크 미연결 시 캐시된 데이터 시도.
-        if (!isNetworkConnected() && !forceRefresh) { // 오프라인이고 강제 새로고침이 아닐 때만 실패 처리 (캐시 의존)
-             // 캐시에서 읽는 동작은 remoteDataSource.getInviteDetails 내부에서 처리되어야 함 (Firestore SDK가 자동으로)
-             // 따라서 여기서는 네트워크 연결이 안되어 있으면 그냥 호출하고 SDK에 맡김.
-             // 만약 명시적으로 오프라인일때 실패처리 하고싶으면 아래 주석 해제.
-             // return Result.failure(Exception("네트워크 연결이 필요합니다. 오프라인 상태에서는 초대 정보를 가져올 수 없습니다."))
+        inviteDto.maxUses?.let {
+            if (inviteDto.currentUses >= it) {
+                // TODO: 최대 사용 횟수 도달 시 DataSource에서 isActive를 false로 업데이트하는 로직이 있으면 좋음
+                throw IllegalStateException(\Invite
+code
+has
+reached
+its
+maximum
+number
+of
+uses.\)
+            }
         }
-        // remoteDataSource가 Firestore 캐시를 활용하도록 구현되어 있다고 가정.
-        return remoteDataSource.getInviteDetails(token)
+        inviteDto.toDomain()
     }
-    
-    /**
-     * 초대 토큰에서 프로젝트 정보를 가져옵니다.
-     * 
-     * @param token 초대 토큰
-     * @param forceRefresh 원격 데이터를 강제로 가져올지 여부
-     * @return 프로젝트 정보 결과
-     */
-    override suspend fun getProjectInfoFromToken(token: String, forceRefresh: Boolean): Result<ProjectInfo> {
-        if (!isNetworkConnected() && !forceRefresh) {
-            // 위 getInviteDetails와 유사한 로직 적용 가능
+
+    override fun getActiveProjectInvitesStream(projectId: String): Flow<Result<List<Invite>>> {
+        // InviteRemoteDataSource에 getActiveInvitesForProjectStream(projectId)와 같은 함수 필요
+        return inviteRemoteDataSource.getActiveInvitesForProjectStream(projectId).map { result ->
+            result.mapCatching { dtoList ->
+                dtoList.map { it.toDomain() }
+            }
         }
-        return remoteDataSource.getProjectInfoFromToken(token)
     }
-    
-    /**
-     * 만료된 초대 정보 정리 기능은 서버 사이드 로직 또는 Firestore TTL 정책으로 이전 고려.
-     * 클라이언트에서 로컬 캐시만 정리하던 기능은 더 이상 유효하지 않음.
-     */
-    override suspend fun cleanupExpiredInvites(): Result<Unit> {
-        // TODO: 서버측에 만료된 토큰 정리 API 요청 또는 Firestore TTL 정책 활용 알림.
-        // 현재 클라이언트에서는 특별한 작업 없음.
-        return Result.success(Unit) 
+
+    override suspend fun consumeInvite(inviteCode: String, userId: String): Result<Invite> = resultTry {
+        // 1. 코드로 초대 정보 가져오기 (유효성 검사 포함)
+        val invite = getInviteByCode(inviteCode).getOrThrow() // 내부적으로 isActive, 만료, 사용횟수 검사
+
+        // 2. 초대 사용 처리 (DataSource에 consumeInvite(inviteId) 또는 incrementInviteUses(inviteId) 함수 필요)
+        //    이 함수는 currentUses를 증가시키고, 필요시 maxUses에 도달하면 isActive를 false로 변경해야 함.
+        //    userId는 누가 사용했는지 로그를 남기거나, 중복 사용 방지에 활용될 수 있음.
+        inviteRemoteDataSource.incrementInviteUses(invite.id, userId).getOrThrow()
+        
+        // 업데이트된 초대 정보 반환 (또는 최소한 targetId 등 필요한 정보 포함)
+        // getInviteByCode를 다시 호출하여 최신 상태를 가져올 수도 있지만, 여기서는 consume 후의 invite 객체를 그대로 반환
+        invite // 이 시점의 invite는 currentUses가 증가되기 전일 수 있으므로 주의.
+               // DataSource의 incrementInviteUses가 업데이트된 InviteDTO를 반환하면 더 좋음.
+               // 여기서는 consume 행위 자체의 성공을 알리고, 반환된 Invite는 참조용.
     }
-} 
+
+    override suspend fun revokeInvite(inviteId: String, currentUserId: String): Result<Unit> = resultTry {
+        // InviteRemoteDataSource에 revokeInvite(inviteId, currentUserId) 함수 필요
+        // currentUserId는 권한 검사용 (생성자 또는 특정 권한자만 비활성화 가능)
+        inviteRemoteDataSource.revokeInvite(inviteId, currentUserId).getOrThrow()
+    }
+}

@@ -1,88 +1,128 @@
-package com.example.data.repository
+package com.example.data._repository
 
-import com.example.core_common.dispatcher.DispatcherProvider
-import com.example.data.datasource.remote.message.MessageRemoteDataSource
+import com.example.core_common.result.resultTry
+import com.example.data.datasource._remote.MessageRemoteDataSource
+import com.example.data.datasource._remote.MessageAttachmentRemoteDataSource // 첨부파일 업로드/다운로드용
+import com.example.data.model._remote.MessageDTO
+import com.example.data.model._remote.MessageAttachmentDTO
+import com.example.data.model._remote.ReactionDTO
+import com.example.data.model.mapper.toDomain // ChatMessageDTO -> ChatMessage
+import com.example.data.model.mapper.toDto // ChatMessage -> ChatMessageDTO
+import com.example.data.model.mapper.toDomain // MessageAttachmentDTO -> MessageAttachment
+import com.example.data.model.mapper.toDto // MessageAttachment -> MessageAttachmentDTO
 import com.example.domain.model.ChatMessage
-import com.example.domain.repository.MessageRepository
+import com.example.domain.model.MessageAttachment
+import com.example.domain._repository.MessageAttachmentToSend
+import com.example.domain._repository.MessageRepository
+import com.google.firebase.Timestamp
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
-import java.time.Instant
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
-import java.io.InputStream
-import kotlinx.coroutines.flow.flowOf
+import kotlin.Result
 
-/**
- * MessageRepository의 구현체입니다.
- * MessageRemoteDataSource를 통해 메시지 관련 원격 데이터 작업을 수행하고,
- * 필요한 경우 여기서 추가적인 데이터 처리나 조합 로직을 수행할 수 있습니다.
- */
 class MessageRepositoryImpl @Inject constructor(
     private val messageRemoteDataSource: MessageRemoteDataSource,
-    private val dispatcherProvider: DispatcherProvider
+    private val messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource // 첨부파일 처리용
+    // private val messageMapper: MessageMapper // 개별 매퍼 사용시
 ) : MessageRepository {
 
-    override suspend fun sendMessage(message: ChatMessage): Result<ChatMessage> {
-        // TODO: Consider adding any repository-level logic here if needed,
-        // e.g., validating message content before sending.
-        return messageRemoteDataSource.sendMessage(message)
+    override fun getMessagesStream(channelId: String, limit: Int): Flow<Result<List<ChatMessage>>> {
+        return messageRemoteDataSource.getMessagesStream(channelId, limit).map { result ->
+            result.mapCatching { dtoList ->
+                dtoList.map { it.toDomain() }
+            }
+        }
     }
 
-    override suspend fun getMessage(channelId: String, messageId: String): Result<ChatMessage> {
-        return messageRemoteDataSource.getMessage(channelId, messageId)
+    override suspend fun getPastMessages(channelId: String, startAfterMessageId: String?, limit: Int): Result<List<ChatMessage>> = resultTry {
+        messageRemoteDataSource.getPastMessages(channelId, startAfterMessageId, limit).getOrThrow().map { it.toDomain() }
     }
 
-    override suspend fun updateMessage(message: ChatMessage): Result<Unit> {
-        return messageRemoteDataSource.updateMessage(message)
-    }
-
-    override suspend fun deleteMessage(channelId: String, messageId: String): Result<Unit> {
-        return messageRemoteDataSource.deleteMessage(channelId, messageId)
-    }
-
-    override suspend fun getMessages(channelId: String, limit: Int, before: Instant?): Result<List<ChatMessage>> {
-        return messageRemoteDataSource.getMessages(channelId, limit, before)
-    }
-
-    override fun getMessagesStream(channelId: String, limit: Int): Flow<List<ChatMessage>> {
-        return messageRemoteDataSource.getMessagesStream(channelId, limit)
-    }
-
-    override suspend fun getPastMessages(
+    override suspend fun sendMessage(
         channelId: String,
-        before: Instant?,
-        limit: Int
-    ): Result<List<ChatMessage>> {
-        // Logic already calls messageRemoteDataSource.getMessages which matches the one in MessageRemoteDataSource
-        return messageRemoteDataSource.getMessages(channelId, limit, before)
+        content: String?,
+        attachments: List<MessageAttachmentToSend>,
+        senderId: String
+    ): Result<String> = resultTry {
+        coroutineScope {
+            // 1. 첨부파일 업로드 (병렬 처리)
+            val uploadedAttachmentDtos = attachments.map { attachmentToSend ->
+                async {
+                    // MessageAttachmentRemoteDataSource를 사용하여 파일 업로드 후 URL 등 정보 받아오기
+                    // 이 부분은 MessageAttachmentRemoteDataSource의 실제 함수 시그니처에 맞춰야 함
+                    val downloadUrl = messageAttachmentRemoteDataSource.uploadAttachment(
+                        channelId = channelId,
+                        fileName = attachmentToSend.fileName,
+                        mimeType = attachmentToSend.mimeType,
+                        uri = attachmentToSend.sourceUri // 또는 ByteArray
+                    ).getOrThrow()
+
+                    MessageAttachmentDTO(
+                        id = \
+\, // DataSource에서 생성 또는 URL 자체가 ID 역할
+                        messageId = \\, // 메시지 생성 후 채워짐
+                        type = mapMimeTypeToAttachmentType(attachmentToSend.mimeType), // \IMAGE\, \FILE\ 등
+                        url = downloadUrl,
+                        name = attachmentToSend.fileName,
+                        size = 0L // 실제 파일 크기 (DataSource에서 설정)
+                    )
+                }
+            }.awaitAll()
+
+            // 2. MessageDTO 생성
+            val messageDto = MessageDTO(
+                // id는 Firestore에서 자동 생성
+                channelId = channelId,
+                senderId = senderId,
+                content = content,
+                attachments = uploadedAttachmentDtos,
+                createdAt = Timestamp.now(),
+                isEdited = false,
+                reactions = emptyMap() // 초기 리액션 없음
+                // senderName, senderProfileImageUrl은 DataSource에서 User 정보 조회 후 채울 수 있음 (비정규화)
+            )
+
+            // 3. 메시지 전송
+            messageRemoteDataSource.sendMessage(messageDto).getOrThrow() // ID 반환 가정
+        }
     }
 
-    override suspend fun uploadChatFile(
+    // MIME 타입을 AttachmentType 문자열로 변환하는 헬퍼 함수 (예시)
+    private fun mapMimeTypeToAttachmentType(mimeType: String): String {
+        return when {
+            mimeType.startsWith(\image/\) -> \IMAGE\
+            mimeType.startsWith(\video/\) -> \VIDEO\
+            mimeType.startsWith(\audio/\) -> \AUDIO\
+            else -> \FILE\
+        }
+    }
+
+    override suspend fun editMessage(
         channelId: String,
-        fileName: String,
-        inputStream: InputStream,
-        mimeType: String
-    ): Result<String> {
-        // TODO: Implement actual file upload logic by delegating to messageRemoteDataSource
-        return Result.failure(UnsupportedOperationException("File upload not implemented yet."))
+        messageId: String,
+        newContent: String
+    ): Result<Unit> = resultTry {
+        // 첨부파일 수정 로직은 복잡하므로 여기서는 텍스트 내용만 수정하는 것으로 가정
+        // 실제로는 기존 DTO를 가져와서 content와 updatedAt만 변경하여 DataSource에 전달
+        messageRemoteDataSource.editMessage(channelId, messageId, newContent).getOrThrow()
     }
 
-    override suspend fun getCachedMessages(channelId: String, limit: Int): Flow<List<ChatMessage>> {
-        // TODO: Implement local caching logic if required, possibly delegating to a local data source
-        return flowOf(emptyList())
+    override suspend fun deleteMessage(channelId: String, messageId: String): Result<Unit> = resultTry {
+        messageRemoteDataSource.deleteMessage(channelId, messageId).getOrThrow()
     }
 
-    override suspend fun saveMessagesToCache(messages: List<ChatMessage>): Result<Unit> {
-        // TODO: Implement local caching logic
-        return Result.success(Unit)
+    override suspend fun addReaction(channelId: String, messageId: String, reactionEmoji: String, userId: String): Result<Unit> = resultTry {
+        messageRemoteDataSource.addReaction(channelId, messageId, reactionEmoji, userId).getOrThrow()
     }
 
-    override suspend fun clearCachedMessagesForChannel(channelId: String): Result<Unit> {
-        // TODO: Implement local caching logic
-        return Result.success(Unit)
+    override suspend fun removeReaction(channelId: String, messageId: String, reactionEmoji: String, userId: String): Result<Unit> = resultTry {
+        messageRemoteDataSource.removeReaction(channelId, messageId, reactionEmoji, userId).getOrThrow()
     }
 
-    // TODO: ChannelUnreadInfo 관련 메서드들의 최종 위치 결정 후, 필요시 여기에 추가하거나 ChannelRepository로 이동.
-    // override suspend fun markChannelAsRead(channelId: String, userId: String, lastReadAt: Instant): Result<Unit> = TODO()
-    // override fun getChannelUnreadInfoStream(channelId: String, userId: String): Flow<ChannelUnreadInfo> = TODO()
-    // override suspend fun getChannelUnreadCount(channelId: String, userId: String): Result<Int> = TODO()
-} 
+    override suspend fun getMessage(channelId: String, messageId: String): Result<ChatMessage> = resultTry {
+        messageRemoteDataSource.getMessage(channelId, messageId).getOrThrow().toDomain()
+    }
+}

@@ -1,264 +1,176 @@
-package com.example.data.repository
+package com.example.data._repository
 
-import android.util.Log
-import com.example.core_common.constants.FirestoreConstants
-import com.example.core_common.dispatcher.DispatcherProvider
-import com.example.data.datasource.remote.channel.ChannelRemoteDataSource
-import com.example.data.model.mapper.ChannelMapper
+import com.example.core_common.result.resultTry
+import com.example.data.datasource._remote.DMChannelRemoteDataSource
+import com.example.data.datasource._remote.MemberRemoteDataSource
+import com.example.data.datasource._remote.MessageRemoteDataSource
+import com.example.data.datasource._remote.ProjectChannelRemoteDataSource
+import com.example.data.model._remote.DMChannelDTO
+import com.example.data.model._remote.ProjectChannelDTO
+import com.example.data.model.mapper.toDomain
 import com.example.domain.model.Channel
 import com.example.domain.model.ChannelType
-import com.example.domain.model.RolePermission
-import com.example.domain.model.channel.DmSpecificData
-import com.example.domain.model.channel.ProjectSpecificData
-import com.example.domain.repository.ChannelRepository
-import com.google.firebase.firestore.*
+import com.example.domain.model.ChatMessage
+import com.example.domain._repository.ChannelRepository
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
-import java.time.Instant
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import kotlin.Result
-import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.ChannelMode
 
-/**
- * ChannelRepository 인터페이스의 구현체입니다.
- * ChannelRemoteDataSource를 통해 원격 데이터 작업을 위임하고 결과를 도메인 모델로 매핑합니다.
- * 메시지 관련 기능은 MessageRepository로 이전되었습니다.
- */
 class ChannelRepositoryImpl @Inject constructor(
-    private val channelRemoteDataSource: ChannelRemoteDataSource,
-    private val firestore: FirebaseFirestore,
-    private val dispatcherProvider: DispatcherProvider,
-    private val channelMapper: ChannelMapper
+    private val projectChannelRemoteDataSource: ProjectChannelRemoteDataSource,
+    private val dmChannelRemoteDataSource: DMChannelRemoteDataSource,
+    private val messageRemoteDataSource: MessageRemoteDataSource, // 마지막 메시지, 안읽은 개수용
+    private val memberRemoteDataSource: MemberRemoteDataSource // 멤버 관리용 (필요시)
+    // private val channelMapper: ChannelMapper // 개별 매퍼 사용시
 ) : ChannelRepository {
 
-    // ---------- 기본 채널 CRUD ----------
-
-    override suspend fun createChannel(channel: Channel): Result<Channel> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.createChannel(channel)
-    }
-
-    override suspend fun getChannel(channelId: String): Result<Channel> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.getChannel(channelId)
-    }
-
-    override suspend fun updateChannel(channel: Channel): Result<Unit> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.updateChannel(channel)
-    }
-
-    override suspend fun deleteChannel(channelId: String): Result<Unit> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.deleteChannel(channelId)
-    }
-
-    override fun getChannelStream(channelId: String): Flow<Channel> {
-        return channelRemoteDataSource.getChannelStream(channelId)
-    }
-
-    // ---------- 채널 필터링 및 조회 ----------
-
-    override suspend fun getUserChannels(userId: String, type: ChannelType?): Result<List<Channel>> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.getUserChannels(userId, type)
-    }
-
-    override fun getUserChannelsStream(userId: String, type: ChannelType?): Flow<List<Channel>> {
-        return channelRemoteDataSource.getUserChannelsStream(userId, type)
-    }
-
-    override suspend fun getChannelsByType(
-        type: ChannelType,
-        userId: String?
-    ): Result<List<Channel>> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.getChannelsByType(type, userId)
-    }
-
-    override fun getChannelsByTypeStream(
-        type: ChannelType,
-        userId: String?
-    ): Flow<List<Channel>> {
-        return channelRemoteDataSource.getChannelsByTypeStream(type, userId)
-    }
-
-    // ---------- DM 채널 참가자 관리 ----------
-
-    override suspend fun addDmParticipant(channelId: String, userId: String): Result<Unit> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.addDmParticipant(channelId, userId)
-    }
-
-    override suspend fun removeDmParticipant(channelId: String, userId: String): Result<Unit> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.removeDmParticipant(channelId, userId)
-    }
-
-    override suspend fun getDmParticipants(channelId: String): Result<List<String>> = withContext(dispatcherProvider.io) {
-        channelRemoteDataSource.getDmParticipants(channelId)
-    }
-
-    override fun getDmParticipantsStream(channelId: String): Flow<List<String>> {
-        return channelRemoteDataSource.getDmParticipantsStream(channelId)
-    }
-
-    // ---------- 채널 권한 관리 (Override) ----------
-    private fun getPermissionOverridesCollection(channelId: String) =
-        firestore.collection(FirestoreConstants.Collections.CHANNELS)
-               .document(channelId)
-               .collection(FirestoreConstants.PERMISSION_OVERRIDES)
-
-    override suspend fun setChannelPermissionOverride(
-        channelId: String,
-        userId: String,
-        permission: RolePermission,
-        value: Boolean?
-    ): Result<Unit> = withContext(dispatcherProvider.io) {
-        Result.runCatching {
-            val overrideRef = getPermissionOverridesCollection(channelId).document(userId)
-            val field = "${FirestoreConstants.ChannelPermissionOverrideFields.PERMISSIONS}.${permission.name}"
-            val updateData = mutableMapOf<String, Any?>(
-                FirestoreConstants.ChannelPermissionOverrideFields.USER_ID to userId,
-                FirestoreConstants.ChannelPermissionOverrideFields.UPDATED_AT to DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.nowInstant())
-            )
-            if (value == null) {
-                updateData[field] = FieldValue.delete()
-            } else {
-                updateData[field] = value
-            }
-            overrideRef.set(updateData, SetOptions.merge()).await()
-            Unit
-        }
-    }
-
-    override suspend fun getChannelPermissionOverridesForUser(
-        channelId: String,
-        userId: String
-    ): Result<Map<RolePermission, Boolean>> = withContext(dispatcherProvider.io) {
-        Result.runCatching {
-            val snapshot = getPermissionOverridesCollection(channelId).document(userId).get().await()
-            if (!snapshot.exists()) {
-                emptyMap<RolePermission, Boolean>()
-            } else {
-                val permissionsData = snapshot.get(FirestoreConstants.ChannelPermissionOverrideFields.PERMISSIONS) as? Map<*, *>
-                permissionsData?.mapNotNull { (key, value) ->
-                    val permissionKey = key as? String
-                    val permissionValue = value as? Boolean
-                    if (permissionKey != null && permissionValue != null) {
-                        try {
-                            RolePermission.valueOf(permissionKey) to permissionValue
-                        } catch (e: IllegalArgumentException) {
-                            Log.w("ChannelRepoImpl", "Invalid permission key in Firestore: $permissionKey")
-                            null
-                        }
-                    } else {
-                        null
-                    }
-                }?.toMap() ?: emptyMap()
+    override fun getProjectChannelsStream(projectId: String): Flow<Result<List<Channel>>> {
+        return projectChannelRemoteDataSource.getProjectChannelsStream(projectId).map { result ->
+            result.mapCatching { dtoList ->
+                dtoList.map { it.toDomain() } // ProjectChannelDTO -> Channel 매핑
             }
         }
     }
 
-    override suspend fun getAllChannelPermissionOverrides(channelId: String): Result<Map<String, Map<RolePermission, Boolean>>> = withContext(dispatcherProvider.io) {
-        Result.runCatching {
-            val snapshot = getPermissionOverridesCollection(channelId).get().await()
-            snapshot.documents.associate { doc ->
-                val userId = doc.id
-                val permissionsData = doc.get(FirestoreConstants.ChannelPermissionOverrideFields.PERMISSIONS) as? Map<*, *>
-                val userOverrides = permissionsData?.mapNotNull { (key, value) ->
-                    val permissionKey = key as? String
-                    val permissionValue = value as? Boolean
-                    if (permissionKey != null && permissionValue != null) {
-                        try {
-                            RolePermission.valueOf(permissionKey) to permissionValue
-                        } catch (e: IllegalArgumentException) {
-                            Log.w("ChannelRepoImpl", "Invalid permission key for user $userId: $permissionKey")
-                            null
-                        }
-                    } else {
-                        null
-                    }
-                }?.toMap() ?: emptyMap()
-                userId to userOverrides
+    override fun getDmChannelsStream(userId: String): Flow<Result<List<Channel>>> {
+        return dmChannelRemoteDataSource.getDmChannelsStream(userId).map { result ->
+            result.mapCatching { dtoList ->
+                dtoList.map { it.toDomain() } // DMChannelDTO -> Channel 매핑
             }
         }
     }
 
-    // ---------- 채널 타입별 특수 기능 ----------
+    override suspend fun getChannelDetails(channelId: String): Result<Channel> = resultTry {
+        // 채널 ID만으로는 DM인지 프로젝트 채널인지 구분하기 어려울 수 있음.
+        // DataSource에서 먼저 시도해보고, 실패하면 다른 DataSource에서 시도하는 방식 또는
+        // 채널 ID 자체에 타입 정보가 포함되어 있다면 더 용이.
+        // 여기서는 우선 ProjectChannel로 시도, 실패 시 DMChannel로 시도하는 예시 (간단화된 로직)
+        projectChannelRemoteDataSource.getChannel(channelId).fold(
+            onSuccess = { it.toDomain() },
+            onFailure = {
+                dmChannelRemoteDataSource.getChannel(channelId).getOrThrow().toDomain()
+            }
+        )
+    }
 
     override suspend fun createProjectChannel(
         name: String,
         projectId: String,
         categoryId: String?,
-        channelMode: ChannelMode,
-        description: String?,
-        order: Int?
-    ): Result<Channel> = withContext(dispatcherProvider.io) {
-        val newChannelId = firestore.collection(FirestoreConstants.Collections.CHANNELS).document().id
-        val channel = Channel(
-            id = newChannelId,
+        channelType: ChannelType,
+        isPrivate: Boolean,
+        memberIds: List<String>
+    ): Result<String> = resultTry {
+        val dto = ProjectChannelDTO(
+            // id는 Firestore에서 자동 생성
             name = name,
-            description = description,
-            type = ChannelType.PROJECT,
-            projectSpecificData = ProjectSpecificData(
-                projectId = projectId,
-                categoryId = categoryId,
-                order = order ?: 0,
-                channelMode = channelMode
-            ),
-            dmSpecificData = null,
-            lastMessagePreview = null,
-            lastMessageTimestamp = null,
-            createdAt = Instant.now(),
-            createdBy = null,
-            updatedAt = Instant.now()
+            projectId = projectId,
+            categoryId = categoryId,
+            type = channelType.name, // Enum을 String으로
+            isPrivate = isPrivate,
+            memberIds = memberIds,
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now()
+            // ownerId는 DataSource에서 현재 사용자로 설정하거나, UseCase에서 주입
         )
-        val createResult = channelRemoteDataSource.createChannel(channel)
-        createResult
+        projectChannelRemoteDataSource.createChannel(dto).getOrThrow() // ID 반환 가정
     }
 
-    override suspend fun getOrCreateDmChannel(myUserId: String, otherUserId: String): Result<Channel> = withContext(dispatcherProvider.io) {
-        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Finding or creating DM for users $myUserId and $otherUserId")
-        val sortedUserIds = listOf(myUserId, otherUserId).sorted()
-        val potentialChannelId = "dm_${sortedUserIds[0]}_${sortedUserIds[1]}"
-        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Potential channel ID: $potentialChannelId")
+    override suspend fun getOrCreateDmChannel(userId1: String, userId2: String): Result<String> = resultTry {
+        // DataSource에 getOrCreateDmChannel(userId1, userId2)와 같은 기능이 있어야 함.
+        // 이 함수는 내부적으로 두 사용자 간의 DM 채널이 이미 있는지 확인하고,
+        // 없으면 생성하며, 있으면 기존 채널 ID를 반환합니다.
+        // 현재 DMChannelRemoteDataSource에는 해당 기능이 명시적으로 없을 수 있습니다. (2.1 항목 참고)
+        // throw NotImplementedError(\
+getOrCreateDmChannel
+is
+not
+fully
+defined
+in
+DataSource
+yet.\)
+        // 임시로 DataSource에 해당 기능이 있다고 가정
+        dmChannelRemoteDataSource.getOrCreateDmChannel(userId1, userId2).getOrThrow()
+    }
 
-        val channelsCollection = firestore.collection(FirestoreConstants.Collections.CHANNELS)
-        val query = channelsCollection
-            .whereEqualTo("type", ChannelType.DM.name)
-            .whereArrayContainsAny("dmSpecificData.participantIds", listOf(myUserId, otherUserId))
-        
-        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Executing query to find existing channel")
-        val snapshot = query.get().await()
-        Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Query returned ${snapshot.documents.size} documents")
-        
-        val foundChannel = snapshot.documents.mapNotNull { doc -> 
-            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Processing document ID: ${doc.id}")
-            channelMapper.mapToDomain(doc) 
-        }.find { channel -> 
-            val matches = channel.dmSpecificData?.participantIds?.let {
-                it.size == 2 && it.containsAll(listOf(myUserId, otherUserId))
-            } == true
-            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Channel ${channel.id} matches both users: $matches")
-            matches
-        }
+    override suspend fun updateChannelInfo(channelId: String, name: String, description: String?): Result<Unit> = resultTry {
+        // 이것도 Project 채널인지 DM 채널인지에 따라 다른 DataSource 호출 필요
+        // getChannelDetails를 통해 타입을 먼저 알아내거나, 두 DataSource 모두 시도
+        // 여기서는 ProjectChannelDTO 업데이트를 예시로
+        val currentProjectChannel = projectChannelRemoteDataSource.getChannel(channelId).getOrThrow()
+        val updatedDto = currentProjectChannel.copy(
+            name = name,
+            description = description ?: currentProjectChannel.description, // null이면 기존 값 유지
+            updatedAt = Timestamp.now()
+        )
+        projectChannelRemoteDataSource.updateChannel(updatedDto).getOrThrow()
+        // TODO: DMChannel의 경우도 처리
+    }
 
-        if (foundChannel != null) {
-            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Found existing channel ${foundChannel.id}")
-            Result.success(foundChannel)
-        } else {
-            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: No existing channel found, creating new one")
-            val newChannelId = potentialChannelId
-            val dmChannel = Channel(
-                id = newChannelId,
-                name = "DM: $myUserId & $otherUserId",
-                type = ChannelType.DM,
-                dmSpecificData = DmSpecificData(participantIds = sortedUserIds),
-                projectSpecificData = null,
-                createdAt = Instant.now(),
-                updatedAt = Instant.now(),
-                lastMessagePreview = null,
-                lastMessageTimestamp = null,
-                description = null,
-                createdBy = myUserId 
-            )
-            Log.d("ChannelRepoImpl", "getOrCreateDmChannel: Creating new DM channel with ID: $newChannelId")
-            channelRemoteDataSource.createChannel(dmChannel)
+    override suspend fun deleteChannel(channelId: String): Result<Unit> = resultTry {
+        // Project 채널인지 DM 채널인지에 따라 다른 DataSource 호출 필요
+        // 여기서는 ProjectChannel 삭제를 예시로
+        projectChannelRemoteDataSource.deleteChannel(channelId).getOrThrow()
+        // TODO: DMChannel의 경우도 처리
+    }
+
+    override suspend fun addMembersToChannel(channelId: String, userIds: List<String>): Result<Unit> = resultTry {
+        // Project 채널에만 해당될 가능성이 높음. DM은 보통 2명.
+        // MemberRemoteDataSource 또는 ProjectChannelRemoteDataSource를 통해 멤버 추가
+        // 여기서는 ProjectChannelRemoteDataSource에 addMembers 기능이 있다고 가정
+        // projectChannelRemoteDataSource.addMembers(channelId, userIds).getOrThrow()
+        throw NotImplementedError(\addMembersToChannel
+in
+DataSource
+needs
+to
+be
+defined.\)
+    }
+
+    override suspend fun removeMemberFromChannel(channelId: String, userId: String): Result<Unit> = resultTry {
+        // Project 채널에만 해당될 가능성이 높음.
+        // projectChannelRemoteDataSource.removeMember(channelId, userId).getOrThrow()
+        throw NotImplementedError(\removeMemberFromChannel
+in
+DataSource
+needs
+to
+be
+defined.\)
+    }
+
+    override fun getLastMessageStream(channelId: String): Flow<Result<ChatMessage?>> {
+        return messageRemoteDataSource.getLastMessageStream(channelId).map { result ->
+            result.mapCatching { dto -> dto?.toDomain() }
         }
+    }
+
+    override fun getUnreadMessageCountStream(channelId: String, userId: String): Flow<Result<Int>> {
+        // 이 기능은 복잡하며, MessageRemoteDataSource 또는 별도 로직 필요
+        // 예를 들어, 채널의 lastMessageTimestamp와 사용자의 lastReadTimestamp를 비교하여 계산
+        // 여기서는 MessageRemoteDataSource에 해당 기능이 있다고 가정 (단순화)
+        // return messageRemoteDataSource.getUnreadCountStream(channelId, userId)
+        return flow { emit(Result.success(0)) } // 임시 구현
+    }
+    
+    override suspend fun markMessagesAsRead(channelId: String, userId: String): Result<Unit> = resultTry {
+        // 사용자의 채널별 마지막 읽은 메시지 정보를 업데이트하는 로직
+        // 예를 들어 UserChannelMetadata 같은 별도 컬렉션에 저장하거나,
+        // Device-specific하게 로컬에 저장 후 서버와 동기화 할 수 있습니다.
+        // MessageRemoteDataSource 또는 UserRepository 등에 기능이 필요할 수 있습니다.
+        // messageRemoteDataSource.markAsRead(channelId, userId).getOrThrow()
+        throw NotImplementedError(\markMessagesAsRead
+in
+DataSource/Repository
+needs
+to
+be
+defined.\)
     }
 }

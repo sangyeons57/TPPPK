@@ -1,299 +1,138 @@
-package com.example.data.repository
+package com.example.data._repository
 
-import android.net.Uri
-import android.util.Log
-import com.example.core_common.constants.FirestoreConstants
-import com.example.data.datasource.remote.user.UserRemoteDataSource
-import com.example.core_common.dispatcher.DispatcherProvider
-import com.example.data.model.mapper.UserMapper
-import com.example.domain.model.AccountStatus
+import com.example.core_common.result.resultTry
+import com.example.data.datasource._remote.UserRemoteDataSource
+import com.example.data.datasource._remote.AuthRemoteDataSource // 현재 사용자 ID 등 필요시
+import com.example.domain._repository.MediaRepository // 이미지 업로드용
+import com.example.data.model._remote.UserDTO
+import com.example.data.model.mapper.toDomain
+import com.example.data.model.mapper.toDto
 import com.example.domain.model.User
 import com.example.domain.model.UserStatus
-import com.example.domain.repository.UserRepository
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.channels.awaitClose
+import com.example.domain.model.AccountStatus
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
+import java.io.InputStream
 import javax.inject.Inject
 import kotlin.Result
 
-/**
- * UserRepository 인터페이스의 실제 구현체
- * Firestore 'users' 컬렉션 관련 작업을 UserRemoteDataSource 또는 직접 Firestore 호출을 통해 수행합니다.
- */
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
-    private val userMapper: UserMapper,
-    private val firestore: FirebaseFirestore,
-    private val firebaseAuth: FirebaseAuth,
-    private val dispatcherProvider: DispatcherProvider
+    private val authRemoteDataSource: AuthRemoteDataSource, // 현재 사용자 UID 등 필요시
+    private val mediaRepository: MediaRepository // 프로필 이미지 업로드
+    // private val userMapper: UserMapper // 개별 매퍼 사용시
 ) : UserRepository {
 
-    private val usersCollection = firestore.collection(FirestoreConstants.Collections.USERS)
+    override suspend fun getCurrentUserProfile(currentUserId: String): Result<User> = resultTry {
+        userRemoteDataSource.getUser(currentUserId).getOrThrow().toDomain()
+    }
 
-    /**
-     * 특정 ID를 가진 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
-     * UserRemoteDataSource를 통해 Firestore의 스냅샷 리스너를 사용하여 변경 사항을 감지하고
-     * UserDto를 User 객체로 변환하여 Flow로 전달합니다.
-     * @param userId 조회할 사용자의 ID
-     * @return Flow<User> 사용자 정보 Flow
-     */
-    override fun getUserStream(userId: String): Flow<Result<User>> {
-        return flow {
-            userRemoteDataSource.getUserStream(userId).collect { resultDto ->
-                emit(resultDto.map { userDto ->
-                    userDto?.let { userMapper.mapToDomain(it) } ?: User.EMPTY
-                })
-            }
+    override fun getCurrentUserProfileStream(currentUserId: String): Flow<Result<User>> {
+        // UserRemoteDataSource에 getUserStream(userId) 함수 필요
+        return userRemoteDataSource.getUserStream(currentUserId).map { result ->
+            result.mapCatching { it.toDomain() }
         }
     }
 
-    /**
-     * 현재 로그인한 사용자의 프로필 정보를 실시간 스트림으로 가져옵니다.
-     * @return Flow<User> 현재 사용자 정보 Flow
-     */
-    override fun getCurrentUserStream(): Flow<Result<User>> {
-        return flow {
-            try {
-                val currentUserId = getCurrentUserId()
-                userRemoteDataSource.getUserStream(currentUserId).collect { resultDto ->
-                    emit(resultDto.map { userDto ->
-                        userDto?.let { userMapper.mapToDomain(it) } ?: User.EMPTY
-                    })
-                }
-            } catch (e: Exception) {
-                emit(Result.failure(e))
-            }
-        }
+    override suspend fun getUserProfile(userId: String): Result<User> = resultTry {
+        userRemoteDataSource.getUser(userId).getOrThrow().toDomain()
     }
 
-    override suspend fun getCurrentStatus(): Result<UserStatus> {
-        val currentUserId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
+    override suspend fun createUserProfile(user: User): Result<Unit> = resultTry {
+        // 회원가입 시 Auth에서 UID를 받고, 그 UID를 ID로 사용하여 UserDTO 생성
+        val userDto = user.toDto() // User 도메인 객체를 UserDTO로 변환
+        userRemoteDataSource.createUser(userDto).getOrThrow()
+    }
+
+    override suspend fun updateUserProfile(userId: String, newNickname: String?, newStatusMessage: String?): Result<Unit> = resultTry {
+        // UserRemoteDataSource에 updateUserProfile(userId, nickname, statusMessage) 함수 필요
+        // 또는 개별 업데이트 함수 (updateNickname, updateStatusMessage)
+        // Firestore Map을 사용한 부분 업데이트 권장
+        val updates = mutableMapOf<String, Any?>()
+        newNickname?.let { updates[\
+nickname\] = it }
+        // statusMessage는 null로 설정하여 필드 제거 가능성을 고려해야 할 수 있음
+        updates[\statusMessage\] = newStatusMessage // null이면 필드 제거 또는 유지 (DataSource 정책에 따름)
+        updates[\updatedAt\] = Timestamp.now()
         
-        // DataSource를 통해 사용자 상태 가져오기
-        return userRemoteDataSource.getUserStatus(currentUserId).map { statusString ->
-            try {
-                UserStatus.valueOf(statusString.uppercase())
-            } catch (e: IllegalArgumentException) {
-                UserStatus.OFFLINE
-            }
+        if (newNickname != null) { // 닉네임 변경 시 중복 확인 선행 가능 (UseCase에서)
+             val isAvailable = userRemoteDataSource.checkNicknameAvailability(newNickname).getOrThrow()
+             if (!isAvailable) throw IllegalArgumentException(\Nickname
+already
+in
+use.\)
         }
+        userRemoteDataSource.updateUser(userId, updates).getOrThrow()
     }
 
-    override suspend fun checkNicknameAvailability(nickname: String): Result<Boolean> {
-        Log.d("UserRepositoryImpl", "checkNicknameAvailability called with nickname: $nickname")
-        return userRemoteDataSource.checkNicknameAvailability(nickname)
+    override suspend fun updateUserProfileImage(
+        userId: String,
+        imageInputStream: InputStream,
+        imageMimeType: String
+    ): Result<String?> = resultTry {
+        val mediaImage = mediaRepository.uploadImage(
+            inputStream = imageInputStream,
+            mimeType = imageMimeType,
+            storagePath = \user_profile_images\,
+            desiredFileName = \\_\\
+        ).getOrThrow()
+        
+        userRemoteDataSource.updateUserProfileImageUrl(userId, mediaImage.url).getOrThrow()
+        mediaImage.url
     }
 
-    /**
-     * 이름(닉네임)으로 사용자를 검색합니다.
-     * @param name 검색할 이름
-     * @return 검색 결과에 해당하는 사용자 목록 또는 에러를 포함하는 Result
-     */
-    override suspend fun searchUsersByName(name: String): Result<List<User>> {
-        // UserRemoteDataSource를 통해 데이터 접근하고 UserMapper로 변환
-        return try {
-            val trimmedName = name.trim()
-            if (trimmedName.isEmpty()) {
-                return Result.success(emptyList())
-            }
-            
-            // DataSource를 통해 데이터를 가져오고, 결과를 매핑
-            val userDtosResult = userRemoteDataSource.searchUsersByName(trimmedName)
-            
-            userDtosResult.map { userDtos ->
-                userDtos.map { userDto ->
-                    userMapper.mapToDomain(userDto)
-                }
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+    override suspend fun deleteUserProfileImage(userId: String): Result<Unit> = resultTry {
+        // 1. 현재 이미지 URL 가져오기 (삭제를 위해) - UserRemoteDataSource.getUser 필요
+        // 2. MediaRepository.deleteImageByUrl 호출 (선택적, Storage에서 실제 파일 삭제)
+        // 3. UserRemoteDataSource.updateUserProfileImageUrl(userId, null) 호출하여 Firestore에서 URL 제거
+        val currentUser = userRemoteDataSource.getUser(userId).getOrThrow()
+        currentUser.profileImageUrl?.let {
+            // mediaRepository.deleteImageByUrl(it) // 실제 파일 삭제 (오류 무시 가능)
         }
+        userRemoteDataSource.updateUserProfileImageUrl(userId, null).getOrThrow()
     }
 
-    override suspend fun createUserProfile(user: User): Result<Unit> {
-        // User 도메인 모델을 UserDto로 변환 후 DataSource를 통해 저장
-        return try {
-            val userDto = userMapper.mapToDto(user)
-            userRemoteDataSource.createUserProfile(userDto)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    override suspend fun updateUserConnectionStatus(userId: String, newStatus: UserStatus): Result<Unit> = resultTry {
+        // UserRemoteDataSource에 updateUserStatus(userId, statusName) 함수가 이미 있음
+        userRemoteDataSource.updateUserStatus(userId, newStatus.name).getOrThrow()
+    }
+
+    override suspend fun checkNicknameAvailability(nickname: String): Result<Boolean> = resultTry {
+        // UserRemoteDataSource에 checkNicknameAvailability(nickname) 함수가 이미 있음
+        userRemoteDataSource.checkNicknameAvailability(nickname).getOrThrow()
+    }
+
+    override suspend fun searchUsersByName(name: String, limit: Int): Result<List<User>> = resultTry {
+        // UserRemoteDataSource에 searchUsersByName(name, limit) 함수가 이미 있음
+        userRemoteDataSource.searchUsersByName(name, limit).getOrThrow().map { it.toDomain() }
+    }
+
+    override suspend fun updateUserFcmToken(userId: String, token: String): Result<Unit> = resultTry {
+        // UserRemoteDataSource에 addOrUpdateFcmToken(userId, token) 함수 필요
+        userRemoteDataSource.addOrUpdateFcmToken(userId, token).getOrThrow()
+    }
+
+    override suspend fun removeUserFcmToken(userId: String, token: String): Result<Unit> = resultTry {
+        // UserRemoteDataSource에 removeFcmToken(userId, token) 함수 필요
+        userRemoteDataSource.removeFcmToken(userId, token).getOrThrow()
     }
     
-    override suspend fun updateUserProfile(user: User): Result<Unit> {
-        // User 도메인 모델을 UserDto로 변환 후 DataSource를 통해 업데이트
-        return try {
-            val userDto = userMapper.mapToDto(user)
-            userRemoteDataSource.updateUserProfile(userDto)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    override suspend fun updateUserAccountStatusByAdmin(
+        targetUserId: String,
+        newAccountStatus: AccountStatus,
+        adminUserId: String // DataSource에서 권한 확인용
+    ): Result<Unit> = resultTry {
+        // UserRemoteDataSource에 updateUserAccountStatus(targetUserId, statusName, adminUserId) 함수가 이미 있음
+        userRemoteDataSource.updateUserAccountStatus(targetUserId, newAccountStatus.name, adminUserId).getOrThrow()
     }
 
-    override suspend fun removeProfileImage(): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-            
-        return userRemoteDataSource.removeProfileImage(userId)
-    }
-
-    override suspend fun updateNickname(newNickname: String): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        // DataSource를 통해 닉네임 업데이트
-        return userRemoteDataSource.updateNickname(userId, newNickname)
-    }
-
-    override suspend fun updateUserMemo(newMemo: String): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        // DataSource를 통해 메모 업데이트
-        return userRemoteDataSource.updateUserMemo(userId, newMemo)
-    }
-
-    override suspend fun getUserStatus(userId: String): Result<UserStatus> {
-        // DataSource를 통해 사용자 상태 가져오기
-        return userRemoteDataSource.getUserStatus(userId).map { statusString ->
-            try {
-                UserStatus.valueOf(statusString.uppercase())
-            } catch (e: IllegalArgumentException) {
-                UserStatus.OFFLINE
-            }
-        }
-    }
-
-    override suspend fun updateUserStatus(status: UserStatus): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        // DataSource를 통해 사용자 상태 업데이트
-        return userRemoteDataSource.updateUserStatus(userId, status)
-    }
-    
-    override suspend fun updateAccountStatus(accountStatus: AccountStatus): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        // DataSource를 통해 계정 상태 업데이트
-        return userRemoteDataSource.updateAccountStatus(userId, accountStatus)
-    }
-    
-    override suspend fun updateFcmToken(token: String): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        // DataSource를 통해 FCM 토큰 업데이트
-        return userRemoteDataSource.updateFcmToken(userId, token)
-    }
-    
-    override suspend fun getParticipatingProjects(userId: String): Result<List<String>> {
-        return userRemoteDataSource.getParticipatingProjects(userId)
-    }
-    
-    override suspend fun updateParticipatingProjects(projectIds: List<String>): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        // DataSource를 통해 참여 프로젝트 업데이트
-        return userRemoteDataSource.updateParticipatingProjects(userId, projectIds)
-    }
-    
-    override suspend fun getActiveDmChannels(userId: String): Result<List<String>> {
-        return userRemoteDataSource.getActiveDmChannels(userId)
-    }
-    
-    override suspend fun updateActiveDmChannels(dmIds: List<String>): Result<Unit> {
-        val userId = firebaseAuth.currentUser?.uid
-            ?: return Result.failure(IllegalStateException("사용자가 로그인되어 있지 않습니다."))
-        // DataSource를 통해 활성 DM 채널 업데이트
-        return userRemoteDataSource.updateActiveDmChannels(userId, dmIds)
-    }
-
-    override suspend fun ensureUserProfileExists(firebaseUser: FirebaseUser): Result<User> {
-        return userRemoteDataSource.ensureUserProfileExists(firebaseUser).map { userDto ->
-            userMapper.mapToDomain(userDto)
-        }
-    }
-
-    override suspend fun getCurrentUserId(): String {
-        return firebaseAuth.currentUser?.uid
-            ?: throw IllegalStateException("User not authenticated or UID not available")
-    }
-
-    // --- Implementation of new methods from UserRepository interface ---
-
-    override suspend fun getMyProfile(): Result<User> = withContext(dispatcherProvider.io) {
-        try {
-            userRemoteDataSource.getMyProfile()
-        } catch (e: Exception) {
-            Log.e("UserRepositoryImpl", "Error in getMyProfile: ${e.message}", e)
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun getUserProfileImageUrl(userId: String): Result<String?> = withContext(dispatcherProvider.io) {
-        try {
-            userRemoteDataSource.getUserProfileImageUrl(userId)
-        } catch (e: Exception) {
-            Log.e("UserRepositoryImpl", "Error in getUserProfileImageUrl: ${e.message}", e)
-            Result.failure(Exception("Failed to get profile image URL from repository", e))
-        }
-    }
-
-    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): Result<Unit> = withContext(dispatcherProvider.io) {
-        try {
-            userRemoteDataSource.updateUserProfile(name, profileImageUrl)
-        } catch (e: Exception) {
-            Log.e("UserRepositoryImpl", "Error in updateUserProfile: ${e.message}", e)
-            Result.failure(Exception("Failed to update profile from repository", e))
-        }
-    }
-
-    override suspend fun uploadProfileImage(imageUri: Uri): Result<String> = withContext(dispatcherProvider.io) {
-        try {
-            userRemoteDataSource.uploadProfileImage(imageUri)
-        } catch (e: Exception) {
-            Log.e("UserRepositoryImpl", "Error in uploadProfileImage: ${e.message}", e)
-            Result.failure(Exception("Failed to upload profile image from repository", e))
-        }
-    }
-
-    override suspend fun clearSensitiveUserDataAndMarkAsWithdrawn(): Result<Unit> = withContext(dispatcherProvider.io) {
-        val currentUserId = firebaseAuth.currentUser?.uid
-            ?: return@withContext Result.failure(IllegalStateException("User not logged in or UID not available"))
-
-        val userDocumentRef = usersCollection.document(currentUserId)
-
-        // Define the updates, keeping displayName and uid.
-        // Other PII fields are set to null or a placeholder.
-        // profileImageUrl is set to a specific marker or a default image URL.
-        val updates = mapOf<String, Any?>(
-            FirestoreConstants.UserFields.EMAIL to null,
-            // FirestoreConstants.UserFields.PASSWORD_HASH to null, // Example if it existed
-            FirestoreConstants.UserFields.PROFILE_IMAGE_URL to "DEFAULT_PROFILE_IMAGE_MARKER",
-            FirestoreConstants.UserFields.STATUS_MESSAGE to null,
-            // FirestoreConstants.UserFields.PHONE_NUMBER to null, // Example if it existed in constants
-            // FirestoreConstants.UserFields.DATE_OF_BIRTH to null, // Example if it existed in constants
-            FirestoreConstants.UserFields.FCM_TOKEN to null,
-            FirestoreConstants.UserFields.ACCOUNT_STATUS to AccountStatus.UNKNOWN.name,
-            FirestoreConstants.UserFields.MEMO to null // Added based on User.kt and UserDto.kt
-            // Add any other sensitive fields that need to be cleared, using constants
-            // Fields like FirestoreConstants.UserFields.NAME (displayName) and FirestoreConstants.UserFields.USER_ID (uid)
-            // are intentionally NOT updated.
-        )
-
-        try {
-            userDocumentRef.update(updates).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e("UserRepositoryImpl", "Error clearing sensitive user data: ${e.message}", e)
-            // Optionally, use SentryUtil or similar for error reporting
-            // SentryUtil.sendError(e, mapOf("context" to "clearSensitiveUserDataAndMarkAsWithdrawn"))
-            Result.failure(e)
-        }
+    override suspend fun updateUserMemoByAdmin(
+        targetUserId: String,
+        memo: String,
+        adminUserId: String // DataSource에서 권한 확인용
+    ): Result<Unit> = resultTry {
+        // UserRemoteDataSource에 updateUserMemo(targetUserId, memo, adminUserId) 함수가 이미 있음
+        userRemoteDataSource.updateUserMemo(targetUserId, memo, adminUserId).getOrThrow()
     }
 }

@@ -1,144 +1,63 @@
-// 경로: data/repository/ScheduleRepositoryImpl.kt
-package com.example.data.repository
+package com.example.data._repository
 
-import com.example.data.datasource.remote.schedule.ScheduleRemoteDataSource
+import com.example.core_common.result.resultTry
+import com.example.data.datasource._remote.ScheduleRemoteDataSource
+import com.example.data.model._remote.ScheduleDTO
+import com.example.data.model.mapper.toDomain // ScheduleDTO -> Schedule
+import com.example.data.model.mapper.toDto // Schedule -> ScheduleDTO
 import com.example.domain.model.Schedule
-import com.example.domain.repository.ScheduleRepository
-// import com.google.firebase.Timestamp // No longer directly constructing Timestamp here
-import java.time.* // LocalDate, YearMonth, LocalTime 등 사용
-import java.time.Instant
+import com.example.domain._repository.ScheduleRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.Result // Result 클래스 사용
-import com.example.core_common.util.DateTimeUtil // Import DateTimeUtil
-import com.example.data.model.mapper.ScheduleMapper
-import android.util.Log // Log import 추가
+import kotlin.Result
 
-/**
- * ScheduleRepository 인터페이스의 구현체입니다.
- * 원격 데이터 소스(ScheduleRemoteDataSource)와 상호작용하여 일정 데이터를 관리하고,
- * 결과를 도메인 모델로 변환하여 Result 객체로 래핑합니다.
- * Hilt를 통해 데이터 소스를 주입받습니다.
- */
-@Singleton // 애플리케이션 전역에서 싱글톤으로 관리
 class ScheduleRepositoryImpl @Inject constructor(
-    private val remoteDataSource: ScheduleRemoteDataSource, // 원격 데이터 소스 주입
-    private val scheduleMapper: ScheduleMapper // Inject ScheduleMapper
+    private val scheduleRemoteDataSource: ScheduleRemoteDataSource
+    // private val scheduleMapper: ScheduleMapper // 개별 매퍼 사용시
 ) : ScheduleRepository {
 
-    // 시간 변환 시 UTC 시간대 사용
-    private val zoneId = ZoneId.of("UTC")
-
-    /**
-     * 특정 날짜의 일정을 가져옵니다.
-     * LocalDate를 해당 날짜의 시작과 끝 Timestamp로 변환하여 데이터 소스를 호출합니다.
-     */
-    override suspend fun getSchedulesForDate(date: LocalDate): Result<List<Schedule>> {
-        Log.d("ScheduleRepoImpl", "getSchedulesForDate 호출됨: date=$date")
-        return runCatching {
-            // LocalDate를 UTC 기준 해당 날짜의 시작(00:00:00Z)과 끝(23:59:59.999Z) Timestamp로 변환
-            val startInstant = date.atStartOfDay(zoneId).toInstant()
-            val endInstant = date.atTime(LocalTime.MAX).atZone(zoneId).toInstant()
-            val startOfDay = DateTimeUtil.instantToFirebaseTimestamp(startInstant)
-            val endOfDay = DateTimeUtil.instantToFirebaseTimestamp(endInstant)
-
-            // 데이터 소스 호출 및 DTO 리스트를 도메인 모델 리스트로 변환
-            val dtoList = remoteDataSource.getSchedulesForDate(startOfDay!!, endOfDay!!)
-            Log.d("ScheduleRepoImpl", "getSchedulesForDate - remoteDataSource 응답 (DTO list size): ${dtoList.size}, 데이터: $dtoList")
-            val domainList = scheduleMapper.mapToDomainList(dtoList)
-            Log.d("ScheduleRepoImpl", "getSchedulesForDate - 최종 반환 (Domain list size): ${domainList.size}, 데이터: $domainList")
-            domainList
-        }
-        // runCatching은 성공 시 Result.success(value), 실패 시 Result.failure(exception) 반환
+    override suspend fun createSchedule(schedule: Schedule): Result<Schedule> = resultTry {
+        val scheduleDto = schedule.toDto() // ID는 비어있을 수 있음
+        // ScheduleRemoteDataSource의 createSchedule 함수는 생성된 DTO (ID 포함)를 반환한다고 가정
+        scheduleRemoteDataSource.createSchedule(scheduleDto).getOrThrow().toDomain()
     }
 
-    /**
-     * 특정 월의 일정 요약 정보(일정이 있는 날짜 Set)를 가져옵니다.
-     * YearMonth를 해당 월의 시작과 끝 Timestamp로 변환하여 데이터 소스를 호출하고,
-     * 결과 DTO 리스트에서 날짜 정보만 추출하여 Set으로 만듭니다.
-     */
-    override suspend fun getScheduleSummaryForMonth(yearMonth: YearMonth): Result<Set<LocalDate>> {
-        Log.d("ScheduleRepoImpl", "getScheduleSummaryForMonth 호출됨: yearMonth=$yearMonth")
-        return runCatching {
-            // YearMonth를 UTC 기준 해당 월의 시작일과 종료일의 Timestamp로 변환
-            val startDayOfMonth = yearMonth.atDay(1)
-            val endDayOfMonth = yearMonth.atEndOfMonth()
-            val startInstant = startDayOfMonth.atStartOfDay(zoneId).toInstant()
-            val endInstant = endDayOfMonth.atTime(LocalTime.MAX).atZone(zoneId).toInstant()
-            val startOfMonth = DateTimeUtil.instantToFirebaseTimestamp(startInstant)
-            val endOfMonth = DateTimeUtil.instantToFirebaseTimestamp(endInstant)
+    override suspend fun getScheduleDetails(scheduleId: String): Result<Schedule> = resultTry {
+        scheduleRemoteDataSource.getSchedule(scheduleId).getOrThrow().toDomain()
+    }
 
-            // 데이터 소스에서 해당 월의 모든 일정 DTO를 가져옴
-            val schedulesDto = remoteDataSource.getSchedulesForMonth(startOfMonth!!, endOfMonth!!)
-            Log.d("ScheduleRepoImpl", "getScheduleSummaryForMonth - remoteDataSource 응답 (DTO list size): ${schedulesDto.size}, 데이터: $schedulesDto")
-
-            // DTO 리스트에서 startTime을 LocalDate로 변환하고 중복 제거하여 Set 생성
-            val dateSet = schedulesDto.mapNotNull { it.startTime } // startTime이 null인 경우 제외 (it.startTime is Firebase.Timestamp?)
-                .mapNotNull { timestamp -> // Ensure timestamp is not null before conversion
-                    // Timestamp -> Instant -> ZonedDateTime -> LocalDate
-                    // LocalDate는 시간대 정보가 없으므로, UTC 기준으로 변환된 날짜를 사용
-                    DateTimeUtil.firebaseTimestampToInstant(timestamp) // Changed
-                        ?.atZone(zoneId)?.toLocalDate() // Apply toLocalDate after conversion
-                }
-                .toSet() // 중복 제거
-            Log.d("ScheduleRepoImpl", "getScheduleSummaryForMonth - 최종 반환 (LocalDate Set size): ${dateSet.size}, 데이터: $dateSet")
-            dateSet
+    override fun getUserSchedulesStream(userId: String, startDateMillis: Long, endDateMillis: Long): Flow<Result<List<Schedule>>> {
+        // ScheduleRemoteDataSource에 getUserSchedulesStream(userId, startDate, endDate) 함수 필요
+        return scheduleRemoteDataSource.getUserSchedulesStream(userId, startDateMillis, endDateMillis).map { result ->
+            result.mapCatching { dtoList ->
+                dtoList.map { it.toDomain() }
+            }
         }
     }
 
-    /**
-     * 특정 ID의 일정 상세 정보를 가져옵니다.
-     */
-    override suspend fun getScheduleDetail(scheduleId: String): Result<Schedule> {
-        Log.d("ScheduleRepoImpl", "getScheduleDetail 호출됨: scheduleId=$scheduleId")
-        return runCatching {
-            // 데이터 소스 호출 및 DTO를 도메인 모델로 변환
-            val dto = remoteDataSource.getScheduleDetail(scheduleId)
-            Log.d("ScheduleRepoImpl", "getScheduleDetail - remoteDataSource 응답 (DTO): $dto")
-            val domainModel = scheduleMapper.mapToDomain(dto)
-            Log.d("ScheduleRepoImpl", "getScheduleDetail - 최종 반환 (Domain): $domainModel")
-            domainModel
+    override fun getProjectSchedulesStream(projectId: String, startDateMillis: Long, endDateMillis: Long): Flow<Result<List<Schedule>>> {
+        // ScheduleRemoteDataSource에 getProjectSchedulesStream(projectId, startDate, endDate) 함수 필요
+        return scheduleRemoteDataSource.getProjectSchedulesStream(projectId, startDateMillis, endDateMillis).map { result ->
+            result.mapCatching { dtoList ->
+                dtoList.map { it.toDomain() }
+            }
         }
     }
 
-    /**
-     * 새로운 일정을 추가합니다.
-     * 도메인 모델을 DTO로 변환하여 데이터 소스를 호출합니다.
-     */
-    override suspend fun addSchedule(newScheduleData: Schedule): Result<Unit> {
-        return runCatching {
-            // 도메인 모델을 DTO로 변환 (id는 DTO 변환 시 제외됨)
-            val scheduleDto = scheduleMapper.mapToDto(newScheduleData)
-            // 데이터 소스 호출 (반환되는 ID는 사용하지 않음)
-            remoteDataSource.addSchedule(scheduleDto)
-            // 성공 시 Unit 반환 (runCatching이 처리)
-        }
+    override suspend fun updateSchedule(schedule: Schedule): Result<Unit> = resultTry {
+        val scheduleDto = schedule.toDto() // ID가 반드시 포함되어야 함
+        scheduleRemoteDataSource.updateSchedule(scheduleDto).getOrThrow()
     }
 
-    /**
-     * 특정 ID의 일정을 삭제합니다.
-     */
-    override suspend fun deleteSchedule(scheduleId: String): Result<Unit> {
-        return runCatching {
-            // 데이터 소스 호출
-            remoteDataSource.deleteSchedule(scheduleId)
-            // 성공 시 Unit 반환 (runCatching이 처리)
-        }
+    override suspend fun deleteSchedule(scheduleId: String, currentUserId: String): Result<Unit> = resultTry {
+        // ScheduleRemoteDataSource에 deleteSchedule(scheduleId, currentUserId) 함수 필요 (권한 확인용)
+        scheduleRemoteDataSource.deleteSchedule(scheduleId, currentUserId).getOrThrow()
     }
 
-    /**
-     * 기존 일정을 업데이트합니다.
-     * 도메인 모델을 DTO로 변환하여 데이터 소스를 호출합니다.
-     */
-    override suspend fun updateSchedule(updatedScheduleData: Schedule): Result<Unit> {
-        return runCatching {
-            // 업데이트 대상 문서 ID 확인
-            val scheduleId = updatedScheduleData.id
-            // 도메인 모델을 DTO로 변환 (id는 DTO 변환 시 제외됨)
-            val scheduleDto = scheduleMapper.mapToDto(updatedScheduleData)
-            // 데이터 소스 호출
-            remoteDataSource.updateSchedule(scheduleId, scheduleDto)
-            // 성공 시 Unit 반환 (runCatching이 처리)
-        }
+    override suspend fun getScheduleSummaryForMonth(userId: String, year: Int, month: Int): Result<Map<Int, Boolean>> = resultTry {
+        // ScheduleRemoteDataSource에 getScheduleSummaryForMonth(userId, year, month) 함수 필요
+        // 이 함수는 해당 월의 날짜별 스케줄 유무를 Map 형태로 반환한다고 가정
+        scheduleRemoteDataSource.getScheduleSummaryForMonth(userId, year, month).getOrThrow()
     }
 }
