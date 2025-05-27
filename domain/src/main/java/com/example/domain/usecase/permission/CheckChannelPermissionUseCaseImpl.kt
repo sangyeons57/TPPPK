@@ -2,8 +2,6 @@ package com.example.domain.usecase.permission
 
 import com.example.domain.model.ChannelType
 import com.example.domain.model.RolePermission
-import com.example.domain.model.ProjectMember
-import com.example.domain.model.Role
 import com.example.domain.repository.ChannelRepository
 import com.example.domain.repository.ProjectMemberRepository
 // import com.example.domain.repository.ProjectRoleRepository // ProjectRoleRepository는 이제 직접 사용하지 않음

@@ -1,5 +1,5 @@
 
-package com.example.data.datasource._remote
+package com.example.data.datasource.remote
 
 import com.example.data.model._remote.CategoryDTO
 import com.google.firebase.auth.FirebaseAuth

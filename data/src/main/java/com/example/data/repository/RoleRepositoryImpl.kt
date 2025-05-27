@@ -1,13 +1,12 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.RoleRemoteDataSource
-import com.example.data.datasource._remote.PermissionRemoteDataSource // 권한 목록 조회 시 필요할 수 있음
+import com.example.data.datasource.remote.RoleRemoteDataSource
+import com.example.data.datasource.remote.PermissionRemoteDataSource // 권한 목록 조회 시 필요할 수 있음
 import com.example.data.model._remote.RoleDTO
 import com.example.data.model.mapper.toDomain // RoleDTO -> Role
-import com.example.data.model.mapper.toDto // Role -> RoleDTO (필요시)
 import com.example.domain.model.Role
-import com.example.domain._repository.RoleRepository
+import com.example.domain.repository.RoleRepository
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

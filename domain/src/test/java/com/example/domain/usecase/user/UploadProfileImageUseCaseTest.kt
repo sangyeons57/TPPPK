@@ -1,7 +1,6 @@
 package com.example.domain.usecase.user
 
 import android.net.Uri
-import com.example.domain.model.Result
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest

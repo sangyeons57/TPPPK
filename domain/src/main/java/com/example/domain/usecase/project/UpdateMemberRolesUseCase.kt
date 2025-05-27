@@ -1,6 +1,5 @@
 package com.example.domain.usecase.project
 
-import com.example.domain.model.Role
 import com.example.domain.repository.ProjectMemberRepository
 import javax.inject.Inject
 

@@ -1,13 +1,7 @@
 package com.example.domain.usecase.project
 
-import com.example.domain.model.Category
-import com.example.domain.model.Channel
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.ChannelType
 import com.example.domain.model.ProjectStructure
-import com.example.domain.model.channel.ProjectSpecificData
 import com.example.domain.repository.ProjectStructureRepository
-import java.time.Instant
 import javax.inject.Inject
 
 /**

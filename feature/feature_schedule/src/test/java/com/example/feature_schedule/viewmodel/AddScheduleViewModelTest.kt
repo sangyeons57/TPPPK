@@ -7,7 +7,6 @@ import com.example.data.util.CoroutinesTestRule
 import com.example.data.util.FlowTestExtensions.EventCollector
 import com.example.data.util.FlowTestExtensions.getValue
 import com.example.domain.model.Project
-import com.example.domain.model.Schedule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.*
@@ -17,9 +16,7 @@ import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
-import java.util.UUID
 
 /**
  * AddScheduleViewModel 테스트

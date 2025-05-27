@@ -1,15 +1,5 @@
 package com.example.data.di
 
-import com.example.data.datasource.local.friend.FriendLocalDataSource
-import com.example.data.datasource.local.friend.FriendLocalDataSourceImpl
-import com.example.data.datasource.local.invite.InviteLocalDataSource
-import com.example.data.datasource.local.invite.InviteLocalDataSourceImpl
-import com.example.data.datasource.local.project.ProjectLocalDataSource
-import com.example.data.datasource.local.project.ProjectLocalDataSourceImpl
-import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSource
-import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSourceImpl
-import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSource
-import com.example.data.datasource.local.projectrole.ProjectRoleLocalDataSourceImpl
 import com.example.data.datasource.remote.friend.FriendRemoteDataSource
 import com.example.data.datasource.remote.friend.FriendRemoteDataSourceImpl
 import com.example.data.datasource.remote.invite.InviteRemoteDataSource

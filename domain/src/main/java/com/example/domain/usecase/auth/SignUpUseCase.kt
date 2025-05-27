@@ -2,7 +2,6 @@ package com.example.domain.usecase.auth
 
 import com.example.domain.model.User
 import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
 import java.time.Instant
 import javax.inject.Inject
 import kotlin.Result

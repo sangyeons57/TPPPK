@@ -1,6 +1,5 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.model.Schedule
 import com.example.domain.model.User
 import com.example.domain.repository.UserRepository
 import javax.inject.Inject

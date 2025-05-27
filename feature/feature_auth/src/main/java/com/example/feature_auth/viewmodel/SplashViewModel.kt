@@ -4,9 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
-import com.example.domain.usecase.auth.CheckSessionUseCase
 import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay

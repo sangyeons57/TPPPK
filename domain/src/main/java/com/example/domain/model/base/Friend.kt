@@ -1,7 +1,9 @@
 package com.example.domain.model.base
 
+import com.example.domain.model._new.enum.FriendStatus
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
+import java.time.Instant
 
 data class Friend(
     @DocumentId val friendUid: String = "",

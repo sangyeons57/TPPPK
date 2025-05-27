@@ -1,6 +1,5 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.model.Result
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -11,7 +10,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 
 @ExperimentalCoroutinesApi

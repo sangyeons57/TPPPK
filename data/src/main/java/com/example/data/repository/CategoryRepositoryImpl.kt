@@ -1,11 +1,10 @@
-package com.example.data._repository
+package com.example.data.repository
 
-import com.example.data.datasource._remote.CategoryRemoteDataSource
+import com.example.data.datasource.remote.CategoryRemoteDataSource
 import com.example.data.model._remote.CategoryDTO // DTO 임포트
 import com.example.data.model.mapper.toDomain // Domain으로 매핑하는 확장함수
-import com.example.data.model.mapper.toDto // DTO로 매핑하는 확장함수 (필요시)
 import com.example.domain.model.Category
-import com.example.domain._repository.CategoryRepository
+import com.example.domain.repository.CategoryRepository
 import com.google.firebase.Timestamp // Timestamp 사용 시
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

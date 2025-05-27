@@ -1,5 +1,5 @@
 
-package com.example.data.datasource._remote
+package com.example.data.datasource.remote
 
 import com.example.data.model._remote.ProjectChannelDTO
 import com.google.firebase.firestore.FieldValue

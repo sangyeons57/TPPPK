@@ -1,8 +1,7 @@
 
-package com.example.data.datasource._remote
+package com.example.data.datasource.remote
 
 import com.example.data.model._remote.MemberDTO
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
 import kotlinx.coroutines.Dispatchers

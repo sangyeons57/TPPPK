@@ -1,7 +1,6 @@
 package com.example.data.repository
 
 import android.util.Log
-import com.example.core_logging.SentryUtil
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.example.domain.model.User

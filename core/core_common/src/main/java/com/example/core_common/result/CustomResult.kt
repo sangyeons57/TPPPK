@@ -1,6 +1,8 @@
 package com.example.core_common.result
 
-sealed class Result<out T> {
-    data class Success<out T>(val data: T) : Result<T>()
-    data class Error(val exception: Exception) : Result<Nothing>()
+sealed class CustomResult<out S, out E> {
+    object Initial : CustomResult<Nothing, Nothing>()
+    object Loading : CustomResult<Nothing, Nothing>()
+    data class Success<out S>(val data: S) : CustomResult<S, Nothing>()
+    data class Failure<out E>(val error: E) : CustomResult<Nothing, E>()
 }

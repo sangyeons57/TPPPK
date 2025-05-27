@@ -7,9 +7,7 @@ import com.example.domain.model.Channel
 import com.example.domain.model.Project
 import com.example.domain.model.User
 import com.example.domain.model.ui.DmUiModel
-import com.example.domain.repository.UserRepository
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
-import com.example.domain.usecase.project.FetchProjectListUseCase
 import com.example.domain.usecase.project.GetProjectListStreamUseCase
 import com.example.domain.usecase.project.GetProjectStructureUseCase
 import com.example.domain.usecase.project.GetSchedulableProjectsUseCase

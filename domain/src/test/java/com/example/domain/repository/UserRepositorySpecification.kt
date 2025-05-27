@@ -1,9 +1,5 @@
 package com.example.domain.repository
 
-import android.net.Uri
-import com.example.domain.model.User
-import com.example.domain.model.UserStatus
-import com.google.firebase.auth.FirebaseUser
 import org.junit.Assert
 import org.junit.Test
 

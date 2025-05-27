@@ -15,7 +15,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mockito.mock
-import java.time.LocalDateTime
 
 /**
  * SearchViewModel 테스트

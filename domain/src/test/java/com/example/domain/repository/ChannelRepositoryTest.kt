@@ -12,7 +12,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertFalse
 import org.mockito.kotlin.verify
 
 /**

@@ -13,10 +13,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * CalendarViewModel 테스트

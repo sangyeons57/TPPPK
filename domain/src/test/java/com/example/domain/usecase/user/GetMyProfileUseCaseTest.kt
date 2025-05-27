@@ -1,6 +1,5 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.model.Result
 import com.example.domain.model.User // Changed from UserProfileData
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi

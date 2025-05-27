@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.model.SearchScope
-import com.example.domain.model.SearchResultItem
 import com.example.domain.model.UserResult
 import com.example.domain.repository.SearchRepository
 import com.example.domain.usecase.friend.SendFriendRequestUseCase

@@ -1,16 +1,14 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.UserRemoteDataSource
-import com.example.data.datasource._remote.AuthRemoteDataSource // 현재 사용자 ID 등 필요시
-import com.example.domain._repository.MediaRepository // 이미지 업로드용
-import com.example.data.model._remote.UserDTO
+import com.example.data.datasource.remote.UserRemoteDataSource
+import com.example.data.datasource.remote.AuthRemoteDataSource // 현재 사용자 ID 등 필요시
+import com.example.domain.repository.MediaRepository // 이미지 업로드용
 import com.example.data.model.mapper.toDomain
 import com.example.data.model.mapper.toDto
 import com.example.domain.model.User
 import com.example.domain.model.UserStatus
 import com.example.domain.model.AccountStatus
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.io.InputStream

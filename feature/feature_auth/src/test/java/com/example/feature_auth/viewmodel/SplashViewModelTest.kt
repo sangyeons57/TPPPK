@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import com.example.data.repository.FakeAuthRepository
 import com.example.data.util.CoroutinesTestRule
 import com.example.data.util.FlowTestExtensions.EventCollector
-import com.example.data.util.FlowTestExtensions.getValue
 import com.example.domain.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest

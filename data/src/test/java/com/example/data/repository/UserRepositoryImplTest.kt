@@ -4,7 +4,6 @@ import android.net.Uri
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.data.datasource.remote.user.UserRemoteDataSource
 import com.example.data.model.mapper.UserMapper // Keep if existing tests need it, not for new methods
-import com.example.domain.model.Result
 import com.example.domain.model.User // Changed from UserProfileData
 import com.google.firebase.auth.FirebaseAuth // Keep if existing tests need it
 import com.google.firebase.firestore.FirebaseFirestore // Keep if existing tests need it

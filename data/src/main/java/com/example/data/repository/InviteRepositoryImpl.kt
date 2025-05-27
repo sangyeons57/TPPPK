@@ -1,13 +1,12 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.InviteRemoteDataSource
+import com.example.data.datasource.remote.InviteRemoteDataSource
 import com.example.data.model._remote.InviteDTO
 import com.example.data.model.mapper.toDomain
-import com.example.data.model.mapper.toDto // Invite -> InviteDTO (필요시)
 import com.example.domain.model.Invite
 import com.example.domain.model.InviteType
-import com.example.domain._repository.InviteRepository
+import com.example.domain.repository.InviteRepository
 import com.google.firebase.Timestamp // Timestamp 사용 시
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

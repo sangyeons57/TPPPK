@@ -1,4 +1,4 @@
-package com.example.domain._repository
+package com.example.domain.repository
 
 import com.example.domain.model.Channel
 import com.example.domain.model.ChannelType

@@ -1,17 +1,14 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.FriendRemoteDataSource
-import com.example.data.datasource._remote.UserRemoteDataSource // 사용자 검색 및 정보 업데이트 시 필요
-import com.example.data.model._remote.FriendDTO
+import com.example.data.datasource.remote.FriendRemoteDataSource
+import com.example.data.datasource.remote.UserRemoteDataSource // 사용자 검색 및 정보 업데이트 시 필요
 import com.example.data.model._remote.FriendRequestDTO
-import com.example.data.model._remote.UserDTO // UserRemoteDataSource가 반환하는 타입
 import com.example.data.model.mapper.toDomain // DTO -> Domain
-import com.example.data.model.mapper.toDto // Domain -> DTO (필요시)
 import com.example.domain.model.Friend
 import com.example.domain.model.FriendRequest
 import com.example.domain.model.User
-import com.example.domain._repository.FriendRepository
+import com.example.domain.repository.FriendRepository
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

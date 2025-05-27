@@ -1,7 +1,10 @@
 package com.example.domain.model.base
 
+import com.example.domain.model._new.enum.UserAccountStatus
+import com.example.domain.model._new.enum.UserStatus
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
+import java.time.Instant
 
 data class User(
     @DocumentId val uid: String = "",

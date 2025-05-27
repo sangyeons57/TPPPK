@@ -7,7 +7,6 @@ import com.example.domain.model.User
 import com.example.domain.repository.MessageRepository
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.flow.first
-import java.time.Instant
 import javax.inject.Inject
 import kotlin.Result
 

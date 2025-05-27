@@ -1,19 +1,15 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.MessageRemoteDataSource
-import com.example.data.datasource._remote.MessageAttachmentRemoteDataSource // 첨부파일 업로드/다운로드용
+import com.example.data.datasource.remote.MessageRemoteDataSource
+import com.example.data.datasource.remote.MessageAttachmentRemoteDataSource // 첨부파일 업로드/다운로드용
 import com.example.data.model._remote.MessageDTO
 import com.example.data.model._remote.MessageAttachmentDTO
-import com.example.data.model._remote.ReactionDTO
 import com.example.data.model.mapper.toDomain // ChatMessageDTO -> ChatMessage
-import com.example.data.model.mapper.toDto // ChatMessage -> ChatMessageDTO
 import com.example.data.model.mapper.toDomain // MessageAttachmentDTO -> MessageAttachment
-import com.example.data.model.mapper.toDto // MessageAttachment -> MessageAttachmentDTO
 import com.example.domain.model.ChatMessage
-import com.example.domain.model.MessageAttachment
-import com.example.domain._repository.MessageAttachmentToSend
-import com.example.domain._repository.MessageRepository
+import com.example.domain.repository.MessageAttachmentToSend
+import com.example.domain.repository.MessageRepository
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

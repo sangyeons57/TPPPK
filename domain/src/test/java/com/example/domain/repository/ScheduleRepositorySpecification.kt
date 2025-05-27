@@ -1,10 +1,7 @@
 package com.example.domain.repository
 
-import com.example.domain.model.Schedule
 import org.junit.Assert
 import org.junit.Test
-import java.time.LocalDate
-import java.time.YearMonth
 
 /**
  * ScheduleRepository 인터페이스 명세 테스트

@@ -8,7 +8,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
-import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

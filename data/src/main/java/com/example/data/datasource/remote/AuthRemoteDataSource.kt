@@ -1,5 +1,5 @@
 
-package com.example.data.datasource._remote
+package com.example.data.datasource.remote
 
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow

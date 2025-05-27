@@ -1,19 +1,18 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.ProjectRemoteDataSource
-import com.example.data.datasource._remote.CategoryRemoteDataSource
-import com.example.data.datasource._remote.ProjectChannelRemoteDataSource
-import com.example.data.datasource._remote.MemberRemoteDataSource // ProjectMember 관리를 위해 필요
+import com.example.data.datasource.remote.ProjectRemoteDataSource
+import com.example.data.datasource.remote.CategoryRemoteDataSource
+import com.example.data.datasource.remote.ProjectChannelRemoteDataSource
+import com.example.data.datasource.remote.MemberRemoteDataSource // ProjectMember 관리를 위해 필요
 // import com.example.domain._repository.MediaRepository // 이미지 업로드를 위해 주입 (또는 직접 Storage 사용)
 import com.example.data.model._remote.ProjectDTO
 import com.example.data.model.mapper.toDomain
-import com.example.data.model.mapper.toDto // Domain -> DTO
 import com.example.domain.model.Project
 import com.example.domain.model.ProjectMember
 import com.example.domain.model.ProjectStructure
-import com.example.domain._repository.ProjectRepository
-import com.example.domain._repository.MediaRepository // MediaRepository 사용 예시
+import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.MediaRepository // MediaRepository 사용 예시
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

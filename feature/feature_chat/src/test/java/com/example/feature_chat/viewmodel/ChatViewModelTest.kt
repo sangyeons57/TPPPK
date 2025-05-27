@@ -7,7 +7,6 @@ import com.example.data.util.CoroutinesTestRule
 import com.example.data.util.FlowTestExtensions.EventCollector
 import com.example.data.util.FlowTestExtensions.getValue
 import com.example.domain.model.ChatMessage
-import com.example.domain.model.MediaImage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.*

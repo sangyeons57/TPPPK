@@ -1,11 +1,10 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.FriendRemoteDataSource
-import com.example.data.model._remote.FriendRequestDTO // 이 DTO 파일이 존재해야 합니다.
+import com.example.data.datasource.remote.FriendRemoteDataSource
 import com.example.data.model.mapper.toDomain // FriendRequestDTO -> FriendRequest 매퍼 함수
 import com.example.domain.model.FriendRequest
-import com.example.domain._repository.FriendRequestRepository
+import com.example.domain.repository.FriendRequestRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

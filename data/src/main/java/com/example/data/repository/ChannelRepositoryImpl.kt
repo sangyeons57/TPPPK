@@ -1,20 +1,18 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.DMChannelRemoteDataSource
-import com.example.data.datasource._remote.MemberRemoteDataSource
-import com.example.data.datasource._remote.MessageRemoteDataSource
-import com.example.data.datasource._remote.ProjectChannelRemoteDataSource
-import com.example.data.model._remote.DMChannelDTO
+import com.example.data.datasource.remote.DMChannelRemoteDataSource
+import com.example.data.datasource.remote.MemberRemoteDataSource
+import com.example.data.datasource.remote.MessageRemoteDataSource
+import com.example.data.datasource.remote.ProjectChannelRemoteDataSource
 import com.example.data.model._remote.ProjectChannelDTO
 import com.example.data.model.mapper.toDomain
 import com.example.domain.model.Channel
 import com.example.domain.model.ChannelType
 import com.example.domain.model.ChatMessage
-import com.example.domain._repository.ChannelRepository
+import com.example.domain.repository.ChannelRepository
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

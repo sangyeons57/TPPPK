@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.domain.model._new.enum.MessageAttachmentType
 import com.google.firebase.firestore.DocumentId
 
 data class MessageAttachment(

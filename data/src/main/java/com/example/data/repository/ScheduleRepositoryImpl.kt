@@ -1,12 +1,11 @@
-package com.example.data._repository
+package com.example.data.repository
 
 import com.example.core_common.result.resultTry
-import com.example.data.datasource._remote.ScheduleRemoteDataSource
-import com.example.data.model._remote.ScheduleDTO
+import com.example.data.datasource.remote.ScheduleRemoteDataSource
 import com.example.data.model.mapper.toDomain // ScheduleDTO -> Schedule
 import com.example.data.model.mapper.toDto // Schedule -> ScheduleDTO
 import com.example.domain.model.Schedule
-import com.example.domain._repository.ScheduleRepository
+import com.example.domain.repository.ScheduleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
