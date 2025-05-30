@@ -1,17 +1,17 @@
 package com.example.domain.usecase.project.role
 
-import com.example.domain.model.RolePermission
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.domain.model.base.Permission
+import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 
 interface CreateRoleUseCase {
-    suspend operator fun invoke(projectId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean): Result<String> // Return Role ID string
+    suspend operator fun invoke(projectId: String, roleName: String, permissions: List<Permission>, isDefault: Boolean): Result<String> // Return Role ID string
 }
 
 class CreateRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: ProjectRoleRepository
+    private val projectRoleRepository: RoleRepository
 ) : CreateRoleUseCase {
-    override suspend operator fun invoke(projectId: String, roleName: String, permissions: List<RolePermission>, isDefault: Boolean): Result<String> {
+    override suspend operator fun invoke(projectId: String, roleName: String, permissions: List<Permission>, isDefault: Boolean): Result<String> {
         if (roleName.isBlank()) {
             return Result.failure(IllegalArgumentException("Role name cannot be blank."))
         }

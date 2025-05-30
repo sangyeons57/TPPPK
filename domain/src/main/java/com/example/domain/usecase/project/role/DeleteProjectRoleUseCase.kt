@@ -1,6 +1,8 @@
 package com.example.domain.usecase.project.role
 
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.core_common.result.CustomResult
+import com.example.domain.repository.AuthRepository
+import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -15,13 +17,14 @@ interface DeleteProjectRoleUseCase {
      * @param roleId The ID of the role to delete.
      * @return A [Result] indicating success or failure.
      */
-    suspend operator fun invoke(projectId: String, roleId: String): Result<Unit>
+    suspend operator fun invoke(projectId: String, roleId: String): CustomResult<Unit, Exception>
 }
 /**
  * Implementation of [DeleteProjectRoleUseCase].
  */
 class DeleteProjectRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: ProjectRoleRepository
+    private val projectRoleRepository: RoleRepository,
+    private val authRepository: AuthRepository
 ) : DeleteProjectRoleUseCase {
 
     /**
@@ -31,7 +34,11 @@ class DeleteProjectRoleUseCaseImpl @Inject constructor(
      * @param roleId The ID of the role to delete.
      * @return A [Result] indicating success or failure.
      */
-    override suspend operator fun invoke(projectId: String, roleId: String): Result<Unit> {
-        return projectRoleRepository.deleteRole(projectId, roleId)
+    override suspend operator fun invoke(projectId: String, roleId: String): CustomResult<Unit, Exception> {
+        val session = authRepository.getCurrentUserSession()
+        when (session) {
+            is CustomResult.Success -> projectRoleRepository.deleteRole(projectId, roleId, session.data.userId)
+            else -> CustomResult.Failure(Exception("User not authenticated"))
+        }
     }
 }

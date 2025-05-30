@@ -1,13 +1,15 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.ProjectChannelDTO
+import com.example.data.model.remote.ProjectChannelDTO
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -35,7 +37,8 @@ class ProjectChannelRemoteDataSourceImpl @Inject constructor(
     ): Flow<List<ProjectChannelDTO>> {
         return getProjectChannelsCollection(projectId, categoryId)
             .orderBy("channelName", Query.Direction.ASCENDING)
-            .dataObjects()
+            .snapshots()
+            .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(ProjectChannelDTO::class.java) } }
     }
 
     override suspend fun addProjectChannel(

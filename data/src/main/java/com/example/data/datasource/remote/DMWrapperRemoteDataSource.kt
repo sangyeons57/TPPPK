@@ -1,7 +1,7 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.DMWrapperDTO
+import com.example.data.model.remote.DMWrapperDTO
 import kotlinx.coroutines.flow.Flow
 
 interface DMWrapperRemoteDataSource {

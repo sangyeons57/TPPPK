@@ -1,5 +1,6 @@
 package com.example.domain.usecase.user
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.UserRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -19,7 +20,7 @@ class UpdateNicknameUseCase @Inject constructor(
      * @param newNickname 변경할 새 닉네임
      * @return 성공 시 성공 결과가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(newNickname: String): Result<Unit> {
+    suspend operator fun invoke(newNickname: String): CustomResult<Unit, Exception> {
         // 닉네임 유효성 검사
         val trimmedNickname = newNickname.trim()
         

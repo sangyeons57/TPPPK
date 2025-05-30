@@ -1,5 +1,6 @@
 package com.example.domain.usecase.project
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.ProjectRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -18,7 +19,7 @@ class JoinProjectWithCodeUseCase @Inject constructor(
      * @param code 프로젝트 참여 코드
      * @return 성공 시 프로젝트 ID가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(code: String): Result<String> {
-        return projectRepository.joinProjectWithCode(code)
+    suspend operator fun invoke(code: String): CustomResult<String, Exception> {
+        return CustomResult.Failure(Exception("미구현 사용할지 고민중"))
     }
 } 

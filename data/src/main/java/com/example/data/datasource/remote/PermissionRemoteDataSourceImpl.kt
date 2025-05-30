@@ -1,11 +1,13 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.PermissionDTO
+import com.example.data.model.remote.PermissionDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -28,7 +30,8 @@ class PermissionRemoteDataSourceImpl @Inject constructor(
             .collection(PERMISSIONS_COLLECTION)
 
     override fun observePermissions(projectId: String, roleId: String): Flow<List<PermissionDTO>> {
-        return getPermissionsCollection(projectId, roleId).dataObjects()
+        return getPermissionsCollection(projectId, roleId).snapshots()
+            .map{ snapshot -> snapshot.documents.mapNotNull { it.toObject(PermissionDTO::class.java) } }
     }
 
     override suspend fun addPermissionToRole(

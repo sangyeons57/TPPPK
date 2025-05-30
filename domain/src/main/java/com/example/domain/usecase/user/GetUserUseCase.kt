@@ -1,16 +1,16 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.model.User
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * 특정 사용자의 정보를 가져오는 유스케이스 인터페이스
  */
 interface GetUserUseCase {
-    operator fun invoke(userId: String): Flow<Result<User>>
+    operator fun invoke(userId: String): Flow<CustomResult<User, Exception>>
 }
 
 /**
@@ -26,7 +26,7 @@ class GetUserUseCaseImpl @Inject constructor(
      * @param userId 조회할 사용자 ID
      * @return Flow<Result<User>> 사용자 정보 로드 결과 Flow
      */
-    override operator fun invoke(userId: String): Flow<Result<User>> {
+    override operator fun invoke(userId: String): Flow<CustomResult<User, Exception>> {
         return userRepository.getUserStream(userId)
     }
 } 

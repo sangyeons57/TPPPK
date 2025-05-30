@@ -1,9 +1,13 @@
 package com.example.domain.usecase.schedule
 
+import com.example.core_common.result.CustomResult
+import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.ScheduleRepository
+import com.google.firebase.auth.FirebaseAuth
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
+import kotlin.time.Instant
 
 /**
  * 특정 월의 일정 요약 정보를 가져오는 유스케이스입니다.
@@ -12,7 +16,8 @@ import javax.inject.Inject
  * @property scheduleRepository ScheduleRepository 인터페이스의 구현체
  */
 class GetScheduleSummaryForMonthUseCase @Inject constructor(
-    private val scheduleRepository: ScheduleRepository
+    private val scheduleRepository: ScheduleRepository,
+    private val authRepository: AuthRepository
 ) {
     /**
      * 지정된 연월에 해당하는 일정 요약 정보(일정이 있는 날짜 세트)를 가져옵니다.
@@ -20,7 +25,11 @@ class GetScheduleSummaryForMonthUseCase @Inject constructor(
      * @param yearMonth 정보를 가져올 연월
      * @return Result 객체. 성공 시 일정이 있는 날짜들의 Set<LocalDate>를, 실패 시 예외를 포함합니다.
      */
-    suspend operator fun invoke(yearMonth: YearMonth): Result<Set<LocalDate>> {
-        return scheduleRepository.getScheduleSummaryForMonth(yearMonth)
+    suspend operator fun invoke(yearMonth: YearMonth): CustomResult<Map<Int, Boolean>, Exception> {
+        val userSession =  authRepository.getCurrentUserSession()
+        when (userSession) {
+            is CustomResult.Success -> scheduleRepository.getScheduleSummaryForMonth(userSession.data.userId, yearMonth)
+            else -> CustomResult.Failure(Exception("로그인이 필요합니다."))
+        }
     }
 } 

@@ -1,7 +1,10 @@
 package com.example.domain.usecase.project.role
 
-import com.example.domain.model.RolePermission
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Permission
+import com.example.domain.model.base.Role
+import com.example.domain.repository.PermissionRepository
+import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -21,16 +24,16 @@ interface CreateProjectRoleUseCase {
     suspend operator fun invoke(
         projectId: String,
         name: String,
-        permissions: List<RolePermission>,
+        permissions: List<Permission>,
         isDefault: Boolean = false
-    ): Result<String>
+    ): CustomResult<Role, Exception>
 }
 
 /**
  * Implementation of [CreateProjectRoleUseCase].
  */
 class CreateProjectRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: ProjectRoleRepository
+    private val roleRepository: RoleRepository
 ) : CreateProjectRoleUseCase {
 
     /**
@@ -45,9 +48,9 @@ class CreateProjectRoleUseCaseImpl @Inject constructor(
     override suspend operator fun invoke(
         projectId: String,
         name: String,
-        permissions: List<RolePermission>,
+        permissions: List<Permission>,
         isDefault: Boolean
-    ): Result<String> {
-        return projectRoleRepository.createRole(projectId, name, permissions, isDefault)
+    ): CustomResult<Role, Exception> {
+        return roleRepository.createRole(projectId, name, permissions, isDefault)
     }
 }

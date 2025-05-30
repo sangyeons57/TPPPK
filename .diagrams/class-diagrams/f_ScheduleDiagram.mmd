@@ -1,0 +1,171 @@
+classDiagram
+    title Schedule Feature Architecture 
+
+    %% Feature Layer (ViewModels)
+    subgraph Feature Layer - ViewModels
+        direction LR
+        namespace ViewModels_ScheduleNS {
+            class AddScheduleViewModel {
+                -addScheduleUseCase: AddScheduleUseCase
+                -getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase %% To select a project for the schedule
+                +loadSchedulableProjects()
+                +createSchedule(title: String, date: String, time: String, projectId: String?, description: String)
+            }
+            class EditScheduleViewModel {
+                -getScheduleDetailUseCase: GetScheduleDetailUseCase
+                -updateScheduleUseCase: UpdateScheduleUseCase
+                -deleteScheduleUseCase: DeleteScheduleUseCase
+                -getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase
+                +loadScheduleDetails(scheduleId: String)
+                +saveScheduleChanges(scheduleId: String, title: String, date: String, time: String, projectId: String?, description: String)
+                +confirmDeleteSchedule(scheduleId: String)
+            }
+            class ScheduleDetailViewModel {
+                -getScheduleDetailUseCase: GetScheduleDetailUseCase
+                +loadScheduleDetails(scheduleId: String)
+            }
+            class Calendar24HourViewModel { %% For daily view if it has specific logic
+                -getSchedulesForDateUseCase: GetSchedulesForDateUseCase
+                +loadDailySchedules(date: String)
+            }
+        }
+    end
+    note for AddScheduleViewModel "새 일정 추가 화면 UI 로직"
+    note for EditScheduleViewModel "기존 일정 수정/삭제 화면 UI 로직"
+    note for ScheduleDetailViewModel "일정 상세 정보 표시 UI 로직"
+    note for Calendar24HourViewModel "하루 단위 일정 상세 보기 UI 로직 (feature_main의 CalendarViewModel과 연관)"
+
+    %% Domain Layer (UseCases & Repository Interfaces)
+    subgraph Domain Layer
+        direction LR
+        namespace UseCases_ScheduleNS {
+            class AddScheduleUseCase {
+                -scheduleRepository: ScheduleRepository
+                +invoke(scheduleData: Schedule): Result<String> %% Returns ScheduleId
+            }
+            class GetScheduleDetailUseCase {
+                -scheduleRepository: ScheduleRepository
+                +invoke(scheduleId: String): Flow<Schedule?>
+            }
+            class UpdateScheduleUseCase {
+                -scheduleRepository: ScheduleRepository
+                +invoke(scheduleData: Schedule): Result<Unit>
+            }
+            class DeleteScheduleUseCase {
+                -scheduleRepository: ScheduleRepository
+                +invoke(scheduleId: String): Result<Unit>
+            }
+            class GetSchedulesForDateUseCase {
+                 %% Used by CalendarViewModel in feature_main and potentially here
+                -scheduleRepository: ScheduleRepository
+                +invoke(date: String): Flow<List<Schedule>>
+            }
+            class GetScheduleSummaryForMonthUseCase { 
+                %% Used by CalendarViewModel in feature_main
+                -scheduleRepository: ScheduleRepository
+                +invoke(year: Int, month: Int): Flow<Map<Int, Int>>
+            }
+        }
+        namespace UseCases_ProjectNS {
+             %% Used for selecting project for schedule
+            class GetSchedulableProjectsUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(): Flow<List<Project>> %% Projects user can add schedules to
+            }
+        }
+
+        namespace Repositories_DomainNS {
+            class ScheduleRepository {
+                <<Interface>>
+                +addSchedule(scheduleData: Schedule): Result<String>
+                +getScheduleById(scheduleId: String): Flow<Schedule?>
+                +updateSchedule(scheduleData: Schedule): Result<Unit>
+                +deleteSchedule(scheduleId: String): Result<Unit>
+                +getSchedulesForDate(date: String): Flow<List<Schedule>>
+                +getScheduleSummaryForMonth(year: Int, month: Int): Flow<Map<Int, Int>>
+            }
+            class ProjectRepository { %% Defined in other features, used here
+                <<Interface>>
+                +getProjectsForScheduling(): Flow<List<Project>> %% Simplified method name
+            }
+        }
+        note for ScheduleRepository "일정 데이터 접근 인터페이스"
+        note for ProjectRepository "프로젝트 데이터 접근 인터페이스 (일정 대상 선택용)"
+    end
+
+    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    subgraph Data Layer
+        direction LR
+        namespace RepositoryImpl_DataNS {
+            class ScheduleRepositoryImpl {
+                -scheduleRemoteDataSource: ScheduleRemoteDataSource
+                %% LocalDataSource excluded
+            }
+            class ProjectRepositoryImpl { %% Defined in other features
+                -projectRemoteDataSource: ProjectRemoteDataSource
+                %% Other DS excluded for this context
+            }
+        }
+        note for ScheduleRepositoryImpl "ScheduleRepository 구현체 (Remote)"
+        note for ProjectRepositoryImpl "ProjectRepository 구현체 (Remote, 일정 기능에서 사용되는 부분)"
+
+
+        namespace RemoteDataSources_DataNS {
+            class ScheduleRemoteDataSource {
+                <<Interface>>
+                +createSchedule(scheduleDTO: ScheduleDTO): Result<String>
+                +fetchScheduleById(scheduleId: String): Flow<ScheduleDTO?>
+                +updateScheduleOnRemote(scheduleDTO: ScheduleDTO): Result<Unit>
+                +deleteScheduleOnRemote(scheduleId: String): Result<Unit>
+                +fetchSchedulesForDate(date: String): Flow<List<ScheduleDTO>>
+                +fetchScheduleSummaryForMonth(year: Int, month: Int): Flow<Map<Int, Int>>
+            }
+            class ProjectRemoteDataSource { %% Defined in other features
+                <<Interface>>
+                +fetchSchedulableProjects(): Flow<List<ProjectDTO>> %% Simplified
+            }
+        }
+        note for ScheduleRemoteDataSource "원격 일정 서비스 통신"
+        note for ProjectRemoteDataSource "원격 프로젝트 서비스 통신 (일정 대상 선택용)"
+
+        namespace DataSourceImpl_DataNS {
+            class ScheduleRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+            class ProjectRemoteDataSourceImpl { %% Defined in other features
+                -firestore: FirebaseFirestore
+            }
+        }
+    end
+
+    %% ===== Relationships =====
+    %% ViewModel -> UseCase
+    AddScheduleViewModel ..> AddScheduleUseCase : uses
+    AddScheduleViewModel ..> GetSchedulableProjectsUseCase : uses
+    EditScheduleViewModel ..> GetScheduleDetailUseCase : uses
+    EditScheduleViewModel ..> UpdateScheduleUseCase : uses
+    EditScheduleViewModel ..> DeleteScheduleUseCase : uses
+    EditScheduleViewModel ..> GetSchedulableProjectsUseCase : uses
+    ScheduleDetailViewModel ..> GetScheduleDetailUseCase : uses
+    Calendar24HourViewModel ..> GetSchedulesForDateUseCase : uses
+
+    %% UseCase -> Repository Interface
+    AddScheduleUseCase ..> ScheduleRepository : accesses
+    GetScheduleDetailUseCase ..> ScheduleRepository : accesses
+    UpdateScheduleUseCase ..> ScheduleRepository : accesses
+    DeleteScheduleUseCase ..> ScheduleRepository : accesses
+    GetSchedulesForDateUseCase ..> ScheduleRepository : accesses
+    GetScheduleSummaryForMonthUseCase ..> ScheduleRepository : accesses
+    GetSchedulableProjectsUseCase ..> ProjectRepository : accesses
+
+    %% Repository Implementation -> Repository Interface
+    ScheduleRepository <|.. ScheduleRepositoryImpl : implements
+    ProjectRepository <|.. ProjectRepositoryImpl : implements %% Assuming ProjectRepositoryImpl definition is centralized
+
+    %% Repository Implementation -> DataSource Interface (Remote Only)
+    ScheduleRepositoryImpl ..> ScheduleRemoteDataSource : uses
+    ProjectRepositoryImpl ..> ProjectRemoteDataSource : uses %% For schedulable projects
+
+    %% DataSource Implementation -> DataSource Interface
+    ScheduleRemoteDataSource <|.. ScheduleRemoteDataSourceImpl : implements
+    ProjectRemoteDataSource <|.. ProjectRemoteDataSourceImpl : implements %% Assuming ProjectRemoteDataSourceImpl definition is centralized

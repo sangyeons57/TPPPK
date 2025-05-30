@@ -1,7 +1,7 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.ScheduleDTO
+import com.example.data.model.remote.ScheduleDTO
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue

@@ -1,0 +1,256 @@
+classDiagram
+    title Friend Feature Architecture
+
+    %% Feature Layer (ViewModels)
+    subgraph Feature Layer - ViewModels
+        direction LR
+        %% ViewModels 네임스페이스 (MMD 코드 가독성을 위함)
+        namespace ViewModels_Friends {
+            class FriendViewModel {
+                -getFriendsListStreamUseCase: GetFriendsListStreamUseCase
+                -fetchFriendsListUseCase: FetchFriendsListUseCase
+                -removeOrDenyFriendUseCase: RemoveOrDenyFriendUseCase
+                -getCurrentUserUseCase: GetCurrentUserUseCase
+                -getUserInfoUseCase: GetUserInfoUseCase
+                -createDmChannelUseCase: CreateDmChannelUseCase
+                -getDmChannelIdUseCase: GetDmChannelIdUseCase
+                +observeFriends()
+                +unfriend(friendId: String)
+                +openDmChat(friendId: String)
+            }
+            class AddFriendViewModel {
+                -searchUserByNameUseCase: SearchUserByNameUseCase
+                -sendFriendRequestUseCase: SendFriendRequestUseCase
+                +searchUser(nickname: String)
+                +sendRequest(userId: String)
+            }
+            class AcceptFriendsViewModel {
+                -getPendingFriendRequestsUseCase: GetPendingFriendRequestsUseCase
+                -acceptFriendRequestUseCase: AcceptFriendRequestUseCase
+                -removeOrDenyFriendUseCase: RemoveOrDenyFriendUseCase
+                +loadPendingRequests()
+                +acceptRequest(requestId: String)
+                +denyRequest(requestId: String)
+            }
+        }
+    end
+    %% SUBNOTE: 친구 목록, 추가, 요청 수락 화면의 UI 로직 및 상태 관리
+
+    %% Domain Layer (UseCases & Repository Interfaces)
+    subgraph Domain Layer
+        direction LR
+        %% Friend UseCases 네임스페이스
+        namespace UseCases_Friend {
+            class GetFriendsListStreamUseCase {
+                -friendRepository: FriendRepository
+                +invoke(): Flow<List<Friend>>
+            }
+            class FetchFriendsListUseCase {
+                -friendRepository: FriendRepository
+                +invoke(): Result<Unit>
+            }
+            class GetPendingFriendRequestsUseCase {
+                -friendRequestRepository: FriendRequestRepository
+                +invoke(): Flow<List<FriendRequest>>
+            }
+            class SendFriendRequestUseCase {
+                -friendRequestRepository: FriendRequestRepository
+                -userRepository: UserRepository %% For nickname validation/lookup
+                +invoke(receiverNickname: String): Result<Unit>
+            }
+            class AcceptFriendRequestUseCase {
+                -friendRequestRepository: FriendRequestRepository
+                -friendRepository: FriendRepository %% To update friend list
+                +invoke(requestId: String): Result<Unit>
+            }
+            class RemoveOrDenyFriendUseCase {
+                -friendRepository: FriendRepository %% For removing a friend
+                -friendRequestRepository: FriendRequestRepository %% For denying a request
+                +invoke(targetUserId: String, isRequest: Boolean): Result<Unit>
+            }
+        }
+        %% User UseCases 네임스페이스 (Friends 기능에서 사용)
+        namespace UseCases_User {
+            class SearchUserByNameUseCase {
+                -userRepository: UserRepository
+                +invoke(nickname: String): Flow<List<User>>
+            }
+            class GetCurrentUserUseCase {
+                -userRepository: UserRepository
+                +invoke(): Flow<User?>
+            }
+            class GetUserInfoUseCase {
+                -userRepository: UserRepository
+                +invoke(userId: String): Flow<User?>
+            }
+        }
+        %% DM UseCases 네임스페이스 (Friends 기능에서 사용)
+        namespace UseCases_DM {
+             class CreateDmChannelUseCase {
+                -channelRepository: ChannelRepository
+                +invoke(targetUserId: String): Result<String> %% Returns channelId
+            }
+            class GetDmChannelIdUseCase {
+                -channelRepository: ChannelRepository
+                +invoke(targetUserId: String): Result<String?> %% Returns channelId or null
+            }
+        }
+
+        %% Repositories 네임스페이스
+        namespace Repositories_Domain {
+            class FriendRepository {
+                <<Interface>>
+                +getFriendsStream(): Flow<List<Friend>>
+                +fetchFriends(): Result<Unit>
+                +removeFriend(friendId: String): Result<Unit>
+                +addFriendAfterAcceptingRequest(userId: String, friendId: String): Result<Unit>
+            }
+            class FriendRequestRepository {
+                <<Interface>>
+                +getPendingFriendRequests(): Flow<List<FriendRequest>>
+                +sendFriendRequest(receiverNickname: String): Result<Unit>
+                +acceptFriendRequest(requestId: String): Result<Unit>
+                +denyFriendRequest(requestId: String): Result<Unit>
+            }
+            class UserRepository {
+                <<Interface>>
+                +searchUsersByName(nickname: String): Flow<List<User>>
+                +getCurrentUser(): Flow<User?>
+                +getUserById(userId: String): Flow<User?>
+                %% Simplified for diagram
+            }
+            class ChannelRepository {
+                <<Interface>>
+                +createDmChannel(targetUserId: String): Result<String>
+                +getDmChannelIdWithUser(targetUserId: String): Result<String?>
+                %% Simplified for diagram
+            }
+        }
+        note for FriendRepository "친구 데이터 접근을 위한<br/>추상화 인터페이스"
+        note for FriendRequestRepository "친구 요청 데이터 접근을 위한<br/>추상화 인터페이스"
+        note for UserRepository "사용자 데이터 접근 인터페이스"
+        note for ChannelRepository "채널(DM 포함) 데이터 접근 인터페이스"
+    end
+
+    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    subgraph Data Layer
+        direction LR
+        %% Repository Implementations 네임스페이스
+        namespace RepositoryImpl_Data {
+            class FriendRepositoryImpl {
+                -friendRemoteDataSource: FriendRemoteDataSource
+                %% LocalDataSource excluded
+            }
+            class FriendRequestRepositoryImpl {
+                -friendRemoteDataSource: FriendRemoteDataSource %% Assuming FriendRemoteDataSource handles requests
+                -userRemoteDataSource: UserRemoteDataSource %% For fetching user by nickname
+            }
+            class UserRepositoryImpl {
+                -userRemoteDataSource: UserRemoteDataSource
+                %% LocalDataSource excluded
+            }
+            class ChannelRepositoryImpl {
+                -dmChannelRemoteDataSource: DMChannelRemoteDataSource
+                %% Other datasources for project channels excluded for this context
+            }
+        }
+        note for FriendRepositoryImpl "FriendRepository 구현체 (Remote)"
+        note for FriendRequestRepositoryImpl "FriendRequestRepository 구현체 (Remote)"
+        note for UserRepositoryImpl "UserRepository 구현체 (Remote)"
+        note for ChannelRepositoryImpl "ChannelRepository 구현체 (Remote DM)"
+
+
+        %% Remote DataSources 네임스페이스
+        namespace RemoteDataSources_Data {
+            class FriendRemoteDataSource {
+                <<Interface>>
+                +getFriends(): Flow<List<FriendDTO>>
+                +fetchFriendsFromServer(): Result<Unit>
+                +removeFriend(friendId: String): Result<Unit>
+                +getPendingRequests(): Flow<List<FriendRequestDTO>>
+                +sendFriendRequestToUser(receiverNickname: String): Result<Unit>
+                +acceptRequest(requestId: String): Result<Unit>
+                +denyRequest(requestId: String): Result<Unit>
+                +addFriend(userId: String, friendId: String): Result<Unit>
+            }
+            class UserRemoteDataSource {
+                <<Interface>>
+                +searchUsers(nickname: String): Flow<List<UserDTO>>
+                +getCurrentUserDto(): Flow<UserDTO?>
+                +getUserDto(userId: String): Flow<UserDTO?>
+            }
+            class DMChannelRemoteDataSource {
+                <<Interface>>
+                +createDmChannel(targetUserId: String): Result<String>
+                +findDmChannelIdWithUser(targetUserId: String): Result<String?>
+            }
+        }
+        note for FriendRemoteDataSource "원격 친구 및 요청 서비스 통신"
+        note for UserRemoteDataSource "원격 사용자 서비스 통신"
+        note for DMChannelRemoteDataSource "원격 DM 채널 서비스 통신"
+
+        %% DataSource Implementations 네임스페이스
+        namespace DataSourceImpl_Data {
+            class FriendRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+                -currentUserProvider: CurrentUserProvider
+            }
+            class UserRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+
+            class DMChannelRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+                -currentUserProvider: CurrentUserProvider
+            }
+        }
+    end
+
+    %% ===== Relationships =====
+    %% ViewModel -> UseCase
+    FriendViewModel ..> GetFriendsListStreamUseCase : uses
+    FriendViewModel ..> FetchFriendsListUseCase : uses
+    FriendViewModel ..> RemoveOrDenyFriendUseCase : uses
+    FriendViewModel ..> GetCurrentUserUseCase : uses
+    FriendViewModel ..> GetUserInfoUseCase : uses
+    FriendViewModel ..> CreateDmChannelUseCase : uses
+    FriendViewModel ..> GetDmChannelIdUseCase : uses
+    AddFriendViewModel ..> SearchUserByNameUseCase : uses
+    AddFriendViewModel ..> SendFriendRequestUseCase : uses
+    AcceptFriendsViewModel ..> GetPendingFriendRequestsUseCase : uses
+    AcceptFriendsViewModel ..> AcceptFriendRequestUseCase : uses
+    AcceptFriendsViewModel ..> RemoveOrDenyFriendUseCase : uses
+
+    %% UseCase -> Repository Interface
+    GetFriendsListStreamUseCase ..> FriendRepository : accesses
+    FetchFriendsListUseCase ..> FriendRepository : accesses
+    GetPendingFriendRequestsUseCase ..> FriendRequestRepository : accesses
+    SendFriendRequestUseCase ..> FriendRequestRepository : accesses
+    SendFriendRequestUseCase ..> UserRepository : accesses %% For nickname validation if done in usecase
+    AcceptFriendRequestUseCase ..> FriendRequestRepository : accesses
+    AcceptFriendRequestUseCase ..> FriendRepository : accesses
+    RemoveOrDenyFriendUseCase ..> FriendRepository : accesses
+    RemoveOrDenyFriendUseCase ..> FriendRequestRepository : accesses
+    SearchUserByNameUseCase ..> UserRepository : accesses
+    GetCurrentUserUseCase ..> UserRepository : accesses
+    GetUserInfoUseCase ..> UserRepository : accesses
+    CreateDmChannelUseCase ..> ChannelRepository : accesses
+    GetDmChannelIdUseCase ..> ChannelRepository : accesses
+
+    %% Repository Implementation -> Repository Interface
+    FriendRepository <|.. FriendRepositoryImpl : implements
+    FriendRequestRepository <|.. FriendRequestRepositoryImpl : implements
+    UserRepository <|.. UserRepositoryImpl : implements
+    ChannelRepository <|.. ChannelRepositoryImpl : implements
+
+    %% Repository Implementation -> DataSource Interface (Remote Only)
+    FriendRepositoryImpl ..> FriendRemoteDataSource : uses
+    FriendRequestRepositoryImpl ..> FriendRemoteDataSource : uses
+    FriendRequestRepositoryImpl ..> UserRemoteDataSource : uses %% For nickname search to get UID
+    UserRepositoryImpl ..> UserRemoteDataSource : uses
+    ChannelRepositoryImpl ..> DMChannelRemoteDataSource : uses
+
+    %% DataSource Implementation -> DataSource Interface
+    FriendRemoteDataSource <|.. FriendRemoteDataSourceImpl : implements
+    UserRemoteDataSource <|.. UserRemoteDataSourceImpl : implements
+    DMChannelRemoteDataSource <|.. DMChannelRemoteDataSourceImpl : implements

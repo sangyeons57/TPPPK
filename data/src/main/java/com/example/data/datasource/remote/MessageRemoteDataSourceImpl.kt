@@ -1,8 +1,10 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.MessageDTO
-import com.example.data.model._remote.ReactionDTO
+import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.MessageDTO
+import com.example.data.model.remote.ReactionDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -21,13 +23,10 @@ class MessageRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : MessageRemoteDataSource {
 
-    companion object {
-        private const val MESSAGES_COLLECTION = "messages"
-        private const val REACTIONS_COLLECTION = "reactions"
-    }
+    // FirestoreConstants에서 정의된 상수 사용
 
     private fun getMessagesCollection(channelPath: String) =
-        firestore.collection(channelPath).document().parent.collection(MESSAGES_COLLECTION)
+        firestore.collection(channelPath).document().parent.collection(FirestoreConstants.MessageFields.Messages.COLLECTION_NAME)
 
 
     override fun observeMessages(channelPath: String, limit: Long): Flow<List<MessageDTO>> {
@@ -35,25 +34,24 @@ class MessageRemoteDataSourceImpl @Inject constructor(
             return kotlinx.coroutines.flow.flow { throw IllegalArgumentException("Channel path cannot be empty.") }
         }
         return getMessagesCollection(channelPath)
-            .orderBy("sentAt", Query.Direction.DESCENDING)
+            .orderBy(FirestoreConstants.MessageFields.SENT_AT, Query.Direction.DESCENDING)
             .limit(limit)
             .dataObjects()
     }
 
-    override suspend fun getMessage(channelPath: String, messageId: String): Result<MessageDTO?> = withContext(Dispatchers.IO) {
+    override suspend fun getMessage(channelPath: String, messageId: String): CustomResult<MessageDTO?, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             if (channelPath.isBlank() || messageId.isBlank()) {
                 throw IllegalArgumentException("Channel path and message ID cannot be empty.")
             }
-            val document = getMessagesCollection(channelPath).document(messageId).get().await()
-            document.toObject(MessageDTO::class.java)
+            val document = getMessagesCollection(channelPath).document(messageId).get()
         }
     }
 
     override suspend fun sendMessage(
         channelPath: String,
         content: String
-    ): Result<String> = withContext(Dispatchers.IO) {
+    ): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val user = auth.currentUser ?: throw Exception("User not logged in.")
             
@@ -72,11 +70,11 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         channelPath: String,
         messageId: String,
         newContent: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val updateData = mapOf(
-                "content" to newContent,
-                "updatedAt" to FieldValue.serverTimestamp()
+                FirestoreConstants.MessageFields.SEND_MESSAGE to newContent,
+                FirestoreConstants.MessageFields.UPDATED_AT to FieldValue.serverTimestamp()
             )
             getMessagesCollection(channelPath).document(messageId)
                 .update(updateData).await()
@@ -87,9 +85,9 @@ class MessageRemoteDataSourceImpl @Inject constructor(
     override suspend fun deleteMessage(
         channelPath: String,
         messageId: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
-            val deleteUpdate = mapOf("isDeleted" to true)
+            val deleteUpdate = mapOf(FirestoreConstants.MessageFields.IS_DELETED to true)
             getMessagesCollection(channelPath).document(messageId)
                 .update(deleteUpdate).await()
             Unit
@@ -97,7 +95,7 @@ class MessageRemoteDataSourceImpl @Inject constructor(
     }
 
     private fun getReactionsCollection(channelPath: String, messageId: String) =
-        getMessagesCollection(channelPath).document(messageId).collection(REACTIONS_COLLECTION)
+        getMessagesCollection(channelPath).document(messageId).collection(FirestoreConstants.MessageFields.Attachments.COLLECTION_NAME)
 
     override fun observeReactions(channelPath: String, messageId: String): Flow<List<ReactionDTO>> {
         return getReactionsCollection(channelPath, messageId).dataObjects()
@@ -107,7 +105,7 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         channelPath: String,
         messageId: String,
         emoji: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             val newReaction = ReactionDTO(userId = uid, emoji = emoji)
@@ -122,7 +120,7 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         channelPath: String,
         messageId: String,
         emoji: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             
@@ -141,12 +139,11 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
+    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         return try {
-            Result.success(block())
-        } catch (e: Throwable) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
+            CustomResult.Success(block())
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
         }
     }
 }

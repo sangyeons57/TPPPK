@@ -1,8 +1,9 @@
-
 package com.example.data.datasource.remote
 
 import android.net.Uri
-import com.example.data.model._remote.UserDTO
+import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.UserDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -25,18 +26,14 @@ class UserRemoteDataSourceImpl @Inject constructor(
     private val storage: FirebaseStorage
 ) : UserRemoteDataSource {
 
-    companion object {
-        private const val USERS_COLLECTION = "users"
-        private const val PROFILE_IMAGES_PATH = "profile_images"
-    }
 
-    private val usersCollection = firestore.collection(USERS_COLLECTION)
+    private val usersCollection = firestore.collection(FirestoreConstants.Collections.USERS)
     
     private fun getCurrentUserIdOrThrow(): String {
         return auth.currentUser?.uid ?: throw Exception("User not logged in.")
     }
 
-    override suspend fun getMyUserInfo(): Result<UserDTO> = withContext(Dispatchers.IO) {
+    override suspend fun getMyUserInfo(): CustomResult<UserDTO, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
             val document = usersCollection.document(uid).get().await()
@@ -45,36 +42,36 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override fun observeUser(userId: String): Flow<Result<UserDTO>> = callbackFlow {
+    override fun observeUser(userId: String): Flow<CustomResult<UserDTO, Exception>> = callbackFlow {
         val listenerRegistration = usersCollection.document(userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(Result.failure(error))
+                    trySend(CustomResult.Failure(error))
                     close(error)
                     return@addSnapshotListener
                 }
                 if (snapshot != null && snapshot.exists()) {
                     val user = snapshot.toObject(UserDTO::class.java)
                     if (user != null) {
-                        trySend(Result.success(user))
+                        trySend(CustomResult.Success(user))
                     } else {
-                        trySend(Result.failure(Exception("Failed to parse user data.")))
+                        trySend(CustomResult.Failure(Exception("Failed to parse user data.")))
                     }
                 } else {
-                     trySend(Result.failure(Exception("User document does not exist.")))
+                     trySend(CustomResult.Failure(Exception("User document does not exist.")))
                 }
             }
         awaitClose { listenerRegistration.remove() }
     }
 
-    override suspend fun createUser(user: UserDTO): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun createUser(user: UserDTO): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             usersCollection.document(user.uid).set(user).await()
             Unit
         }
     }
 
-    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
             val updates = mutableMapOf<String, Any?>()
@@ -87,7 +84,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
     
-    override suspend fun updateFcmToken(token: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateFcmToken(token: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
             usersCollection.document(uid).update("fcmToken", token).await()
@@ -95,11 +92,11 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun uploadProfileImage(imageUri: Uri): Result<String> = withContext(Dispatchers.IO) {
+    override suspend fun uploadProfileImage(imageUri: Uri): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
             val storageRef = storage.reference
-            val imageRef = storageRef.child("$PROFILE_IMAGES_PATH/$uid/${UUID.randomUUID()}.jpg")
+            val imageRef = storageRef.child("profile_images/$uid/${UUID.randomUUID()}.jpg")
 
             imageRef.putFile(imageUri).await()
             val downloadUrl = imageRef.downloadUrl.await()
@@ -107,7 +104,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun searchUsersByName(nameQuery: String): Result<List<UserDTO>> = withContext(Dispatchers.IO) {
+    override suspend fun searchUsersByName(nameQuery: String): CustomResult<List<UserDTO>, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             // Firestore에서 효율적인 검색을 구현하려면 Algolia 같은 외부 검색 서비스를 연동하는 것이 좋습니다.
             // "name" 필드에 대한 색인이 필요합니다.
@@ -123,7 +120,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun checkNicknameAvailability(nickname: String): Result<Boolean> = withContext(Dispatchers.IO) {
+    override suspend fun checkNicknameAvailability(nickname: String): CustomResult<Boolean, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val querySnapshot = usersCollection
                 .whereEqualTo("name", nickname)
@@ -135,7 +132,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateUserStatus(status: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateUserStatus(status: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
             usersCollection.document(uid).update(mapOf(
@@ -146,7 +143,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateUserAccountStatus(accountStatus: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateUserAccountStatus(accountStatus: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
             usersCollection.document(uid).update(mapOf(
@@ -157,7 +154,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateUserMemo(memo: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateUserMemo(memo: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
             usersCollection.document(uid).update(mapOf(
@@ -168,12 +165,12 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
+    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         return try {
-            Result.success(block())
-        } catch (e: Throwable) {
+            CustomResult.Success(block())
+        } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
+            CustomResult.Failure(e)
         }
     }
 }

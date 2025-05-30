@@ -1,5 +1,6 @@
 package com.example.domain.usecase.friend
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.FriendRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -18,7 +19,7 @@ class AcceptFriendRequestUseCase @Inject constructor(
      * @param requesterId 수락할 친구 요청을 보낸 사용자의 ID.
      * @return 성공 시 Unit이 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(requesterId: String): Result<Unit> {
-        return friendRepository.acceptFriendRequest(requesterId)
+    suspend operator fun invoke(requesterId: String, currentUserId: String): CustomResult<Unit, Exception> {
+        return friendRepository.acceptFriendRequest(requesterId, currentUserId)
     }
 } 

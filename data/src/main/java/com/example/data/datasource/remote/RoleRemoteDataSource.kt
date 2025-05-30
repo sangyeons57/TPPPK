@@ -1,7 +1,7 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.RoleDTO
+import com.example.data.model.remote.RoleDTO
 import kotlinx.coroutines.flow.Flow
 
 interface RoleRemoteDataSource {

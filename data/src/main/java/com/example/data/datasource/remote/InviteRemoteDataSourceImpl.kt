@@ -1,14 +1,16 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.InviteDTO
+import com.example.data.model.remote.InviteDTO
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
 import com.google.firebase.firestore.ktx.toObject
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -31,7 +33,8 @@ class InviteRemoteDataSourceImpl @Inject constructor(
             .collection(INVITES_COLLECTION)
 
     override fun observeInvites(projectId: String): Flow<List<InviteDTO>> {
-        return getInvitesCollection(projectId).dataObjects()
+        return getInvitesCollection(projectId).snapshots()
+            .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(InviteDTO::class.java) } }
     }
 
     override suspend fun createInvite(

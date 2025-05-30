@@ -1,7 +1,8 @@
 package com.example.domain.usecase.project.role
 
-import com.example.domain.model.RolePermission
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Permission
+import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -23,15 +24,15 @@ interface UpdateProjectRoleUseCase {
         projectId: String,
         roleId: String,
         name: String? = null,
-        permissions: List<RolePermission>? = null,
+        permissions: List<Permission>? = null,
         isDefault: Boolean? = null
-    ): Result<Unit>
+    ): CustomResult<Unit, Exception>
 }
 /**
  * Implementation of [UpdateProjectRoleUseCase].
  */
 class UpdateProjectRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: ProjectRoleRepository
+    private val projectRoleRepository: RoleRepository
 ) : UpdateProjectRoleUseCase {
 
     /**
@@ -48,18 +49,18 @@ class UpdateProjectRoleUseCaseImpl @Inject constructor(
         projectId: String,
         roleId: String,
         name: String?,
-        permissions: List<RolePermission>?,
+        permissions: List<Permission>?,
         isDefault: Boolean?
-    ): Result<Unit> {
+    ): CustomResult<Unit, Exception> {
         // Fetch the current role details to get existing values if not provided
         val currentRoleResult = projectRoleRepository.getRoleDetails(projectId, roleId)
 
         if (currentRoleResult.isFailure) {
-            return Result.failure(currentRoleResult.exceptionOrNull() ?: Exception("Failed to fetch current role details."))
+            return CustomResult.Failure(currentRoleResult.exceptionOrNull() ?: Exception("Failed to fetch current role details."))
         }
 
         val currentRole = currentRoleResult.getOrNull()
-            ?: return Result.failure(Exception("Role with ID $roleId not found in project $projectId."))
+            ?: return CustomResult.Failure(Exception("Role with ID $roleId not found in project $projectId."))
 
         // Use provided values or fallback to current role's values for name and permissions
         val updatedName = name ?: currentRole.name

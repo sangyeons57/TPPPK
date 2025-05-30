@@ -1,8 +1,9 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.MessageDTO
-import com.example.data.model._remote.ReactionDTO
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.MessageDTO
+import com.example.data.model.remote.ReactionDTO
 import kotlinx.coroutines.flow.Flow
 
 interface MessageRemoteDataSource {
@@ -19,7 +20,7 @@ interface MessageRemoteDataSource {
      * @param channelPath 메시지를 가져올 채널의 전체 경로
      * @param messageId 가져올 메시지의 ID
      */
-    suspend fun getMessage(channelPath: String, messageId: String): Result<MessageDTO?>
+    suspend fun getMessage(channelPath: String, messageId: String): CustomResult<MessageDTO?, Exception>
 
     /**
      * 특정 채널에 메시지를 전송합니다.
@@ -27,7 +28,7 @@ interface MessageRemoteDataSource {
      * @param content 보낼 메시지의 내용
      * @return 생성된 메시지의 ID를 포함한 Result 객체
      */
-    suspend fun sendMessage(channelPath: String, content: String): Result<String>
+    suspend fun sendMessage(channelPath: String, content: String): CustomResult<String, Exception>
 
     /**
      * 메시지 내용을 수정합니다.
@@ -35,14 +36,14 @@ interface MessageRemoteDataSource {
      * @param messageId 수정할 메시지의 ID
      * @param newContent 새로운 메시지 내용
      */
-    suspend fun updateMessage(channelPath: String, messageId: String, newContent: String): Result<Unit>
+    suspend fun updateMessage(channelPath: String, messageId: String, newContent: String): CustomResult<Unit, Exception>
 
     /**
      * 메시지를 삭제(soft delete)합니다.
      * @param channelPath 대상 채널의 전체 경로
      * @param messageId 삭제할 메시지의 ID
      */
-    suspend fun deleteMessage(channelPath: String, messageId: String): Result<Unit>
+    suspend fun deleteMessage(channelPath: String, messageId: String): CustomResult<Unit, Exception>
 
     /**
      * 특정 메시지의 리액션 목록을 실시간으로 관찰합니다.
@@ -57,7 +58,7 @@ interface MessageRemoteDataSource {
      * @param messageId 리액션을 추가할 메시지의 ID
      * @param emoji 추가할 이모지
      */
-    suspend fun addReaction(channelPath: String, messageId: String, emoji: String): Result<Unit>
+    suspend fun addReaction(channelPath: String, messageId: String, emoji: String): CustomResult<Unit, Exception>
 
     /**
      * 메시지에서 리액션을 제거합니다.
@@ -65,6 +66,6 @@ interface MessageRemoteDataSource {
      * @param messageId 리액션을 제거할 메시지의 ID
      * @param emoji 제거할 이모지
      */
-    suspend fun removeReaction(channelPath: String, messageId: String, emoji: String): Result<Unit>
+    suspend fun removeReaction(channelPath: String, messageId: String, emoji: String): CustomResult<Unit, Exception>
 }
 

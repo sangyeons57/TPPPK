@@ -1,12 +1,13 @@
 package com.example.domain.model.base
 
 import com.example.domain.model._new.enum.ScheduleStatus
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 
-data class ScheduleDTO(
+/**
+ * 일정 정보를 나타내는 도메인 모델 클래스
+ */
+data class Schedule(
     @DocumentId val id: String = "",
     val title: String = "",
     val content: String = "",

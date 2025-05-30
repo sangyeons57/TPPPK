@@ -1,7 +1,7 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.ProjectChannelDTO
+import com.example.data.model.remote.ProjectChannelDTO
 import kotlinx.coroutines.flow.Flow
 
 interface ProjectChannelRemoteDataSource {

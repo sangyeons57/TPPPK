@@ -1,8 +1,7 @@
 package com.example.domain.usecase.project.member
 
-import com.example.domain.model.ProjectMember
-import com.example.domain.model.project.MemberSortOption
-import com.example.domain.repository.ProjectMemberRepository
+import com.example.domain.model.base.Member
+import com.example.domain.repository.MemberRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -23,14 +22,14 @@ interface GetProjectMembersUseCase {
         projectId: String,
         roleIdFilter: String? = null,
         sortBy: MemberSortOption? = null
-    ): Flow<List<ProjectMember>>
+    ): Flow<List<Member>>
 }
 
 /**
  * Implementation of [GetProjectMembersUseCase].
  */
 class GetProjectMembersUseCaseImpl @Inject constructor(
-    private val projectMemberRepository: ProjectMemberRepository
+    private val projectMemberRepository: MemberRepository
 ) : GetProjectMembersUseCase {
 
     /**
@@ -45,7 +44,7 @@ class GetProjectMembersUseCaseImpl @Inject constructor(
         projectId: String,
         roleIdFilter: String?,
         sortBy: MemberSortOption?
-    ): Flow<List<ProjectMember>> {
+    ): Flow<List<Member>> {
         return projectMemberRepository.getProjectMembersStream(projectId).map { members ->
             val filteredMembers = if (roleIdFilter != null) {
                 members.filter { member -> member.roles.any { role -> role.id == roleIdFilter } }

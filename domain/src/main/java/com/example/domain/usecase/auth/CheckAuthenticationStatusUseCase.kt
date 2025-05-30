@@ -1,5 +1,6 @@
 package com.example.domain.usecase.auth
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.AuthRepository
 import javax.inject.Inject
 
@@ -28,7 +29,10 @@ class CheckAuthenticationStatusUseCaseImpl @Inject constructor(
             val isAuthenticated = authRepository.isLoggedIn()
             
             val isEmailVerified = if (isAuthenticated) {
-                authRepository.checkEmailVerification().getOrDefault(false)
+                when (val result = authRepository.checkEmailVerification() ){
+                    is CustomResult.Success<Boolean> -> result.data
+                    else -> false
+                }
             } else {
                 false
             }

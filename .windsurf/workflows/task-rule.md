@@ -7,7 +7,7 @@ description: Rule to follow when you have a lot of work to do and it is difficul
 1.  **Identify Large Task:** If a user request involves significant changes that cannot be reliably completed in a single response, activate this process.
 2.  **Break Down Task:** Decompose the overall task into smaller, logical, sequential steps.
 3.  **Create Task File:**
-    *   Create a new markdown file inside the `.cursor/tasks/` directory. Name it descriptively based on the task (e.g., `refactor_feature_xyz.md`).
+    *   Create a new markdown file inside the `.tasks/` directory. Name it descriptively based on the task (e.g., `refactor_feature_xyz.md`).
     *   List the decomposed steps as a markdown checklist in the file:
         ```markdown
         # Task: [Brief Task Description]

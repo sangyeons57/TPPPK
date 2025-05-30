@@ -1,13 +1,17 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.DMChannelDTO
+import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.DMChannelDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -19,17 +23,17 @@ class DMChannelRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : DMChannelRemoteDataSource {
 
-    companion object {
-        private const val DM_CHANNELS_COLLECTION = "dm_channels"
-    }
+    // FirestoreConstants에서 정의된 상수 사용
 
-    private val channelsCollection = firestore.collection(DM_CHANNELS_COLLECTION)
+    private val channelsCollection = firestore.collection(FirestoreConstants.Collections.DM_CHANNELS)
 
     override fun observeDMChannel(channelId: String): Flow<DMChannelDTO?> {
-        return channelsCollection.document(channelId).dataObjects()
+        return channelsCollection.document(channelId)
+            .snapshots()
+            .map { snapshot -> snapshot.toObject(DMChannelDTO::class.java) }
     }
 
-    override suspend fun findOrCreateDMChannel(otherUserId: String): Result<String> = withContext(Dispatchers.IO) {
+    override suspend fun findOrCreateDMChannel(otherUserId: String): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val myUid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             
@@ -57,7 +61,7 @@ class DMChannelRemoteDataSourceImpl @Inject constructor(
     override suspend fun updateLastMessage(
         channelId: String,
         messagePreview: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val updateData = mapOf(
                 "lastMessagePreview" to messagePreview,
@@ -69,12 +73,12 @@ class DMChannelRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
+    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         return try {
-            Result.success(block())
-        } catch (e: Throwable) {
+            CustomResult.Success(block())
+        } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
+            CustomResult.Failure(e)
         }
     }
 }

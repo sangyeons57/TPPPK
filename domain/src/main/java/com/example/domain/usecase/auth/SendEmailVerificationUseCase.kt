@@ -1,5 +1,6 @@
 package com.example.domain.usecase.auth
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.AuthRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -19,7 +20,7 @@ class SendEmailVerificationUseCase @Inject constructor(
      * @return 성공 시 [Result.success] Unit, 실패 시 [Result.failure] Throwable을 반환합니다.
      *         네트워크 오류, 사용자 세션 만료 등의 이유로 실패할 수 있습니다.
      */
-    suspend operator fun invoke(): Result<Unit> {
+    suspend operator fun invoke(): CustomResult<Unit, Exception> {
         return authRepository.sendEmailVerification()
     }
 } 

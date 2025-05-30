@@ -1,7 +1,10 @@
 package com.example.domain.usecase.auth
 
-import com.example.domain.model.User
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.repository.AuthRepository
+import com.example.domain.repository.UserRepository
+import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
 import kotlin.Result
@@ -14,6 +17,7 @@ import kotlin.Result
  */
 class SignUpUseCase @Inject constructor(
     private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
 ) {
     /**
      * 이메일, 비밀번호, 닉네임을 이용하여 회원가입을 수행합니다.
@@ -32,9 +36,34 @@ class SignUpUseCase @Inject constructor(
         password: String, 
         nickname: String,
         consentTimeStamp: Instant = Instant.now()
-    ): Result<User?> {
+    ): CustomResult<User, Exception> {
 
+        val uid = authRepository.signup(email, password)
+        return when (uid){
+            is CustomResult.Failure<*> ->
+                TODO()
+            is CustomResult.Success<String> -> {
+                val user = User (
+                    uid = uid.data,
+                    email = email,
+                    name = nickname,
+                    consentTimeStamp = consentTimeStamp
+                )
+                return when ( userRepository.createUserProfile(user) ) {
+                    is CustomResult.Failure<*> ->
+                        return CustomResult.Failure<Exception>( Exception("Failed to create user profile"))
+                    is CustomResult.Success<Unit> ->
+                        return CustomResult.Success(user)
+                    else -> {
+                        return CustomResult.Failure<Exception>( Exception("Failed to create user profile"))
+                    }
+
+                }
+            }
+            else -> {
+                TODO()
+            }
+        }
         // 회원가입 수행
-        return authRepository.signUp(email, password, nickname, consentTimeStamp)
     }
 } 

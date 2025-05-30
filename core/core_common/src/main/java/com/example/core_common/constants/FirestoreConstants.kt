@@ -6,6 +6,8 @@ package com.example.core_common.constants
  */
 object FirestoreConstants {
 
+    const val DB_NAME = "default"
+
     object Collections {
         const val USERS = "users"
         const val DM_CHANNELS = "dm_channels"
@@ -14,7 +16,7 @@ object FirestoreConstants {
         // Sub-collections will be accessed via parent paths + sub-collection name
     }
 
-    object User { // users/{userId}
+    object Users { // users/{userId}
         const val EMAIL = "email"
         const val NAME = "name"
         const val CONSENT_TIMESTAMP = "consentTimeStamp"
@@ -22,6 +24,7 @@ object FirestoreConstants {
         const val MEMO = "memo"
         const val STATUS = "status" // User's online/offline status
         const val CREATED_AT = "createdAt"
+        const val UPDATED_AT = "updatedAt"
         const val FCM_TOKEN = "fcmToken" // Note: ERD shows singular, DTO might have List
         const val ACCOUNT_STATUS = "accountStatus"
 
@@ -75,20 +78,13 @@ object FirestoreConstants {
         object Members { // projects/{projectId}/members/{userId}
             const val COLLECTION_NAME = "members"
             const val JOINED_AT = "joinedAt"
-            // ERD shows Members *-- Role, but Role has its own sub-collection.
-            // This 'Members' collection might store a roleId or roleIds list for the member.
-            // Let's assume Member DTO will have a roleId or roleIds field.
-            const val ROLE_ID = "roleId" // Assumption, or roleIds: List<String>
+            const val ROLE_ID = "roleIds" // List<String>
         }
 
         object Roles { // projects/{projectId}/roles/{roleId}
             const val COLLECTION_NAME = "roles"
             const val NAME = "name"
             const val IS_DEFAULT = "isDefault"
-            // ERD shows Role *-- Permission as SubCollection.
-            // This means a Role document might contain a list of permission strings/IDs
-            // or Permission is a sub-collection under Role. The diagram says:
-            // "Role *-- Permission : SubCollection", so Permission is a sub-collection of Role.
         }
 
         object Permissions { // projects/{projectId}/roles/{roleId}/permissions/{permissionId}

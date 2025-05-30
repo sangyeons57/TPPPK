@@ -1,6 +1,7 @@
 package com.example.domain.usecase.user
 
 import android.util.Log
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.UserRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -19,7 +20,7 @@ class CheckNicknameAvailabilityUseCase @Inject constructor(
      * @param nickname 확인할 닉네임
      * @return 성공 시 사용 가능 여부(Boolean)가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(nickname: String): Result<Boolean> {
+    suspend operator fun invoke(nickname: String): CustomResult<Boolean, Exception> {
         Log.d("CheckNicknameAvailabilityUseCase", "invoke called with nickname: $nickname")
         return userRepository.checkNicknameAvailability(nickname)
     }

@@ -3,15 +3,21 @@ package com.example.data.util
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * FirebaseAuth를 래핑하는 클래스
  * 
  * 이 클래스는 FirebaseAuth 기능을 테스트하기 쉽게 래핑합니다.
  * Mockito로 이 클래스를 테스트할 수 있습니다.
+ * 인증 상태 변경을 감지하고 Flow로 제공하는 기능을 포함합니다.
  */
+@Singleton
 class FirebaseAuthWrapper @Inject constructor(
     private val firebaseAuth: FirebaseAuth
 ) {
@@ -87,4 +93,22 @@ class FirebaseAuthWrapper @Inject constructor(
     fun signOut() {
         firebaseAuth.signOut()
     }
-} 
+    
+    /**
+     * Firebase 사용자의 인증 상태 변경을 Flow로 제공합니다.
+     * 사용자가 로그인하거나 로그아웃할 때 새로운 FirebaseUser 객체 (또는 null)를 emit 합니다.
+     */
+    fun authStateChanges(): Flow<FirebaseUser?> = callbackFlow {
+        val authStateListener = FirebaseAuth.AuthStateListener { auth ->
+            trySend(auth.currentUser).isSuccess // 최신 사용자 상태 전송
+        }
+        firebaseAuth.addAuthStateListener(authStateListener) // 리스너 등록
+
+        // 초기 상태 전송
+        trySend(firebaseAuth.currentUser).isSuccess
+
+        awaitClose {
+            firebaseAuth.removeAuthStateListener(authStateListener) // Flow가 close될 때 리스너 제거
+        }
+    }
+}

@@ -12,6 +12,7 @@ classDiagram
             +String? memo
             +String status
             +Timestamp createdAt
+            +Timestamp updatedAt
             +String fcmToken
             +String accountStatus
         }
@@ -94,6 +95,7 @@ classDiagram
             <<SubCollection>>
             // userId is the User document ID
             +Timestamp joinedAt
+            +List<String> roleIds
         }
 
         class Role["roles/{roleId}"] {
@@ -154,12 +156,12 @@ classDiagram
     Message *-- MessageAttachment : SubCollection
     DMChannel "1" *-- "0..*" Message : contains
     ProjectChannel "1" *-- "0..*" Message : contains
-    Members *-- Role : SubCollection
 
     Role *-- Permission : SubCollection
 
 
     Project *-- Members : SubCollection
+    Project *-- Role : SubCollection
     Project *-- Invite : SubCollection
     Project *-- Category : SubCollection
     Category *-- ProjectChannel : SubCollection 

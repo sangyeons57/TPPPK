@@ -1,11 +1,8 @@
 package com.example.data.repository
 
-import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.InviteRemoteDataSource
-import com.example.data.model._remote.InviteDTO
-import com.example.data.model.mapper.toDomain
-import com.example.domain.model.Invite
-import com.example.domain.model.InviteType
+import com.example.data.model.remote.InviteDTO
+import com.example.domain.model.base.Invite
 import com.example.domain.repository.InviteRepository
 import com.google.firebase.Timestamp // Timestamp 사용 시
 import kotlinx.coroutines.flow.Flow

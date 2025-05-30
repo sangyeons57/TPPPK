@@ -24,9 +24,6 @@ abstract class UseCaseModule {
     abstract fun bindGetUserUseCase(impl: GetUserUseCaseImpl): GetUserUseCase
 
     @Binds
-    abstract fun bindLogoutUseCase(impl: LogoutUseCaseImpl): LogoutUseCase
-
-    @Binds
     abstract fun bindUpdateUserStatusUseCase(impl: UpdateUserStatusUseCaseImpl): UpdateUserStatusUseCase
 
     @Binds

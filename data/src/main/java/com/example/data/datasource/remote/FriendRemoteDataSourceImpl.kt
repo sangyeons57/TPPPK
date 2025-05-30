@@ -1,15 +1,16 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.FriendDTO
+import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.FriendDTO
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.dataObjects
-import kotlinx.coroutines.Dispatchers
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,10 +20,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : FriendRemoteDataSource {
 
-    companion object {
-        private const val USERS_COLLECTION = "users"
-        private const val FRIENDS_COLLECTION = "friends"
-    }
+    // FirestoreConstants에서 정의된 상수 사용
     
     private fun getCurrentUserId(): Result<String> {
         val uid = auth.currentUser?.uid
@@ -31,28 +29,19 @@ class FriendRemoteDataSourceImpl @Inject constructor(
 
     // 현재 로그인한 사용자의 friends 컬렉션 참조
     private fun getMyFriendsCollectionRef() = auth.currentUser?.uid?.let { uid ->
-        firestore.collection(USERS_COLLECTION).document(uid).collection(FRIENDS_COLLECTION)
+        firestore.collection(FirestoreConstants.Collections.USERS).document(uid).collection(FirestoreConstants.Users.Friends.COLLECTION_NAME)
     }
 
     // 특정 사용자의 friends 컬렉션 참조 (상대방의 컬렉션을 조작할 때 사용)
     private fun getOthersFriendsCollectionRef(otherUserId: String) =
-        firestore.collection(USERS_COLLECTION).document(otherUserId).collection(FRIENDS_COLLECTION)
+        firestore.collection(FirestoreConstants.Collections.USERS).document(otherUserId).collection(FirestoreConstants.Users.Friends.COLLECTION_NAME)
 
 
     override fun observeFriends(): Flow<List<FriendDTO>> {
         return getMyFriendsCollectionRef()
-            ?.whereEqualTo("status", "accepted")
-            ?.dataObjects()
-            ?: kotlinx.coroutines.flow.flow { throw Exception("User not logged in or collection path is invalid.") }
-    }
-
-    override fun observeFriendRequests(): Flow<List<FriendDTO>> {
-        // 이 함수는 "나에게 온 친구 요청"을 의미합니다.
-        // 즉, 내 friends 컬렉션에서 status가 "pending"인 문서를 찾습니다.
-        // 이 문서의 friendName, friendProfileImageUrl 필드에는 나에게 요청을 보낸 사람의 정보가 들어있어야 합니다.
-        return getMyFriendsCollectionRef()
-            ?.whereEqualTo("status", "pending")
-            ?.dataObjects()
+            ?.whereEqualTo(FirestoreConstants.Users.Friends.STATUS, "accepted")
+            ?.snapshots()
+            ?.map { snapshot -> snapshot.documents.mapNotNull { it.toObject(FriendDTO::class.java) } }
             ?: kotlinx.coroutines.flow.flow { throw Exception("User not logged in or collection path is invalid.") }
     }
 
@@ -60,8 +49,8 @@ class FriendRemoteDataSourceImpl @Inject constructor(
         friendId: String, // 내가 요청을 보내는 상대방의 User ID
         myName: String,   // 상대방의 friends 컬렉션에 저장될 나의 이름
         myProfileImageUrl: String? // 상대방의 friends 컬렉션에 저장될 나의 프로필 이미지
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        resultTry {
+    ): CustomResult<Unit, Exception> {
+        return resultTry {
             val myUid = getCurrentUserId().getOrThrow() // 나의 User ID
 
             firestore.runTransaction { transaction ->
@@ -88,6 +77,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 //    friendName, friendProfileImageUrl 필드에는 나의 정보를 저장.
                 val theirFriendDocRef = getOthersFriendsCollectionRef(friendId).document(myUid)
                 val theirFriendData = FriendDTO(
+                    friendUid = myUid,
                     friendName = myName,
                     friendProfileImageUrl = myProfileImageUrl,
                     status = "pending",
@@ -101,13 +91,13 @@ class FriendRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun acceptFriendRequest(
         requesterId: String // 나에게 친구 요청을 보낸 사람의 User ID (내 friends 컬렉션의 문서 ID)
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        resultTry {
+    ): CustomResult<Unit, Exception> {
+        return resultTry {
             val myUid = getCurrentUserId().getOrThrow()
-            
+
             firestore.runBatch { batch ->
                 val now = Timestamp.now()
-                val updateData = mapOf("status" to "accepted", "acceptedAt" to now)
+                val updateData = mapOf(FirestoreConstants.Users.Friends.STATUS to "accepted", FirestoreConstants.Users.Friends.ACCEPTED_AT to now)
 
                 // 1. 나의 friends 컬렉션에서 해당 요청 문서의 상태를 "accepted"로 변경
                 val myFriendDocRef = getMyFriendsCollectionRef()?.document(requesterId)
@@ -123,8 +113,8 @@ class FriendRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun removeOrDenyFriend(
         friendId: String // 나와의 관계를 끊을 상대방 User ID (내 friends 컬렉션의 문서 ID)
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        resultTry {
+    ): CustomResult<Unit, Exception> {
+        return resultTry {
             val myUid = getCurrentUserId().getOrThrow()
 
             firestore.runBatch { batch ->
@@ -132,7 +122,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 val myFriendDocRef = getMyFriendsCollectionRef()?.document(friendId)
                     ?: throw Exception("Failed to get my friends collection reference for friend.")
                 batch.delete(myFriendDocRef)
-                
+
                 // 2. 상대방의 friends 컬렉션에서 나의 문서 삭제
                 val theirFriendDocRef = getOthersFriendsCollectionRef(friendId).document(myUid)
                 batch.delete(theirFriendDocRef)
@@ -140,12 +130,11 @@ class FriendRemoteDataSourceImpl @Inject constructor(
         }
     }
     
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
+    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         return try {
-            Result.success(block())
-        } catch (e: Throwable) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
+            CustomResult.Success(block())
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
         }
     }
 }

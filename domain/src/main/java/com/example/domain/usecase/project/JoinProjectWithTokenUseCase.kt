@@ -1,5 +1,6 @@
 package com.example.domain.usecase.project
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.ProjectRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -18,7 +19,8 @@ class JoinProjectWithTokenUseCase @Inject constructor(
      * @param token 프로젝트 초대 토큰
      * @return 성공 시 프로젝트 ID가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(token: String): Result<String> {
-        return projectRepository.joinProjectWithToken(token)
+    suspend operator fun invoke(token: String): CustomResult<String, Exception> {
+        //return projectRepository.joinProjectWithToken(token)
+        return CustomResult.Failure(Exception("미구현 사용할지 고민중"))
     }
 } 

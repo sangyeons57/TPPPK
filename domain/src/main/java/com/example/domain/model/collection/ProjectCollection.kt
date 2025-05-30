@@ -1,8 +1,9 @@
 package com.example.domain.model.collection
 
-import com.example.domain.model.Project
-import com.example.domain.model.Member
-import com.example.domain.model.Invite
+import com.example.domain.model.base.Invite
+import com.example.domain.model.base.Member
+import com.example.domain.model.base.Project
+
 // RoleCollection과 CategoryCollection은 같은 패키지 내에 있으므로 별도 import 불필요
 
 data class ProjectCollection(

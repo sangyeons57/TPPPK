@@ -1,7 +1,9 @@
 package com.example.domain.usecase.project.member
 
-import com.example.domain.model.ProjectMember
-import com.example.domain.repository.ProjectMemberRepository
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Member
+import com.example.domain.repository.MemberRepository
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import kotlin.Result
 
@@ -16,13 +18,13 @@ interface GetProjectMemberUseCase {
      * @param userId The ID of the user (member) to retrieve.
      * @return A [Result] containing the [ProjectMember] if found, or null if not found, or an error.
      */
-    suspend operator fun invoke(projectId: String, userId: String): Result<ProjectMember?>
+    suspend operator fun invoke(projectId: String, userId: String): Flow<CustomResult<Member, Exception>>
 }
 /**
  * Implementation of [GetProjectMemberUseCase].
  */
 class GetProjectMemberUseCaseImpl @Inject constructor(
-    private val projectMemberRepository: ProjectMemberRepository
+    private val projectMemberRepository: MemberRepository
 ) : GetProjectMemberUseCase {
 
     /**
@@ -32,9 +34,9 @@ class GetProjectMemberUseCaseImpl @Inject constructor(
      * @param userId The ID of the user (member) to retrieve.
      * @return A [Result] containing the [ProjectMember] if found, or null if not found, or an error.
      */
-    override suspend fun invoke(projectId: String, userId: String): Result<ProjectMember?> {
+    override suspend fun invoke(projectId: String, userId: String): Flow<CustomResult<Member, Exception>> {
         // The repository's getProjectMember already handles forceRefresh if needed by its own logic.
         // Here we directly call it.
-        return projectMemberRepository.getProjectMember(projectId, userId)
+        return projectMemberRepository.getProjectMemberStream(projectId, userId)
     }
 }

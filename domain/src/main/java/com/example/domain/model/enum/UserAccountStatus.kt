@@ -1,4 +1,4 @@
-package com.example.domain.model._new.enum
+package com.example.domain.model.enum
 
 /**
  * 사용자의 계정 상태를 나타내는 열거형입니다.

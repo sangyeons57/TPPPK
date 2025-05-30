@@ -1,11 +1,15 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.MemberDTO
+import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.MemberDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -26,13 +30,14 @@ class MemberRemoteDataSourceImpl @Inject constructor(
             .collection(MEMBERS_COLLECTION)
 
     override fun observeMembers(projectId: String): Flow<List<MemberDTO>> {
-        return getMembersCollection(projectId).dataObjects()
+        return getMembersCollection(projectId).snapshots()
+            .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(MemberDTO::class.java) } }
     }
     
     override suspend fun getProjectMember(
         projectId: String,
         userId: String
-    ): Result<MemberDTO?> = withContext(Dispatchers.IO) {
+    ): CustomResult<MemberDTO?, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             if (projectId.isBlank() || userId.isBlank()) {
                 throw IllegalArgumentException("Project ID and User ID cannot be empty.")
@@ -45,12 +50,12 @@ class MemberRemoteDataSourceImpl @Inject constructor(
     override suspend fun addMember(
         projectId: String,
         userId: String,
-        roleId: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+        roleIds: List<String>
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             // MemberDTO에는 joinedAt (ServerTimestamp)과 roleId만 저장됩니다.
             // Class Diagram에 따르면 Members 엔티티의 문서 ID는 userId 입니다.
-            val newMember = MemberDTO(roleId = roleId) // joinedAt은 DTO의 @ServerTimestamp로 자동 설정
+            val newMember = MemberDTO(roleIds = roleIds) // joinedAt은 DTO의 @ServerTimestamp로 자동 설정
             getMembersCollection(projectId).document(userId)
                 .set(newMember).await()
             Unit
@@ -60,14 +65,11 @@ class MemberRemoteDataSourceImpl @Inject constructor(
     override suspend fun updateMemberRole(
         projectId: String,
         userId: String,
-        newRoleId: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+        newRoleIds: List<String>
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
-            // Class Diagram의 Members 엔티티에는 roleId 필드가 명시되어 있지 않지만,
-            // 멤버의 역할을 변경하는 기능이 필요하므로, MemberDTO에 roleId 필드를 추가했고,
-            // 이 필드를 업데이트합니다.
             val updateData = mapOf(
-                "roleId" to newRoleId,
+                FirestoreConstants.Collections.Members.ROLE_IDS to newRoleIds,
                 // 역할 변경 시 joinedAt은 변경하지 않으므로, 업데이트 맵에 포함하지 않습니다.
                 // 만약 joinedAt도 업데이트해야 한다면 FieldValue.serverTimestamp()를 사용할 수 있으나,
                 // 보통 역할 변경 시 가입 시간은 유지됩니다.
@@ -81,7 +83,7 @@ class MemberRemoteDataSourceImpl @Inject constructor(
     override suspend fun removeMember(
         projectId: String,
         userId: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             getMembersCollection(projectId).document(userId)
                 .delete().await()
@@ -89,12 +91,12 @@ class MemberRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
+    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         return try {
-            Result.success(block())
+            CustomResult.Success(block())
         } catch (e: Throwable) {
             if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
+            CustomResult.Failure(e)
         }
     }
 }

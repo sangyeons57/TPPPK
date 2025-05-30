@@ -1,7 +1,7 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.MessageAttachmentDTO
+import com.example.data.model.remote.MessageAttachmentDTO
 import kotlinx.coroutines.flow.Flow
 
 interface MessageAttachmentRemoteDataSource {

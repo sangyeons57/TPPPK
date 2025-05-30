@@ -1,13 +1,17 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.ProjectDTO
+import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.ProjectDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -19,33 +23,31 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ProjectRemoteDataSource {
 
-    companion object {
-        private const val PROJECTS_COLLECTION = "projects"
-    }
+    // FirestoreConstants에서 정의된 상수 사용
 
-    private val projectsCollection = firestore.collection(PROJECTS_COLLECTION)
+    private val projectsCollection = firestore.collection(FirestoreConstants.Collections.PROJECTS)
 
     override fun observeProject(projectId: String): Flow<ProjectDTO?> {
-        return projectsCollection.document(projectId).dataObjects()
+        return projectsCollection.document(projectId).snapshots()
+            .map { snapshot -> snapshot.toObject(ProjectDTO::class.java) }
     }
 
-    override suspend fun getProject(projectId: String): Result<ProjectDTO?> = withContext(Dispatchers.IO) {
-        resultTry {
+    override suspend fun getProject(projectId: String): CustomResult<ProjectDTO, Exception> = withContext(Dispatchers.IO) {
+        resultTry<ProjectDTO> {
             if (projectId.isBlank()) {
-                throw IllegalArgumentException("Project ID cannot be empty.")
+                throw Exception("Invalid project ID.")
             }
             val document = projectsCollection.document(projectId).get().await()
-            document.toObject(ProjectDTO::class.java)
+            return@resultTry document.toObject<ProjectDTO>(ProjectDTO::class.java) ?: throw Exception("Project not found.")
         }
     }
 
-    override suspend fun createProject(name: String, isPublic: Boolean): Result<String> = withContext(Dispatchers.IO) {
+    override suspend fun createProject(name: String): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             
             val newProject = ProjectDTO(
                 name = name,
-                isPublic = isPublic,
                 ownerId = uid
                 // createdAt, updatedAt은 DTO에서 @ServerTimestamp로 자동 설정됩니다.
             )
@@ -59,7 +61,7 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
         projectId: String,
         name: String,
         imageUrl: String?
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val updateData = mutableMapOf<String, Any?>()
             updateData["name"] = name
@@ -74,7 +76,7 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteProject(projectId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteProject(projectId: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             // 경고: 이 작업은 프로젝트 문서 자체만 삭제합니다.
             // 하위 컬렉션(members, roles 등)은 삭제되지 않으므로,
@@ -85,12 +87,11 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
     }
 
     // 사용자님이 제공해주신 코드와 동일한 역할을 하는 헬퍼 함수
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
+    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         return try {
-            Result.success(block())
-        } catch (e: Throwable) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
+            CustomResult.Success(block())
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
         }
     }
 }

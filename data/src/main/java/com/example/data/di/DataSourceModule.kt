@@ -1,25 +1,31 @@
 package com.example.data.di
 
-import com.example.data.datasource.remote.friend.FriendRemoteDataSource
-import com.example.data.datasource.remote.friend.FriendRemoteDataSourceImpl
-import com.example.data.datasource.remote.invite.InviteRemoteDataSource
-import com.example.data.datasource.remote.invite.InviteRemoteDataSourceImpl
-import com.example.data.datasource.remote.projectmember.ProjectMemberRemoteDataSource
-import com.example.data.datasource.remote.projectmember.ProjectMemberRemoteDataSourceImpl
-import com.example.data.datasource.remote.projectrole.ProjectRoleRemoteDataSource
-import com.example.data.datasource.remote.projectrole.ProjectRoleRemoteDataSourceImpl
-import com.example.data.datasource.remote.schedule.ScheduleRemoteDataSource
-import com.example.data.datasource.remote.schedule.ScheduleRemoteDataSourceImpl
-import com.example.data.datasource.remote.project.ProjectRemoteDataSource
-import com.example.data.datasource.remote.project.ProjectRemoteDataSourceImpl
-import com.example.data.datasource.remote.channel.ChannelRemoteDataSource
-import com.example.data.datasource.remote.channel.ChannelRemoteDataSourceImpl
-import com.example.data.datasource.remote.message.MessageRemoteDataSource
-import com.example.data.datasource.remote.message.MessageRemoteDataSourceImpl
-import com.example.data.datasource.remote.projectstructure.ProjectStructureRemoteDataSource
-import com.example.data.datasource.remote.projectstructure.ProjectStructureRemoteDataSourceImpl
-import com.example.data.datasource.remote.dm.DmRemoteDataSource
-import com.example.data.datasource.remote.dm.DmRemoteDataSourceImpl
+import com.example.data.datasource.remote.DMChannelRemoteDataSource
+import com.example.data.datasource.remote.DMChannelRemoteDataSourceImpl
+import com.example.data.datasource.remote.DMWrapperRemoteDataSource
+import com.example.data.datasource.remote.DMWrapperRemoteDataSourceImpl
+import com.example.data.datasource.remote.FriendRemoteDataSource
+import com.example.data.datasource.remote.FriendRemoteDataSourceImpl
+import com.example.data.datasource.remote.InviteRemoteDataSource
+import com.example.data.datasource.remote.InviteRemoteDataSourceImpl
+import com.example.data.datasource.remote.MemberRemoteDataSource
+import com.example.data.datasource.remote.MemberRemoteDataSourceImpl
+import com.example.data.datasource.remote.MessageAttachmentRemoteDataSource
+import com.example.data.datasource.remote.MessageAttachmentRemoteDataSourceImpl
+import com.example.data.datasource.remote.MessageRemoteDataSource
+import com.example.data.datasource.remote.MessageRemoteDataSourceImpl
+import com.example.data.datasource.remote.PermissionRemoteDataSource
+import com.example.data.datasource.remote.PermissionRemoteDataSourceImpl
+import com.example.data.datasource.remote.ProjectChannelRemoteDataSource
+import com.example.data.datasource.remote.ProjectChannelRemoteDataSourceImpl
+import com.example.data.datasource.remote.ProjectRemoteDataSource
+import com.example.data.datasource.remote.ProjectRemoteDataSourceImpl
+import com.example.data.datasource.remote.RoleRemoteDataSource
+import com.example.data.datasource.remote.RoleRemoteDataSourceImpl
+import com.example.data.datasource.remote.ScheduleRemoteDataSource
+import com.example.data.datasource.remote.ScheduleRemoteDataSourceImpl
+import com.example.data.datasource.remote.UserRemoteDataSource
+import com.example.data.datasource.remote.UserRemoteDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -49,10 +55,17 @@ abstract class DataSourceModule {
      */
     @Binds
     @Singleton
-    abstract fun bindProjectRoleRemoteDataSource(
-        projectRoleRemoteDataSourceImpl: ProjectRoleRemoteDataSourceImpl
-    ): ProjectRoleRemoteDataSource
-    
+    abstract fun bindRoleRemoteDataSource(
+        roleRemoteDataSourceImpl: RoleRemoteDataSourceImpl
+    ): RoleRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindPermissionRemoteDataSource(
+        roleRemoteDataSourceImpl: PermissionRemoteDataSourceImpl
+    ): PermissionRemoteDataSource
+
+
     /**
      * InviteRemoteDataSource 인터페이스 요청 시
      * InviteRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
@@ -80,18 +93,9 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindProjectMemberRemoteDataSource(
-        projectMemberRemoteDataSourceImpl: ProjectMemberRemoteDataSourceImpl
-    ): ProjectMemberRemoteDataSource
+        projectMemberRemoteDataSourceImpl: MemberRemoteDataSourceImpl
+    ): MemberRemoteDataSource
     
-    // /**
-    //  * ProjectMemberLocalDataSource 인터페이스 요청 시
-    //  * ProjectMemberLocalDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-    //  */
-    // @Binds
-    // abstract fun bindProjectMemberLocalDataSource(
-    //     projectMemberLocalDataSourceImpl: ProjectMemberLocalDataSourceImpl
-    // ): ProjectMemberLocalDataSource
-
     /**
      * ProjectRemoteDataSource 인터페이스 요청 시
      * ProjectRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
@@ -108,9 +112,16 @@ abstract class DataSourceModule {
      */
     @Binds
     @Singleton
-    abstract fun bindChannelRemoteDataSource(
-        channelRemoteDataSourceImpl: ChannelRemoteDataSourceImpl
-    ): ChannelRemoteDataSource
+    abstract fun bindProjectChannelRemoteDataSource(
+        channelRemoteDataSourceImpl: ProjectChannelRemoteDataSourceImpl
+    ): ProjectChannelRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindDMChannelRemoteDataSource(
+        channelRemoteDataSourceImpl: DMChannelRemoteDataSourceImpl
+    ): DMChannelRemoteDataSource
+
 
     /**
      * MessageRemoteDataSource 인터페이스 요청 시
@@ -124,12 +135,20 @@ abstract class DataSourceModule {
 
     @Binds
     @Singleton
-    abstract fun bindProjectStructureDataSource(projectLocalDataSourceImpl: ProjectStructureRemoteDataSourceImpl): ProjectStructureRemoteDataSource
+    abstract fun bindDMWrapperRemoteDataSource(
+        dmWrapperRemoteDataSourceImpl: DMWrapperRemoteDataSourceImpl
+    ): DMWrapperRemoteDataSource
 
     @Binds
     @Singleton
-    abstract fun bindDmRemoteDataSource(
-        dmRemoteDataSourceImpl: DmRemoteDataSourceImpl
-    ): DmRemoteDataSource
+    abstract fun bindMessageAttachmentRemoteDataSource(
+        messageRemoteDataSource: MessageRemoteDataSourceImpl
+    ): MessageAttachmentRemoteDataSource
 
+
+    @Binds
+    @Singleton
+    abstract fun bindUserRemoteDataSource(
+        userRemoteDataSourceImpl: UserRemoteDataSourceImpl
+    ): UserRemoteDataSource
 }

@@ -1,0 +1,291 @@
+classDiagram
+    title Main Feature Architecture 
+
+    %% Feature Layer (ViewModels)
+    subgraph Feature Layer - ViewModels
+        direction LR
+        %% ViewModels 네임스페이스 (MMD 코드 가독성을 위함)
+        %% 네임스페이스 이름 변경 (충돌 방지 및 명확성)
+        namespace ViewModels_MainNS {
+            class HomeViewModel {
+                -getProjectListStreamUseCase: GetProjectListStreamUseCase
+                -fetchProjectListUseCase: FetchProjectListUseCase
+                -getCurrentUserDmChannelsUseCase: GetCurrentUserDmChannelsUseCase
+                -getUserInfoUseCase: GetUserInfoUseCase
+                -updateUserStatusUseCase: UpdateUserStatusUseCase
+                -getCurrentUserUseCase: GetCurrentUserUseCase
+                +observeProjects()
+                +observeDmChannels()
+                +updateStatus(status: String)
+            }
+            class CalendarViewModel {
+                -getScheduleSummaryForMonthUseCase: GetScheduleSummaryForMonthUseCase
+                -getSchedulesForDateUseCase: GetSchedulesForDateUseCase
+                +loadMonthSummary(year: Int, month: Int)
+                +loadDateSchedules(date: String)
+            }
+            class ProfileViewModel {
+                -getMyProfileUseCase: GetMyProfileUseCase
+                -getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase
+                -updateUserStatusUseCase: UpdateUserStatusUseCase
+                -logoutUseCase: LogoutUseCase
+                -withdrawUserUseCase: WithdrawUserUseCase
+                +observeProfile()
+                +logout()
+                +withdrawAccount()
+            }
+        }
+    end
+    note for HomeViewModel "홈 화면(프로젝트/DM 목록) UI 로직"
+    note for CalendarViewModel "캘린더 화면 UI 로직"
+    note for ProfileViewModel "메인 프로필 탭 화면 UI 로직"
+
+    %% Domain Layer (UseCases & Repository Interfaces)
+    subgraph Domain Layer
+        direction LR
+        %% Project UseCases 네임스페이스
+        namespace UseCases_ProjectNS {
+            class GetProjectListStreamUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(): Flow<List<Project>>
+            }
+            class FetchProjectListUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(): Result<Unit>
+            }
+        }
+        %% DM UseCases 네임스페이스
+        namespace UseCases_DMNS {
+            class GetCurrentUserDmChannelsUseCase {
+                -channelRepository: ChannelRepository
+                +invoke(): Flow<List<DMChannel>>
+            }
+        }
+        %% User UseCases 네임스페이스
+        namespace UseCases_UserNS {
+            class GetUserInfoUseCase {
+                -userRepository: UserRepository
+                +invoke(userId: String): Flow<User?>
+            }
+            class GetMyProfileUseCase {
+                -userRepository: UserRepository
+                +invoke(): Flow<User>
+            }
+            class GetCurrentUserUseCase {
+                -userRepository: UserRepository
+                +invoke(): Flow<User?>
+            }
+            class GetCurrentUserStreamUseCase {
+                -userRepository: UserRepository
+                +invoke(): Flow<User?>
+            }
+            class UpdateUserStatusUseCase {
+                -userRepository: UserRepository
+                +invoke(status: String): Result<Unit>
+            }
+            class WithdrawUserUseCase {
+                -authRepository: AuthRepository
+                -userRepository: UserRepository
+                +invoke(): Result<Unit>
+            }
+        }
+        %% Schedule UseCases 네임스페이스
+        namespace UseCases_ScheduleNS {
+            class GetScheduleSummaryForMonthUseCase {
+                -scheduleRepository: ScheduleRepository
+                +invoke(year: Int, month: Int): Flow<Map<Int, Int>>
+            }
+            class GetSchedulesForDateUseCase {
+                -scheduleRepository: ScheduleRepository
+                +invoke(date: String): Flow<List<Schedule>>
+            }
+        }
+        %% Auth UseCases 네임스페이스
+        namespace UseCases_AuthNS {
+            class LogoutUseCase {
+                -authRepository: AuthRepository
+                +invoke(): Result<Unit>
+            }
+        }
+
+        %% Repositories 네임스페이스
+        namespace Repositories_DomainNS {
+            class ProjectRepository {
+                <<Interface>>
+                +getProjectListStream(): Flow<List<Project>>
+                +fetchProjects(): Result<Unit>
+            }
+            class ChannelRepository {
+                <<Interface>>
+                +getCurrentUserDmChannels(): Flow<List<DMChannel>>
+            }
+            class UserRepository {
+                <<Interface>>
+                +getUser(userId: String): Flow<User?>
+                +getMyProfile(): Flow<User>
+                +observeCurrentUser(): Flow<User?>
+                +updateStatus(status: String): Result<Unit>
+                +deleteUserAccountData(uid: String): Result<Unit>
+            }
+            class ScheduleRepository {
+                <<Interface>>
+                +getScheduleSummaryForMonth(year: Int, month: Int): Flow<Map<Int, Int>>
+                +getSchedulesForDate(date: String): Flow<List<Schedule>>
+            }
+            class AuthRepository {
+                <<Interface>>
+                +logout(): Result<Unit>
+                +deleteCurrentUserAccount(): Result<Unit>
+            }
+        }
+        note for ProjectRepository "프로젝트 데이터 접근 인터페이스"
+        note for ChannelRepository "DM 채널 데이터 접근 인터페이스"
+        note for UserRepository "사용자 데이터 접근 인터페이스"
+        note for ScheduleRepository "일정 데이터 접근 인터페이스"
+        note for AuthRepository "인증 데이터 접근 인터페이스"
+    end
+
+    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    subgraph Data Layer
+        direction LR
+        %% Repository Implementations 네임스페이스
+        namespace RepositoryImpl_DataNS {
+            class ProjectRepositoryImpl {
+                -projectRemoteDataSource: ProjectRemoteDataSource
+                -projectsWrapperRemoteDataSource: ProjectsWrapperRemoteDataSource
+            }
+            class ChannelRepositoryImpl {
+                -dmChannelRemoteDataSource: DMChannelRemoteDataSource
+            }
+            class UserRepositoryImpl {
+                -userRemoteDataSource: UserRemoteDataSource
+            }
+            class ScheduleRepositoryImpl {
+                -scheduleRemoteDataSource: ScheduleRemoteDataSource
+            }
+            class AuthRepositoryImpl {
+                -authRemoteDataSource: AuthRemoteDataSource
+            }
+        }
+        note for ProjectRepositoryImpl "ProjectRepository 구현체 (Remote)"
+        note for ChannelRepositoryImpl "ChannelRepository 구현체 (Remote DM)"
+        note for UserRepositoryImpl "UserRepository 구현체 (Remote)"
+        note for ScheduleRepositoryImpl "ScheduleRepository 구현체 (Remote)"
+        note for AuthRepositoryImpl "AuthRepository 구현체 (Remote)"
+
+        %% Remote DataSources 네임스페이스
+        namespace RemoteDataSources_DataNS {
+            class ProjectRemoteDataSource {
+                <<Interface>>
+                +observeProjects(): Flow<List<ProjectDTO>>
+                +fetchProjectsFromServer(): Result<Unit>
+            }
+            class ProjectsWrapperRemoteDataSource {
+                 <<Interface>>
+                +getProjectsWrappers(): Flow<List<ProjectsWrapperDTO>>
+            }
+            class DMChannelRemoteDataSource {
+                <<Interface>>
+                +observeDmChannels(): Flow<List<DMChannelDTO>>
+            }
+            class UserRemoteDataSource {
+                <<Interface>>
+                +observeUser(userId: String): Flow<UserDTO?>
+                +observeMyProfile(): Flow<UserDTO>
+                +updateUserStatus(status: String): Result<Unit>
+                +deleteUserData(uid: String): Result<Unit>
+            }
+            class ScheduleRemoteDataSource {
+                <<Interface>>
+                +getMonthlyScheduleSummary(year: Int, month: Int): Flow<Map<Int, Int>>
+                +getDailySchedules(date: String): Flow<List<ScheduleDTO>>
+            }
+            class AuthRemoteDataSource {
+                <<Interface>>
+                +signOut(): Result<Unit>
+                +deleteUserAccount(): Result<Unit>
+            }
+        }
+        note for ProjectRemoteDataSource "원격 프로젝트 서비스 통신"
+        note for ProjectsWrapperRemoteDataSource "원격 프로젝트 래퍼 서비스 통신"
+        note for DMChannelRemoteDataSource "원격 DM 채널 서비스 통신"
+        note for UserRemoteDataSource "원격 사용자 서비스 통신"
+        note for ScheduleRemoteDataSource "원격 일정 서비스 통신"
+        note for AuthRemoteDataSource "원격 인증 서비스 통신"
+
+        %% DataSource Implementations 네임스페이스
+        namespace DataSourceImpl_DataNS {
+            class ProjectRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+            class ProjectsWrapperRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+            class DMChannelRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+            class UserRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+            class ScheduleRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+            class AuthRemoteDataSourceImpl {
+                -firebaseAuth: FirebaseAuth
+            }
+        }
+    end
+
+    %% ===== Relationships =====
+    %% ViewModel -> UseCase
+    HomeViewModel ..> GetProjectListStreamUseCase : uses
+    HomeViewModel ..> FetchProjectListUseCase : uses
+    HomeViewModel ..> GetCurrentUserDmChannelsUseCase : uses
+    HomeViewModel ..> GetUserInfoUseCase : uses
+    HomeViewModel ..> UpdateUserStatusUseCase : uses
+    HomeViewModel ..> GetCurrentUserUseCase : uses
+    CalendarViewModel ..> GetScheduleSummaryForMonthUseCase : uses
+    CalendarViewModel ..> GetSchedulesForDateUseCase : uses
+    ProfileViewModel ..> GetMyProfileUseCase : uses
+    ProfileViewModel ..> GetCurrentUserStreamUseCase : uses
+    ProfileViewModel ..> UpdateUserStatusUseCase : uses
+    ProfileViewModel ..> LogoutUseCase : uses
+    ProfileViewModel ..> WithdrawUserUseCase : uses
+
+    %% UseCase -> Repository Interface
+    GetProjectListStreamUseCase ..> ProjectRepository : accesses
+    FetchProjectListUseCase ..> ProjectRepository : accesses
+    GetCurrentUserDmChannelsUseCase ..> ChannelRepository : accesses
+    GetUserInfoUseCase ..> UserRepository : accesses
+    GetMyProfileUseCase ..> UserRepository : accesses
+    GetCurrentUserUseCase ..> UserRepository : accesses
+    GetCurrentUserStreamUseCase ..> UserRepository : accesses
+    UpdateUserStatusUseCase ..> UserRepository : accesses
+    WithdrawUserUseCase ..> AuthRepository : accesses
+    WithdrawUserUseCase ..> UserRepository : accesses
+    GetScheduleSummaryForMonthUseCase ..> ScheduleRepository : accesses
+    GetSchedulesForDateUseCase ..> ScheduleRepository : accesses
+    LogoutUseCase ..> AuthRepository : accesses
+
+    %% Repository Implementation -> Repository Interface
+    ProjectRepository <|.. ProjectRepositoryImpl : implements
+    ChannelRepository <|.. ChannelRepositoryImpl : implements
+    UserRepository <|.. UserRepositoryImpl : implements
+    ScheduleRepository <|.. ScheduleRepositoryImpl : implements
+    AuthRepository <|.. AuthRepositoryImpl : implements
+
+    %% Repository Implementation -> DataSource Interface (Remote Only)
+    ProjectRepositoryImpl ..> ProjectRemoteDataSource : uses
+    ProjectRepositoryImpl ..> ProjectsWrapperRemoteDataSource : uses
+    ChannelRepositoryImpl ..> DMChannelRemoteDataSource : uses
+    UserRepositoryImpl ..> UserRemoteDataSource : uses
+    ScheduleRepositoryImpl ..> ScheduleRemoteDataSource : uses
+    AuthRepositoryImpl ..> AuthRemoteDataSource : uses
+
+    %% DataSource Implementation -> DataSource Interface
+    ProjectRemoteDataSource <|.. ProjectRemoteDataSourceImpl : implements
+    ProjectsWrapperRemoteDataSource <|.. ProjectsWrapperRemoteDataSourceImpl : implements
+    DMChannelRemoteDataSource <|.. DMChannelRemoteDataSourceImpl : implements
+    UserRemoteDataSource <|.. UserRemoteDataSourceImpl : implements
+    ScheduleRemoteDataSource <|.. ScheduleRemoteDataSourceImpl : implements
+    AuthRemoteDataSource <|.. AuthRemoteDataSourceImpl : implements

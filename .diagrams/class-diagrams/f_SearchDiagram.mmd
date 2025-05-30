@@ -1,0 +1,136 @@
+classDiagram
+    title Search Feature Architecture 
+
+    %% Feature Layer (ViewModels)
+    subgraph Feature Layer - ViewModels
+        direction LR
+        namespace ViewModels_SearchNS {
+            class SearchViewModel {
+                -searchUserByNameUseCase: SearchUserByNameUseCase
+                %% -searchProjectByNameUseCase: SearchProjectByNameUseCase (If project search is added)
+                %% -searchMessagesUseCase: SearchMessagesUseCase (If message search is added)
+                +performSearch(query: String, searchType: SearchType)
+            }
+        }
+    end
+    note for SearchViewModel "검색 화면 UI 로직 및 검색 실행"
+
+    %% Domain Layer (UseCases & Repository Interfaces)
+    subgraph Domain Layer
+        direction LR
+        %% User UseCases 네임스페이스 (Search 기능에서 사용)
+        namespace UseCases_UserNS {
+            class SearchUserByNameUseCase {
+                -userRepository: UserRepository
+                +invoke(nameQuery: String): Flow<List<User>>
+            }
+        }
+        %% Project UseCases (검색 대상이 확장될 경우 추가)
+        %% namespace UseCases_ProjectNS {
+        %%     class SearchProjectByNameUseCase {
+        %%         -projectRepository: ProjectRepository
+        %%         +invoke(nameQuery: String): Flow<List<Project>>
+        %%     }
+        %% }
+        %% Message UseCases (검색 대상이 확장될 경우 추가)
+        %% namespace UseCases_MessageNS {
+        %%     class SearchMessagesUseCase {
+        %%         -messageRepository: MessageRepository
+        %%         +invoke(query: String, channelId: String?): Flow<List<Message>>
+        %%     }
+        %% }
+
+        %% Repositories 네임스페이스
+        namespace Repositories_DomainNS {
+            class UserRepository { %% Defined in other features, used here
+                <<Interface>>
+                +searchUsersByName(nameQuery: String): Flow<List<User>>
+                %% Other methods
+            }
+            %% class ProjectRepository { %% If project search is implemented
+            %%     <<Interface>>
+            %%     +searchProjectsByName(nameQuery: String): Flow<List<Project>>
+            %% }
+            %% class MessageRepository { %% If message search is implemented
+            %%     <<Interface>>
+            %%     +searchMessages(query: String, channelId: String?): Flow<List<Message>>
+            %% }
+        }
+        note for UserRepository "사용자 검색을 위한 데이터 접근 인터페이스"
+        %% note for ProjectRepository "프로젝트 검색을 위한 데이터 접근 인터페이스"
+        %% note for MessageRepository "메시지 검색을 위한 데이터 접근 인터페이스"
+    end
+
+    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    subgraph Data Layer
+        direction LR
+        %% Repository Implementations 네임스페이스
+        namespace RepositoryImpl_DataNS {
+            class UserRepositoryImpl { %% Defined in other features
+                -userRemoteDataSource: UserRemoteDataSource
+            }
+            %% class ProjectRepositoryImpl { %% If project search
+            %%     -projectRemoteDataSource: ProjectRemoteDataSource
+            %% }
+            %% class MessageRepositoryImpl { %% If message search
+            %%     -messageRemoteDataSource: MessageRemoteDataSource
+            %% }
+        }
+        note for UserRepositoryImpl "UserRepository 구현체 (Remote)"
+        %% note for ProjectRepositoryImpl "ProjectRepository 구현체 (Remote)"
+        %% note for MessageRepositoryImpl "MessageRepository 구현체 (Remote)"
+
+        %% Remote DataSources 네임스페이스
+        namespace RemoteDataSources_DataNS {
+            class UserRemoteDataSource { %% Defined in other features
+                <<Interface>>
+                +searchUsers(nameQuery: String): Flow<List<UserDTO>>
+            }
+            %% class ProjectRemoteDataSource { %% If project search
+            %%     <<Interface>>
+            %%     +searchProjects(nameQuery: String): Flow<List<ProjectDTO>>
+            %% }
+            %% class MessageRemoteDataSource { %% If message search
+            %%     <<Interface>>
+            %%     +searchMessagesInRemote(query: String, channelId: String?): Flow<List<MessageDTO>>
+            %% }
+        }
+        note for UserRemoteDataSource "원격 사용자 검색 서비스 통신"
+        %% note for ProjectRemoteDataSource "원격 프로젝트 검색 서비스 통신"
+        %% note for MessageRemoteDataSource "원격 메시지 검색 서비스 통신"
+
+        %% DataSource Implementations 네임스페이스
+        namespace DataSourceImpl_DataNS {
+            class UserRemoteDataSourceImpl { %% Defined in other features
+                -firestore: FirebaseFirestore %% Or other search backend like Algolia
+            }
+            %% class ProjectRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            %% class MessageRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+        }
+    end
+
+    %% ===== Relationships =====
+    %% ViewModel -> UseCase
+    SearchViewModel ..> SearchUserByNameUseCase : uses for user search
+    %% SearchViewModel ..> SearchProjectByNameUseCase : uses for project search
+    %% SearchViewModel ..> SearchMessagesUseCase : uses for message search
+
+    %% UseCase -> Repository Interface
+    SearchUserByNameUseCase ..> UserRepository : accesses
+    %% SearchProjectByNameUseCase ..> ProjectRepository : accesses
+    %% SearchMessagesUseCase ..> MessageRepository : accesses
+
+    %% Repository Implementation -> Repository Interface
+    UserRepository <|.. UserRepositoryImpl : implements
+    %% ProjectRepository <|.. ProjectRepositoryImpl : implements
+    %% MessageRepository <|.. MessageRepositoryImpl : implements
+
+    %% Repository Implementation -> DataSource Interface (Remote Only)
+    UserRepositoryImpl ..> UserRemoteDataSource : uses
+    %% ProjectRepositoryImpl ..> ProjectRemoteDataSource : uses
+    %% MessageRepositoryImpl ..> MessageRemoteDataSource : uses
+
+    %% DataSource Implementation -> DataSource Interface
+    UserRemoteDataSource <|.. UserRemoteDataSourceImpl : implements
+    %% ProjectRemoteDataSource <|.. ProjectRemoteDataSourceImpl : implements
+    %% MessageRemoteDataSource <|.. MessageRemoteDataSourceImpl : implements

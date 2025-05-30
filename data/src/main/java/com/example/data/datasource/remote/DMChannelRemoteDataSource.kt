@@ -1,7 +1,8 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.DMChannelDTO
+import com.example.core_common.result.CustomResult
+import com.example.data.model.remote.DMChannelDTO
 import kotlinx.coroutines.flow.Flow
 
 interface DMChannelRemoteDataSource {
@@ -16,13 +17,13 @@ interface DMChannelRemoteDataSource {
      * @param otherUserId 대화를 시작할 상대방 사용자의 ID
      * @return 생성되거나 기존에 있던 채널의 ID를 포함한 Result 객체
      */
-    suspend fun findOrCreateDMChannel(otherUserId: String): Result<String>
+    suspend fun findOrCreateDMChannel(otherUserId: String): CustomResult<String, Exception>
 
     /**
      * DM 채널의 마지막 메시지 정보를 업데이트합니다.
      * @param channelId 업데이트할 채널의 ID
      * @param messagePreview 마지막 메시지 내용 미리보기
      */
-    suspend fun updateLastMessage(channelId: String, messagePreview: String): Result<Unit>
+    suspend fun updateLastMessage(channelId: String, messagePreview: String): CustomResult<Unit, Exception>
 }
 

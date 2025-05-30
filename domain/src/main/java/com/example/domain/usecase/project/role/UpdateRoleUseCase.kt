@@ -1,20 +1,34 @@
 package com.example.domain.usecase.project.role
 
-import com.example.domain.model.RolePermission
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Permission
+import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 
 interface UpdateRoleUseCase {
-    suspend operator fun invoke(projectId: String, roleId: String, newName: String, newPermissions: List<RolePermission>, isDefault: Boolean? = null): Result<Unit>
+    suspend operator fun invoke(projectId: String, roleId: String, newName: String, newPermissions: List<Permission>, isDefault: Boolean? = null): CustomResult<Unit, Exception>
 }
 
 class UpdateRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: ProjectRoleRepository
+    private val projectRoleRepository: RoleRepository
 ) : UpdateRoleUseCase {
-    override suspend operator fun invoke(projectId: String, roleId: String, newName: String, newPermissions: List<RolePermission>, isDefault: Boolean?): Result<Unit> {
+    override suspend operator fun invoke(
+        projectId: String,
+        roleId: String,
+        newName: String,
+        newPermissions: List<Permission>,
+        isDefault: Boolean?
+    ): CustomResult<Unit, Exception> {
         if (newName.isBlank()) {
-            return Result.failure(IllegalArgumentException("Role name cannot be blank."))
+            return CustomResult.Failure(IllegalArgumentException("Role name cannot be blank."))
         }
-        return projectRoleRepository.updateRole(projectId, roleId, newName, newPermissions, isDefault)
+        return projectRoleRepository.updateRole(
+            projectId,
+            roleId,
+            newName,
+            newPermissions,
+            isDefault
+        )
     }
+
 }

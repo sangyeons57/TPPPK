@@ -1,0 +1,265 @@
+classDiagram
+    title Chat Feature Architecture 
+
+    %% Feature Layer (ViewModels)
+    subgraph Feature Layer - ViewModels
+        direction LR
+        namespace ViewModels_ChatNS {
+            class ChatViewModel {
+                -getMessagesStreamUseCase: GetMessagesStreamUseCase
+                -fetchPastMessagesUseCase: FetchPastMessagesUseCase
+                -sendMessageUseCase: SendMessageUseCase
+                -editMessageUseCase: EditMessageUseCase
+                -deleteMessageUseCase: DeleteMessageUseCase
+                -getChannelUseCase: GetChannelUseCase
+                -getCurrentUserUseCase: GetCurrentUserUseCase
+                -getUserInfoUseCase: GetUserInfoUseCase
+                -checkChannelPermissionUseCase: CheckChannelPermissionUseCase
+                %% -uploadImageToMessageUseCase: UploadImageToMessageUseCase (Potentially part of SendMessageUseCase flow)
+                +loadInitialMessages(channelId: String)
+                +loadMoreMessages()
+                +sendTextMessage(text: String)
+                +sendImageMessage(imageUri: Uri)
+                +editUserMessage(messageId: String, newText: String)
+                +deleteUserMessage(messageId: String)
+                +loadChannelInfo(channelId: String)
+            }
+        }
+    end
+    note for ChatViewModel "채팅 화면의 메시지 및 채널 정보 관리, 사용자 상호작용 처리"
+
+    %% Domain Layer (UseCases & Repository Interfaces)
+    subgraph Domain Layer
+        direction LR
+        namespace UseCases_MessageNS {
+            class GetMessagesStreamUseCase {
+                -messageRepository: MessageRepository
+                +invoke(channelId: String): Flow<List<Message>>
+            }
+            class FetchPastMessagesUseCase {
+                -messageRepository: MessageRepository
+                +invoke(channelId: String, lastMessageTimestamp: Long?): Result<List<Message>>
+            }
+            class SendMessageUseCase {
+                -messageRepository: MessageRepository
+                -userRepository: UserRepository %% For sender info
+                %% -mediaRepository: MediaRepository (if image upload is separate step before sending message object)
+                +invoke(channelId: String, messageContent: MessageContent): Result<Unit>
+            }
+            class EditMessageUseCase {
+                -messageRepository: MessageRepository
+                +invoke(channelId: String, messageId: String, newText: String): Result<Unit>
+            }
+            class DeleteMessageUseCase {
+                -messageRepository: MessageRepository
+                +invoke(channelId: String, messageId: String): Result<Unit>
+            }
+            %% Conceptual UseCase if image upload is handled before creating Message object
+            %% class UploadImageToMessageUseCase {
+            %%     -messageRepository: MessageRepository %% or MediaRepository
+            %%     +invoke(imageUri: Uri): Result<String> %% Returns image URL
+            %% }
+        }
+        namespace UseCases_ChannelNS {
+            class GetChannelUseCase {
+                -channelRepository: ChannelRepository
+                +invoke(channelId: String): Flow<Channel?> %% Channel can be DM or ProjectChannel
+            }
+        }
+        namespace UseCases_UserNS { 
+            %% From other features, used here
+            class GetCurrentUserUseCase {
+                -userRepository: UserRepository
+                +invoke(): Flow<User?>
+            }
+            class GetUserInfoUseCase {
+                -userRepository: UserRepository
+                +invoke(userId: String): Flow<User?>
+            }
+        }
+        namespace UseCases_PermissionNS { 
+            %% From other features, used here
+            class CheckChannelPermissionUseCase {
+                -userRepository: UserRepository
+                -projectRepository: ProjectRepository %% For project channel context
+                -roleRepository: RoleRepository %% For project channel context
+                -channelRepository: ChannelRepository %% To know channel type (DM vs Project)
+                +invoke(channelId: String, permissionType: String): Flow<Boolean>
+            }
+        }
+
+        namespace Repositories_DomainNS {
+            class MessageRepository {
+                <<Interface>>
+                +getMessagesStream(channelId: String): Flow<List<Message>>
+                +fetchPastMessages(channelId: String, lastMessageTimestamp: Long?): Result<List<Message>>
+                +sendMessage(channelId: String, message: Message): Result<Unit>
+                +editMessage(channelId: String, messageId: String, newText: String): Result<Unit>
+                +deleteMessage(channelId: String, messageId: String): Result<Unit>
+                +uploadMessageAttachment(channelId: String, attachmentUri: Uri): Result<String> %% Returns attachment URL
+            }
+            class ChannelRepository {
+                <<Interface>>
+                +getChannelDetails(channelId: String): Flow<Channel?>
+                %% Other methods for DM/Project channel management
+            }
+            class UserRepository { %% Defined in other features
+                <<Interface>>
+                +getCurrentUser(): Flow<User?>
+                +getUserById(userId: String): Flow<User?>
+            }
+            class ProjectRepository { %% Defined in other features
+                <<Interface>>
+                +getProjectForChannel(channelId: String): Flow<Project?> %% Example method
+            }
+            class RoleRepository { %% Defined in other features
+                <<Interface>>
+                +getRolesForUserInProject(userId: String, projectId: String): Flow<List<Role>>
+            }
+        }
+        note for MessageRepository "채팅 메시지 및 첨부파일 데이터 접근 인터페이스"
+        note for ChannelRepository "채팅 채널(DM, 프로젝트 채널) 정보 접근 인터페이스"
+        note for UserRepository "사용자 정보 접근 인터페이스 (채팅 참여자 정보 등)"
+        note for ProjectRepository "프로젝트 정보 접근 인터페이스 (채널 권한 확인용)"
+        note for RoleRepository "역할 정보 접근 인터페이스 (채널 권한 확인용)"
+    end
+
+    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    subgraph Data Layer
+        direction LR
+        namespace RepositoryImpl_DataNS {
+            class MessageRepositoryImpl {
+                -messageRemoteDataSource: MessageRemoteDataSource
+                -messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource %% For uploads
+            }
+            class ChannelRepositoryImpl {
+                -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
+                -dmChannelRemoteDataSource: DMChannelRemoteDataSource
+            }
+            class UserRepositoryImpl { %% Defined in other features
+                -userRemoteDataSource: UserRemoteDataSource
+            }
+            class ProjectRepositoryImpl { %% Defined in other features
+                -projectRemoteDataSource: ProjectRemoteDataSource
+            }
+            class RoleRepositoryImpl { %% Defined in other features
+                -roleRemoteDataSource: RoleRemoteDataSource
+            }
+        }
+        note for MessageRepositoryImpl "MessageRepository 구현체 (Remote)"
+        note for ChannelRepositoryImpl "ChannelRepository 구현체 (Remote)"
+        note for UserRepositoryImpl "UserRepository 구현체 (Remote)"
+        note for ProjectRepositoryImpl "ProjectRepository 구현체 (Remote)"
+        note for RoleRepositoryImpl "RoleRepository 구현체 (Remote)"
+
+        namespace RemoteDataSources_DataNS {
+            class MessageRemoteDataSource {
+                <<Interface>>
+                +observeMessages(channelId: String): Flow<List<MessageDTO>>
+                +fetchOldMessages(channelId: String, lastTimestamp: Long?): Result<List<MessageDTO>>
+                +postMessage(channelId: String, messageDTO: MessageDTO): Result<Unit>
+                +updateMessage(channelId: String, messageId: String, newText: String): Result<Unit>
+                +removeMessage(channelId: String, messageId: String): Result<Unit>
+            }
+            class MessageAttachmentRemoteDataSource {
+                <<Interface>>
+                +uploadAttachment(channelId: String, attachmentUri: Uri): Result<String> %% Returns URL
+            }
+            class ProjectChannelRemoteDataSource { %% Defined elsewhere, used by ChannelRepo
+                <<Interface>>
+                +getChannelInfo(channelId: String): Flow<ProjectChannelDTO?>
+            }
+            class DMChannelRemoteDataSource { %% Defined elsewhere, used by ChannelRepo
+                <<Interface>>
+                +getDmChannelInfo(channelId: String): Flow<DMChannelDTO?>
+            }
+            class UserRemoteDataSource { %% Defined elsewhere
+                <<Interface>>
+                +observeUser(userId: String): Flow<UserDTO?>
+            }
+            class ProjectRemoteDataSource { %% Defined elsewhere
+                 <<Interface>>
+                 +getProjectDtoForChannel(channelId: String): Flow<ProjectDTO?>
+            }
+            class RoleRemoteDataSource { %% Defined elsewhere
+                 <<Interface>>
+                 +getRolesDtoForUser(userId: String, projectId: String): Flow<List<RoleDTO>>
+            }
+        }
+        note for MessageRemoteDataSource "원격 메시지 서비스 통신"
+        note for MessageAttachmentRemoteDataSource "원격 메시지 첨부파일(이미지 등) 업로드 서비스 통신"
+        note for ProjectChannelRemoteDataSource "원격 프로젝트 채널 정보 서비스 통신"
+        note for DMChannelRemoteDataSource "원격 DM 채널 정보 서비스 통신"
+        note for UserRemoteDataSource "원격 사용자 정보 서비스 통신"
+        note for ProjectRemoteDataSource "원격 프로젝트 정보 서비스 통신"
+        note for RoleRemoteDataSource "원격 역할 정보 서비스 통신"
+
+
+        namespace DataSourceImpl_DataNS {
+            class MessageRemoteDataSourceImpl {
+                -firestore: FirebaseFirestore
+            }
+            class MessageAttachmentRemoteDataSourceImpl {
+                -firebaseStorage: FirebaseStorage
+            }
+            class ProjectChannelRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class DMChannelRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class UserRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class ProjectRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class RoleRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+        }
+    end
+
+    %% ===== Relationships =====
+    %% ViewModel -> UseCase
+    ChatViewModel ..> GetMessagesStreamUseCase : observes messages
+    ChatViewModel ..> FetchPastMessagesUseCase : loads history
+    ChatViewModel ..> SendMessageUseCase : sends message
+    ChatViewModel ..> EditMessageUseCase : edits message
+    ChatViewModel ..> DeleteMessageUseCase : deletes message
+    ChatViewModel ..> GetChannelUseCase : gets channel info
+    ChatViewModel ..> GetCurrentUserUseCase : gets current user
+    ChatViewModel ..> GetUserInfoUseCase : gets participant info
+    ChatViewModel ..> CheckChannelPermissionUseCase : checks permissions
+    %% ChatViewModel ..> UploadImageToMessageUseCase : for uploading image before sending (if separate)
+
+    %% UseCase -> Repository Interface
+    GetMessagesStreamUseCase ..> MessageRepository : accesses
+    FetchPastMessagesUseCase ..> MessageRepository : accesses
+    SendMessageUseCase ..> MessageRepository : for sending and possibly uploading attachment
+    SendMessageUseCase ..> UserRepository : for sender info
+    EditMessageUseCase ..> MessageRepository : accesses
+    DeleteMessageUseCase ..> MessageRepository : accesses
+    %% UploadImageToMessageUseCase ..> MessageRepository : accesses (or MediaRepository)
+    GetChannelUseCase ..> ChannelRepository : accesses
+    GetCurrentUserUseCase ..> UserRepository : accesses
+    GetUserInfoUseCase ..> UserRepository : accesses
+    CheckChannelPermissionUseCase ..> UserRepository : for user roles
+    CheckChannelPermissionUseCase ..> ProjectRepository : for project context
+    CheckChannelPermissionUseCase ..> RoleRepository : for role permissions
+    CheckChannelPermissionUseCase ..> ChannelRepository : for channel type
+
+    %% Repository Implementation -> Repository Interface
+    MessageRepository <|.. MessageRepositoryImpl : implements
+    ChannelRepository <|.. ChannelRepositoryImpl : implements
+    UserRepository <|.. UserRepositoryImpl : implements
+    ProjectRepository <|.. ProjectRepositoryImpl : implements
+    RoleRepository <|.. RoleRepositoryImpl : implements
+
+    %% Repository Implementation -> DataSource Interface (Remote Only)
+    MessageRepositoryImpl ..> MessageRemoteDataSource : uses
+    MessageRepositoryImpl ..> MessageAttachmentRemoteDataSource : for attachments
+    ChannelRepositoryImpl ..> ProjectChannelRemoteDataSource : for project channels
+    ChannelRepositoryImpl ..> DMChannelRemoteDataSource : for DMs
+    UserRepositoryImpl ..> UserRemoteDataSource : uses
+    ProjectRepositoryImpl ..> ProjectRemoteDataSource : uses
+    RoleRepositoryImpl ..> RoleRemoteDataSource : uses
+
+    %% DataSource Implementation -> DataSource Interface
+    MessageRemoteDataSource <|.. MessageRemoteDataSourceImpl : implements
+    MessageAttachmentRemoteDataSource <|.. MessageAttachmentRemoteDataSourceImpl : implements
+    ProjectChannelRemoteDataSource <|.. ProjectChannelRemoteDataSourceImpl : implements
+    DMChannelRemoteDataSource <|.. DMChannelRemoteDataSourceImpl : implements
+    UserRemoteDataSource <|.. UserRemoteDataSourceImpl : implements
+    ProjectRemoteDataSource <|.. ProjectRemoteDataSourceImpl : implements
+    RoleRemoteDataSource <|.. RoleRemoteDataSourceImpl : implements

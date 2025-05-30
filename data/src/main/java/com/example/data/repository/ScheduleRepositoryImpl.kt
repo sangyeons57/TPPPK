@@ -1,62 +1,191 @@
 package com.example.data.repository
 
-import com.example.core_common.result.resultTry
+import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.ScheduleRemoteDataSource
-import com.example.data.model.mapper.toDomain // ScheduleDTO -> Schedule
-import com.example.data.model.mapper.toDto // Schedule -> ScheduleDTO
-import com.example.domain.model.Schedule
+import com.example.domain.model.base.Schedule
 import com.example.domain.repository.ScheduleRepository
+i
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
-import kotlin.Result
 
+
+/**
+ * 일정 관리를 위한 저장소 구현체
+ * Firebase의 자체 캐싱 시스템을 활용하여 데이터를 관리합니다.
+ */
 class ScheduleRepositoryImpl @Inject constructor(
     private val scheduleRemoteDataSource: ScheduleRemoteDataSource
-    // private val scheduleMapper: ScheduleMapper // 개별 매퍼 사용시
 ) : ScheduleRepository {
 
-    override suspend fun createSchedule(schedule: Schedule): Result<Schedule> = resultTry {
-        val scheduleDto = schedule.toDto() // ID는 비어있을 수 있음
-        // ScheduleRemoteDataSource의 createSchedule 함수는 생성된 DTO (ID 포함)를 반환한다고 가정
-        scheduleRemoteDataSource.createSchedule(scheduleDto).getOrThrow().toDomain()
+    /**
+     * 새로운 일정을 생성합니다.
+     * Firebase의 자체 캐싱 시스템을 활용합니다.
+     * 
+     * @param schedule 생성할 일정 정보
+     * @return 생성된 일정 정보 (서버에서 부여된 ID 포함)
+     */
+    override suspend fun createSchedule(schedule: Schedule): CustomResult<Schedule, Exception> {
+        return try {
+            val scheduleDto = schedule.toDto() // ID는 비어있을 수 있음
+            val result = scheduleRemoteDataSource.createSchedule(scheduleDto)
+            when (result) {
+                is CustomResult.Success -> {
+                    try {
+                        val domainSchedule = result.data.toDomain()
+                        CustomResult.Success(domainSchedule)
+                    } catch (e: Exception) {
+                        CustomResult.Failure(e)
+                    }
+                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to create schedule"))
+                else -> CustomResult.Failure(Exception("Unknown error"))
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 
-    override suspend fun getScheduleDetails(scheduleId: String): Result<Schedule> = resultTry {
-        scheduleRemoteDataSource.getSchedule(scheduleId).getOrThrow().toDomain()
+    /**
+     * 특정 일정의 상세 정보를 가져옵니다.
+     * Firebase의 자체 캐싱 시스템을 활용합니다.
+     * 
+     * @param scheduleId 일정 ID
+     * @return 일정 상세 정보
+     */
+    override suspend fun getScheduleDetails(scheduleId: String): CustomResult<Schedule, Exception> {
+        return try {
+            val result = scheduleRemoteDataSource.getSchedule(scheduleId)
+            when (result) {
+                is CustomResult.Success -> {
+                    try {
+                        val domainSchedule = result.data.toDomain()
+                        CustomResult.Success(domainSchedule)
+                    } catch (e: Exception) {
+                        CustomResult.Failure(e)
+                    }
+                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to get schedule details"))
+                else -> CustomResult.Failure(Exception("Unknown error"))
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 
-    override fun getUserSchedulesStream(userId: String, startDateMillis: Long, endDateMillis: Long): Flow<Result<List<Schedule>>> {
-        // ScheduleRemoteDataSource에 getUserSchedulesStream(userId, startDate, endDate) 함수 필요
+    /**
+     * 사용자의 일정 목록을 스트림으로 가져옵니다.
+     * Firebase의 자체 캐싱 시스템을 활용하여 실시간 업데이트를 처리합니다.
+     * 
+     * @param userId 사용자 ID
+     * @param startDateMillis 시작 날짜 (밀리초)
+     * @param endDateMillis 종료 날짜 (밀리초)
+     * @return 해당 기간 내 사용자의 일정 목록 스트림
+     */
+    override fun getUserSchedulesStream(userId: String, startDateMillis: Long, endDateMillis: Long): Flow<CustomResult<List<Schedule>, Exception>> {
         return scheduleRemoteDataSource.getUserSchedulesStream(userId, startDateMillis, endDateMillis).map { result ->
-            result.mapCatching { dtoList ->
-                dtoList.map { it.toDomain() }
+            when (result) {
+                is CustomResult.Success -> {
+                    try {
+                        val domainSchedules = result.data.map { it.toDomain() }
+                        CustomResult.Success(domainSchedules)
+                    } catch (e: Exception) {
+                        CustomResult.Failure(e)
+                    }
+                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to get user schedules"))
+                else -> CustomResult.Failure(Exception("Unknown error"))
             }
         }
     }
 
-    override fun getProjectSchedulesStream(projectId: String, startDateMillis: Long, endDateMillis: Long): Flow<Result<List<Schedule>>> {
-        // ScheduleRemoteDataSource에 getProjectSchedulesStream(projectId, startDate, endDate) 함수 필요
+    /**
+     * 프로젝트의 일정 목록을 스트림으로 가져옵니다.
+     * Firebase의 자체 캐싱 시스템을 활용하여 실시간 업데이트를 처리합니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param startDateMillis 시작 날짜 (밀리초)
+     * @param endDateMillis 종료 날짜 (밀리초)
+     * @return 해당 기간 내 프로젝트의 일정 목록 스트림
+     */
+    override fun getProjectSchedulesStream(projectId: String, startDateMillis: Long, endDateMillis: Long): Flow<CustomResult<List<Schedule>, Exception>> {
         return scheduleRemoteDataSource.getProjectSchedulesStream(projectId, startDateMillis, endDateMillis).map { result ->
-            result.mapCatching { dtoList ->
-                dtoList.map { it.toDomain() }
+            when (result) {
+                is CustomResult.Success -> {
+                    try {
+                        val domainSchedules = result.data.map { it.toDomain() }
+                        CustomResult.Success(domainSchedules)
+                    } catch (e: Exception) {
+                        CustomResult.Failure(e)
+                    }
+                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to get project schedules"))
+                else -> CustomResult.Failure(Exception("Unknown error"))
             }
         }
     }
 
-    override suspend fun updateSchedule(schedule: Schedule): Result<Unit> = resultTry {
-        val scheduleDto = schedule.toDto() // ID가 반드시 포함되어야 함
-        scheduleRemoteDataSource.updateSchedule(scheduleDto).getOrThrow()
+    /**
+     * 일정 정보를 업데이트합니다.
+     * Firebase의 자체 캐싱 시스템을 활용합니다.
+     * 
+     * @param schedule 업데이트할 일정 정보 (ID 필수)
+     * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
+     */
+    override suspend fun updateSchedule(schedule: Schedule): CustomResult<Unit, Exception> {
+        return try {
+            val scheduleDto = schedule.toDto() // ID가 반드시 포함되어야 함
+            val result = scheduleRemoteDataSource.updateSchedule(scheduleDto)
+            when (result) {
+                is CustomResult.Success -> CustomResult.Success(Unit)
+                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to update schedule"))
+                else -> CustomResult.Failure(Exception("Unknown error"))
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 
-    override suspend fun deleteSchedule(scheduleId: String, currentUserId: String): Result<Unit> = resultTry {
-        // ScheduleRemoteDataSource에 deleteSchedule(scheduleId, currentUserId) 함수 필요 (권한 확인용)
-        scheduleRemoteDataSource.deleteSchedule(scheduleId, currentUserId).getOrThrow()
+    /**
+     * 일정을 삭제합니다.
+     * Firebase의 자체 캐싱 시스템을 활용합니다.
+     * 
+     * @param scheduleId 삭제할 일정 ID
+     * @param currentUserId 현재 사용자 ID (권한 확인용)
+     * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
+     */
+    override suspend fun deleteSchedule(scheduleId: String, currentUserId: String): CustomResult<Unit, Exception> {
+        return try {
+            val result = scheduleRemoteDataSource.deleteSchedule(scheduleId, currentUserId)
+            when (result) {
+                is CustomResult.Success -> CustomResult.Success(Unit)
+                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to delete schedule"))
+                else -> CustomResult.Failure(Exception("Unknown error"))
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 
-    override suspend fun getScheduleSummaryForMonth(userId: String, year: Int, month: Int): Result<Map<Int, Boolean>> = resultTry {
-        // ScheduleRemoteDataSource에 getScheduleSummaryForMonth(userId, year, month) 함수 필요
-        // 이 함수는 해당 월의 날짜별 스케줄 유무를 Map 형태로 반환한다고 가정
-        scheduleRemoteDataSource.getScheduleSummaryForMonth(userId, year, month).getOrThrow()
+    /**
+     * 특정 월의 일정 요약 정보를 가져옵니다.
+     * Firebase의 자체 캐싱 시스템을 활용합니다.
+     * 
+     * @param userId 사용자 ID
+     * @param year 년도
+     * @param month 월 (1-12)
+     * @return 날짜별 일정 유무 맵 (key: 일(day), value: 일정 유무)
+     */
+    override suspend fun getScheduleSummaryForMonth(userId: String, year: Int, month: Int): CustomResult<Map<Int, Boolean>, Exception> {
+        return try {
+            val result = scheduleRemoteDataSource.getScheduleSummaryForMonth(userId, year, month)
+            when (result) {
+                is CustomResult.Success -> CustomResult.Success(result.data)
+                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to get schedule summary"))
+                else -> CustomResult.Failure(Exception("Unknown error"))
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 }

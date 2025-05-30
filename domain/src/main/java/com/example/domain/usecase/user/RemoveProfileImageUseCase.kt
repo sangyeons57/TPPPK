@@ -1,5 +1,6 @@
 package com.example.domain.usecase.user
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.UserRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -17,7 +18,7 @@ class RemoveProfileImageUseCase @Inject constructor(
      *
      * @return 성공 시 성공 결과가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(): Result<Unit> {
+    suspend operator fun invoke(): CustomResult<Unit, Exception> {
         return userRepository.removeProfileImage()
     }
 } 

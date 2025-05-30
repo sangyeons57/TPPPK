@@ -2,6 +2,7 @@
 package com.example.data.datasource.remote
 
 import com.example.data.model._remote.PermissionDTO
+import com.example.data.model.remote.PermissionDTO
 import kotlinx.coroutines.flow.Flow
 
 interface PermissionRemoteDataSource {

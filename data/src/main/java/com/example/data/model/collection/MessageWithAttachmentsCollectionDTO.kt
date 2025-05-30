@@ -1,6 +1,9 @@
 package com.example.data.model.collection
 
+import com.example.data.model.remote.MessageAttachmentDTO
+import com.example.data.model.remote.MessageDTO
+
 data class MessageWithAttachmentsCollectionDTO(
-    val message: MessageDocumentDTO,
-    val attachments: List<MessageAttachmentDocumentDTO>? = null
+    val message: MessageDTO,
+    val attachments: List<MessageAttachmentDTO>? = null
 )

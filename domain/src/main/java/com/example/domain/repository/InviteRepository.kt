@@ -1,7 +1,8 @@
 package com.example.domain.repository
 
-import com.example.domain.model.Invite
-import com.example.domain.model.InviteType
+import com.example.core_common.result.CustomResult
+import com.example.domain.model._new.enum.InviteStatus
+import com.example.domain.model.base.Invite
 import kotlinx.coroutines.flow.Flow
 import kotlin.Result
 
@@ -19,26 +20,26 @@ interface InviteRepository {
      * @return 생성된 초대 정보를 담은 Result.
      */
     suspend fun createInvite(
-        type: InviteType,
+        type: InviteStatus,
         targetId: String,
         creatorId: String,
         expiresInMillis: Long?,
         maxUses: Int?
-    ): Result<Invite>
+    ): CustomResult<Invite, Exception>
 
     /**
      * 초대 코드를 사용하여 초대 정보를 조회합니다.
      * @param inviteCode 조회할 초대 코드 문자열
      * @return 해당 초대 코드의 상세 정보를 담은 Result. 코드가 유효하지 않으면 실패.
      */
-    suspend fun getInviteByCode(inviteCode: String): Result<Invite>
+    suspend fun getInviteByCode(inviteCode: String): CustomResult<Invite, Exception>
 
     /**
      * 특정 프로젝트에 대해 생성된 활성 초대 코드 목록을 가져옵니다.
      * @param projectId 프로젝트 ID
      * @return 활성 초대 코드 목록을 담은 Result Flow.
      */
-    fun getActiveProjectInvitesStream(projectId: String): Flow<Result<List<Invite>>>
+    fun getActiveProjectInvitesStream(projectId: String): Flow<CustomResult<List<Invite>, Exception>>
 
     /**
      * 초대 코드를 사용 처리합니다.
@@ -47,7 +48,7 @@ interface InviteRepository {
      * @param userId 사용하는 사용자 ID
      * @return 사용된 초대 정보(targetId 등 포함)를 담은 Result.
      */
-    suspend fun consumeInvite(inviteCode: String, userId: String): Result<Invite>
+    suspend fun consumeInvite(inviteCode: String, userId: String): CustomResult<Invite, Exception>
 
     /**
      * 특정 초대 코드를 비활성화(또는 삭제)합니다.
@@ -55,5 +56,5 @@ interface InviteRepository {
      * @param currentUserId 작업을 요청한 사용자 ID (권한 확인용)
      * @return 작업 성공 여부를 담은 Result.
      */
-    suspend fun revokeInvite(inviteId: String, currentUserId: String): Result<Unit>
+    suspend fun revokeInvite(inviteId: String, currentUserId: String): CustomResult<Unit, Exception>
 }

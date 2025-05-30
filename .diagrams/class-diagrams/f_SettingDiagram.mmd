@@ -1,0 +1,241 @@
+classDiagram
+    title Settings Feature Architecture 
+
+    %% Feature Layer (ViewModels)
+    subgraph Feature Layer - ViewModels
+        direction LR
+        namespace ViewModels_SettingsNS {
+            class SettingsViewModel {
+                -getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase
+                -logoutUseCase: LogoutUseCase
+                -withdrawUserUseCase: WithdrawUserUseCase
+                +observeUserProfile()
+                +performLogout()
+                +performWithdrawal()
+            }
+            class ChangePasswordViewModel {
+                -changePasswordUseCase: ChangePasswordUseCase
+                -getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
+                +updatePassword(currentPassword: String, newPassword: String)
+            }
+            class ChangeNameViewModel { 
+                %% Corrected from ChangNameViewModel
+                -getMyProfileUseCase: GetMyProfileUseCase
+                -updateNicknameUseCase: UpdateNicknameUseCase
+                -checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase
+                +loadCurrentNickname()
+                +saveNewNickname(nickname: String)
+            }
+            class MigrationToolViewModel {
+                %% Data layer component
+                -channelMigrationTool: ChannelMigrationTool 
+                -projectRepository: ProjectRepository
+                -channelRepository: ChannelRepository
+                +startChannelMigration(projectId: String)
+            }
+        }
+    end
+    note for SettingsViewModel "메인 설정 화면 UI 로직 (로그아웃, 회원탈퇴 등)"
+    note for ChangePasswordViewModel "비밀번호 변경 화면 UI 로직"
+    note for ChangeNameViewModel "이름(닉네임) 변경 다이얼로그 UI 로직"
+    note for MigrationToolViewModel "데이터 마이그레이션 도구 UI 로직 (개발용)"
+
+    %% Domain Layer (UseCases & Repository Interfaces)
+    subgraph Domain Layer
+        direction LR
+        namespace UseCases_UserNS {
+            %% From other features, used here
+            class GetCurrentUserStreamUseCase {
+                -userRepository: UserRepository
+                +invoke(): Flow<User?>
+            }
+            class GetMyProfileUseCase {
+                -userRepository: UserRepository
+                +invoke(): Flow<User>
+            }
+            class UpdateNicknameUseCase {
+                -userRepository: UserRepository
+                +invoke(nickname: String): Result<Unit>
+            }
+            class CheckNicknameAvailabilityUseCase {
+                -userRepository: UserRepository
+                +invoke(nickname: String): Result<Boolean>
+            }
+            class WithdrawUserUseCase {
+                -authRepository: AuthRepository
+                -userRepository: UserRepository
+                +invoke(): Result<Unit>
+            }
+        }
+        namespace UseCases_AuthNS {
+            %% From other features, used here
+            class LogoutUseCase {
+                -authRepository: AuthRepository
+                +invoke(): Result<Unit>
+            }
+            class ChangePasswordUseCase {
+                -authRepository: AuthRepository
+                +invoke(currentPassword: String, newPassword: String): Result<Unit>
+            }
+            class GetAuthErrorMessageUseCase {
+                %% Error mapping
+                +invoke(throwable: Throwable): String
+            }
+        }
+
+        namespace Repositories_DomainNS {
+            class UserRepository { %% Defined elsewhere
+                <<Interface>>
+                +observeCurrentUser(): Flow<User?>
+                +getMyProfile(): Flow<User>
+                +updateNickname(nickname: String): Result<Unit>
+                +isNicknameAvailable(nickname: String): Result<Boolean>
+                +deleteUserAccountData(uid: String): Result<Unit> %% For WithdrawUserUseCase
+            }
+            class AuthRepository { %% Defined elsewhere
+                <<Interface>>
+                +logout(): Result<Unit>
+                +changePassword(currentPassword: String, newPassword: String): Result<Unit>
+                +deleteCurrentUserAccount(): Result<Unit> %% For WithdrawUserUseCase
+            }
+            class ProjectRepository { %% Defined elsewhere, for MigrationTool
+                <<Interface>>
+                +getAllProjectsBasicInfo(): Flow<List<Project>> %% Example method for migration tool
+            }
+            class ChannelRepository { %% Defined elsewhere, for MigrationTool
+                <<Interface>>
+                +getAllChannelsForProject(projectId: String): Flow<List<Channel>> %% Example for migration
+            }
+        }
+        note for UserRepository "사용자 정보 접근 인터페이스"
+        note for AuthRepository "인증 관련 작업 인터페이스"
+        note for ProjectRepository "프로젝트 정보 접근 인터페이스 (마이그레이션용)"
+        note for ChannelRepository "채널 정보 접근 인터페이스 (마이그레이션용)"
+    end
+
+    %% Data Layer (Repository Impl, DataSources, Other Components - Local Excluded)
+    subgraph Data Layer
+        direction LR
+        namespace RepositoryImpl_DataNS {
+            class UserRepositoryImpl {
+                %% Defined elsewhere
+                -userRemoteDataSource: UserRemoteDataSource
+            }
+            class AuthRepositoryImpl {
+                %% Defined elsewhere
+                -authRemoteDataSource: AuthRemoteDataSource
+            }
+            class ProjectRepositoryImpl {
+                %% Defined elsewhere
+                -projectRemoteDataSource: ProjectRemoteDataSource
+                -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
+            }
+            class ChannelRepositoryImpl {
+                %% Defined elsewhere
+                -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
+            }
+        }
+        note for UserRepositoryImpl "UserRepository 구현체 (Remote)"
+        note for AuthRepositoryImpl "AuthRepository 구현체 (Remote)"
+        note for ProjectRepositoryImpl "ProjectRepository 구현체 (Remote, 마이그레이션용)"
+        note for ChannelRepositoryImpl "ChannelRepository 구현체 (Remote, 마이그레이션용)"
+
+        namespace RemoteDataSources_DataNS {
+            class UserRemoteDataSource { %% Defined elsewhere
+                <<Interface>>
+                +observeMyProfile(): Flow<UserDTO>
+                +updateUserNickname(nickname: String): Result<Unit>
+                +checkNickname(nickname: String): Result<Boolean>
+                +deleteUserData(uid: String): Result<Unit>
+            }
+            class AuthRemoteDataSource { %% Defined elsewhere
+                <<Interface>>
+                +signOut(): Result<Unit>
+                +updatePassword(currentPassword: String, newPassword: String): Result<Unit>
+                +deleteUserAccount(): Result<Unit>
+            }
+            class ProjectRemoteDataSource { %% Defined elsewhere
+                <<Interface>>
+                +fetchAllProjectsBasic(): Flow<List<ProjectDTO>>
+            }
+            class ProjectChannelRemoteDataSource { %% Defined elsewhere
+                <<Interface>>
+                +fetchAllChannelsForProjectFromRemote(projectId: String): Flow<List<ProjectChannelDTO>>
+                +migrateChannelData(projectId: String, channelId: String, newData: Any): Result<Unit> %% For migration
+            }
+        }
+        note for UserRemoteDataSource "원격 사용자 서비스 통신"
+        note for AuthRemoteDataSource "원격 인증 서비스 통신"
+        note for ProjectRemoteDataSource "원격 프로젝트 서비스 통신 (마이그레이션용)"
+        note for ProjectChannelRemoteDataSource "원격 프로젝트 채널 서비스 통신 (마이그레이션용)"
+
+
+        namespace DataSourceImpl_DataNS {
+            class UserRemoteDataSourceImpl { -firestore: FirebaseFirestore } 
+            %% Defined elsewhere
+            class AuthRemoteDataSourceImpl { -firebaseAuth: FirebaseAuth } 
+            %% Defined elsewhere
+            class ProjectRemoteDataSourceImpl { -firestore: FirebaseFirestore } 
+            %% Defined elsewhere
+            class ProjectChannelRemoteDataSourceImpl { -firestore: FirebaseFirestore } 
+            %% Defined elsewhere
+        }
+
+        namespace DataComponents_DataNS {
+            class ChannelMigrationTool {
+                -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
+                %% -projectStructureLocalDataSource: ProjectStructureLocalDataSource (EXCLUDED)
+                +executeMigrationForProject(projectId: String): Flow<String>
+            }
+        }
+        note for ChannelMigrationTool "채널 데이터 마이그레이션 로직 (Data Layer)"
+    end
+
+    %% ===== Relationships =====
+    %% ViewModel -> UseCase / Data Component
+    SettingsViewModel ..> GetCurrentUserStreamUseCase : observes user
+    SettingsViewModel ..> LogoutUseCase : performs logout
+    SettingsViewModel ..> WithdrawUserUseCase : performs withdrawal
+
+    ChangePasswordViewModel ..> ChangePasswordUseCase : uses
+    ChangePasswordViewModel ..> GetAuthErrorMessageUseCase : handles errors
+
+    ChangeNameViewModel ..> GetMyProfileUseCase : loads profile
+    ChangeNameViewModel ..> UpdateNicknameUseCase : updates nickname
+    ChangeNameViewModel ..> CheckNicknameAvailabilityUseCase : checks nickname
+
+    MigrationToolViewModel ..> ChannelMigrationTool : uses tool
+    MigrationToolViewModel ..> ProjectRepository : reads project data for migration
+    MigrationToolViewModel ..> ChannelRepository : reads channel data for migration
+
+    %% UseCase -> Repository Interface
+    GetCurrentUserStreamUseCase ..> UserRepository : accesses
+    GetMyProfileUseCase ..> UserRepository : accesses
+    UpdateNicknameUseCase ..> UserRepository : accesses
+    CheckNicknameAvailabilityUseCase ..> UserRepository : accesses
+    WithdrawUserUseCase ..> AuthRepository : for auth actions
+    WithdrawUserUseCase ..> UserRepository : for user data deletion
+    LogoutUseCase ..> AuthRepository : accesses
+    ChangePasswordUseCase ..> AuthRepository : accesses
+
+    %% Repository Implementation -> Repository Interface
+    UserRepository <|.. UserRepositoryImpl : implements
+    AuthRepository <|.. AuthRepositoryImpl : implements
+    ProjectRepository <|.. ProjectRepositoryImpl : implements
+    ChannelRepository <|.. ChannelRepositoryImpl : implements
+
+    %% Repository Implementation -> DataSource Interface (Remote Only)
+    UserRepositoryImpl ..> UserRemoteDataSource : uses
+    AuthRepositoryImpl ..> AuthRemoteDataSource : uses
+    ProjectRepositoryImpl ..> ProjectRemoteDataSource : uses
+    ProjectRepositoryImpl ..> ProjectChannelRemoteDataSource : uses %% For migration-related project data
+    ChannelRepositoryImpl ..> ProjectChannelRemoteDataSource : uses %% For migration-related channel data
+
+    %% DataSource Implementation -> DataSource Interface
+    UserRemoteDataSource <|.. UserRemoteDataSourceImpl : implements
+    AuthRemoteDataSource <|.. AuthRemoteDataSourceImpl : implements
+    ProjectRemoteDataSource <|.. ProjectRemoteDataSourceImpl : implements
+    ProjectChannelRemoteDataSource <|.. ProjectChannelRemoteDataSourceImpl : implements
+
+    %% Data Component -> DataSource Interface
+    ChannelMigrationTool ..> ProjectChannelRemoteDataSource : uses for remote migration steps

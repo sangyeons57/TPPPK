@@ -3,7 +3,7 @@ package com.example.domain.viewmodel
 import com.example.domain.model.Channel
 import com.example.domain.model.ChatMessage
 import com.example.domain.repository.FakeChannelRepository
-import com.example.domain.usecase.channel.GetChannelUseCase
+import com.example.domain.usecase.channel.GetProjectChannelUseCase
 import com.example.domain.usecase.channel.MarkChannelAsReadUseCase
 import com.example.domain.usecase.chat.AddReactionUseCase
 import com.example.domain.usecase.chat.DeleteMessageUseCase
@@ -43,7 +43,7 @@ class ChannelViewModelTest {
     private lateinit var channelRepository: FakeChannelRepository
     
     // UseCase mocks
-    private lateinit var getChannelUseCase: GetChannelUseCase
+    private lateinit var getProjectChannelUseCase: GetProjectChannelUseCase
     private lateinit var getMessagesStreamUseCase: GetMessagesStreamUseCase
     private lateinit var fetchPastMessagesUseCase: FetchPastMessagesUseCase
     private lateinit var sendMessageUseCase: SendMessageUseCase
@@ -109,7 +109,7 @@ class ChannelViewModelTest {
         channelRepository = FakeChannelRepository(testDispatcher)
         
         // Set up mocks
-        getChannelUseCase = mock()
+        getProjectChannelUseCase = mock()
         getMessagesStreamUseCase = mock()
         fetchPastMessagesUseCase = mock()
         sendMessageUseCase = mock()
@@ -122,12 +122,12 @@ class ChannelViewModelTest {
         
         // Default mock responses
         whenever(getCurrentUserIdUseCase()).thenReturn(testUserId)
-        whenever(getChannelUseCase(testChannelId)).thenReturn(flowOf(Result.success(testChannel)))
+        whenever(getProjectChannelUseCase(testChannelId)).thenReturn(flowOf(Result.success(testChannel)))
         whenever(getMessagesStreamUseCase(testChannelId)).thenReturn(flowOf(Result.success(testMessages)))
         
         // Initialize ViewModel
         viewModel = ChannelViewModel(
-            getChannelUseCase = getChannelUseCase,
+            getChannelUseCase = getProjectChannelUseCase,
             getMessagesStreamUseCase = getMessagesStreamUseCase,
             fetchPastMessagesUseCase = fetchPastMessagesUseCase,
             sendMessageUseCase = sendMessageUseCase,
@@ -162,7 +162,7 @@ class ChannelViewModelTest {
         }
         
         // Verify usecase calls
-        verify(getChannelUseCase).invoke(testChannelId)
+        verify(getProjectChannelUseCase).invoke(testChannelId)
         verify(getMessagesStreamUseCase).invoke(testChannelId)
     }
     

@@ -1,6 +1,6 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.model.User
+import com.example.domain.model.base.User
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject

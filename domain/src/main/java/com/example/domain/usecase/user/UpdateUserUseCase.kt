@@ -1,7 +1,8 @@
 package com.example.domain.usecase.user
 
+import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.User
+import com.example.domain.model.base.User
 import com.example.domain.repository.UserRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -20,7 +21,7 @@ class UpdateUserUseCase @Inject constructor(
      * @param user 업데이트할 사용자 정보
      * @return 성공 시 Unit이 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(user: User): Result<Unit> {
+    suspend operator fun invoke(user: User): CustomResult<Unit, Exception> {
         val userWithTimestamp = user.copy(updatedAt = DateTimeUtil.nowInstant())
         return userRepository.updateUserProfile(userWithTimestamp)
     }

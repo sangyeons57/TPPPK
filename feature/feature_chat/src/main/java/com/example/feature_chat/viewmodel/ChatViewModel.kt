@@ -1,20 +1,15 @@
 package com.example.feature_chat.viewmodel
 
+/** 다른 문제 전부 해결하고나면 VIewmodel구현 왜냐하면 chat은 다음주에 할일 이기때문
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.ChatMessage
-import com.example.domain.model.MediaImage
-import com.example.domain.model.Channel
-import com.example.domain.model.MessageAttachment
-import com.example.domain.repository.ChannelRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.usecase.message.DeleteMessageUseCase
 import com.example.domain.usecase.message.EditMessageUseCase
 import com.example.domain.usecase.message.FetchPastMessagesUseCase
-import com.example.domain.usecase.chat.GetLocalGalleryImagesUseCase
 import com.example.domain.usecase.message.GetMessagesStreamUseCase
 import com.example.domain.usecase.message.SendMessageUseCase
 import com.example.feature_chat.model.ChatEvent
@@ -39,12 +34,11 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.core_navigation.destination.AppRoutes
 import android.util.Log
 import com.example.data.model.channel.ChannelLocator
-import com.example.domain.model.AttachmentType
-import com.example.domain.model.ChannelType
+import com.example.domain.model.base.Message
 
 // --- Domain 모델 -> UI 모델 변환 함수 ---
 // ViewModel 내부 또는 별도 Mapper 파일에 위치 가능
-private fun ChatMessage.toUiModel(myUserId: String, tempIdGenerator: () -> String): ChatMessageUiModel {
+private fun Message.toUiModel(myUserId: String, tempIdGenerator: () -> String): ChatMessageUiModel {
     return ChatMessageUiModel(
         localId = tempIdGenerator(),
         chatId = this.id, 
@@ -61,13 +55,6 @@ private fun ChatMessage.toUiModel(myUserId: String, tempIdGenerator: () -> Strin
     )
 }
 
-private fun MediaImage.toUiModel(): GalleryImageUiModel {
-    return GalleryImageUiModel(
-        uri = this.contentPath,
-        id = this.id,
-        isSelected = false
-    )
-}
 
 private const val INITIAL_MESSAGE_LOAD_LIMIT = 30
 private const val PAST_MESSAGE_LOAD_LIMIT = 20
@@ -77,14 +64,6 @@ private const val PAST_MESSAGE_LOAD_LIMIT = 20
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val channelRepository: ChannelRepository,
-    private val getMessagesStreamUseCase: GetMessagesStreamUseCase,
-    private val fetchPastMessagesUseCase: FetchPastMessagesUseCase,
-    private val sendMessageUseCase: SendMessageUseCase,
-    private val getLocalGalleryImagesUseCase: GetLocalGalleryImagesUseCase,
-    private val editMessageUseCase: EditMessageUseCase,
-    private val deleteMessageUseCase: DeleteMessageUseCase,
-    private val userRepository: UserRepository
 ) : ViewModel() {
 
     // 채널 타입 정의 - AppRoutes.Chat에서 ARG_CHANNEL_TYPE 가져오기
@@ -567,3 +546,4 @@ class ChatViewModel @Inject constructor(
         deleteMessage(messageId)
     }
 }
+        **/

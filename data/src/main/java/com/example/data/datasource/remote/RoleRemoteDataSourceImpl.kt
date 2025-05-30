@@ -1,11 +1,13 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.RoleDTO
+import com.example.data.model.remote.RoleDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -26,7 +28,8 @@ class RoleRemoteDataSourceImpl @Inject constructor(
             .collection(ROLES_COLLECTION)
 
     override fun observeRoles(projectId: String): Flow<List<RoleDTO>> {
-        return getRolesCollection(projectId).dataObjects()
+        return getRolesCollection(projectId).snapshots()
+            .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(RoleDTO::class.java) } }
     }
 
     override suspend fun addRole(projectId: String, name: String): Result<String> = withContext(Dispatchers.IO) {

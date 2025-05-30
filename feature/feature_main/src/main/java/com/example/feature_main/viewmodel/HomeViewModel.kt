@@ -3,12 +3,7 @@ package com.example.feature_main.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.Channel
-import com.example.domain.model.Project
-import com.example.domain.model.User
-import com.example.domain.model.ui.DmUiModel
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
-import com.example.domain.usecase.project.GetProjectListStreamUseCase
 import com.example.domain.usecase.project.GetProjectStructureUseCase
 import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
@@ -95,7 +90,6 @@ class HomeViewModel @Inject constructor(
     private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val getUserDmChannelsUseCase: GetUserDmChannelsUseCase,
     private val getUserInfoUseCase: GetUserInfoUseCase,
-    private val getProjectListStreamUseCase: GetProjectListStreamUseCase,
     private val getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase,
     private val getProjectStructureUseCase: GetProjectStructureUseCase
 ) : ViewModel() {

@@ -1,7 +1,7 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.CategoryDTO
+import com.example.data.model.remote.CategoryDTO
 import kotlinx.coroutines.flow.Flow
 
 interface CategoryRemoteDataSource {

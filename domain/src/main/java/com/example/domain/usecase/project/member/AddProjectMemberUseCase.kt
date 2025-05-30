@@ -1,6 +1,6 @@
 package com.example.domain.usecase.project.member
 
-import com.example.domain.repository.ProjectMemberRepository
+import com.example.domain.repository.MemberRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -22,7 +22,7 @@ interface AddProjectMemberUseCase {
  * Implementation of [AddProjectMemberUseCase].
  */
 class AddProjectMemberUseCaseImpl @Inject constructor(
-    private val projectMemberRepository: ProjectMemberRepository
+    private val projectMemberRepository: MemberRepository
 ) : AddProjectMemberUseCase {
 
     /**

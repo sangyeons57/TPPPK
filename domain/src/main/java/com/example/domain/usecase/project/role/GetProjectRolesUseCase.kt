@@ -1,8 +1,7 @@
 package com.example.domain.usecase.project.role
 
-import com.example.domain.model.Role
-import com.example.domain.model.project.RoleSortOption
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.domain.model.base.Role
+import com.example.domain.repository.RoleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -29,7 +28,7 @@ interface GetProjectRolesUseCase {
  * Implementation of [GetProjectRolesUseCase].
  */
 class GetProjectRolesUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: ProjectRoleRepository
+    private val projectRoleRepository: RoleRepository
 ) : GetProjectRolesUseCase {
 
     /**

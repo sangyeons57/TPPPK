@@ -60,40 +60,40 @@ object DateTimeUtil {
      * Firebase Timestamp를 LocalDateTime으로 변환합니다.
      * @param timestamp 변환할 Firebase Timestamp
      * @param zoneId 사용할 시간대 (기본값: 시스템 기본 시간대)
-     * @return 변환된 LocalDateTime 객체 또는 timestamp가 null인 경우 null
+     * @return 변환된 LocalDateTime 객체
      */
-    fun toLocalDateTime(timestamp: Timestamp?, zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime? {
-        return timestamp?.toDate()?.let { toLocalDateTime(it, zoneId) }
+    fun toLocalDateTime(timestamp: Timestamp, zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime {
+        return timestamp.toDate().let { toLocalDateTime(it, zoneId) }
     }
 
     /**
      * Firebase Timestamp를 LocalTime으로 변환합니다.
      * @param timestamp 변환할 Firebase Timestamp
      * @param zoneId 사용할 시간대 (기본값: 시스템 기본 시간대)
-     * @return 변환된 LocalTime 객체 또는 timestamp가 null인 경우 null
+     * @return 변환된 LocalTime 객체
      */
-    fun toLocalTime(timestamp: Timestamp?, zoneId: ZoneId = ZoneId.systemDefault()): LocalTime? {
+    fun toLocalTime(timestamp: Timestamp, zoneId: ZoneId = ZoneId.systemDefault()): LocalTime {
         // API 레벨 호환성을 위해 LocalDateTime을 거쳐서 LocalTime을 얻음
-        return toLocalDateTime(timestamp, zoneId)?.toLocalTime()
+        return toLocalDateTime(timestamp, zoneId).toLocalTime()
     }
 
     /**
      * LocalDateTime을 Firebase Timestamp로 변환합니다.
      * @param localDateTime 변환할 LocalDateTime
-     * @return 변환된 Firebase Timestamp 객체 또는 localDateTime이 null인 경우 null
+     * @return 변환된 Firebase Timestamp 객체
      */
-    fun toTimestamp(localDateTime: LocalDateTime?): Timestamp? {
-        return localDateTime?.let { Timestamp(toDate(it)) }
+    fun toTimestamp(localDateTime: LocalDateTime): Timestamp {
+        return Timestamp(toDate(localDateTime))
     }
 
     /**
      * LocalTime을 Firebase Timestamp로 변환합니다.
      * (현재 날짜의 지정 시간으로 변환합니다)
      * @param localTime 변환할 LocalTime
-     * @return 변환된 Firebase Timestamp 객체 또는 localTime이 null인 경우 null
+     * @return 변환된 Firebase Timestamp 객체
      */
-    fun toTimestamp(localTime: LocalTime?): Timestamp? {
-        return localTime?.let { 
+    fun toTimestamp(localTime: LocalTime): Timestamp {
+        return localTime.let { 
             val today = LocalDateTime.now().toLocalDate()
             val dateTime = LocalDateTime.of(today, it)
             Timestamp(toDate(dateTime)) 
@@ -147,10 +147,10 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 사용할 시간대 (기본값: 시스템 기본 시간대)
-     * @return 변환된 LocalDateTime 객체 또는 instant가 null인 경우 null
+     * @return 변환된 LocalDateTime 객체
      */
-    fun toLocalDateTime(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime? {
-        return instant?.let { LocalDateTime.ofInstant(it, zoneId) }
+    fun toLocalDateTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime {
+        return LocalDateTime.ofInstant(instant, zoneId)
     }
 
     /**
@@ -158,11 +158,11 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 사용할 시간대 (기본값: 시스템 기본 시간대)
-     * @return 변환된 LocalTime 객체 또는 instant가 null인 경우 null
+     * @return 변환된 LocalTime 객체
      */
-    fun toLocalTime(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): LocalTime? {
+    fun toLocalTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): LocalTime {
         // API 레벨 호환성을 위해 LocalDateTime을 거쳐서 LocalTime을 얻음
-        return toLocalDateTime(instant, zoneId)?.toLocalTime()
+        return toLocalDateTime(instant, zoneId).toLocalTime()
     }
 
     /**
@@ -187,10 +187,10 @@ object DateTimeUtil {
      * 포맷: "yyyy-MM-dd" (예: "2023-07-15")
      * 
      * @param dateTime 변환할 LocalDateTime 객체
-     * @return 포맷팅된 날짜 문자열 또는 dateTime이 null인 경우 빈 문자열
+     * @return 포맷팅된 날짜 문자열
      */
-    fun formatDate(dateTime: LocalDateTime?): String {
-        return dateTime?.format(DATE_PATTERN) ?: ""
+    fun formatDate(dateTime: LocalDateTime): String {
+        return dateTime.format(DATE_PATTERN)
     }
 
     /**
@@ -198,10 +198,10 @@ object DateTimeUtil {
      * 포맷: "HH:mm" (예: "14:30")
      * 
      * @param dateTime 변환할 LocalDateTime 객체
-     * @return 포맷팅된 시간 문자열 또는 dateTime이 null인 경우 빈 문자열
+     * @return 포맷팅된 시간 문자열
      */
-    fun formatTime(dateTime: LocalDateTime?): String {
-        return dateTime?.format(TIME_PATTERN) ?: ""
+    fun formatTime(dateTime: LocalDateTime): String {
+        return dateTime.format(TIME_PATTERN)
     }
 
     /**
@@ -209,10 +209,10 @@ object DateTimeUtil {
      * 포맷: "a h:mm" (예: "오전 9:30", "오후 2:45")
      * 
      * @param dateTime 변환할 LocalDateTime 객체
-     * @return 포맷팅된 채팅 시간 문자열 또는 dateTime이 null인 경우 빈 문자열
+     * @return 포맷팅된 채팅 시간 문자열
      */
-    fun formatChatTime(dateTime: LocalDateTime?): String {
-        return dateTime?.format(CHAT_TIME_PATTERN) ?: ""
+    fun formatChatTime(dateTime: LocalDateTime): String {
+        return dateTime.format(CHAT_TIME_PATTERN)
     }
 
     /**
@@ -220,10 +220,10 @@ object DateTimeUtil {
      * 포맷: "yyyy-MM-dd HH:mm" (예: "2023-07-15 14:30")
      * 
      * @param dateTime 변환할 LocalDateTime 객체
-     * @return 포맷팅된 날짜 및 시간 문자열 또는 dateTime이 null인 경우 빈 문자열
+     * @return 포맷팅된 날짜 및 시간 문자열
      */
-    fun formatDateTime(dateTime: LocalDateTime?): String {
-        return dateTime?.format(DATE_TIME_PATTERN) ?: ""
+    fun formatDateTime(dateTime: LocalDateTime): String {
+        return dateTime.format(DATE_TIME_PATTERN)
     }
 
     /**
@@ -231,10 +231,10 @@ object DateTimeUtil {
      * 포맷: "yyyy-MM-dd HH:mm:ss" (예: "2023-07-15 14:30:45")
      * 
      * @param dateTime 변환할 LocalDateTime 객체
-     * @return 포맷팅된 날짜 및 시간 문자열 또는 dateTime이 null인 경우 빈 문자열
+     * @return 포맷팅된 날짜 및 시간 문자열
      */
-    fun formatDateTimeWithSeconds(dateTime: LocalDateTime?): String {
-        return dateTime?.format(DATE_TIME_SECONDS_PATTERN) ?: ""
+    fun formatDateTimeWithSeconds(dateTime: LocalDateTime): String {
+        return dateTime.format(DATE_TIME_SECONDS_PATTERN)
     }
 
     /**
@@ -242,10 +242,10 @@ object DateTimeUtil {
      * 
      * @param dateTime 변환할 LocalDateTime 객체
      * @param pattern DateTimeFormatter 패턴 문자열 (예: "yyyy년 MM월 dd일")
-     * @return 포맷팅된 문자열 또는 dateTime이 null인 경우 빈 문자열
+     * @return 포맷팅된 문자열
      */
-    fun format(dateTime: LocalDateTime?, pattern: String): String {
-        return dateTime?.format(DateTimeFormatter.ofPattern(pattern)) ?: ""
+    fun format(dateTime: LocalDateTime, pattern: String): String {
+        return dateTime.format(DateTimeFormatter.ofPattern(pattern))
     }
 
     /**
@@ -253,10 +253,10 @@ object DateTimeUtil {
      * 
      * @param localDateTime 변환할 LocalDateTime
      * @param zoneId 변환할 때 사용할 시간대 (기본값: UTC)
-     * @return 변환된 Instant 객체 또는 localDateTime이 null인 경우 null
+     * @return 변환된 Instant 객체
      */
-    fun toInstant(localDateTime: LocalDateTime?, zoneId: ZoneId = ZoneOffset.UTC): Instant? {
-        return localDateTime?.atZone(zoneId)?.toInstant()
+    fun toInstant(localDateTime: LocalDateTime, zoneId: ZoneId = ZoneOffset.UTC): Instant {
+        return localDateTime.atZone(zoneId).toInstant()
     }
 
     /**
@@ -265,8 +265,8 @@ object DateTimeUtil {
      * @param instant 변환할 Instant
      * @return 변환된 Date 객체 또는 instant가 null인 경우 null
      */
-    fun toDate(instant: Instant?): Date? {
-        return instant?.let { Date.from(it) }
+    fun toDate(instant: Instant): Date {
+        return instant.let { Date.from(it) }
     }
     
     /**
@@ -275,8 +275,8 @@ object DateTimeUtil {
      * @param date 변환할 Date 객체
      * @return 변환된 Instant 객체 또는 date가 null인 경우 null
      */
-    fun toInstant(date: Date?): Instant? {
-        return date?.toInstant()
+    fun toInstant(date: Date): Instant {
+        return date.toInstant()
     }
 
     /**
@@ -285,8 +285,8 @@ object DateTimeUtil {
      * @param instant 변환할 Instant
      * @return 변환된 Firebase Timestamp 객체 또는 instant가 null인 경우 null
      */
-    fun instantToFirebaseTimestamp(instant: Instant?): Timestamp? {
-        return instant?.let { Timestamp(it.epochSecond, it.nano) }
+    fun instantToFirebaseTimestamp(instant: Instant): Timestamp {
+        return Timestamp(instant.epochSecond, instant.nano)
     }
 
     /**
@@ -295,8 +295,8 @@ object DateTimeUtil {
      * @param timestamp 변환할 Firebase Timestamp
      * @return 변환된 Instant 객체 또는 timestamp가 null인 경우 null
      */
-    fun firebaseTimestampToInstant(timestamp: Timestamp?): Instant? {
-        return timestamp?.let { Instant.ofEpochSecond(it.seconds, it.nanoseconds.toLong()) }
+    fun firebaseTimestampToInstant(timestamp: Timestamp): Instant {
+        return Instant.ofEpochSecond(timestamp.seconds, timestamp.nanoseconds.toLong())
     }
 
     /**
@@ -315,10 +315,10 @@ object DateTimeUtil {
      * 
      * @param localTime 변환할 LocalTime
      * @param zoneId 변환할 때 사용할 시간대 (기본값: UTC)
-     * @return 변환된 Instant 객체 또는 localTime이 null인 경우 null
+     * @return 변환된 Instant 객체
      */
-    fun toInstant(localTime: LocalTime?, zoneId: ZoneId = ZoneOffset.UTC): Instant? {
-        return localTime?.let { 
+    fun toInstant(localTime: LocalTime, zoneId: ZoneId = ZoneOffset.UTC): Instant {
+        return localTime.let { 
             val today = LocalDateTime.now().toLocalDate()
             val dateTime = LocalDateTime.of(today, it)
             dateTime.atZone(zoneId).toInstant()
@@ -329,10 +329,10 @@ object DateTimeUtil {
      * LocalDateTime을 LocalTime으로 변환합니다.
      * 
      * @param localDateTime 변환할 LocalDateTime
-     * @return 변환된 LocalTime 객체 또는 localDateTime이 null인 경우 null
+     * @return 변환된 LocalTime 객체
      */
-    fun toLocalTime(localDateTime: LocalDateTime?): LocalTime? {
-        return localDateTime?.toLocalTime()
+    fun toLocalTime(localDateTime: LocalDateTime): LocalTime {
+        return localDateTime.toLocalTime()
     }
 
     /**
@@ -340,10 +340,10 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 사용할 시간대 (기본값: 시스템 기본 시간대)
-     * @return 하루 중 경과한 초 (0 ~ 86399) 또는 instant가 null인 경우 0
+     * @return 하루 중 경과한 초 (0 ~ 86399)
      */
-    fun getSecondOfDayFromInstant(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): Int {
-        return instant?.let { toLocalTime(it, zoneId)?.toSecondOfDay() } ?: 0
+    fun getSecondOfDayFromInstant(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): Int {
+        return toLocalTime(instant, zoneId).toSecondOfDay()
     }
 
     /**
@@ -368,10 +368,10 @@ object DateTimeUtil {
      * Instant를 에포크 밀리초로 변환합니다.
      * 
      * @param instant 변환할 Instant
-     * @return 에포크 시간 (밀리초) 또는 instant가 null인 경우 0
+     * @return 에포크 시간 (밀리초)
      */
-    fun toEpochMillis(instant: Instant?): Long {
-        return instant?.toEpochMilli() ?: 0L
+    fun toEpochMillis(instant: Instant): Long {
+        return instant.toEpochMilli()
     }
 
     /**
@@ -380,10 +380,10 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 시간대 (기본값: 시스템 기본)
-     * @return 포맷팅된 날짜 문자열 또는 instant가 null인 경우 빈 문자열
+     * @return 포맷팅된 날짜 문자열
      */
-    fun formatDate(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): String {
-        return instant?.let { formatDate(toLocalDateTime(it, zoneId)) } ?: ""
+    fun formatDate(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatDate(toLocalDateTime(instant, zoneId))
     }
 
     /**
@@ -392,10 +392,10 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 시간대 (기본값: 시스템 기본)
-     * @return 포맷팅된 시간 문자열 또는 instant가 null인 경우 빈 문자열
+     * @return 포맷팅된 시간 문자열
      */
-    fun formatTime(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): String {
-        return instant?.let { formatTime(toLocalDateTime(it, zoneId)) } ?: ""
+    fun formatTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatTime(toLocalDateTime(instant, zoneId))
     }
 
     /**
@@ -404,10 +404,10 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 시간대 (기본값: 시스템 기본)
-     * @return 포맷팅된 채팅 시간 문자열 또는 instant가 null인 경우 빈 문자열
+     * @return 포맷팅된 채팅 시간 문자열
      */
-    fun formatChatTime(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): String {
-        return instant?.let { formatChatTime(toLocalDateTime(it, zoneId)) } ?: ""
+    fun formatChatTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatChatTime(toLocalDateTime(instant, zoneId))
     }
 
     /**
@@ -416,10 +416,10 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 시간대 (기본값: 시스템 기본)
-     * @return 포맷팅된 날짜/시간 문자열 또는 instant가 null인 경우 빈 문자열
+     * @return 포맷팅된 날짜/시간 문자열
      */
-    fun formatDateTime(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): String {
-        return instant?.let { formatDateTime(toLocalDateTime(it, zoneId)) } ?: ""
+    fun formatDateTime(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatDateTime(toLocalDateTime(instant, zoneId))
     }
 
     /**
@@ -428,10 +428,10 @@ object DateTimeUtil {
      * 
      * @param instant 변환할 Instant
      * @param zoneId 시간대 (기본값: 시스템 기본)
-     * @return 포맷팅된 날짜/시간 문자열 또는 instant가 null인 경우 빈 문자열
+     * @return 포맷팅된 날짜/시간 문자열
      */
-    fun formatDateTimeWithSeconds(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): String {
-        return instant?.let { formatDateTimeWithSeconds(toLocalDateTime(it, zoneId)) } ?: ""
+    fun formatDateTimeWithSeconds(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatDateTimeWithSeconds(toLocalDateTime(instant, zoneId))
     }
 
     /**
@@ -440,20 +440,20 @@ object DateTimeUtil {
      * @param instant 변환할 Instant
      * @param pattern DateTimeFormatter 패턴 문자열
      * @param zoneId 시간대 (기본값: 시스템 기본)
-     * @return 포맷팅된 문자열 또는 instant가 null인 경우 빈 문자열
+     * @return 포맷팅된 문자열
      */
-    fun format(instant: Instant?, pattern: String, zoneId: ZoneId = ZoneId.systemDefault()): String {
-        return instant?.let { format(toLocalDateTime(it, zoneId), pattern) } ?: ""
+    fun format(instant: Instant, pattern: String, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return format(toLocalDateTime(instant, zoneId), pattern)
     }
 
     // LocalTime 관련 추가 유틸리티 (예: LocalTime을 초로 변환)
     /**
      * LocalTime을 자정 기준 초로 변환합니다.
      * @param localTime 변환할 LocalTime
-     * @return 초 단위 값 또는 localTime이 null인 경우 0
+     * @return 초 단위 값
      */
-    fun toSecondOfDay(localTime: LocalTime?): Int {
-        return localTime?.toSecondOfDay() ?: 0
+    fun toSecondOfDay(localTime: LocalTime): Int {
+        return localTime.toSecondOfDay()
     }
 
     /**
@@ -469,10 +469,10 @@ object DateTimeUtil {
      * Instant를 자정 기준 초로 변환합니다.
      * @param instant 변환할 Instant
      * @param zoneId 시간대 (기본값: 시스템 기본)
-     * @return 초 단위 값 또는 instant가 null인 경우 0
+     * @return 초 단위 값
      */
-    fun toSecondOfDay(instant: Instant?, zoneId: ZoneId = ZoneId.systemDefault()): Int {
-        return instant?.let { toLocalTime(it, zoneId)?.toSecondOfDay() } ?: 0
+    fun toSecondOfDay(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): Int {
+        return toLocalTime(instant, zoneId).toSecondOfDay()
     }
 
     // --- Methods for converting UI input types (String/LocalDateTime/LocalDate/LocalTime) back to Instant ---
@@ -482,17 +482,15 @@ object DateTimeUtil {
      * @param dateString "yyyy-MM-dd"
      * @param timeString "HH:mm"
      * @param zoneId 해당 로컬 날짜/시간의 시간대 (기본값: 시스템 기본값)
-     * @return 변환된 Instant 또는 파싱 실패 시 null
+     * @return 변환된 Instant
      */
-    fun parseDateTimeStringsToInstant(dateString: String?, timeString: String?, zoneId: ZoneId = ZoneId.systemDefault()): Instant? {
+    fun parseDateTimeStringsToInstant(dateString: String, timeString: String, zoneId: ZoneId = ZoneId.systemDefault()): Instant {
         return try {
-            if (dateString.isNullOrBlank() || timeString.isNullOrBlank()) return null
             val localDate = LocalDate.parse(dateString, DATE_PATTERN)
             val localTime = LocalTime.parse(timeString, TIME_PATTERN)
             LocalDateTime.of(localDate, localTime).atZone(zoneId).toInstant()
         } catch (e: Exception) {
-            // TODO: Consider logging the exception, e.g., Log.e("DateTimeUtil", "Error parsing date/time strings", e)
-            null
+            throw e
         }
     }
 
@@ -500,20 +498,20 @@ object DateTimeUtil {
      * LocalDate를 해당 날짜의 시작 시간(00:00:00) Instant로 변환합니다.
      * @param localDate 변환할 LocalDate
      * @param zoneId 해당 로컬 날짜의 시간대 (기본값: 시스템 기본값)
-     * @return 변환된 Instant 또는 localDate가 null인 경우 null
+     * @return 변환된 Instant
      */
-    fun localDateToStartOfDayInstant(localDate: LocalDate?, zoneId: ZoneId = ZoneId.systemDefault()): Instant? {
-        return localDate?.atStartOfDay(zoneId)?.toInstant()
+    fun localDateToStartOfDayInstant(localDate: LocalDate, zoneId: ZoneId = ZoneId.systemDefault()): Instant {
+        return localDate.atStartOfDay(zoneId).toInstant()
     }
 
     /**
      * LocalDate를 해당 날짜의 종료 시간(23:59:59.999999999) Instant로 변환합니다.
      * @param localDate 변환할 LocalDate
      * @param zoneId 해당 로컬 날짜의 시간대 (기본값: 시스템 기본값)
-     * @return 변환된 Instant 또는 localDate가 null인 경우 null
+     * @return 변환된 Instant
      */
-    fun localDateToEndOfDayInstant(localDate: LocalDate?, zoneId: ZoneId = ZoneId.systemDefault()): Instant? {
-        return localDate?.atTime(LocalTime.MAX)?.atZone(zoneId)?.toInstant()
+    fun localDateToEndOfDayInstant(localDate: LocalDate, zoneId: ZoneId = ZoneId.systemDefault()): Instant {
+        return localDate.atTime(LocalTime.MAX).atZone(zoneId).toInstant()
     }
 
     //endregion
@@ -548,7 +546,7 @@ object DateTimeUtil {
      * 현재 시간을 기준으로 "방금 전", "n분 전", "n시간 전", "어제", "날짜" 형식으로 표시합니다.
      */
     @RequiresApi(Build.VERSION_CODES.S)
-    fun formatRelativeTime(dateTime: LocalDateTime?): String {
+    fun formatRelativeTime(dateTime: LocalDateTime): String {
         val now = LocalDateTime.now()
         val diff = Duration.between(dateTime, now)
 
@@ -571,9 +569,9 @@ object DateTimeUtil {
      * @param localDate 변환할 LocalDate
      * @param localTime 변환할 LocalTime
      * @param zoneId 변환할 때 사용할 시간대 (기본값: 시스템 기본 시간대)
-     * @return 결합되고 변환된 Instant 객체 또는 입력 값 중 하나라도 null이면 null
+     * @return 결합되고 변환된 Instant 객체
      */
-    fun localDateAndTimeToInstant(localDate: LocalDate, localTime: LocalTime, zoneId: ZoneId = ZoneId.systemDefault()): Instant? {
+    fun localDateAndTimeToInstant(localDate: LocalDate, localTime: LocalTime, zoneId: ZoneId = ZoneId.systemDefault()): Instant {
         return LocalDateTime.of(localDate, localTime).atZone(zoneId).toInstant()
     }
 
@@ -581,24 +579,11 @@ object DateTimeUtil {
      * Firebase Timestamp를 LocalDateTime으로 변환합니다. (Instant를 통해 변환)
      * @param timestamp 변환할 Firebase Timestamp
      * @param zoneId 결과 LocalDateTime에 적용할 시간대 (기본값: 시스템 기본 시간대)
-     * @return 변환된 LocalDateTime 객체 또는 timestamp가 null인 경우 null
+     * @return 변환된 LocalDateTime 객체
      */
-    fun firebaseTimestampToLocalDateTime(timestamp: Timestamp?, zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime? {
-        return firebaseTimestampToInstant(timestamp)?.let { instant ->
+    fun firebaseTimestampToLocalDateTime(timestamp: Timestamp, zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime {
+        return firebaseTimestampToInstant(timestamp).let { instant ->
             LocalDateTime.ofInstant(instant, zoneId)
         }
     }
-
-    /**
-     * LocalDateTime을 Firebase Timestamp로 변환합니다. (Instant를 통해 변환)
-     * @param localDateTime 변환할 LocalDateTime
-     * @param zoneId localDateTime 값의 실제 시간대 (기본값: 시스템 기본 시간대)
-     * @return 변환된 Firebase Timestamp 객체 또는 localDateTime이 null인 경우 null
-     */
-    fun localDateTimeToFirebaseTimestamp(localDateTime: LocalDateTime?, zoneId: ZoneId = ZoneId.systemDefault()): Timestamp? {
-        return localDateTime?.let {
-            val instant = it.atZone(zoneId).toInstant()
-            instantToFirebaseTimestamp(instant)
-        }
-    }
-} 
+}

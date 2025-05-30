@@ -1,7 +1,7 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.ScheduleDTO
+import com.example.data.model.remote.ScheduleDTO
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 

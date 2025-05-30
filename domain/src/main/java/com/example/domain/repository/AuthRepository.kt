@@ -1,9 +1,12 @@
 // 파일 위치: domain/repository/AuthRepository.kt
 package com.example.domain.repository
 
-import com.example.domain.model.User
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.UserSession
+import com.example.domain.model.auth.AuthenticationState
+import com.example.domain.model.base.User
+import com.google.api.CustomHttpPatternOrBuilder
 import kotlinx.coroutines.flow.Flow
-import kotlin.Result
 import java.time.Instant
 
 /**
@@ -13,38 +16,48 @@ import java.time.Instant
 interface AuthRepository {
 
     // --- 로그인/로그아웃/상태 관련 ---
+    suspend fun login(email: String, password: String): CustomResult<UserSession,Exception>
     suspend fun isLoggedIn(): Boolean // 로그인 상태 확인 (Splash)
     
-    fun getCurrentUser(): Flow<User?> // 현재 인증된 사용자 정보를 Flow로 가져옴
+    suspend fun getCurrentUserId(): CustomResult<String, Exception> // 현재 인증된 사용자의 ID 반환
     
-    suspend fun getCurrentUserId(): String? // 현재 인증된 사용자의 ID 반환
-    
-    suspend fun checkSession(): Result<User?> // 세션 유효성 확인 및 사용자 정보 반환
+    suspend fun logout(): CustomResult<Unit, Exception> // 로그아웃
 
-    suspend fun login(email: String, pass: String): Result<User?> // 로그인 시도 (Login - User 모델 반환)
-    
-    suspend fun logout(): Result<Unit> // 로그아웃
+    suspend fun signup(email: String, password: String): CustomResult<String, Exception> //회원가입
 
     // --- 비밀번호 재설정 관련 (FindPassword) ---
-    suspend fun requestPasswordResetCode(email: String): Result<Unit>
-    suspend fun verifyPasswordResetCode(email: String, code: String): Result<Unit>
-    suspend fun resetPassword(email: String, code: String, newPassword: String): Result<Unit>
+    suspend fun requestPasswordResetCode(email: String): CustomResult<Unit,  Exception>
 
     // --- 회원가입 관련 (SignUp) ---
-    suspend fun signUp(email: String, pass: String, nickname: String, consentTimeStamp: Instant = Instant.now()): Result<User?> // 회원가입
     
-    suspend fun sendEmailVerification(): Result<Unit> // 이메일 인증 전송
+    suspend fun sendEmailVerification(): CustomResult<Unit,  Exception> // 이메일 인증 전송
     
-    suspend fun checkEmailVerification(): Result<Boolean> // 이메일 인증 확인
+    suspend fun checkEmailVerification(): CustomResult<Boolean,  Exception> // 이메일 인증 확인
 
-    // --- 비밀번호 변경 관련 ---
-    suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> // 현재 로그인된 사용자의 비밀번호 변경
+    suspend fun updateUserName(newDisplayName: String): CustomResult<User, Exception> // 사용자 이름 업데이트
 
     // --- 회원 탈퇴 ---
-    suspend fun deleteCurrentUser(): Result<Unit> // 현재 Firebase Auth 사용자 삭제
+    suspend fun deleteCurrentUser(): CustomResult<Unit,  Exception> // 현재 Firebase Auth 사용자 삭제
 
     // --- 에러 처리 ---
     suspend fun getLoginErrorMessage(exception: Throwable): String
     suspend fun getSignUpErrorMessage(exception: Throwable): String
     suspend fun getPasswordResetErrorMessage(exception: Throwable): String
+    
+    // --- 세션 관리 ---
+    /**
+     * 현재 사용자의 세션 정보를 가져옵니다.
+     * 로그인되어 있지 않은 경우 null을 반환합니다.
+     * 
+     * @return 현재 사용자의 세션 정보가 포함된 CustomResult 또는 null
+     */
+    suspend fun getCurrentUserSession(): CustomResult<UserSession, Exception>
+    
+    /**
+     * 현재 사용자의 세션 정보를 실시간으로 관찰합니다.
+     * 로그인/로그아웃 상태 변화에 따라 값이 업데이트됩니다.
+     * 
+     * @return 사용자 세션 정보의 Flow
+     */
+    suspend fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>>
 }

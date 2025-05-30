@@ -1,6 +1,7 @@
 package com.example.domain.usecase.project.member
 
-import com.example.domain.repository.ProjectMemberRepository
+import com.example.core_common.result.CustomResult
+import com.example.domain.repository.MemberRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -15,14 +16,14 @@ interface RemoveProjectMemberUseCase {
      * @param userId The ID of the user to remove.
      * @return A [Result] indicating success or failure.
      */
-    suspend operator fun invoke(projectId: String, userId: String): Result<Unit>
+    suspend operator fun invoke(projectId: String, userId: String): CustomResult<Unit, Exception>
 }
 
 /**
  * Implementation of [RemoveProjectMemberUseCase].
  */
 class RemoveProjectMemberUseCaseImpl @Inject constructor(
-    private val projectMemberRepository: ProjectMemberRepository
+    private val projectMemberRepository: MemberRepository
 ) : RemoveProjectMemberUseCase {
 
     /**
@@ -32,7 +33,7 @@ class RemoveProjectMemberUseCaseImpl @Inject constructor(
      * @param userId The ID of the user to remove.
      * @return A [Result] indicating success or failure.
      */
-    override suspend fun invoke(projectId: String, userId: String): Result<Unit> {
-        return projectMemberRepository.removeMemberFromProject(projectId, userId)
+    override suspend fun invoke(projectId: String, userId: String): CustomResult<Unit, Exception> {
+        return projectMemberRepository.removeProjectMember(projectId, userId)
     }
 }

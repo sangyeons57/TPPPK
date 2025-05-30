@@ -1,6 +1,7 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.model.User
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.repository.UserRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -22,7 +23,7 @@ class SearchUserByNameUseCaseImpl @Inject constructor(
      * @param name 검색할 사용자 이름
      * @return 검색 결과에 해당하는 사용자 목록 또는 에러를 포함하는 Result
      */
-    override suspend operator fun invoke(name: String): Result<List<User>> {
+    override suspend operator fun invoke(name: String): CustomResult<List<User>, Exception> {
         return userRepository.searchUsersByName(name)
     }
 } 

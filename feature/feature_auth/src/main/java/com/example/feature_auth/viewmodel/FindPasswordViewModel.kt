@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.RequestPasswordResetUseCase
 import com.example.domain.usecase.auth.ResetPasswordUseCase
-import com.example.domain.usecase.auth.VerifyPasswordResetCodeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

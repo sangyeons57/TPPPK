@@ -1,12 +1,14 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.DMWrapperDTO
+import com.example.data.model.remote.DMWrapperDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,7 +35,8 @@ class DMWrapperRemoteDataSourceImpl @Inject constructor(
         return firestore.collection(USERS_COLLECTION).document(uid)
             .collection(DM_WRAPPER_COLLECTION)
             .orderBy(LAST_MESSAGE_TIMESTAMP_FIELD, Query.Direction.DESCENDING) // 최신 메시지 순으로 정렬
-            .dataObjects() // Flow<List<DMWrapperDTO>> 반환
+            .snapshots()
+            .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(DMWrapperDTO::class.java) } }
     }
 }
 

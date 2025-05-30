@@ -1,6 +1,7 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.model.User
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -15,7 +16,7 @@ class GetCurrentUserStreamUseCase @Inject constructor(
      * 현재 로그인된 사용자의 정보를 실시간 Flow로 반환합니다.
      * @return 사용자 정보 Flow
      */
-    operator fun invoke(): Flow<Result<User>> {
+    operator fun invoke(): Flow<CustomResult<User, Exception>> {
         return userRepository.getCurrentUserStream()
     }
 } 
