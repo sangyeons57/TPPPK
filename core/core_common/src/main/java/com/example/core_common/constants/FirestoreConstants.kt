@@ -110,30 +110,16 @@ object FirestoreConstants {
             const val CREATED_AT = "createdAt"
             const val UPDATED_AT = "updatedAt"
 
-            object ProjectChannels { // projects/{projectId}/categories/{categoryId}/project_channels/{projectChannelId}
-                 const val COLLECTION_NAME = "project_channels"
-                 // Common ProjectChannelFields defined below
-            }
+            const val _DIRECT_CHANNELS_CATEGORY = "directChannels"
         }
-        // Direct Project Channels (not under a category) could also exist.
-        // The ERD shows "Category *-- ProjectChannel", suggesting channels are under categories.
-        // If project_channels can also be a direct subcollection of Project:
-        object DirectProjectChannels { // projects/{projectId}/project_channels/{projectChannelId}
+
+        object Channels { // projects/{projectId}/categories/{categoryId}/project_channels/{projectChannelId}
             const val COLLECTION_NAME = "project_channels"
-            // Common ProjectChannelFields defined below
-        }
-    }
-
-    // Fields for ProjectChannel, used as sub-collection of Category or Project
-    object ProjectChannelFields {
-        const val CHANNEL_NAME = "channelName"
-        const val CHANNEL_TYPE = "channelType" // MESSAGES, TASKS etc.
-        const val CREATED_AT = "createdAt"
-        const val UPDATED_AT = "updatedAt"
-
-        object Messages { // .../project_channels/{projectChannelId}/messages/{messageId}
-            const val COLLECTION_NAME = "messages"
-            // Common MessageFields defined below
+            const val CHANNEL_NAME = "channelName"
+            const val ORDER = "order"
+            const val CHANNEL_TYPE = "channelType" // MESSAGES, TASKS etc.
+            const val CREATED_AT = "createdAt"
+            const val UPDATED_AT = "updatedAt"
         }
     }
 

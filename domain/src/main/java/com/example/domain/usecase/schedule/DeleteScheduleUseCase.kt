@@ -28,7 +28,7 @@ class DeleteScheduleUseCaseImpl @Inject constructor(
      */
     override suspend fun invoke(scheduleId: String): CustomResult<Unit, Exception> {
         val session = authRepository.getCurrentUserSession()
-        when (session) {
+        return when (session) {
             is CustomResult.Success -> scheduleRepository.deleteSchedule(scheduleId)
             else -> CustomResult.Failure(Exception("로그인이 필요합니다."))
         }

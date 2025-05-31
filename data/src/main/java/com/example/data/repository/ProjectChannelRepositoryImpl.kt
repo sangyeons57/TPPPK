@@ -20,19 +20,25 @@ class ProjectChannelRepositoryImpl @Inject constructor(
         throw NotImplementedError("구현 필요: getProjectChannelsStream")
     }
 
-    override suspend fun createProjectChannel(projectId: String, categoryId: String, channel: ProjectChannel): CustomResult<Unit, Exception> {
+    override suspend fun addProjectChannel(projectId: String, channel: ProjectChannel): CustomResult<Unit, Exception> {
         // TODO: 기존 ChannelRepositoryImpl의 프로젝트 채널 생성 로직 구현
         // 예: return projectChannelRemoteDataSource.createProjectChannel(projectId, channel.toDto())
         throw NotImplementedError("구현 필요: createProjectChannel")
     }
 
-    override suspend fun updateProjectChannel(projectId: String, channel: ProjectChannel): CustomResult<Unit> {
+    override suspend fun setProjectChannel(projectId: String, categoryId: String, channel: ProjectChannel): CustomResult<Unit, Exception> {
+        // TODO: 기존 ChannelRepositoryImpl의 프로젝트 채널 생성 로직 구현
+        // 예: return projectChannelRemoteDataSource.createProjectChannel(projectId, channel.toDto())
+        throw NotImplementedError("구현 필요: createProjectChannel")
+    }
+
+    override suspend fun updateProjectChannel(projectId: String, channel: ProjectChannel): CustomResult<Unit, Exception> {
         // TODO: 기존 ChannelRepositoryImpl의 프로젝트 채널 업데이트 로직 구현
         // 예: return projectChannelRemoteDataSource.updateProjectChannel(projectId, channel.toDto())
         throw NotImplementedError("구현 필요: updateProjectChannel")
     }
 
-    override suspend fun deleteProjectChannel(projectId: String, channelId: String): CustomResult<Unit> {
+    override suspend fun deleteProjectChannel(projectId: String, channelId: String): CustomResult<Unit, Exception> {
         // TODO: 기존 ChannelRepositoryImpl의 프로젝트 채널 삭제 로직 구현
         // 예: return projectChannelRemoteDataSource.deleteProjectChannel(projectId, channelId)
         throw NotImplementedError("구현 필요: deleteProjectChannel")

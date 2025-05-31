@@ -6,7 +6,7 @@ import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 
 interface UpdateRoleUseCase {
-    suspend operator fun invoke(projectId: String, roleId: String, newName: String, newPermissions: List<Permission>, isDefault: Boolean? = null): CustomResult<Unit, Exception>
+    suspend operator fun invoke(projectId: String, roleId: String, newName: String, isDefault: Boolean? = null): CustomResult<Unit, Exception>
 }
 
 class UpdateRoleUseCaseImpl @Inject constructor(
@@ -16,7 +16,6 @@ class UpdateRoleUseCaseImpl @Inject constructor(
         projectId: String,
         roleId: String,
         newName: String,
-        newPermissions: List<Permission>,
         isDefault: Boolean?
     ): CustomResult<Unit, Exception> {
         if (newName.isBlank()) {
@@ -26,7 +25,6 @@ class UpdateRoleUseCaseImpl @Inject constructor(
             projectId,
             roleId,
             newName,
-            newPermissions,
             isDefault
         )
     }

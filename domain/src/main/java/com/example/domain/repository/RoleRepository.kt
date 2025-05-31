@@ -13,23 +13,17 @@ interface RoleRepository {
     suspend fun createRole(
         projectId: String,
         name: String,
-        permissions: List<String>,
-        color: String?,
         isDefault: Boolean,
-        currentUserId: String
-    ): CustomResult<Role, Exception>
+    ): CustomResult<String, Exception>
 
     suspend fun updateRole(
         projectId: String,
         roleId: String,
         name: String?,
-        permissions: List<String>?,
-        color: String?,
         isDefault: Boolean?,
-        currentUserId: String
     ): CustomResult<Unit, Exception>
 
-    suspend fun deleteRole(projectId: String, roleId: String, currentUserId: String): CustomResult<Unit, Exception>
+    suspend fun deleteRole(projectId: String, roleId: String): CustomResult<Unit, Exception>
     suspend fun getRoleDetails(projectId: String, roleId: String): CustomResult<Role, Exception>
     suspend fun getAvailablePermissions(): CustomResult<List<String>, Exception>
 }

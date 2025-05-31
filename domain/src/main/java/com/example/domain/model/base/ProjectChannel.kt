@@ -9,6 +9,7 @@ import java.time.Instant
 data class ProjectChannel(
     @DocumentId val id: String = "",
     val channelName: String = "",
+    val order: Int = 0,
     val channelType: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null

@@ -35,7 +35,6 @@ sealed class AddFriendEvent {
 class AddFriendViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
     private val sendFriendRequestUseCase: SendFriendRequestUseCase,
-    private val searchRepository: SearchRepository // 추가
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddFriendUiState())

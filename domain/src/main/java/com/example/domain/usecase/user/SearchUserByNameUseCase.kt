@@ -10,7 +10,7 @@ import kotlin.Result
  * 이름(닉네임)으로 사용자를 검색하는 UseCase입니다.
  */
 interface SearchUserByNameUseCase {
-    suspend operator fun invoke(name: String): Result<List<User>>
+    suspend operator fun invoke(name: String): CustomResult<List<User>, Exception>
 }
 
 class SearchUserByNameUseCaseImpl @Inject constructor(

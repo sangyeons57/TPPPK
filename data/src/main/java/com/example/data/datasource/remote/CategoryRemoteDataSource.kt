@@ -1,6 +1,7 @@
 
 package com.example.data.datasource.remote
 
+import com.example.core_common.result.CustomResult
 import com.example.data.model.remote.CategoryDTO
 import kotlinx.coroutines.flow.Flow
 
@@ -19,7 +20,9 @@ interface CategoryRemoteDataSource {
      * @param order 카테고리의 순서
      * @return 생성된 카테고리의 ID를 포함한 Result 객체
      */
-    suspend fun addCategory(projectId: String, name: String, order: Double): Result<String>
+    suspend fun addCategory(projectId: String, categoryDTO: CategoryDTO): CustomResult<String, Exception>
+
+    suspend fun setDirectCategory(projectId: String, categoryDTO: CategoryDTO): CustomResult<Unit, Exception>
 
     /**
      * 카테고리의 이름 또는 순서를 수정합니다.
@@ -33,13 +36,13 @@ interface CategoryRemoteDataSource {
         categoryId: String,
         newName: String,
         newOrder: Double
-    ): Result<Unit>
+    ): CustomResult<Unit, Exception>
 
     /**
      * 프로젝트에서 카테고리를 삭제합니다.
      * @param projectId 대상 프로젝트의 ID
      * @param categoryId 삭제할 카테고리의 ID
      */
-    suspend fun deleteCategory(projectId: String, categoryId: String): Result<Unit>
+    suspend fun deleteCategory(projectId: String, categoryId: String): CustomResult<Unit, Exception>
 }
 

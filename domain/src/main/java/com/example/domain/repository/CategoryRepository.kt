@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
  * 카테고리는 특정 프로젝트에 종속됩니다.
  */
 interface CategoryRepository {
-    suspend fun createCategory(projectId: String, category: Category): CustomResult<Unit, Exception>
+    suspend fun createCategory(projectId: String, category: Category): CustomResult<String, Exception>
     suspend fun updateCategory(projectId: String, category: Category): CustomResult<Unit, Exception>
     suspend fun deleteCategory(projectId: String, categoryId: String): CustomResult<Unit, Exception>
     suspend fun getCategory(projectId: String, categoryId: String): CustomResult<Category, Exception> // 이전 단계에서 추가됨 (또는 getCategoryById)

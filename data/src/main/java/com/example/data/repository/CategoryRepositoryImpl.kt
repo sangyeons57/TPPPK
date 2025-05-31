@@ -21,8 +21,8 @@ class CategoryRepositoryImpl @Inject constructor(
     override suspend fun createCategory(
         projectId: String,
         category: Category
-    ): CustomResult<Unit, Exception> {
-        return categoryRemoteDataSource.createCategory(projectId, category.toDto())
+    ): CustomResult<String, Exception> {
+        return categoryRemoteDataSource.addCategory(projectId, category.toDto())
     }
 
     /**

@@ -30,7 +30,7 @@ class DeleteRoleUseCaseImpl @Inject constructor(
     override suspend fun invoke(projectId: String, roleId: String): CustomResult<Unit, Exception> {
         return when (val uid = authRepository.getCurrentUserId()){
             is CustomResult.Success -> {
-                return projectRoleRepository.deleteRole(projectId, roleId, uid.data)
+                return projectRoleRepository.deleteRole(projectId, roleId)
             }
             else -> {
                 return CustomResult.Failure(Exception("로그인이 필요합니다."))

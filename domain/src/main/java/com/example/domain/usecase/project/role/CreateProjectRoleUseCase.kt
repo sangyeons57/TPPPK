@@ -24,9 +24,8 @@ interface CreateProjectRoleUseCase {
     suspend operator fun invoke(
         projectId: String,
         name: String,
-        permissions: List<Permission>,
         isDefault: Boolean = false
-    ): CustomResult<Role, Exception>
+    ): CustomResult<String, Exception>
 }
 
 /**
@@ -48,9 +47,8 @@ class CreateProjectRoleUseCaseImpl @Inject constructor(
     override suspend operator fun invoke(
         projectId: String,
         name: String,
-        permissions: List<Permission>,
         isDefault: Boolean
-    ): CustomResult<Role, Exception> {
-        return roleRepository.createRole(projectId, name, permissions, isDefault)
+    ): CustomResult<String, Exception> {
+        return roleRepository.createRole(projectId, name, isDefault)
     }
 }

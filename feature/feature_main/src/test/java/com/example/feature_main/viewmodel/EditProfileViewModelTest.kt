@@ -5,7 +5,6 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.domain.model.Result
 import com.example.domain.model.User // Changed from UserProfileData
-import com.example.domain.usecase.user.GetMyProfileUseCase
 import com.example.domain.usecase.user.UpdateUserProfileParams
 import com.example.domain.usecase.user.UpdateUserProfileUseCase
 import com.example.domain.usecase.user.UploadProfileImageUseCase

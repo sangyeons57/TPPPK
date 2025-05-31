@@ -1,7 +1,7 @@
 package com.example.domain.repository
 
-import com.example.core_common.constants.FirestoreConstants.Schedule
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Schedule
 import kotlinx.coroutines.flow.Flow
 import java.time.Month
 import java.time.YearMonth
@@ -15,6 +15,6 @@ interface ScheduleRepository {
     fun getUserSchedulesStream(userId: String, startDateMillis: Long, endDateMillis: Long): Flow<CustomResult<List<Schedule>, Exception>>
     fun getProjectSchedulesStream(projectId: String, startDateMillis: Long, endDateMillis: Long): Flow<CustomResult<List<Schedule>, Exception>>
     suspend fun updateSchedule(schedule: Schedule): CustomResult<Unit, Exception>
-    suspend fun deleteSchedule(scheduleId: String, currentUserId: String): CustomResult<Unit, Exception>
+    suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception>
     suspend fun getScheduleSummaryForMonth(userId: String, yearMonth: YearMonth): CustomResult<Map<Int, Boolean>, Exception>
 }

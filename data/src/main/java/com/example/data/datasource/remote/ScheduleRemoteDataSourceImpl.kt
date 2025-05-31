@@ -1,14 +1,18 @@
 
 package com.example.data.datasource.remote
 
+import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 import com.example.data.model.remote.ScheduleDTO
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -37,20 +41,19 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
             .whereEqualTo("projectId", projectId)
             .whereGreaterThanOrEqualTo("startTime", startAt)
             .whereLessThanOrEqualTo("startTime", endAt) // endTime으로 필터링하는 것이 더 정확할 수 있으나, startTime 기준으로 조회
-            .dataObjects()
+            .snapshots()
+            .map { snapshot -> snapshot.toObjects(ScheduleDTO::class.java) }
     }
 
-    override suspend fun getSchedule(scheduleId: String): Result<ScheduleDTO?> = withContext(Dispatchers.IO) {
-        resultTry {
-            if (scheduleId.isBlank()) {
-                throw IllegalArgumentException("Schedule ID cannot be empty.")
-            }
-            val document = schedulesCollection.document(scheduleId).get().await()
-            document.toObject(ScheduleDTO::class.java)
+    override suspend fun getSchedule(scheduleId: String): CustomResult<ScheduleDTO, Exception> = resultTry {
+        if (scheduleId.isBlank()) {
+            throw IllegalArgumentException("Schedule ID cannot be empty.")
         }
+        val document = schedulesCollection.document(scheduleId).get().await()
+        document.toObject(ScheduleDTO::class.java) as ScheduleDTO
     }
 
-    override suspend fun createSchedule(schedule: ScheduleDTO): Result<String> = withContext(Dispatchers.IO) {
+    override suspend fun createSchedule(schedule: ScheduleDTO): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             // 생성자 ID와 생성 시간을 주입 (DTO에 ServerTimestamp가 있으므로 Firestore에서 자동 설정됨)
@@ -60,7 +63,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateSchedule(schedule: ScheduleDTO): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateSchedule(schedule: ScheduleDTO): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             if (schedule.id.isBlank()) {
                 throw IllegalArgumentException("Schedule ID cannot be empty for an update.")
@@ -82,20 +85,12 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteSchedule(scheduleId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             schedulesCollection.document(scheduleId).delete().await()
             Unit
         }
     }
 
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
-        return try {
-            Result.success(block())
-        } catch (e: Throwable) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
-        }
-    }
 }
 

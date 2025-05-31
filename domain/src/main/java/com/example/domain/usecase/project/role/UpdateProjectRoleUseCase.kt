@@ -55,25 +55,24 @@ class UpdateProjectRoleUseCaseImpl @Inject constructor(
         // Fetch the current role details to get existing values if not provided
         val currentRoleResult = projectRoleRepository.getRoleDetails(projectId, roleId)
 
-        if (currentRoleResult.isFailure) {
-            return CustomResult.Failure(currentRoleResult.exceptionOrNull() ?: Exception("Failed to fetch current role details."))
+        return when (currentRoleResult) {
+            is CustomResult.Success -> {
+                val currentRole = currentRoleResult.data
+
+                // Use provided values or fallback to current role's values for name and permissions
+                val updatedName = name ?: currentRole.name
+
+                // The isDefault parameter can be passed directly to the repository as it handles nullable.
+                // If name or permissions were null, we use the currentRole's values.
+                projectRoleRepository.updateRole(
+                    projectId = projectId,
+                    roleId = roleId,
+                    name = updatedName,
+                    isDefault = isDefault // Pass isDefault as is, can be null for no change
+                )
+            }
+            is CustomResult.Failure -> return CustomResult.Failure(currentRoleResult.error)
+            else -> CustomResult.Failure(Exception("Role with ID $roleId not found in project $projectId."))
         }
-
-        val currentRole = currentRoleResult.getOrNull()
-            ?: return CustomResult.Failure(Exception("Role with ID $roleId not found in project $projectId."))
-
-        // Use provided values or fallback to current role's values for name and permissions
-        val updatedName = name ?: currentRole.name
-        val updatedPermissions = permissions ?: currentRole.permissions
-
-        // The isDefault parameter can be passed directly to the repository as it handles nullable.
-        // If name or permissions were null, we use the currentRole's values.
-        return projectRoleRepository.updateRole(
-            projectId = projectId,
-            roleId = roleId,
-            name = updatedName,
-            permissions = updatedPermissions,
-            isDefault = isDefault // Pass isDefault as is, can be null for no change
-        )
     }
 }

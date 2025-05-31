@@ -27,7 +27,7 @@ class GetScheduleSummaryForMonthUseCase @Inject constructor(
      */
     suspend operator fun invoke(yearMonth: YearMonth): CustomResult<Map<Int, Boolean>, Exception> {
         val userSession =  authRepository.getCurrentUserSession()
-        when (userSession) {
+        return when (userSession) {
             is CustomResult.Success -> scheduleRepository.getScheduleSummaryForMonth(userSession.data.userId, yearMonth)
             else -> CustomResult.Failure(Exception("로그인이 필요합니다."))
         }

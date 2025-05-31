@@ -36,8 +36,8 @@ class DeleteProjectRoleUseCaseImpl @Inject constructor(
      */
     override suspend operator fun invoke(projectId: String, roleId: String): CustomResult<Unit, Exception> {
         val session = authRepository.getCurrentUserSession()
-        when (session) {
-            is CustomResult.Success -> projectRoleRepository.deleteRole(projectId, roleId, session.data.userId)
+        return when (session) {
+            is CustomResult.Success -> projectRoleRepository.deleteRole(projectId, roleId)
             else -> CustomResult.Failure(Exception("User not authenticated"))
         }
     }

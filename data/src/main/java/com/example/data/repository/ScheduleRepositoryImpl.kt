@@ -1,12 +1,14 @@
 package com.example.data.repository
 
+import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.ScheduleRemoteDataSource
+import com.example.data.model.remote.toDto
 import com.example.domain.model.base.Schedule
 import com.example.domain.repository.ScheduleRepository
-i
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.YearMonth
 import javax.inject.Inject
 
 
@@ -38,7 +40,7 @@ class ScheduleRepositoryImpl @Inject constructor(
                         CustomResult.Failure(e)
                     }
                 }
-                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to create schedule"))
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
                 else -> CustomResult.Failure(Exception("Unknown error"))
             }
         } catch (e: Exception) {
@@ -138,7 +140,7 @@ class ScheduleRepositoryImpl @Inject constructor(
             val result = scheduleRemoteDataSource.updateSchedule(scheduleDto)
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(Unit)
-                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to update schedule"))
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
                 else -> CustomResult.Failure(Exception("Unknown error"))
             }
         } catch (e: Exception) {
@@ -154,12 +156,12 @@ class ScheduleRepositoryImpl @Inject constructor(
      * @param currentUserId 현재 사용자 ID (권한 확인용)
      * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
      */
-    override suspend fun deleteSchedule(scheduleId: String, currentUserId: String): CustomResult<Unit, Exception> {
+    override suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception> {
         return try {
-            val result = scheduleRemoteDataSource.deleteSchedule(scheduleId, currentUserId)
+            val result = scheduleRemoteDataSource.deleteSchedule(scheduleId)
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(Unit)
-                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to delete schedule"))
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
                 else -> CustomResult.Failure(Exception("Unknown error"))
             }
         } catch (e: Exception) {
@@ -167,25 +169,10 @@ class ScheduleRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * 특정 월의 일정 요약 정보를 가져옵니다.
-     * Firebase의 자체 캐싱 시스템을 활용합니다.
-     * 
-     * @param userId 사용자 ID
-     * @param year 년도
-     * @param month 월 (1-12)
-     * @return 날짜별 일정 유무 맵 (key: 일(day), value: 일정 유무)
-     */
-    override suspend fun getScheduleSummaryForMonth(userId: String, year: Int, month: Int): CustomResult<Map<Int, Boolean>, Exception> {
-        return try {
-            val result = scheduleRemoteDataSource.getScheduleSummaryForMonth(userId, year, month)
-            when (result) {
-                is CustomResult.Success -> CustomResult.Success(result.data)
-                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to get schedule summary"))
-                else -> CustomResult.Failure(Exception("Unknown error"))
-            }
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
+    override suspend fun getScheduleSummaryForMonth(
+        userId: String,
+        yearMonth: YearMonth
+    ): CustomResult<Map<Int, Boolean>, Exception> {
+        TODO("Not yet implemented")
     }
 }

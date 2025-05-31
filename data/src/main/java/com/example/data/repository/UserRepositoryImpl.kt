@@ -79,7 +79,7 @@ class UserRepositoryImpl @Inject constructor(
             }
             
             // 프로필 업데이트 수행
-            if (user.name != null && user.memo != null) {
+            if (user.memo != null) {
                 userRemoteDataSource.updateUserProfile(user.name, user.memo)
             } else if (user.name != null) {
                 userRemoteDataSource.updateUserProfile(user.name, null)

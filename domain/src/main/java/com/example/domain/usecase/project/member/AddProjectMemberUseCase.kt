@@ -1,5 +1,6 @@
 package com.example.domain.usecase.project.member
 
+import com.example.core_common.result.CustomResult
 import com.example.domain.repository.MemberRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -16,7 +17,7 @@ interface AddProjectMemberUseCase {
      * @param initialRoleIds The list of role IDs to assign to the member initially.
      * @return A [Result] indicating success or failure.
      */
-    suspend operator fun invoke(projectId: String, userId: String, initialRoleIds: List<String>): Result<Unit>
+    suspend operator fun invoke(projectId: String, userId: String, initialRoleIds: List<String>): CustomResult<Unit, Exception>
 }
 /**
  * Implementation of [AddProjectMemberUseCase].
@@ -37,7 +38,7 @@ class AddProjectMemberUseCaseImpl @Inject constructor(
         projectId: String,
         userId: String,
         initialRoleIds: List<String>
-    ): Result<Unit> {
+    ): CustomResult<Unit, Exception> {
         return projectMemberRepository.addMemberToProject(projectId, userId, initialRoleIds)
     }
 }

@@ -22,6 +22,6 @@ class GetUserInfoUseCase @Inject constructor(
      * @return Flow<Result<User>> 사용자 정보를 포함한 Flow
      */
     operator fun invoke(userId: String): Flow<CustomResult<User, Exception>> {
-        return userRepository.getUser(userId)
+        return userRepository.getUserStream(userId)
     }
 } 

@@ -13,7 +13,7 @@ class UpdateUserProfileUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(user: User): CustomResult<Unit, Exception> {
         val sessionResult = authRepository.getCurrentUserSession()
-        when (sessionResult){
+        return when (sessionResult){
             is CustomResult.Success -> userRepository.updateUserProfile(sessionResult.data.userId, user)
             else -> CustomResult.Failure(Exception("Failed to get current user session"))
         }

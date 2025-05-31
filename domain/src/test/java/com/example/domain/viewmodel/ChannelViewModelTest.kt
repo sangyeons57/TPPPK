@@ -3,7 +3,7 @@ package com.example.domain.viewmodel
 import com.example.domain.model.Channel
 import com.example.domain.model.ChatMessage
 import com.example.domain.repository.FakeChannelRepository
-import com.example.domain.usecase.channel.GetProjectChannelUseCase
+import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
 import com.example.domain.usecase.channel.MarkChannelAsReadUseCase
 import com.example.domain.usecase.chat.AddReactionUseCase
 import com.example.domain.usecase.chat.DeleteMessageUseCase

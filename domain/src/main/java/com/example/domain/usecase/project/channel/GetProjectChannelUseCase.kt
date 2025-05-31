@@ -1,4 +1,4 @@
-package com.example.domain.usecase.channel
+package com.example.domain.usecase.project.channel
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectChannel
