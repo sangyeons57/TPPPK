@@ -27,7 +27,6 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.R
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.FriendRequestStatus
 import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
 import com.example.feature_friends.viewmodel.FriendsEvent

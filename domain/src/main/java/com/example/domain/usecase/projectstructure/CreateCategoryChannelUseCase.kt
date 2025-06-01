@@ -1,7 +1,7 @@
 package com.example.domain.usecase.projectstructure
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model._new.enum.ProjectChannelType
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.repository.ProjectChannelRepository
 import com.example.domain.repository.ProjectRepository
@@ -26,7 +26,7 @@ class CreateCategoryChannelUseCase @Inject constructor(
      * @param type 생성할 채널의 타입 ([ChannelMode])
      * @return 생성된 [Channel] 정보를 담은 [Result]
      */
-    suspend operator fun invoke(projectId: String, categoryId: String, name: String, type: ProjectChannelType, order: Int): CustomResult<Unit, Exception> {
+    suspend operator fun invoke(projectId: String, categoryId: String, name: String, type: ProjectChannelType, order: Double): CustomResult<Unit, Exception> {
         if (projectId.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("프로젝트 ID는 비어있을 수 없습니다."))
         }

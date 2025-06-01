@@ -3,6 +3,7 @@ package com.example.feature_settings.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.domain.usecase.user.UpdateNicknameUseCase
 // Domain UseCase Import
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -70,14 +71,22 @@ class ChangeNameViewModel @Inject constructor( // ★ 클래스 이름 오타 �
 
             val result = updateNicknameUseCase(nameToUpdate) // ★ UseCase 호출
 
-            if (result.isSuccess) {
-                _uiState.update { it.copy(isLoading = false, updateSuccess = true) } // 성공 플래그
-                _eventFlow.emit(ChangeNameEvent.ShowSnackbar("이름이 성공적으로 변경되었습니다."))
-                _eventFlow.emit(ChangeNameEvent.DismissDialog) // 성공 시 다이얼로그 닫기
-            } else {
-                val errorMsg = "이름 변경 실패: ${result.exceptionOrNull()?.message}"
-                _uiState.update { it.copy(isLoading = false, error = errorMsg) }
-                _eventFlow.emit(ChangeNameEvent.ShowSnackbar(errorMsg))
+            when (result) {
+                is CustomResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false, updateSuccess = true) } // 성공 플래그
+                    _eventFlow.emit(ChangeNameEvent.ShowSnackbar("이름이 성공적으로 변경되었습니다."))
+                    _eventFlow.emit(ChangeNameEvent.DismissDialog) // 성공 시 다이얼로그 닫기
+                }
+                is CustomResult.Failure -> {
+                    val errorMsg = "이름 변경 실패: ${result.error.message}"
+                    _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                    _eventFlow.emit(ChangeNameEvent.ShowSnackbar(errorMsg))
+                }
+                else -> {
+                    val errorMsg = "이름 변경 실패: 알수없는 에러 "
+                    _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                    _eventFlow.emit(ChangeNameEvent.ShowSnackbar(errorMsg))
+                }
             }
         }
     }

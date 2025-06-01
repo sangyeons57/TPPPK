@@ -1,7 +1,5 @@
 package com.example.data.migration
 
-import com.example.domain.model.Channel
-import com.example.domain.model.ChatMessage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query

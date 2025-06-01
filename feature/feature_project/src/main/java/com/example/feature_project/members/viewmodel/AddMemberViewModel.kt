@@ -2,7 +2,6 @@ package com.example.feature_project.members.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.User // Assuming User model for search results
 import com.example.domain.usecase.project.member.AddProjectMemberUseCase
 import com.example.domain.usecase.user.SearchUserByNameUseCase // Or relevant search use case
 import com.example.feature_project.members.ui.UserSearchResult // Use existing UI model
@@ -56,7 +55,7 @@ class AddMemberViewModel @Inject constructor(
             result.onSuccess { users ->
                 val uiResults = users.map { user -> // Map Domain User to UserSearchResult
                     UserSearchResult(
-                        userId = user.id, // Adjust field names based on actual User model
+                        userId = user.uid, // Adjust field names based on actual User model
                         userName = user.name,
                         userEmail = user.email,
                         profileImageUrl = user.profileImageUrl
@@ -97,10 +96,10 @@ class AddMemberViewModel @Inject constructor(
                 val result = addProjectMemberUseCase(projectId, userId, defaultRoleIds)
                 if (result.isSuccess) {
                     successCount++
-                } else {
+                } else if (result.isFailure){
                     allSuccess = false
                     // Optionally collect individual errors or stop on first error
-                    _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${_uiState.value.searchResults.find{it.userId == userId}?.userName ?: userId}님 추가 실패: ${result.exceptionOrNull()?.message}"))
+                    _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${_uiState.value.searchResults.find{it.userId == userId}?.userName ?: userId}님 추가 실패"))
                     // break // Uncomment to stop on first error
                 }
             }

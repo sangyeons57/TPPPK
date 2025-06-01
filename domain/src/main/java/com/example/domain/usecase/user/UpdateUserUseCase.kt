@@ -21,9 +21,9 @@ class UpdateUserUseCase @Inject constructor(
      * 사용자 정보를 업데이트합니다.
      *
      * @param user 업데이트할 사용자 정보
-     * @return 성공 시 Unit이 포함된 Result, 실패 시 에러 정보가 포함된 Result
+     * @return 성공 시 업데이트된 User 객체, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(user: User): CustomResult<Unit, Exception> {
+    suspend operator fun invoke(user: User): CustomResult<User, Exception> {
         val userWithTimestamp = user.copy(updatedAt = DateTimeUtil.nowInstant())
         val session = authRepository.getCurrentUserSession()
         return when (session){

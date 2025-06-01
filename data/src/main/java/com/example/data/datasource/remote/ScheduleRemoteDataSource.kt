@@ -5,6 +5,8 @@ import com.example.core_common.result.CustomResult
 import com.example.data.model.remote.ScheduleDTO
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
+import java.time.YearMonth
 
 interface ScheduleRemoteDataSource {
 
@@ -44,5 +46,23 @@ interface ScheduleRemoteDataSource {
      * @param scheduleId 삭제할 일정의 ID
      */
     suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception>
+
+
+    /**
+     * Firestore에서 지정된 년도와 월에 해당하는 모든 스케줄 DTO를 가져옵니다.
+     *
+     * @param yearMonth 가져올 스케줄의 년월 정보
+     * @return 해당 월의 스케줄 DTO 목록을 담은 Flow
+     */
+    suspend fun getSchedulesForMonth(userId: String, yearMonth: YearMonth): Flow<CustomResult<List<ScheduleDTO>, Exception>>
+
+    /**
+     * Firestore에서 지정된 날짜에 시작하는 모든 스케줄 DTO를 가져옵니다.
+     *
+     * @param date 스케줄을 가져올 특정 날짜
+     * @return 해당 날짜의 스케줄 DTO 목록을 담은 Flow
+     */
+    suspend fun getSchedulesOnDate(userId: String, date: LocalDate): Flow<CustomResult<List<ScheduleDTO>, Exception>>
+
 }
 

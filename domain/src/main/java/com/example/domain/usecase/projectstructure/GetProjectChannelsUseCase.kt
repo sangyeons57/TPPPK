@@ -23,6 +23,6 @@ class GetProjectChannelsUseCase @Inject constructor(
      * @return 프로젝트의 전체 채널 구조를 담고 있는 [Flow]<[ProjectStructure]>
      */
     suspend operator fun invoke(projectId: String): Flow<CustomResult<List<Category>, Exception>> {
-        return projectChannelRepository.getProjectStructure(projectId)
+        return projectChannelRepository.getProjectStructureStream(projectId)
     }
 } 

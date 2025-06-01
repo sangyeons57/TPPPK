@@ -11,7 +11,9 @@ interface CategoryRemoteDataSource {
      * 특정 프로젝트의 모든 카테고리 목록을 순서대로 실시간 관찰합니다.
      * @param projectId 카테고리를 가져올 프로젝트의 ID
      */
-    fun observeCategories(projectId: String): Flow<List<CategoryDTO>>
+    fun observeCategories(projectId: String): Flow<CustomResult<List<CategoryDTO>, Exception>>
+
+    fun observeCategory(projectId: String, categoryId: String): Flow<CustomResult<CategoryDTO, Exception>>
 
     /**
      * 프로젝트에 새로운 카테고리를 추가합니다.

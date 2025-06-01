@@ -1,15 +1,14 @@
 package com.example.data.repository
 
+import android.content.ContentValues.TAG
 import android.util.Log
 import com.example.data.datasource.remote.AuthRemoteDataSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.example.domain.model.auth.AuthenticationState
 import com.example.domain.repository.AuthRepository
 import com.example.data.util.FirebaseAuthWrapper
 import kotlinx.coroutines.tasks.await // await() 사용 위해 임포트
 import javax.inject.Inject
-import com.example.data.model.mapper.UserMapper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -17,7 +16,8 @@ import kotlinx.coroutines.flow.flow
 import java.time.Instant
 import com.example.domain.model.base.User
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.UserSession
+import com.example.domain.model.data.UserSession
+import com.google.firebase.auth.UserProfileChangeRequest
 import io.sentry.MeasurementUnit
 import kotlinx.coroutines.flow.map
 
@@ -29,7 +29,6 @@ class AuthRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth, // FirebaseAuth 주입
     private val authWrapper: FirebaseAuthWrapper, // 추가: FirebaseAuthWrapper 주입
     private val authRemoteDataSource: AuthRemoteDataSource,
-    private val userMapper: UserMapper
 ) : AuthRepository {
 
 
@@ -241,35 +240,32 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateUserName(newDisplayName: String): CustomResult<User, Exception> {
-        // 1. 현재 Firebase 사용자 가져오기
-        val user = FirebaseAuth.getInstance().currentUser
+        val firebaseUser = FirebaseAuth.getInstance().currentUser
 
-        // 사용자가 로그인되어 있는지 확인
-        if (user != null) {
-            // 2. UserProfileChangeRequest 객체 생성
+        return if (firebaseUser != null) {
             val profileUpdates = UserProfileChangeRequest.Builder()
                 .setDisplayName(newDisplayName)
-                // .setPhotoUri(newPhotoUri) // 프로필 사진도 변경하려면 여기에 추가
                 .build()
-
-            // 3. updateProfile() 호출하여 프로필 업데이트 요청
-            user.updateProfile(profileUpdates)
-                .addOnCompleteListener { task ->
-                    // 4. Task 결과 처리
-                    if (task.isSuccessful) {
-                        Log.d(TAG, "User display name updated successfully.")
-                        Log.d(TAG, "New display name: ${FirebaseAuth.getInstance().currentUser?.displayName}")
-                        // 성공 시 UI 업데이트 또는 사용자에게 알림 등의 추가 작업 수행
-                        // 예: viewModel.updateUserNameInUi(newDisplayName)
-                        return CustomResult.Success(FirebaseAuth.getInstance().currentUser?.toDomainUser())
-                    } else {
-                        Log.e(TAG, "Failed to update user display name.", task.exception)
-                        // 실패 시 사용자에게 오류 메시지 표시 등의 작업 수행
-                        return CustomResult.Failure(task.exception)
-                    }
+            try {
+                firebaseUser.updateProfile(profileUpdates).await() // kotlinx-coroutines-play-services await()
+                Log.d(TAG, "User display name updated successfully.")
+                // After successful update, re-fetch the current user to ensure the data is fresh.
+                val updatedFirebaseUser = FirebaseAuth.getInstance().currentUser
+                if (updatedFirebaseUser != null) {
+                    // Assuming toDomainUser() is an extension function for FirebaseUser
+                    // and correctly maps to the non-nullable domain User model.
+                    CustomResult.Success(updatedFirebaseUser.toDomainUser())
+                } else {
+                    Log.e(TAG, "Current Firebase user is null after profile update operation.")
+                    CustomResult.Failure(Exception("User session seems to be lost after profile update."))
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update user display name during await.", e)
+                CustomResult.Failure(e)
+            }
         } else {
-            return CustomResult.Failure(Exception("User not logged in"))
+            Log.w(TAG, "Attempted to update display name, but no user is logged in.")
+            CustomResult.Failure(Exception("User not logged in. Cannot update display name."))
         }
     }
     

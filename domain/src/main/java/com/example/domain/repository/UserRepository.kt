@@ -1,6 +1,8 @@
 package com.example.domain.repository
 
+import android.net.Uri
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.base.User
@@ -13,43 +15,33 @@ import kotlinx.coroutines.flow.Flow
 interface UserRepository {
     /**
      * 사용자 ID로 사용자 정보를 실시간 스트림으로 가져옵니다.
-     * 
+     *
      * @param userId 사용자 ID
      * @return 사용자 정보를 담은 Flow
      */
     fun getUserStream(userId: String): Flow<CustomResult<User, Exception>>
-    
+
     /**
      * 새로운 사용자 프로필을 생성합니다.
-     * 
+     *
      * @param user 생성할 사용자 정보
      * @return 성공 시 CustomResult.Success, 실패 시 CustomResult.Failure
      */
     suspend fun createUserProfile(user: User): CustomResult<Unit, Exception>
-    
+
     /**
      * 사용자 프로필 정보를 업데이트합니다.
-     * 
+     *
      * @param userId 사용자 ID
      * @param user 새 사용자 정보
      * @return 성공 시 CustomResult.Success, 실패 시 CustomResult.Failure
      */
-    suspend fun updateUserProfile(userId: String, user: User): CustomResult<Unit, Exception>
-    
-    /**
-     * 사용자 프로필 이미지를 업데이트합니다.
-     * 
-     * @param userId 사용자 ID
-     * @param imageInputStream 이미지 입력 스트림
-     * @param imageMimeType 이미지 MIME 타입
-     * @return 성공 시 이미지 URL을 포함한 CustomResult.Success, 실패 시 CustomResult.Failure
-     */
-    suspend fun updateUserProfileImage(
+    suspend fun updateUserProfile(
         userId: String,
-        imageInputStream: InputStream,
-        imageMimeType: String
-    ): CustomResult<String, Exception>
-    
+        user: User,
+        localImageUri: Uri? = null
+    ): CustomResult<User, Exception>
+
     /**
      * 사용자 프로필 이미지를 삭제합니다.
      * 
@@ -129,4 +121,5 @@ interface UserRepository {
         memo: String,
         adminUserId: String
     ): CustomResult<Unit, Exception>
+
 }

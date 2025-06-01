@@ -19,10 +19,6 @@ import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.components.buttons.DebouncedBackButton
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.ui.CategoryUiModel
-import com.example.domain.model.ui.ChannelUiModel
-import com.example.domain.model.ui.CreateChannelDialogData
 import com.example.feature_project.viewmodel.ProjectDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

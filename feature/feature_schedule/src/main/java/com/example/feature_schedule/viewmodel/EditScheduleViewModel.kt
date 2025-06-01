@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.model.Schedule // Ensure this import
+import com.example.domain.model.base.Schedule
 import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
 import com.example.domain.usecase.schedule.UpdateScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -87,9 +87,9 @@ class EditScheduleViewModel @Inject constructor(
                         it.copy(
                             title = schedule.title,
                             content = schedule.content,
-                            date = DateTimeUtil.toLocalDateTime(schedule.startTime)?.toLocalDate(),
-                            startTime = DateTimeUtil.toLocalTime(schedule.startTime),
-                            endTime = DateTimeUtil.toLocalTime(schedule.endTime),
+                            date = DateTimeUtil.toLocalDateTime(schedule.startTime!!).toLocalDate(),
+                            startTime = DateTimeUtil.toLocalTime(schedule.startTime!!),
+                            endTime = DateTimeUtil.toLocalTime(schedule.endTime!!),
                             isLoading = false
                         )
                     }
@@ -199,9 +199,9 @@ class EditScheduleViewModel @Inject constructor(
             val updatedSchedule = Schedule(
                 id = currentState.scheduleId,
                 creatorId = "", // Per instruction for now
-                projectId = null, // Per instruction for now
+                projectId = "", // Per instruction for now
                 title = currentState.title,
-                content = currentState.content,
+                content = currentState.content!!,
                 startTime = startInstant,
                 endTime = endInstant,
                 createdAt = Instant.now() // Per instruction, or fetch original
@@ -209,17 +209,21 @@ class EditScheduleViewModel @Inject constructor(
 
             val result = updateScheduleUseCase(updatedSchedule)
             result.onSuccess {
-                _uiState.update { it.copy(isSaving = false) }
-                _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정이 저장되었습니다."))
-                _eventFlow.emit(EditScheduleEvent.SaveSuccessAndRequestBackNavigation)
-            }.onFailure { exception ->
-                _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        error = "저장 실패: ${exception.localizedMessage}"
-                    )
+                viewModelScope.launch {
+                    _uiState.update { it.copy(isSaving = false) }
+                    _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정이 저장되었습니다."))
+                    _eventFlow.emit(EditScheduleEvent.SaveSuccessAndRequestBackNavigation)
                 }
-                _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정 저장에 실패했습니다: ${exception.localizedMessage}"))
+            }.onFailure { exception ->
+                viewModelScope.launch {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            error = "저장 실패: ${exception.localizedMessage}"
+                        )
+                    }
+                    _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정 저장에 실패했습니다: ${exception.localizedMessage}"))
+                }
             }
         }
     }

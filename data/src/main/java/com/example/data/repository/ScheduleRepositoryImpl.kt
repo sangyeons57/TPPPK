@@ -8,6 +8,7 @@ import com.example.domain.model.base.Schedule
 import com.example.domain.repository.ScheduleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 
@@ -27,18 +28,13 @@ class ScheduleRepositoryImpl @Inject constructor(
      * @param schedule 생성할 일정 정보
      * @return 생성된 일정 정보 (서버에서 부여된 ID 포함)
      */
-    override suspend fun createSchedule(schedule: Schedule): CustomResult<Schedule, Exception> {
+    override suspend fun createSchedule(schedule: Schedule): CustomResult<String, Exception> {
         return try {
             val scheduleDto = schedule.toDto() // ID는 비어있을 수 있음
             val result = scheduleRemoteDataSource.createSchedule(scheduleDto)
             when (result) {
                 is CustomResult.Success -> {
-                    try {
-                        val domainSchedule = result.data.toDomain()
-                        CustomResult.Success(domainSchedule)
-                    } catch (e: Exception) {
-                        CustomResult.Failure(e)
-                    }
+                    CustomResult.Success(result.data)
                 }
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 else -> CustomResult.Failure(Exception("Unknown error"))
@@ -72,58 +68,6 @@ class ScheduleRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             CustomResult.Failure(e)
-        }
-    }
-
-    /**
-     * 사용자의 일정 목록을 스트림으로 가져옵니다.
-     * Firebase의 자체 캐싱 시스템을 활용하여 실시간 업데이트를 처리합니다.
-     * 
-     * @param userId 사용자 ID
-     * @param startDateMillis 시작 날짜 (밀리초)
-     * @param endDateMillis 종료 날짜 (밀리초)
-     * @return 해당 기간 내 사용자의 일정 목록 스트림
-     */
-    override fun getUserSchedulesStream(userId: String, startDateMillis: Long, endDateMillis: Long): Flow<CustomResult<List<Schedule>, Exception>> {
-        return scheduleRemoteDataSource.getUserSchedulesStream(userId, startDateMillis, endDateMillis).map { result ->
-            when (result) {
-                is CustomResult.Success -> {
-                    try {
-                        val domainSchedules = result.data.map { it.toDomain() }
-                        CustomResult.Success(domainSchedules)
-                    } catch (e: Exception) {
-                        CustomResult.Failure(e)
-                    }
-                }
-                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to get user schedules"))
-                else -> CustomResult.Failure(Exception("Unknown error"))
-            }
-        }
-    }
-
-    /**
-     * 프로젝트의 일정 목록을 스트림으로 가져옵니다.
-     * Firebase의 자체 캐싱 시스템을 활용하여 실시간 업데이트를 처리합니다.
-     * 
-     * @param projectId 프로젝트 ID
-     * @param startDateMillis 시작 날짜 (밀리초)
-     * @param endDateMillis 종료 날짜 (밀리초)
-     * @return 해당 기간 내 프로젝트의 일정 목록 스트림
-     */
-    override fun getProjectSchedulesStream(projectId: String, startDateMillis: Long, endDateMillis: Long): Flow<CustomResult<List<Schedule>, Exception>> {
-        return scheduleRemoteDataSource.getProjectSchedulesStream(projectId, startDateMillis, endDateMillis).map { result ->
-            when (result) {
-                is CustomResult.Success -> {
-                    try {
-                        val domainSchedules = result.data.map { it.toDomain() }
-                        CustomResult.Success(domainSchedules)
-                    } catch (e: Exception) {
-                        CustomResult.Failure(e)
-                    }
-                }
-                is CustomResult.Failure -> CustomResult.Failure(result.error ?: Exception("Failed to get project schedules"))
-                else -> CustomResult.Failure(Exception("Unknown error"))
-            }
         }
     }
 
@@ -173,6 +117,34 @@ class ScheduleRepositoryImpl @Inject constructor(
         userId: String,
         yearMonth: YearMonth
     ): CustomResult<Map<Int, Boolean>, Exception> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getSchedulesForMonth(userId: String, yearMonth: YearMonth): Flow<CustomResult<List<Schedule>, Exception>> {
+        return scheduleRemoteDataSource.getSchedulesForMonth(userId, yearMonth).map { result ->
+            when (result) {
+                is CustomResult.Success -> {
+                    try {
+                        // ScheduleDTO 리스트를 Schedule 도메인 모델 리스트로 변환
+                        val domainSchedules = result.data.map { dto -> dto.toDomain() }
+                        CustomResult.Success(domainSchedules)
+                    } catch (e: Exception) {
+                        CustomResult.Failure(e)
+                    }
+                }
+                is CustomResult.Failure -> {
+                    CustomResult.Failure(result.error)
+                }
+                else -> CustomResult.Failure(Exception("Unknown error"))
+            }
+        }
+    }
+
+    override fun getSchedulesOnDate(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
+        TODO("Not yet implemented")
+    }
+
+    override fun getSchedulesForDate(date: String): Flow<CustomResult<List<Schedule>, Exception>> {
         TODO("Not yet implemented")
     }
 }

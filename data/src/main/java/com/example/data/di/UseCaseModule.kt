@@ -7,11 +7,28 @@ import com.example.domain.usecase.auth.* // auth 패키지 UseCase 임포트
 import com.example.domain.usecase.friend.*
 import com.example.domain.usecase.project.member.*
 import com.example.domain.usecase.project.role.*
+import com.example.domain.usecase.project.ConvertProjectStructureToDraggableItemsUseCase
+import com.example.domain.usecase.project.ConvertProjectStructureToDraggableItemsUseCaseImpl
+import com.example.domain.usecase.project.MoveChannelUseCase
+import com.example.domain.usecase.project.MoveChannelUseCaseImpl
+import com.example.domain.usecase.project.MoveCategoryUseCase
+import com.example.domain.usecase.project.MoveCategoryUseCaseImpl
+import com.example.domain.usecase.project.AddCategoryUseCase
+import com.example.domain.usecase.project.AddCategoryUseCaseImpl
+import com.example.domain.usecase.project.DeleteCategoryUseCase
+import com.example.domain.usecase.project.DeleteCategoryUseCaseImpl
+import com.example.domain.usecase.project.DeleteChannelUseCase
+import com.example.domain.usecase.project.DeleteChannelUseCaseImpl
+import com.example.domain.usecase.project.RenameCategoryUseCase
+import com.example.domain.usecase.project.RenameCategoryUseCaseImpl
+import com.example.domain.usecase.project.RenameChannelUseCase
+import com.example.domain.usecase.project.RenameChannelUseCaseImpl
+import com.example.domain.usecase.project.AddChannelUseCase
+import com.example.domain.usecase.project.AddChannelUseCaseImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ViewModelComponent
-import javax.inject.Singleton
 
 /**
  * UseCase 인터페이스와 구현체를 바인딩하는 Hilt 모듈
@@ -58,12 +75,47 @@ abstract class UseCaseModule {
     abstract fun bindUpdateRoleUseCase(impl: UpdateRoleUseCaseImpl): UpdateRoleUseCase
 
 
+    // --- Project Structure UseCases ---
+    @Binds
+    abstract fun bindConvertProjectStructureToDraggableItemsUseCase(
+        impl: ConvertProjectStructureToDraggableItemsUseCaseImpl
+    ): ConvertProjectStructureToDraggableItemsUseCase
+    
+    @Binds
+    abstract fun bindMoveChannelUseCase(
+        impl: MoveChannelUseCaseImpl
+    ): MoveChannelUseCase
+    
+    @Binds
+    abstract fun bindMoveCategoryUseCase(
+        impl: MoveCategoryUseCaseImpl
+    ): MoveCategoryUseCase
+    
+    @Binds
+    abstract fun bindAddCategoryUseCase(
+        impl: AddCategoryUseCaseImpl
+    ): AddCategoryUseCase
+    
+
+    @Binds
+    abstract fun bindRenameCategoryUseCase(
+        impl: RenameCategoryUseCaseImpl
+    ): RenameCategoryUseCase
+    
+    @Binds
+    abstract fun bindRenameChannelUseCase(
+        impl: RenameChannelUseCaseImpl
+    ): RenameChannelUseCase
+    
+    @Binds
+    abstract fun bindAddChannelUseCase(
+        impl: AddChannelUseCaseImpl
+    ): AddChannelUseCase
+
     // --- Project Member List UseCases ---
     @Binds
     abstract fun bindObserveProjectMembersUseCase(impl: ObserveProjectMembersUseCaseImpl): ObserveProjectMembersUseCase
 
-    @Binds
-    abstract fun bindFetchProjectMembersUseCase(impl: FetchProjectMembersUseCaseImpl): FetchProjectMembersUseCase
 
     @Binds
     abstract fun bindDeleteProjectMemberUseCase(impl: DeleteProjectMemberUseCaseImpl): DeleteProjectMemberUseCase
@@ -73,11 +125,11 @@ abstract class UseCaseModule {
 
     // --- Project UseCases (Common? AddSchedule) ---
     @Binds
-    abstract fun bindGetSchedulableProjectsUseCase(impl: GetSchedulableProjectsUseCaseImpl): GetSchedulableProjectsUseCase
+    abstract fun bindGetUserParticipatingProjectsUseCase(impl: GetUserParticipatingProjectsUseCaseImpl): GetUserParticipatingProjectsUseCase
 
     // --- Project UseCases (Common & Setting) ---
     @Binds
-    abstract fun bindGetProjectStructureUseCase(impl: GetProjectStructureUseCaseImpl): GetProjectStructureUseCase
+    abstract fun bindGetProjectStructureUseCase(impl: GetProjectAllCategoriesUseCaseImpl): GetProjectAllCategoriesUseCase
 
     @Binds
     abstract fun bindDeleteCategoryUseCase(impl: DeleteCategoryUseCaseImpl): DeleteCategoryUseCase

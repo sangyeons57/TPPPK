@@ -10,7 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.domain.model.ChannelMode
+import com.example.domain.model.enum.ProjectChannelType
 
 // 채널 유형 정의 -> domain/model/ChannelType 으로 이동했으므로 제거
 // enum class ChannelType { TEXT, VOICE }
@@ -18,7 +18,7 @@ import com.example.domain.model.ChannelMode
 // --- UI 상태 ---
 data class CreateChannelUiState(
     val channelName: String = "",
-    val selectedChannelMode: ChannelMode = ChannelMode.TEXT, // Changed to String, default TEXT mode
+    val selectedChannelMode: ProjectChannelType = ProjectChannelType.MESSAGES, // Changed to String, default TEXT mode
     val isLoading: Boolean = false,
     val error: String? = null,
     val createSuccess: Boolean = false // 생성 성공 시 네비게이션 트리거
@@ -68,7 +68,7 @@ class CreateChannelViewModel @Inject constructor(
     /**
      * 채널 유형 선택 시 호출
      */
-    fun onChannelTypeSelected(type: ChannelMode) { // Changed ChannelType to String
+    fun onChannelTypeSelected(type: ProjectChannelType) { // Changed ChannelType to String
         _uiState.update { it.copy(selectedChannelMode = type) }
     }
 

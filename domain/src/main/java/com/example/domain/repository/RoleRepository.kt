@@ -25,5 +25,4 @@ interface RoleRepository {
 
     suspend fun deleteRole(projectId: String, roleId: String): CustomResult<Unit, Exception>
     suspend fun getRoleDetails(projectId: String, roleId: String): CustomResult<Role, Exception>
-    suspend fun getAvailablePermissions(): CustomResult<List<String>, Exception>
 }

@@ -10,7 +10,19 @@ interface FriendRemoteDataSource {
     /**
      * 현재 로그인한 사용자의 친구("accepted" 상태) 목록을 실시간으로 관찰합니다.
      */
-    fun observeFriends(): Flow<List<FriendDTO>>
+    fun observeFriends(): Flow<CustomResult<List<FriendDTO>, Exception>>
+
+    /**
+     * 특정 사용자의 친구("accepted" 상태) 목록을 실시간으로 관찰합니다.
+     * @param userId 조회할 사용자의 ID
+     */
+    fun observeFriends(userId: String): Flow<CustomResult<List<FriendDTO>, Exception>>
+    
+    /**
+     * 특정 사용자에게 온 친구 요청("pending" 상태) 목록을 실시간으로 관찰합니다.
+     * @param userId 조회할 사용자의 ID
+     */
+    fun observeFriendRequests(userId: String): Flow<CustomResult<List<FriendDTO>, Exception>>
 
     /**
      * 다른 사용자에게 친구 요청을 보냅니다.

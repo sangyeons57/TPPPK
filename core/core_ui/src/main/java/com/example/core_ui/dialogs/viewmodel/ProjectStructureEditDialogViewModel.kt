@@ -1,38 +1,6 @@
 package com.example.core_ui.dialogs.viewmodel
 
-import android.util.Log
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.core_common.util.DateTimeUtil
-import com.example.core_ui.components.draggablelist.DraggableListItemData
-import com.example.core_ui.dialogs.service.AddChannelService
-import com.example.core_ui.dialogs.service.ConvertProjectStructureToDraggableItems
-import com.example.core_ui.dialogs.service.DeleteCategoryService
-import com.example.core_ui.dialogs.service.DeleteChannelService
-import com.example.core_ui.dialogs.service.MoveCategoryService
-import com.example.core_ui.dialogs.service.MoveChannelService
-import com.example.core_ui.dialogs.service.RenameCategoryService
-import com.example.core_ui.dialogs.service.RenameChannelService
-import com.example.domain.model.Category
-import com.example.domain.model.Channel
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.ChannelType
-import com.example.domain.model.ProjectStructure
-import com.example.domain.model.channel.ProjectSpecificData
-import com.example.domain.usecase.project.GetProjectStructureUseCase
-import com.example.domain.usecase.project.UpdateProjectStructureUseCase
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
-
+/**
 /**
  * 삭제할 아이템의 유형 (카테고리 또는 채널) -> ChannelType으로 변경
  */
@@ -64,11 +32,11 @@ sealed interface ProjectStructureDraggableItem {
     }
 
     data class ChannelDraggable(
-        val channel: Channel,
+        val channel: ProjectChannel,
         val currentParentCategoryId: String? // Null if it's a direct channel initially or becomes one
     ) : ProjectStructureDraggableItem {
         override val id: String get() = channel.id
-        override val name: String get() = channel.name
+        override val name: String get() = channel.channelName
     }
 }
 
@@ -77,16 +45,13 @@ sealed interface ProjectStructureDraggableItem {
  */
 @HiltViewModel
 class ProjectStructureEditDialogViewModel @Inject constructor(
-    private val getProjectStructureUseCase: GetProjectStructureUseCase,
-    private val updateProjectStructureUseCase: UpdateProjectStructureUseCase,
-    private val convertProjectStructureToDraggableItemsService: ConvertProjectStructureToDraggableItems,
-    private val moveChannelService: MoveChannelService,
-    private val moveCategoryService: MoveCategoryService,
-    private val deleteChannelService: DeleteChannelService,
-    private val deleteCategoryService: DeleteCategoryService,
-    private val addChannelService: AddChannelService,
-    private val renameCategoryService: RenameCategoryService,
-    private val renameChannelService: RenameChannelService
+    private val projectStructureToDraggableItemsAdapter: ProjectStructureToDraggableItemsAdapter,
+    private val deleteChannelUseCase: DeleteChannelUseCase,
+    private val deleteCategoryUseCase: DeleteCategoryUseCase,
+    private val addChannelUseCase: AddChannelUseCase,
+    private val renameCategoryUseCase: RenameCategoryUseCase,
+    private val renameChannelUseCase: RenameChannelUseCase,
+    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
 ) : ViewModel() {
 
     // UI 상태
@@ -96,6 +61,85 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
     // 이벤트
     private val _eventFlow = MutableSharedFlow<ProjectStructureEditEvent>()
     val eventFlow: SharedFlow<ProjectStructureEditEvent> = _eventFlow.asSharedFlow()
+    
+    /**
+     * 카테고리를 삭제하는 서비스 메서드
+     * @param categoryId 삭제할 카테고리 ID
+     * @return 삭제 결과
+     */
+    private suspend fun deleteCategoryService(categoryId: String) {
+        deleteCategoryUseCase(categoryId, _uiState.value.projectId).fold(
+            onSuccess = {
+                // 삭제 성공 시 UI 상태 업데이트
+                val updatedItems = _uiState.value.draggableItems.filter { item ->
+                    !(item.id == categoryId || 
+                      (item.originalData is ProjectStructureDraggableItem.ChannelDraggable && 
+                       item.originalData.currentParentCategoryId == categoryId))
+                }
+                _uiState.update { it.copy(draggableItems = updatedItems) }
+                _eventFlow.emit(ProjectStructureEditEvent.ShowSnackbar("카테고리가 삭제되었습니다."))
+                Log.d("ViewModel", "Category deleted: $categoryId")
+            },
+            onFailure = { e ->
+                // 오류 로깅 및 사용자에게 알림만 하고 예외는 던지지 않음
+                Log.e("ViewModel", "Failed to delete category: ${e.message}")
+                _eventFlow.emit(ProjectStructureEditEvent.Error("카테고리 삭제 실패: ${e.message}"))
+            }
+        )
+    }
+    
+    /**
+     * 채널을 삭제하는 서비스 메서드
+     * @param categoryId 채널이 속한 카테고리 ID
+     * @param channelId 삭제할 채널 ID
+     * @return 삭제 결과
+     */
+    private suspend fun deleteChannelService(categoryId: String, channelId: String) {
+        deleteChannelUseCase(categoryId, channelId, _uiState.value.projectId).fold(
+            onSuccess = {
+                // 삭제 성공 시 UI 상태 업데이트
+                val updatedItems = _uiState.value.draggableItems.filter { item ->
+                    item.id != channelId
+                }
+                _uiState.update { it.copy(draggableItems = updatedItems) }
+                _eventFlow.emit(ProjectStructureEditEvent.ShowSnackbar("채널이 삭제되었습니다."))
+                Log.d("ViewModel", "Channel deleted: $channelId from category $categoryId")
+            },
+            onFailure = { e ->
+                // 오류 로깅 및 사용자에게 알림만 하고 예외는 던지지 않음
+                Log.e("ViewModel", "Failed to delete channel: ${e.message}")
+                _eventFlow.emit(ProjectStructureEditEvent.Error("채널 삭제 실패: ${e.message}"))
+            }
+        )
+    }
+    
+    /**
+     * 카테고리 이름을 변경하는 서비스 메서드
+     * @param categoryId 변경할 카테고리 ID
+     * @param newName 새 카테고리 이름
+     * @return 변경된 카테고리
+     */
+    private suspend fun renameCategoryService(categoryId: String, newName: String) = 
+        renameCategoryUseCase(categoryId, newName, _uiState.value.projectId)
+    
+    /**
+     * 채널 이름을 변경하는 서비스 메서드
+     * @param categoryId 채널이 속한 카테고리 ID
+     * @param channelId 변경할 채널 ID
+     * @param newName 새 채널 이름
+     * @return 변경된 채널
+     */
+    private suspend fun renameChannelService(categoryId: String, channelId: String, newName: String) = 
+        renameChannelUseCase(categoryId, channelId, newName, _uiState.value.projectId)
+    
+    /**
+     * 채널을 추가하는 서비스 메서드
+     * @param categoryId 채널이 속한 카테고리 ID
+     * @param channel 추가할 채널 정보
+     * @return 추가된 채널
+     */
+    private suspend fun addChannelService(categoryId: String, channel: ProjectChannel) =
+        addChannelUseCase(categoryId = categoryId, channel = channel, projectId = _uiState.value.projectId)
 
     // 변경 사항이 있는지 추적
     private var hasChanges = false
@@ -108,9 +152,9 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, error = null, projectId = projectId) }
         viewModelScope.launch {
             try {
-                getProjectStructureUseCase(projectId).fold(
+                getProjectAllCategoriesUseCase(projectId).fold(
                     onSuccess = { structure ->
-                        convertProjectStructureToDraggableItemsService(structure).fold(
+                        projectStructureToDraggableItemsAdapter(structure).fold(
                             onSuccess = { newDraggableItems ->
                                 _uiState.update {
                                     it.copy(
@@ -333,11 +377,23 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
      */
     fun confirmDelete() {
         _uiState.value.deleteConfirmationInfo?.let { info ->
-            when (info.itemType) {
-                ChannelTypeForDeletion.CATEGORY -> deleteChannelService(info.categoryId, info.channelId!!)
-                ChannelTypeForDeletion.CHANNEL -> deleteChannelService(info.categoryId, info.channelId!!)
+            viewModelScope.launch {
+                try {
+                    when (info.itemType) {
+                        ChannelTypeForDeletion.CATEGORY -> {
+                            deleteCategoryService(info.categoryId)
+                        }
+                        ChannelTypeForDeletion.CHANNEL -> {
+                            if (info.channelId != null) {
+                                deleteChannelService(info.categoryId, info.channelId)
+                            }
+                        }
+                    }
+                    _uiState.update { it.copy(deleteConfirmationInfo = null) }
+                } catch (e: Exception) {
+                    _eventFlow.emit(ProjectStructureEditEvent.Error("삭제 실패: ${e.message}"))
+                }
             }
-            _uiState.update { it.copy(deleteConfirmationInfo = null) }
         }
     }
 
@@ -462,7 +518,7 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
      * @param channelName 추가할 채널의 이름.
      * @param channelMode 추가할 채널의 모드 (TEXT 또는 VOICE).
      */
-    fun handleAddChannelConfirm(channelName: String, channelMode: ChannelMode) {
+    fun handleAddChannelConfirm(channelName: String, channelMode: ChannelType) {
         val targetCategoryId = _uiState.value.addChannelDialogTargetCategoryId ?: return
         viewModelScope.launch {
             addChannel(targetCategoryId, channelName, channelMode)
@@ -541,7 +597,7 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
      */
     fun renameChannel(categoryId: String, channelId: String, newName: String) {
         viewModelScope.launch {
-            renameChannelService(categoryId, channelId, newName).fold( // Assuming service only needs channelId and newName
+            renameChannelService(categoryId, channelId, newName).fold(
                 onSuccess = { updatedChannel ->
                     // Find and update in draggableItems
                     val updatedItems = _uiState.value.draggableItems.map { item ->
@@ -553,7 +609,7 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
                     }
                     _uiState.update { it.copy(draggableItems = updatedItems) }
                     // setHasChanges()
-                    _eventFlow.emit(ProjectStructureEditEvent.ShowSnackbar("'${updatedChannel.name}' (으)로 이름 변경됨"))
+                    _eventFlow.emit(ProjectStructureEditEvent.ShowSnackbar("'${updatedChannel.channelName}' (으)로 이름 변경됨"))
                 },
                 onFailure = { e ->
                     _eventFlow.emit(ProjectStructureEditEvent.Error("채널 이름 변경 실패: ${e.message}"))
@@ -568,38 +624,44 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
      * @param channelName 새로 추가할 채널의 이름.
      * @param channelMode 새로 추가할 채널의 모드 (TEXT 또는 VOICE).
      */
-    fun addChannel(categoryId: String, channelName: String, channelMode: ChannelMode) {
+    fun addChannel(categoryId: String, channelName: String, channelMode: ProjectChannelType) {
         viewModelScope.launch {
-            // TODO: Implement actual logic to add a channel to draggableItems under the given categoryId.
-            // This involves creating a new Channel object, then a new DraggableListItemData,
-            // finding the correct insertion point in the list, and updating depths.
-            // For now, use the service and assume it might update a backend.
-            val newChannel = Channel(
-                id ="",
-                name = channelName,
-                type = ChannelType.PROJECT,
-                description = "",
-                projectSpecificData = ProjectSpecificData(projectId = _uiState.value.projectId, categoryId = categoryId, order = 0), // Order needs calculation
+            // 새 채널 객체 생성
+            val newChannel = ProjectChannel(
+                id = UUID.randomUUID().toString(),
+                channelName = channelName,
+                channelType = channelMode,
+                order = 0.0, // 순서는 나중에 계산
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant()
             )
-            addChannelService(newChannel).fold(
+            
+            addChannelService(categoryId, newChannel).fold(
                 onSuccess = { addedChannel ->
-                    // This is tricky: we need to insert this into draggableItems correctly.
-                    // It should appear under its parent category, and its depth should be parentDepth + 1.
-                    // The order within the category also matters.
-                    // For now, just log and show a snackbar. A full implementation is complex.
-                    Log.d("ViewModel", "Channel added: ${addedChannel.name} to category $categoryId. UI update needed.")
-                    // Example placeholder for adding to list (very simplified, won't place correctly):
-                    // val newChannelItem = DraggableListItemData(
-                    // id = addedChannel.id,
-                    // originalData = ProjectStructureDraggableItem.ChannelDraggable(addedChannel, categoryId),
-                    // depth = 1, // This needs to be dynamic
-                    // parentId = categoryId
-                    // )
-                    // _uiState.update { it.copy(draggableItems = it.draggableItems + newChannelItem) }
-                    // setHasChanges()
-                    _eventFlow.emit(ProjectStructureEditEvent.ShowSnackbar("'${addedChannel.name}' 채널 추가됨 (UI 업데이트 필요)"))
+                    // 부모 카테고리의 깊이 찾기
+                    val parentItem = _uiState.value.draggableItems.find { 
+                        it.id == categoryId && it.originalData is ProjectStructureDraggableItem.CategoryDraggable 
+                    }
+                    
+                    val parentDepth = parentItem?.depth ?: 0
+                    
+                    // 새 채널 아이템 생성
+                    val newChannelItem = DraggableListItemData(
+                        id = addedChannel.id,
+                        originalData = ProjectStructureDraggableItem.ChannelDraggable(addedChannel, categoryId),
+                        depth = parentDepth + 1, // 부모 카테고리보다 한 단계 깊게
+                        parentId = categoryId
+                    )
+                    
+                    // 카테고리 내 올바른 위치에 삽입
+                    // 현재는 단순히 목록 끝에 추가하지만, 나중에는 순서를 고려해야 함
+                    _uiState.update { it.copy(draggableItems = it.draggableItems + newChannelItem) }
+                    
+                    // 변경 사항 알림
+                    _eventFlow.emit(ProjectStructureEditEvent.ShowSnackbar("'${addedChannel.channelName}' 채널이 추가되었습니다."))
+                    
+                    // 로그 기록
+                    Log.d("ViewModel", "Channel added: ${addedChannel.channelName} to category $categoryId")
                 },
                 onFailure = { e ->
                     _eventFlow.emit(ProjectStructureEditEvent.Error("채널 추가 실패: ${e.message}"))
@@ -607,7 +669,6 @@ class ProjectStructureEditDialogViewModel @Inject constructor(
             )
         }
     }
-}
 
 /**
  * 프로젝트 구조 편집 화면의 UI 상태 (DraggableList 통합)
@@ -633,8 +694,8 @@ data class ProjectStructureEditUiState(
     // Deprecated, to be removed once draggableItems is fully used
     val categories: List<Category> = emptyList(), 
     val originalCategories: List<Category> = emptyList(), 
-    val directChannels: List<Channel> = emptyList(),
-    val originalDirectChannels: List<Channel> = emptyList()
+    val directChannels: List<ProjectChannel> = emptyList(),
+    val originalDirectChannels: List<ProjectChannel> = emptyList()
 )
 
 /**
@@ -710,4 +771,5 @@ sealed class RenameDialogState {
 sealed class ContextMenuState {
     data class Category(val categoryId: String, val position: androidx.compose.ui.geometry.Offset) : ContextMenuState()
     data class Channel(val categoryId: String, val channelId: String, val position: androidx.compose.ui.geometry.Offset) : ContextMenuState()
-} 
+}
+        **/

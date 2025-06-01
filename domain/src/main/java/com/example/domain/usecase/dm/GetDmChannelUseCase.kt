@@ -1,7 +1,7 @@
 package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.UserSession
+import com.example.domain.model.data.UserSession
 import com.example.domain.model.base.DMChannel
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.DMChannelRepository

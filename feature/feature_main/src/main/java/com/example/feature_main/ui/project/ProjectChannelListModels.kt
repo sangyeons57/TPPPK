@@ -1,8 +1,9 @@
 package com.example.feature_main.ui.project
 
-import com.example.domain.model.Channel
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.ProjectCategory
+import com.example.domain.model.base.Category
+import com.example.domain.model.base.ProjectChannel
+import com.example.domain.model.enum.ProjectChannelType
+
 
 /**
  * 프로젝트 상세 화면의 카테고리 및 채널 목록 표시를 위한 UI 모델
@@ -29,7 +30,7 @@ data class CategoryUiModel(
     val isExpanded: Boolean = true
 ) {
     companion object {
-        fun fromDomain(category: ProjectCategory, isExpanded: Boolean = true): CategoryUiModel {
+        fun fromDomain(category: Category, isExpanded: Boolean = true): CategoryUiModel {
             return CategoryUiModel(
                 id = category.id,
                 name = category.name,
@@ -50,15 +51,15 @@ data class CategoryUiModel(
 data class ChannelUiModel(
     val id: String,
     val name: String,
-    val mode: ChannelMode,
+    val mode: ProjectChannelType,
     val isSelected: Boolean = false
 ) {
     companion object {
-        fun fromDomain(channel: Channel): ChannelUiModel {
+        fun fromDomain(channel: ProjectChannel): ChannelUiModel {
             return ChannelUiModel(
                 id = channel.id,
-                name = channel.name,
-                mode = channel.channelMode!!
+                name = channel.channelName,
+                mode = channel.channelType
             )
         }
     }

@@ -26,7 +26,6 @@ import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.User
 import com.example.feature_profile.viewmodel.EditProfileEvent
 import com.example.feature_profile.viewmodel.EditProfileUiState
 import com.example.feature_profile.viewmodel.EditProfileViewModel
@@ -39,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext // Context 접근
+import com.example.domain.model.base.User
 import com.google.accompanist.permissions.ExperimentalPermissionsApi // Accompanist
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -217,7 +217,7 @@ fun EditProfileContent(
 fun EditProfileContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditProfileContent(
-            uiState = EditProfileUiState(user = User(id="prev", name = "김철수", email="e"), isLoading = false),
+            uiState = EditProfileUiState(user = User(name = "김철수", email="e"), isLoading = false),
             onNameChanged = {},
             onProfileImageClicked = {},
             onSaveProfileClicked = {}

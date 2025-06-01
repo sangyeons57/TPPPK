@@ -12,7 +12,6 @@ import androidx.compose.ui.draw.scale
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.theme.Dimens
-import com.example.domain.model.Schedule
 import com.example.feature_main.viewmodel.CalendarEvent
 import com.example.feature_main.viewmodel.CalendarUiState
 import com.example.feature_main.viewmodel.CalendarViewModel
@@ -33,6 +32,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model.base.Schedule
 
 /**
  * 캘린더 모듈
@@ -189,7 +189,7 @@ private object PreviewUtils {
             ),
             Schedule(
                 id = "s2",
-                projectId = null,
+                projectId = "",
                 title = "점심 약속",
                 content = "김대표님과 식사",
                 startTime = LocalDateTime.of(today, LocalTime.of(12, 0)).atZone(ZoneId.systemDefault()).toInstant(),

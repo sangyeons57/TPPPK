@@ -1,7 +1,7 @@
 package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
-import com.example.data.model._remote.DMWrapper
+import com.example.domain.model.base.DMWrapper
 import kotlinx.coroutines.flow.Flow
 
 interface DMWrapperRepository {

@@ -13,6 +13,9 @@ class DMChannelRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth, // Firebase Authentication 주입
     // 필요한 경우 LocalDataSource 등 다른 의존성 추가
 ) : DMChannelRepository {
+    override suspend fun getDmChannelById(dmChannelId: String): CustomResult<DMChannel, Exception> {
+        TODO("Not yet implemented")
+    }
 
     override suspend fun getDmChannelId(otherUserId: String): CustomResult<String, Exception> {
         TODO("Not yet implemented")

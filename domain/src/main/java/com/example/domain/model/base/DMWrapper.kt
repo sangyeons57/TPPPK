@@ -1,7 +1,5 @@
+package com.example.domain.model.base
 
-package com.example.data.model._remote
-
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import java.time.Instant
 

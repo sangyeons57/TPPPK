@@ -3,17 +3,14 @@ package com.example.feature_profile.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.UserStatus
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.enum.UserStatus
 import com.example.domain.usecase.user.GetCurrentStatusUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
-// Domain 요소 Import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.onSuccess
-
-// --- UserStatus enum 정의는 domain/model/UserStatus.kt 로 이동 ---
 
 // --- UI 상태 ---
 data class ChangeStatusUiState(
@@ -32,8 +29,9 @@ sealed class ChangeStatusEvent {
     data class ShowSnackbar(val message: String) : ChangeStatusEvent()
 }
 
-// --- UserStatusRepository 인터페이스 정의는 domain/repository/UserRepository.kt 로 이동/통합 ---
-
+/**
+ * 상태 변경 화면을 위한 ViewModel
+ */
 @HiltViewModel
 class ChangeStatusViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
@@ -57,20 +55,25 @@ class ChangeStatusViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading current user status")
 
-            val result = getCurrentStatusUseCase() // UseCase 호출
-
-            result.onSuccess { status -> // 성공 시 람다 실행, status는 Non-null 타입
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        currentStatus = status,
-                        selectedStatus = status
-                    )
+            getCurrentStatusUseCase().collect { result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        val status = result.data
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                currentStatus = status,
+                                selectedStatus = status
+                            )
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        val errorMsg = "현재 상태를 불러오지 못했습니다: ${result.error.message}"
+                        _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                        _eventFlow.emit(ChangeStatusEvent.ShowSnackbar(errorMsg))
+                    }
+                    else -> { /* 로딩 상태 등 다른 상태는 무시 */ }
                 }
-            }.onFailure { exception -> // 실패 시 람다 실행
-                val errorMsg = "현재 상태를 불러오지 못했습니다: ${exception.message}"
-                _uiState.update { it.copy(isLoading = false, error = errorMsg) }
-                _eventFlow.emit(ChangeStatusEvent.ShowSnackbar(errorMsg))
             }
         }
     }
@@ -101,24 +104,29 @@ class ChangeStatusViewModel @Inject constructor(
             _uiState.update { it.copy(isUpdating = true, error = null) }
             _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태 변경 중..."))
 
-            // UseCase는 UserStatus.value (e.g., "ONLINE")를 사용해야 합니다.
-            val result = updateUserStatusUseCase(statusToUpdate.value)
+            // UserStatus 객체를 전달하도록 수정
+            val result = updateUserStatusUseCase(statusToUpdate)
 
-            if (result.isSuccess) {
-                _uiState.update {
-                    it.copy(
-                        isUpdating = false,
-                        currentStatus = statusToUpdate, // 성공 시 현재 상태도 업데이트
-                        updateSuccess = true
-                    )
+            when (result) {
+                is CustomResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isUpdating = false,
+                            currentStatus = statusToUpdate, // 성공 시 현재 상태도 업데이트
+                            updateSuccess = true
+                        )
+                    }
+                    _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태가 '${statusToUpdate.name}'(으)로 변경되었습니다."))
+                    _eventFlow.emit(ChangeStatusEvent.DismissDialog) // 성공 시 다이얼로그 닫기
                 }
-                // The snackbar can still use .name for display as per instructions
-                _eventFlow.emit(ChangeStatusEvent.ShowSnackbar("상태가 '${statusToUpdate.name}'(으)로 변경되었습니다."))
-                _eventFlow.emit(ChangeStatusEvent.DismissDialog) // 성공 시 다이얼로그 닫기
-            } else {
-                val errorMsg = "상태 변경 실패: ${result.exceptionOrNull()?.message}"
-                _uiState.update { it.copy(isUpdating = false, error = errorMsg) }
-                _eventFlow.emit(ChangeStatusEvent.ShowSnackbar(errorMsg))
+                is CustomResult.Failure -> {
+                    val errorMsg = "상태 변경 실패: ${result.error.message}"
+                    _uiState.update { it.copy(isUpdating = false, error = errorMsg) }
+                    _eventFlow.emit(ChangeStatusEvent.ShowSnackbar(errorMsg))
+                }
+                else -> {
+                    // 기타 상태 처리 (로딩 등)
+                }
             }
         }
     }

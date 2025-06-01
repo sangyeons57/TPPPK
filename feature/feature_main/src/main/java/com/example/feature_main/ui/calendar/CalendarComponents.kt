@@ -60,10 +60,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.example.core_common.constants.FirestoreConstants.Schedule
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.Schedule
 import com.example.feature_main.R
 import com.example.feature_main.viewmodel.CalendarUiState
 import java.time.DayOfWeek

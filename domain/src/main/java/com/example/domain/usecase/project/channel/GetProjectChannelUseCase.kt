@@ -23,8 +23,8 @@ class GetProjectChannelUseCase @Inject constructor(
      * @param channelId 채널의 ID
      * @return 채널 정보 또는 에러를 포함한 Result를 방출하는 [Flow]
      */
-    operator fun invoke(projectId: String, channelId: String): Flow<CustomResult<List<ProjectChannel>, Exception>> {
-        return projectChannelRepository.getProjectChannelsStream(projectId, channelId)
+    operator fun invoke(projectId: String, channelId: String): Flow<CustomResult<ProjectChannel, Exception>> {
+        return projectChannelRepository.getProjectChannelStream(projectId, channelId)
         // 에러 처리는 Repository나 DataSource 단계에서 이루어지거나, ViewModel에서 .catch를 통해 처리합니다.
     }
 } 

@@ -1,32 +1,57 @@
 package com.example.domain.usecase.project
 
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.collection.CategoryCollection
+import com.example.domain.repository.CategoryCollectionRepository
 import javax.inject.Inject
 
 /**
- * 프로젝트 채널을 삭제하는 유스케이스 인터페이스
+ * 프로젝트 구조에서 채널을 삭제하는 유스케이스
+ * 
+ * 이 유스케이스는 프로젝트 구조에서 특정 카테고리 내의 채널을 삭제하고
+ * 남은 채널들의 순서를 재정렬하는 기능을 제공합니다.
  */
 interface DeleteChannelUseCase {
-    suspend operator fun invoke(channelId: String): Result<Unit>
+    /**
+     * 프로젝트 구조에서 채널을 삭제합니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param categoryId 채널이 속한 카테고리 ID
+     * @param channelId 삭제할 채널 ID
+     * @return 채널이 삭제된 카테고리 컬렉션을 포함한 CustomResult
+     */
+    suspend operator fun invoke(
+        projectId: String,
+        categoryId: String,
+        channelId: String
+    ): CustomResult<CategoryCollection, Exception>
 }
 
 /**
- * DeleteChannelUseCase의 구현체
- * @param projectSettingRepository 프로젝트 설정 관련 데이터 접근을 위한 Repository (가정)
+ * DeleteChannelUseCase 구현체
  */
 class DeleteChannelUseCaseImpl @Inject constructor(
-    // TODO: ProjectSettingRepository 또는 ChannelRepository 주입 필요
-    // private val projectSettingRepository: ProjectSettingRepository
+    private val categoryCollectionRepository: CategoryCollectionRepository
 ) : DeleteChannelUseCase {
-
+    
     /**
-     * 유스케이스를 실행하여 프로젝트 채널을 삭제합니다.
-     * @param channelId 삭제할 채널의 ID
-     * @return Result<Unit> 삭제 처리 결과
+     * 프로젝트 구조에서 채널을 삭제합니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param categoryId 채널이 속한 카테고리 ID
+     * @param channelId 삭제할 채널 ID
+     * @return 채널이 삭제된 카테고리 컬렉션을 포함한 CustomResult
      */
-    override suspend fun invoke(channelId: String): Result<Unit> {
-        // TODO: Repository 호출 로직 구현 필요
-        // return projectSettingRepository.deleteChannel(channelId)
-        println("UseCase: DeleteChannelUseCase - $channelId (TODO: Implement actual logic)")
-        return Result.success(Unit) // Return success for now
+    override suspend operator fun invoke(
+        projectId: String,
+        categoryId: String,
+        channelId: String
+    ): CustomResult<CategoryCollection, Exception> {
+        // 저장소를 통해 채널 삭제
+        return categoryCollectionRepository.removeChannelFromCategory(
+            projectId = projectId,
+            categoryId = categoryId,
+            channelId = channelId
+        )
     }
-} 
+}

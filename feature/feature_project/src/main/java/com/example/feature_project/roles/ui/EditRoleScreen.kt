@@ -238,7 +238,7 @@ fun PermissionSwitchRow(
         horizontalArrangement = Arrangement.SpaceBetween // 텍스트와 스위치 양쪽 정렬
     ) {
         Text(
-            text = permission.description, // Enum의 설명 사용
+            text = permission.name, // Enum의 설명 사용
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f).padding(end = 16.dp), // 스위치와 간격 확보
             color = if (enabled) LocalContentColor.current else MaterialTheme.colorScheme.outline

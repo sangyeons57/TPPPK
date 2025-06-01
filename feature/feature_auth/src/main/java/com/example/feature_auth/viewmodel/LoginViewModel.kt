@@ -4,7 +4,8 @@ import android.util.Log
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.LoginFormFocusTarget
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.ui.enum.LoginFormFocusTarget
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.LoginUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -153,16 +155,25 @@ class LoginViewModel @Inject constructor(
             // LoginUseCase 호출
             val result = loginUseCase(currentState.email, currentState.password)
 
-            result.onSuccess { loggedInUser ->
-                // 로그인 성공
-                _eventFlow.emit(LoginEvent.LoginSuccess(loggedInUser!!.id))
-                // 성공 시 isLoading은 false로 바꿀 필요 없음 (화면 전환)
-            }.onFailure { exception ->
-                // 로그인 실패
-                Log.e("LoginViewModel", "Login failed", exception)
-                val errorMessage = getAuthErrorMessageUseCase.getLoginErrorMessage(exception)
-                _uiState.update { it.copy(isLoading = false) } // 로딩 종료
-                _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage)) // 스낵바로 에러 알림
+            when (result) {
+                is CustomResult.Success -> {
+                    // 로그인 성공
+                    val user = result.data
+                    _eventFlow.emit(LoginEvent.LoginSuccess(user.userId))
+                    // 성공 시 isLoading은 false로 바꿀 필요 없음 (화면 전환)
+                }
+                is CustomResult.Failure -> {
+                    // 로그인 실패
+                    val exception = result.error
+                    Log.e("LoginViewModel", "Login failed", exception)
+                    val errorMessage = getAuthErrorMessageUseCase(exception.message ?: "unknown_error")
+                    _uiState.update { it.copy(isLoading = false) } // 로딩 종료
+                    _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage)) // 스낵바로 에러 알림
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(LoginEvent.ShowSnackbar("로그인 처리 중 오류가 발생했습니다."))
+                }
             }
         }
     }

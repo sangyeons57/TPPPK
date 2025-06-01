@@ -1,8 +1,10 @@
 package com.example.feature_project.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -72,17 +74,24 @@ class JoinProjectViewModel @Inject constructor(
             // 프로젝트 참여 로직
             val result = joinProjectWithCodeUseCase(codeOrLink)
 
-            if (result.isSuccess) {
-                val joinedProjectId = result.getOrThrow() // 성공 시 ID 가져오기
-                _eventFlow.emit(JoinProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
-                _eventFlow.emit(JoinProjectEvent.JoinSuccess(joinedProjectId)) // 성공 이벤트 발생
-                _uiState.update { it.copy(isLoading = false) } // 로딩 해제 (네비게이션은 Screen에서 처리)
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "유효하지 않은 초대 코드 또는 링크입니다: ${result.exceptionOrNull()?.message ?: "참여 실패"}"
-                    )
+            when (result){
+                is CustomResult.Success -> {
+                    val joinedProjectId = result.data // 성공 시 ID 가져오기
+                    _eventFlow.emit(JoinProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
+                    _eventFlow.emit(JoinProjectEvent.JoinSuccess(joinedProjectId)) // 성공 이벤트 발생
+                    _uiState.update { it.copy(isLoading = false) } // 로딩 해제 (네비게이션은 Screen에서 처리)
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "유효하지 않은 초대 코드 또는 링크입니다: ${result.error}"
+                        )
+                    }
+                }
+                else  ->{
+                    _uiState.update { it.copy(isLoading = false) }
+                    Log.e("JoinProjectViewModel", "Unknown result type: $result")
                 }
             }
         }

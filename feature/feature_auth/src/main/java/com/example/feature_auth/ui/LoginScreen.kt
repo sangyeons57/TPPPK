@@ -31,7 +31,7 @@ import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.LoginFormFocusTarget
+import com.example.domain.model.ui.enum.LoginFormFocusTarget
 import com.example.feature_auth.viewmodel.LoginEvent
 import com.example.feature_auth.viewmodel.LoginUiState
 import com.example.feature_auth.viewmodel.LoginViewModel
@@ -75,6 +75,7 @@ fun LoginScreen(
                     when (event.target) {
                         LoginFormFocusTarget.EMAIL -> emailFocusRequester.requestFocus()
                         LoginFormFocusTarget.PASSWORD -> passwordFocusRequester.requestFocus()
+                        LoginFormFocusTarget.LOGIN_BUTTON -> { /* 로그인 버튼에는 특별한 포커스 처리가 필요 없음 */ }
                     }
                 }
             }

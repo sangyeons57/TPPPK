@@ -1,6 +1,7 @@
 package com.example.data.di
 
 import com.example.data.repository.AuthRepositoryImpl
+import com.example.data.repository.CategoryCollectionRepositoryImpl
 import com.example.data.repository.CategoryRepositoryImpl
 import com.example.data.repository.DMChannelRepositoryImpl
 import com.example.data.repository.DMWrapperRepositoryImpl
@@ -18,6 +19,7 @@ import com.example.data.repository.RoleRepositoryImpl
 import com.example.data.repository.ScheduleRepositoryImpl
 import com.example.data.repository.UserRepositoryImpl
 import com.example.domain.repository.AuthRepository
+import com.example.domain.repository.CategoryCollectionRepository
 import com.example.domain.repository.CategoryRepository
 import com.example.domain.repository.DMChannelRepository
 import com.example.domain.repository.DMWrapperRepository
@@ -31,9 +33,11 @@ import com.example.domain.repository.ProjectChannelRepository
 import com.example.domain.repository.ProjectRepository
 import com.example.domain.repository.ProjectsWrapperRepository
 import com.example.domain.repository.ReactionRepository
+import com.example.domain.repository.MediaRepository
 import com.example.domain.repository.RoleRepository
 import com.example.domain.repository.ScheduleRepository
 import com.example.domain.repository.UserRepository
+import com.example.data.repository.MediaRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -111,4 +115,12 @@ abstract class RepositoryModule {
     @[Binds]
     @[Singleton]
     abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
+    
+    @[Binds]
+    @[Singleton]
+    abstract fun bindMediaRepository(impl: MediaRepositoryImpl): MediaRepository
+
+    @[Binds]
+    @[Singleton]
+    abstract fun bindCategoryCollectionRepository(impl: CategoryCollectionRepositoryImpl): CategoryCollectionRepository
 }

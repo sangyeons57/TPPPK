@@ -1,6 +1,6 @@
 package com.example.domain.usecase.auth
 
-import com.example.domain.model.auth.PasswordValidationResult
+import com.example.domain.model.ui.auth.PasswordValidationResult
 import javax.inject.Inject
 
 /**

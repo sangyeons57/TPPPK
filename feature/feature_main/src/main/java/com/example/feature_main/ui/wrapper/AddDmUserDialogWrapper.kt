@@ -6,8 +6,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core_ui.dialogs.ui.AddDmUserDialog
-import com.example.core_ui.dialogs.viewmodel.AddDmUserDialogViewModel
-import com.example.core_ui.dialogs.viewmodel.AddDmUserEvent
 import kotlinx.coroutines.flow.collectLatest
 
 /**

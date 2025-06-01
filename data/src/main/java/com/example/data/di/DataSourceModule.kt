@@ -26,6 +26,8 @@ import com.example.data.datasource.remote.ScheduleRemoteDataSource
 import com.example.data.datasource.remote.ScheduleRemoteDataSourceImpl
 import com.example.data.datasource.remote.UserRemoteDataSource
 import com.example.data.datasource.remote.UserRemoteDataSourceImpl
+import com.example.data.datasource.remote.AuthRemoteDataSource
+import com.example.data.datasource.remote.AuthRemoteDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -142,7 +144,7 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindMessageAttachmentRemoteDataSource(
-        messageRemoteDataSource: MessageRemoteDataSourceImpl
+        messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSourceImpl
     ): MessageAttachmentRemoteDataSource
 
 
@@ -151,4 +153,10 @@ abstract class DataSourceModule {
     abstract fun bindUserRemoteDataSource(
         userRemoteDataSourceImpl: UserRemoteDataSourceImpl
     ): UserRemoteDataSource
+    
+    @Binds
+    @Singleton
+    abstract fun bindAuthRemoteDataSource(
+        authRemoteDataSourceImpl: AuthRemoteDataSourceImpl
+    ): AuthRemoteDataSource
 }

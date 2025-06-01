@@ -5,15 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.model.ChannelType
-import com.example.domain.model.ProjectStructure
 import com.example.domain.usecase.projectstructure.CreateCategoryChannelUseCase
 import com.example.domain.usecase.projectstructure.CreateDirectChannelUseCase
 import com.example.domain.usecase.projectstructure.GetProjectChannelsUseCase
-import com.example.domain.model.ui.CategoryUiModel
-import com.example.domain.model.ui.ChannelUiModel
-import com.example.domain.model.ui.CreateChannelDialogData
-import com.example.domain.model.ui.ProjectDetailUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.core_common.constants.FirestoreConstants
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.channel.isDirectProjectChannel
+import com.example.domain.model.base.ProjectChannel
 
 /**
  * UI 상태를 나타내는 데이터 클래스입니다.
@@ -40,43 +33,8 @@ data class ProjectDetailUiState(
     val error: String? = null,
     // 채널 생성 관련 상태
     val showCreateChannelDialog: Boolean = false,
-    val createChannelDialogData: CreateChannelDialogData? = null // categoryId가 null이면 직속 채널
 )
 
-// Domain -> UI Model Mappers
-private fun com.example.domain.model.Channel.toUiModel(): ChannelUiModel {
-    return ChannelUiModel(
-        id = this.id,
-        categoryId = this.projectSpecificData?.categoryId,
-        projectId = this.projectSpecificData?.projectId ?: "",
-        name = this.name,
-        type = this.type,
-        order = this.projectSpecificData?.order ?: 0,
-        isDirect = this.isDirectProjectChannel(),
-        lastMessagePreview = this.lastMessagePreview,
-        formattedLastMessageTimestamp = DateTimeUtil.formatChatTime(this.lastMessageTimestamp)
-    )
-}
-
-private fun com.example.domain.model.Category.toUiModel(): CategoryUiModel {
-    return CategoryUiModel(
-        id = this.id,
-        projectId = this.projectId,
-        name = this.name,
-        order = this.order,
-        channels = this.channels.map { it.toUiModel() },
-        formattedCreatedAt = DateTimeUtil.formatDate(this.createdAt),
-        formattedUpdatedAt = DateTimeUtil.formatDate(this.updatedAt)
-    )
-}
-
-private fun ProjectStructure.toCategoryUiModels(): List<CategoryUiModel> {
-    return this.categories.map { it.toUiModel() }
-}
-
-private fun ProjectStructure.toDirectChannelUiModels(): List<ChannelUiModel> {
-    return this.directChannels.map { it.toUiModel() }
-}
 
 @HiltViewModel
 class ProjectDetailViewModel @Inject constructor(

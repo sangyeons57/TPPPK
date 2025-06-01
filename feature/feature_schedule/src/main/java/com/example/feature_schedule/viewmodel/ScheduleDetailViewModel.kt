@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.model.Schedule
+import com.example.domain.model.base.Schedule
 import com.example.domain.usecase.schedule.DeleteScheduleUseCase
 import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -93,13 +93,15 @@ class ScheduleDetailViewModel @Inject constructor(
                         )
                     }
                 }.onFailure { exception ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = exception.message ?: "일정 정보를 불러오지 못했습니다."
-                        )
+                    viewModelScope.launch {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = exception.message ?: "일정 정보를 불러오지 못했습니다."
+                            )
+                        }
+                         _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("정보 로드 실패: ${exception.localizedMessage}"))
                     }
-                     _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("정보 로드 실패: ${exception.localizedMessage}"))
                 }
             } catch (e: Exception) {
                  _uiState.update {
@@ -117,13 +119,16 @@ class ScheduleDetailViewModel @Inject constructor(
     private fun Schedule.toDetailItem(): ScheduleDetailItem {
         val datePattern = "yyyy년 M월 d일 (E)" // Define pattern locally or in DateTimeUtil if widely used
 
-        val dateString = DateTimeUtil.format(this.startTime, datePattern)
+        // null 체크 추가 및 DateTimeUtil 메서드 수정
+        val dateString = this.startTime?.let { DateTimeUtil.formatDate(DateTimeUtil.toLocalDateTime(it)) } ?: "날짜 없음"
 
-        val start = DateTimeUtil.formatChatTime(this.startTime)
-        val end = DateTimeUtil.formatChatTime(this.endTime)
+        // 시간 포맷팅 - null 체크 추가
+        val start = this.startTime?.let { DateTimeUtil.formatTime(DateTimeUtil.toLocalDateTime(it)) } ?: "시간 없음"
+        val end = this.endTime?.let { DateTimeUtil.formatTime(DateTimeUtil.toLocalDateTime(it)) } ?: "시간 없음"
         val timeString = "$start ~ $end"
 
-        val projectName = this.projectId?.let { "Project $it" } // Placeholder
+        // projectId는 이미 String 타입(null은 아님)
+        val projectName = if (this.projectId.isNotEmpty()) "Project ${this.projectId}" else null
 
         return ScheduleDetailItem(
             id = this.id,
@@ -155,11 +160,15 @@ class ScheduleDetailViewModel @Inject constructor(
             try {
                 val result = deleteScheduleUseCase(uiState.value.scheduleId ?: "")
                 result.onSuccess {
-                    _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정이 삭제되었습니다."))
-                    _uiState.update { it.copy(isLoading = false, deleteSuccess = true) } // 삭제 성공 및 네비게이션 트리거
+                    viewModelScope.launch {
+                        _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정이 삭제되었습니다."))
+                        _uiState.update { it.copy(isLoading = false, deleteSuccess = true) } // 삭제 성공 및 네비게이션 트리거
+                    }
                 }.onFailure { exception ->
-                     _uiState.update { it.copy(isLoading = false, error = "일정 삭제 실패: ${exception.message}") }
-                     _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정 삭제 실패: ${exception.localizedMessage}"))
+                    viewModelScope.launch {
+                         _uiState.update { it.copy(isLoading = false, error = "일정 삭제 실패: ${exception.message}") }
+                         _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정 삭제 실패: ${exception.localizedMessage}"))
+                     }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "일정 삭제 중 오류 발생: ${e.message}") }

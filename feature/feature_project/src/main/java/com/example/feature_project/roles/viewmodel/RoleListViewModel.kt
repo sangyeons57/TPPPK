@@ -3,9 +3,9 @@ package com.example.feature_project.roles.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.model.Role // Added
 import com.example.domain.usecase.project.role.DeleteProjectRoleUseCase // Added
 import com.example.domain.usecase.project.role.GetProjectRolesUseCase // Added
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -101,11 +101,16 @@ class RoleListViewModel @Inject constructor(
         viewModelScope.launch {
             // Optional: _uiState.update { it.copy(isLoading = true) } // Indicate loading for delete
             val result = deleteProjectRoleUseCase(projectId, roleId)
-            if (result.isSuccess) {
-                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할이 삭제되었습니다."))
-                // List will auto-update due to observing GetProjectRolesUseCase
-            } else {
-                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할 삭제 실패: ${result.exceptionOrNull()?.localizedMessage}"))
+            when (result){
+                is CustomResult.Success -> {
+                    _eventFlow.emit(RoleListEvent.ShowSnackbar("역할이 삭제되었습니다."))
+                }
+                is CustomResult.Failure -> {
+                    _eventFlow.emit(RoleListEvent.ShowSnackbar("역할 삭제 실패: ${result.error}"))
+                }
+                else -> {
+                    _eventFlow.emit(RoleListEvent.ShowSnackbar("알 수 없는 오류가 발생했습니다."))
+                }
             }
             // Optional: _uiState.update { it.copy(isLoading = false) }
         }

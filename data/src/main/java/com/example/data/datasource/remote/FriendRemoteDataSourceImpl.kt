@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -37,12 +38,56 @@ class FriendRemoteDataSourceImpl @Inject constructor(
         firestore.collection(FirestoreConstants.Collections.USERS).document(otherUserId).collection(FirestoreConstants.Users.Friends.COLLECTION_NAME)
 
 
-    override fun observeFriends(): Flow<List<FriendDTO>> {
-        return getMyFriendsCollectionRef()
-            ?.whereEqualTo(FirestoreConstants.Users.Friends.STATUS, "accepted")
-            ?.snapshots()
-            ?.map { snapshot -> snapshot.documents.mapNotNull { it.toObject(FriendDTO::class.java) } }
-            ?: kotlinx.coroutines.flow.flow { throw Exception("User not logged in or collection path is invalid.") }
+    override fun observeFriends(): Flow<CustomResult<List<FriendDTO>, Exception>> {
+        return observeFriends(auth.currentUser?.uid ?: "")
+    }
+    
+    override fun observeFriends(userId: String): Flow<CustomResult<List<FriendDTO>, Exception>> {
+        return flow {
+            try {
+                if (userId.isEmpty()) {
+                    emit(CustomResult.Failure(Exception("User ID is empty")))
+                    return@flow
+                }
+                
+                val friendsCollection = firestore.collection(FirestoreConstants.Collections.USERS)
+                    .document(userId)
+                    .collection(FirestoreConstants.Users.Friends.COLLECTION_NAME)
+                    .whereEqualTo(FirestoreConstants.Users.Friends.STATUS, "accepted")
+                    .snapshots()
+                
+                friendsCollection.collect { snapshot ->
+                    val friendDTOs = snapshot.documents.mapNotNull { it.toObject(FriendDTO::class.java) }
+                    emit(CustomResult.Success(friendDTOs))
+                }
+            } catch (e: Exception) {
+                emit(CustomResult.Failure(e))
+            }
+        }
+    }
+    
+    override fun observeFriendRequests(userId: String): Flow<CustomResult<List<FriendDTO>, Exception>> {
+        return kotlinx.coroutines.flow.flow {
+            try {
+                if (userId.isEmpty()) {
+                    emit(CustomResult.Failure(Exception("User ID is empty")))
+                    return@flow
+                }
+                
+                val friendsCollection = firestore.collection(FirestoreConstants.Collections.USERS)
+                    .document(userId)
+                    .collection(FirestoreConstants.Users.Friends.COLLECTION_NAME)
+                    .whereEqualTo(FirestoreConstants.Users.Friends.STATUS, "pending")
+                    .snapshots()
+                
+                friendsCollection.collect { snapshot ->
+                    val friendDTOs = snapshot.documents.mapNotNull { it.toObject(FriendDTO::class.java) }
+                    emit(CustomResult.Success(friendDTOs))
+                }
+            } catch (e: Exception) {
+                emit(CustomResult.Failure(e))
+            }
+        }
     }
 
     override suspend fun requestFriend(

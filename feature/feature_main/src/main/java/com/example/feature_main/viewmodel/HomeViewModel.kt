@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
-import com.example.domain.usecase.project.GetProjectStructureUseCase
+import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetUserInfoUseCase
@@ -91,7 +91,7 @@ class HomeViewModel @Inject constructor(
     private val getUserDmChannelsUseCase: GetUserDmChannelsUseCase,
     private val getUserInfoUseCase: GetUserInfoUseCase,
     private val getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase,
-    private val getProjectStructureUseCase: GetProjectStructureUseCase
+    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -378,7 +378,7 @@ class HomeViewModel @Inject constructor(
     private suspend fun loadProjectStructure(projectId: String) {
         try {
             // projectSettingRepository.getProjectStructure(projectId) 대신 UseCase 사용
-            val structureResult = getProjectStructureUseCase(projectId)
+            val structureResult = getProjectAllCategoriesUseCase(projectId)
             
             structureResult.onSuccess { projectStructure -> // ProjectStructure 객체 받음
                 // ProjectStructure에는 categories와 directChannels가 포함됨

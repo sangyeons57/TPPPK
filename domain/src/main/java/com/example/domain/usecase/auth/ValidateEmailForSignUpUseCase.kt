@@ -1,6 +1,6 @@
 package com.example.domain.usecase.auth
 
-import com.example.domain.model.auth.EmailValidationResult
+import com.example.domain.model.ui.auth.EmailValidationResult
 import javax.inject.Inject
 
 /**

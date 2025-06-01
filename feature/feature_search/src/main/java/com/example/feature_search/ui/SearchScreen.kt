@@ -29,19 +29,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_common.util.DateTimeUtil
 // Removed direct Coil imports
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.core.NavDestination
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.core_ui.components.buttons.DebouncedBackButton
-import com.example.domain.model.MessageResult
-import com.example.domain.model.SearchResultItem
-import com.example.domain.model.SearchScope
-import com.example.domain.model.UserResult
+import com.example.domain.model.ui.search.MessageResult
+import com.example.domain.model.ui.search.SearchResultItem
+import com.example.domain.model.ui.search.SearchScope
+import com.example.domain.model.ui.search.UserResult
+import java.time.Instant
 // Domain 모델 및 ViewModel 관련 요소 Import
 import com.example.feature_search.viewmodel.SearchEvent
 import com.example.feature_search.viewmodel.SearchUiState
@@ -62,28 +64,49 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val focusRequester = remember { FocusRequester() }
-
-    // 이벤트 처리
-    LaunchedEffect(Unit) {
+    
+    // 이벤트 수집 (상태가 아닌 일회성 이벤트)
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    LaunchedEffect(key1 = viewModel) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SearchEvent.NavigateToMessage -> appNavigator.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(event.channelId, event.messageId))
-                )
-                is SearchEvent.NavigateToUserProfile -> appNavigator.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.User.profile(event.userId.toString()))
-                )
-                is SearchEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is SearchEvent.NavigateToMessageDetail -> {
+                    appNavigator.navigate(NavigationCommand.NavigateToRoute(
+                        destination = NavDestination.fromRoute(AppRoutes.Project.MessageDetail.route),
+                        args = mapOf(
+                            AppRoutes.Project.ARG_CHANNEL_ID to event.channelId,
+                            AppRoutes.Project.ARG_MESSAGE_ID to event.messageId
+                        )
+                    ))
+                }
+                is SearchEvent.NavigateToUserProfile -> {
+                    appNavigator.navigate(NavigationCommand.NavigateToRoute(
+                        destination = NavDestination.fromRoute(AppRoutes.Project.UserProfile.route),
+                        args = mapOf(AppRoutes.Project.ARG_USER_ID to event.userId)
+                    ))
+                }
+                is SearchEvent.NavigateToMessage -> {
+                    appNavigator.navigate(NavigationCommand.NavigateToRoute(
+                        destination = NavDestination.fromRoute(AppRoutes.Project.MessageDetail.route),
+                        args = mapOf(
+                            AppRoutes.Project.ARG_CHANNEL_ID to event.channelId,
+                            AppRoutes.Project.ARG_MESSAGE_ID to event.messageId
+                        )
+                    ))
+                }
+                // 다른 이벤트 추가 가능
+                is SearchEvent.ShowSnackbar -> {
+                    // 에러 토스트 또는 스낵바 표시
+                    snackbarHostState.showSnackbar(event.message)
+                }
             }
         }
-        // 화면 진입 시 포커스 요청 (선택적)
-        // focusRequester.requestFocus()
     }
-
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -130,7 +153,7 @@ fun SearchScreen(
                     Tab(
                         selected = uiState.selectedScope == scope,
                         onClick = { viewModel.onScopeChange(scope) },
-                        text = { Text(scope.displayName) }
+                        text = { Text(scope.getDisplayName()) }
                     )
                 }
             }
@@ -166,7 +189,7 @@ fun SearchScreen(
                     else -> {
                         SearchResultList(
                             results = uiState.searchResults, // ★ Domain 모델 리스트 전달
-                            onResultClick = viewModel::onResultClick // ViewModel 함수 호출
+                            onResultClick = viewModel::onResultItemClick // ViewModel 함수 호출
                         )
                     }
                 }
@@ -238,7 +261,7 @@ fun MessageResultItem(
                 modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp) // 공간 확보
             )
             Text( // 시간
-                text = messageResult.timestamp.format(DateTimeFormatter.ofPattern("yyyy.MM.dd a h:mm")), // 시간 포맷팅
+                text = DateTimeUtil.formatDateTime2(DateTimeUtil.toLocalDateTime(messageResult.timestamp)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -302,10 +325,48 @@ fun UserResultItem(
 @Composable
 private fun SearchScreenPreview_Results() {
     val previewResults = listOf(
-        MessageResult("m1", "ch1", "일반 채널", "101", "김개발", "이전 프로젝트 검색 결과입니다.", LocalDateTime.now().minusDays(1)),
-        UserResult("u1", "u1", "박기획", "url...", "회의 중"),
-        MessageResult("m2", "ch2", "중요 공지", "102", "최관리", "검색 테스트 메시지 내용 미리보기", LocalDateTime.now().minusHours(3)),
-        UserResult("u2", "u2", "정디자인", null, null)
+        MessageResult(
+            id = "m1",
+            channelId = "ch1",
+            channelName = "일반 채널",
+            messageId = "msg1",
+            messageContent = "이전 프로젝트 검색 결과입니다.",
+            timestamp = Instant.now(),
+            senderId = "user123",
+            senderName = "김개발",
+            highlightedContent = "이전 프로젝트 검색 결과"
+        ),
+        UserResult(
+            id = "u1", 
+            userId = "u1", 
+            userName = "박기획",
+            displayName = "박기획", 
+            profileImageUrl = "url...", 
+            status = "회의 중",
+            isOnline = true,
+            matchReason = "닉네임 일치"
+        ),
+        MessageResult(
+            id = "m2",
+            channelId = "ch2",
+            channelName = "중요 공지",
+            messageId = "msg2",
+            messageContent = "검색 테스트 메시지 내용 미리보기",
+            timestamp = Instant.now().minusSeconds(3600),
+            senderId = "user456",
+            senderName = "최관리",
+            highlightedContent = "검색 테스트 메시지"
+        ),
+        UserResult(
+            id = "u2", 
+            userId = "u2", 
+            userName = "정디자인",
+            displayName = "정디자인",
+            profileImageUrl = null,
+            status = null,
+            isOnline = false,
+            matchReason = "이메일 일치"
+        )
     )
     val previewUiState = SearchUiState(
         query = "검색",
@@ -321,7 +382,7 @@ private fun SearchScreenPreview_Results() {
             Column(Modifier.padding(padding)) {
                 OutlinedTextField(value = "검색", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(16.dp))
                 PrimaryTabRow(selectedTabIndex = 0) {
-                    SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.displayName) }) }
+                    SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.name) }) }
                 }
                 SearchResultList(results = previewUiState.searchResults, onResultClick = {})
             }
@@ -333,7 +394,7 @@ private fun SearchScreenPreview_Results() {
 @Preview(showBackground = true, name = "Search Screen Empty")
 @Composable
 private fun SearchScreenPreview_Empty() {
-    val previewUiState = SearchUiState(query = "없는단어", searchPerformed = true, searchResults = emptyList())
+    val previewUiState = SearchUiState(query = "없는단어", searchPerformed = true)
     // ... (Scaffold 구조는 위와 유사하게) ...
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Scaffold(
@@ -342,7 +403,7 @@ private fun SearchScreenPreview_Empty() {
             Column(Modifier.padding(padding)) {
                 OutlinedTextField(value = "없는단어", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(16.dp))
                 PrimaryTabRow(selectedTabIndex = 0) {
-                    SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.displayName) }) }
+                    SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.name) }) }
                 }
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                     Text("'${previewUiState.query}'에 대한 검색 결과가 없습니다.")
@@ -365,7 +426,7 @@ private fun SearchScreenPreview_Loading() {
             Column(Modifier.padding(padding)) {
                 OutlinedTextField(value = "검색중", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(16.dp))
                 PrimaryTabRow(selectedTabIndex = 0) {
-                    SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.displayName) }) }
+                    SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.name) }) }
                 }
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()

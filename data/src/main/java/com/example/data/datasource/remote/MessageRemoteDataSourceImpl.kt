@@ -2,6 +2,7 @@
 package com.example.data.datasource.remote
 
 import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.constants.FirestorePaths
 import com.example.core_common.result.CustomResult
 import com.example.data.model.remote.MessageDTO
 import com.example.data.model.remote.ReactionDTO
@@ -12,42 +13,59 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.dataObjects
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * 메시지 원격 데이터 소스 구현체
+ * Firestore를 통해 메시지 데이터를 관리합니다.
+ */
 @Singleton
 class MessageRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) : MessageRemoteDataSource {
 
-    // FirestoreConstants에서 정의된 상수 사용
-
+    /**
+     * 채널 경로에서 메시지 컬렉션 참조를 가져옵니다.
+     * 채널 경로는 이미 완전한 Firestore 경로여야 합니다.
+     */
     private fun getMessagesCollection(channelPath: String) =
-        firestore.collection(channelPath).document().parent.collection(FirestoreConstants.MessageFields.Messages.COLLECTION_NAME)
+        firestore.document(channelPath).collection(FirestoreConstants.MessageFields.COLLECTION_NAME)
 
-
+    /**
+     * 채널의 메시지 목록을 관찰합니다.
+     */
     override fun observeMessages(channelPath: String, limit: Long): Flow<List<MessageDTO>> {
         if (channelPath.isBlank()) {
-            return kotlinx.coroutines.flow.flow { throw IllegalArgumentException("Channel path cannot be empty.") }
+            return flow { throw IllegalArgumentException("Channel path cannot be empty.") }
         }
+        
         return getMessagesCollection(channelPath)
             .orderBy(FirestoreConstants.MessageFields.SENT_AT, Query.Direction.DESCENDING)
             .limit(limit)
             .dataObjects()
     }
 
+    /**
+     * 특정 메시지 정보를 가져옵니다.
+     */
     override suspend fun getMessage(channelPath: String, messageId: String): CustomResult<MessageDTO?, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             if (channelPath.isBlank() || messageId.isBlank()) {
                 throw IllegalArgumentException("Channel path and message ID cannot be empty.")
             }
-            val document = getMessagesCollection(channelPath).document(messageId).get()
+            val documentSnapshot = getMessagesCollection(channelPath).document(messageId).get().await()
+            documentSnapshot.toObject(MessageDTO::class.java)
         }
     }
 
+    /**
+     * 새 메시지를 전송합니다.
+     */
     override suspend fun sendMessage(
         channelPath: String,
         content: String
@@ -66,13 +84,16 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    /**
+     * 메시지 내용을 업데이트합니다.
+     */
     override suspend fun updateMessage(
         channelPath: String,
         messageId: String,
         newContent: String
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
-            val updateData = mapOf(
+            val updateData = mapOf<String, Any>(
                 FirestoreConstants.MessageFields.SEND_MESSAGE to newContent,
                 FirestoreConstants.MessageFields.UPDATED_AT to FieldValue.serverTimestamp()
             )
@@ -82,6 +103,9 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    /**
+     * 메시지를 삭제 표시합니다.
+     */
     override suspend fun deleteMessage(
         channelPath: String,
         messageId: String
@@ -94,13 +118,22 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    /**
+     * 메시지의 반응 컬렉션 참조를 가져옵니다.
+     */
     private fun getReactionsCollection(channelPath: String, messageId: String) =
         getMessagesCollection(channelPath).document(messageId).collection(FirestoreConstants.MessageFields.Attachments.COLLECTION_NAME)
 
+    /**
+     * 메시지의 반응 목록을 관찰합니다.
+     */
     override fun observeReactions(channelPath: String, messageId: String): Flow<List<ReactionDTO>> {
         return getReactionsCollection(channelPath, messageId).dataObjects()
     }
 
+    /**
+     * 메시지에 새 반응을 추가합니다.
+     */
     override suspend fun addReaction(
         channelPath: String,
         messageId: String,
@@ -116,6 +149,9 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    /**
+     * 메시지에서 반응을 제거합니다.
+     */
     override suspend fun removeReaction(
         channelPath: String,
         messageId: String,
@@ -139,6 +175,9 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    /**
+     * 비동기 작업을 수행하고 결과를 CustomResult로 변환합니다.
+     */
     private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         return try {
             CustomResult.Success(block())

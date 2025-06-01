@@ -1,5 +1,6 @@
 package com.example.feature_chat.ui
 
+/** 다른 문제 전부 해결하고나면 VIewmodel구현 왜냐하면 chat은 다음주에 할일 이기때문
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,7 +60,6 @@ import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.GalleryImageUiModel
-import com.example.feature_chat.viewmodel.ChatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
@@ -803,3 +803,4 @@ private fun ImageSelectionGridPreview() {
         )
     }
 }
+*/

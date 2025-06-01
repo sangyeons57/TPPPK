@@ -19,6 +19,12 @@ interface AuthRemoteDataSource {
      * @return 로그인 상태이면 FirebaseUser, 아니면 null
      */
     fun getCurrentUser(): CustomResult<FirebaseUser, Exception>
+    
+    /**
+     * 현재 로그인된 사용자의 ID를 가져옵니다.
+     * @return 로그인 상태이면 사용자 ID, 아니면 null
+     */
+    suspend fun getCurrentUserId(): String?
 
     /**
      * 이메일과 비밀번호로 회원가입을 시도합니다.

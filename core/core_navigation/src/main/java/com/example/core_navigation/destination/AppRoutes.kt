@@ -99,6 +99,24 @@ object AppRoutes {
         const val ARG_CATEGORY_ID = "categoryId"
         const val ARG_CHANNEL_ID = "channelId"
         const val ARG_USER_ID = "userId" // For member editing
+        const val ARG_MESSAGE_ID = "messageId" // For message detail
+        
+        // 메시지 상세 화면
+        object MessageDetail {
+            const val route = "$ROOT/channel/{$ARG_CHANNEL_ID}/message/{$ARG_MESSAGE_ID}"
+            val arguments = listOf(
+                navArgument(ARG_CHANNEL_ID) { type = NavType.StringType },
+                navArgument(ARG_MESSAGE_ID) { type = NavType.StringType }
+            )
+        }
+        
+        // 사용자 프로필 화면
+        object UserProfile {
+            const val route = "$ROOT/user/{$ARG_USER_ID}"
+            val arguments = listOf(
+                navArgument(ARG_USER_ID) { type = NavType.StringType }
+            )
+        }
         const val ARG_ROLE_ID = "roleId" // For role editing (optional query param)
 
         // 프로젝트 그래프 정의

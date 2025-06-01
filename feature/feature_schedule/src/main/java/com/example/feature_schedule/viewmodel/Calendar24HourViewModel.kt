@@ -3,9 +3,10 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.*
-import com.example.domain.model.Schedule
+import com.example.domain.model.base.Schedule
 import com.example.domain.usecase.schedule.DeleteScheduleUseCase
 import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,9 +16,21 @@ import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.model.ScheduleItem24Hour
 import java.time.Instant
 import android.util.Log
+
+
+/**
+ * 24시간 캘린더 화면에서 사용하는 일정 아이템 데이터 클래스
+ * 일정 ID, 제목, 시작 시간, 종료 시간, 색상을 포함합니다.
+ */
+data class ScheduleItem24Hour(
+    val id: String,
+    val title: String,
+    val startTime: Instant,
+    val endTime: Instant,
+    val color: ULong
+)
 
 // --- UI 상태 ---
 sealed interface Calendar24HourUiState {
@@ -72,7 +85,7 @@ class Calendar24HourViewModel @Inject constructor(
         
         // 특정 프로젝트 ID에 대한 기본 타입 설정 예시
         // 실제로는 저장된 사용자 설정에서 로드해야 함
-        colorManager.setProjectDefaultType("project-special", ScheduleType.IMPORTANT)
+        colorManager.projectDefaultTypes["project-special"] = ScheduleType.IMPORTANT
     }
 
     /**
@@ -80,42 +93,47 @@ class Calendar24HourViewModel @Inject constructor(
      * 
      * @param date 로드할 일정 날짜
      */
-    internal fun loadSchedules(date: LocalDate) { // Changed visibility from private to internal
+    internal fun loadSchedules(date: LocalDate) { 
         viewModelScope.launch {
             _uiState.value = Calendar24HourUiState.Loading
             Log.d("CalendarVM", "loadSchedules($date) 호출됨. UI 상태: Loading")
             
-            val result = getSchedulesForDateUseCase(date)
-            Log.d("CalendarVM", "loadSchedules($date) - getSchedulesForDateUseCase 결과: isSuccess=${result.isSuccess}, data=${if (result.isSuccess) result.getOrNull() else result.exceptionOrNull()}")
-            
-            if (result.isSuccess) {
-                val schedulesDomain = result.getOrThrow()
-                Log.d("CalendarVM", "loadSchedules($date) - 성공. Domain schedules count: ${schedulesDomain.size}")
-                val schedulesUi = schedulesDomain.map { schedule ->
-                    // 기본 색상 계산
-                    val color = colorManager.getColorForSchedule(schedule)
-                    
-                    // 시간 기반 그라데이션 효과를 위한 알파값 계산
-                    val (startAlpha, endAlpha) = colorManager.calculateTimeBasedAlpha(
-                        schedule.startTime,
-                        schedule.endTime
-                    )
-                    
-                    ScheduleItem24Hour(
-                        id = schedule.id,
-                        title = schedule.title,
-                        startTime = schedule.startTime,
-                        endTime = schedule.endTime,
-                        color = color,
-                        startColorAlpha = startAlpha,
-                        endColorAlpha = endAlpha
-                    )
+            getSchedulesForDateUseCase(date).collect { result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        val schedulesDomain = result.data
+                        
+                        // 도메인 모델을 UI 모델로 변환
+                        val schedules = schedulesDomain.map { schedule ->
+                            // 일정 타입 추론
+                            val scheduleType = colorManager.inferScheduleType(schedule)
+                            
+                            // 일정 타입에 따른 색상 할당
+                            val scheduleColor = colorManager.getColor(scheduleType)
+                            
+                            // UI 모델로 변환
+                            ScheduleItem24Hour(
+                                id = schedule.id,
+                                title = schedule.title,
+                                startTime = schedule.startTime!!,
+                                endTime = schedule.endTime!!,
+                                color = scheduleColor
+                            )
+                        }
+                        
+                        _uiState.value = Calendar24HourUiState.Success(date, schedules)
+                        Log.d("CalendarVM", "loadSchedules($date) 성공. 일정 개수: ${schedules.size}")
+                    }
+                    is CustomResult.Failure -> {
+                        val errorMessage = "Failed to load schedules: ${result.error.message ?: "Unknown error"}"
+                        _uiState.value = Calendar24HourUiState.Error(errorMessage)
+                        Log.e("CalendarVM", "loadSchedules($date) 실패: ${result.error.message}")
+                        _eventFlow.emit(Calendar24HourEvent.ShowSnackbar(errorMessage))
+                    }
+                    else -> {
+                        // 로딩 상태 등 무시
+                    }
                 }
-                _uiState.value = Calendar24HourUiState.Success(date, schedulesUi)
-                Log.d("CalendarVM", "loadSchedules($date) - UI 상태: Success. UI schedules count: ${schedulesUi.size}, 데이터: $schedulesUi")
-            } else {
-                _uiState.value = Calendar24HourUiState.Error("스케줄 로딩 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}")
-                Log.e("CalendarVM", "loadSchedules($date) - UI 상태: Error", result.exceptionOrNull())
             }
         }
     }
@@ -126,11 +144,15 @@ class Calendar24HourViewModel @Inject constructor(
      * @param enabled 고대비 모드 활성화 여부
      */
     fun setHighContrastMode(enabled: Boolean) {
-        colorManager.setHighContrastMode(enabled)
-        // 설정이 변경되었으므로 현재 날짜의 일정 다시 로드
-        val currentDate = (uiState.value as? Calendar24HourUiState.Success)?.selectedDate 
-            ?: LocalDate.of(year, month, day)
-        loadSchedules(currentDate)
+        viewModelScope.launch {
+            try {
+                // 실제로는 사용자 설정에 저장해야 함
+                colorManager.highContrastMode = enabled
+                refreshSchedules() // 변경된 설정 적용을 위해 새로고침
+            } catch (e: Exception) {
+                _eventFlow.emit(Calendar24HourEvent.ShowSnackbar("설정 변경 중 오류가 발생했습니다."))
+            }
+        }
     }
 
     /**
@@ -139,11 +161,15 @@ class Calendar24HourViewModel @Inject constructor(
      * @param enabled 그라데이션 효과 활성화 여부
      */
     fun setGradientEffect(enabled: Boolean) {
-        colorManager.setGradientEffect(enabled)
-        // 설정이 변경되었으므로 현재 날짜의 일정 다시 로드
-        val currentDate = (uiState.value as? Calendar24HourUiState.Success)?.selectedDate 
-            ?: LocalDate.of(year, month, day)
-        loadSchedules(currentDate)
+        viewModelScope.launch {
+            try {
+                // 실제로는 사용자 설정에 저장해야 함
+                colorManager.gradientEffect = enabled
+                refreshSchedules() // 변경된 설정 적용을 위해 새로고침
+            } catch (e: Exception) {
+                _eventFlow.emit(Calendar24HourEvent.ShowSnackbar("설정 변경 중 오류가 발생했습니다."))
+            }
+        }
     }
 
     /**
@@ -153,19 +179,27 @@ class Calendar24HourViewModel @Inject constructor(
      */
     fun deleteSchedule(scheduleId: String) {
         viewModelScope.launch {
-            val result = deleteScheduleUseCase(scheduleId)
-            
-            if (result.isSuccess) {
-                // 성공 시, 현재 상태가 Success이면 해당 스케줄 제거 후 UI 업데이트
-                val currentState = _uiState.value
-                if (currentState is Calendar24HourUiState.Success) {
-                    _uiState.value = currentState.copy(
-                        schedules = currentState.schedules.filterNot { it.id == scheduleId }
-                    )
-                    _eventFlow.emit(Calendar24HourEvent.ShowSnackbar("일정이 삭제되었습니다."))
+            val currentState = _uiState.value
+            if (currentState is Calendar24HourUiState.Success) {
+                // 현재 화면에서 해당 일정 제거
+                val updatedSchedules = currentState.schedules.filterNot { it.id == scheduleId }
+                _uiState.value = Calendar24HourUiState.Success(currentState.selectedDate, updatedSchedules)
+                
+                // 서버에서 삭제
+                val result = deleteScheduleUseCase(scheduleId)
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(Calendar24HourEvent.ShowSnackbar("일정이 삭제되었습니다."))
+                    }
+                    is CustomResult.Failure -> {
+                        // 삭제 실패 시 원복
+                        _uiState.value = currentState
+                        _eventFlow.emit(Calendar24HourEvent.ShowSnackbar("일정 삭제 실패: ${result.error.message ?: "알 수 없는 오류"}"))
+                    }
+                    else -> {
+                        // 로딩 상태 등 무시
+                    }
                 }
-            } else {
-                _eventFlow.emit(Calendar24HourEvent.ShowSnackbar("일정 삭제 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"))
             }
         }
     }
@@ -244,14 +278,14 @@ class ScheduleColorManager {
     // 프로젝트 ID를 색상에 매핑 (일관성 유지용)
     private val projectColorMap = mutableMapOf<String, ULong>()
     
-    // 프로젝트 ID를 일정 타입에 매핑 (커스터마이징용)
-    private val projectTypeMap = mutableMapOf<String, ScheduleType>()
+    // 프로젝트별 기본 타입 설정
+    val projectDefaultTypes = mutableMapOf<String, ScheduleType>()
     
-    // 고대비 모드 설정
-    private var isHighContrastMode = false
+    // 고대비 모드 활성화 여부
+    var highContrastMode = false
     
-    // 그라데이션 효과 설정
-    private var useGradientEffect = true
+    // 그라데이션 효과 활성화 여부
+    var gradientEffect = true
     
     // 하루 시간대 표현 (오전, 오후, 저녁, 밤)
     private val morningStart = LocalTime.of(6, 0)
@@ -260,128 +294,64 @@ class ScheduleColorManager {
     private val nightStart = LocalTime.of(22, 0)
     
     /**
-     * 고대비 모드 설정
+     * 일정에 대한 색상을 결정합니다.
      * 
-     * @param enabled 고대비 모드 활성화 여부
-     */
-    fun setHighContrastMode(enabled: Boolean) {
-        isHighContrastMode = enabled
-    }
-    
-    /**
-     * 그라데이션 효과 설정
-     * 
-     * @param enabled 그라데이션 효과 활성화 여부
-     */
-    fun setGradientEffect(enabled: Boolean) {
-        useGradientEffect = enabled
-    }
-    
-    /**
-     * 특정 프로젝트의 기본 일정 타입 설정
-     * 
-     * @param projectId 프로젝트 ID
-     * @param type 설정할 일정 타입
-     */
-    fun setProjectDefaultType(projectId: String, type: ScheduleType) {
-        projectTypeMap[projectId] = type
-    }
-    
-    /**
-     * 일정의 타입에 따른 색상 반환
-     * 
-     * @param schedule 색상을 얻을 일정
-     * @return ARGB 색상값 (ULong)
+     * @param schedule 색상을 결정할 일정 객체
+     * @return 색상 값 (ULong)
      */
     fun getColorForSchedule(schedule: Schedule): ULong {
-        // 프로젝트 ID가 null이면 기본 타입(개인) 사용
-        val projectId = schedule.projectId ?: ""
-        
-        // 이미 매핑된 프로젝트 ID가 있으면 해당 색상 반환
-        if (projectColorMap.containsKey(projectId)) {
-            return projectColorMap[projectId]!!
+        // 프로젝트 ID가 있고, 해당 프로젝트에 기본 타입이 지정되어 있는 경우
+        val projectId = schedule.projectId
+        if (projectDefaultTypes.containsKey(projectId)) {
+            val type = projectDefaultTypes[projectId]!!
+            return if (highContrastMode) getHighContrastColor(type) else getColor(type)
         }
         
-        // 프로젝트 기본 타입이 설정되어 있으면 해당 타입 사용
-        val type = if (projectId.isNotEmpty() && projectTypeMap.containsKey(projectId)) {
-            projectTypeMap[projectId]!!
-        } else {
-            // 설정이 없으면 일정 내용에서 타입 유추
-            inferScheduleType(schedule)
-        }
-        
-        // 타입에 따라 색상 할당 (고대비 모드 여부에 따라 다른 색상 세트 사용)
-        val color = if (isHighContrastMode) {
-            getHighContrastColor(type)
-        } else {
-            getStandardColor(type)
-        }
-        
-        // 프로젝트 ID에 색상 매핑 저장 (빈 문자열이 아닌 경우에만)
-        if (projectId.isNotEmpty()) {
-            projectColorMap[projectId] = color
-        }
-        
-        return color
+        // 타입을 추론해서 색상 결정
+        val inferredType = inferScheduleType(schedule)
+        return if (highContrastMode) getHighContrastColor(inferredType) else getColor(inferredType)
     }
     
     /**
-     * 시간대에 따른 알파값 계산
+     * 시각적 사용성을 위해 일정의 시작/종료 시간에 따라 알파 값 계산
+     * (아침에 시작하는 일정은 밝게, 밤에 시작하는 일정은 어둠게 표시)
      * 
-     * @param time 시간 (LocalTime)
-     * @return 해당 시간에 적용할 알파값 (0.6f ~ 1.0f)
+     * @param startTime 일정 시작 시간
+     * @param endTime 일정 종료 시간
+     * @return 시작 알파와 종료 알파 값 쌍
      */
-    fun getAlphaForTime(time: LocalTime): Float {
-        // 시간대별 기본 알파값 (낮 - 밝게, 밤 - 어둡게)
-        return when {
-            // 새벽 (어두움 -> 밝아짐)
-            time.isBefore(morningStart) -> {
-                // 0시에 가장 어둡고(0.6f), 아침에 가까울수록 밝아짐
-                val progress = time.toSecondOfDay().toFloat() / morningStart.toSecondOfDay()
-                0.6f + (0.4f * progress)
-            }
-            // 오전 (밝음)
-            time.isBefore(afternoonStart) -> {
-                // 오전은 일관되게 밝음 (1.0f)
-                1.0f
-            }
-            // 오후 (약간 어두워짐)
-            time.isBefore(eveningStart) -> {
-                // 오후는 약간 어두움 (0.9f)
-                0.9f
-            }
-            // 저녁 (점점 더 어두워짐)
-            time.isBefore(nightStart) -> {
-                // 저녁에서 밤으로 갈수록 어두워짐
-                val totalSeconds = (nightStart.toSecondOfDay() - eveningStart.toSecondOfDay()).toFloat()
-                val progress = (time.toSecondOfDay() - eveningStart.toSecondOfDay()) / totalSeconds
-                0.9f - (0.2f * progress)
-            }
-            // 밤 (가장 어두움)
-            else -> {
-                // 밤은 가장 어두움 (0.7f)
-                0.7f
-            }
-        }
-    }
-    
-    /**
-     * 일정 시작 및 종료 시간에 따른 알파값 쌍 계산 (Instant 버전)
-     * 
-     * @param startInstant 일정 시작 시간 (Instant)
-     * @param endInstant 일정 종료 시간 (Instant)
-     * @return 시작 및 종료 시간에 대한 알파값 쌍 (그라데이션 효과가 비활성화되면 둘 다 1.0f)
-     */
-    fun calculateTimeBasedAlpha(startInstant: Instant, endInstant: Instant): Pair<Float, Float> {
-        if (!useGradientEffect) {
+    fun calculateTimeBasedAlpha(
+        startTime: Instant,
+        endTime: Instant
+    ): Pair<Float, Float> {
+        if (!gradientEffect) {
             return Pair(1.0f, 1.0f)
         }
         
-        // Instant를 LocalTime으로 변환
-        val startAlpha = getAlphaForTime(DateTimeUtil.toLocalTime(startInstant) ?: LocalTime.NOON)
-        val endAlpha = getAlphaForTime( DateTimeUtil.toLocalTime(endInstant) ?: LocalTime.NOON )
-
+        // 현재 시간대에 따라 알파 값 조정 (24시간 일정은 아침에 밝고 밤에 어둡게)
+        val startLocalTime = DateTimeUtil.toLocalTime(startTime) ?: LocalTime.NOON
+        val endLocalTime = DateTimeUtil.toLocalTime(endTime) ?: LocalTime.NOON
+        
+        val startAlpha = getAlphaForTime(startLocalTime)
+        val endAlpha = getAlphaForTime(endLocalTime)
+        
         return Pair(startAlpha, endAlpha)
+    }
+    
+    /**
+     * 시간에 따른 알파값 계산
+     * 
+     * @param time 시간
+     * @return 계산된 알파값 (0.7f ~ 1.0f)
+     */
+    private fun getAlphaForTime(time: LocalTime): Float {
+        return when {
+            time.isBefore(morningStart) -> 0.7f  // 새벽
+            time.isBefore(afternoonStart) -> 1.0f  // 오전
+            time.isBefore(eveningStart) -> 0.9f  // 오후
+            time.isBefore(nightStart) -> 0.8f  // 저녁
+            else -> 0.7f  // 밤
+        }
     }
     
     /**
@@ -399,6 +369,23 @@ class ScheduleColorManager {
             ScheduleType.OTHER -> ScheduleColor5.value
             ScheduleType.IMPORTANT -> ScheduleColor6.value
             ScheduleType.DEADLINE -> ScheduleColor7.value
+        }
+    }
+    /**
+     * 일정 타입에 따른 색상 반환
+     * 
+     * @param type 일정 타입
+     * @return ARGB 색상값 (ULong)
+     */
+    fun getColor(type: ScheduleType): ULong {
+        return when (type) {
+            ScheduleType.IMPORTANT -> ScheduleColor1.value
+            ScheduleType.DEADLINE -> ScheduleColor2.value
+            ScheduleType.MEETING -> ScheduleColor3.value
+            ScheduleType.WORK -> ScheduleColor4.value
+            ScheduleType.PROJECT -> ScheduleColor5.value
+            ScheduleType.PERSONAL -> ScheduleColor6.value
+            ScheduleType.OTHER -> ScheduleColor7.value
         }
     }
     
@@ -427,7 +414,7 @@ class ScheduleColorManager {
      * @param schedule 분석할 일정
      * @return 유추된 일정 타입
      */
-    private fun inferScheduleType(schedule: Schedule): ScheduleType {
+    fun inferScheduleType(schedule: Schedule): ScheduleType {
         val titleLower = schedule.title.lowercase()
         val contentLower = schedule.content?.lowercase() ?: ""
         

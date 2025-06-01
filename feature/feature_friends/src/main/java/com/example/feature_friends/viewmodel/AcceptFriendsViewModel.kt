@@ -3,7 +3,9 @@ package com.example.feature_friends.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.FriendRelationship
+import com.example.core_common.result.CustomResult
+import com.example.core_common.util.AuthUtil
+import com.example.domain.model.base.Friend
 import com.example.domain.usecase.friend.AcceptFriendRequestUseCase
 import com.example.domain.usecase.friend.GetPendingFriendRequestsUseCase
 import com.example.domain.usecase.friend.RemoveOrDenyFriendUseCase
@@ -11,10 +13,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.util.Date
 import javax.inject.Inject
 
-// UI 모델 (FriendRelationship 기반으로 변경)
+// UI 모델 (Friend 도메인 모델 기반으로 변경)
 data class FriendRequestItem(
     val userId: String,
     val userName: String,
@@ -43,6 +44,7 @@ class AcceptFriendsViewModel @Inject constructor(
     private val getPendingFriendRequestsUseCase: GetPendingFriendRequestsUseCase,
     private val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
     private val denyFriendRequestUseCase: RemoveOrDenyFriendUseCase,
+    private val authUtil: AuthUtil,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -66,17 +68,18 @@ class AcceptFriendsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             
             try {
-                getPendingFriendRequestsUseCase().collect { result ->
-                    result.fold(
-                        onSuccess = { relationships ->
-                            // Firestore에서 추가 정보 조회 필요 - 이름, 프로필 이미지 등 (실제 구현에서는 UserRepository 활용)
-                            // 여기서는 더미 데이터 사용
-                            val requests = relationships.map { relationship ->
+                val currentUserId = authUtil.getCurrentUserId()
+                getPendingFriendRequestsUseCase(currentUserId).collect { result ->
+                    when (result) {
+                        is CustomResult.Success -> {
+                            val friends = result.data
+                            // Friend 객체를 UI 모델로 변환
+                            val requests = friends.map { friend ->
                                 FriendRequestItem(
-                                    userId = relationship.friendUserId, // FriendRelationship의 friendId 필드 사용
-                                    userName = "사용자 ${relationship.friendUserId.takeLast(4)}", // 실제 구현에서는 UserRepository에서 이름 가져오기
-                                    profileImageUrl = null, // 실제 구현에서는 UserRepository에서 프로필 이미지 URL 가져오기
-                                    requestDate = relationship.timestamp
+                                    userId = friend.friendUid,
+                                    userName = friend.friendName.ifEmpty { "사용자 ${friend.friendUid.takeLast(4)}" },
+                                    profileImageUrl = friend.friendProfileImageUrl,
+                                    requestDate = friend.requestedAt
                                 )
                             }
                             _uiState.update { 
@@ -85,8 +88,9 @@ class AcceptFriendsViewModel @Inject constructor(
                                     friendRequests = requests
                                 )
                             }
-                        },
-                        onFailure = { error ->
+                        }
+                        is CustomResult.Failure -> {
+                            val error = result.error
                             _uiState.update { 
                                 it.copy(
                                     isLoading = false,
@@ -95,7 +99,10 @@ class AcceptFriendsViewModel @Inject constructor(
                             }
                             _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 불러오는데 실패했습니다."))
                         }
-                    )
+                        else -> {
+                            // Loading, Initial, Progress 등의 상태 처리 (필요 시)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update { 
@@ -117,8 +124,10 @@ class AcceptFriendsViewModel @Inject constructor(
     fun acceptFriendRequest(userId: String) {
         viewModelScope.launch {
             try {
-                acceptFriendRequestUseCase(userId).fold(
-                    onSuccess = {
+                val currentUserId = authUtil.getCurrentUserId()
+                val result = acceptFriendRequestUseCase(userId, currentUserId)
+                when (result) {
+                    is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)
                         _uiState.update { currentState ->
                             currentState.copy(
@@ -126,11 +135,15 @@ class AcceptFriendsViewModel @Inject constructor(
                             )
                         }
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 수락했습니다."))
-                    },
-                    onFailure = { error ->
+                    }
+                    is CustomResult.Failure -> {
+                        val error = result.error
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청 수락 실패: ${error.message ?: "알 수 없는 오류"}"))
                     }
-                )
+                    else -> {
+                        // 다른 상태 처리 (필요 시)
+                    }
+                }
             } catch (e: Exception) {
                 _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("오류: ${e.message}"))
             }
@@ -145,8 +158,9 @@ class AcceptFriendsViewModel @Inject constructor(
     fun denyFriendRequest(userId: String) {
         viewModelScope.launch {
             try {
-                denyFriendRequestUseCase(userId).fold(
-                    onSuccess = {
+                val result = denyFriendRequestUseCase(userId)
+                when (result) {
+                    is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)
                         _uiState.update { currentState ->
                             currentState.copy(
@@ -154,11 +168,15 @@ class AcceptFriendsViewModel @Inject constructor(
                             )
                         }
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 거절했습니다."))
-                    },
-                    onFailure = { error ->
+                    }
+                    is CustomResult.Failure -> {
+                        val error = result.error
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청 거절 실패: ${error.message ?: "알 수 없는 오류"}"))
                     }
-                )
+                    else -> {
+                        // 다른 상태 처리 (필요 시)
+                    }
+                }
             } catch (e: Exception) {
                 _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("오류: ${e.message}"))
             }

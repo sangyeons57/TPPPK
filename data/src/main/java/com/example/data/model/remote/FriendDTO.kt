@@ -1,10 +1,9 @@
 package com.example.data.model.remote
 
-import com.example.domain.model._new.enum.FriendStatus
+import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
-import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
 
 /*

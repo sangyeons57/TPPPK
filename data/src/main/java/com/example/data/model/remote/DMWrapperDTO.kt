@@ -1,7 +1,7 @@
 package com.example.data.model.remote
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.data.model._remote.DMWrapper
+import com.example.domain.model.base.DMWrapper
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import java.time.Instant

@@ -13,6 +13,7 @@ import com.google.firebase.firestore.ktx.dataObjects
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -29,11 +30,19 @@ class CategoryRemoteDataSourceImpl @Inject constructor(
         firestore.collection(FirestoreConstants.Collections.PROJECTS).document(projectId)
             .collection(FirestoreConstants.Project.Categories.COLLECTION_NAME)
 
-    override fun observeCategories(projectId: String): Flow<List<CategoryDTO>> {
+    override fun observeCategories(projectId: String): Flow<CustomResult<List<CategoryDTO>, Exception>> {
         return getCategoriesCollection(projectId)
             .orderBy("order", Query.Direction.ASCENDING)
             .snapshots()
-            .map { snapshot -> snapshot.toObjects(CategoryDTO::class.java) }
+            .map { snapshot -> CustomResult.Success(snapshot.toObjects(CategoryDTO::class.java)) }
+            .catch { error -> CustomResult.Failure(Exception(error)) }
+    }
+
+    override fun observeCategory(
+        projectId: String,
+        categoryId: String
+    ): Flow<CustomResult<CategoryDTO, Exception>> {
+        TODO("Not yet implemented")
     }
 
     override suspend fun addCategory(

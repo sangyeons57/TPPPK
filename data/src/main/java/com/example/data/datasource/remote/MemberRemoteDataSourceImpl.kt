@@ -3,6 +3,7 @@ package com.example.data.datasource.remote
 
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 import com.example.data.model.remote.MemberDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
@@ -50,6 +51,14 @@ class MemberRemoteDataSourceImpl @Inject constructor(
     override suspend fun addMember(
         projectId: String,
         userId: String,
+        roleIds: String
+    ): CustomResult<Unit, Exception> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun addMember(
+        projectId: String,
+        userId: String,
         roleIds: List<String>
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
@@ -69,7 +78,7 @@ class MemberRemoteDataSourceImpl @Inject constructor(
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val updateData = mapOf(
-                FirestoreConstants.Collections.Members.ROLE_IDS to newRoleIds,
+                FirestoreConstants.Project.Members.ROLE_ID to newRoleIds,
                 // 역할 변경 시 joinedAt은 변경하지 않으므로, 업데이트 맵에 포함하지 않습니다.
                 // 만약 joinedAt도 업데이트해야 한다면 FieldValue.serverTimestamp()를 사용할 수 있으나,
                 // 보통 역할 변경 시 가입 시간은 유지됩니다.
@@ -88,15 +97,6 @@ class MemberRemoteDataSourceImpl @Inject constructor(
             getMembersCollection(projectId).document(userId)
                 .delete().await()
             Unit
-        }
-    }
-
-    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
-        return try {
-            CustomResult.Success(block())
-        } catch (e: Throwable) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            CustomResult.Failure(e)
         }
     }
 }

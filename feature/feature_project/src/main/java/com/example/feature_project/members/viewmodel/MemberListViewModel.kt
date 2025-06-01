@@ -3,11 +3,11 @@ package com.example.feature_project.members.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.extension.getRequiredString
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.model.ProjectMember
+import com.example.domain.model.base.Member
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
-import com.example.domain.usecase.project.FetchProjectMembersUseCase
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import com.example.domain.usecase.project.role.GetProjectRolesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,11 +22,11 @@ import javax.inject.Inject
 
 
 data class MemberListUiState(
-    val members: List<ProjectMember> = emptyList(), // Changed from ProjectMemberUiItem
+    val members: List<Member> = emptyList(), // Changed from ProjectMemberUiItem
     val isLoading: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
-    val selectedMember: ProjectMember? = null,
+    val selectedMember: Member? = null,
     val projectId: String = ""
 )
 
@@ -42,7 +42,7 @@ sealed class MemberListEvent {
     /**
      * 멤버 삭제 확인 다이얼로그 표시 이벤트
      */
-    data class ShowDeleteConfirm(val member: ProjectMember) : MemberListEvent()
+    data class ShowDeleteConfirm(val member: Member) : MemberListEvent()
     
     /**
      * 스낵바 메시지 표시 이벤트
@@ -66,7 +66,6 @@ sealed class MemberListEvent {
 class MemberListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val observeProjectMembersUseCase: ObserveProjectMembersUseCase,
-    private val fetchProjectMembersUseCase: FetchProjectMembersUseCase,
     private val deleteProjectMemberUseCase: DeleteProjectMemberUseCase,
     private val getProjectRolesUseCase: GetProjectRolesUseCase // Added
 ) : ViewModel() {
@@ -149,7 +148,7 @@ class MemberListViewModel @Inject constructor(
      *
      * @param member 클릭한 멤버 객체 (Domain 모델)
      */
-    fun onMemberClick(member: ProjectMember) {
+    fun onMemberClick(member: Member) {
         viewModelScope.launch {
             _eventFlow.emit(MemberListEvent.NavigateToEditMember(projectId, member.userId))
         }
@@ -168,7 +167,7 @@ class MemberListViewModel @Inject constructor(
     /**
      * ★ 멤버 삭제 요청 처리 함수 추가
      */
-    fun requestDeleteMember(member: ProjectMember) {
+    fun requestDeleteMember(member: Member) {
         viewModelScope.launch {
             _eventFlow.emit(MemberListEvent.ShowDeleteConfirm(member))
         }
@@ -177,14 +176,20 @@ class MemberListViewModel @Inject constructor(
     /**
      * ★ 멤버 삭제 확정 처리 함수 추가
      */
-    fun confirmDeleteMember(member: ProjectMember) {
+    fun confirmDeleteMember(member: Member) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = deleteProjectMemberUseCase(projectId, member.userId)
-            if (result.isSuccess) {
-                _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName}님을 내보냈습니다."))
-            } else {
-                _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 내보내기 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"))
+            when (result){
+                is CustomResult.Success -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName}님을 내보냈습니다."))
+                }
+                is CustomResult.Failure -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 내보내기 실패: ${result.error}"))
+                }
+                else -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 내보내기 실패: 알 수 없는 오류"))
+                }
             }
             _uiState.update { it.copy(isLoading = false) }
         }

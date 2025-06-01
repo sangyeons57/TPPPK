@@ -1,20 +1,28 @@
 
 package com.example.data.datasource.remote
 
+import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.remote.ScheduleDTO
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.dataObjects
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -92,5 +100,65 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun getSchedulesForMonth(userId : String, yearMonth: YearMonth): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
+
+        val startOfMonthTimestamp = DateTimeUtil.yearMonthToStartOfMonthTimestamp(yearMonth)
+        val endOfMonthTimestamp = DateTimeUtil.yearMonthToEndOfMonthExclusiveTimestamp(yearMonth)
+
+        val query = firestore.collection(FirestoreConstants.Collections.SCHEDULES) // agés FirestoreConstants.Collections.SCHEDULES 사용
+            .whereEqualTo(FirestoreConstants.Schedule.CREATOR_ID, userId) // agés FirestoreConstants.Schedule.CREATOR_ID 사용
+            .whereGreaterThanOrEqualTo(FirestoreConstants.Schedule.START_TIME, startOfMonthTimestamp) // agés FirestoreConstants.Schedule.START_TIME 사용
+            .whereLessThan(FirestoreConstants.Schedule.START_TIME, endOfMonthTimestamp)
+            .orderBy(FirestoreConstants.Schedule.START_TIME, Query.Direction.ASCENDING) // agés FirestoreConstants.Schedule.START_TIME 사용
+
+        val listenerRegistration = query.addSnapshotListener { snapshots, error ->
+            if (error != null) {
+                trySend(CustomResult.Failure(Exception("$error")))
+                close() // 오류 발생 시 Flow 종료
+                return@addSnapshotListener
+            }
+            if (snapshots != null) {
+                val schedules = snapshots.toObjects<ScheduleDTO>(ScheduleDTO::class.java)
+                trySend(CustomResult.Success(schedules))
+            } else {
+                // 스냅샷이 null인 경우는 Firestore 문서가 없을 때도 발생 가능 (Listener 초기 호출 시)
+                trySend(CustomResult.Success(emptyList()))
+            }
+        }
+        // Flow가 취소될 때 Firestore 리스너를 제거합니다.
+        awaitClose { listenerRegistration.remove() }
+    }
+
+
+    override suspend fun getSchedulesOnDate(userId: String, date: LocalDate): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
+
+        // DateTimeUtil을 사용하여 해당 날짜의 시작과 끝 Timestamp를 가져옵니다. (UTC 기준)
+        val startOfDayTimestamp = DateTimeUtil.localDateToStartOfDayInstant(date)
+        val endOfDayExclusiveTimestamp = DateTimeUtil.localDateToEndOfDayInstant(date)
+
+        val query = firestore.collection(FirestoreConstants.Collections.SCHEDULES)
+            .whereEqualTo(FirestoreConstants.Schedule.CREATOR_ID, userId)
+            .whereGreaterThanOrEqualTo(FirestoreConstants.Schedule.START_TIME, startOfDayTimestamp)
+            .whereLessThan(FirestoreConstants.Schedule.START_TIME, endOfDayExclusiveTimestamp)
+            .orderBy(FirestoreConstants.Schedule.START_TIME, Query.Direction.ASCENDING)
+
+        val listenerRegistration = query.addSnapshotListener { snapshots, error ->
+            if (isClosedForSend) { // 채널이 닫혔는지 확인
+                return@addSnapshotListener
+            }
+            if (error != null) {
+                trySend(CustomResult.Failure(error))
+                // 필요하다면 여기서 close(error) 호출하여 Flow를 종료
+                return@addSnapshotListener
+            }
+            if (snapshots != null) {
+                val schedules = snapshots.toObjects<ScheduleDTO>(ScheduleDTO::class.java) // 여기에서 오류가 발생했었음
+                trySend(CustomResult.Success(schedules))
+            } else {
+                trySend(CustomResult.Success(emptyList()))
+            }
+        }
+        awaitClose { listenerRegistration.remove() }
+    }
 }
 

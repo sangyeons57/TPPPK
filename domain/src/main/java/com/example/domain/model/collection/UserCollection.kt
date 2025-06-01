@@ -1,6 +1,6 @@
 package com.example.domain.model.collection
 
-import com.example.data.model._remote.DMWrapper
+import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Friend
 import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.base.User

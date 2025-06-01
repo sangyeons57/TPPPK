@@ -1,8 +1,10 @@
 package com.example.feature_project.setting.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,9 +12,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 // Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
-import com.example.domain.model.Channel
-import com.example.domain.model.Category
-import com.example.domain.model.ProjectStructure
+import com.example.domain.model.base.Category
+import com.example.domain.model.base.ProjectChannel
 // import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
 import com.example.domain.usecase.project.* // Import project use cases
 
@@ -36,7 +37,7 @@ sealed class ProjectSettingEvent {
     data class NavigateToMemberList(val projectId: String) : ProjectSettingEvent()
     data class NavigateToRoleList(val projectId: String) : ProjectSettingEvent()
     data class ShowDeleteCategoryConfirm(val category: Category) : ProjectSettingEvent()
-    data class ShowDeleteChannelConfirm(val channel: Channel) : ProjectSettingEvent()
+    data class ShowDeleteChannelConfirm(val channel: ProjectChannel) : ProjectSettingEvent()
     object ShowRenameProjectDialog : ProjectSettingEvent()
     object ShowDeleteProjectConfirm : ProjectSettingEvent()
 }
@@ -45,7 +46,7 @@ sealed class ProjectSettingEvent {
 class ProjectSettingViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     // private val repository: ProjectSettingRepository // Remove Repo injection
-    private val getProjectStructureUseCase: GetProjectStructureUseCase,
+    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
     private val deleteCategoryUseCase: DeleteCategoryUseCase,
     private val deleteChannelUseCase: DeleteChannelUseCase,
     private val renameProjectUseCase: RenameProjectUseCase,
@@ -69,26 +70,33 @@ class ProjectSettingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading structure for project $projectId (UseCase)")
             // --- UseCase 호출 ---
-            val result = getProjectStructureUseCase(projectId)
+            val result = getProjectAllCategoriesUseCase(projectId).first()
             // -------------------
             // delay(800) // Remove temporary delay
-            if (result.isSuccess) {
-                val projectStructure = result.getOrThrow() // ProjectStructure 객체 받음
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        // projectName은 ProjectStructure에 포함되지 않으므로 현재 상태 유지
-                        categories = projectStructure.categories
-                    )
+            when (result) {
+                is CustomResult.Success -> {
+                    val projectStructure = result.data // ProjectStructure 객체 받음
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            // projectName은 ProjectStructure에 포함되지 않으므로 현재 상태 유지
+                            categories = projectStructure
+                        )
+                    }
                 }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "프로젝트 정보를 불러오지 못했습니다: ${result.exceptionOrNull()?.message}"
-                    )
+
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "프로젝트 정보를 불러오지 못했습니다: ${result.error}"
+                        )
+                    }
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 구조 로딩 실패")) // Notify user               }
                 }
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 구조 로딩 실패")) // Notify user
+                else -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
             }
         }
     }
@@ -125,7 +133,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun requestEditChannel(categoryId: String, channelId: String) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToEditChannel(projectId, categoryId, channelId)) }
     }
-    fun requestDeleteChannel(channel: Channel) {
+    fun requestDeleteChannel(channel: ProjectChannel) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteChannelConfirm(channel)) }
     }
     fun confirmDeleteChannel(channelId: String) {
@@ -135,13 +143,19 @@ class ProjectSettingViewModel @Inject constructor(
             println("Deleting Channel: $channelId (UseCase)")
              val result = deleteChannelUseCase(channelId)
             // delay(500) // Remove delay
-             if (result.isSuccess) {
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널이 삭제되었습니다."))
-                 loadProjectStructure() // Refresh structure
-             } else {
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널 삭제 실패: ${result.exceptionOrNull()?.message}"))
-                 _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
-             }
+            when (result) {
+                is CustomResult.Success -> {
+                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널이 삭제되었습니다."))
+                     loadProjectStructure() // Refresh structure
+                }
+                is CustomResult.Failure -> {
+                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널 삭제 실패: ${result.error}"))
+                     _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                 }
+                else ->{
+                    Log.e("ProjectSettingViewModel", "Unknown result type: $result")
+                }
+            }
              // isLoading will be turned off by loadProjectStructure on success
         }
     }

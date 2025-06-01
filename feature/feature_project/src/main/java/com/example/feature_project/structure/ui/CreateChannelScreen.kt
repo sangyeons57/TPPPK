@@ -20,11 +20,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_project.structure.viewmodel.CreateChannelEvent
 import com.example.feature_project.structure.viewmodel.CreateChannelUiState
 import com.example.feature_project.structure.viewmodel.CreateChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
-import com.example.domain.model.ChannelMode
 
 /**
  * CreateChannelScreen: 프로젝트 내 카테고리 아래 새 채널 추가 화면 (Stateful)
@@ -90,7 +90,7 @@ fun CreateChannelContent(
     modifier: Modifier = Modifier,
     uiState: CreateChannelUiState,
     onChannelNameChange: (String) -> Unit,
-    onChannelTypeSelected: (ChannelMode) -> Unit,
+    onChannelTypeSelected: (ProjectChannelType) -> Unit,
     onCreateClick: () -> Unit
 ) {
     Column(
@@ -124,14 +124,14 @@ fun CreateChannelContent(
                     .fillMaxWidth()
                     .height(56.dp) // RadioButton 높이와 비슷하게
                     .selectable(
-                        selected = (uiState.selectedChannelMode == ChannelMode.TEXT),
-                        onClick = { onChannelTypeSelected(ChannelMode.TEXT) },
+                        selected = (uiState.selectedChannelMode == ProjectChannelType.MESSAGES),
+                        onClick = { onChannelTypeSelected(ProjectChannelType.MESSAGES) },
                         role = Role.RadioButton
                     )
                     .padding(horizontal = 16.dp)
             ) {
                 RadioButton(
-                    selected = (uiState.selectedChannelMode == ChannelMode.TEXT),
+                    selected = (uiState.selectedChannelMode == ProjectChannelType.MESSAGES),
                     onClick = null // Row의 selectable에서 처리
                 )
                 Text(
@@ -146,14 +146,14 @@ fun CreateChannelContent(
                     .fillMaxWidth()
                     .height(56.dp)
                     .selectable(
-                        selected = (uiState.selectedChannelMode == ChannelMode.VOICE),
-                        onClick = { onChannelTypeSelected(ChannelMode.VOICE) },
+                        selected = (uiState.selectedChannelMode == ProjectChannelType.MESSAGES),
+                        onClick = { onChannelTypeSelected(ProjectChannelType.MESSAGES) },
                         role = Role.RadioButton
                     )
                     .padding(horizontal = 16.dp)
             ) {
                 RadioButton(
-                    selected = (uiState.selectedChannelMode == ChannelMode.VOICE),
+                    selected = (uiState.selectedChannelMode == ProjectChannelType.MESSAGES),
                     onClick = null // Row의 selectable에서 처리
                 )
                 Text(
@@ -202,23 +202,7 @@ private fun CreateChannelContentPreview() {
         CreateChannelContent(
             uiState = CreateChannelUiState(
                 channelName = "새로운-채팅방",
-                selectedChannelMode = ChannelMode.TEXT
-            ),
-            onChannelNameChange = {},
-            onChannelTypeSelected = {},
-            onCreateClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "Create Channel Voice Selected")
-@Composable
-private fun CreateChannelContentVoicePreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        CreateChannelContent(
-            uiState = CreateChannelUiState(
-                channelName = "음성 회의 채널",
-                selectedChannelMode = ChannelMode.VOICE
+                selectedChannelMode = ProjectChannelType.MESSAGES
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},

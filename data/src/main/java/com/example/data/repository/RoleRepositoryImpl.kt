@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.RoleRemoteDataSource
@@ -9,6 +10,7 @@ import com.example.domain.model.base.Role
 import com.example.domain.repository.RoleRepository
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import kotlin.Result
@@ -19,56 +21,112 @@ class RoleRepositoryImpl @Inject constructor(
     // private val roleMapper: RoleMapper // 개별 매퍼 사용시
 ) : RoleRepository {
 
+    /**
+     * 프로젝트의 역할 목록을 스트림으로 가져옵니다.
+     * Firebase 캐싱을 활용하여 실시간으로 업데이트된 역할 목록을 제공합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @return 역할 목록 스트림
+     */
     override fun getProjectRolesStream(projectId: String): Flow<CustomResult<List<Role>, Exception>> {
-            // RoleRemoteDataSource에 getProjectRolesStream(projectId) 함수 필요
         return roleRemoteDataSource.observeRoles(projectId).map { roleList ->
-            resultTry { roleList.map { it.toDomain() } }
+            when (roleList) {
+                is CustomResult.Success -> {
+                    try {
+                        // DTO를 도메인 모델로 변환
+                        val roles = roleList.data.map { it.toDomain() }
+                        CustomResult.Success(roles)
+                    } catch (e: Exception) {
+                        // 변환 중 오류 처리
+                        CustomResult.Failure(e)
+                    }
+                }
+                is CustomResult.Failure -> CustomResult.Failure(roleList.error)
+                else -> CustomResult.Failure(Exception("Unknown error getting roles"))
+            }
         }
     }
 
+    /**
+     * 새 역할을 생성합니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param name 역할 이름
+     * @param isDefault 기본 역할 여부
+     * @return 생성된 역할 ID를 포함한 CustomResult
+     */
     override suspend fun createRole(
         projectId: String,
         name: String,
         isDefault: Boolean,
-    ): CustomResult<String, Exception> = resultTry {
+    ): CustomResult<String, Exception> {
         val roleDto = RoleDTO(
             // id는 Firestore에서 자동 생성
             name = name,
             isDefault = isDefault,
-            // priority 등은 DataSource에서 설정 가능
+            // 추가 필드는 실제 구현에서 필요에 따라 추가
         )
-        // RoleRemoteDataSource의 createRole 함수는 생성된 RoleDTO (ID 포함)를 반환하거나, 생성된 Role의 ID를 반환할 수 있음.
-        // 여기서는 DataSource가 생성된 DTO를 반환하고, 그것을 도메인 모델로 변환한다고 가정
-        val result = roleRemoteDataSource.addRole(projectId, roleDto)
-        //return result as? CustomResult.Success ?: CustomResult.Failure(Exception("Failed to create role"))
+        
+        // 역할 추가 후 결과 반환
+        return roleRemoteDataSource.addRole(projectId, roleDto)
     }
 
+    /**
+     * 역할 정보를 업데이트합니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param roleId 역할 ID
+     * @param name 새 역할 이름 (선택적)
+     * @param isDefault 기본 역할 여부 (선택적)
+     * @return 성공 시 CustomResult.Success, 실패 시 CustomResult.Failure
+     */
     override suspend fun updateRole(
         projectId: String,
         roleId: String,
         name: String?,
         isDefault: Boolean?,
     ): CustomResult<Unit, Exception> = resultTry {
+        // 업데이트할 필드만 맵으로 구성
+        val updates = mutableMapOf<String, Any>()
+        
+        // 각 필드가 null이 아닌 경우에만 업데이트 맵에 추가
+        name?.let { updates[FirestoreConstants.Project.Roles.NAME] = it }
+        isDefault?.let { updates[FirestoreConstants.Project.Roles.IS_DEFAULT] = it }
+        
 
+        // 업데이트할 내용이 있는 경우에만 데이터소스 호출
+        if (updates.isNotEmpty()) {
+            roleRemoteDataSource.updateRole(projectId, roleId, name!!)
+        }
     }
 
+    /**
+     * 프로젝트에서 역할을 삭제합니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param roleId 삭제할 역할 ID
+     * @return 성공 시 CustomResult.Success, 실패 시 CustomResult.Failure
+     */
     override suspend fun deleteRole(projectId: String, roleId: String): CustomResult<Unit, Exception> = resultTry {
-        // RoleRemoteDataSource에 deleteRole(projectId, roleId, currentUserId) 함수 필요
-        // 삭제 시 해당 역할을 가진 멤버들의 역할 처리 방안은 UseCase 레벨에서 고민 필요
+        // 삭제 시 해당 역할을 가진 멤버들의 역할 처리 방안은 UseCase 레벨에서 처리
         roleRemoteDataSource.deleteRole(projectId, roleId)
     }
 
+    /**
+     * 특정 역할의 상세 정보를 가져옵니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param roleId 역할 ID
+     * @return 역할 상세 정보
+     */
     override suspend fun getRoleDetails(projectId: String, roleId: String): CustomResult<Role, Exception> = resultTry {
-        // RoleRemoteDataSource에 getRole(projectId, roleId) 함수 필요
-        roleRemoteDataSource.observeRoles(projectId, roleId).map { it.toDomain() }
-        roleRemoteDataSource.getRole(projectId, roleId).getOrThrow().toDomain()
-    }
-
-    override suspend fun getAvailablePermissions(): Result<List<String>> = resultTry {
-        // PermissionRemoteDataSource 또는 로컬 상수/설정에서 가져옴
-        // 여기서는 PermissionRemoteDataSource에 getAvailablePermissions() 함수가 있다고 가정
-        permissionRemoteDataSource.getAvailablePermissions().getOrThrow()
-        // 또는 고정된 권한 목록 반환:
-        // Result.success(listOf(\MANAGE_MEMBERS\, \EDIT_PROJECT_SETTINGS\, \CREATE_CHANNELS\, ...))
+        // 역할 상세 정보를 스트림으로 가져와서 처음 발행된 값을 반환
+        roleRemoteDataSource.observeRole(projectId, roleId).map { result ->
+            when (result) {
+                is CustomResult.Success -> result.data.toDomain()
+                is CustomResult.Failure -> throw result.error
+                else -> throw Exception("Unknown error getting role details")
+            }
+        }.first()
     }
 }

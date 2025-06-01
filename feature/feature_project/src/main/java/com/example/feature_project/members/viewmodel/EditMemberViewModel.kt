@@ -3,10 +3,10 @@ package com.example.feature_project.members.viewmodel // 경로 확인!
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.model.ProjectMember
-import com.example.domain.model.Role
+import com.example.domain.model.base.Member
 // import com.example.domain.repository.ProjectMemberRepository // Remove Repo import
 // import com.example.domain.repository.ProjectRoleRepository // Remove Repo import
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase // Import UseCase
@@ -27,7 +27,7 @@ data class RoleSelectionItem(
 
 // --- UI 상태 ---
 data class EditMemberUiState(
-    val memberInfo: ProjectMember? = null, // 멤버 기본 정보 (Domain 모델 직접 사용 가능)
+    val memberInfo: Member? = null, // 멤버 기본 정보 (Domain 모델 직접 사용 가능)
     val availableRoles: List<RoleSelectionItem> = emptyList(), // 선택 가능한 전체 역할 목록 (UI 모델)
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
@@ -75,19 +75,22 @@ class EditMemberViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             // 1. 멤버 정보 가져오기 (UseCase 사용)
-            val memberResult = getProjectMemberDetailsUseCase(projectId, userId)
+            val memberResult = getProjectMemberDetailsUseCase(projectId, userId).first()
 
-            if (memberResult.isSuccess) {
-                val member = memberResult.getOrThrow()
+            when (memberResult) {
+                is CustomResult.Success -> {
+                    val member = memberResult.data
 
-                // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roles 필드 사용)
-                originalSelectedRoleIds = member?.roles?.map { it.id }?.filterNotNull()?.toSet().orEmpty() // Null-safe, filterNotNull
+                    // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roles 필드 사용)
+                    originalSelectedRoleIds = member.roles?.map { it.id }?.filterNotNull()?.toSet().orEmpty() // Null-safe, filterNotNull
 
-                _uiState.update { it.copy(memberInfo = member, isLoading = false) }
-            } else {
-                val errorMsg = memberResult.exceptionOrNull()?.message ?: "데이터 로드 실패"
-                _uiState.update { it.copy(isLoading = false, error = errorMsg) }
-                _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 정보를 불러오는 데 실패했습니다: $errorMsg"))
+                    _uiState.update { it.copy(memberInfo = member, isLoading = false) }
+                }
+                is CustomResult.Failure -> {
+                    val errorMsg = memberResult.exceptionOrNull()?.message ?: "데이터 로드 실패"
+                    _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                    _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 정보를 불러오는 데 실패했습니다: $errorMsg"))
+                }
             }
         }
     }
@@ -107,7 +110,7 @@ class EditMemberViewModel @Inject constructor(
                     // Convert List<Role> to List<RoleSelectionItem>
                     val roleSelectionItems = roles.map { role ->
                          RoleSelectionItem(
-                             id = role.id ?: "", // Null-safe
+                             id = role.id, // Null-safe
                              name = role.name,
                              isSelected = originalSelectedRoleIds.contains(role.id) // Check against original selected IDs
                          )

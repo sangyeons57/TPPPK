@@ -42,12 +42,14 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun createProject(name: String): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun createProject(projectDTO: ProjectDTO): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             
-            val newProject = ProjectDTO(
-                name = name,
+            // Ensure ownerId is set from auth, potentially overriding DTO if necessary,
+            // or validate that DTO's ownerId matches current user if it's pre-set.
+            // For now, assuming DTO might not have ownerId or it should be overwritten by current user.
+            val newProject = projectDTO.copy(
                 ownerId = uid
                 // createdAt, updatedAt은 DTO에서 @ServerTimestamp로 자동 설정됩니다.
             )
@@ -59,17 +61,15 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun updateProjectDetails(
         projectId: String,
-        name: String,
-        imageUrl: String?
+        projectDTO: ProjectDTO
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val updateData = mutableMapOf<String, Any?>()
-            updateData["name"] = name
+            updateData["name"] = projectDTO.name
+            updateData["imageUrl"] = projectDTO.imageUrl // Assuming imageUrl is part of ProjectDTO
             updateData["updatedAt"] = FieldValue.serverTimestamp()
-            // imageUrl이 null이면 업데이트하지 않거나, 명시적으로 null로 설정할 수 있습니다.
-            // 여기서는 전달된 값 그대로 사용합니다. (필드가 nullable이므로)
-            updateData["imageUrl"] = imageUrl
-
+            // Consider other fields from projectDTO that might need updating.
+            // For now, only name and imageUrl as per original logic.
 
             projectsCollection.document(projectId).update(updateData).await()
             Unit // 성공 시 Unit 반환

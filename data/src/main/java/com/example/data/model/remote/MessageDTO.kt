@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.google.firebase.firestore.PropertyName
 
 /*
  * 메시지 정보를 나타내는 DTO 클래스
@@ -15,7 +16,7 @@ data class MessageDTO(
     val senderId: String = "",
     val senderName: String = "",
     val senderProfileImageUrl: String? = null,
-    val content: String = "", // sendMessage 보다 content가 더 명확한 필드명입니다.
+    @PropertyName("sendMessage") val content: String = "", // Firestore field is "sendMessage"
     @ServerTimestamp val sentAt: Timestamp? = null,
     @ServerTimestamp val updatedAt: Timestamp? = null,
     val replyToMessageId: String? = null,

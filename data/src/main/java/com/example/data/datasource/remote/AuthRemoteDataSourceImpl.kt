@@ -35,6 +35,10 @@ class AuthRemoteDataSourceImpl @Inject constructor(
     override fun getCurrentUser(): CustomResult<FirebaseUser, Exception> {
         return auth.currentUser?.let { CustomResult.Success(it) } ?: CustomResult.Failure(Exception("No user is currently signed in"))
     }
+    
+    override suspend fun getCurrentUserId(): String? = withContext(Dispatchers.IO) {
+        auth.currentUser?.uid
+    }
 
     override suspend fun signUp(
         email: String,

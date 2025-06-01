@@ -3,6 +3,7 @@ package com.example.feature_settings.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.usecase.auth.RequestPasswordResetUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -32,9 +33,9 @@ sealed class ChangePasswordEvent {
 @HiltViewModel
 class ChangePasswordViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    private val changePasswordUseCase: ChangePasswordUseCase
+    requestPasswordResetUseCase: RequestPasswordResetUseCase,
+    // 필요 시 사용
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(ChangePasswordUiState())
     val uiState: StateFlow<ChangePasswordUiState> = _uiState.asStateFlow()
 
@@ -104,13 +105,15 @@ class ChangePasswordViewModel @Inject constructor(
 
         if (hasError || currentState.isLoading) return // 에러 있거나 로딩 중이면 중단
 
+        /**
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             _eventFlow.emit(ChangePasswordEvent.ClearFocus)
             println("ViewModel: Attempting to change password")
 
             // 비밀번호 변경 요청
-            val result = changePasswordUseCase(currentPassword, newPassword)
+            val result =  reque(currentPassword, newPassword)
+            requestPasswordResetUseCase()
 
             if (result.isSuccess) {
                 _eventFlow.emit(ChangePasswordEvent.ShowSnackbar("비밀번호가 변경되었습니다."))
@@ -127,5 +130,6 @@ class ChangePasswordViewModel @Inject constructor(
                 _eventFlow.emit(ChangePasswordEvent.ShowSnackbar(errorMessage))
             }
         }
+        **/
     }
 }

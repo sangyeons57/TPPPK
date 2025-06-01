@@ -44,12 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.User
-import com.example.domain.model.UserProfileData
-import com.example.feature_profile.ui.ChangeStatusDialog // Import ChangeStatusDialog
 
 /**
  * ProfileScreen: 상태 관리 및 이벤트 처리 (Stateful)

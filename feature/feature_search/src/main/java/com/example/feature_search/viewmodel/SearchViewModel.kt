@@ -3,12 +3,11 @@ package com.example.feature_search.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.MessageResult
-import com.example.domain.model.SearchResultItem
-import com.example.domain.model.SearchScope
-import com.example.domain.model.UserResult
+import com.example.domain.model.ui.search.MessageResult
+import com.example.domain.model.ui.search.SearchResultItem
+import com.example.domain.model.ui.search.SearchScope
+import com.example.domain.model.ui.search.UserResult
 import com.example.domain.usecase.search.SearchUseCase
-// Domain 요소 Import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -28,9 +27,10 @@ data class SearchUiState(
 
 // --- 이벤트 ---
 sealed class SearchEvent {
-    data class NavigateToMessage(val channelId: String, val messageId: String) : SearchEvent()
+    data class NavigateToMessageDetail(val channelId: String, val messageId: String) : SearchEvent()
     data class NavigateToUserProfile(val userId: String) : SearchEvent()
-    data class ShowSnackbar(val message: String) : SearchEvent()
+    data class ShowSnackbar(val message: String) : SearchEvent() // ShowError에서 ShowSnackbar로 이름 변경
+    data class NavigateToMessage(val channelId: String, val messageId: String) : SearchEvent() // 기존 코드와의 호환성 유지
 }
 
 // --- ViewModel ---
@@ -43,8 +43,8 @@ class SearchViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    private val _eventFlow = MutableSharedFlow<SearchEvent>()
-    val eventFlow = _eventFlow.asSharedFlow()
+    private val _eventFlow = MutableSharedFlow<SearchEvent>() // _events에서 _eventFlow로 변경
+    val eventFlow = _eventFlow.asSharedFlow() // events에서 eventFlow로 변경
 
     // 검색 디바운스를 위한 Job
     private var searchJob: Job? = null
@@ -64,13 +64,13 @@ class SearchViewModel @Inject constructor(
             _uiState.update { it.copy(searchResults = emptyList(), searchPerformed = false) }
         }
     }
-
+    
     /** 검색 범위 변경 시 호출 */
     fun onScopeChange(newScope: SearchScope) {
         if (newScope != _uiState.value.selectedScope) {
             _uiState.update { it.copy(selectedScope = newScope, error = null) }
-            // 범위 변경 시 즉시 검색 실행 (또는 검색 버튼 사용 시에는 상태만 변경)
-            if (_uiState.value.query.isNotBlank()) {
+            // 범위 변경 시 즉시 검색 실행 (만약 이미 검색어가 있는 경우)
+            if (_uiState.value.query.isNotBlank() && _uiState.value.searchPerformed) {
                 performSearch()
             }
         }
@@ -105,18 +105,21 @@ class SearchViewModel @Inject constructor(
     }
 
     /** 검색 결과 항목 클릭 시 */
-    fun onResultClick(item: SearchResultItem) {
+    fun onResultItemClick(item: SearchResultItem) {
         viewModelScope.launch {
             when (item) {
                 is MessageResult -> {
-                    // 메시지 클릭 시 해당 채팅방 및 메시지 위치로 이동
+                    // 메시지 검색 결과 클릭 시 해당 메시지가 있는 채팅방으로 이동
                     _eventFlow.emit(SearchEvent.NavigateToMessage(item.channelId, item.messageId))
                 }
                 is UserResult -> {
-                    // 사용자 클릭 시 해당 사용자 프로필로 이동
+                    // 사용자 검색 결과 클릭 시 해당 사용자 프로필로 이동
                     _eventFlow.emit(SearchEvent.NavigateToUserProfile(item.userId))
                 }
-                // 다른 결과 타입 처리 추가 가능
+                else -> {
+                    // 다른 타입의 검색 결과 처리 (미구현)
+                    _eventFlow.emit(SearchEvent.ShowSnackbar("지원되지 않는 검색 결과 유형입니다."))
+                }
             }
         }
     }

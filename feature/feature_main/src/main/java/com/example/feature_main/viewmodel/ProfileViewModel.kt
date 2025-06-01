@@ -4,10 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.User
-import com.example.domain.model.UserProfileData
+import com.example.domain.model.base.User
 import com.example.domain.usecase.user.GetUserUseCase
-import com.example.domain.usecase.auth.LogoutUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserImageUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
@@ -40,7 +38,6 @@ sealed class ProfileEvent {
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
-    private val logoutUseCase: LogoutUseCase,
     private val updateUserStatusUseCase: UpdateUserStatusUseCase,
     private val updateUserProfileImageUseCase: UpdateUserImageUseCase
 ) : ViewModel() {
@@ -158,14 +155,18 @@ class ProfileViewModel @Inject constructor(
             println("ViewModel: 상태 메시지 변경 시도 (UseCase 사용) - $newStatus")
             // This updateUserStatusUseCase is for the status *message*, not UserStatus (ONLINE/OFFLINE)
             // Ensure this is not confused with the one for UserStatus.
-            val result = updateUserStatusUseCase(newStatus) 
+            val result = updateUserStatusUseCase(newStatus)
             result.onSuccess {
-                // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
-                loadUserProfile() // This reloads the whole profile, including user status and status message
-                _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨"))
+                viewModelScope.launch {
+                    // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
+                    loadUserProfile() // This reloads the whole profile, including user status and status message
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨"))
+                }
             }.onFailure { exception ->
-                 _uiState.update { it.copy(isLoading = false) }
-                _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경 실패: ${exception.message}"))
+                viewModelScope.launch {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경 실패: ${exception.message}"))
+                }
             }
             // delay(300) // Remove temporary delay
             // _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(statusMessage = newStatus)) } // Remove temporary UI update

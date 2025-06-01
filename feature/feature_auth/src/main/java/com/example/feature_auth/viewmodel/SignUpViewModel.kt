@@ -5,7 +5,9 @@ import android.util.Patterns
 import androidx.compose.ui.focus.FocusState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.SignUpFormFocusTarget
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.ui.enum.SignUpFormFocusTarget
+import com.example.domain.model.ui.data.UiEvent
 import com.example.domain.usecase.auth.CheckEmailVerificationUseCase
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.SendEmailVerificationUseCase
@@ -74,7 +76,7 @@ sealed class SignUpEvent {
      * @param message 표시할 메시지
      */
     data class ShowSnackbar(val message: String) : SignUpEvent()
-
+    
     /**
      * 특정 입력 필드로 포커스 요청 이벤트
      * @param target 포커스 대상 필드
@@ -186,7 +188,26 @@ class SignUpViewModel @Inject constructor(
             return
         }
         if (!state.agreeWithTerms) {
-            viewModelScope.launch { _eventFlow.emit(SignUpEvent.ShowSnackbar("이용약관 및 개인정보처리방침에 동의해주세요.")) }
+            viewModelScope.launch {
+                _eventFlow.emit(SignUpEvent.ShowSnackbar("이용약관 및 개인정보처리방침에 동의해주세요."))
+                // 포커스를 적절한 필드로 이동
+                var focusTarget: SignUpFormFocusTarget? = null
+
+                if (checkEmail(state)) {
+                    focusTarget = SignUpFormFocusTarget.EMAIL
+                } else if (checkPassword(state)) {
+                    focusTarget = SignUpFormFocusTarget.PASSWORD
+                } else if (checkPasswordConfirm(state)) {
+                    focusTarget = SignUpFormFocusTarget.PASSWORD_CONFIRM
+                } else if (checkName(state)) {
+                    focusTarget = SignUpFormFocusTarget.NAME
+                }
+
+                // 적절한 필드로 포커스 이동 요청
+                focusTarget?.let {
+                    _eventFlow.emit(SignUpEvent.RequestFocus(it))
+                }
+            }
             return
         }
 
@@ -225,34 +246,76 @@ class SignUpViewModel @Inject constructor(
             )}
 
             // 닉네임 중복 확인
-            val nicknameCheck = checkNicknameAvailabilityUseCase(state.name)
-            Log.d("nicknameCheck", "nicknameCheck: [ ${state.name} ] $nicknameCheck")
-            if (nicknameCheck.isFailure || nicknameCheck.getOrNull() == false) {
-                _uiState.update { it.copy(
-                    isLoading = false,
-                    nameError = "이미 사용 중인 닉네임입니다."
-                )}
-                _eventFlow.emit(SignUpEvent.RequestFocus(SignUpFormFocusTarget.NAME))
-                return@launch
+            val resultName = checkNicknameAvailabilityUseCase(state.name)
+            when (resultName) {
+                is CustomResult.Success -> {
+                    // 이름 중복 확인 결과
+                    val isNameAvailable = resultName.data
+                    if (!isNameAvailable) {
+                        // 이름이 이미 사용 중인 경우
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false, 
+                                nameError = "이미 사용 중인 닉네임입니다."
+                            )
+                        }
+                        _eventFlow.emit(SignUpEvent.RequestFocus(SignUpFormFocusTarget.NAME))
+                        return@launch
+                    }
+                }
+                is CustomResult.Failure -> {
+                    // 이름 중복 체크 에러 처리
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false, 
+                            nameError = "닉네임 중복 확인 중 오류가 발생했습니다."
+                        )
+                    }
+                    return@launch
+                }
+                else -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            nameError = "알 수 없는 오류가 발생했습니다."
+                        )
+                    }
+                    return@launch
+                }
             }
 
             // 정책 동의 시간 기록
             val consentTimeStamp = Instant.now()
 
-            // SignUpUseCase 호출
-            val result = signUpUseCase(state.email, state.password, state.name, consentTimeStamp)
-
-            result.onSuccess { newUser ->
-                _uiState.update { it.copy(isLoading = false, signUpSuccess = true) }
-                sendEmailVerificationUseCase()
-                _eventFlow.emit(SignUpEvent.ShowSnackbar("회원가입 성공! 로그인해주세요."))
-                _eventFlow.emit(SignUpEvent.NavigateToLogin)
-                println("회원가입 성공: ${newUser!!.email}")
-            }.onFailure { exception ->
-                val errorMessage = getAuthErrorMessageUseCase.getSignUpErrorMessage(exception)
-                // 회원가입 API 실패 시 에러 처리
-                _uiState.update { it.copy(isLoading = false) }
-                _eventFlow.emit(SignUpEvent.ShowSnackbar(errorMessage))
+            // SignUpUseCase 호출 (CustomResult 방식 사용)
+            when (val result = signUpUseCase(state.email, state.password, state.name, consentTimeStamp)) {
+                is CustomResult.Success -> {
+                    val newUser = result.data
+                    _uiState.update { it.copy(isLoading = false, signUpSuccess = true) }
+                    // 이메일 인증 발송 시도
+                    when (val verificationResult = sendEmailVerificationUseCase()) {
+                        is CustomResult.Success -> {
+                            _uiState.update { it.copy(isEmailVerificationSent = true) }
+                        }
+                        else -> {
+                            // 인증 메일 발송 실패는 치명적인 오류가 아니므로 로그만 출력
+                            Log.w("SignUpViewModel", "Failed to send email verification: $verificationResult")
+                        }
+                    }
+                    _eventFlow.emit(SignUpEvent.ShowSnackbar("회원가입 성공! 로그인해주세요."))
+                    _eventFlow.emit(SignUpEvent.NavigateToLogin)
+                    Log.d("SignUpViewModel", "회원가입 성공: ${newUser.email}")
+                }
+                is CustomResult.Failure -> {
+                    val exception = result.error
+                    val errorMessage = getAuthErrorMessageUseCase(exception.toString())
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(SignUpEvent.ShowSnackbar(errorMessage))
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(SignUpEvent.ShowSnackbar("알 수 없는 오류가 발생했습니다. 다시 시도해주세요."))
+                }
             }
         }
     }

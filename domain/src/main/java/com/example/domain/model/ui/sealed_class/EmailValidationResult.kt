@@ -1,8 +1,9 @@
-package com.example.domain.model.auth
+package com.example.domain.model.ui.auth
 
 /**
  * Represents the result of an email validation attempt, specifically for sign-up.
  * It can indicate success (Valid) or various types of failures.
+ * 이 모델은 UI 계층에서 이메일 검증 결과를 표시하는데 사용됩니다.
  */
 sealed class EmailValidationResult {
     /** Indicates the email is valid for sign-up. */

@@ -2,8 +2,7 @@
 package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.UserSession
-import com.example.domain.model.auth.AuthenticationState
+import com.example.domain.model.data.UserSession
 import com.example.domain.model.base.User
 import com.google.api.CustomHttpPatternOrBuilder
 import kotlinx.coroutines.flow.Flow

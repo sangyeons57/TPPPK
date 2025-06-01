@@ -1,4 +1,4 @@
-package com.example.domain.model._new.enum
+package com.example.domain.model.enum
 
 /**
  * 프로젝트 채널의 유형을 나타내는 열거형입니다.

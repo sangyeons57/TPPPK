@@ -50,8 +50,8 @@ import com.example.core_ui.theme.ScheduleColor1
 import com.example.core_ui.theme.ScheduleColor3
 import com.example.core_ui.theme.ScheduleColor4
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.ScheduleItem24Hour
 import com.example.feature_schedule.viewmodel.Calendar24HourEvent
+import com.example.feature_schedule.viewmodel.ScheduleItem24Hour
 import com.example.feature_schedule.viewmodel.Calendar24HourUiState
 import com.example.feature_schedule.viewmodel.Calendar24HourViewModel
 import kotlinx.coroutines.delay

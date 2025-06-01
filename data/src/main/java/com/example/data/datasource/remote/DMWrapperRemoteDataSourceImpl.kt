@@ -38,5 +38,9 @@ class DMWrapperRemoteDataSourceImpl @Inject constructor(
             .snapshots()
             .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(DMWrapperDTO::class.java) } }
     }
+
+    override fun observeDmWrappers(userId: String): Flow<List<DMWrapperDTO>> {
+        TODO("Not yet implemented")
+    }
 }
 

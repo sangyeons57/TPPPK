@@ -2,6 +2,7 @@ package com.example.feature_settings.presentation
 
 import app.cash.turbine.test
 import com.example.domain.usecase.user.WithdrawUserUseCase
+import com.example.feature_settings.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*

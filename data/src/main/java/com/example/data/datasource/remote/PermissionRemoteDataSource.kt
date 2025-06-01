@@ -1,7 +1,6 @@
 
 package com.example.data.datasource.remote
 
-import com.example.data.model._remote.PermissionDTO
 import com.example.data.model.remote.PermissionDTO
 import kotlinx.coroutines.flow.Flow
 
@@ -13,6 +12,8 @@ interface PermissionRemoteDataSource {
      * @param roleId 권한 목록을 가져올 역할의 ID
      */
     fun observePermissions(projectId: String, roleId: String): Flow<List<PermissionDTO>>
+
+    fun observePermission(permissionId: String): Flow<PermissionDTO>
 
     /**
      * 특정 역할에 권한을 추가합니다.

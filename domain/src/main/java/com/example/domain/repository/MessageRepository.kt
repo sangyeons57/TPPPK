@@ -22,7 +22,7 @@ interface MessageRepository {
      * @param limit 한 번에 가져올 메시지 개수 (최신 메시지부터)
      * @return 메시지 목록을 담은 Result Flow.
      */
-    fun getMessagesStream(channelId: String, limit: Int): Flow<CustomResult<List<Message>, Unit>>
+    fun getMessagesStream(channelId: String, limit: Int): Flow<CustomResult<List<Message>, Exception>>
 
     /**
      * 특정 채널의 과거 메시지를 가져옵니다 (페이지네이션).
@@ -31,7 +31,7 @@ interface MessageRepository {
      * @param limit 한 번에 가져올 메시지 개수
      * @return 과거 메시지 목록을 담은 Result.
      */
-    suspend fun getPastMessages(channelId: String, startAfterMessageId: String?, limit: Int): CustomResult<List<Message>, Unit>
+    suspend fun getPastMessages(channelId: String, startAfterMessageId: String?, limit: Int): CustomResult<List<Message>, Exception>
 
     /**
      * 새로운 메시지를 전송합니다.
@@ -46,7 +46,7 @@ interface MessageRepository {
         content: String?,
         attachments: List<MessageAttachmentToSend>,
         senderId: String
-    ): CustomResult<String, Unit>
+    ): CustomResult<String, Exception>
 
     /**
      * 기존 메시지를 수정합니다.
@@ -59,7 +59,7 @@ interface MessageRepository {
         channelId: String,
         messageId: String,
         newContent: String
-    ): CustomResult<Unit, Unit>
+    ): CustomResult<Unit, Exception>
 
     /**
      * 메시지를 삭제합니다.
@@ -67,7 +67,7 @@ interface MessageRepository {
      * @param messageId 삭제할 메시지 ID
      * @return 작업 성공 여부를 담은 Result.
      */
-    suspend fun deleteMessage(channelId: String, messageId: String): CustomResult<Unit, Unit>
+    suspend fun deleteMessage(channelId: String, messageId: String): CustomResult<Unit, Exception>
 
     /**
      * 메시지에 리액션을 추가합니다.
@@ -77,7 +77,7 @@ interface MessageRepository {
      * @param userId 리액션을 추가하는 사용자 ID
      * @return 작업 성공 여부를 담은 Result.
      */
-    suspend fun addReaction(channelId: String, messageId: String, reactionEmoji: String, userId: String): CustomResult<Unit, Unit>
+    suspend fun addReaction(channelId: String, messageId: String, reactionEmoji: String, userId: String): CustomResult<Unit, Exception>
 
     /**
      * 메시지에서 리액션을 제거합니다.
@@ -87,7 +87,7 @@ interface MessageRepository {
      * @param userId 리액션을 제거하는 사용자 ID
      * @return 작업 성공 여부를 담은 Result.
      */
-    suspend fun removeReaction(channelId: String, messageId: String, reactionEmoji: String, userId: String): CustomResult<Unit, Unit>
+    suspend fun removeReaction(channelId: String, messageId: String, reactionEmoji: String, userId: String): CustomResult<Unit, Exception>
 
     /**
      * 특정 메시지 정보를 가져옵니다.
@@ -95,5 +95,5 @@ interface MessageRepository {
      * @param messageId 가져올 메시지 ID
      * @return 해당 메시지 정보를 담은 Result
      */
-    suspend fun getMessage(channelId: String, messageId: String): CustomResult<Message, Unit>
+    suspend fun getMessage(channelId: String, messageId: String): CustomResult<Message, Exception>
 }

@@ -3,9 +3,9 @@ package com.example.feature_auth.viewmodel
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.domain.model.ui.enum.AuthErrorType
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.RequestPasswordResetUseCase
-import com.example.domain.usecase.auth.ResetPasswordUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -45,8 +45,8 @@ sealed class FindPasswordEvent {
 @HiltViewModel
 class FindPasswordViewModel @Inject constructor(
     private val requestPasswordResetUseCase: RequestPasswordResetUseCase,
-    // Removed: verifyPasswordResetCodeUseCase, resetPasswordUseCase
     private val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
+    // Removed: verifyPasswordResetCodeUseCase, resetPasswordUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FindPasswordUiState())
@@ -83,11 +83,20 @@ class FindPasswordViewModel @Inject constructor(
             val result = requestPasswordResetUseCase(email)
 
             result.onSuccess {
-                _uiState.update { it.copy(isLoading = false, isEmailSent = true) }
-                _eventFlow.emit(FindPasswordEvent.ShowSnackbar("이메일이 전송되었습니다.")) // Updated message
+                viewModelScope.launch {
+                    _uiState.update { it.copy(isLoading = false, isEmailSent = true) }
+                    _eventFlow.emit(FindPasswordEvent.ShowSnackbar("이메일이 전송되었습니다.")) // Updated message
+                }
             }.onFailure { exception ->
-                val errorMessage = getAuthErrorMessageUseCase.getPasswordResetErrorMessage(exception)
-                _uiState.update { it.copy(isLoading = false, errorMessage = errorMessage) }
+                viewModelScope.launch {
+                    // Exception을 AuthErrorType.RESET_PASSWORD_FAILURE로 처리하거나 구체적인 오류 메시지 생성
+                    val errorMessage = if (exception is Exception) {
+                        getAuthErrorMessageUseCase(exception)
+                    } else {
+                        getAuthErrorMessageUseCase(AuthErrorType.RESET_PASSWORD_FAILURE)
+                    }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = errorMessage) }
+                }
             }
         }
     }

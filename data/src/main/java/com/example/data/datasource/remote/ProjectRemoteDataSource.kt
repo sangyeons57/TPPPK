@@ -25,7 +25,7 @@ interface ProjectRemoteDataSource {
      * @param isPublic 공개 여부
      * @return 생성된 프로젝트의 ID를 포함한 Result 객체
      */
-    suspend fun createProject(name: String, isPublic: Boolean): CustomResult<String, Exception>
+    suspend fun createProject(projectDTO : ProjectDTO): CustomResult<String, Exception>
 
     /**
      * 프로젝트의 이름과 이미지 URL을 업데이트합니다.
@@ -35,8 +35,7 @@ interface ProjectRemoteDataSource {
      */
     suspend fun updateProjectDetails(
         projectId: String,
-        name: String,
-        imageUrl: String?
+        projectDTO: ProjectDTO
     ): CustomResult<Unit, Exception>
 
     /**

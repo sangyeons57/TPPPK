@@ -34,6 +34,10 @@ class PermissionRemoteDataSourceImpl @Inject constructor(
             .map{ snapshot -> snapshot.documents.mapNotNull { it.toObject(PermissionDTO::class.java) } }
     }
 
+    override fun observePermission(permissionId: String): Flow<PermissionDTO> {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun addPermissionToRole(
         projectId: String,
         roleId: String,

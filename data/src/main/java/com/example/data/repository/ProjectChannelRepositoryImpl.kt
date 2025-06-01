@@ -14,10 +14,17 @@ class ProjectChannelRepositoryImpl @Inject constructor(
     // 필요한 경우 LocalDataSource 등 다른 의존성 추가
 ) : ProjectChannelRepository {
 
-    override fun getProjectChannelsStream(projectId: String, categoryId: String): Flow<CustomResult<List<ProjectChannel>, Exception>> {
+    override fun getProjectChannelsByCategoryStream(projectId: String, categoryId: String): Flow<CustomResult<List<ProjectChannel>, Exception>> {
         // TODO: 기존 ChannelRepositoryImpl의 프로젝트 채널 목록 가져오기 로직 구현
         // 예: return projectChannelRemoteDataSource.getProjectChannelsStream(projectId).map { result -> /* 매핑 로직 */ }
         throw NotImplementedError("구현 필요: getProjectChannelsStream")
+    }
+
+    override fun getProjectChannelStream(
+        projectId: String,
+        channelId: String
+    ): Flow<CustomResult<ProjectChannel, Exception>> {
+        TODO("Not yet implemented")
     }
 
     override suspend fun addProjectChannel(projectId: String, channel: ProjectChannel): CustomResult<Unit, Exception> {

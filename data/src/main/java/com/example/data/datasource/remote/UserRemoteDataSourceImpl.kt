@@ -3,10 +3,12 @@ package com.example.data.datasource.remote
 import android.net.Uri
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 import com.example.data.model.remote.UserDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.toObjects
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
@@ -71,15 +73,11 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateUserProfile(name: String, profileImageUrl: String?): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun updateUserProfile(name: String, userDTO: UserDTO): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = getCurrentUserIdOrThrow()
-            val updates = mutableMapOf<String, Any?>()
-            updates["name"] = name
-            updates["updatedAt"] = FieldValue.serverTimestamp()
-            profileImageUrl?.let { updates["profileImageUrl"] = it }
 
-            usersCollection.document(uid).update(updates).await()
+            usersCollection.document(uid).set(userDTO, SetOptions.merge()).await()
             Unit
         }
     }
@@ -118,6 +116,13 @@ class UserRemoteDataSourceImpl @Inject constructor(
             
             querySnapshot.toObjects()
         }
+    }
+
+    override suspend fun searchUsersByName(
+        nameQuery: String,
+        maxResults: Int
+    ): CustomResult<List<UserDTO>, Exception> {
+        TODO("Not yet implemented")
     }
 
     override suspend fun checkNicknameAvailability(nickname: String): CustomResult<Boolean, Exception> = withContext(Dispatchers.IO) {
@@ -165,13 +170,5 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
-        return try {
-            CustomResult.Success(block())
-        } catch (e: Exception) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            CustomResult.Failure(e)
-        }
-    }
 }
 

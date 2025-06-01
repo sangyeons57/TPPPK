@@ -22,11 +22,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_project.structure.viewmodel.EditChannelEvent
 import com.example.feature_project.structure.viewmodel.EditChannelUiState
 import com.example.feature_project.structure.viewmodel.EditChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
-import com.example.domain.model.ChannelMode
 
 /**
  * EditChannelScreen: 프로젝트 내 채널 이름 및 유형 수정/삭제 화면 (Stateful)
@@ -136,7 +136,7 @@ fun EditChannelContent(
     modifier: Modifier = Modifier,
     uiState: EditChannelUiState,
     onChannelNameChange: (String) -> Unit,
-    onChannelTypeSelected: (ChannelMode) -> Unit,
+    onChannelTypeSelected: (ProjectChannelType) -> Unit,
     onUpdateClick: () -> Unit
 ) {
     Column(
@@ -170,40 +170,18 @@ fun EditChannelContent(
                     .fillMaxWidth()
                     .height(56.dp)
                     .selectable(
-                        selected = (uiState.currentChannelMode == ChannelMode.TEXT),
-                        onClick = { onChannelTypeSelected(ChannelMode.TEXT) },
+                        selected = (uiState.currentChannelMode == ProjectChannelType.MESSAGES),
+                        onClick = { onChannelTypeSelected(ProjectChannelType.MESSAGES) },
                         role = Role.RadioButton
                     )
                     .padding(horizontal = 16.dp)
             ) {
                 RadioButton(
-                    selected = (uiState.currentChannelMode == ChannelMode.TEXT),
+                    selected = (uiState.currentChannelMode == ProjectChannelType.MESSAGES),
                     onClick = null
                 )
                 Text(
                     text = "텍스트 채널",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .selectable(
-                        selected = (uiState.currentChannelMode == ChannelMode.VOICE),
-                        onClick = { onChannelTypeSelected(ChannelMode.VOICE) },
-                        role = Role.RadioButton
-                    )
-                    .padding(horizontal = 16.dp)
-            ) {
-                RadioButton(
-                    selected = (uiState.currentChannelMode == ChannelMode.VOICE),
-                    onClick = null
-                )
-                Text(
-                    text = "음성 채널",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(start = 16.dp)
                 )
@@ -250,8 +228,8 @@ private fun EditChannelContentPreview() {
                 channelId = "1",
                 currentChannelName = "기존-채팅방",
                 originalChannelName = "기존-채팅방",
-                currentChannelMode = ChannelMode.TEXT,
-                originalChannelMode = ChannelMode.TEXT
+                currentChannelMode = ProjectChannelType.MESSAGES,
+                originalChannelMode = ProjectChannelType.MESSAGES
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
@@ -301,7 +279,6 @@ private fun EditChannelContentVoicePreview() {
         EditChannelContent(
             uiState = EditChannelUiState(
                 currentChannelName = "음성 채널 편집",
-                currentChannelMode = ChannelMode.VOICE
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},

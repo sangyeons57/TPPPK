@@ -1,7 +1,7 @@
 package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model._new.enum.FriendStatus
+import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
 import com.example.domain.model.base.User
 import kotlinx.coroutines.flow.Flow

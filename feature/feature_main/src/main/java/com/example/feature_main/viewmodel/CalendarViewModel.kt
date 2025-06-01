@@ -3,10 +3,9 @@ package com.example.feature_main.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.model.Schedule
+import com.example.domain.model.base.Schedule
 import com.example.domain.usecase.schedule.GetScheduleSummaryForMonthUseCase
 import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -146,7 +145,7 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) } // Set loading, clear error
             try {
-                val result = getSchedulesForDateUseCase(date)
+                val result = getSchedulesForDateUseCase(date).first()
                 result.onSuccess { schedules ->
                     _uiState.update { state ->
                         state.copy(
@@ -155,14 +154,16 @@ class CalendarViewModel @Inject constructor(
                         )
                     }
                 }.onFailure { exception ->
-                    _uiState.update { state ->
-                        state.copy(
-                            isLoading = false,
-                            schedulesForSelectedDate = emptyList(),
-                            errorMessage = exception.message ?: "일정 로드 중 오류가 발생했습니다."
-                        )
+                    viewModelScope.launch {
+                        _uiState.update { state ->
+                            state.copy(
+                                isLoading = false,
+                                schedulesForSelectedDate = emptyList(),
+                                errorMessage = exception.message ?: "일정 로드 중 오류가 발생했습니다."
+                            )
+                        }
+                        _eventFlow.emit(CalendarEvent.ShowSnackbar("일정 로드 실패: ${exception.localizedMessage}"))
                     }
-                    _eventFlow.emit(CalendarEvent.ShowSnackbar("일정 로드 실패: ${exception.localizedMessage}"))
                 }
             } catch (e: Exception) {
                 // Catch unexpected exceptions during the flow or repository call

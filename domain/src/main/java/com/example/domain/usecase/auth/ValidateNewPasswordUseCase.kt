@@ -1,6 +1,6 @@
 package com.example.domain.usecase.auth
 
-import com.example.domain.model.auth.PasswordValidationResult
+import com.example.core_common.result.CustomResult
 import javax.inject.Inject
 
 /**
@@ -21,18 +21,18 @@ class ValidateNewPasswordUseCase @Inject constructor() {
      * @param password 검사할 새 비밀번호.
      * @return PasswordValidationResult 객체 (유효성 상태와 메시지 포함).
      */
-    operator fun invoke(password: String): PasswordValidationResult {
+    operator fun invoke(password: String): CustomResult<Unit, Exception> {
         if (password.length < MIN_PASSWORD_LENGTH) {
-            return PasswordValidationResult(false, "비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상이어야 합니다.")
+            return CustomResult.Failure(IllegalArgumentException("비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상이어야 합니다."))
         }
         if (!password.any { it.isDigit() }) {
-            return PasswordValidationResult(false, "비밀번호에는 숫자가 1개 이상 포함되어야 합니다.")
+            return CustomResult.Failure(IllegalArgumentException("비밀번호에는 숫자가 1개 이상 포함되어야 합니다."))
         }
         if (!password.any { it.isLetter() }) {
-            return PasswordValidationResult(false, "비밀번호에는 영문자가 1개 이상 포함되어야 합니다.")
+            return CustomResult.Failure(IllegalArgumentException("비밀번호에는 영문자가 1개 이상 포함되어야 합니다"))
         }
         // TODO: 추후 특수문자 포함 등의 추가적인 검증 로직을 여기에 추가할 수 있습니다.
 
-        return PasswordValidationResult(true)
+        return CustomResult.Success(Unit)
     }
 }

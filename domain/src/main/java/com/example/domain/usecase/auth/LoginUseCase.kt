@@ -1,7 +1,7 @@
 package com.example.domain.usecase.auth
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.UserSession
+import com.example.domain.model.data.UserSession
 import com.example.domain.repository.AuthRepository
 import javax.inject.Inject
 

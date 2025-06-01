@@ -2,6 +2,7 @@ package com.example.feature_project.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.domain.usecase.project.CreateProjectUseCase
 import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -99,16 +100,27 @@ class AddProjectViewModel @Inject constructor(
             
             // 프로젝트 참여 로직
             val result = joinProjectWithCodeUseCase(joinCode)
-            
-            if (result.isSuccess) {
-                _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
-                _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }
-            } else {
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false, 
-                        errorMessage = "참여 코드 확인 또는 참여 실패: ${result.exceptionOrNull()?.message ?: ""}"
-                    ) 
+
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
+                    _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "참여 코드 확인 또는 참여 실패: ${result.error.message ?: ""}"
+                        )
+                    }
+                }
+                else -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "참여 코드 확인 또는 참여 실패: 알수없는 에러"
+                        )
+                    }
                 }
             }
         }
@@ -127,18 +139,28 @@ class AddProjectViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             
             // 프로젝트 생성 로직
-            val isPublic = _uiState.value.createMode == CreateProjectMode.OPEN
-            val result = createProjectUseCase(name, description, isPublic)
-            
-            if (result.isSuccess) {
-                _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트를 생성했습니다!"))
-                _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }
-            } else {
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false, 
-                        errorMessage = "프로젝트 생성 실패: ${result.exceptionOrNull()?.message ?: ""}"
-                    ) 
+            val result = createProjectUseCase(name, description)
+
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트를 생성했습니다!"))
+                    _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "프로젝트 생성 실패: ${result.error.message ?: ""}"
+                        )
+                    }
+                }
+                else -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "프로젝트 생성 실패: 알수없는 에러"
+                        )
+                    }
                 }
             }
         }

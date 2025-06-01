@@ -27,15 +27,13 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.Channel
-import com.example.domain.model.ChannelType
-import com.example.domain.model.Category
+import com.example.domain.model.base.Category
+import com.example.domain.model.base.ProjectChannel
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_project.setting.viewmodel.ProjectSettingEvent
 import com.example.feature_project.setting.viewmodel.ProjectSettingUiState
 import com.example.feature_project.setting.viewmodel.ProjectSettingViewModel
 import kotlinx.coroutines.flow.collectLatest
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.channel.ProjectSpecificData
 import java.time.Instant
 
 /**
@@ -54,7 +52,7 @@ fun ProjectSettingScreen(
 
     // 다이얼로그 상태
     var showDeleteCategoryDialog by remember { mutableStateOf<Category?>(null) }
-    var showDeleteChannelDialog by remember { mutableStateOf<Channel?>(null) }
+    var showDeleteChannelDialog by remember { mutableStateOf<ProjectChannel?>(null) }
     var showRenameProjectDialog by remember { mutableStateOf(false) } // 프로젝트 이름 변경 다이얼로그
     var showDeleteProjectDialog by remember { mutableStateOf(false) } // 프로젝트 삭제 확인 다이얼로그
 
@@ -142,7 +140,7 @@ fun ProjectSettingScreen(
         AlertDialog(
             onDismissRequest = { showDeleteChannelDialog = null },
             title = { Text("채널 삭제") },
-            text = { Text("'${channel.name}' 채널을 삭제하시겠습니까? 채널 내의 모든 메시지 기록이 삭제됩니다.") },
+            text = { Text("'${channel.channelName}' 채널을 삭제하시겠습니까? 채널 내의 모든 메시지 기록이 삭제됩니다.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -198,7 +196,7 @@ fun ProjectSettingContent(
     onCategoryEditClick: (String) -> Unit, // categoryId
     onCategoryDeleteClick: (Category) -> Unit, // category 객체 전달
     onChannelEditClick: (String, String) -> Unit, // categoryId, channelId
-    onChannelDeleteClick: (Channel) -> Unit, // channel 객체 전달
+    onChannelDeleteClick: (ProjectChannel) -> Unit, // channel 객체 전달
     onAddCategoryClick: () -> Unit,
     onAddChannelClick: (String) -> Unit, // categoryId
     onManageMembersClick: () -> Unit,
@@ -365,7 +363,7 @@ fun CategoryHeader(
 // 채널 아이템
 @Composable
 fun ChannelItem(
-    channel: Channel,
+    channel: ProjectChannel,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -378,10 +376,10 @@ fun ChannelItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 아이콘 (텍스트/음성 구분)
-        val icon = if (channel.channelMode == ChannelMode.TEXT) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp
+        val icon = if (channel.channelType == ProjectChannelType.MESSAGES) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp
         Icon(
             imageVector = icon,
-            contentDescription = "${channel.channelMode} 채널",
+            contentDescription = "${channel.channelType} 채널",
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.secondary
         )
@@ -448,59 +446,6 @@ fun RenameProjectDialog(
             TextButton(onClick = onDismiss) { Text("취소") }
         }
     )
-}
-
-
-// --- Preview ---
-@Preview(showBackground = true)
-@Composable
-private fun ProjectSettingContentPreview() {
-    val previewState = ProjectSettingUiState(
-        projectId = "p1",
-        projectName = "샘플 프로젝트",
-        categories = listOf(
-            Category(
-                id = "c1",
-                projectId = "p1",
-                name = "일반",
-                order = 0,
-                channels = listOf(
-                    Channel(id = "ch1", name = "잡담", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT)),
-                    Channel(id = "ch2", name = "공지사항", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c1", channelMode = ChannelMode.TEXT))
-                ),
-                createdAt = Instant.now(),
-                updatedAt = Instant.now()
-            ),
-            Category(
-                id = "c2",
-                projectId = "p1",
-                name = "개발",
-                order = 1,
-                channels = listOf(
-                    Channel(id = "ch3", name = "프론트엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
-                    Channel(id = "ch4", name = "백엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.TEXT)),
-                    Channel(id = "ch5", name = "개발 회의", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", categoryId = "c2", channelMode = ChannelMode.VOICE))
-                ),
-                createdAt = Instant.now(),
-                updatedAt = Instant.now()
-            )
-        )
-    )
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        ProjectSettingContent(
-            uiState = previewState,
-            onCategoryEditClick = {},
-            onCategoryDeleteClick = {},
-            onChannelEditClick = { _, _ -> },
-            onChannelDeleteClick = {},
-            onAddCategoryClick = {},
-            onAddChannelClick = {},
-            onManageMembersClick = {},
-            onManageRolesClick = {},
-            onRenameProjectClick = {},
-            onDeleteProjectClick = {}
-        )
-    }
 }
 
 @Preview

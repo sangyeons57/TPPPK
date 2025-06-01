@@ -25,7 +25,7 @@ class UpdateNicknameUseCase @Inject constructor(
      * @param newNickname 변경할 새 닉네임
      * @return 성공 시 성공 결과가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(newNickname: String): CustomResult<Unit, Exception> {
+    suspend operator fun invoke(newNickname: String): CustomResult<User, Exception> {
         // 닉네임 유효성 검사
         val trimmedNickname = newNickname.trim()
         
@@ -51,7 +51,7 @@ class UpdateNicknameUseCase @Inject constructor(
             return CustomResult.Failure(availabilityResult.error)
         }
         
-        if (availabilityResult !is CustomResult.Success) {
+        if (availabilityResult !is CustomResult.Success || !availabilityResult.data) {
             return CustomResult.Failure(IllegalArgumentException("이미 사용 중인 닉네임입니다."))
         }
 

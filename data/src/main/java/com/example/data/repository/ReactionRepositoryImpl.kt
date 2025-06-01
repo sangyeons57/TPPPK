@@ -2,35 +2,53 @@ package com.example.data.repository
 
 import com.example.core_common.result.CustomResult
 // import com.example.data.datasource.remote.ReactionRemoteDataSource // TODO: DataSource 생성 후 주석 해제
-import com.example.data.model.mapper.toDomain // TODO: 실제 매퍼 경로 및 함수 확인
-import com.example.data.model.mapper.toDto // TODO: 실제 매퍼 경로 및 함수 확인
 import com.example.domain.model.base.Reaction
 import com.example.domain.repository.ReactionRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf // 임시
+import kotlinx.coroutines.flow.flowOf
+import java.time.Instant
 import javax.inject.Inject
 
+/**
+ * 메시지 반응(이모지) 관리를 위한 저장소 구현체
+ * 현재는 임시 구현으로, ReactionRemoteDataSource가 구현되면 실제 구현으로 교체 예정
+ */
 class ReactionRepositoryImpl @Inject constructor(
     // private val reactionRemoteDataSource: ReactionRemoteDataSource // TODO: DataSource 생성 후 주석 해제
-    // TODO: 필요한 Mapper 주입
 ) : ReactionRepository {
 
-    override fun getReactionsStream(messageId: String): Flow<CustomResult<List<Reaction>>> {
-        // TODO: reactionRemoteDataSource.getReactionsStream(messageId).map { ... } 구현
-        throw NotImplementedError("ReactionRemoteDataSource 필요 및 구현 필요")
-        // return flowOf(CustomResult.Success(emptyList())) // 임시 반환
+    /**
+     * 특정 메시지에 대한 반응 목록을 스트림으로 조회합니다.
+     * 
+     * @param messageId 반응을 조회할 메시지 ID
+     * @return 반응 목록 스트림
+     */
+    override fun getReactionsStream(messageId: String): Flow<CustomResult<List<Reaction>, Exception>> {
+        // 데이터 소스가 구현되기 전까지는 빈 리스트 반환
+        return flowOf(CustomResult.Failure(Exception("ReactionRemoteDataSource가 아직 구현되지 않았습니다.")))
     }
 
-    override suspend fun addReaction(messageId: String, userId: String, emoji: String): CustomResult<Reaction> {
-        // val reactionDto = Reaction(id = "", messageId = messageId, userId = userId, emoji = emoji, createdAt = java.time.LocalDateTime.now()).toDto() // 예시
-        // TODO: reactionRemoteDataSource.addReaction(...) 구현
-        throw NotImplementedError("ReactionRemoteDataSource 필요 및 구현 필요")
-        // return CustomResult.Error(NotImplementedError("...")) // 임시 반환
+    /**
+     * 메시지에 새 반응을 추가합니다.
+     * 
+     * @param messageId 반응을 추가할 메시지 ID
+     * @param userId 반응을 추가하는 사용자 ID
+     * @param emoji 추가할 이모지 문자
+     * @return 추가된 반응 정보
+     */
+    override suspend fun addReaction(messageId: String, userId: String, emoji: String): CustomResult<Reaction, Exception> {
+        // 데이터 소스가 구현되기 전까지는 실패 결과 반환
+        return CustomResult.Failure(Exception("ReactionRemoteDataSource가 아직 구현되지 않았습니다."))
     }
 
-    override suspend fun removeReaction(reactionId: String): CustomResult<Unit> {
-        // TODO: reactionRemoteDataSource.removeReaction(reactionId) 구현
-        throw NotImplementedError("ReactionRemoteDataSource 필요 및 구현 필요")
-        // return CustomResult.Error(NotImplementedError("...")) // 임시 반환
+    /**
+     * 기존 반응을 제거합니다.
+     * 
+     * @param reactionId 제거할 반응 ID
+     * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
+     */
+    override suspend fun removeReaction(reactionId: String): CustomResult<Unit, Exception> {
+        // 데이터 소스가 구현되기 전까지는 실패 결과 반환
+        return CustomResult.Failure(Exception("ReactionRemoteDataSource가 아직 구현되지 않았습니다."))
     }
 }

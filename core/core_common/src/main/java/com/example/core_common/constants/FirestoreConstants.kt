@@ -125,6 +125,7 @@ object FirestoreConstants {
 
     // Common fields for Message (sub-collection of DMChannel or ProjectChannel)
     object MessageFields {
+        const val COLLECTION_NAME = "messages"
         const val SENDER_ID = "senderId"
         const val SENDER_NAME = "senderName"
         const val SENDER_PROFILE_IMAGE_URL = "senderProfileImageUrl"

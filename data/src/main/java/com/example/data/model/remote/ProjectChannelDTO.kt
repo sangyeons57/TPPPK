@@ -1,11 +1,10 @@
 package com.example.data.model.remote
 
-import com.example.domain.model._new.enum.ProjectChannelType
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.base.ProjectChannel
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
-import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
 
 /*

@@ -1,77 +1,10 @@
 package com.example.core_ui.dialogs.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DragIndicator
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.*
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.runtime.*
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.Category
-import com.example.domain.model.Channel
-import com.example.core_ui.dialogs.viewmodel.*
-import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 // Import for DraggableList
-import com.example.core_ui.components.draggablelist.DraggableList
-import com.example.core_ui.components.draggablelist.DraggableListItem
-import com.example.core_ui.components.draggablelist.rememberDraggableListState
-import com.example.core_common.util.DateTimeUtil // For preview
-import com.example.core_ui.components.buttons.DebouncedBackButton
 
+/**
 /**
  * 프로젝트 구조 편집 다이얼로그
  * 카테고리와 채널을 드래그 앤 드롭으로 이동 및 추가/수정/삭제할 수 있습니다.
@@ -448,10 +381,10 @@ private fun RenameDialog(
 @Composable
 private fun AddChannelDialog(
     onDismiss: () -> Unit,
-    onConfirm: (channelName: String, channelMode: ChannelMode) -> Unit
+    onConfirm: (channelName: String, channelMode: ProjectChannelType) -> Unit
 ) {
     var channelName by remember { mutableStateOf("") }
-    var selectedChannelMode by remember { mutableStateOf(ChannelMode.TEXT) }
+    var selectedChannelMode by remember { mutableStateOf(ProjectChannelType.MESSAGES) }
     var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -498,7 +431,7 @@ private fun AddChannelDialog(
                         onDismissRequest = { expanded = false },
                         modifier = Modifier.fillMaxWidth(0.95f)
                     ) {
-                        ChannelMode.values().forEach { mode ->
+                        ProjectChannelType.entries.forEach { mode ->
                             DropdownMenuItem(
                                 text = { Text(mode.name) },
                                 onClick = {
@@ -607,4 +540,5 @@ fun ProjectStructureEditDialogPreview() {
             viewModel = mockViewModel 
         )
     }
-} 
+}
+        */

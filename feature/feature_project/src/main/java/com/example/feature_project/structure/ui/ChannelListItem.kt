@@ -15,11 +15,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.ChannelType
-import com.example.domain.model.Channel
-import com.example.core_common.constants.FirestoreConstants
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.channel.ProjectSpecificData
+import com.example.domain.model.base.ProjectChannel
+import com.example.domain.model.enum.ProjectChannelType
 import java.time.Instant
 
 /**
@@ -35,7 +32,7 @@ import java.time.Instant
  */
 @Composable
 fun ChannelListItem(
-    channel: Channel,
+    channel: ProjectChannel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showActions: Boolean = false, // 추가 액션 버튼 표시 여부
@@ -55,14 +52,13 @@ fun ChannelListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 타입 아이콘
-        val icon: ImageVector = when (channel.channelMode) {
-            ChannelMode.TEXT -> Icons.Filled.ChatBubbleOutline
-            ChannelMode.VOICE -> Icons.AutoMirrored.Filled.VolumeUp
+        val icon: ImageVector = when (channel.channelType) {
+            ProjectChannelType.MESSAGES -> Icons.Filled.ChatBubbleOutline
             else -> Icons.Filled.ChatBubbleOutline // Default icon or handle error
         }
         Icon(
             imageVector = icon,
-            contentDescription = "${channel.channelMode} 채널",
+            contentDescription = "${channel.channelType} 채널",
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.secondary // 아이콘 색상
         )
@@ -71,7 +67,7 @@ fun ChannelListItem(
 
         // 채널 이름
         Text(
-            text = channel.name,
+            text = channel.channelName,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f) // 남은 공간 차지
         )
@@ -98,59 +94,15 @@ fun ChannelListItem(
 @Preview(showBackground = true, name = "Text Channel Item")
 @Composable
 private fun ChannelListItemTextPreview() {
-    val textChannel = Channel(
+    val textChannel = ProjectChannel(
         id = "ch1",
-        name = "일반 대화",
-        type = ChannelType.PROJECT, // Domain model ChannelType
+        channelName = "일반 대화",
         createdAt = Instant.now(),
         updatedAt = Instant.now(),
-        projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT)
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {
             ChannelListItem(channel = textChannel, onClick = {})
-        }
-    }
-}
-
-@Preview(showBackground = true, name = "Voice Channel Item")
-@Composable
-private fun ChannelListItemVoicePreview() {
-    val voiceChannel = Channel(
-        id = "ch2",
-        name = "음성 회의",
-        type = ChannelType.PROJECT, // Domain model ChannelType
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-        projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.VOICE)
-    )
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        Surface {
-            ChannelListItem(channel = voiceChannel, onClick = {})
-        }
-    }
-}
-
-@Preview(showBackground = true, name = "Channel Item with Actions")
-@Composable
-private fun ChannelListItemWithActionsCallback() {
-    val actionChannel = Channel(
-        id = "ch3",
-        name = "공지사항",
-        type = ChannelType.PROJECT, // Domain model ChannelType
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-        projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT)
-    )
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        Surface {
-            ChannelListItem(
-                channel = actionChannel,
-                onClick = {},
-                showActions = true, // 액션 버튼 표시
-                onEditClick = {},
-                onDeleteClick = {}
-            )
         }
     }
 }

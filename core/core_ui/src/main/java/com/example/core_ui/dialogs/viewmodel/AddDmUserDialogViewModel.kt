@@ -3,7 +3,8 @@ package com.example.core_ui.dialogs.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.model.User
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.usecase.dm.CreateDmChannelUseCase
 import com.example.domain.usecase.friend.SendFriendRequestUseCase
 import com.example.domain.usecase.user.SearchUserByNameUseCase
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
 /**
  * DM 추가 다이얼로그의 UI 상태
  */
@@ -82,10 +84,9 @@ class AddDmUserDialogViewModel @Inject constructor(
     private fun startDmWithUser(userId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
-            
-            createDmChannelUseCase(userId)
-            .fold(
-                onSuccess = { channel ->
+
+            createDmChannelUseCase(userId).fold(
+                onSuccess = { dmChannel ->
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
@@ -93,10 +94,11 @@ class AddDmUserDialogViewModel @Inject constructor(
                             shouldDismiss = true
                         )
                     }
-                    _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(channel.id))
+                    _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(dmChannel.id))
+                    Log.d("AddDmUserDialogViewModel", "DM channel created successfully: ${dmChannel.id}")
                 },
-                onFailure = { dmError ->
-                    val errorMsg = "DM 채널 연결 중 오류: ${dmError.message ?: "알 수 없는 오류"}"
+                onFailure = { error ->
+                    val errorMsg = "DM 채널 연결 중 오류: ${error.message ?: "알 수 없는 오류"}"
                     _uiState.update { state ->
                         state.copy(
                             isLoading = false,
@@ -104,6 +106,7 @@ class AddDmUserDialogViewModel @Inject constructor(
                         )
                     }
                     _eventFlow.emit(AddDmUserEvent.ShowSnackbar(errorMsg))
+                    Log.e("AddDmUserDialogViewModel", "Failed to create DM channel: ${error.message}", error)
                 }
             )
         }
@@ -124,12 +127,13 @@ class AddDmUserDialogViewModel @Inject constructor(
         
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
-            
+
+            // suspend 함수를 코루틴 내에서 한 번만 호출
             searchUserByNameUseCase(username).fold(
                 onSuccess = { users ->
                     if (users.isEmpty()) {
                         val errorMsg = "일치하는 사용자를 찾을 수 없습니다."
-                        _uiState.update { 
+                        _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 errorMessage = errorMsg
@@ -137,10 +141,34 @@ class AddDmUserDialogViewModel @Inject constructor(
                         }
                         _eventFlow.emit(AddDmUserEvent.ShowSnackbar(errorMsg))
                     } else {
-                        val firstUser = users.first()
+                        val firstUser: User = users.first()
                         // 사용자를 찾으면 바로 DM 시작
                         Log.d("AddDmUserDialogViewModel", "User found: $firstUser, starting DM...")
-                        startDmWithUser(firstUser.id)
+                        // 코루틴 내에서 이미 실행 중이므로 직접 createDmChannelUseCase 호출
+                        createDmChannelUseCase(firstUser.uid).fold(
+                            onSuccess = { dmChannel ->
+                                _uiState.update { state ->
+                                    state.copy(
+                                        isLoading = false,
+                                        successMessage = "DM 채널에 연결되었습니다.",
+                                        shouldDismiss = true
+                                    )
+                                }
+                                _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(dmChannel.id))
+                                Log.d("AddDmUserDialogViewModel", "DM channel created successfully: ${dmChannel.id}")
+                            },
+                            onFailure = { error ->
+                                val errorMsg = "DM 채널 연결 중 오류: ${error.message ?: "알 수 없는 오류"}"
+                                _uiState.update { state ->
+                                    state.copy(
+                                        isLoading = false,
+                                        errorMessage = errorMsg
+                                    )
+                                }
+                                _eventFlow.emit(AddDmUserEvent.ShowSnackbar(errorMsg))
+                                Log.e("AddDmUserDialogViewModel", "Failed to create DM channel: ${error.message}", error)
+                            }
+                        )
                     }
                 },
                 onFailure = { error ->
@@ -165,4 +193,5 @@ class AddDmUserDialogViewModel @Inject constructor(
             _eventFlow.emit(AddDmUserEvent.DismissDialog)
         }
     }
-} 
+}
+        **/

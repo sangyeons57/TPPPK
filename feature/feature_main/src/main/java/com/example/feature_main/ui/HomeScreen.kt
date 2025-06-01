@@ -24,12 +24,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.ui.DmUiModel
-import com.example.domain.model.ui.ProjectUiModel
 import com.example.feature_main.viewmodel.HomeEvent
 import com.example.feature_main.viewmodel.HomeViewModel
 import com.example.feature_main.viewmodel.ProjectItem
@@ -41,7 +38,6 @@ import com.example.feature_main.ui.components.ExtendableFloatingActionMenu
 import com.example.feature_main.ui.wrapper.AddDmUserDialogWrapper
 import com.example.feature_main.ui.wrapper.ProjectStructureEditDialogWrapper
 import androidx.navigation.NavHostController
-import com.example.domain.model.ChannelMode
 import com.example.feature_main.ui.project.CategoryUiModel
 import com.example.feature_main.ui.project.ChannelUiModel
 import com.example.feature_main.ui.project.ProjectStructureUiState

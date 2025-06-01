@@ -3,7 +3,7 @@ package com.example.domain.usecase.projectstructure
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model._new.enum.ProjectChannelType
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.repository.CategoryRepository
 import com.example.domain.repository.ProjectChannelRepository
@@ -41,7 +41,7 @@ class CreateDirectChannelUseCase @Inject constructor(
         val projectChannel = ProjectChannel(
             channelName = name,
             channelType = type,
-            order = 0,
+            order = 0.0,
             createdAt = DateTimeUtil.nowInstant(),
             updatedAt = DateTimeUtil.nowInstant()
         )

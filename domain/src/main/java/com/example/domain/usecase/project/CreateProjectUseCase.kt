@@ -25,7 +25,7 @@ class CreateProjectUseCase @Inject constructor(
      * @param isPublic 공개 프로젝트 여부
      * @return 성공 시 생성된 프로젝트 정보가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(name: String, description: String): CustomResult<Project, Exception> {
+    suspend operator fun invoke(name: String, description: String): CustomResult<String, Exception> {
         val trimmedName = name.trim()
         val trimmedDescription = description.trim()
         

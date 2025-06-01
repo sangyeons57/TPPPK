@@ -25,8 +25,8 @@ import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
-import com.example.domain.model.ProjectMember
-import com.example.domain.model.Role
+import com.example.domain.model.base.Member
+import com.example.domain.model.base.Role
 // ViewModel 및 관련 요소 Import
 import com.example.feature_project.members.viewmodel.EditMemberEvent
 import com.example.feature_project.members.viewmodel.EditMemberViewModel
@@ -116,7 +116,7 @@ fun EditMemberScreen(
 @Composable
 fun EditMemberContent(
     modifier: Modifier = Modifier,
-    memberInfo: ProjectMember, // Domain 모델 직접 사용 (표시용)
+    memberInfo: Member, // Domain 모델 직접 사용 (표시용)
     availableRoles: List<RoleSelectionItem>, // ★ UI 모델 사용 (선택용)
     onRoleSelectionChanged: (String, Boolean) -> Unit, // roleId, isSelected 전달
     onSaveClick: () -> Unit,
@@ -222,7 +222,7 @@ private fun EditMemberContentPreview() {
     // Preview용 Role 객체 생성
     val previewRole1 = Role(id = "role1", projectId = "p1", name = "관리자", permissions = listOf(com.example.domain.model.RolePermission.MANAGE_MEMBERS), isDefault = false, memberCount = 1)
     val previewRole2 = Role(id = "role2", projectId = "p1", name = "팀원", permissions = listOf(com.example.domain.model.RolePermission.READ_MESSAGES), isDefault = true, memberCount = 5)
-    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf(previewRole1, previewRole2), DateTimeUtil.nowInstant())
+    val previewMember = Member("u1", "테스트 멤버", null, listOf(previewRole1, previewRole2), DateTimeUtil.nowInstant())
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),

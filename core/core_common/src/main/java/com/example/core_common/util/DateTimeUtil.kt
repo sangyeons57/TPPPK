@@ -12,6 +12,7 @@ import java.util.Date
 import com.google.firebase.Timestamp
 import java.time.Duration
 import java.time.LocalTime
+import java.time.YearMonth
 import javax.inject.Singleton
 
 /**
@@ -23,8 +24,10 @@ object DateTimeUtil {
     private val DATE_PATTERN = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val TIME_PATTERN = DateTimeFormatter.ofPattern("HH:mm")
     private val DATE_TIME_PATTERN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    private val DATE_TIME_PATTERN2 = DateTimeFormatter.ofPattern("yyyy.MM.dd a h:mm")
     private val DATE_TIME_SECONDS_PATTERN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     private val CHAT_TIME_PATTERN = DateTimeFormatter.ofPattern("a h:mm") // 오전/오후 표시
+    private val SCHEDULE_DATE_PATTERN = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)")
 
     /**
      * LocalDateTime을 Date로 변환합니다.
@@ -215,6 +218,10 @@ object DateTimeUtil {
         return dateTime.format(CHAT_TIME_PATTERN)
     }
 
+    fun formatScheduleDate(dateTime: LocalDateTime): String {
+        return dateTime.format(SCHEDULE_DATE_PATTERN)
+    }
+
     /**
      * LocalDateTime을 날짜 및 시간 문자열로 포맷팅합니다.
      * 포맷: "yyyy-MM-dd HH:mm" (예: "2023-07-15 14:30")
@@ -224,6 +231,10 @@ object DateTimeUtil {
      */
     fun formatDateTime(dateTime: LocalDateTime): String {
         return dateTime.format(DATE_TIME_PATTERN)
+    }
+
+    fun formatDateTime2(dateTime: LocalDateTime): String {
+        return dateTime.format(DATE_TIME_PATTERN2)
     }
 
     /**
@@ -585,5 +596,61 @@ object DateTimeUtil {
         return firebaseTimestampToInstant(timestamp).let { instant ->
             LocalDateTime.ofInstant(instant, zoneId)
         }
+    }
+
+    /**
+     * YearMonth를 해당 월의 시작 시점 Instant로 변환합니다.
+     * 예: 2023년 5월 -> 2023-05-01T00:00:00Z (UTC 기준)
+     *
+     * @param yearMonth 변환할 YearMonth 객체
+     * @param zoneId 기준 시간대 (기본값: UTC)
+     * @return 해당 월의 1일 00:00:00 시점의 Instant
+     */
+    fun yearMonthToStartOfMonthInstant(yearMonth: YearMonth, zoneId: ZoneId = ZoneOffset.UTC): Instant {
+        return yearMonth.atDay(1).atStartOfDay(zoneId).toInstant()
+    }
+
+    /**
+     * YearMonth를 다음 달의 시작 시점 Instant로 변환합니다.
+     * 이는 특정 월의 스케줄을 조회할 때 종료 시점(exclusive, 해당 시점 미포함)으로 유용하게 사용될 수 있습니다.
+     * 예: 2023년 5월 -> 2023-06-01T00:00:00Z (UTC 기준)
+     *
+     * @param yearMonth 변환할 YearMonth 객체
+     * @param zoneId 기준 시간대 (기본값: UTC)
+     * @return 다음 달의 1일 00:00:00 시점의 Instant
+     */
+    fun yearMonthToEndOfMonthExclusiveInstant(yearMonth: YearMonth, zoneId: ZoneId = ZoneOffset.UTC): Instant {
+        return yearMonth.plusMonths(1).atDay(1).atStartOfDay(zoneId).toInstant()
+    }
+
+    /**
+     * YearMonth를 해당 월의 시작 시점 Firebase Timestamp로 변환합니다.
+     * 예: 2023년 5월 -> 2023-05-01T00:00:00Z (UTC 기준)에 해당하는 Timestamp
+     *
+     * @param yearMonth 변환할 YearMonth 객체
+     * @param zoneId 기준 시간대 (기본값: UTC)
+     * @return 해당 월의 1일 00:00:00 시점의 Firebase Timestamp
+     */
+    fun yearMonthToStartOfMonthTimestamp(yearMonth: YearMonth, zoneId: ZoneId = ZoneOffset.UTC): Timestamp {
+        val instant = yearMonthToStartOfMonthInstant(yearMonth, zoneId)
+        // 기존 instantToTimestamp 함수가 null을 반환할 수 있지만, 여기서는 yearMonthToStartOfMonthInstant가 항상 non-null Instant를 반환하므로
+        // instantToTimestamp(instant)!! 와 같이 단언하거나, 아래처럼 직접 변환합니다.
+        return Timestamp(instant.epochSecond, instant.nano)
+    }
+
+    /**
+     * YearMonth를 다음 달의 시작 시점 Firebase Timestamp로 변환합니다.
+     * 이는 특정 월의 스케줄을 조회할 때 종료 시점(exclusive, 해당 시점 미포함)으로 유용하게 사용될 수 있습니다.
+     * 예: 2023년 5월 -> 2023-06-01T00:00:00Z (UTC 기준)에 해당하는 Timestamp
+     *
+     * @param yearMonth 변환할 YearMonth 객체
+     * @param zoneId 기준 시간대 (기본값: UTC)
+     * @return 다음 달의 1일 00:00:00 시점의 Firebase Timestamp
+     */
+    fun yearMonthToEndOfMonthExclusiveTimestamp(yearMonth: YearMonth, zoneId: ZoneId = ZoneOffset.UTC): Timestamp {
+        val instant = yearMonthToEndOfMonthExclusiveInstant(yearMonth, zoneId)
+        // yearMonthToEndOfMonthExclusiveInstant가 항상 non-null Instant를 반환하므로
+        // instantToTimestamp(instant)!! 와 같이 단언하거나, 아래처럼 직접 변환합니다.
+        return Timestamp(instant.epochSecond, instant.nano)
     }
 }

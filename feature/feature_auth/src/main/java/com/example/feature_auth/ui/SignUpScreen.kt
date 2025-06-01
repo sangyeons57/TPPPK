@@ -37,7 +37,7 @@ import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.SignUpFormFocusTarget
+import com.example.domain.model.ui.enum.SignUpFormFocusTarget
 import com.example.feature_auth.viewmodel.SignUpEvent
 import com.example.feature_auth.viewmodel.SignUpUiState
 import com.example.feature_auth.viewmodel.SignUpViewModel
@@ -74,6 +74,8 @@ fun SignUpScreen(
                         SignUpFormFocusTarget.PASSWORD -> passwordFocusRequester.requestFocus()
                         SignUpFormFocusTarget.PASSWORD_CONFIRM -> passwordConfirmFocusRequester.requestFocus()
                         SignUpFormFocusTarget.NAME -> nameFocusRequester.requestFocus()
+                        SignUpFormFocusTarget.SIGNUP_BUTTON -> { /* 회원가입 버튼에는 특별한 포커스 처리가 필요 없음 */ }
+                        SignUpFormFocusTarget.NONE -> { /* 포커스 요청 없음 */ }
                     }
                 }
             }
@@ -432,8 +434,8 @@ fun SignUpContentWithErrorAndOptionsPreview() {
             onUnder14CheckedChange = {}, onTermsOfServiceClick = {}, onPrivacyPolicyClick = {},
             onSignUpClick = {}, onNavigateBack = {},
             onEmailFocus = {}, onPasswordFocus = {}, onPasswordConfirmFocus = {}, onNameFocus = {},
-            modifier = TODO(),
-            onAgreeWithTermsChange = TODO()
+            modifier = Modifier,
+            onAgreeWithTermsChange = {}
         )
     }
 }

@@ -30,7 +30,7 @@ interface UserRemoteDataSource {
      * @param name 변경할 이름
      * @param profileImageUrl 변경할 프로필 이미지 URL
      */
-    suspend fun updateUserProfile(name: String, profileImageUrl: String?): CustomResult<Unit, Exception>
+    suspend fun updateUserProfile(name: String, userDTO: UserDTO): CustomResult<Unit, Exception>
     
     /**
      * 사용자의 FCM 토큰을 업데이트합니다.
@@ -51,6 +51,14 @@ interface UserRemoteDataSource {
      * @return 검색 결과에 해당하는 사용자 DTO 목록
      */
     suspend fun searchUsersByName(nameQuery: String): CustomResult<List<UserDTO>, Exception>
+    
+    /**
+     * 이름(닉네임)으로 사용자를 검색하고 결과 수를 제한합니다.
+     * @param nameQuery 검색할 이름 문자열
+     * @param maxResults 결과 수 제한
+     * @return 검색 결과에 해당하는 사용자 DTO 목록
+     */
+    suspend fun searchUsersByName(nameQuery: String, maxResults: Int): CustomResult<List<UserDTO>, Exception>
 
     /**
      * 닉네임(이름)이 이미 사용 중인지 확인합니다.

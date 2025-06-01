@@ -1,7 +1,7 @@
 package com.example.domain.usecase.friend
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model._new.enum.FriendStatus
+import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
 import com.example.domain.repository.FriendRepository
 import kotlinx.coroutines.flow.Flow

@@ -13,6 +13,9 @@ trigger: always_on
 - **오프라인 우선 (전략 변경 중)**: Firestore 캐시를 우선 활용하며, 필요시 Room DB를 통한 고도화된 로컬 캐싱 전략 적용 ([room_db_decoupling.md](mdc:.cursor/tasks/room_db_decoupling.md) 참조)
 - **Data흐름 구조**: data -> datasource -> repository -> viewmodel -> ui (또한 각 계층은 추상화 되어있음)
 
+## 추가 원칙
+- LocalDB 사용금지, firebase 캐싱 시스탬 활용해서 우선 복잡도 감소 시키기
+
 ## 계층 구조
 - **datasource**: 가장 기본적인 구조 DTO형테로 DB에서 데이터 베이스 가지고 오는 역할
 - **repository**: 데이터에 구조를 Domain model에 정의된 형태로 usecase에 전달하거나 usecase에서 위임한 직접적인 편집을 하는 계층.

@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.feature_settings.presentation.SettingsViewModel // Import the ViewModel
+import com.example.feature_settings.viewmodel.SettingsViewModel // Import the ViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

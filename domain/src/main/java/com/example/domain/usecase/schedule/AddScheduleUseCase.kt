@@ -26,6 +26,7 @@ class AddScheduleUseCaseImpl @Inject constructor(
      * @return Result<Unit> 일정 추가 처리 결과
      */
     override suspend fun invoke(schedule: Schedule): CustomResult<Unit, Exception> {
-        return scheduleRepository.createSchedule(schedule)
+        scheduleRepository.createSchedule(schedule)
+        return CustomResult.Success( Unit )
     }
 } 

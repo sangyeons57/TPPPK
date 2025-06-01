@@ -3,10 +3,11 @@ package com.example.feature_schedule.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.Schedule
-import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
+import com.example.domain.model.base.Schedule
+import com.example.domain.usecase.project.GetUserParticipatingProjectsUseCase
 import com.example.domain.usecase.schedule.AddScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -56,8 +57,8 @@ sealed class AddScheduleEvent {
 @HiltViewModel
 class AddScheduleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase,
     private val addScheduleUseCase: AddScheduleUseCase,
+    private val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCase
 ) : ViewModel() {
 
     private val year: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR)
@@ -81,35 +82,46 @@ class AddScheduleViewModel @Inject constructor(
         loadAvailableProjects()
     }
 
+    /**
+     * 일정 생성이 가능한 프로젝트 목록을 로드합니다.
+     * 기본적으로 개인 일정 옵션을 항상 포함하며, 그 외 사용자가 참여 중인 프로젝트를 불러옵니다.
+     */
     private fun loadAvailableProjects() {
         viewModelScope.launch {
             // 개인 일정 옵션 기본 추가
             val personalScheduleOption = ProjectSelectionItem(id = PERSONAL_SCHEDULE_PROJECT_ID, name = "개인 일정")
-            _uiState.update { it.copy(isLoading = true, availableProjects = listOf(personalScheduleOption), selectedProject = null) } // selectedProject를 null로 초기화 (개인 일정이 기본값)
+            _uiState.update { it.copy(isLoading = true, availableProjects = listOf(personalScheduleOption), selectedProject = personalScheduleOption) }
 
-            val result = getSchedulableProjectsUseCase()
+            getUserParticipatingProjectsUseCase().collect { result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        val fetchedProjects = result.data.map { project ->
+                            ProjectSelectionItem(
+                                id = project.id,
+                                name = project.name
+                            )
+                        }
 
-            if (result.isSuccess) {
-                val fetchedProjects = result.getOrThrow().map { project ->
-                    ProjectSelectionItem(
-                        id = project.id ?: "",
-                        name = project.name
-                    )
-                }
-
-                // 개인 일정 옵션과 불러온 프로젝트 목록 합치기
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        availableProjects = listOf(personalScheduleOption) + fetchedProjects
-                    )
-                }
-            } else {
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false, 
-                        errorMessage = "프로젝트 목록 로드 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"
-                    ) 
+                        // 개인 일정 옵션과 불러온 프로젝트 목록 합치기
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                availableProjects = listOf(personalScheduleOption) + fetchedProjects
+                            )
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = "프로젝트 목록을 불러오는데 실패했습니다: ${result.error.message ?: "알 수 없는 오류"}"
+                            ) 
+                        }
+                        _eventFlow.emit(AddScheduleEvent.ShowSnackbar("프로젝트 목록을 불러오는데 실패했습니다."))
+                    }
+                    else -> {
+                        // 로딩 상태 등 무시
+                    }
                 }
             }
         }
@@ -226,27 +238,32 @@ class AddScheduleViewModel @Inject constructor(
             val schedule = Schedule(
                 id = UUID.randomUUID().toString(),
                 creatorId = userId,
-                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID },
+                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID }!!,
                 title = title,
-                content = content.takeIf { it.isNotEmpty() }, // 내용 없으면 null
-                startTime = instantStartTime!!,
-                endTime = instantEndTime!!,
+                content = content.takeIf { it.isNotEmpty() } ?: "", // 내용 없으면 null
+                startTime = instantStartTime,
+                endTime = instantEndTime,
                 createdAt = DateTimeUtil.nowInstant()
             )
             
             // Use UseCase to add the schedule
-            val result = addScheduleUseCase(schedule)
-            
-            if (result.isSuccess) {
-                _eventFlow.emit(AddScheduleEvent.ShowSnackbar("일정이 추가되었습니다."))
-                _uiState.update { it.copy(isLoading = false) }
-                _eventFlow.emit(AddScheduleEvent.SaveSuccessAndRequestBackNavigation)
-            } else {
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false, 
-                        errorMessage = "일정 저장 실패: ${result.exceptionOrNull()?.message ?: "알 수 없는 오류"}"
-                    )
+            val result = addScheduleUseCase(schedule);
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(AddScheduleEvent.ShowSnackbar("일정이 추가되었습니다."))
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(AddScheduleEvent.SaveSuccessAndRequestBackNavigation)
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "일정 저장 실패: ${result.error.message ?: "알 수 없는 오류"}"
+                        )
+                    }
+                }
+                else -> {
+                    // 로딩 상태 등 무시
                 }
             }
         }

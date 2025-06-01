@@ -1,5 +1,6 @@
 package com.example.feature_chat.ui.components
 
+/** 다른 문제 전부 해결하고나면 VIewmodel구현 왜냐하면 chat은 다음주에 할일 이기때문
 import android.text.format.DateUtils
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -18,7 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.domain.model.ChatMessage
+import com.example.domain.model.base.Message
 
 /**
  * 채팅 메시지 아이템 컴포저블
@@ -33,7 +34,7 @@ import com.example.domain.model.ChatMessage
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageItem(
-    message: ChatMessage,
+    message: Message,
     isCurrentUser: Boolean,
     currentUserId: String,
     onReactionClick: (String) -> Unit = {},
@@ -64,7 +65,7 @@ fun MessageItem(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Text(
-                text = message.text,
+                text = message.content,
                 color = if (isCurrentUser) 
                     MaterialTheme.colorScheme.onPrimary 
                 else 
@@ -80,7 +81,7 @@ fun MessageItem(
             Text(
                 text = DateUtils.formatDateTime(
                     LocalContext.current,
-                    message.timestamp.epochSecond * 1000,
+                    message.updatedAt!!.epochSecond * 1000,
                     DateUtils.FORMAT_SHOW_TIME
                 ),
                 style = MaterialTheme.typography.bodySmall,
@@ -131,4 +132,5 @@ fun MessageItem(
             }
         }
     }
-} 
+}
+        */

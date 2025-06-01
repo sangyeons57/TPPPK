@@ -16,11 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.Channel
-import com.example.core_common.constants.FirestoreConstants
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.channel.ProjectSpecificData
-import com.example.domain.model.ChannelType
+import com.example.domain.model.base.ProjectChannel
+import com.example.domain.model.enum.ProjectChannelType
 import java.time.Instant
 
 // 카테고리 및 채널 정보를 담는 데이터 클래스 (호출하는 쪽에서 사용)
@@ -28,7 +25,7 @@ import java.time.Instant
 data class ExpandableCategoryData(
     val id: String,
     val name: String,
-    val channels: List<Channel> = emptyList(), // Changed from ChannelInfo to domain.model.Channel
+    val channels: List<ProjectChannel> = emptyList(), // Changed from ChannelInfo to domain.model.Channel
     val isExpanded: Boolean = false // 확장 상태
 )
 
@@ -51,14 +48,14 @@ data class ExpandableCategoryData(
 fun ExpandableCategoryItem(
     category: ExpandableCategoryData,
     onCategoryClick: () -> Unit,
-    onChannelClick: (Channel) -> Unit,
+    onChannelClick: (ProjectChannel) -> Unit,
     modifier: Modifier = Modifier,
     showActions: Boolean = false,
     onCategoryEditClick: (() -> Unit)? = null,
     onCategoryDeleteClick: (() -> Unit)? = null,
     onAddChannelClick: (() -> Unit)? = null,
-    onChannelEditClick: ((Channel) -> Unit)? = null,
-    onChannelDeleteClick: ((Channel) -> Unit)? = null
+    onChannelEditClick: ((ProjectChannel) -> Unit)? = null,
+    onChannelDeleteClick: ((ProjectChannel) -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         // 카테고리 헤더 (클릭 시 확장/축소)
@@ -144,7 +141,7 @@ fun ExpandableCategoryItem(
 private fun ExpandableCategoryItemCollapsedPreview() {
     val category = ExpandableCategoryData(
         id = "c1", name = "일반", channels = listOf(
-            Channel(id = "ch1", name = "잡담", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT))
+            ProjectChannel(createdAt = Instant.now(), updatedAt = Instant.now())
         ), isExpanded = false
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -159,9 +156,9 @@ private fun ExpandableCategoryItemCollapsedPreview() {
 private fun ExpandableCategoryItemExpandedPreview() {
     val category = ExpandableCategoryData(
         id = "c2", name = "개발", channels = listOf(
-            Channel(id = "ch2", name = "프론트엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT)),
-            Channel(id = "ch3", name = "백엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT)),
-            Channel(id = "ch4", name = "음성 회의", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.VOICE))
+            ProjectChannel(),
+            ProjectChannel(),
+            ProjectChannel()
         ), isExpanded = true // 확장된 상태
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -176,8 +173,8 @@ private fun ExpandableCategoryItemExpandedPreview() {
 private fun ExpandableCategoryItemExpandedActionsPreview() {
     val category = ExpandableCategoryData(
         id = "c2", name = "개발", channels = listOf(
-            Channel(id = "ch2", name = "프론트엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT)),
-            Channel(id = "ch3", name = "백엔드", type = ChannelType.PROJECT, createdAt = Instant.now(), updatedAt = Instant.now(), projectSpecificData = ProjectSpecificData(projectId = "p1", channelMode = ChannelMode.TEXT))
+            ProjectChannel(),
+            ProjectChannel()
         ), isExpanded = true // 확장된 상태
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {

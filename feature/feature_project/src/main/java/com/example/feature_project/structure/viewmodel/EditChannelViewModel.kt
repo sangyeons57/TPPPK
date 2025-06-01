@@ -10,7 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.domain.model.ChannelMode
+import com.example.domain.model.enum.ProjectChannelType
 
 // ChannelType enum은 CreateChannelViewModel과 공유하거나 별도 파일로 분리 가능 -> domain/model/ChannelType 으로 이동했으므로 제거
 
@@ -19,8 +19,8 @@ data class EditChannelUiState(
     val channelId: String = "",
     val currentChannelName: String = "",
     val originalChannelName: String = "", // 변경 여부 확인용
-    val currentChannelMode: ChannelMode = ChannelMode.TEXT,
-    val originalChannelMode: ChannelMode = ChannelMode.TEXT,
+    val currentChannelMode: ProjectChannelType = ProjectChannelType.MESSAGES,
+    val originalChannelMode: ProjectChannelType = ProjectChannelType.MESSAGES,
     val isLoading: Boolean = false,
     val error: String? = null,
     val updateSuccess: Boolean = false, // 업데이트 성공 시 네비게이션 트리거
@@ -67,7 +67,7 @@ class EditChannelViewModel @Inject constructor(
             delay(500)
             val success = true
             val currentName = "기존 채널 이름 $channelId" // 임시
-            val currentType = if (channelId.hashCode() % 2 == 0) ChannelMode.TEXT else ChannelMode.VOICE // Changed to String constants
+            val currentType = if (channelId.hashCode() % 2 == 0) ProjectChannelType.MESSAGES else ProjectChannelType.MESSAGES // Changed to String constants
             // val result = repository.getChannelDetails(channelId)
             // -------------------------------------------------------------
             if (success /*result.isSuccess*/) {
@@ -107,7 +107,7 @@ class EditChannelViewModel @Inject constructor(
     /**
      * 채널 유형 선택 시 호출
      */
-    fun onChannelTypeSelected(newType: ChannelMode) {
+    fun onChannelTypeSelected(newType: ProjectChannelType) {
         _uiState.update { it.copy(currentChannelMode = newType) }
     }
 
