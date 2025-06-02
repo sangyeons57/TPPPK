@@ -28,11 +28,18 @@ class RoleRemoteDataSourceImpl @Inject constructor(
     companion object {
         private const val PROJECTS_COLLECTION = "projects"
         private const val ROLES_COLLECTION = "roles"
+        private const val PERMISSIONS_SUB_COLLECTION = "permissions" // New for role-specific permissions
     }
 
     private fun getRolesCollection(projectId: String) =
         firestore.collection(PROJECTS_COLLECTION).document(projectId)
             .collection(ROLES_COLLECTION)
+
+    // New helper for role's permissions subcollection
+    private fun getRolePermissionsSubCollectionRef(projectId: String, roleId: String) =
+        firestore.collection(PROJECTS_COLLECTION).document(projectId)
+            .collection(ROLES_COLLECTION).document(roleId)
+            .collection(PERMISSIONS_SUB_COLLECTION)
 
     override fun observeRoles(projectId: String): Flow<CustomResult<List<RoleDTO>, Exception>> {
         return getRolesCollection(projectId).snapshots()
@@ -82,6 +89,39 @@ class RoleRemoteDataSourceImpl @Inject constructor(
             // UseCase나 Repository 계층에서 처리하는 것이 좋습니다.
             getRolesCollection(projectId).document(roleId)
                 .delete().await()
+            Unit
+        }
+    }
+
+    override suspend fun getRolePermissionNames(projectId: String, roleId: String): CustomResult<List<String>, Exception> = withContext(Dispatchers.IO) {
+        resultTry {
+            val snapshot = getRolePermissionsSubCollectionRef(projectId, roleId)
+                .get()
+                .await()
+            // Assuming the document ID itself is the permission name string
+            snapshot.documents.map { it.id }
+        }
+    }
+
+    override suspend fun setRolePermissions(projectId: String, roleId: String, permissionNames: List<String>): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        resultTry {
+            val batch = firestore.batch()
+            val permissionsSubCollectionRef = getRolePermissionsSubCollectionRef(projectId, roleId)
+
+            // 1. Delete all existing permissions in the subcollection for this role
+            val existingPermissionsSnapshot = permissionsSubCollectionRef.get().await()
+            for (document in existingPermissionsSnapshot.documents) {
+                batch.delete(document.reference)
+            }
+
+            // 2. Add new permissions
+            for (permissionName in permissionNames) {
+                // Using permissionName as document ID. Document can be empty or have a simple field.
+                val newPermissionDocRef = permissionsSubCollectionRef.document(permissionName)
+                batch.set(newPermissionDocRef, mapOf("granted" to true)) // Example: storing a simple field
+            }
+
+            batch.commit().await()
             Unit
         }
     }

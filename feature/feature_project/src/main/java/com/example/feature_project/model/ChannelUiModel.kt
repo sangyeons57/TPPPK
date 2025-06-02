@@ -7,7 +7,7 @@ package com.example.feature_project.model
 data class ChannelUiModel(
     val id: String,
     val name: String,
-    val categoryId: String?, // Null if it's a direct channel
+    val categoryId: String, // Null if it's a direct channel
     val isDirect: Boolean, // True if it's a direct channel (not under a category)
     val channelType: String // e.g., "MESSAGES", "TASKS". Domain model uses ProjectChannelType enum.
                                   // Consider mapping to a UI-specific enum or String for simplicity here.

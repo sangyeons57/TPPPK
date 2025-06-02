@@ -34,9 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.domain.model.ChannelMode
-import com.example.domain.model.ChannelType
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.enum.ProjectChannelType
 
 // 누락된 모델 import 추가
 import com.example.feature_main.ui.project.ProjectStructureUiState
@@ -209,14 +208,12 @@ fun ChannelItem(
     ) {
         Icon(
             imageVector = when(channel.mode) {
-                ChannelMode.TEXT -> Icons.Default.Tag // Discord의 # 아이콘과 유사
-                ChannelMode.VOICE -> Icons.Default.Mic
-                ChannelMode.UNKNOWN -> Icons.Default.Tag // 기본값으로 Tag 아이콘
+                ProjectChannelType.MESSAGES ->  Icons.Default.Tag // Discord의 # 아이콘과 유사
+                else -> Icons.Default.Tag // 기본값으로 Tag 아이콘
             },
             contentDescription = when(channel.mode) {
-                ChannelMode.TEXT -> "텍스트 채널"
-                ChannelMode.VOICE -> "음성 채널"
-                ChannelMode.UNKNOWN -> "알 수 없는 채널"
+                ProjectChannelType.MESSAGES -> "텍스트 채널"
+                else -> "알 수 없는 채널"
             },
             modifier = Modifier.size(18.dp), // 아이콘 크기 약간 키움
             tint = iconColor
@@ -244,25 +241,12 @@ fun ChannelItem(
 fun ChannelItemPreview_TextSelected() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ChannelItem(
-            channel = ChannelUiModel(id = "ch1", name = "일반 대화", mode = ChannelMode.TEXT, isSelected = true),
+            channel = ChannelUiModel(id = "ch1", name = "일반 대화", mode = ProjectChannelType.MESSAGES, isSelected = true),
             onClick = {}
         )
     }
 }
 
-/**
- * ChannelItem 미리보기: 음성 채널, 선택 안됨
- */
-@Preview(showBackground = true, name = "ChannelItem - Voice Unselected")
-@Composable
-fun ChannelItemPreview_VoiceUnselected() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        ChannelItem(
-            channel = ChannelUiModel(id = "ch2", name = "팀 보이스", mode = ChannelMode.VOICE, isSelected = false),
-            onClick = {}
-        )
-    }
-}
 
 /**
  * CategoryHeader 미리보기: 펼쳐짐
@@ -293,8 +277,8 @@ fun CategoryHeaderPreview_Collapsed() {
 @Composable
 fun CategoryItemPreview_Expanded() {
     val sampleChannels = listOf(
-        ChannelUiModel(id = "ch3", name = "프론트엔드 논의", mode = ChannelMode.TEXT, isSelected = false),
-        ChannelUiModel(id = "ch4", name = "백엔드 작업", mode = ChannelMode.TEXT, isSelected = true)
+        ChannelUiModel(id = "ch3", name = "프론트엔드 논의", mode = ProjectChannelType.MESSAGES, isSelected = false),
+        ChannelUiModel(id = "ch4", name = "백엔드 작업", mode = ProjectChannelType.MESSAGES, isSelected = true)
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CategoryItem(
@@ -327,23 +311,23 @@ fun CategoryItemPreview_Collapsed() {
 @Composable
 fun ProjectChannelListPreview_Default() {
     val generalChannels = listOf(
-        ChannelUiModel(id = "gen1", name = "공지사항", mode = ChannelMode.TEXT, isSelected = false),
-        ChannelUiModel(id = "gen2", name = "자유 게시판", mode = ChannelMode.TEXT, isSelected = false)
+        ChannelUiModel(id = "gen1", name = "공지사항", mode = ProjectChannelType.MESSAGES, isSelected = false),
+        ChannelUiModel(id = "gen2", name = "자유 게시판", mode = ProjectChannelType.MESSAGES, isSelected = false)
     )
     val categories = listOf(
         CategoryUiModel(
             id = "cat_dev", name = "개발팀", isExpanded = true,
             channels = listOf(
-                ChannelUiModel(id = "dev_ch1", name = "프론트엔드", mode = ChannelMode.TEXT, isSelected = true),
-                ChannelUiModel(id = "dev_ch2", name = "백엔드", mode = ChannelMode.TEXT, isSelected = false),
-                ChannelUiModel(id = "dev_voice", name = "개발팀 음성", mode = ChannelMode.VOICE, isSelected = false)
+                ChannelUiModel(id = "dev_ch1", name = "프론트엔드", mode = ProjectChannelType.MESSAGES, isSelected = true),
+                ChannelUiModel(id = "dev_ch2", name = "백엔드", mode = ProjectChannelType.MESSAGES, isSelected = false),
+                ChannelUiModel(id = "dev_voice", name = "개발팀 음성", mode = ProjectChannelType.MESSAGES, isSelected = false)
             )
         ),
         CategoryUiModel(id = "cat_design", name = "디자인팀", isExpanded = false, channels = emptyList()),
         CategoryUiModel(
             id = "cat_plan", name = "기획팀", isExpanded = true,
             channels = listOf(
-                ChannelUiModel(id = "plan_ch1", name = "아이디어 공유", mode = ChannelMode.TEXT, isSelected = false)
+                ChannelUiModel(id = "plan_ch1", name = "아이디어 공유", mode = ProjectChannelType.MESSAGES, isSelected = false)
             )
         )
     )

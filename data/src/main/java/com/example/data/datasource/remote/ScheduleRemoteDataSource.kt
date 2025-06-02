@@ -64,5 +64,13 @@ interface ScheduleRemoteDataSource {
      */
     suspend fun getSchedulesOnDate(userId: String, date: LocalDate): Flow<CustomResult<List<ScheduleDTO>, Exception>>
 
+    /**
+     * Firestore에서 지정된 사용자의 특정 연월에 일정이 있는 날짜들의 요약 정보를 가져옵니다.
+     *
+     * @param userId 사용자 ID
+     * @param yearMonth 요약 정보를 가져올 연월
+     * @return 해당 월에 일정이 있는 날짜들의 Set. CustomResult로 성공 또는 실패를 나타냅니다.
+     */
+    suspend fun getScheduleSummaryForMonth(userId: String, yearMonth: YearMonth): CustomResult<Set<LocalDate>, Exception>
 }
 

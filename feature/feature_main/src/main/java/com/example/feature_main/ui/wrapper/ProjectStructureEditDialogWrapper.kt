@@ -5,9 +5,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.core_ui.dialogs.ui.ProjectStructureEditDialog
-import com.example.core_ui.dialogs.viewmodel.ProjectStructureEditDialogViewModel
-import com.example.core_ui.dialogs.viewmodel.ProjectStructureEditEvent
+import com.example.feature_main.ui.dialog.ProjectStructureEditDialog
+import com.example.feature_main.viewmodel.ProjectStructureEditDialogViewModel
+import com.example.feature_main.viewmodel.ProjectStructureEditEvent
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -32,22 +32,16 @@ fun ProjectStructureEditDialogWrapper(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProjectStructureEditEvent.SavedChanges -> {
+                is ProjectStructureEditEvent.ShowSuccessSnackbar -> {
                     onStructureUpdated()
-                    onShowSnackbar("프로젝트 구조가 업데이트되었습니다.")
+                    onShowSnackbar(event.message)
+                    onDismiss() // Assuming success implies dismiss
+                }
+                is ProjectStructureEditEvent.DismissDialog -> {
                     onDismiss()
                 }
-                is ProjectStructureEditEvent.Dismissed -> {
-                    onDismiss()
-                }
-                is ProjectStructureEditEvent.Error -> {
+                is ProjectStructureEditEvent.ShowErrorSnackbar -> {
                     onShowSnackbar(event.message)
-                }
-                is ProjectStructureEditEvent.ShowSnackbar -> {
-                    onShowSnackbar(event.message)
-                }
-                else -> {
-                    // 다른 이벤트는 다이얼로그 내부에서 처리됨
                 }
             }
         }
@@ -62,8 +56,8 @@ fun ProjectStructureEditDialogWrapper(
     
     // 수정된 다이얼로그 호출
     ProjectStructureEditDialog(
-        onDismiss = onDismiss,
-        viewModel = viewModel,
-        projectId = projectId
+        uiState = uiState, // Pass the ViewModel's entire UiState
+        onDismissRequest = onDismiss,
+        onSaveClick = { viewModel.saveProjectStructure(uiState.projectStructure) } // Pass the inner projectStructure
     )
 } 

@@ -1,9 +1,10 @@
 package com.example.domain.usecase.project.role
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.ui.project.RoleSortOption
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.domain.repository.RoleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -27,7 +28,7 @@ interface GetProjectRolesUseCase {
     ): Flow<List<Role>>
 }
 class GetProjectRolesUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: ProjectRoleRepository
+    private val roleRepository: RoleRepository
 ) : GetProjectRolesUseCase {
 
     /**
@@ -43,7 +44,18 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
         filterIsDefault: Boolean?,
         sortBy: RoleSortOption?
     ): Flow<List<Role>> {
-        return projectRoleRepository.getRolesStream(projectId).map { roles ->
+        return roleRepository.getProjectRolesStream(projectId).map { customResult ->
+            val roles = when (customResult) {
+                is CustomResult.Success -> customResult.data
+                is CustomResult.Failure -> {
+                    // Optionally log customResult.error here
+                    emptyList<Role>() // Return empty list on failure
+                }
+                else -> {
+                    Log.e("GetProjectRolesUseCaseImpl", "Unexpected CustomResult type: $customResult")
+                    emptyList<Role>() // Return empty list on failure
+                }
+            }
             var result = roles.toList()
 
             // Apply filter if specified

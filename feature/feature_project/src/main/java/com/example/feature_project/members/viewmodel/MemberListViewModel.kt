@@ -10,7 +10,7 @@ import com.example.domain.model.base.Member
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import com.example.domain.usecase.project.role.GetProjectRolesUseCase
-import com.example.feature_project.members.model.MemberUiModel // Added import
+import com.example.domain.model.ui.data.MemberUiModel // Added import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

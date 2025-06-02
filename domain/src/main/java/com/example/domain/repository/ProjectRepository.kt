@@ -16,7 +16,7 @@ interface ProjectRepository {
         ownerId: String,
     ): CustomResult<String, Exception>
 
-    suspend fun getProjectDetails(projectId: String): CustomResult<Project, Exception>
+    fun getProjectDetailsStream(projectId: String): Flow<CustomResult<Project, Exception>>
 
     suspend fun updateProjectInfo(
         projectId: String,
@@ -31,4 +31,6 @@ interface ProjectRepository {
 
     suspend fun deleteProject(projectId: String, currentUserId: String): CustomResult<Unit, Exception>
     suspend fun getProjectStructureStream(projectId: String): Flow<CustomResult<List<Category>, Exception>>
+
+    fun getProjectListStream(): Flow<CustomResult<List<Project>, Exception>>
 }

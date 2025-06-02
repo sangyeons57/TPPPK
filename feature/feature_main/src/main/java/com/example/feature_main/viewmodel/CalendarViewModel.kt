@@ -3,6 +3,7 @@ package com.example.feature_main.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Schedule
@@ -189,11 +190,11 @@ class CalendarViewModel @Inject constructor(
             _uiState.update { it.copy(isSummaryLoading = true) } // Optional: Separate loading state for summary
             try {
                 val result = getScheduleSummaryForMonthUseCase(yearMonth)
-                result.onSuccess { dates ->
+                result.onSuccess { datesSet -> // datesSet is now directly Set<LocalDate>
                     _uiState.update { state ->
                         state.copy(
                             isSummaryLoading = false,
-                            datesWithSchedules = dates
+                            datesWithSchedules = datesSet
                         )
                     }
                 }.onFailure { exception ->

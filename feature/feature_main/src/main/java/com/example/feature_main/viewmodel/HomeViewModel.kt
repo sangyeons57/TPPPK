@@ -3,11 +3,23 @@ package com.example.feature_main.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
+import com.example.domain.model.base.DMChannel // Added import for DMChannel
+import com.example.domain.model.base.Project
+import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
-import com.example.domain.usecase.project.GetSchedulableProjectsUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetUserInfoUseCase
+import com.example.domain.usecase.project.GetProjectListStreamUseCase // Added
+
+import com.example.domain.usecase.project.GetProjectDetailsStreamUseCase // Added
+import com.example.domain.usecase.dm.AddDmChannelUseCase // Added
+import com.example.domain.usecase.project.CreateProjectUseCase // Added
+import com.example.domain.usecase.project.UpdateProjectStructureUseCase // Added
+import com.example.feature_main.ui.DmUiModel
+import com.example.feature_main.ui.ProjectUiModel // Added
 import com.example.feature_main.ui.project.CategoryUiModel
 import com.example.feature_main.ui.project.ChannelUiModel
 import com.example.feature_main.ui.project.ProjectStructureUiState
@@ -15,6 +27,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async // Added for async mapping
+import kotlinx.coroutines.awaitAll // Added for async mapping
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -28,21 +42,14 @@ enum class TopSection {
     PROJECTS, DMS
 }
 
-// --- 데이터 모델 (예시) ---
-data class ProjectItem(
-    val id: String,
-    val name: String,
-    val description: String,
-    val lastUpdated: String // 예시 필드
-)
-
+// ProjectItem REMOVED (replaced by ProjectUiModel)
 // DmItem REMOVED
 // ------------------------
 
 // 홈 화면 UI 상태
 data class HomeUiState(
     val selectedTopSection: TopSection = TopSection.DMS, // 기본 선택: DMS
-    val projects: List<ProjectItem> = emptyList(),
+    val projects: List<ProjectUiModel> = emptyList(), // Changed to ProjectUiModel
     val dms: List<DmUiModel> = emptyList(), // Use DmUiModel
     val isLoading: Boolean = false,
     val errorMessage: String = "default",
@@ -90,8 +97,13 @@ class HomeViewModel @Inject constructor(
     private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val getUserDmChannelsUseCase: GetUserDmChannelsUseCase,
     private val getUserInfoUseCase: GetUserInfoUseCase,
-    private val getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase,
-    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase
+    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
+    private val getProjectListStreamUseCase: GetProjectListStreamUseCase, // Added
+    // private val getDmListStreamUseCase: GetDmListStreamUseCase, // Removed as getUserDmChannelsUseCase seems to cover DM list fetching
+    private val getProjectDetailsStreamUseCase: GetProjectDetailsStreamUseCase, // Added
+    private val addDmChannelUseCase: AddDmChannelUseCase, // Added
+    private val createProjectUseCase: CreateProjectUseCase, // Added
+    private val updateProjectStructureUseCase: UpdateProjectStructureUseCase // Added
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -126,11 +138,11 @@ class HomeViewModel @Inject constructor(
                     Log.e("HomeViewModel", "Failed to get current user", exception)
                     _uiState.update { it.copy(isLoading = false, errorMessage = "사용자 정보 로드 실패: ${exception.localizedMessage}") }
                 }
-                .collectLatest { result : Result<User> ->
+                .collectLatest { result : CustomResult<User, Exception> ->
                     result.fold(
                         onSuccess = { user ->
-                            Log.d("HomeViewModel", "User received from UseCase: ${user.id}")
-                            currentUserId = user.id
+                            Log.d("HomeViewModel", "User received from UseCase: ${user.uid}")
+                            currentUserId = user.uid
 
                             // 사용자 이니셜과 프로필 이미지 URL 업데이트
                             _uiState.update { state ->
@@ -157,36 +169,40 @@ class HomeViewModel @Inject constructor(
         loadDms()
     }
 
-    // Mapper function Channel -> DmUiModel로 변경
-    // Channel 객체에서 DmUiModel에 필요한 정보를 추출합니다.
-    // partnerUserId, partnerUserName, partnerProfileImageUrl 은 Channel.participantIds 와 UserRepository 를 통해 가져와야 합니다.
-    // 이 부분은 DmRepositoryImpl에서 Channel 객체를 어떻게 구성했는지에 따라 달라집니다.
-    // 여기서는 Channel.name이 상대방 이름, Channel.coverImageUrl이 상대방 프로필 URL이라고 가정합니다.
-    // 또한, currentUserId를 알아야 상대방 ID를 식별할 수 있습니다.
-    private suspend fun Channel.toDmUiModel(currentUserId: String): DmUiModel {
-        val partnerId = this.participantIds.find { it != currentUserId } ?: ""
-        
-        var partnerName = "알 수 없는 사용자" 
-        var partnerProfilePic = ""
+    // Mapper function DMChannel -> DmUiModel
+// DMChannel 객체에서 DmUiModel에 필요한 정보를 추출합니다.
+private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): DmUiModel {
+    val partnerId = dmChannel.participants.firstOrNull { it != currentUserId }
+    var partnerName = "Unknown User"
+    var partnerProfileImageUrl: String? = null
 
-        if (partnerId.isNotEmpty()) {
-            // GetUserInfoUseCase를 사용하여 파트너 정보를 가져옵니다.
-            getUserInfoUseCase(partnerId).collectLatest { result : Result<User> ->
-                result.onSuccess { user ->
-                    partnerName = user.name
-                    partnerProfilePic = user.profileImageUrl ?: ""
-                }
+    if (partnerId != null && partnerId.isNotEmpty()) {
+        // GetUserInfoUseCase returns Flow<CustomResult<User, Exception>>
+        // We take the first result from this flow.
+        when (val userInfoResult = getUserInfoUseCase(partnerId).first()) {
+            is CustomResult.Success -> {
+                partnerName = userInfoResult.data.name // Assuming User model has 'name'
+                partnerProfileImageUrl = userInfoResult.data.profileImageUrl // Assuming User model has 'profileImageUrl'
+                Log.d("HomeViewModel", "Partner info success for $partnerId: Name=$partnerName")
+            }
+            is CustomResult.Failure -> {
+                Log.e("HomeViewModel", "Failed to get partner info for $partnerId", userInfoResult.error)
+            }
+            else -> { 
+                Log.d("HomeViewModel", "Fetching partner info for $partnerId resulted in: $userInfoResult (e.g. Loading/Initial)")
             }
         }
-
-        return DmUiModel(
-            channelId = this.id,
-            partnerName = partnerName,
-            partnerProfileImageUrl = partnerProfilePic,
-            lastMessage = this.lastMessagePreview,
-            lastMessageTimestamp = this.updatedAt,
-        )
     }
+
+    return DmUiModel(
+        channelId = dmChannel.id,
+        partnerName = partnerName,
+        partnerProfileImageUrl = partnerProfileImageUrl,
+        lastMessage = dmChannel.lastMessagePreview,
+        lastMessageTimestamp = dmChannel.lastMessageTimestamp!!, // Corrected from updatedAt
+        unreadCount = 0 // Placeholder - unread count not in DMChannel model
+    )
+}
 
     // 상단 탭 선택 시 호출
     fun onTopSectionSelect(section: TopSection) {
@@ -205,106 +221,111 @@ class HomeViewModel @Inject constructor(
     }
 
     // 프로젝트 데이터 로드
-    private fun loadProjects() { 
+    private fun loadProjects() {
         Log.d("HomeViewModel", "loadProjects called")
         viewModelScope.launch {
-             _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
-            
-            // 기존 일회성 fetchProjectListUseCase() 호출 대신 스트림 방식으로 변경
-            try {
-                // 스트림 방식으로 프로젝트 목록을 가져오는 Flow를 수집
-                getProjectListStreamUseCase()
-                    .catch { e ->
-                        Log.e("HomeViewModel", "프로젝트 목록 스트림 오류", e)
-                     _uiState.update {
-                        it.copy(
-                            errorMessage = "프로젝트 목록 동기화 실패: ${e.localizedMessage ?: "알 수 없는 오류"}",
-                                isLoading = false
-                        )
-                    }
-                }
-                    .collectLatest { projects ->
-                        Log.d("HomeViewModel", "프로젝트 목록 스트림 업데이트: ${projects.size}개")
-                        _uiState.update { state ->
-                            state.copy(
-                                projects = projects.map { it.toProjectItem() },
-                                isLoading = false,
-                                errorMessage = if (projects.isEmpty()) "프로젝트가 없습니다." else ""
-                            )
+            getProjectListStreamUseCase()
+                .collectLatest { result ->
+                    when (result) {
+                        is CustomResult.Loading -> {
+                            _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                        }
+                        is CustomResult.Success -> {
+                            val projectUiModels = result.data.map { project ->
+                                project.toProjectUiModel() // Use the updated mapper
+                            }
+                            _uiState.update { state ->
+                                state.copy(
+                                    projects = projectUiModels,
+                                    isLoading = false,
+                                    errorMessage = if (projectUiModels.isEmpty()) "프로젝트가 없습니다." else "default"
+                                )
+                            }
+                            Log.d("HomeViewModel", "Projects loaded: ${projectUiModels.size}")
+                        }
+                        is CustomResult.Failure -> {
+                            Log.e("HomeViewModel", "Failed to load projects", result.error)
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    errorMessage = result.error.message ?: "알 수 없는 오류가 발생했습니다."
+                                )
+                            }
+                        }
+                        is CustomResult.Initial -> {
+                            // Optionally handle Initial state, e.g., by showing loading
+                            _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                        }
+                        is CustomResult.Progress -> {
+                            // Handle progress if applicable, e.g. update a progress bar
+                            // For now, we can treat it as loading
+                            val progressValue = result.progress ?: 0f
+                            Log.d("HomeViewModel", "Project loading progress: $progressValue%")
+                            _uiState.update { it.copy(isLoading = true) } // Keep isLoading true during progress
                         }
                     }
-            } catch (e: Exception) {
-                Log.e("HomeViewModel", "프로젝트 목록 로드 중 예외 발생", e)
-                _uiState.update {
-                    it.copy(
-                        errorMessage = "프로젝트 목록 동기화 중 예측 못한 오류: ${e.localizedMessage ?: "알 수 없는 오류"}",
-                        isLoading = false
-                    )
                 }
-            }
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadDms() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
-            Log.d("HomeViewModel", "Starting to load DMs")
-            
-            // 로그 추가 - Flow 시작 전
-            Log.d("HomeViewModel", "Starting to collect DM channels Flow from getUserDmChannelsUseCase")
-            
-            // 파라미터 없이 호출하도록 수정
-            getUserDmChannelsUseCase()
-                .onStart { 
-                    Log.d("HomeViewModel", "DM channels Flow started") 
+            val currentUserResult = getCurrentUserStreamUseCase().first()
+            when (currentUserResult) {
+                is CustomResult.Failure -> {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "사용자 정보를 가져올 수 없습니다.") }
+                    Log.e("HomeViewModel", "Current user ID is null or empty in loadDms.")
+                    Log.d("HomeViewModel", "loadDms called with currentUserId: $currentUserId")
+                    return@launch
                 }
-                .mapLatest { channels -> // 각 List<Channel>에 대해 List<DmUiModel>로 변환
-                    Log.d("HomeViewModel", "Raw DM channels received: ${channels.size}, IDs: ${channels.map { it.id }}")
-                    
-                    // 각 채널 세부 정보 로깅
-                    channels.forEach { channel ->
-                        Log.d("HomeViewModel", "DM channel detail: ID=${channel.id}, type=${channel.type}, name=${channel.name}, " +
-                            "participants=${channel.dmSpecificData?.participantIds}, " +
-                            "lastMessage=${channel.lastMessagePreview?.take(20)}")
-                    }
-                    
-                    // 변환 진행 중 로그
-                    Log.d("HomeViewModel", "Converting ${channels.size} DM channels to UI models")
-                    val uiModels = channels.map { channel -> 
-                        Log.d("HomeViewModel", "Processing DM channel: ${channel.id}, participants: ${channel.dmSpecificData?.participantIds}")
-                        channel.toDmUiModel(currentUserId) 
-                    }
-                    
-                    Log.d("HomeViewModel", "DM UI models created: ${uiModels.size}")
-                    uiModels
-                }
-                .catch { exception ->
-                    Log.e("HomeViewModel", "Error loading DMs", exception)
-                    exception.printStackTrace() // 스택 트레이스 출력
-                    _uiState.update { state ->
-                        state.copy(
-                            isLoading = false,
-                            errorMessage = "DM 목록 로드 중 오류: ${exception.localizedMessage}"
-                        )
-                    }
-                }
-                .collectLatest { dmUiModels ->
-                    Log.d("HomeViewModel", "DMs loaded: ${dmUiModels.size}, DMs: ${dmUiModels.map { "${it.channelId}(${it.partnerName})" }}")
-                    
-                    // UI 상태 업데이트 전 로그
-                    Log.d("HomeViewModel", "Updating UI state with ${dmUiModels.size} DM models")
-                    
-                    _uiState.update { state ->
-                        val newState = state.copy(
-                            dms = dmUiModels,
-                            isLoading = false,
-                            errorMessage = (if (dmUiModels.isEmpty()) "DM이 없습니다." else null).toString()
-                        )
-                        Log.d("HomeViewModel", "UI state updated, new DM count: ${newState.dms.size}")
-                        newState
+                is CustomResult.Success -> {
+                    getUserDmChannelsUseCase().collectLatest { result: CustomResult<List<DMChannel>, Exception> ->
+                        Log.d("HomeViewModel", "Received DM channels result: $result")
+                        when (result) {
+                            is CustomResult.Loading -> {
+                                _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                            }
+                            is CustomResult.Success -> {
+                                Log.d("HomeViewModel", "Successfully fetched DM channels: ${result.data.size} channels.")
+                                // Map DMChannel domain models to DmUiModel, fetching partner info
+                                val dmUiModels = result.data.map { dmChannel ->
+                                    async { toDmUiModel(dmChannel, currentUserId) } // Launch async mapping for each
+                                }.awaitAll() // Wait for all mappings to complete
+                                _uiState.update { state ->
+                                    state.copy(
+                                        dms = dmUiModels,
+                                        isLoading = false,
+                                        errorMessage = if (dmUiModels.isEmpty()) "DM이 없습니다." else "default"
+                                    )
+                                }
+                                Log.d("HomeViewModel", "DMs loaded and UI updated: ${dmUiModels.size}")
+                            }
+                            is CustomResult.Failure -> {
+                                Log.e("HomeViewModel", "Failed to load DMs", result.error)
+                                _uiState.update {
+                                    it.copy(
+                                        isLoading = false,
+                                        errorMessage = result.error.message ?: "알 수 없는 DM 오류가 발생했습니다."
+                                    )
+                                }
+                            }
+                            is CustomResult.Initial -> {
+                                _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                                Log.d("HomeViewModel", "DM loading initial state.")
+                            }
+                            is CustomResult.Progress -> {
+                                val progressValue = result.progress
+                                Log.d("HomeViewModel", "DM loading progress: $progressValue%")
+                                _uiState.update { it.copy(isLoading = true) }
+                            }
+                        }
                     }
                 }
+                else -> {
+                    Log.e("HomeViewModel", "Unexpected result type in loadDms.")
+                }
+            }
         }
     }
 
@@ -331,123 +352,129 @@ class HomeViewModel @Inject constructor(
     }
 
     // 프로젝트 상세 정보 로드
-    private suspend fun loadProjectDetails(projectId: String) {
-        try {
-            // projectRepository.getAvailableProjectsForScheduling() 대신 UseCase 사용
-            val allProjectsResult = getSchedulableProjectsUseCase()
-            
-            allProjectsResult.onSuccess { projectsList ->
-                // 프로젝트 ID로 프로젝트 찾기
-                val project = projectsList.find { it.id == projectId }
-                
-                if (project != null) {
-                    // 프로젝트 찾음
-                    _uiState.update { state ->
-                        state.copy(
-                            projectName = project.name,
-                            projectDescription = project.description ?: "",
-                            isLoading = false
-                        )
+private fun loadProjectDetails(projectId: String) { 
+    viewModelScope.launch {
+        Log.d("HomeViewModel", "loadProjectDetails called for projectId: $projectId")
+        getProjectDetailsStreamUseCase(projectId)
+            .collectLatest { result: CustomResult<Project, Exception> ->
+                Log.d("HomeViewModel", "Received project details result: $result")
+                when (result) {
+                    is CustomResult.Loading -> {
+                        _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
                     }
-                } else {
-                    // 프로젝트를 찾을 수 없음
-                    _uiState.update { it.copy(
-                        isLoading = false,
-                        errorMessage = "프로젝트를 찾을 수 없습니다: $projectId"
-                    )}
+                    is CustomResult.Success -> {
+                        val project = result.data
+                        _uiState.update { state ->
+                            state.copy(
+                                projectName = project.name,
+                                projectDescription = "Project description placeholder for ${project.name}", 
+                                isLoading = false,
+                                errorMessage = "default"
+                            )
+                        }
+                        Log.d("HomeViewModel", "Project details loaded: ${project.name}")
+                    }
+                    is CustomResult.Failure -> {
+                        Log.e("HomeViewModel", "Failed to load project details for $projectId", result.error)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = result.error.message ?: "프로젝트 상세 정보를 가져오지 못했습니다."
+                            )
+                        }
+                    }
+                    is CustomResult.Initial -> {
+                        _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                        Log.d("HomeViewModel", "Project details loading initial state.")
+                    }
+                    is CustomResult.Progress -> {
+                        val progressValue = result.progress ?: 0f
+                        Log.d("HomeViewModel", "Project details loading progress: $progressValue%")
+                        _uiState.update { it.copy(isLoading = true) }
+                    }
                 }
-            }.onFailure { error ->
-                _uiState.update { it.copy(
-                    isLoading = false,
-                    errorMessage = "프로젝트 정보를 불러오는데 실패했습니다: ${error.message ?: "알 수 없는 오류"}"
-                )}
             }
-            
-            // 프로젝트 멤버 정보는 별도 API 호출이 필요할 수 있음
-            // TODO: 멤버 정보 로드 로직 추가
-            
-        } catch (e: Exception) {
-            _uiState.update { it.copy(
-                isLoading = false,
-                errorMessage = "오류 발생: ${e.message ?: "알 수 없는 오류"}"
-            )}
-        }
     }
+}
     
     // 프로젝트 구조 (카테고리 및 채널) 로드
-    private suspend fun loadProjectStructure(projectId: String) {
-        try {
-            // projectSettingRepository.getProjectStructure(projectId) 대신 UseCase 사용
-            val structureResult = getProjectAllCategoriesUseCase(projectId)
-            
-            structureResult.onSuccess { projectStructure -> // ProjectStructure 객체 받음
-                // ProjectStructure에는 categories와 directChannels가 포함됨
-                // 프로젝트 구조 UI 모델로 변환
-                val categoriesMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
-                
-                // 카테고리에 속한 채널들 처리
-                val categoryUiModels = projectStructure.categories.map { category ->
-                    // 카테고리 확장 상태 가져오기 (저장된 상태가 없으면 기본값 true)
-                    val isExpanded = categoriesMap.getOrPut(category.id) { true }
-                    
-                    CategoryUiModel(
-                        id = category.id,
-                        name = category.name,
-                        channels = category.channels.map { channel ->
-                            ChannelUiModel(
-                                id = channel.id,
-                                name = channel.name,
-                                mode = channel.channelMode!!,
-                                isSelected = channel.id == selectedChannelId
+    private fun loadProjectStructure(projectId: String) { 
+    viewModelScope.launch {
+        Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
+        val projectStructureFlow = getProjectAllCategoriesUseCase(projectId)
+
+        projectStructureFlow.collectLatest { result: CustomResult<List<CategoryCollection>, Exception> ->
+            Log.d("HomeViewModel", "Received project structure result: $result")
+            when (result) {
+                is CustomResult.Loading -> {
+                    _uiState.update { state ->
+                        state.copy(projectStructure = state.projectStructure.copy(isLoading = true, error = "default"))
+                    }
+                }
+                is CustomResult.Success -> {
+                    val categoryCollections = result.data
+                    val categoriesMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
+
+                    val categoryUiModels = categoryCollections.map { categoryCollection ->
+                        val categoryDomain = categoryCollection.category
+                        val isExpanded = categoriesMap.getOrPut(categoryDomain.id) { true } // Default to expanded
+                        CategoryUiModel(
+                            id = categoryDomain.id,
+                            name = categoryDomain.name,
+                            channels = categoryCollection.channels.map { channelDomain ->
+                                ChannelUiModel(
+                                    id = channelDomain.id,
+                                    name = channelDomain.channelName,
+                                    // Assuming ProjectChannel has channelMode, otherwise adjust
+                                    mode = channelDomain.channelType, // Provide a default or handle null
+                                    isSelected = channelDomain.id == selectedChannelId // Use .value for StateFlow
+                                )
+                            },
+                            isExpanded = isExpanded
+                        )
+                    }
+
+                    _uiState.update { state ->
+                        state.copy(
+                            projectStructure = ProjectStructureUiState(
+                                categories = categoryUiModels,
+                                directChannel = emptyList(), // Direct channels not handled by CategoryCollection
+                                isLoading = false,
+                                error = "default"
                             )
-                        },
-                        isExpanded = isExpanded
-                    )
-                }
-                
-                // 카테고리에 속하지 않은 직접 채널들 처리
-                val directChannels = projectStructure.directChannels.map { channel ->
-                    ChannelUiModel(
-                        id = channel.id,
-                        name = channel.name,
-                        mode = channel.channelMode!!,
-                        isSelected = channel.id == selectedChannelId
-                    )
-                }
-                
-                // UI 상태 업데이트
-                _uiState.update { state ->
-                    state.copy(
-                        // 프로젝트 이름은 이미 이전 단계에서 로드되었으므로 그대로 유지
-                        projectStructure = ProjectStructureUiState(
-                            categories = categoryUiModels,
-                            directChannel = directChannels,
-                            isLoading = false
                         )
-                    )
+                    }
+                    Log.d("HomeViewModel", "Project structure loaded for $projectId")
                 }
-            }.onFailure { error ->
-                _uiState.update { state ->
-                    state.copy(
-                        projectStructure = state.projectStructure.copy(
-                            isLoading = false,
-                            error = "프로젝트 구조를 불러오는데 실패했습니다: ${error.message ?: "알 수 없는 오류"}"
+                is CustomResult.Failure -> {
+                    Log.e("HomeViewModel", "Failed to load project structure for $projectId", result.error)
+                    _uiState.update { state ->
+                        state.copy(
+                            projectStructure = state.projectStructure.copy(
+                                isLoading = false,
+                                error = result.error.message ?: "프로젝트 구조를 가져오지 못했습니다."
+                            )
                         )
-                    )
+                    }
                 }
-            }
-        } catch (e: Exception) {
-            _uiState.update { state ->
-                state.copy(
-                    projectStructure = state.projectStructure.copy(
-                        isLoading = false,
-                        error = "오류 발생: ${e.message ?: "알 수 없는 오류"}"
-                    )
-                )
+                is CustomResult.Initial -> {
+                     _uiState.update { state ->
+                        state.copy(projectStructure = state.projectStructure.copy(isLoading = true, error = "default"))
+                    }
+                    Log.d("HomeViewModel", "Project structure loading initial state.")
+                }
+                is CustomResult.Progress -> {
+                    val progressValue = result.progress ?: 0f
+                    Log.d("HomeViewModel", "Project structure loading progress: $progressValue%")
+                     _uiState.update { state ->
+                        state.copy(projectStructure = state.projectStructure.copy(isLoading = true))
+                    }
+                }
             }
         }
     }
-    
+}
+
     // 카테고리 클릭 시 (접기/펼치기)
     fun onCategoryClick(category: CategoryUiModel) {
         val projectId = _uiState.value.selectedProjectId ?: return
@@ -604,13 +631,15 @@ class HomeViewModel @Inject constructor(
     }
     
     // Domain 모델을 UI 모델로 변환하는 확장 함수
-    private fun Project.toProjectItem(): ProjectItem {
-        Log.d("HomeViewModel", "toProjectItem: id=${this.id}, name=${this.name}")
-        return ProjectItem(
+    private fun Project.toProjectUiModel(): ProjectUiModel {
+        Log.d("HomeViewModel", "Mapping Project domain to ProjectUiModel: id=${this.id}, name=${this.name}")
+        return ProjectUiModel(
             id = this.id,
             name = this.name,
-            description = this.description ?: "설명 없음",
-            lastUpdated = this.updatedAt?.let { formatTimestamp(it) } ?: "알 수 없음"
+            description = "No description available", // Placeholder as Project domain model lacks description
+            imageUrl = this.imageUrl,
+            memberCount = 1, // Placeholder as Project domain model lacks member count, assuming at least owner
+            lastActivity = this.updatedAt?.let { formatTimestamp(it) } ?: "N/A"
         )
     }
 

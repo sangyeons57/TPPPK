@@ -36,7 +36,7 @@ import com.example.feature_project.members.viewmodel.MemberListEvent
 import com.example.feature_project.members.viewmodel.MemberListUiState
 import com.example.feature_project.members.viewmodel.MemberListViewModel
 import com.example.domain.model.base.Member // Will likely be removed if not used elsewhere after refactor
-import com.example.feature_project.members.model.MemberUiModel // Added import
+import com.example.domain.model.ui.data.MemberUiModel // Added import
 import kotlinx.coroutines.flow.collectLatest
 
 /**

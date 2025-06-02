@@ -6,13 +6,13 @@ import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 
 interface CreateRoleUseCase {
-    suspend operator fun invoke(projectId: String, roleName: String, permissions: List<Permission>, isDefault: Boolean): CustomResult<String, Exception> // Return Role ID string
+    suspend operator fun invoke(projectId: String, roleName: String, isDefault: Boolean): CustomResult<String, Exception> // Return Role ID string
 }
 
 class CreateRoleUseCaseImpl @Inject constructor(
     private val projectRoleRepository: RoleRepository
 ) : CreateRoleUseCase {
-    override suspend operator fun invoke(projectId: String, roleName: String, permissions: List<Permission>, isDefault: Boolean): CustomResult<String, Exception> {
+    override suspend operator fun invoke(projectId: String, roleName: String, isDefault: Boolean): CustomResult<String, Exception> {
         if (roleName.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("Role name cannot be blank."))
         }

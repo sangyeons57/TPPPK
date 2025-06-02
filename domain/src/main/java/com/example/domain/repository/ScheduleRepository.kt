@@ -15,7 +15,7 @@ interface ScheduleRepository {
     suspend fun getScheduleDetails(scheduleId: String): CustomResult<Schedule, Exception>
     suspend fun updateSchedule(schedule: Schedule): CustomResult<Unit, Exception>
     suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception>
-    suspend fun getScheduleSummaryForMonth(userId: String, yearMonth: YearMonth): CustomResult<Map<Int, Boolean>, Exception>
+    suspend fun getScheduleSummaryForMonth(userId: String, yearMonth: YearMonth): CustomResult<Set<LocalDate>, Exception>
 
     /**
      * 지정된 년도와 월에 해당하는 모든 스케줄을 가져옵니다.

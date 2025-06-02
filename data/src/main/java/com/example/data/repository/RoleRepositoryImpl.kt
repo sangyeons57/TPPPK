@@ -129,4 +129,29 @@ class RoleRepositoryImpl @Inject constructor(
             }
         }.first()
     }
+
+    override suspend fun getRolePermissions(projectId: String, roleId: String): CustomResult<List<com.example.domain.model.data.project.RolePermission>, Exception> {
+        return resultTry {
+            when (val result = roleRemoteDataSource.getRolePermissionNames(projectId, roleId)) { // Needs to be in RoleRemoteDataSource
+                is CustomResult.Success -> {
+                    result.data.mapNotNull { name ->
+                        try {
+                            com.example.domain.model.data.project.RolePermission.valueOf(name)
+                        } catch (e: IllegalArgumentException) {
+                            null
+                        }
+                    }
+                }
+                is CustomResult.Failure -> throw result.error // re-throw
+                else -> {
+                    throw Exception("Unkown error")
+                }
+            }
+        }
+    }
+
+    override suspend fun setRolePermissions(projectId: String, roleId: String, permissions: List<com.example.domain.model.data.project.RolePermission>): CustomResult<Unit, Exception> = resultTry {
+        val permissionNames = permissions.map { it.name }
+        roleRemoteDataSource.setRolePermissions(projectId, roleId, permissionNames) // Assumes this method in RoleRemoteDataSource
+    }
 }

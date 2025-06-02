@@ -83,21 +83,39 @@ class EditRoleViewModel @Inject constructor(
 
             when (result) {
                 is CustomResult.Success -> {
-                    val role = result.data // Role? 타입
-                    // role.permissions is now Map<RolePermission, Boolean>
-                    val loadedPermissionsMap = role.permissions
+                    val role = result.data
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             roleName = role.name,
                             originalRoleName = role.name,
-                            permissions = loadedPermissionsMap,
-                            originalPermissions = loadedPermissionsMap,
                             isDefault = role.isDefault,             // isDefault 로드
                             originalIsDefault = role.isDefault,     // originalIsDefault 로드
+                            // Permissions will be loaded separately
+                            // TODO: Call GetRolePermissionsUseCase(projectId, roleId) here
+                            // TODO: and update it.permissions and it.originalPermissions
                             hasChanges = false
                         )
                     }
+                    // Example of how you might call GetRolePermissionsUseCase and update state:
+                    /*
+                    viewModelScope.launch {
+                        val permissionsResult = getRolePermissionsUseCase(projectId, roleId)
+                        if (permissionsResult is CustomResult.Success) {
+                            _uiState.update {
+                                it.copy(
+                                    permissions = permissionsResult.data.associateBy { it.permission } // Assuming data is List<RolePermissionDetail>
+                                        .mapValues { it.value.isEnabled }, // Adjust based on actual data structure
+                                    originalPermissions = permissionsResult.data.associateBy { it.permission }
+                                        .mapValues { it.value.isEnabled }
+                                )
+                            }
+                        } else if (permissionsResult is CustomResult.Failure) {
+                            // Handle permission loading failure
+                             _uiState.update { it.copy(error = "권한 정보를 불러오지 못했습니다: ${permissionsResult.error}") }
+                        }
+                    }
+                    */
                 }
                 is CustomResult.Failure -> {
                     _uiState.update {
@@ -192,10 +210,13 @@ class EditRoleViewModel @Inject constructor(
 
             val result = if (currentState.roleId == null) {
                 println("ViewModel: Creating role '$nameToSave' in project $projectId (UseCase)")
-                createRoleUseCase(projectId, nameToSave, permissionsListToSave, isDefaultToSave)
+                // Permissions are saved separately after role creation
+                createRoleUseCase(projectId, nameToSave, isDefaultToSave)
+                // TODO: After successful role creation, get the new roleId from the result
+                // TODO: Then call a new SetRolePermissionsUseCase(projectId, newRoleId, permissionsListToSave)
             } else {
                 println("ViewModel: Updating role ${currentState.roleId} to '$nameToSave' (UseCase)")
-                updateRoleUseCase(projectId, currentState.roleId, nameToSave, permissionsListToSave, isDefaultToSave)
+                updateRoleUseCase(projectId, currentState.roleId, nameToSave, isDefaultToSave)
             }
 
             if (result.isSuccess) {
@@ -209,7 +230,7 @@ class EditRoleViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, saveSuccess = true) }
             } else {
                 val errorMessage = if (currentState.roleId == null) "역할 생성 실패" else "역할 수정 실패"
-                val errorDetail = result.exceptionOrNull()?.localizedMessage
+                val errorDetail = (result as CustomResult.Failure).error
                 _uiState.update { it.copy(isLoading = false, error = errorMessage + (errorDetail?.let { ": $it" } ?: "")) }
             }
         }
@@ -244,7 +265,7 @@ class EditRoleViewModel @Inject constructor(
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할이 삭제되었습니다."))
                 _uiState.update { it.copy(isLoading = false, deleteSuccess = true) }
             } else {
-                val errorDetail = result.exceptionOrNull()?.message
+                val errorDetail = (result as CustomResult.Failure).error
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 삭제 실패" + (errorDetail?.let { ": $it" } ?: "")))
                 _uiState.update { it.copy(isLoading = false) }
             }

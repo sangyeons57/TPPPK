@@ -11,9 +11,11 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -47,7 +49,8 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         return getMessagesCollection(channelPath)
             .orderBy(FirestoreConstants.MessageFields.SENT_AT, Query.Direction.DESCENDING)
             .limit(limit)
-            .dataObjects()
+            .snapshots()
+            .map { snapshot -> snapshot.toObjects(MessageDTO::class.java) }
     }
 
     /**

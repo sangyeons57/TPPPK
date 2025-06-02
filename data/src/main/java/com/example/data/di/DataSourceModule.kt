@@ -28,6 +28,10 @@ import com.example.data.datasource.remote.UserRemoteDataSource
 import com.example.data.datasource.remote.UserRemoteDataSourceImpl
 import com.example.data.datasource.remote.AuthRemoteDataSource
 import com.example.data.datasource.remote.AuthRemoteDataSourceImpl
+import com.example.data.datasource.remote.CategoryRemoteDataSource
+import com.example.data.datasource.remote.CategoryRemoteDataSourceImpl
+import com.example.data.datasource.remote.ProjectsWrapperRemoteDataSource
+import com.example.data.datasource.remote.ProjectsWrapperRemoteDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -159,4 +163,16 @@ abstract class DataSourceModule {
     abstract fun bindAuthRemoteDataSource(
         authRemoteDataSourceImpl: AuthRemoteDataSourceImpl
     ): AuthRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindCategoryRemoteDataSource(
+        categoryRemoteDataSourceImpl: CategoryRemoteDataSourceImpl
+    ): CategoryRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindProjectsWrapperRemoteDataSource(
+        projectsWrapperRemoteDataSourceImpl: ProjectsWrapperRemoteDataSourceImpl
+    ): ProjectsWrapperRemoteDataSource
 }

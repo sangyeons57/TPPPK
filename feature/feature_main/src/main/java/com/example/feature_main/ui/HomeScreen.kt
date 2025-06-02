@@ -1,5 +1,7 @@
 package com.example.feature_main.ui
 
+import com.example.feature_main.ui.DmUiModel // Added import
+import com.example.feature_main.ui.ProjectUiModel // Added import
 import android.os.Bundle
 import android.util.Log
 import androidx.compose.foundation.background
@@ -47,6 +49,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import com.example.core_navigation.core.NavDestination
+import com.example.domain.model.enum.ProjectChannelType
 
 // 오버레이 투명도 상수
 private const val OVERLAY_ALPHA = 0.7f
@@ -666,86 +670,19 @@ fun ProjectContentArea(
     }
 }
 
-// ProjectListItem을 이미지 기반 디자인으로 수정
-@Composable
-fun ProjectListItem(
-    projectName: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isCompact: Boolean = false
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = MaterialTheme.shapes.medium
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = projectName.take(1).uppercase(),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
-
-        if (!isCompact) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = projectName,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-
-// 사이드바의 프로젝트 리스트 부분도 수정
-@Composable
-fun ProjectsList(
-    projects: List<ProjectItem>,
-    onProjectClick: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(0.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        items(
-            items = projects,
-            key = { project -> project.id }
-        ) { project ->
-            ProjectListItem(
-                projectName = project.name,
-                onClick = { onProjectClick(project.id) },
-                isCompact = true
-            )
-        }
-    }
-}
-
 @Preview(showBackground = true)
 @Composable
 fun HomeContentProjectsPreview() {
     val previewState = HomeUiState(
         selectedTopSection = TopSection.PROJECTS,
         projects = List(5) { i ->
-            ProjectItem(
-                "p$i",
-                "미리보기 프로젝트 ${i + 1}",
-                "설명 ${i + 1}",
-                "${i}분 전"
+            ProjectUiModel(
+                id = "p$i",
+                name = "미리보기 프로젝트 ${i + 1}",
+                description = "설명 ${i + 1}",
+                imageUrl = null, // Or some placeholder image URL
+                memberCount = i + 2, // Example member count
+                lastActivity = "${i}분 전"
             )
         },
         userInitial = "U", // 사용자 이니셜 추가
@@ -821,8 +758,22 @@ fun HomeScreenPreview_WithData() {
 
     val sampleUiState = HomeUiState(
         projects = listOf(
-            ProjectItem("proj1", "Project Alpha", "Description for Alpha", "10m ago"),
-            ProjectItem("proj2", "Project Beta", "Description for Beta", "1h ago")
+            ProjectUiModel(
+                id = "proj1",
+                name = "Project Alpha",
+                description = "Description for Alpha",
+                imageUrl = null,
+                memberCount = 3, // Example
+                lastActivity = "10m ago"
+            ),
+            ProjectUiModel(
+                id = "proj2",
+                name = "Project Beta",
+                description = "Description for Beta",
+                imageUrl = null,
+                memberCount = 5, // Example
+                lastActivity = "1h ago"
+            )
         ),
         dms = listOf(
             DmUiModel(
@@ -850,7 +801,7 @@ fun HomeScreenPreview_WithData() {
                 ChannelUiModel(
                     id = "ch1",
                     name = "general",
-                    mode = ChannelMode.TEXT,
+                    mode = ProjectChannelType.MESSAGES,
                     isSelected = false
                 )
             ),
@@ -862,7 +813,7 @@ fun HomeScreenPreview_WithData() {
                         ChannelUiModel(
                             id = "ch2",
                             name = "announcements",
-                            mode = ChannelMode.TEXT,
+                            mode = ProjectChannelType.MESSAGES,
                             isSelected = true
                         )
                     ),

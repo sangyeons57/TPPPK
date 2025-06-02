@@ -114,7 +114,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 .get()
                 .await()
             
-            querySnapshot.toObjects()
+            querySnapshot.map{snapshot -> snapshot.toObject(UserDTO::class.java)}
         }
     }
 

@@ -116,8 +116,8 @@ class ScheduleRepositoryImpl @Inject constructor(
     override suspend fun getScheduleSummaryForMonth(
         userId: String,
         yearMonth: YearMonth
-    ): CustomResult<Map<Int, Boolean>, Exception> {
-        TODO("Not yet implemented")
+    ): CustomResult<Set<LocalDate>, Exception> {
+        return scheduleRemoteDataSource.getScheduleSummaryForMonth(userId, yearMonth)
     }
 
     override suspend fun getSchedulesForMonth(userId: String, yearMonth: YearMonth): Flow<CustomResult<List<Schedule>, Exception>> {

@@ -2,9 +2,6 @@ package com.example.feature_main.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.example.feature_main.viewmodel.ProfileUiState
-import com.example.feature_main.viewmodel.ProfileViewModel
-import com.example.feature_main.viewmodel.UserProfileData
 import org.junit.Rule
 import org.junit.Test
 
@@ -29,7 +26,7 @@ class ProfileScreenTest {
             userId = "test123",
             name = "테스트 사용자",
             email = "test@example.com",
-            statusMessage = "테스트 중입니다",
+            memo = "테스트 중입니다",
             profileImageUrl = null
         )
         
@@ -62,7 +59,7 @@ class ProfileScreenTest {
             userId = "test123",
             name = "테스트 사용자",
             email = "test@example.com",
-            statusMessage = "테스트 중입니다",
+            memo = "테스트 중입니다",
             profileImageUrl = null
         )
         
@@ -129,7 +126,7 @@ class ProfileScreenTest {
                     userId = "test123",
                     name = "테스트 사용자",
                     email = "test@example.com",
-                    statusMessage = "테스트 중입니다",
+                    memo = "테스트 중입니다",
                     profileImageUrl = null
                 ),
                 onEditProfileImageClick = {},
@@ -164,7 +161,7 @@ class ProfileScreenTest {
                     userId = "test123",
                     name = "테스트 사용자",
                     email = "test@example.com",
-                    statusMessage = "테스트 중입니다",
+                    memo = "테스트 중입니다",
                     profileImageUrl = null
                 ),
                 onEditProfileImageClick = {},
@@ -199,7 +196,7 @@ class ProfileScreenTest {
                     userId = "test123",
                     name = "테스트 사용자",
                     email = "test@example.com",
-                    statusMessage = "테스트 중입니다",
+                    memo = "테스트 중입니다",
                     profileImageUrl = null
                 ),
                 onEditProfileImageClick = { editProfileImageClicked = true },
@@ -234,7 +231,7 @@ class ProfileScreenTest {
                     userId = "test123",
                     name = "테스트 사용자",
                     email = "test@example.com",
-                    statusMessage = "테스트 중입니다",
+                    memo = "테스트 중입니다",
                     profileImageUrl = null
                 ),
                 onEditProfileImageClick = {},
@@ -269,7 +266,7 @@ class ProfileScreenTest {
                     userId = "test123",
                     name = "테스트 사용자",
                     email = "test@example.com",
-                    statusMessage = "테스트 중입니다",
+                    memo = "테스트 중입니다",
                     profileImageUrl = null
                 ),
                 onEditProfileImageClick = {},
@@ -304,7 +301,7 @@ class ProfileScreenTest {
                     userId = "test123",
                     name = "테스트 사용자",
                     email = "test@example.com",
-                    statusMessage = "테스트 중입니다",
+                    memo = "테스트 중입니다",
                     profileImageUrl = null
                 ),
                 onEditProfileImageClick = {},
@@ -385,7 +382,7 @@ class ProfileScreenTest {
                     userId = "test123",
                     name = "테스트 사용자",
                     email = "test@example.com",
-                    statusMessage = "테스트 중입니다",
+                    memo = "테스트 중입니다",
                     profileImageUrl = null
                 ),
                 onEditProfileImageClick = {},

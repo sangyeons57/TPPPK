@@ -39,12 +39,7 @@ class UserRepositoryImpl @Inject constructor(
             when (result) {
                 is CustomResult.Success -> {
                     val userDto = result.data // UserDTO?
-                    if (userDto != null) {
-                        CustomResult.Success(userDto.toDomain()) // Returns CustomResult<User, Nothing>
-                    } else {
-                        // UserDTO is null, e.g., user not found or data is null from datasource
-                        CustomResult.Failure(Exception("User data is null for observed user ID")) // Returns CustomResult<Nothing, Exception>
-                    }
+                    CustomResult.Success(userDto.toDomain()) // Returns CustomResult<User, Nothing>
                 }
                 is CustomResult.Failure -> {
                     CustomResult.Failure(result.error) // Returns CustomResult<Nothing, E>

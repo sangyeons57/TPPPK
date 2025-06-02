@@ -51,12 +51,7 @@ class AuthRepositoryImpl @Inject constructor(
                 
                 when (userSessionResult) {
                     is CustomResult.Success -> {
-                        if (userSessionResult.data != null) {
-                            CustomResult.Success(userSessionResult.data!!)
-                        } else {
-                            // 세션 정보를 가져올 수 없는 경우 (로그인은 성공했지만 세션 정보가 없는 상황)
-                            CustomResult.Failure(Exception("Failed to get user session after login"))
-                        }
+                        CustomResult.Success(userSessionResult.data)
                     }
                     is CustomResult.Failure -> {
                         // 세션 정보를 가져오는 데 실패한 경우

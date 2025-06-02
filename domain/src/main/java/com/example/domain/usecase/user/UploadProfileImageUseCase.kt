@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
  * 사용자 프로필 이미지를 업로드하는 UseCase
@@ -22,7 +23,7 @@ import javax.inject.Inject
 class UploadProfileImageUseCase @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
-    private val context: Context // Context 주입을 위해 필요
+    @ApplicationContext private val context: Context // Context 주입을 위해 필요
 ) {
     /**
      * 이미지 URI를 받아 서버에 업로드하고 프로필 이미지를 업데이트합니다.

@@ -8,7 +8,9 @@ import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.repository.ProjectRepository
 import com.example.domain.repository.ProjectsWrapperRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -54,7 +56,7 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
                     
                     // 각 프로젝트 ID에 대한 전체 프로젝트 정보 가져오기
                     val projects = projectIds.mapNotNull { projectId ->
-                        val projectResult = projectRepository.getProjectDetails(projectId)
+                        val projectResult = projectRepository.getProjectDetailsStream(projectId).first()
                         when (projectResult) {
                             is CustomResult.Success -> projectResult.data
                             else -> null

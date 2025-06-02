@@ -30,5 +30,6 @@ interface PermissionRemoteDataSource {
      * @param permissionId 제거할 권한의 ID (보통 권한 이름)
      */
     suspend fun removePermissionFromRole(projectId: String, roleId: String, permissionId: String): Result<Unit>
+
 }
 

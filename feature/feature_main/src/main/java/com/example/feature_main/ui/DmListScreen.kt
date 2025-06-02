@@ -1,5 +1,6 @@
 package com.example.feature_main.ui
 
+import com.example.feature_main.ui.DmUiModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,7 +18,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.ui.DmUiModel
 
 /**
  * DM 목록 화면
@@ -77,7 +77,7 @@ fun DmListItem(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = dmItem.partnerName.firstOrNull()?.toString() ?: "?",
+                text = dmItem.partnerName?.firstOrNull()?.toString() ?: "?",
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
@@ -86,7 +86,7 @@ fun DmListItem(
         
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = dmItem.partnerName,
+                text = dmItem.partnerName!!,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -105,7 +105,7 @@ fun DmListItem(
         
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = DateTimeUtil.formatDateTime(dmItem.lastMessageTimestamp),
+                text = DateTimeUtil.formatDateTime(dmItem.lastMessageTimestamp!!),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -137,9 +137,30 @@ fun DmListItemPreview() {
 fun DmListScreenPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         val sampleDms = listOf(
-            DmUiModel("1", "User One", "안녕하세요!", null, DateTimeUtil.nowInstant()),
-            DmUiModel("2", "User Two With A Very Long Name", "긴 메시지 테스트입니다.", null, DateTimeUtil.nowInstant()),
-            DmUiModel("3", "User Three", null, null, DateTimeUtil.nowInstant())
+            DmUiModel(
+                channelId = "1", 
+                partnerName = "User One", 
+                partnerProfileImageUrl = null, 
+                lastMessage = "안녕하세요!", 
+                lastMessageTimestamp = DateTimeUtil.nowInstant(), 
+                unreadCount = 1
+            ),
+            DmUiModel(
+                channelId = "2", 
+                partnerName = "User Two With A Very Long Name", 
+                partnerProfileImageUrl = null, 
+                lastMessage = "긴 메시지 테스트입니다.", 
+                lastMessageTimestamp = DateTimeUtil.nowInstant(), 
+                unreadCount = 0
+            ),
+            DmUiModel(
+                channelId = "3", 
+                partnerName = "User Three", 
+                partnerProfileImageUrl = null, 
+                lastMessage = null, 
+                lastMessageTimestamp = DateTimeUtil.nowInstant(), 
+                unreadCount = 2
+            )
         )
         DmListScreen(dms = sampleDms, onDmItemClick = {}, isLoading = false)
     }

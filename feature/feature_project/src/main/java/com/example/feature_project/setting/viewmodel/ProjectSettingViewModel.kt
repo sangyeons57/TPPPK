@@ -83,8 +83,8 @@ class ProjectSettingViewModel @Inject constructor(
                         // For now, placeholder:
                         val placeholderChannels = emptyList<ChannelUiModel>() // Empty list for now
                         CategoryUiModel(
-                            id = domainCategory.id,
-                            name = domainCategory.name,
+                            id = domainCategory.category.id,
+                            name = domainCategory.category.name,
                             channels = placeholderChannels
                         )
                     }
@@ -125,14 +125,21 @@ class ProjectSettingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteCategoryUseCase 호출
             println("Deleting Category: ${category.id} (UseCase)") // Used category.id
-            val result = deleteCategoryUseCase(category.id) // Used category.id
+            val result = deleteCategoryUseCase(projectId, category.id) // Used category.id
             // delay(500) // Remove delay
-            if (result.isSuccess) {
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리가 삭제되었습니다."))
-                 loadProjectStructure() // Refresh structure
-            } else {
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리 삭제 실패: ${result.exceptionOrNull()?.message}"))
-                 _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리가 삭제되었습니다."))
+                    loadProjectStructure() // Refresh structure
+                }
+                is CustomResult.Failure -> {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리 삭제 실패: ${result.error.message}"))
+                    _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                }
+                else -> {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리 삭제 실패: 알수 없는 에러"))
+                    _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                }
             }
             // isLoading will be turned off by loadProjectStructure on success
         }
@@ -153,7 +160,7 @@ class ProjectSettingViewModel @Inject constructor(
              _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteChannelUseCase 호출
             println("Deleting Channel: ${channel.id} (UseCase)") // Used channel.id
-             val result = deleteChannelUseCase(channel.id) // Used channel.id
+             val result = deleteChannelUseCase(projectId, channel.categoryId, channel.id) // Used channel.id
             // delay(500) // Remove delay
             when (result) {
                 is CustomResult.Success -> {

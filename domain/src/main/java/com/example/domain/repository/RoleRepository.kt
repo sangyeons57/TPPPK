@@ -25,4 +25,23 @@ interface RoleRepository {
 
     suspend fun deleteRole(projectId: String, roleId: String): CustomResult<Unit, Exception>
     suspend fun getRoleDetails(projectId: String, roleId: String): CustomResult<Role, Exception>
+
+    /**
+     * Fetches the list of enabled permissions for a specific role.
+     * Permissions are typically stored as a subcollection of the role.
+     * @param projectId The ID of the project.
+     * @param roleId The ID of the role.
+     * @return A [CustomResult] containing a list of enabled [com.example.domain.model.data.project.RolePermission] enums on success, or an [Exception] on failure.
+     */
+    suspend fun getRolePermissions(projectId: String, roleId: String): CustomResult<List<com.example.domain.model.data.project.RolePermission>, Exception>
+
+    /**
+     * Sets the enabled permissions for a specific role.
+     * This will update the permissions subcollection for the role.
+     * @param projectId The ID of the project.
+     * @param roleId The ID of the role.
+     * @param permissions A list of [com.example.domain.model.data.project.RolePermission] enums that should be enabled for the role.
+     * @return A [CustomResult] indicating success ([Unit]) or failure ([Exception]).
+     */
+    suspend fun setRolePermissions(projectId: String, roleId: String, permissions: List<com.example.domain.model.data.project.RolePermission>): CustomResult<Unit, Exception>
 }
