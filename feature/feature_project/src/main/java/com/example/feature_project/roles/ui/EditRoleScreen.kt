@@ -266,34 +266,6 @@ private fun EditRoleContent_CreateModePreview() {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun EditRoleContent_EditModePreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        EditRoleContent(
-            uiState = EditRoleUiState(
-                roleId = "r1",
-                roleName = "운영진",
-                originalRoleName = "운영진",
-                permissions = mapOf(
-                    RolePermission.INVITE_MEMBERS to true,
-                    RolePermission.MANAGE_ROLES to false,
-                    RolePermission.MANAGE_PROJECT_SETTINGS to false
-                ),
-                originalPermissions = mapOf(
-                    RolePermission.INVITE_MEMBERS to true,
-                    RolePermission.MANAGE_ROLES to false,
-                    RolePermission.MANAGE_PROJECT_SETTINGS to false
-                ),
-                hasChanges = false // 초기 상태
-            ),
-            onRoleNameChange = {},
-            onPermissionCheckedChange = { _, _ -> },
-            onSaveClick = {}
-        )
-    }
-}
-
 @Preview(showBackground = true, name = "Edit Role Loading")
 @Composable
 private fun EditRoleContentLoadingPreview() {

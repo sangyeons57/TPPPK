@@ -3,6 +3,7 @@ package com.example.feature_project.roles.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
@@ -48,7 +49,7 @@ class EditRoleViewModel @Inject constructor(
     private val getRoleDetailsUseCase: GetRoleDetailsUseCase,
     private val createRoleUseCase: CreateRoleUseCase,
     private val updateRoleUseCase: UpdateRoleUseCase,
-    private val deleteRoleUseCase: DeleteRoleUseCase
+    private val deleteRoleUseCase: DeleteRoleUseCase,
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
@@ -80,10 +81,9 @@ class EditRoleViewModel @Inject constructor(
             // --- UseCase 호출 ---
             val result = getRoleDetailsUseCase(projectId, roleId) // UseCase returns Result<Role?>
 
-            if (result.isSuccess) {
-
-                val role = result.getOrNull() // Role? 타입
-                if (role != null) {
+            when (result) {
+                is CustomResult.Success -> {
+                    val role = result.data // Role? 타입
                     // role.permissions is now Map<RolePermission, Boolean>
                     val loadedPermissionsMap = role.permissions
                     _uiState.update {
@@ -98,18 +98,20 @@ class EditRoleViewModel @Inject constructor(
                             hasChanges = false
                         )
                     }
-                } else {
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, error = "역할 정보를 불러오지 못했습니다: ${result.error}")
+                    }
+                    _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 정보를 불러오지 못했습니다."))
+                    _eventFlow.emit(EditRoleEvent.NavigateBack)
+                }
+                else -> {
                     // Role not found
                     _uiState.update { it.copy(isLoading = false, error = "역할 정보를 찾을 수 없습니다.") }
                     _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 정보를 찾을 수 없습니다."))
                     _eventFlow.emit(EditRoleEvent.NavigateBack)
                 }
-            } else { // Failure case
-                _uiState.update {
-                    it.copy(isLoading = false, error = "역할 정보를 불러오지 못했습니다: ${result.exceptionOrNull()?.localizedMessage}")
-                }
-                _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 정보를 불러오지 못했습니다."))
-                _eventFlow.emit(EditRoleEvent.NavigateBack)
             }
         }
     }

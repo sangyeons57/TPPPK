@@ -29,7 +29,7 @@ class CreateDirectChannelUseCase @Inject constructor(
      * @param mode 생성할 채널의 타입 ([ChannelMode])
      * @return 생성된 [Channel] 정보를 담은 [Result]
      */
-    suspend operator fun invoke(projectId: String, name: String, type: ProjectChannelType , order: Int): CustomResult<Unit, Exception> {
+    suspend operator fun invoke(projectId: String, name: String, type: ProjectChannelType , order: Double): CustomResult<Unit, Exception> {
         if (projectId.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("프로젝트 ID는 비어있을 수 없습니다."))
         }
@@ -41,7 +41,7 @@ class CreateDirectChannelUseCase @Inject constructor(
         val projectChannel = ProjectChannel(
             channelName = name,
             channelType = type,
-            order = 0.0,
+            order = order,
             createdAt = DateTimeUtil.nowInstant(),
             updatedAt = DateTimeUtil.nowInstant()
         )

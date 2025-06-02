@@ -87,8 +87,8 @@ class EditMemberViewModel @Inject constructor(
                     _uiState.update { it.copy(memberInfo = member, isLoading = false) }
                 }
                 is CustomResult.Failure -> {
-                    val errorMsg = memberResult.exceptionOrNull()?.message ?: "데이터 로드 실패"
-                    _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                    val errorMsg = memberResult.error
+                    _uiState.update { it.copy(isLoading = false, error = errorMsg.message) }
                     _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 정보를 불러오는 데 실패했습니다: $errorMsg"))
                 }
                 CustomResult.Initial -> {
@@ -171,15 +171,23 @@ class EditMemberViewModel @Inject constructor(
             // UseCase 호출
             val result = updateMemberRolesUseCase(projectId, userId, currentSelectedRoleIds.toList())
 
-            if (result.isSuccess) {
-                originalSelectedRoleIds = currentSelectedRoleIds
-                _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
-                _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 역할이 성공적으로 업데이트되었습니다."))
-                _eventFlow.emit(EditMemberEvent.NavigateBack)
-            } else {
-                val errorMsg = result.exceptionOrNull()?.message ?: "알 수 없는 오류"
-                _uiState.update { it.copy(isSaving = false, error = "역할 업데이트 실패: $errorMsg") }
-                _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할 업데이트에 실패했습니다."))
+            when (result) {
+                is CustomResult.Success -> {
+                    originalSelectedRoleIds = currentSelectedRoleIds
+                    _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
+                    _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 역할이 성공적으로 업데이트되었습니다."))
+                    _eventFlow.emit(EditMemberEvent.NavigateBack)
+                }
+                is CustomResult.Failure -> {
+                    val errorMsg = result.error
+                    _uiState.update { it.copy(isSaving = false, error = "역할 업데이트 실패: $errorMsg") }
+                    _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할 업데이트에 실패했습니다."))
+                }
+                else -> {
+                    val errorMsg = "알 수 없는 오류"
+                    _uiState.update { it.copy(isSaving = false, error = "역할 업데이트 실패: $errorMsg") }
+                    _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할 업데이트에 실패했습니다."))
+                }
             }
         }
     }

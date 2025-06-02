@@ -10,7 +10,6 @@ import com.example.domain.model.base.Member
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import com.example.domain.usecase.project.role.GetProjectRolesUseCase
-import com.example.domain.usecase.project.FetchProjectMembersUseCase // Added import
 import com.example.feature_project.members.model.MemberUiModel // Added import
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -69,8 +68,6 @@ class MemberListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val observeProjectMembersUseCase: ObserveProjectMembersUseCase,
     private val deleteProjectMemberUseCase: DeleteProjectMemberUseCase,
-    private val getProjectRolesUseCase: GetProjectRolesUseCase, // Added
-    private val fetchProjectMembersUseCase: FetchProjectMembersUseCase // Added
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
@@ -133,7 +130,7 @@ class MemberListViewModel @Inject constructor(
                             _uiState.update { it.copy(members = filteredList, isLoading = false, error = null) }
                         }
                         is CustomResult.Failure -> {
-                            _uiState.update { it.copy(error = membersResult.exceptionOrNull()?.message ?: "멤버 목록 로드 실패", members = emptyList(), isLoading = false) }
+                            _uiState.update { it.copy(error = membersResult.error.toString(), members = emptyList(), isLoading = false) }
                         }
                         CustomResult.Initial -> {
                              //isLoading should be true if observeProjectMembersUseCase emits Loading first.
@@ -157,6 +154,7 @@ class MemberListViewModel @Inject constructor(
      * 서버에서 최신 멤버 목록을 가져와 로컬 캐시를 업데이트합니다.
      */
     fun refreshMembers() {
+        /** stream을 사용해서 불필요할 것으로 예상된는데 한번 살펴봐야함
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = fetchProjectMembersUseCase(projectId) // This is a suspend function call
@@ -189,6 +187,7 @@ class MemberListViewModel @Inject constructor(
             // the (potentially) new data emitted as a result of this refresh trigger.
             // However, if fetch itself fails, we stop its own loading indicator.
         }
+        **/
     }
 
     /**

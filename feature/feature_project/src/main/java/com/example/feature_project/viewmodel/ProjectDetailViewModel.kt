@@ -18,20 +18,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectChannel
+import com.example.domain.model.enum.ProjectChannelType
 // Import the new UI models - assuming they are in com.example.feature_project.model
 import com.example.feature_project.model.CategoryUiModel
 import com.example.feature_project.model.ChannelUiModel
+import kotlinx.coroutines.flow.first
 
 // Define ChannelMode enum and CreateChannelDialogData data class
-enum class ChannelMode {
-    TEXT, VOICE // Assuming these are the modes, adjust as necessary
-}
 
 data class CreateChannelDialogData(
     val channelName: String = "",
     val categoryId: String? = null, // For which category to add, null for direct
-    val channelMode: ChannelMode = ChannelMode.TEXT // Default to TEXT
+    val channelMode: ProjectChannelType = ProjectChannelType.MESSAGES // Default to TEXT
 )
 
 /**
@@ -64,35 +64,6 @@ class ProjectDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProjectDetailUiState(projectId = projectId))
     val uiState: StateFlow<ProjectDetailUiState> = _uiState.asStateFlow()
 
-    init {
-        fetchProjectStructure()
-        // TODO: Fetch project name and update uiState.projectName
-    }
-
-    private fun fetchProjectStructure() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            getProjectChannelsUseCase(projectId)
-                .map { projectStructure ->
-                    // Map domain models to UI models
-                    Pair(projectStructure.toCategoryUiModels(), projectStructure.toDirectChannelUiModels())
-                }
-                .catch { e ->
-                    _uiState.update { it.copy(isLoading = false, error = "프로젝트 구조 로드 실패: ${e.message}") }
-                }
-                .collect { (categories, directChannels) ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            categories = categories,
-                            directChannels = directChannels,
-                            error = null
-                        )
-                    }
-                }
-        }
-    }
-
     fun showCreateDirectChannelDialog() {
         _uiState.update {
             it.copy(
@@ -100,7 +71,7 @@ class ProjectDetailViewModel @Inject constructor(
                 createChannelDialogData = CreateChannelDialogData(
                     categoryId = null,
                     channelName = "",
-                    channelMode = ChannelMode.TEXT
+                    channelMode = ProjectChannelType.MESSAGES
                 )
             )
         }
@@ -113,7 +84,7 @@ class ProjectDetailViewModel @Inject constructor(
                 createChannelDialogData = CreateChannelDialogData(
                     categoryId = categoryId,
                     channelName = "",
-                    channelMode = ChannelMode.TEXT
+                    channelMode = ProjectChannelType.MESSAGES
                 )
             )
         }
@@ -131,7 +102,7 @@ class ProjectDetailViewModel @Inject constructor(
         }
     }
 
-    fun updateCreateChannelDialogChannelMode(mode: ChannelMode) {
+    fun updateCreateChannelDialogChannelMode(mode: ProjectChannelType) {
         _uiState.update { state ->
             state.createChannelDialogData?.let {
                 state.copy(createChannelDialogData = it.copy(channelMode = mode))
@@ -156,17 +127,23 @@ class ProjectDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val result = if (dialogData.categoryId == null) {
                 // Create Direct Channel
-                createDirectChannelUseCase(projectId, dialogData.channelName, ChannelMode.TEXT, 0) // Use ChannelType.PROJECT, add order
+                createDirectChannelUseCase(projectId, dialogData.channelName, ProjectChannelType.MESSAGES, 0.0) // Use ChannelType.PROJECT, add order
             } else {
                 // Create Category Channel
-                createCategoryChannelUseCase(projectId, dialogData.categoryId!!, dialogData.channelName, ChannelMode.TEXT, 0) // Use ChannelType.CATEGORY
+                createCategoryChannelUseCase(projectId, dialogData.categoryId, dialogData.channelName, ProjectChannelType.MESSAGES, 0.0) // Use ChannelType.CATEGORY
             }
 
-            if (result.isSuccess) {
-                _uiState.update { it.copy(showCreateChannelDialog = false, createChannelDialogData = null, error = null) }
-                // Optionally, refresh structure or rely on stream to update
-            } else {
-                _uiState.update { it.copy(error = "채널 생성 실패: ${result.exceptionOrNull()?.message}") }
+            when (result) {
+                is CustomResult.Success -> {
+                    _uiState.update { it.copy(showCreateChannelDialog = false, createChannelDialogData = null, error = null) }
+                    // Optionally, refresh structure or rely on stream to update
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update { it.copy(error = "채널 생성 실패: ${result.error.message}") }
+                }
+                else -> {
+                    _uiState.update { it.copy(error = "채널 생성 실패: Unknown error") }
+                }
             }
         }
     }

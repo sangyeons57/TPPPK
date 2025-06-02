@@ -222,8 +222,8 @@ fun RoleCheckboxRow(
 @Composable
 private fun EditMemberContentPreview() {
     // Preview용 Role 객체 생성
-    val previewRole1 = Role(id = "role1", projectId = "p1", name = "관리자", permissions = mapOf(RolePermission.MANAGE_MEMBERS to true), isDefault = false)
-    val previewRole2 = Role(id = "role2", projectId = "p1", name = "팀원", permissions = mapOf(RolePermission.READ_MESSAGES to true), isDefault = true)
+    val previewRole1 = Role(name = "관리자", isDefault = false)
+    val previewRole2 = Role(name = "팀원", isDefault = true)
     // Note: Member constructor and EditMemberContent's usage of memberInfo.userName/profileImageUrl is problematic
     // as per current Member domain model. This is expected to be fixed in a later step.
     // For now, constructing Member according to its domain model using role IDs.
@@ -251,8 +251,8 @@ private fun EditMemberContentPreview() {
 @Composable
 private fun EditMemberContentSavingPreview() {
     // Preview용 Role 객체 생성
-    val previewRole1Saving = Role(id = "role1_saving", projectId = "p1_saving", name = "관리자", permissions = mapOf(RolePermission.MANAGE_MEMBERS to true), isDefault = false)
-    val previewRole2Saving = Role(id = "role2_saving", projectId = "p1_saving", name = "팀원", permissions = mapOf(RolePermission.READ_MESSAGES to true), isDefault = true)
+    val previewRole1Saving = Role(name = "관리자", isDefault = false)
+    val previewRole2Saving = Role(name = "팀원", isDefault = true)
     // Note: Member constructor and EditMemberContent's usage of memberInfo.userName/profileImageUrl is problematic.
     // Constructing Member according to its domain model using role IDs.
     val previewMember = Member(userId = "u1", joinedAt = DateTimeUtil.nowInstant(), roleIds = listOf(previewRole1Saving.id, previewRole2Saving.id))

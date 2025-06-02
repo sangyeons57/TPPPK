@@ -16,21 +16,9 @@ import com.example.domain.model.data.project.RolePermission // Added import
  */
 data class Role(
     @DocumentId val id: String = "",
-    val projectId: String = "",
     val name: String = "",
-    val permissions: Map<RolePermission, Boolean> = emptyMap(), // Changed type
-    val isDefault: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val isDefault: Boolean = false // 기본 역할(Admin, Member 등)인지 커스텀 역할인지 구분
 ) {
-    /**
-     * Checks if this role has a specific permission.
-     *
-     * @param permission The permission key to check.
-     * @return `true` if the permission is granted, `false` otherwise.
-     */
-    fun hasPermission(permission: RolePermission): Boolean = permissions[permission] ?: false // Changed parameter type
-
     /**
      * Creates a copy of this role with updated fields.
      *
@@ -41,12 +29,9 @@ data class Role(
      */
     fun copyWith(
         name: String = this.name,
-        permissions: Map<RolePermission, Boolean> = this.permissions, // Changed parameter type
         isDefault: Boolean = this.isDefault
     ): Role = copy(
         name = name,
-        permissions = permissions,
         isDefault = isDefault,
-        updatedAt = System.currentTimeMillis()
     )
 }

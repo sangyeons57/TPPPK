@@ -56,8 +56,7 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
                 result = when (option) {
                     RoleSortOption.NAME_ASC -> result.sortedBy { it.name.lowercase() }
                     RoleSortOption.NAME_DESC -> result.sortedByDescending { it.name.lowercase() }
-                    RoleSortOption.CREATED_AT_ASC -> result.sortedBy { it.createdAt }
-                    RoleSortOption.CREATED_AT_DESC -> result.sortedByDescending { it.createdAt }
+                    else -> result.sortedBy { it.name.lowercase() }
                 }
             }
 
