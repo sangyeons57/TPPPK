@@ -1,164 +1,208 @@
 classDiagram
-    title Profile Feature Architecture 
+    title Profile Feature Architecture
 
     %% Feature Layer (ViewModels)
     subgraph Feature Layer - ViewModels
         direction LR
-        %% ViewModels 네임스페이스
         namespace ViewModels_ProfileNS {
             class EditProfileViewModel {
-                -getMyProfileUseCase: GetMyProfileUseCase
+                -getCurrentUserUseCase: GetCurrentUserStreamUseCase  %% Renamed from GetMyProfileUseCase in diagram
                 -updateUserProfileUseCase: UpdateUserProfileUseCase
-                -checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase
                 -uploadProfileImageUseCase: UploadProfileImageUseCase
-                -removeProfileImageUseCase: RemoveProfileImageUseCase
-                -updateUserImageUseCase: UpdateUserImageUseCase
-                +loadProfile()
-                +updateProfile(name: String, nickname: String, bio: String)
-                +checkNickname(nickname: String)
-                +changeProfileImage(imageUri: Uri)
-                +deleteProfileImage()
+                +loadUserProfile()
+                +onNameChanged(newName: String)
+                +onProfileImageClicked()
+                +handleImageSelection(uri: Uri?)
+                +onSaveProfileClicked()
             }
             class ChangeStatusViewModel {
                 -getCurrentStatusUseCase: GetCurrentStatusUseCase
                 -updateUserStatusUseCase: UpdateUserStatusUseCase
                 +loadCurrentStatus()
-                +updateStatus(newStatus: String)
+                +onStatusSelected(status: UserStatus)
+                +updateStatus()
+            }
+            class ProfileImageViewModel {
+                -uploadProfileImageUseCase: UploadProfileImageUseCase
+                +uploadProfileImage(imageUri: Uri)
             }
         }
     end
-    note for EditProfileViewModel "프로필 수정 화면 UI 로직"
-    note for ChangeStatusViewModel "상태 메시지 변경 다이얼로그 UI 로직"
 
     %% Domain Layer (UseCases & Repository Interfaces)
     subgraph Domain Layer
         direction LR
-        %% User UseCases 네임스페이스 (Profile 기능에서 주로 사용)
         namespace UseCases_UserNS {
-            class GetMyProfileUseCase {
+            class GetCurrentUserStreamUseCase {
+                -authRepository: AuthRepository
                 -userRepository: UserRepository
-                +invoke(): Flow<User>
+                +invoke(): Flow<CustomResult<User, Exception>>
             }
             class UpdateUserProfileUseCase {
                 -userRepository: UserRepository
-                +invoke(name: String, bio: String): Result<Unit>
+                -authRepository: AuthRepository
+                +invoke(params: UpdateUserProfileParams): CustomResult<User, Exception>
             }
             class UpdateNicknameUseCase {
                 -userRepository: UserRepository
-                +invoke(nickname: String): Result<Unit>
+                -authRepository: AuthRepository
+                +invoke(newNickname: String): CustomResult<User, Exception>
             }
             class CheckNicknameAvailabilityUseCase {
                 -userRepository: UserRepository
-                +invoke(nickname: String): Result<Boolean>
+                +invoke(nickname: String): CustomResult<Boolean, Exception>
             }
             class UploadProfileImageUseCase {
                 -userRepository: UserRepository
-                +invoke(imageUri: Uri): Result<String> %% Returns image URL
+                -authRepository: AuthRepository
+                -context: Context
+                +invoke(imageUri: Uri): CustomResult<User, Exception>
             }
             class RemoveProfileImageUseCase {
                 -userRepository: UserRepository
-                +invoke(): Result<Unit>
+                -authRepository: AuthRepository
+                +invoke(): CustomResult<Unit, Exception>
             }
             class UpdateUserImageUseCase {
+                <<Interface>>
+                +invoke(imageUri: Uri): Result<String>
+            }
+            class UpdateUserImageUseCaseImpl {
                 -userRepository: UserRepository
-                +invoke(imageUrl: String): Result<Unit>
+                +invoke(imageUri: Uri): Result<String>
             }
             class GetCurrentStatusUseCase {
                 -userRepository: UserRepository
-                +invoke(): Flow<String> %% Assuming status is String
+                -authRepository: AuthRepository
+                +invoke(): Flow<CustomResult<UserStatus, Exception>>
             }
             class UpdateUserStatusUseCase {
+                <<Interface>>
+                +invoke(status: UserStatus): CustomResult<Unit, Exception>
+            }
+            class UpdateUserStatusUseCaseImpl {
                 -userRepository: UserRepository
-                +invoke(status: String): Result<Unit>
+                -authRepository: AuthRepository
+                +invoke(status: UserStatus): CustomResult<Unit, Exception>
             }
         }
 
-        %% Repositories 네임스페이스
         namespace Repositories_DomainNS {
             class UserRepository {
                 <<Interface>>
-                +getMyProfile(): Flow<User>
-                +updateProfile(name: String, bio: String): Result<Unit>
-                +updateNickname(nickname: String): Result<Unit>
-                +isNicknameAvailable(nickname: String): Result<Boolean>
-                +uploadProfileImage(imageUri: Uri): Result<String>
-                +removeProfileImage(): Result<Unit>
-                +updateProfileImageUrl(imageUrl: String?): Result<Unit>
-                +getCurrentStatus(): Flow<String>
-                +updateStatus(status: String): Result<Unit>
+                +getUserStream(userId: String): Flow<CustomResult<User, Exception>>
+                +updateUserProfile(userId: String, user: User, localImageUri: Uri?): CustomResult<User, Exception>
+                +checkNicknameAvailability(nickname: String): CustomResult<Boolean, Exception>
+                +deleteUserProfileImage(userId: String): CustomResult<Unit, Exception>
+                +updateUserConnectionStatus(userId: String, newStatus: UserStatus): CustomResult<Unit, Exception>
+            }
+            class AuthRepository {
+                <<Interface>>
+                +getCurrentUserSession(): CustomResult<UserSession, Exception>
+            }
+            class MediaRepository {
+                <<Interface>>
+                +uploadFile(uri: Uri, storagePath: String): CustomResult<String, Exception>
+                +deleteFile(fileUrl: String): CustomResult<Unit, Exception>
             }
         }
-        note for UserRepository "사용자 프로필 및 상태 데이터 접근 인터페이스"
     end
 
-    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    %% Data Layer
     subgraph Data Layer
         direction LR
-        %% Repository Implementations 네임스페이스
         namespace RepositoryImpl_DataNS {
             class UserRepositoryImpl {
                 -userRemoteDataSource: UserRemoteDataSource
-                %% LocalDataSource excluded
+                -mediaRepository: MediaRepository
+            }
+            class AuthRepositoryImpl {
+                -authRemoteDataSource: AuthRemoteDataSource
+                -auth: FirebaseAuth
+                -authWrapper: FirebaseAuthWrapper
+            }
+            class MediaRepositoryImpl {
+                -firebaseStorage: FirebaseStorage
+                -context: Context
             }
         }
-        note for UserRepositoryImpl "UserRepository 구현체 (Remote)"
 
-        %% Remote DataSources 네임스페이스
         namespace RemoteDataSources_DataNS {
             class UserRemoteDataSource {
                 <<Interface>>
-                +fetchMyProfile(): Flow<UserDTO>
-                +updateUserProfile(name: String, bio: String): Result<Unit>
-                +updateUserNickname(nickname: String): Result<Unit>
-                +checkNickname(nickname: String): Result<Boolean>
-                +uploadImageToStorage(imageUri: Uri): Result<String> %% Returns download URL
-                +deleteProfileImageFromStorage(): Result<Unit>
-                +updateUserImageUrlInProfile(imageUrl: String?): Result<Unit>
-                +fetchCurrentStatus(): Flow<String>
-                +updateUserStatusOnRemote(status: String): Result<Unit>
+                +observeUser(userId: String): Flow<CustomResult<UserDTO, Exception>>
+                +updateUserProfile(name: String, userDTO: UserDTO): CustomResult<Unit, Exception>
+                +checkNicknameAvailability(nickname: String): CustomResult<Boolean, Exception>
+                +uploadProfileImage(imageUri: Uri): CustomResult<String, Exception>
+                +updateUserStatus(status: String): CustomResult<Unit, Exception>
+            }
+            class AuthRemoteDataSource {
+                <<Interface>>
+                +getCurrentUser(): CustomResult<FirebaseUser, Exception>
+                +getCurrentUserId(): String?
             }
         }
-        note for UserRemoteDataSource "원격 사용자 프로필/상태 서비스 통신"
 
-        %% DataSource Implementations 네임스페이스
         namespace DataSourceImpl_DataNS {
             class UserRemoteDataSourceImpl {
+                -auth: FirebaseAuth
                 -firestore: FirebaseFirestore
-                -firebaseStorage: FirebaseStorage
-                -firebaseAuth: FirebaseAuth
+                -storage: FirebaseStorage
+            }
+            class AuthRemoteDataSourceImpl {
+                -auth: FirebaseAuth
             }
         }
     end
 
     %% ===== Relationships =====
     %% ViewModel -> UseCase
-    EditProfileViewModel ..> GetMyProfileUseCase : uses
-    EditProfileViewModel ..> UpdateUserProfileUseCase : uses
-    EditProfileViewModel ..> CheckNicknameAvailabilityUseCase : uses
-    EditProfileViewModel ..> UploadProfileImageUseCase : uses
-    EditProfileViewModel ..> RemoveProfileImageUseCase : uses
-    EditProfileViewModel ..> UpdateUserImageUseCase : uses
-    %% EditProfileViewModel might also use UpdateNicknameUseCase if it's separate
+    ViewModels_ProfileNS.EditProfileViewModel ..> UseCases_UserNS.GetCurrentUserStreamUseCase : uses
+    ViewModels_ProfileNS.EditProfileViewModel ..> UseCases_UserNS.UpdateUserProfileUseCase : uses
+    ViewModels_ProfileNS.EditProfileViewModel ..> UseCases_UserNS.UploadProfileImageUseCase : uses
 
-    ChangeStatusViewModel ..> GetCurrentStatusUseCase : uses
-    ChangeStatusViewModel ..> UpdateUserStatusUseCase : uses
+    ViewModels_ProfileNS.ChangeStatusViewModel ..> UseCases_UserNS.GetCurrentStatusUseCase : uses
+    ViewModels_ProfileNS.ChangeStatusViewModel ..> UseCases_UserNS.UpdateUserStatusUseCase : uses
+
+    ViewModels_ProfileNS.ProfileImageViewModel ..> UseCases_UserNS.UploadProfileImageUseCase : uses
 
     %% UseCase -> Repository Interface
-    GetMyProfileUseCase ..> UserRepository : accesses
-    UpdateUserProfileUseCase ..> UserRepository : accesses
-    UpdateNicknameUseCase ..> UserRepository : accesses
-    CheckNicknameAvailabilityUseCase ..> UserRepository : accesses
-    UploadProfileImageUseCase ..> UserRepository : accesses
-    RemoveProfileImageUseCase ..> UserRepository : accesses
-    UpdateUserImageUseCase ..> UserRepository : accesses
-    GetCurrentStatusUseCase ..> UserRepository : accesses
-    UpdateUserStatusUseCase ..> UserRepository : accesses
+    UseCases_UserNS.GetCurrentUserStreamUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_UserNS.GetCurrentUserStreamUseCase ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.UpdateUserProfileUseCase ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.UpdateUserProfileUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_UserNS.UpdateNicknameUseCase ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.UpdateNicknameUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_UserNS.CheckNicknameAvailabilityUseCase ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.UploadProfileImageUseCase ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.UploadProfileImageUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_UserNS.RemoveProfileImageUseCase ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.RemoveProfileImageUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_UserNS.UpdateUserImageUseCaseImpl ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.GetCurrentStatusUseCase ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.GetCurrentStatusUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_UserNS.UpdateUserStatusUseCaseImpl ..> Repositories_DomainNS.UserRepository : accesses
+    UseCases_UserNS.UpdateUserStatusUseCaseImpl ..> Repositories_DomainNS.AuthRepository : accesses
 
-    %% Repository Implementation -> Repository Interface
-    UserRepository <|.. UserRepositoryImpl : implements
+    UseCases_UserNS.UpdateUserImageUseCase <|.. UseCases_UserNS.UpdateUserImageUseCaseImpl : implements
+    UseCases_UserNS.UpdateUserStatusUseCase <|.. UseCases_UserNS.UpdateUserStatusUseCaseImpl : implements
 
-    %% Repository Implementation -> DataSource Interface (Remote Only)
-    UserRepositoryImpl ..> UserRemoteDataSource : uses
+    %% Repository Impl -> Repo Interface
+    Repositories_DomainNS.UserRepository <|.. RepositoryImpl_DataNS.UserRepositoryImpl : implements
+    Repositories_DomainNS.AuthRepository <|.. RepositoryImpl_DataNS.AuthRepositoryImpl : implements
+    Repositories_DomainNS.MediaRepository <|.. RepositoryImpl_DataNS.MediaRepositoryImpl : implements
 
-    %% DataSource Implementation -> DataSource Interface
-    UserRemoteDataSource <|.. UserRemoteDataSourceImpl : implements
+    %% Repository Impl -> DataSource Interface / Other Repo
+    RepositoryImpl_DataNS.UserRepositoryImpl ..> RemoteDataSources_DataNS.UserRemoteDataSource : uses
+    RepositoryImpl_DataNS.UserRepositoryImpl ..> Repositories_DomainNS.MediaRepository : uses
+    RepositoryImpl_DataNS.AuthRepositoryImpl ..> RemoteDataSources_DataNS.AuthRemoteDataSource : uses
+    %% MediaRepositoryImpl uses FirebaseStorage directly
+
+    %% DataSource Impl -> DS Interface
+    RemoteDataSources_DataNS.UserRemoteDataSource <|.. DataSourceImpl_DataNS.UserRemoteDataSourceImpl : implements
+    RemoteDataSources_DataNS.AuthRemoteDataSource <|.. DataSourceImpl_DataNS.AuthRemoteDataSourceImpl : implements
+
+    note for UseCases_UserNS.UploadProfileImageUseCase "Context dependency for reading URI."
+    note for RepositoryImpl_DataNS.UserRepositoryImpl "Delegates to MediaRepository for file operations."
+    note for RepositoryImpl_DataNS.MediaRepositoryImpl "Directly uses FirebaseStorage."
+    note for ViewModels_ProfileNS.EditProfileViewModel "CheckNickname and RemoveProfileImage UseCases are not directly injected here."

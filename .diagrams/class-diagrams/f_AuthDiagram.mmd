@@ -4,210 +4,212 @@ classDiagram
     %% Feature Layer (ViewModels)
     subgraph Feature Layer - ViewModels
         direction LR
-        %% ViewModels 네임스페이스 (MMD 코드 가독성을 위함)
         namespace ViewModels_AuthNS {
             class SplashViewModel {
-                -checkSessionUseCase: CheckSessionUseCase
-                -checkAuthStatusUseCase: CheckAuthenticationStatusUseCase
-                +onAppStart()
+                -checkAuthenticationStatusUseCase: CheckAuthenticationStatusUseCase
+                +retry()
             }
             class LoginViewModel {
                 -loginUseCase: LoginUseCase
                 -getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
-                +login(email, password)
+                +onEmailChange(email: String)
+                +onPasswordChange(password: String)
+                +onLoginClick()
+                +onFindPasswordClick()
+                +onSignUpClick()
             }
             class SignUpViewModel {
                 -signUpUseCase: SignUpUseCase
                 -checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase
                 -sendEmailVerificationUseCase: SendEmailVerificationUseCase
                 -getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
-                +signUp(email, password, nickname)
-                +sendVerificationEmail()
+                +signUp()
+                +onEmailChange(email: String)
+                +onPasswordChange(password: String)
+                +onNameChange(name: String)
+                +onTermsOfServiceClick()
+                +onPrivacyPolicyClick()
             }
             class FindPasswordViewModel {
                 -requestPasswordResetUseCase: RequestPasswordResetUseCase
-                -verifyPasswordResetCodeUseCase: VerifyPasswordResetCodeUseCase
-                -resetPasswordUseCase: ResetPasswordUseCase
                 -getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
-                +requestPasswordReset(email)
-                +verifyCodeAndResetPassword(code, newPassword)
+                +onEmailChange(email: String)
+                +requestPasswordResetEmail()
+                +onDoneClicked()
+                +onBackClick()
             }
             class TermsOfServiceViewModel {
-                %% Static content
+                +onBackClick()
             }
             class PrivacyPolicyViewModel {
-                %% Static content
+                +onBackClick()
             }
         }
     end
-    note for SplashViewModel "스플래시 화면 UI 로직 및 세션 확인"
-    note for LoginViewModel "로그인 화면 UI 로직"
-    note for SignUpViewModel "회원가입 화면 UI 로직"
-    note for FindPasswordViewModel "비밀번호 찾기 화면 UI 로직"
-    note for TermsOfServiceViewModel "서비스 이용약관 표시"
-    note for PrivacyPolicyViewModel "개인정보처리방침 표시"
+    note for SplashViewModel "Handles splash screen logic and navigation based on auth status."
+    note for LoginViewModel "Handles login screen UI logic and user authentication."
+    note for SignUpViewModel "Handles sign-up screen UI logic, user registration, and email verification."
+    note for FindPasswordViewModel "Handles find password screen UI logic and password reset requests."
+    note for TermsOfServiceViewModel "Displays terms of service."
+    note for PrivacyPolicyViewModel "Displays privacy policy."
 
     %% Domain Layer (UseCases & Repository Interfaces)
     subgraph Domain Layer
         direction LR
-        %% Auth UseCases 네임스페이스
         namespace UseCases_AuthNS {
-            class CheckSessionUseCase {
-                -authRepository: AuthRepository
-                +invoke(): Flow<Boolean>
-            }
             class CheckAuthenticationStatusUseCase {
                 -authRepository: AuthRepository
-                +invoke(): Flow<Boolean>
+                +invoke(): Result<Pair<Boolean, Boolean>>
+            }
+            class CheckEmailVerificationUseCase {
+                -authRepository: AuthRepository
+                +invoke(): CustomResult<Boolean, Exception>
             }
             class LoginUseCase {
                 -authRepository: AuthRepository
-                +invoke(email, password): Result<Unit>
+                +invoke(email: String, password: String): CustomResult<UserSession, Exception>
             }
             class GetAuthErrorMessageUseCase {
-                %% Error mapping logic
-                +invoke(throwable: Throwable): String
+                +invoke(exception: Exception): String
+                +invoke(errorCode: String): String
+                +invoke(errorType: AuthErrorType): String
             }
             class SignUpUseCase {
                 -authRepository: AuthRepository
-                -userRepository: UserRepository %% For creating user profile part
-                +invoke(email, password, nickname): Result<Unit>
+                -userRepository: UserRepository
+                +invoke(email: String, password: String, nickname: String, consentTimeStamp: Instant): CustomResult<User, Exception>
             }
             class SendEmailVerificationUseCase {
                 -authRepository: AuthRepository
-                +invoke(): Result<Unit>
+                +invoke(): CustomResult<Unit, Exception>
+            }
+            class RequestEmailVerificationAfterSignUpUseCase {
+                -authRepository: AuthRepository
+                +invoke(): CustomResult<Unit, Exception>
             }
             class RequestPasswordResetUseCase {
                 -authRepository: AuthRepository
-                +invoke(email: String): Result<Unit>
-            }
-            class VerifyPasswordResetCodeUseCase {
-                -authRepository: AuthRepository
-                +invoke(code: String): Result<Unit>
-            }
-            class ResetPasswordUseCase {
-                -authRepository: AuthRepository
-                +invoke(code: String, newPassword: String): Result<Unit>
+                +invoke(email: String): CustomResult<Unit, Exception>
             }
         }
-        %% User UseCases 네임스페이스 (Auth 기능에서 일부 사용)
         namespace UseCases_UserNS {
             class CheckNicknameAvailabilityUseCase {
                 -userRepository: UserRepository
-                +invoke(nickname: String): Result<Boolean>
+                +invoke(nickname: String): CustomResult<Boolean, Exception>
             }
         }
 
-        %% Repositories 네임스페이스
         namespace Repositories_DomainNS {
             class AuthRepository {
                 <<Interface>>
-                +checkSession(): Flow<Boolean>
-                +observeAuthenticationStatus(): Flow<Boolean>
-                +login(email, password): Result<Unit>
-                +signUp(email, password): Result<String> %% Returns UID
-                +sendEmailVerification(): Result<Unit>
-                +requestPasswordReset(email: String): Result<Unit>
-                +verifyPasswordResetCode(code: String): Result<String> %% Returns email or token
-                +resetPassword(code: String, newPassword: String): Result<Unit>
-                +getCurrentUserId(): String?
+                +login(email: String, password: String): CustomResult<UserSession, Exception>
+                +isLoggedIn(): Boolean
+                +getCurrentUserId(): CustomResult<String, Exception>
+                +logout(): CustomResult<Unit, Exception>
+                +signup(email: String, password: String): CustomResult<String, Exception>
+                +requestPasswordResetCode(email: String): CustomResult<Unit, Exception>
+                +sendEmailVerification(): CustomResult<Unit, Exception>
+                +checkEmailVerification(): CustomResult<Boolean, Exception>
+                +getCurrentUserSession(): CustomResult<UserSession, Exception>
+                +getUserSessionStream(): Flow<CustomResult<UserSession, Exception>>
             }
             class UserRepository {
                 <<Interface>>
-                +isNicknameAvailable(nickname: String): Result<Boolean>
-                +createUserProfile(uid: String, email: String, nickname: String): Result<Unit>
-                %% Other methods omitted for brevity in Auth context
+                +checkNicknameAvailability(nickname: String): CustomResult<Boolean, Exception>
+                +createUserProfile(user: User): CustomResult<Unit, Exception>
+                +getUserStream(userId: String): Flow<CustomResult<User, Exception>>
             }
         }
-        note for AuthRepository "인증 데이터 접근 추상화 인터페이스"
-        note for UserRepository "사용자 데이터 접근 추상화 인터페이스 (Auth에서 일부 사용)"
+        note for AuthRepository "Interface for authentication data operations."
+        note for UserRepository "Interface for user profile data operations (relevant parts for Auth)."
     end
 
     %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
     subgraph Data Layer
         direction LR
-        %% Repository Implementations 네임스페이스
         namespace RepositoryImpl_DataNS {
             class AuthRepositoryImpl {
                 -authRemoteDataSource: AuthRemoteDataSource
-                %% -userLocalDataSource: UserLocalDataSource (EXCLUDED)
+                -firebaseAuth: FirebaseAuth
+                -authWrapper: FirebaseAuthWrapper
             }
             class UserRepositoryImpl {
                 -userRemoteDataSource: UserRemoteDataSource
-                %% -userLocalDataSource: UserLocalDataSource (EXCLUDED)
+                -mediaRepository: MediaRepository
             }
         }
-        note for AuthRepositoryImpl "AuthRepository 구현체 (Remote)"
-        note for UserRepositoryImpl "UserRepository 구현체 (Remote, Auth에서 사용되는 부분)"
+        note for AuthRepositoryImpl "Implementation of AuthRepository using remote data source."
+        note for UserRepositoryImpl "Implementation of UserRepository using remote data source."
 
-        %% Remote DataSources 네임스페이스
         namespace RemoteDataSources_DataNS {
             class AuthRemoteDataSource {
                 <<Interface>>
-                +login(email, password): Result<String> %% UID
-                +signUp(email, password): Result<String> %% UID
-                +sendEmailVerification(): Result<Unit>
-                +requestPasswordReset(email: String): Result<Unit>
-                +verifyPasswordResetCode(code: String): Result<String> %% email
-                +resetPasswordWithCode(code: String, newPassword: String): Result<Unit>
-                +observeAuthState(): Flow<String?> %% UID or null
+                +observeAuthState(): Flow<CustomResult<FirebaseUser, Exception>>
+                +getCurrentUser(): CustomResult<FirebaseUser, Exception>
                 +getCurrentUserId(): String?
+                +signUp(email: String, password: String): CustomResult<String, Exception>
+                +signIn(email: String, password: String): CustomResult<String, Exception>
+                +signOut(): CustomResult<Unit, Exception>
+                +requestPasswordResetCode(email: String): CustomResult<Unit, Exception>
+                +sendEmailVerification(): CustomResult<Unit, Exception>
+                +checkEmailVerification(): CustomResult<Boolean, Exception>
             }
             class UserRemoteDataSource {
                 <<Interface>>
-                +isNicknameAvailable(nickname: String): Result<Boolean>
-                +createUser(userDto: UserDTO): Result<Unit>
+                +observeUser(userId: String): Flow<CustomResult<UserDTO, Exception>>
+                +createUser(user: UserDTO): CustomResult<Unit, Exception>
+                +checkNicknameAvailability(nickname: String): CustomResult<Boolean, Exception>
+                +getMyUserInfo(): CustomResult<UserDTO, Exception>
             }
         }
-        note for AuthRemoteDataSource "원격 인증 서비스(Firebase Auth) 통신"
-        note for UserRemoteDataSource "원격 사용자 데이터 서비스(Firestore) 통신 (Auth에서 사용되는 부분)"
+        note for AuthRemoteDataSource "Interface for remote authentication operations (e.g., Firebase Auth)."
+        note for UserRemoteDataSource "Interface for remote user data operations (e.g., Firestore, relevant for Auth)."
 
-        %% DataSource Implementations 네임스페이스
         namespace DataSourceImpl_DataNS {
             class AuthRemoteDataSourceImpl {
                 -firebaseAuth: FirebaseAuth
             }
             class UserRemoteDataSourceImpl {
+                -firebaseAuth: FirebaseAuth
                 -firestore: FirebaseFirestore
+                -storage: FirebaseStorage
             }
         }
+        note for AuthRemoteDataSourceImpl "Implementation of AuthRemoteDataSource using FirebaseAuth."
+        note for UserRemoteDataSourceImpl "Implementation of UserRemoteDataSource using Firestore and FirebaseStorage."
     end
 
     %% ===== Relationships =====
     %% ViewModel -> UseCase
-    SplashViewModel ..> CheckSessionUseCase : uses
-    SplashViewModel ..> CheckAuthenticationStatusUseCase : uses
-    LoginViewModel ..> LoginUseCase : uses
-    LoginViewModel ..> GetAuthErrorMessageUseCase : uses
-    SignUpViewModel ..> SignUpUseCase : uses
-    SignUpViewModel ..> CheckNicknameAvailabilityUseCase : uses
-    SignUpViewModel ..> SendEmailVerificationUseCase : uses
-    SignUpViewModel ..> GetAuthErrorMessageUseCase : uses
-    FindPasswordViewModel ..> RequestPasswordResetUseCase : uses
-    FindPasswordViewModel ..> VerifyPasswordResetCodeUseCase : uses
-    FindPasswordViewModel ..> ResetPasswordUseCase : uses
-    FindPasswordViewModel ..> GetAuthErrorMessageUseCase : uses
+    ViewModels_AuthNS.SplashViewModel ..> UseCases_AuthNS.CheckAuthenticationStatusUseCase : uses
+    ViewModels_AuthNS.LoginViewModel ..> UseCases_AuthNS.LoginUseCase : uses
+    ViewModels_AuthNS.LoginViewModel ..> UseCases_AuthNS.GetAuthErrorMessageUseCase : uses
+    ViewModels_AuthNS.SignUpViewModel ..> UseCases_AuthNS.SignUpUseCase : uses
+    ViewModels_AuthNS.SignUpViewModel ..> UseCases_UserNS.CheckNicknameAvailabilityUseCase : uses
+    ViewModels_AuthNS.SignUpViewModel ..> UseCases_AuthNS.SendEmailVerificationUseCase : uses
+    ViewModels_AuthNS.SignUpViewModel ..> UseCases_AuthNS.GetAuthErrorMessageUseCase : uses
+    ViewModels_AuthNS.FindPasswordViewModel ..> UseCases_AuthNS.RequestPasswordResetUseCase : uses
+    ViewModels_AuthNS.FindPasswordViewModel ..> UseCases_AuthNS.GetAuthErrorMessageUseCase : uses
 
     %% UseCase -> Repository Interface
-    CheckSessionUseCase ..> AuthRepository : accesses
-    CheckAuthenticationStatusUseCase ..> AuthRepository : accesses
-    LoginUseCase ..> AuthRepository : accesses
-    SignUpUseCase ..> AuthRepository : for auth operations
-    SignUpUseCase ..> UserRepository : for profile creation
-    SendEmailVerificationUseCase ..> AuthRepository : accesses
-    RequestPasswordResetUseCase ..> AuthRepository : accesses
-    VerifyPasswordResetCodeUseCase ..> AuthRepository : accesses
-    ResetPasswordUseCase ..> AuthRepository : accesses
-    CheckNicknameAvailabilityUseCase ..> UserRepository : accesses
+    UseCases_AuthNS.CheckAuthenticationStatusUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_AuthNS.CheckEmailVerificationUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_AuthNS.LoginUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_AuthNS.SignUpUseCase ..> Repositories_DomainNS.AuthRepository : for auth operations
+    UseCases_AuthNS.SignUpUseCase ..> Repositories_DomainNS.UserRepository : for profile creation
+    UseCases_AuthNS.SendEmailVerificationUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_AuthNS.RequestEmailVerificationAfterSignUpUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_AuthNS.RequestPasswordResetUseCase ..> Repositories_DomainNS.AuthRepository : accesses
+    UseCases_UserNS.CheckNicknameAvailabilityUseCase ..> Repositories_DomainNS.UserRepository : accesses
 
     %% Repository Implementation -> Repository Interface
-    AuthRepository <|.. AuthRepositoryImpl : implements
-    UserRepository <|.. UserRepositoryImpl : implements
+    Repositories_DomainNS.AuthRepository <|.. RepositoryImpl_DataNS.AuthRepositoryImpl : implements
+    Repositories_DomainNS.UserRepository <|.. RepositoryImpl_DataNS.UserRepositoryImpl : implements
 
     %% Repository Implementation -> DataSource Interface (Remote Only)
-    AuthRepositoryImpl ..> AuthRemoteDataSource : uses
-    UserRepositoryImpl ..> UserRemoteDataSource : uses
+    RepositoryImpl_DataNS.AuthRepositoryImpl ..> RemoteDataSources_DataNS.AuthRemoteDataSource : uses
+    RepositoryImpl_DataNS.UserRepositoryImpl ..> RemoteDataSources_DataNS.UserRemoteDataSource : uses
 
     %% DataSource Implementation -> DataSource Interface
-    AuthRemoteDataSource <|.. AuthRemoteDataSourceImpl : implements
-    UserRemoteDataSource <|.. UserRemoteDataSourceImpl : implements
+    RemoteDataSources_DataNS.AuthRemoteDataSource <|.. DataSourceImpl_DataNS.AuthRemoteDataSourceImpl : implements
+    RemoteDataSources_DataNS.UserRemoteDataSource <|.. DataSourceImpl_DataNS.UserRemoteDataSourceImpl : implements

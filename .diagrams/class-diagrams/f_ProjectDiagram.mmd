@@ -7,99 +7,90 @@ classDiagram
         namespace ViewModels_ProjectNS {
             class AddProjectViewModel {
                 -createProjectUseCase: CreateProjectUseCase
-                -isProjectNameAvailableUseCase: IsProjectNameAvailableUseCase
-                +createProject(name: String, description: String)
-            }
-            class JoinProjectViewModel { %% Covers JoinProjectDialogViewModel as well for simplicity
                 -joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase
-                +joinProject(code: String)
+                +createProject(name: String, description: String)
+                +onJoinProjectClick()
+            }
+            class JoinProjectViewModel {
+                -joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase
+                +joinProject()
+            }
+            class JoinProjectDialogViewModel {
+                +setToken(token: String?)
+                +joinProject()
+            }
+            class SetProjectNameViewModel {
+                +onProjectNameChange(name: String)
+                +onNextClick()
             }
             class ProjectDetailViewModel {
-                -getProjectInfoFromTokenUseCase: GetProjectInfoFromTokenUseCase
-                -getProjectStructureUseCase: GetProjectStructureUseCase
-                -updateProjectStructureUseCase: UpdateProjectStructureUseCase
-                -observeProjectMembersUseCase: ObserveProjectMembersUseCase
-                +loadProjectDetails(projectId: String)
-                +reorderChannels(categoryId: String, channels: List)
+                -getProjectChannelsUseCase: GetProjectChannelsUseCase
+                -createCategoryChannelUseCase: CreateCategoryChannelUseCase
+                -createDirectChannelUseCase: CreateDirectChannelUseCase
+                +fetchProjectStructure()
+                +confirmCreateChannel()
             }
             class ProjectSettingViewModel {
+                -getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase
+                -deleteCategoryUseCase: DeleteCategoryUseCase
+                -deleteChannelUseCase: DeleteChannelUseCase
                 -renameProjectUseCase: RenameProjectUseCase
                 -deleteProjectUseCase: DeleteProjectUseCase
-                -getProjectInfoFromTokenUseCase: GetProjectInfoFromTokenUseCase
-                +loadSettings(projectId: String)
-                +updateProjectName(newName: String)
+                +loadProjectStructure()
+                +confirmRenameProject(newName: String)
                 +confirmDeleteProject()
             }
             class MemberListViewModel {
                 -observeProjectMembersUseCase: ObserveProjectMembersUseCase
-                -fetchProjectMembersUseCase: FetchProjectMembersUseCase
-                +loadMembers(projectId: String)
+                -deleteProjectMemberUseCase: DeleteProjectMemberUseCase
+                -getProjectRolesUseCase: GetProjectRolesUseCase
+                +observeMembers()
+                +confirmDeleteMember(member: Member)
             }
             class AddMemberViewModel {
                 -searchUserByNameUseCase: SearchUserByNameUseCase
                 -addProjectMemberUseCase: AddProjectMemberUseCase
-                -getProjectRolesUseCase: GetProjectRolesUseCase
-                +searchUsers(name: String)
-                +inviteUserToProject(userId: String, roleId: String)
+                +addSelectedMembers(projectId: String, defaultRoleIds: List<String>)
             }
             class EditMemberViewModel {
                 -getProjectMemberDetailsUseCase: GetProjectMemberDetailsUseCase
-                -updateMemberRolesUseCase: UpdateMemberRolesUseCase
-                -removeProjectMemberUseCase: RemoveProjectMemberUseCase
                 -getProjectRolesUseCase: GetProjectRolesUseCase
-                +loadMemberDetails(projectId: String, memberId: String)
-                +changeMemberRole(newRoleId: String)
-                +kickMember()
+                -updateMemberRolesUseCase: UpdateMemberRolesUseCase
+                +saveMemberRoles()
             }
             class RoleListViewModel {
                 -getProjectRolesUseCase: GetProjectRolesUseCase
-                +loadRoles(projectId: String)
+                -deleteProjectRoleUseCase: DeleteProjectRoleUseCase
+                +confirmDeleteRole(roleId: String)
             }
             class EditRoleViewModel {
-                -createRoleUseCase: CreateRoleUseCase
                 -getRoleDetailsUseCase: GetRoleDetailsUseCase
+                -createRoleUseCase: CreateRoleUseCase
                 -updateRoleUseCase: UpdateRoleUseCase
                 -deleteRoleUseCase: DeleteRoleUseCase
-                +loadRoleDetails(projectId: String, roleId: String)
-                +saveRole(name: String, permissions: List)
-                +removeRole()
+                +saveRole()
+                +confirmDeleteRole()
             }
             class CreateCategoryViewModel {
-                -updateProjectStructureUseCase: UpdateProjectStructureUseCase %% Simplified dependency
-                +createCategory(projectId: String, name: String)
+                %% Placeholder logic in code, actual UseCase for creation TBD
+                +createCategory()
             }
             class CreateChannelViewModel {
-                -createCategoryChannelUseCase: CreateCategoryChannelUseCase
-                +createChannel(projectId: String, categoryId: String, name: String, type: String)
+                %% Placeholder logic in code, actual UseCase for creation TBD
+                +createChannel()
             }
-            class EditCategoryViewModel{
-                -updateProjectStructureUseCase: UpdateProjectStructureUseCase
-                -deleteCategoryUseCase: DeleteCategoryUseCase
-                +renameCategory(newName: String)
-                +confirmDeleteCategory()
+            class EditCategoryViewModel {
+                %% Placeholder logic in code, actual UseCases for update/delete TBD
+                +updateCategory()
+                +confirmDelete()
             }
-            class EditChannelViewModel{
-                -updateProjectStructureUseCase: UpdateProjectStructureUseCase
-                -deleteChannelUseCase: DeleteChannelUseCase
-                +renameChannel(newName: String)
-                +confirmDeleteChannel()
+            class EditChannelViewModel {
+                %% Placeholder logic in code, actual UseCases for update/delete TBD
+                +updateChannel()
+                +confirmDelete()
             }
         }
     end
-    note for AddProjectViewModel "새 프로젝트 생성 화면 UI 로직"
-    note for JoinProjectViewModel "프로젝트 참여 코드 입력 화면/다이얼로그 UI 로직"
-    note for ProjectDetailViewModel "프로젝트 상세 및 구조(채널/카테고리) 조회/편집 UI 로직"
-    note for ProjectSettingViewModel "프로젝트 설정(이름 변경, 삭제 등) UI 로직"
-    note for MemberListViewModel "프로젝트 멤버 목록 조회 UI 로직"
-    note for AddMemberViewModel "프로젝트 멤버 추가 UI 로직"
-    note for EditMemberViewModel "프로젝트 멤버 역할 변경/추방 UI 로직"
-    note for RoleListViewModel "프로젝트 역할 목록 조회 UI 로직"
-    note for EditRoleViewModel "프로젝트 역할 생성/편집/삭제 UI 로직"
-    note for CreateCategoryViewModel "카테고리 생성 UI 로직"
-    note for CreateChannelViewModel "채널 생성 UI 로직"
-    note for EditCategoryViewModel "카테고리 편집/삭제 UI 로직"
-    note for EditChannelViewModel "채널 편집/삭제 UI 로직"
-
 
     %% Domain Layer (UseCases & Repository Interfaces)
     subgraph Domain Layer
@@ -107,177 +98,113 @@ classDiagram
         namespace UseCases_ProjectNS {
             class CreateProjectUseCase {
                 -projectRepository: ProjectRepository
-                -roleRepository: RoleRepository
-                +invoke(name: String, description: String): Result<String> %% Returns ProjectId
-            }
-            class IsProjectNameAvailableUseCase {
-                -projectRepository: ProjectRepository
-                +invoke(name: String): Result<Boolean>
+                -authRepository: AuthRepository
+                +invoke(name: String, description: String): CustomResult<String, Exception>
             }
             class JoinProjectWithCodeUseCase {
-                -inviteRepository: InviteRepository
                 -projectRepository: ProjectRepository
-                +invoke(code: String): Result<Unit>
+                +invoke(code: String): CustomResult<String, Exception>
             }
-            class GetProjectInfoFromTokenUseCase { %% Simplified name for GetProjectById or similar
+            class JoinProjectWithTokenUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String): Flow<Project>
+                +invoke(token: String): CustomResult<String, Exception>
             }
-            class GetProjectStructureUseCase {
-                -projectRepository: ProjectRepository
-                %% -categoryRepository: CategoryRepository (Handled via ProjectRepository)
-                %% -channelRepository: ChannelRepository (Handled via ProjectRepository)
+            class GetProjectChannelsUseCase {
+                -categoryCollectionRepository: CategoryCollectionRepository
                 +invoke(projectId: String): Flow<ProjectStructure>
             }
-            class UpdateProjectStructureUseCase {
-                -projectRepository: ProjectRepository
-                %% -categoryRepository: CategoryRepository
-                %% -channelRepository: ChannelRepository
-                +invoke(projectId: String, newStructure: ProjectStructure): Result<Unit>
+            class CreateCategoryChannelUseCase {
+                -categoryCollectionRepository: CategoryCollectionRepository
+                 +invoke(projectId: String, categoryId: String, channelName: String, channelMode: ChannelMode, order: Int): Result<ProjectChannel>
             }
-            class ObserveProjectMembersUseCase {
-                -projectRepository: ProjectRepository
-                +invoke(projectId: String): Flow<List<Member>>
+            class CreateDirectChannelUseCase {
+                 -categoryCollectionRepository: CategoryCollectionRepository
+                 +invoke(projectId: String, channelName: String, channelMode: ChannelMode, order: Int): Result<ProjectChannel>
             }
-            class FetchProjectMembersUseCase {
-                -projectRepository: ProjectRepository
-                +invoke(projectId: String): Result<Unit>
+            class GetProjectAllCategoriesUseCase {
+                 -categoryCollectionRepository: CategoryCollectionRepository
+                 +invoke(projectId: String): Flow<CustomResult<List<CategoryCollection>, Exception>>
             }
             class RenameProjectUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String, newName: String): Result<Unit>
+                +invoke(projectId: String, newName: String): CustomResult<Unit, Exception>
             }
             class DeleteProjectUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String): Result<Unit>
+                +invoke(projectId: String): CustomResult<Unit, Exception>
             }
-            class AddProjectMemberUseCase {
-                -projectRepository: ProjectRepository %% To add member
-                -userRepository: UserRepository %% To validate/get user by name/id
-                -roleRepository: RoleRepository %% To assign default role or specific role
-                +invoke(projectId: String, userId: String, roleId: String): Result<Unit>
+            class AddCategoryUseCase {
+                 -categoryCollectionRepository: CategoryCollectionRepository
+                 +invoke(categories: List<CategoryCollection>, projectId: String, categoryName: String): CustomResult<List<CategoryCollection>, Exception>
             }
+            class AddChannelUseCase {
+                 -categoryCollectionRepository: CategoryCollectionRepository
+                 +invoke(projectId: String, channelName: String, channelType: ProjectChannelType, categoryId: String): CustomResult<CategoryCollection, Exception>
+            }
+            class DeleteCategoryUseCase {
+                -categoryRepository: CategoryRepository
+                +invoke(categoryId: String): CustomResult<Unit, Exception>
+            }
+            class DeleteChannelUseCase {
+                -projectChannelRepository: ProjectChannelRepository
+                +invoke(channelId: String): CustomResult<Unit, Exception>
+            }
+            class ObserveProjectMembersUseCase {
+                -memberRepository: MemberRepository
+                +invoke(projectId: String): Flow<List<Member>>
+            }
+            class AddProjectMemberUseCase { <<Interface>> }
+            class AddProjectMemberUseCaseImpl { -projectMemberRepository: MemberRepository }
             class GetProjectMemberDetailsUseCase {
-                -projectRepository: ProjectRepository
-                +invoke(projectId: String, memberId: String): Flow<Member>
+                -memberRepository: MemberRepository
+                +invoke(projectId: String, userId: String): Flow<CustomResult<Member, Exception>>
             }
             class UpdateMemberRolesUseCase {
-                -projectRepository: ProjectRepository
-                %% -roleRepository: RoleRepository (For role validation)
-                +invoke(projectId: String, memberId: String, newRoleIds: List<String>): Result<Unit>
+                -memberRepository: MemberRepository
+                +invoke(projectId: String, userId: String, newRoleIds: List<String>): CustomResult<Unit, Exception>
             }
-            class RemoveProjectMemberUseCase {
-                -projectRepository: ProjectRepository
-                +invoke(projectId: String, memberId: String): Result<Unit>
+            class DeleteProjectMemberUseCase {
+                -memberRepository: MemberRepository
+                +invoke(projectId: String, userId: String): CustomResult<Unit, Exception>
             }
+        }
+        namespace UseCases_RoleNS {
             class CreateRoleUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, name: String, permissions: List): Result<String> %% RoleId
+                +invoke(projectId: String, name: String, permissions: List<RolePermission>, isDefault: Boolean): CustomResult<String, Exception>
             }
-            class GetProjectRolesUseCase {
-                -roleRepository: RoleRepository
-                +invoke(projectId: String): Flow<List<Role>>
-            }
+            class GetProjectRolesUseCase { <<Interface>> }
+            class GetProjectRolesUseCaseImpl { -projectRoleRepository: RoleRepository }
             class GetRoleDetailsUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, roleId: String): Flow<Role>
+                +invoke(projectId: String, roleId: String): CustomResult<Role, Exception>
             }
             class UpdateRoleUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, roleId: String, newName: String, newPermissions: List): Result<Unit>
+                +invoke(projectId: String, roleId: String, name: String?, permissions: List<Permission>?, isDefault: Boolean?): CustomResult<Unit, Exception>
             }
             class DeleteRoleUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, roleId: String): Result<Unit>
+                +invoke(projectId: String, roleId: String): CustomResult<Unit, Exception>
             }
-            class CreateCategoryChannelUseCase {
-                -channelRepository: ChannelRepository
-                -categoryRepository: CategoryRepository 
-                +invoke(projectId: String, categoryId: String, channelName: String, channelType: String): Result<String> %% ChannelId
-            }
-            class DeleteCategoryUseCase{
-                -categoryRepository: CategoryRepository
-                -projectRepository: ProjectRepository 
-                +invoke(projectId: String, categoryId: String): Result<Unit>
-            }
-            class DeleteChannelUseCase{
-                -channelRepository: ChannelRepository
-                -projectRepository: ProjectRepository 
-                +invoke(projectId: String, channelId: String): Result<Unit>
-            }
+            class DeleteProjectRoleUseCase { -roleRepository: RoleRepository }
         }
-
-        namespace UseCases_UserNS { 
-            class SearchUserByNameUseCase {
-                -userRepository: UserRepository
-                +invoke(name: String): Flow<List<User>>
-            }
-        }
-        %% Permission UseCases (if any specific to project, else handled by main use cases)
-        namespace UseCases_PermissionNS {
-            class CheckChannelPermissionUseCase {
-                -userRepository: UserRepository
-                -projectRepository: ProjectRepository
-                -roleRepository: RoleRepository
-                +invoke(userId: String, projectId: String, channelId: String, permission: String): Flow<Boolean>
-            }
-        }
-
+        namespace UseCases_UserNS { class SearchUserByNameUseCase { -userRepository: UserRepository } }
 
         namespace Repositories_DomainNS {
-            class ProjectRepository {
-                <<Interface>>
-                +createProject(name: String, description: String, ownerId: String): Result<String>
-                +isProjectNameAvailable(name: String): Result<Boolean>
-                +joinProjectByCode(userId: String, code: String): Result<Unit>
-                +getProjectById(projectId: String): Flow<Project>
-                +getProjectStructure(projectId: String): Flow<ProjectStructure>
-                +updateProjectStructure(projectId: String, structure: ProjectStructure): Result<Unit>
-                +observeProjectMembers(projectId: String): Flow<List<Member>>
-                +fetchProjectMembers(projectId: String): Result<Unit>
-                +addMemberToProject(projectId: String, userId: String, roleIds: List<String>): Result<Unit>
-                +getMemberDetails(projectId: String, memberId: String): Flow<Member>
-                +updateMemberRoles(projectId: String, memberId: String, roleIds: List<String>): Result<Unit>
-                +removeMemberFromProject(projectId: String, memberId: String): Result<Unit>
-                +renameProject(projectId: String, newName: String): Result<Unit>
-                +deleteProject(projectId: String): Result<Unit>
-                %% Category/Channel specific methods can be here or in dedicated repos
-                +createCategoryInProject(projectId: String, categoryName: String): Result<String>
-                +createChannelInProjectCategory(projectId: String, categoryId: String, channelName: String, channelType: String): Result<String>
-                +deleteCategoryFromProject(projectId: String, categoryId: String): Result<Unit>
-                +deleteChannelFromProject(projectId: String, channelId: String): Result<Unit>
-            }
-            class RoleRepository {
-                <<Interface>>
-                +createRoleInProject(projectId: String, name: String, permissions: List): Result<String>
-                +getRolesForProject(projectId: String): Flow<List<Role>>
-                +getRoleDetails(projectId: String, roleId: String): Flow<Role>
-                +updateRole(projectId: String, roleId: String, newName: String, newPermissions: List): Result<Unit>
-                +deleteRole(projectId: String, roleId: String): Result<Unit>
-                +assignDefaultRolesToOwner(projectId: String, ownerId: String): Result<Unit>
-            }
-            class InviteRepository {
-                <<Interface>>
-                +validateInviteCode(code: String): Result<String> %% Returns ProjectId
-                +generateInviteCode(projectId: String): Result<String>
-            }
-            class CategoryRepository { %% If managed separately from ProjectRepository
-                <<Interface>>
-                +createCategory(projectId: String, name: String): Result<String>
-                +deleteCategory(categoryId: String): Result<Unit>
-            }
-            class ChannelRepository { %% If managed separately from ProjectRepository
-                <<Interface>>
-                +createChannel(projectId: String, categoryId: String, name: String, type: String): Result<String>
-                +deleteChannel(channelId: String): Result<Unit>
-            }
-            %% UserRepository is defined in other features, assumed available
+            class ProjectRepository { <<Interface>> }
+            class ProjectsWrapperRepository { <<Interface>> }
+            class RoleRepository { <<Interface>> }
+            class InviteRepository { <<Interface>> }
+            class CategoryRepository { <<Interface>> }
+            class ProjectChannelRepository { <<Interface>> }
+            class MemberRepository { <<Interface>> }
+            class PermissionRepository { <<Interface>> }
+            class UserRepository { <<Interface>> }
+            class MediaRepository { <<Interface>> }
+            class AuthRepository { <<Interface>> }
+            class CategoryCollectionRepository { <<Interface>> }
         }
-        note for ProjectRepository "프로젝트 생성, 조회, 멤버, 구조 등 핵심 관리 인터페이스"
-        note for RoleRepository "프로젝트 내 역할 관리 인터페이스"
-        note for InviteRepository "프로젝트 초대 코드 관리 인터페이스"
-        note for CategoryRepository "프로젝트 카테고리 관리 인터페이스 (ProjectRepo에 통합될 수 있음)"
-        note for ChannelRepository "프로젝트 채널 관리 인터페이스 (ProjectRepo에 통합될 수 있음)"
     end
 
     %% Data Layer
@@ -286,206 +213,73 @@ classDiagram
         namespace RepositoryImpl_DataNS {
             class ProjectRepositoryImpl {
                 -projectRemoteDataSource: ProjectRemoteDataSource
+                -categoryRemoteDataSource: CategoryRemoteDataSource
+                -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
                 -memberRemoteDataSource: MemberRemoteDataSource
-                -categoryRemoteDataSource: CategoryRemoteDataSource
-                -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
-                -inviteRemoteDataSource: InviteRemoteDataSource
-                -projectsWrapperRemoteDataSource: ProjectsWrapperRemoteDataSource
-                %% Role operations might be delegated or use RoleRemoteDataSource directly if needed
+                -mediaRepository: MediaRepository
             }
-            class RoleRepositoryImpl {
-                -roleRemoteDataSource: RoleRemoteDataSource
-            }
-            class InviteRepositoryImpl {
-                -inviteRemoteDataSource: InviteRemoteDataSource
-            }
-            class CategoryRepositoryImpl {
-                -categoryRemoteDataSource: CategoryRemoteDataSource
-            }
-            class ChannelRepositoryImpl {
-                -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
-            }
-            %% UserRepositoryImpl is defined in other features
+            class ProjectsWrapperRepositoryImpl { -projectsWrapperRemoteDataSource: ProjectsWrapperRemoteDataSource }
+            class RoleRepositoryImpl { -roleRemoteDataSource: RoleRemoteDataSource }
+            class InviteRepositoryImpl { -inviteRemoteDataSource: InviteRemoteDataSource }
+            class CategoryRepositoryImpl { -categoryRemoteDataSource: CategoryRemoteDataSource }
+            class ProjectChannelRepositoryImpl { -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource }
+            class MemberRepositoryImpl { -memberRemoteDataSource: MemberRemoteDataSource }
+            class PermissionRepositoryImpl { -permissionRemoteDataSource: PermissionRemoteDataSource }
+            class CategoryCollectionRepositoryImpl { -categoryCollectionRemoteDataSource: CategoryCollectionRemoteDataSource }
         }
-        note for ProjectRepositoryImpl "ProjectRepository 구현체 (다수 Remote DS 사용)"
-        note for RoleRepositoryImpl "RoleRepository 구현체 (Remote)"
-        note for InviteRepositoryImpl "InviteRepository 구현체 (Remote)"
-        note for CategoryRepositoryImpl "CategoryRepository 구현체 (Remote)"
-        note for ChannelRepositoryImpl "ChannelRepository 구현체 (Remote)"
 
         namespace RemoteDataSources_DataNS {
-            class ProjectRemoteDataSource {
-                <<Interface>>
-                +createProject(projectDTO: ProjectDTO): Result<String>
-                +checkProjectName(name: String): Result<Boolean>
-                +getProject(projectId: String): Flow<ProjectDTO>
-                +getProjectStructureData(projectId: String): Flow<ProjectStructureDTO>
-                +updateProjectStructureData(projectId: String, structureDTO: ProjectStructureDTO): Result<Unit>
-                +renameProject(projectId: String, newName: String): Result<Unit>
-                +deleteProject(projectId: String): Result<Unit>
-            }
-            class ProjectsWrapperRemoteDataSource{
-                <<Interface>>
-                +getProjectsWrappers(userId: String): Flow<List<ProjectsWrapperDTO>>
-            }
-            class MemberRemoteDataSource {
-                <<Interface>>
-                +getMembers(projectId: String): Flow<List<MemberDTO>>
-                +fetchMembers(projectId: String): Result<Unit>
-                +addMember(projectId: String, userId: String, roleIds: List<String>): Result<Unit>
-                +getMember(projectId: String, memberId: String): Flow<MemberDTO>
-                +updateMemberRoles(projectId: String, memberId: String, roleIds: List<String>): Result<Unit>
-                +removeMember(projectId: String, memberId: String): Result<Unit>
-            }
-            class RoleRemoteDataSource {
-                <<Interface>>
-                +createRole(projectId: String, roleDTO: RoleDTO): Result<String>
-                +getRoles(projectId: String): Flow<List<RoleDTO>>
-                +getRole(projectId: String, roleId: String): Flow<RoleDTO>
-                +updateRole(projectId: String, roleId: String, roleDTO: RoleDTO): Result<Unit>
-                +deleteRole(projectId: String, roleId: String): Result<Unit>
-                +setupDefaultRolesForProject(projectId: String, ownerId: String): Result<Unit>
-            }
-            class InviteRemoteDataSource {
-                <<Interface>>
-                +getProjectIdByInviteCode(code: String): Result<String>
-                +createInviteCode(projectId: String): Result<String>
-            }
-            class CategoryRemoteDataSource {
-                <<Interface>>
-                +createCategory(projectId: String, categoryDTO: CategoryDTO): Result<String>
-                +deleteCategory(categoryId: String): Result<Unit>
-                 %% updateCategory, getCategories etc.
-            }
-            class ProjectChannelRemoteDataSource {
-                <<Interface>>
-                +createChannel(projectId: String, categoryId: String, channelDTO: ChannelDTO): Result<String>
-                +deleteChannel(channelId: String): Result<Unit>
-                %% updateChannel, getChannels etc.
-            }
-            %% UserRemoteDataSource is defined in other features
+            class ProjectRemoteDataSource { <<Interface>> }
+            class ProjectsWrapperRemoteDataSource { <<Interface>> }
+            class RoleRemoteDataSource { <<Interface>> }
+            class InviteRemoteDataSource { <<Interface>> }
+            class CategoryRemoteDataSource { <<Interface>> }
+            class ProjectChannelRemoteDataSource { <<Interface>> }
+            class MemberRemoteDataSource { <<Interface>> }
+            class PermissionRemoteDataSource { <<Interface>> }
+            class CategoryCollectionRemoteDataSource { <<Interface>> }
         }
-        note for ProjectRemoteDataSource "원격 프로젝트 핵심 데이터 통신"
-        note for ProjectsWrapperRemoteDataSource "원격 프로젝트 목록(상세 포함) 통신"
-        note for MemberRemoteDataSource "원격 프로젝트 멤버 데이터 통신"
-        note for RoleRemoteDataSource "원격 프로젝트 역할 데이터 통신"
-        note for InviteRemoteDataSource "원격 프로젝트 초대 코드 데이터 통신"
-        note for CategoryRemoteDataSource "원격 카테고리 데이터 통신"
-        note for ProjectChannelRemoteDataSource "원격 프로젝트 채널 데이터 통신"
 
         namespace DataSourceImpl_DataNS {
             class ProjectRemoteDataSourceImpl { -firestore: FirebaseFirestore }
             class ProjectsWrapperRemoteDataSourceImpl { -firestore: FirebaseFirestore }
-            class MemberRemoteDataSourceImpl { -firestore: FirebaseFirestore }
             class RoleRemoteDataSourceImpl { -firestore: FirebaseFirestore }
             class InviteRemoteDataSourceImpl { -firestore: FirebaseFirestore }
             class CategoryRemoteDataSourceImpl { -firestore: FirebaseFirestore }
             class ProjectChannelRemoteDataSourceImpl { -firestore: FirebaseFirestore }
-            %% UserRemoteDataSourceImpl is defined in other features
+            class MemberRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class PermissionRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class CategoryCollectionRemoteDataSourceImpl { -firestore: FirebaseFirestore }
         }
     end
 
-    %% ===== Relationships =====
-    %% ViewModel -> UseCase
-    AddProjectViewModel ..> CreateProjectUseCase : uses
-    AddProjectViewModel ..> IsProjectNameAvailableUseCase : uses
-    JoinProjectViewModel ..> JoinProjectWithCodeUseCase : uses
-    ProjectDetailViewModel ..> GetProjectInfoFromTokenUseCase : observes project
-    ProjectDetailViewModel ..> GetProjectStructureUseCase : observes structure
-    ProjectDetailViewModel ..> UpdateProjectStructureUseCase : updates structure
-    ProjectDetailViewModel ..> ObserveProjectMembersUseCase : observes members
-    ProjectSettingViewModel ..> GetProjectInfoFromTokenUseCase : loads project name
-    ProjectSettingViewModel ..> RenameProjectUseCase : renames
-    ProjectSettingViewModel ..> DeleteProjectUseCase : deletes
-    MemberListViewModel ..> ObserveProjectMembersUseCase : observes
-    MemberListViewModel ..> FetchProjectMembersUseCase : refreshes
-    AddMemberViewModel ..> SearchUserByNameUseCase : searches user
-    AddMemberViewModel ..> AddProjectMemberUseCase : adds member
-    AddMemberViewModel ..> GetProjectRolesUseCase : to show roles for assignment
-    EditMemberViewModel ..> GetProjectMemberDetailsUseCase : loads member
-    EditMemberViewModel ..> UpdateMemberRolesUseCase : updates roles
-    EditMemberViewModel ..> RemoveProjectMemberUseCase : removes member
-    EditMemberViewModel ..> GetProjectRolesUseCase : to show available roles
-    RoleListViewModel ..> GetProjectRolesUseCase : observes roles
-    EditRoleViewModel ..> CreateRoleUseCase : creates
-    EditRoleViewModel ..> GetRoleDetailsUseCase : loads role
-    EditRoleViewModel ..> UpdateRoleUseCase : updates
-    EditRoleViewModel ..> DeleteRoleUseCase : deletes
-    CreateCategoryViewModel ..> UpdateProjectStructureUseCase : creates category via structure update
-    CreateChannelViewModel ..> CreateCategoryChannelUseCase : creates channel
-    EditCategoryViewModel ..> UpdateProjectStructureUseCase : renames category via structure update
-    EditCategoryViewModel ..> DeleteCategoryUseCase : deletes category
-    EditChannelViewModel ..> UpdateProjectStructureUseCase : renames channel via structure update
-    EditChannelViewModel ..> DeleteChannelUseCase : deletes channel
-    ProjectDetailViewModel ..> CheckChannelPermissionUseCase : checks permission (example)
+    %% ===== Relationships ===== (Simplified for brevity - key interactions)
+    ViewModels_ProjectNS.AddProjectViewModel ..> UseCases_ProjectNS.CreateProjectUseCase
+    ViewModels_ProjectNS.ProjectDetailViewModel ..> UseCases_ProjectNS.GetProjectChannelsUseCase
+    ViewModels_ProjectNS.MemberListViewModel ..> UseCases_ProjectNS.ObserveProjectMembersUseCase
+    ViewModels_ProjectNS.AddMemberViewModel ..> UseCases_UserNS.SearchUserByNameUseCase
+    ViewModels_ProjectNS.AddMemberViewModel ..> UseCases_ProjectNS.AddProjectMemberUseCase
+    ViewModels_ProjectNS.EditRoleViewModel ..> UseCases_RoleNS.CreateRoleUseCase
 
-    %% UseCase -> Repository Interface
-    CreateProjectUseCase ..> ProjectRepository : creates project
-    CreateProjectUseCase ..> RoleRepository : setups default roles
-    IsProjectNameAvailableUseCase ..> ProjectRepository : checks name
-    JoinProjectWithCodeUseCase ..> InviteRepository : validates code
-    JoinProjectWithCodeUseCase ..> ProjectRepository : adds user to project
-    GetProjectInfoFromTokenUseCase ..> ProjectRepository : gets project
-    GetProjectStructureUseCase ..> ProjectRepository : gets structure
-    %% GetProjectStructureUseCase may also directly use CategoryRepository, ChannelRepository if not through ProjectRepository
-    UpdateProjectStructureUseCase ..> ProjectRepository : updates structure
-    %% UpdateProjectStructureUseCase may also directly use CategoryRepository, ChannelRepository
-    ObserveProjectMembersUseCase ..> ProjectRepository : observes members
-    FetchProjectMembersUseCase ..> ProjectRepository : fetches members
-    RenameProjectUseCase ..> ProjectRepository : renames project
-    DeleteProjectUseCase ..> ProjectRepository : deletes project
-    AddProjectMemberUseCase ..> ProjectRepository : adds member
-    AddProjectMemberUseCase ..> UserRepository : gets user info
-    AddProjectMemberUseCase ..> RoleRepository : gets role info
-    GetProjectMemberDetailsUseCase ..> ProjectRepository : gets member details
-    UpdateMemberRolesUseCase ..> ProjectRepository : updates member roles
-    RemoveProjectMemberUseCase ..> ProjectRepository : removes member
-    CreateRoleUseCase ..> RoleRepository : creates role
-    GetProjectRolesUseCase ..> RoleRepository : gets roles
-    GetRoleDetailsUseCase ..> RoleRepository : gets role details
-    UpdateRoleUseCase ..> RoleRepository : updates role
-    DeleteRoleUseCase ..> RoleRepository : deletes role
-    CreateCategoryChannelUseCase ..> ChannelRepository : creates channel
-    CreateCategoryChannelUseCase ..> CategoryRepository : for category context
-    DeleteCategoryUseCase ..> CategoryRepository : deletes category
-    DeleteCategoryUseCase ..> ProjectRepository : for structure consistency
-    DeleteChannelUseCase ..> ChannelRepository : deletes channel
-    DeleteChannelUseCase ..> ProjectRepository : for structure consistency
-    SearchUserByNameUseCase ..> UserRepository : searches users
-    CheckChannelPermissionUseCase ..> UserRepository : uses
-    CheckChannelPermissionUseCase ..> ProjectRepository : uses
-    CheckChannelPermissionUseCase ..> RoleRepository : uses
+    UseCases_ProjectNS.CreateProjectUseCase ..> Repositories_DomainNS.ProjectRepository
+    UseCases_ProjectNS.GetProjectChannelsUseCase ..> Repositories_DomainNS.CategoryCollectionRepository
+    UseCases_ProjectNS.AddProjectMemberUseCaseImpl ..> Repositories_DomainNS.MemberRepository
+    UseCases_RoleNS.GetProjectRolesUseCaseImpl ..> Repositories_DomainNS.RoleRepository
 
+    Repositories_DomainNS.ProjectRepository <|.. RepositoryImpl_DataNS.ProjectRepositoryImpl
+    Repositories_DomainNS.RoleRepository <|.. RepositoryImpl_DataNS.RoleRepositoryImpl
+    Repositories_DomainNS.CategoryCollectionRepository <|.. RepositoryImpl_DataNS.CategoryCollectionRepositoryImpl
 
-    %% Repository Implementation -> Repository Interface
-    ProjectRepository <|.. ProjectRepositoryImpl : implements
-    RoleRepository <|.. RoleRepositoryImpl : implements
-    InviteRepository <|.. InviteRepositoryImpl : implements
-    CategoryRepository <|.. CategoryRepositoryImpl : implements
-    ChannelRepository <|.. ChannelRepositoryImpl : implements
-    %% UserRepository <|.. UserRepositoryImpl (defined in other features)
+    RepositoryImpl_DataNS.ProjectRepositoryImpl ..> RemoteDataSources_DataNS.ProjectRemoteDataSource
+    RepositoryImpl_DataNS.ProjectRepositoryImpl ..> RemoteDataSources_DataNS.CategoryRemoteDataSource
+    RepositoryImpl_DataNS.RoleRepositoryImpl ..> RemoteDataSources_DataNS.RoleRemoteDataSource
+    RepositoryImpl_DataNS.CategoryCollectionRepositoryImpl ..> RemoteDataSources_DataNS.CategoryCollectionRemoteDataSource
 
-    %% Repository Implementation -> DataSource Interface (Remote Only)
-    ProjectRepositoryImpl ..> ProjectRemoteDataSource : uses
-    ProjectRepositoryImpl ..> ProjectsWrapperRemoteDataSource : uses
-    ProjectRepositoryImpl ..> MemberRemoteDataSource : uses
-    ProjectRepositoryImpl ..> CategoryRemoteDataSource : uses
-    ProjectRepositoryImpl ..> ProjectChannelRemoteDataSource : uses
-    ProjectRepositoryImpl ..> InviteRemoteDataSource : uses
-    %% ProjectRepositoryImpl also uses RoleRemoteDataSource indirectly via RoleRepository, or directly
-    RoleRepositoryImpl ..> RoleRemoteDataSource : uses
-    InviteRepositoryImpl ..> InviteRemoteDataSource : uses
-    CategoryRepositoryImpl ..> CategoryRemoteDataSource : uses
-    ChannelRepositoryImpl ..> ProjectChannelRemoteDataSource : uses
-    %% UserRepositoryImpl ..> UserRemoteDataSource (defined in other features)
+    RemoteDataSources_DataNS.ProjectRemoteDataSource <|.. DataSourceImpl_DataNS.ProjectRemoteDataSourceImpl
+    RemoteDataSources_DataNS.RoleRemoteDataSource <|.. DataSourceImpl_DataNS.RoleRemoteDataSourceImpl
+    RemoteDataSources_DataNS.CategoryCollectionRemoteDataSource <|.. DataSourceImpl_DataNS.CategoryCollectionRemoteDataSourceImpl
 
-
-    %% DataSource Implementation -> DataSource Interface
-    ProjectRemoteDataSource <|.. ProjectRemoteDataSourceImpl : implements
-    ProjectsWrapperRemoteDataSource <|.. ProjectsWrapperRemoteDataSourceImpl : implements
-    MemberRemoteDataSource <|.. MemberRemoteDataSourceImpl : implements
-    RoleRemoteDataSource <|.. RoleRemoteDataSourceImpl : implements
-    InviteRemoteDataSource <|.. InviteRemoteDataSourceImpl : implements
-    CategoryRemoteDataSource <|.. CategoryRemoteDataSourceImpl : implements
-    ProjectChannelRemoteDataSource <|.. ProjectChannelRemoteDataSourceImpl : implements
-    %% UserRemoteDataSource <|.. UserRemoteDataSourceImpl (defined in other features)
+    note "Many ViewModels and UseCases omitted for brevity in relationships section."
+    note "Detailed method signatures and all dependencies are captured in the actual file content."
+    note "Structure modification UseCases like UpdateProjectStructureUseCase were not found; specific creation/deletion UseCases are used or logic is placeholder in VMs."
+    note "Invite and Permission UseCases from diagram were not found directly; their functionality might be in other UseCases or Repositories."

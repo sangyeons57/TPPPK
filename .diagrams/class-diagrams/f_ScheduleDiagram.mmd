@@ -1,5 +1,5 @@
 classDiagram
-    title Schedule Feature Architecture 
+    title Schedule Feature Architecture
 
     %% Feature Layer (ViewModels)
     subgraph Feature Layer - ViewModels
@@ -7,165 +7,203 @@ classDiagram
         namespace ViewModels_ScheduleNS {
             class AddScheduleViewModel {
                 -addScheduleUseCase: AddScheduleUseCase
-                -getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase %% To select a project for the schedule
-                +loadSchedulableProjects()
-                +createSchedule(title: String, date: String, time: String, projectId: String?, description: String)
+                -getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCase
+                +loadAvailableProjects()
+                +onSaveClick()
             }
             class EditScheduleViewModel {
                 -getScheduleDetailUseCase: GetScheduleDetailUseCase
                 -updateScheduleUseCase: UpdateScheduleUseCase
                 -deleteScheduleUseCase: DeleteScheduleUseCase
-                -getSchedulableProjectsUseCase: GetSchedulableProjectsUseCase
                 +loadScheduleDetails(scheduleId: String)
-                +saveScheduleChanges(scheduleId: String, title: String, date: String, time: String, projectId: String?, description: String)
-                +confirmDeleteSchedule(scheduleId: String)
+                +onSaveClicked()
             }
             class ScheduleDetailViewModel {
                 -getScheduleDetailUseCase: GetScheduleDetailUseCase
+                -deleteScheduleUseCase: DeleteScheduleUseCase
                 +loadScheduleDetails(scheduleId: String)
+                +confirmDelete()
             }
-            class Calendar24HourViewModel { %% For daily view if it has specific logic
+            class Calendar24HourViewModel {
                 -getSchedulesForDateUseCase: GetSchedulesForDateUseCase
-                +loadDailySchedules(date: String)
+                -deleteScheduleUseCase: DeleteScheduleUseCase
+                +loadSchedules(date: LocalDate)
+                +deleteSchedule(scheduleId: String)
             }
         }
     end
-    note for AddScheduleViewModel "새 일정 추가 화면 UI 로직"
-    note for EditScheduleViewModel "기존 일정 수정/삭제 화면 UI 로직"
-    note for ScheduleDetailViewModel "일정 상세 정보 표시 UI 로직"
-    note for Calendar24HourViewModel "하루 단위 일정 상세 보기 UI 로직 (feature_main의 CalendarViewModel과 연관)"
 
     %% Domain Layer (UseCases & Repository Interfaces)
     subgraph Domain Layer
         direction LR
         namespace UseCases_ScheduleNS {
             class AddScheduleUseCase {
+                <<Interface>>
+                +invoke(schedule: Schedule): CustomResult<Unit, Exception>
+            }
+            class AddScheduleUseCaseImpl {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleData: Schedule): Result<String> %% Returns ScheduleId
             }
             class GetScheduleDetailUseCase {
+                <<Interface>>
+                +invoke(scheduleId: String): CustomResult<Schedule, Exception>
+            }
+            class GetScheduleDetailUseCaseImpl {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleId: String): Flow<Schedule?>
             }
             class UpdateScheduleUseCase {
+                <<Interface>>
+                +invoke(schedule: Schedule): CustomResult<Unit, Exception>
+            }
+            class UpdateScheduleUseCaseImpl {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleData: Schedule): Result<Unit>
             }
             class DeleteScheduleUseCase {
+                <<Interface>>
+                +invoke(scheduleId: String): CustomResult<Unit, Exception>
+            }
+            class DeleteScheduleUseCaseImpl {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleId: String): Result<Unit>
+                -authRepository: AuthRepository
             }
             class GetSchedulesForDateUseCase {
-                 %% Used by CalendarViewModel in feature_main and potentially here
-                -scheduleRepository: ScheduleRepository
-                +invoke(date: String): Flow<List<Schedule>>
+                <<Interface>>
+                +invoke(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>>
             }
-            class GetScheduleSummaryForMonthUseCase { 
-                %% Used by CalendarViewModel in feature_main
+            class GetSchedulesForDateUseCaseImpl {
                 -scheduleRepository: ScheduleRepository
-                +invoke(year: Int, month: Int): Flow<Map<Int, Int>>
+            }
+            class GetScheduleSummaryForMonthUseCase {
+                -scheduleRepository: ScheduleRepository
+                -authRepository: AuthRepository
+                +invoke(yearMonth: YearMonth): CustomResult<Map<Int, Boolean>, Exception>
             }
         }
         namespace UseCases_ProjectNS {
-             %% Used for selecting project for schedule
-            class GetSchedulableProjectsUseCase {
+            class GetUserParticipatingProjectsUseCase {
+                <<Interface>>
+                +invoke(): Flow<CustomResult<List<Project>, Exception>>
+            }
+            class GetUserParticipatingProjectsUseCaseImpl {
+                -projectsWrapperRepository: ProjectsWrapperRepository
                 -projectRepository: ProjectRepository
-                +invoke(): Flow<List<Project>> %% Projects user can add schedules to
+                -authUtil: AuthUtil
             }
         }
 
         namespace Repositories_DomainNS {
             class ScheduleRepository {
                 <<Interface>>
-                +addSchedule(scheduleData: Schedule): Result<String>
-                +getScheduleById(scheduleId: String): Flow<Schedule?>
-                +updateSchedule(scheduleData: Schedule): Result<Unit>
-                +deleteSchedule(scheduleId: String): Result<Unit>
-                +getSchedulesForDate(date: String): Flow<List<Schedule>>
-                +getScheduleSummaryForMonth(year: Int, month: Int): Flow<Map<Int, Int>>
+                +createSchedule(schedule: Schedule): CustomResult<String, Exception>
+                +getScheduleDetails(scheduleId: String): CustomResult<Schedule, Exception>
+                +updateSchedule(schedule: Schedule): CustomResult<Unit, Exception>
+                +deleteSchedule(scheduleId: String): CustomResult<Unit, Exception>
+                +getSchedulesOnDate(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>>
+                +getScheduleSummaryForMonth(userId: String, yearMonth: YearMonth): CustomResult<Map<Int, Boolean>, Exception>
             }
-            class ProjectRepository { %% Defined in other features, used here
+            class ProjectRepository {
                 <<Interface>>
-                +getProjectsForScheduling(): Flow<List<Project>> %% Simplified method name
+                +getProjectDetails(projectId: String): CustomResult<Project, Exception>
+            }
+            class ProjectsWrapperRepository {
+                <<Interface>>
+                +getProjectsWrapperStream(userId: String): Flow<List<CustomResult<ProjectsWrapper, Exception>>>
+            }
+            class AuthRepository {
+                <<Interface>>
+                +getCurrentUserSession(): CustomResult<UserSession, Exception>
             }
         }
-        note for ScheduleRepository "일정 데이터 접근 인터페이스"
-        note for ProjectRepository "프로젝트 데이터 접근 인터페이스 (일정 대상 선택용)"
     end
 
-    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    %% Data Layer
     subgraph Data Layer
         direction LR
         namespace RepositoryImpl_DataNS {
             class ScheduleRepositoryImpl {
                 -scheduleRemoteDataSource: ScheduleRemoteDataSource
-                %% LocalDataSource excluded
             }
-            class ProjectRepositoryImpl { %% Defined in other features
+            class ProjectRepositoryImpl {
                 -projectRemoteDataSource: ProjectRemoteDataSource
-                %% Other DS excluded for this context
+                %% Other DS for full ProjectRepo not shown for brevity in this diagram
+            }
+            class ProjectsWrapperRepositoryImpl {
+                -projectsWrapperRemoteDataSource: ProjectsWrapperRemoteDataSource
+            }
+            class AuthRepositoryImpl {
+                -authRemoteDataSource: AuthRemoteDataSource
+                -auth: FirebaseAuth
             }
         }
-        note for ScheduleRepositoryImpl "ScheduleRepository 구현체 (Remote)"
-        note for ProjectRepositoryImpl "ProjectRepository 구현체 (Remote, 일정 기능에서 사용되는 부분)"
-
 
         namespace RemoteDataSources_DataNS {
-            class ScheduleRemoteDataSource {
-                <<Interface>>
-                +createSchedule(scheduleDTO: ScheduleDTO): Result<String>
-                +fetchScheduleById(scheduleId: String): Flow<ScheduleDTO?>
-                +updateScheduleOnRemote(scheduleDTO: ScheduleDTO): Result<Unit>
-                +deleteScheduleOnRemote(scheduleId: String): Result<Unit>
-                +fetchSchedulesForDate(date: String): Flow<List<ScheduleDTO>>
-                +fetchScheduleSummaryForMonth(year: Int, month: Int): Flow<Map<Int, Int>>
-            }
-            class ProjectRemoteDataSource { %% Defined in other features
-                <<Interface>>
-                +fetchSchedulableProjects(): Flow<List<ProjectDTO>> %% Simplified
-            }
+            class ScheduleRemoteDataSource { <<Interface>> }
+            class ProjectRemoteDataSource { <<Interface>> }
+            class ProjectsWrapperRemoteDataSource { <<Interface>> }
+            class AuthRemoteDataSource { <<Interface>> }
         }
-        note for ScheduleRemoteDataSource "원격 일정 서비스 통신"
-        note for ProjectRemoteDataSource "원격 프로젝트 서비스 통신 (일정 대상 선택용)"
 
         namespace DataSourceImpl_DataNS {
-            class ScheduleRemoteDataSourceImpl {
-                -firestore: FirebaseFirestore
-            }
-            class ProjectRemoteDataSourceImpl { %% Defined in other features
-                -firestore: FirebaseFirestore
-            }
+            class ScheduleRemoteDataSourceImpl { -auth: FirebaseAuth; -firestore: FirebaseFirestore }
+            class ProjectRemoteDataSourceImpl { -auth: FirebaseAuth; -firestore: FirebaseFirestore }
+            class ProjectsWrapperRemoteDataSourceImpl { -auth: FirebaseAuth; -firestore: FirebaseFirestore }
+            class AuthRemoteDataSourceImpl { -auth: FirebaseAuth }
+        }
+        namespace Utils_DataNS {
+            class AuthUtil { +getCurrentUserId(): String }
         }
     end
 
     %% ===== Relationships =====
     %% ViewModel -> UseCase
-    AddScheduleViewModel ..> AddScheduleUseCase : uses
-    AddScheduleViewModel ..> GetSchedulableProjectsUseCase : uses
-    EditScheduleViewModel ..> GetScheduleDetailUseCase : uses
-    EditScheduleViewModel ..> UpdateScheduleUseCase : uses
-    EditScheduleViewModel ..> DeleteScheduleUseCase : uses
-    EditScheduleViewModel ..> GetSchedulableProjectsUseCase : uses
-    ScheduleDetailViewModel ..> GetScheduleDetailUseCase : uses
-    Calendar24HourViewModel ..> GetSchedulesForDateUseCase : uses
+    ViewModels_ScheduleNS.AddScheduleViewModel ..> UseCases_ScheduleNS.AddScheduleUseCase
+    ViewModels_ScheduleNS.AddScheduleViewModel ..> UseCases_ProjectNS.GetUserParticipatingProjectsUseCase
+    ViewModels_ScheduleNS.EditScheduleViewModel ..> UseCases_ScheduleNS.GetScheduleDetailUseCase
+    ViewModels_ScheduleNS.EditScheduleViewModel ..> UseCases_ScheduleNS.UpdateScheduleUseCase
+    ViewModels_ScheduleNS.EditScheduleViewModel ..> UseCases_ScheduleNS.DeleteScheduleUseCase
+    ViewModels_ScheduleNS.ScheduleDetailViewModel ..> UseCases_ScheduleNS.GetScheduleDetailUseCase
+    ViewModels_ScheduleNS.ScheduleDetailViewModel ..> UseCases_ScheduleNS.DeleteScheduleUseCase
+    ViewModels_ScheduleNS.Calendar24HourViewModel ..> UseCases_ScheduleNS.GetSchedulesForDateUseCase
+    ViewModels_ScheduleNS.Calendar24HourViewModel ..> UseCases_ScheduleNS.DeleteScheduleUseCase
 
     %% UseCase -> Repository Interface
-    AddScheduleUseCase ..> ScheduleRepository : accesses
-    GetScheduleDetailUseCase ..> ScheduleRepository : accesses
-    UpdateScheduleUseCase ..> ScheduleRepository : accesses
-    DeleteScheduleUseCase ..> ScheduleRepository : accesses
-    GetSchedulesForDateUseCase ..> ScheduleRepository : accesses
-    GetScheduleSummaryForMonthUseCase ..> ScheduleRepository : accesses
-    GetSchedulableProjectsUseCase ..> ProjectRepository : accesses
+    UseCases_ScheduleNS.AddScheduleUseCaseImpl ..> Repositories_DomainNS.ScheduleRepository
+    UseCases_ScheduleNS.GetScheduleDetailUseCaseImpl ..> Repositories_DomainNS.ScheduleRepository
+    UseCases_ScheduleNS.UpdateScheduleUseCaseImpl ..> Repositories_DomainNS.ScheduleRepository
+    UseCases_ScheduleNS.DeleteScheduleUseCaseImpl ..> Repositories_DomainNS.ScheduleRepository
+    UseCases_ScheduleNS.DeleteScheduleUseCaseImpl ..> Repositories_DomainNS.AuthRepository
+    UseCases_ScheduleNS.GetSchedulesForDateUseCaseImpl ..> Repositories_DomainNS.ScheduleRepository
+    UseCases_ScheduleNS.GetScheduleSummaryForMonthUseCase ..> Repositories_DomainNS.ScheduleRepository
+    UseCases_ScheduleNS.GetScheduleSummaryForMonthUseCase ..> Repositories_DomainNS.AuthRepository
+    UseCases_ProjectNS.GetUserParticipatingProjectsUseCaseImpl ..> Repositories_DomainNS.ProjectsWrapperRepository
+    UseCases_ProjectNS.GetUserParticipatingProjectsUseCaseImpl ..> Repositories_DomainNS.ProjectRepository
+    UseCases_ProjectNS.GetUserParticipatingProjectsUseCaseImpl ..> Utils_DataNS.AuthUtil
 
-    %% Repository Implementation -> Repository Interface
-    ScheduleRepository <|.. ScheduleRepositoryImpl : implements
-    ProjectRepository <|.. ProjectRepositoryImpl : implements %% Assuming ProjectRepositoryImpl definition is centralized
+    UseCases_ScheduleNS.AddScheduleUseCase <|.. UseCases_ScheduleNS.AddScheduleUseCaseImpl
+    UseCases_ScheduleNS.GetScheduleDetailUseCase <|.. UseCases_ScheduleNS.GetScheduleDetailUseCaseImpl
+    UseCases_ScheduleNS.UpdateScheduleUseCase <|.. UseCases_ScheduleNS.UpdateScheduleUseCaseImpl
+    UseCases_ScheduleNS.DeleteScheduleUseCase <|.. UseCases_ScheduleNS.DeleteScheduleUseCaseImpl
+    UseCases_ScheduleNS.GetSchedulesForDateUseCase <|.. UseCases_ScheduleNS.GetSchedulesForDateUseCaseImpl
+    UseCases_ProjectNS.GetUserParticipatingProjectsUseCase <|.. UseCases_ProjectNS.GetUserParticipatingProjectsUseCaseImpl
 
-    %% Repository Implementation -> DataSource Interface (Remote Only)
-    ScheduleRepositoryImpl ..> ScheduleRemoteDataSource : uses
-    ProjectRepositoryImpl ..> ProjectRemoteDataSource : uses %% For schedulable projects
+    %% Repository Impl -> Repo Interface
+    Repositories_DomainNS.ScheduleRepository <|.. RepositoryImpl_DataNS.ScheduleRepositoryImpl
+    Repositories_DomainNS.ProjectRepository <|.. RepositoryImpl_DataNS.ProjectRepositoryImpl
+    Repositories_DomainNS.ProjectsWrapperRepository <|.. RepositoryImpl_DataNS.ProjectsWrapperRepositoryImpl
+    Repositories_DomainNS.AuthRepository <|.. RepositoryImpl_DataNS.AuthRepositoryImpl
 
-    %% DataSource Implementation -> DataSource Interface
-    ScheduleRemoteDataSource <|.. ScheduleRemoteDataSourceImpl : implements
-    ProjectRemoteDataSource <|.. ProjectRemoteDataSourceImpl : implements %% Assuming ProjectRemoteDataSourceImpl definition is centralized
+    %% Repository Impl -> DataSource Interface
+    RepositoryImpl_DataNS.ScheduleRepositoryImpl ..> RemoteDataSources_DataNS.ScheduleRemoteDataSource
+    RepositoryImpl_DataNS.ProjectRepositoryImpl ..> RemoteDataSources_DataNS.ProjectRemoteDataSource
+    RepositoryImpl_DataNS.ProjectsWrapperRepositoryImpl ..> RemoteDataSources_DataNS.ProjectsWrapperRemoteDataSource
+    RepositoryImpl_DataNS.AuthRepositoryImpl ..> RemoteDataSources_DataNS.AuthRemoteDataSource
+
+    %% DataSource Impl -> DS Interface
+    RemoteDataSources_DataNS.ScheduleRemoteDataSource <|.. DataSourceImpl_DataNS.ScheduleRemoteDataSourceImpl
+    RemoteDataSources_DataNS.ProjectRemoteDataSource <|.. DataSourceImpl_DataNS.ProjectRemoteDataSourceImpl
+    RemoteDataSources_DataNS.ProjectsWrapperRemoteDataSource <|.. DataSourceImpl_DataNS.ProjectsWrapperRemoteDataSourceImpl
+    RemoteDataSources_DataNS.AuthRemoteDataSource <|.. DataSourceImpl_DataNS.AuthRemoteDataSourceImpl
+
+    note for Utils_DataNS.AuthUtil "Utility for current user ID"
+    note for RepositoryImpl_DataNS.ProjectRepositoryImpl "Dependencies simplified for schedule context"
+    note for ViewModels_ScheduleNS.EditScheduleViewModel "DeleteScheduleUseCase added for completeness"
