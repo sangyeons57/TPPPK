@@ -17,7 +17,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.RolePermission
+import com.example.domain.model.data.project.RolePermission // Corrected import
 // Domain 모델 및 ViewModel 관련 요소 Import
 import com.example.feature_project.roles.viewmodel.EditRoleEvent
 import com.example.feature_project.roles.viewmodel.EditRoleUiState
@@ -259,34 +259,6 @@ private fun EditRoleContent_CreateModePreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditRoleContent(
             uiState = EditRoleUiState(roleId = null), // 생성 모드
-            onRoleNameChange = {},
-            onPermissionCheckedChange = { _, _ -> },
-            onSaveClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun EditRoleContent_EditModePreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        EditRoleContent(
-            uiState = EditRoleUiState(
-                roleId = "r1",
-                roleName = "운영진",
-                originalRoleName = "운영진",
-                permissions = mapOf(
-                    RolePermission.INVITE_MEMBERS to true,
-                    RolePermission.MANAGE_ROLES to false,
-                    RolePermission.MANAGE_PROJECT_SETTINGS to false
-                ),
-                originalPermissions = mapOf(
-                    RolePermission.INVITE_MEMBERS to true,
-                    RolePermission.MANAGE_ROLES to false,
-                    RolePermission.MANAGE_PROJECT_SETTINGS to false
-                ),
-                hasChanges = false // 초기 상태
-            ),
             onRoleNameChange = {},
             onPermissionCheckedChange = { _, _ -> },
             onSaveClick = {}

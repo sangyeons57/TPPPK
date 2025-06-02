@@ -60,10 +60,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.example.core_common.constants.FirestoreConstants.Schedule
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.base.Schedule
 import com.example.feature_main.R
 import com.example.feature_main.viewmodel.CalendarUiState
 import java.time.DayOfWeek
@@ -627,14 +627,14 @@ fun ScheduleListItem(
     val timeFormatter = remember { DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN) }
     
     // 프로젝트 색상 (임시)
-    val projectColor = schedule.projectId?.let { getProjectColor(it) } ?: Color.Transparent
+    val projectColor = schedule.projectId.let { getProjectColor(it) }
     
     // UTC LocalDateTime을 로컬 시간으로 변환
     val localStartTime = remember(schedule.startTime) {
-        schedule.startTime.let { DateTimeUtil.toLocalDateTime(it, ZoneId.systemDefault()) }
+        schedule.startTime.let { DateTimeUtil.toLocalDateTime(it!!, ZoneId.systemDefault()) }
     }
     val localEndTime = remember(schedule.endTime) {
-        schedule.endTime.let { DateTimeUtil.toLocalDateTime(it, ZoneId.systemDefault()) }
+        schedule.endTime.let { DateTimeUtil.toLocalDateTime(it!!, ZoneId.systemDefault()) }
     }
 
     Card(
@@ -680,26 +680,24 @@ fun ScheduleListItem(
                 )
                 
                 // 일정 시간 (시작~종료) - 있을 경우에만 표시
-                if (localStartTime != null && localEndTime != null) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = Dimens.paddingSmall)
-                    ) {
-                        // 시계 아이콘
-                        Icon(
-                            imageVector = Icons.Default.AccessTime,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(Dimens.iconSizeSmall)
-                        )
-                        Spacer(modifier = Modifier.width(Dimens.paddingSmall))
-                        // 시간 텍스트 (하루 종일 또는 시간 범위)
-                        Text(
-                            text = "${localStartTime.format(timeFormatter)} - ${localEndTime.format(timeFormatter)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LocalContentColor.current.copy(alpha = 0.8f)
-                        )
-                    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = Dimens.paddingSmall)
+                ) {
+                    // 시계 아이콘
+                    Icon(
+                        imageVector = Icons.Default.AccessTime,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(Dimens.iconSizeSmall)
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.paddingSmall))
+                    // 시간 텍스트 (하루 종일 또는 시간 범위)
+                    Text(
+                        text = "${localStartTime.format(timeFormatter)} - ${localEndTime.format(timeFormatter)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LocalContentColor.current.copy(alpha = 0.8f)
+                    )
                 }
             }
             
@@ -768,10 +766,10 @@ fun ScheduleListItemPreview() {
 @Composable
 fun ScheduleListItemAllDayPreview() {
     val sample = getSampleSchedulesForPreview("previewUser").last { 
-        val startDateTime = DateTimeUtil.toLocalDateTime(it.startTime)
-        val endDateTime = DateTimeUtil.toLocalDateTime(it.endTime)
-        startDateTime?.toLocalTime() == java.time.LocalTime.MIDNIGHT && 
-        endDateTime?.toLocalTime() == java.time.LocalTime.MAX.minusNanos(1)
+        val startDateTime = DateTimeUtil.toLocalDateTime(it.startTime!!)
+        val endDateTime = DateTimeUtil.toLocalDateTime(it.endTime!!)
+        startDateTime.toLocalTime() == java.time.LocalTime.MIDNIGHT &&
+        endDateTime.toLocalTime() == java.time.LocalTime.MAX.minusNanos(1)
     }
     
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -929,7 +927,7 @@ private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser
             id = "3", 
             projectId = "projA", 
             title = "클라이언트 미팅", 
-            content = null,
+            content = "",
             startTime = DateTimeUtil.localDateAndTimeToInstant(today.minusDays(1), time1)!!,
             endTime = DateTimeUtil.localDateAndTimeToInstant(today.plusDays(1), time1.plusHours(1))!!,
             creatorId = creatorId,
@@ -937,7 +935,7 @@ private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser
         ),
         Schedule(
             id = "4", 
-            projectId = null, 
+            projectId = "",
             title = "개인 약속: 병원", 
             content = "정기 검진",
             startTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.of(9, 0))!!,

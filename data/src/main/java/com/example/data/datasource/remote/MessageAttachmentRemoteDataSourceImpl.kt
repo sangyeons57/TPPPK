@@ -4,8 +4,10 @@ package com.example.data.datasource.remote
 import com.example.data.model.remote.MessageAttachmentDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.dataObjects
+import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -27,7 +29,7 @@ class MessageAttachmentRemoteDataSourceImpl @Inject constructor(
         if (messagePath.isBlank() || !messagePath.contains("/")) {
             return kotlinx.coroutines.flow.flow { throw IllegalArgumentException("Invalid message path.") }
         }
-        return getAttachmentsCollection(messagePath).dataObjects()
+        return getAttachmentsCollection(messagePath).snapshots().map { querySnapshot -> querySnapshot.toObjects(MessageAttachmentDTO::class.java) }
     }
 
     override suspend fun addAttachment(

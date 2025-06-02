@@ -16,6 +16,8 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
 import java.io.InputStream
 import javax.inject.Inject
 
@@ -68,19 +70,26 @@ class ProjectRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * 프로젝트 상세 정보를 가져옵니다.
-     * Firebase의 자체 캐싱 시스템을 활용합니다.
-     */
-    override suspend fun getProjectDetails(projectId: String): CustomResult<Project, Exception> {
-        return resultTry {
-            val projectResult = projectRemoteDataSource.getProject(projectId)
-            if (projectResult is CustomResult.Failure) {
-                throw projectResult.error
+    override fun getProjectDetailsStream(projectId: String): Flow<CustomResult<Project, Exception>> {
+        return projectRemoteDataSource.observeProject(projectId)
+            .map { projectDto ->
+                if (projectDto != null) {
+                    try {
+                        CustomResult.Success(projectDto.toDomain())
+                    } catch (e: Exception) {
+                        // Handle potential errors during toDomain() conversion, though less likely if DTO is valid
+                        CustomResult.Failure(Exception("Error converting project DTO to domain model: ${e.message}", e))
+                    }
+                } else {
+                    // This case might mean the project doesn't exist or was deleted.
+                    CustomResult.Failure(NoSuchElementException("Project with ID $projectId not found or stream returned null."))
+                }
             }
-            val project = (projectResult as CustomResult.Success).data
-            project.toDomain()
-        }
+            .catch { e ->
+                // Catch exceptions from the upstream flow (e.g., network issues in observeProject)
+                emit(CustomResult.Failure(Exception("Error observing project details: ${e.message}", e)))
+            }
+            .onStart { emit(CustomResult.Loading) } // Emit Loading state when the flow collection starts
     }
 
 
@@ -223,5 +232,9 @@ class ProjectRepositoryImpl @Inject constructor(
                 }
             }
         }
+    }
+
+    override fun getProjectListStream(): Flow<CustomResult<List<Project>, Exception>> {
+        TODO("Not yet implemented")
     }
 }

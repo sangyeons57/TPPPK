@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit // 편집 아이콘
 import androidx.compose.material.icons.filled.PhotoCamera // 카메라/갤러리 아이콘
 import androidx.compose.material.icons.filled.Settings // 설정 아이콘
-import androidx.compose.material.icons.filled.Person // 사용자 아이콘 (프로필 수정용으로 사용 가능)
 import androidx.compose.material.icons.filled.People // 친구 아이콘
 import androidx.compose.material.icons.filled.Done // 완료 아이콘
 import androidx.compose.material3.*
@@ -44,8 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.base.User
 
 /**
  * ProfileScreen: 상태 관리 및 이벤트 처리 (Stateful)
@@ -62,12 +63,12 @@ fun ProfileScreen(
 
     // State for in-place status editing
     var isEditingStatusMessage by rememberSaveable { mutableStateOf(false) }
-    var editableStatusMessage by rememberSaveable { mutableStateOf(uiState.userProfile?.statusMessage ?: "") }
+    var editableStatusMessage by rememberSaveable { mutableStateOf(uiState.userProfile?.memo ?: "") }
 
     // Initialize editableStatusMessage when profile data is loaded or changed
-    LaunchedEffect(uiState.userProfile?.statusMessage) {
+    LaunchedEffect(uiState.userProfile?.memo) {
         if (!isEditingStatusMessage) {
-            editableStatusMessage = uiState.userProfile?.statusMessage ?: ""
+            editableStatusMessage = uiState.userProfile?.memo ?: ""
         }
     }
 
@@ -141,12 +142,12 @@ fun ProfileScreen(
                     isEditingStatusMessage = !isEditingStatusMessage
                     if (isEditingStatusMessage) {
                         // When starting to edit, sync with the latest profile status
-                        editableStatusMessage = uiState.userProfile?.statusMessage ?: ""
+                        editableStatusMessage = uiState.userProfile?.memo ?: ""
                     }
                 },
                 onSubmitStatusMessage = {
-                    if (editableStatusMessage != uiState.userProfile?.statusMessage) {
-                        viewModel.changeStatusMessage(editableStatusMessage)
+                    if (editableStatusMessage != uiState.userProfile?.memo) {
+                        viewModel.changeMemo(editableStatusMessage)
                     }
                     isEditingStatusMessage = false
                 }
@@ -160,13 +161,13 @@ fun ProfileScreen(
         }
 
         // Conditionally display ChangeStatusDialog
-        if (uiState.showChangeStatusDialog) {
-            ChangeStatusDialog(
-                onDismissRequest = viewModel::onDismissChangeStatusDialog,
-                onSuccess = viewModel::onChangeStatusSuccess // Pass the success callback
-                // viewModel for ChangeStatusDialog is Hilt-injected by default
-            )
-        }
+//        if (uiState.showChangeStatusDialog) {
+//            ChangeStatusDialog(
+//                onDismissRequest = viewModel::onDismissChangeStatusDialog,
+//                onSuccess = viewModel::onChangeStatusSuccess // Pass the success callback
+//                // viewModel for ChangeStatusDialog is Hilt-injected by default
+//            )
+//        }
     }
 }
 
@@ -203,6 +204,13 @@ fun ProfileContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(32.dp))
+
+        // Request focus when isEditingStatusMessage becomes true
+        LaunchedEffect(isEditingStatusMessage) {
+            if (isEditingStatusMessage) {
+                focusRequester.requestFocus()
+            }
+        }
 
         // 프로필 이미지 영역
         Box(contentAlignment = Alignment.BottomEnd) {
@@ -258,16 +266,6 @@ fun ProfileContent(
                         focusManager.clearFocus() // Clear focus after submit
                     } else {
                         onToggleEditStatus() // Start editing
-                        // It's good practice to request focus *after* the field becomes editable
-                        // LaunchedEffect can be used here if focusRequester.requestFocus() needs to be called
-                        // after the recomposition that makes the field editable.
-                        // For simplicity, direct call might work on some Compose versions or scenarios.
-                        // If focus is not reliably gained, use LaunchedEffect(isEditingStatusMessage) { ... }
-                        if (isEditingStatusMessage) { // Check again as onToggleEditStatus changes it
-                             LaunchedEffect(Unit) { // Request focus after recomposition
-                                focusRequester.requestFocus()
-                            }
-                        }
                     }
                 }) {
                     Icon(
@@ -365,11 +363,11 @@ fun ProfileMenuItem(
 @Preview(showBackground = true)
 @Composable
 fun ProfileContentPreview() {
-    val previewProfile = User("id", "김미리", "preview@example.com", "Compose 공부 중!", null).toUserProfileData()
+    val previewProfile = User("id", "김미리", "preview@example.com")
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProfileContent(
             isLoading = false,
-            profile = previewProfile,
+            profile = previewProfile.toUserProfileData(),
             onEditProfileImageClick = {},
             // onEditStatusClick = {}, // Removed
             onSettingsClick = {},
@@ -379,7 +377,7 @@ fun ProfileContentPreview() {
             onEditProfileClick = {}, // Preview에 추가
             // Preview parameters for status editing
             isEditingStatusMessage = false,
-            editableStatusMessage = previewProfile.statusMessage ?: "Compose 공부 중!",
+            editableStatusMessage = previewProfile.memo ?: "Compose 공부 중!",
             onStatusMessageChange = {},
             onToggleEditStatus = {},
             onSubmitStatusMessage = {}
@@ -390,11 +388,11 @@ fun ProfileContentPreview() {
 @Preview(showBackground = true, name = "ProfileContent Editing Status")
 @Composable
 fun ProfileContentEditingPreview() {
-    val previewProfile = User("id", "김미리", "preview@example.com", "Compose 공부 중!", null).toUserProfileData()
+    val previewProfile = User("id", "김미리", "preview@example.com")
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProfileContent(
             isLoading = false,
-            profile = previewProfile,
+            profile = previewProfile.toUserProfileData(),
             onEditProfileImageClick = {},
             onSettingsClick = {},
             onLogoutClick = {},

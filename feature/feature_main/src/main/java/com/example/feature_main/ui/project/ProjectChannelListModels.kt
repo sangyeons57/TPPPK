@@ -34,7 +34,6 @@ data class CategoryUiModel(
             return CategoryUiModel(
                 id = category.id,
                 name = category.name,
-                channels = category.channels.map { ChannelUiModel.fromDomain(it) },
                 isExpanded = isExpanded
             )
         }

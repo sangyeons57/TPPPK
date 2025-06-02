@@ -3,7 +3,10 @@ package com.example.data.di
 import com.example.domain.usecase.user.* // 생성한 UseCase 임포트
 import com.example.domain.usecase.project.* // project 패키지 UseCase 임포트
 import com.example.domain.usecase.schedule.* // schedule 패키지 UseCase 임포트
-import com.example.domain.usecase.auth.* // auth 패키지 UseCase 임포트
+import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
+import com.example.domain.usecase.auth.GetAuthErrorMessageUseCaseImpl
+import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCase
+import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCaseImpl
 import com.example.domain.usecase.friend.*
 import com.example.domain.usecase.project.member.*
 import com.example.domain.usecase.project.role.*
@@ -166,6 +169,9 @@ abstract class UseCaseModule {
     // --- Auth UseCases ---
     @Binds
     abstract fun bindCheckAuthenticationStatusUseCase(impl: CheckAuthenticationStatusUseCaseImpl): CheckAuthenticationStatusUseCase
+
+    @Binds
+    abstract fun bindGetAuthErrorMessageUseCase(impl: GetAuthErrorMessageUseCaseImpl): GetAuthErrorMessageUseCase
 
     // TODO: 다른 UseCase들도 여기에 바인딩 추가
 

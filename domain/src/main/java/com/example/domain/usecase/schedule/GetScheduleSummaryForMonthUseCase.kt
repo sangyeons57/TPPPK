@@ -25,7 +25,7 @@ class GetScheduleSummaryForMonthUseCase @Inject constructor(
      * @param yearMonth 정보를 가져올 연월
      * @return Result 객체. 성공 시 일정이 있는 날짜들의 Set<LocalDate>를, 실패 시 예외를 포함합니다.
      */
-    suspend operator fun invoke(yearMonth: YearMonth): CustomResult<Map<Int, Boolean>, Exception> {
+    suspend operator fun invoke(yearMonth: YearMonth): CustomResult<Set<LocalDate>, Exception> {
         val userSession =  authRepository.getCurrentUserSession()
         return when (userSession) {
             is CustomResult.Success -> scheduleRepository.getScheduleSummaryForMonth(userSession.data.userId, yearMonth)

@@ -35,7 +35,8 @@ import com.example.core_ui.R
 import com.example.feature_project.members.viewmodel.MemberListEvent
 import com.example.feature_project.members.viewmodel.MemberListUiState
 import com.example.feature_project.members.viewmodel.MemberListViewModel
-import com.example.domain.model.base.Member
+import com.example.domain.model.base.Member // Will likely be removed if not used elsewhere after refactor
+import com.example.domain.model.ui.data.MemberUiModel // Added import
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -50,7 +51,7 @@ fun MemberListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDeleteConfirmationDialog by remember { mutableStateOf<Member?>(null) }
+    var showDeleteConfirmationDialog by remember { mutableStateOf<MemberUiModel?>(null) } // Changed type
     var showAddMemberDialogState by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -105,15 +106,15 @@ fun MemberListScreen(
     }
 
     // 멤버 삭제 확인 다이얼로그
-    showDeleteConfirmationDialog?.let { member ->
+    showDeleteConfirmationDialog?.let { memberUiModel -> // Changed variable name for clarity
         AlertDialog(
             onDismissRequest = { showDeleteConfirmationDialog = null },
             title = { Text("멤버 내보내기") },
-            text = { Text("${member.userName}님을 프로젝트에서 내보내시겠습니까?") },
+            text = { Text("${memberUiModel.userName}님을 프로젝트에서 내보내시겠습니까?") }, // Used MemberUiModel.userName
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.confirmDeleteMember(member)
+                        viewModel.confirmDeleteMember(memberUiModel) // Pass MemberUiModel
                         showDeleteConfirmationDialog = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -144,10 +145,10 @@ fun MemberListScreen(
 @Composable
 fun MemberListContent(
     paddingValues: PaddingValues,
-    uiState: MemberListUiState, // This uiState now contains List<Member>
+    uiState: MemberListUiState, // This uiState now contains List<MemberUiModel>
     onSearchQueryChanged: (String) -> Unit,
-    onMemberClick: (Member) -> Unit, // Changed
-    onDeleteMemberClick: (Member) -> Unit, // Changed
+    onMemberClick: (MemberUiModel) -> Unit, // Changed
+    onDeleteMemberClick: (MemberUiModel) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -208,21 +209,21 @@ fun MemberListContent(
  */
 @Composable
 fun ProjectMemberListItemComposable(
-    member: Member, // Changed parameter to ProjectMember
-    onClick: (Member) -> Unit, // Changed
-    onMoreClick: (Member) -> Unit, // Changed
+    member: MemberUiModel, // Changed parameter to MemberUiModel
+    onClick: (MemberUiModel) -> Unit, // Changed
+    onMoreClick: (MemberUiModel) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick(member) } // Use member
+            .clickable { onClick(member) } // Use member (which is MemberUiModel)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = member.profileImageUrl,
-            contentDescription = "${member.userName}님의 프로필 사진",
+            profileImageUrl = member.profileImageUrl, // Use MemberUiModel.profileImageUrl
+            contentDescription = "${member.userName}님의 프로필 사진", // Use MemberUiModel.userName
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
@@ -230,15 +231,15 @@ fun ProjectMemberListItemComposable(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = member.userName,
+                text = member.userName, // Use MemberUiModel.userName
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (member.roles.isNotEmpty()) { // Changed from member.roles to member.roleIds
+            if (member.roleNames.isNotEmpty()) { // Use MemberUiModel.roleNames
                 Text(
-                    text = "역할 ID: " + member.roles.joinToString(), // Display role IDs
+                    text = member.roleNames.joinToString(", "), // Display role names
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -247,7 +248,7 @@ fun ProjectMemberListItemComposable(
             }
         }
 
-        IconButton(onClick = { onMoreClick(member) }) {
+        IconButton(onClick = { onMoreClick(member) }) { // Pass MemberUiModel
             Icon(Icons.Filled.MoreVert, contentDescription = "더 보기")
         }
     }

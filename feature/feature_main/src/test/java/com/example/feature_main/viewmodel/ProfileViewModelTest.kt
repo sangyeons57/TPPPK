@@ -3,9 +3,7 @@ package com.example.feature_main.viewmodel
 import android.net.Uri
 import app.cash.turbine.test
 import com.example.data.util.CoroutinesTestRule
-import com.example.data.util.FlowTestExtensions.getValue // Keep if used, otherwise remove
 import com.example.domain.model.User
-import com.example.domain.model.UserProfileData
 import com.example.domain.usecase.auth.LogoutUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserImageUseCase
@@ -21,7 +19,6 @@ import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -144,7 +141,7 @@ class ProfileViewModelTest {
         runCurrent() // Initial load
 
         viewModel.eventFlow.test {
-            viewModel.changeStatusMessage(newStatusMessage)
+            viewModel.changeStatus(newStatusMessage)
             runCurrent() // Allow coroutines to complete
 
             // Check UI state for loading indicators (optional, depends on exact implementation)
@@ -167,7 +164,7 @@ class ProfileViewModelTest {
             // Let's check the user profile after some time, assuming loadUserProfile completes
              testScheduler.advanceUntilIdle() // Advance virtual time
              val reloadedUiState = viewModel.uiState.value
-             assertEquals(newStatusMessage, reloadedUiState.userProfile?.statusMessage)
+             assertEquals(newStatusMessage, reloadedUiState.userProfile?.memo)
 
 
             coVerify { updateUserStatusUseCase(newStatusMessage) }
@@ -183,7 +180,7 @@ class ProfileViewModelTest {
         coEvery { updateUserStatusUseCase(newStatusMessage) } returns Result.failure(exception)
 
         viewModel.eventFlow.test {
-            viewModel.changeStatusMessage(newStatusMessage)
+            viewModel.changeStatus(newStatusMessage)
             runCurrent()
 
             val event = awaitItem()

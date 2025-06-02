@@ -12,6 +12,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.core_common.result.CustomResult
 
 @Singleton
 class PermissionRemoteDataSourceImpl @Inject constructor(
@@ -21,7 +22,7 @@ class PermissionRemoteDataSourceImpl @Inject constructor(
     companion object {
         private const val PROJECTS_COLLECTION = "projects"
         private const val ROLES_COLLECTION = "roles"
-        private const val PERMISSIONS_COLLECTION = "permissions"
+        private const val PERMISSIONS_COLLECTION = "permissions" // For permissions granted to a role
     }
 
     private fun getPermissionsCollection(projectId: String, roleId: String) =
@@ -60,6 +61,7 @@ class PermissionRemoteDataSourceImpl @Inject constructor(
             Unit
         }
     }
+
     
     private inline fun <T> resultTry(block: () -> T): Result<T> {
         return try {

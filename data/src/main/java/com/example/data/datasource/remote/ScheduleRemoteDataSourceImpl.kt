@@ -160,5 +160,29 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         }
         awaitClose { listenerRegistration.remove() }
     }
+
+    override suspend fun getScheduleSummaryForMonth(
+        userId: String,
+        yearMonth: YearMonth
+    ): CustomResult<Set<LocalDate>, Exception> = withContext(Dispatchers.IO) {
+        resultTry {
+            val startOfMonthTimestamp = DateTimeUtil.yearMonthToStartOfMonthTimestamp(yearMonth)
+            val endOfMonthExclusiveTimestamp = DateTimeUtil.yearMonthToEndOfMonthExclusiveTimestamp(yearMonth)
+
+            val querySnapshot = firestore.collection(FirestoreConstants.Collections.SCHEDULES)
+                .whereEqualTo(FirestoreConstants.Schedule.CREATOR_ID, userId)
+                .whereGreaterThanOrEqualTo(FirestoreConstants.Schedule.START_TIME, startOfMonthTimestamp)
+                .whereLessThan(FirestoreConstants.Schedule.START_TIME, endOfMonthExclusiveTimestamp)
+                .get()
+                .await()
+
+            val datesWithSchedules = querySnapshot.documents
+                .mapNotNull { document -> document.toObject(ScheduleDTO::class.java)?.startTime }
+                .mapNotNull { timestamp -> DateTimeUtil.firebaseTimestampToLocalDateTime(timestamp).toLocalDate() }
+                .toSet()
+
+            datesWithSchedules
+        }
+    }
 }
 

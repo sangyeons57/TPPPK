@@ -1,14 +1,18 @@
 package com.example.feature_main.viewmodel
 
 import android.net.Uri
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.usecase.user.GetUserUseCase
+import com.example.domain.model.enum.UserStatus
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserImageUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
+import com.example.domain.usecase.auth.LogoutUseCase
+import com.example.domain.usecase.user.ChangeMemoUseCase // Placeholder
+import com.example.feature_main.ui.UserProfileData // Added
+import com.example.feature_main.ui.toUserProfileData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -39,7 +43,9 @@ sealed class ProfileEvent {
 class ProfileViewModel @Inject constructor(
     private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val updateUserStatusUseCase: UpdateUserStatusUseCase,
-    private val updateUserProfileImageUseCase: UpdateUserImageUseCase
+    private val updateUserProfileImageUseCase: UpdateUserImageUseCase,
+    private val logoutUseCase: LogoutUseCase,
+    private val changeMemoUseCase: ChangeMemoUseCase // Placeholder
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(isLoading = true)) // 초기 로딩 상태
@@ -71,12 +77,27 @@ class ProfileViewModel @Inject constructor(
                     val errorMsg = "프로필 정보를 불러오지 못했습니다: ${exception.message}"
                     _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
                     _eventFlow.emit(ProfileEvent.ShowSnackbar(errorMsg))
+                    println("ViewModel: 프로필 로드 중 예외 발생 - ${exception.message}")
                 }
-                .collectLatest  { user: Result<User> ->
-                    // User 객체를 UserProfileData로 변환
-                    user.onSuccess { user ->
-                        _uiState.update { it.copy(isLoading = false, userProfile = user.toUserProfileData()) }
-                        println("ViewModel: 프로필 로드 성공 - ${user.name}")
+                .collectLatest { customResult: CustomResult<User, Exception> ->
+                    when (customResult) {
+                        is CustomResult.Success -> {
+                            val user = customResult.data
+                            _uiState.update { it.copy(isLoading = false, userProfile = user.toUserProfileData()) }
+                            println("ViewModel: 프로필 로드 성공 - ${user.name}")
+                        }
+                        is CustomResult.Failure -> {
+                            val errorMsg = "프로필 로드 실패: ${customResult.error.message}"
+                            _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
+                            _eventFlow.emit(ProfileEvent.ShowSnackbar(errorMsg))
+                            println("ViewModel: 프로필 로드 실패 - $errorMsg")
+                        }
+                        else -> {
+                            val errorMsg = "프로필 로드 실패: Unknown"
+                            _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
+                            _eventFlow.emit(ProfileEvent.ShowSnackbar(errorMsg))
+                            println("ViewModel: 프로필 로드 실패 - $errorMsg")
+                        }
                     }
                 }
         }
@@ -138,18 +159,34 @@ class ProfileViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 로그아웃 시도 (UseCase 사용)")
             // val result = authRepository.logout() // Remove direct repository call
-            val result = logoutUseCase() // Call UseCase
-            result.onSuccess {
-                _eventFlow.emit(ProfileEvent.LogoutCompleted)
-            }.onFailure {
-                _uiState.update { it.copy(isLoading = false) }
-                _eventFlow.emit(ProfileEvent.ShowSnackbar("로그아웃 실패"))
+            when (val result = logoutUseCase()) { // Assign to val for smart casting
+                is CustomResult.Success -> {
+                    _eventFlow.emit(ProfileEvent.LogoutCompleted)
+                    // isLoading state will be managed by the screen navigating away or resetting.
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("로그아웃 실패: ${result.error.message}"))
+                    println("ViewModel: 로그아웃 실패 - ${result.error.message}")
+                }
+                is CustomResult.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                    println("ViewModel: 로그아웃 로딩 중...")
+                }
+                is CustomResult.Initial -> {
+                    _uiState.update { it.copy(isLoading = false) } // Or true if initial implies start of a process
+                    println("ViewModel: 로그아웃 초기 상태 - $result")
+                }
+                is CustomResult.Progress -> {
+                    _uiState.update { it.copy(isLoading = true) } // Keep loading true, potentially update UI with progress
+                    println("ViewModel: 로그아웃 진행 중 (${result.progress}%) - $result")
+                }
             }
         }
     }
 
     // --- 상태 메시지 변경, 프로필 이미지 변경 처리 함수 ---
-    fun changeStatusMessage(newStatus: String) {
+    fun changeStatus(newStatus: UserStatus) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 상태 메시지 변경 시도 (UseCase 사용) - $newStatus")
@@ -171,6 +208,43 @@ class ProfileViewModel @Inject constructor(
             // delay(300) // Remove temporary delay
             // _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(statusMessage = newStatus)) } // Remove temporary UI update
             // _eventFlow.emit(ProfileEvent.ShowSnackbar("상태 메시지 변경됨 (임시)")) // Remove temporary snackbar
+        }
+    }
+
+    fun changeMemo(newMemo: String) {
+        // TODO: Implement actual call to changeMemoUseCase once its dependencies (UserRepository.updateUserMemo) are ready
+        // changeMemoUseCase(newMemo)
+        println("ProfileViewModel.changeMemo called with: $newMemo - UseCase call commented out for now.")
+        // For now, simulate success or handle as needed for UI development
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            // Simulate a call and success
+            when (val result = changeMemoUseCase(newMemo)) { // Assign to val and use actual use case call
+                is CustomResult.Success -> {
+                    // Optionally update UI state if memo is directly displayed and needs immediate refresh
+                    // _uiState.update { it.copy(userProfile = it.userProfile?.copy(memo = newMemo), isLoading = false) }
+                    _uiState.update { it.copy(isLoading = false) } // Stop loading
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("메모가 업데이트되었습니다."))
+                    println("ViewModel: 메모 변경 성공")
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("메모 변경 실패: ${result.error.message}"))
+                    println("ViewModel: 메모 변경 실패 - ${result.error.message}")
+                }
+                is CustomResult.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                    println("ViewModel: 메모 변경 로딩 중...")
+                }
+                is CustomResult.Initial -> {
+                    _uiState.update { it.copy(isLoading = false) } // Or true if initial implies start of a process
+                    println("ViewModel: 메모 변경 초기 상태 - $result")
+                }
+                is CustomResult.Progress -> {
+                    _uiState.update { it.copy(isLoading = true) } // Keep loading true, potentially update UI with progress
+                    println("ViewModel: 메모 변경 진행 중 (${result.progress}%) - $result")
+                }
+            }
         }
     }
 

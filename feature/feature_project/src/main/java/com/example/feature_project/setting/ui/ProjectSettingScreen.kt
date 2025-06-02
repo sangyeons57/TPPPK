@@ -27,9 +27,11 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.base.Category
-import com.example.domain.model.base.ProjectChannel
+import com.example.domain.model.base.Category // May become unused
+import com.example.domain.model.base.ProjectChannel // May become unused
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.feature_project.model.CategoryUiModel // Added import
+import com.example.feature_project.model.ChannelUiModel // Added import
 import com.example.feature_project.setting.viewmodel.ProjectSettingEvent
 import com.example.feature_project.setting.viewmodel.ProjectSettingUiState
 import com.example.feature_project.setting.viewmodel.ProjectSettingViewModel
@@ -51,8 +53,8 @@ fun ProjectSettingScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 다이얼로그 상태
-    var showDeleteCategoryDialog by remember { mutableStateOf<Category?>(null) }
-    var showDeleteChannelDialog by remember { mutableStateOf<ProjectChannel?>(null) }
+    var showDeleteCategoryDialog by remember { mutableStateOf<CategoryUiModel?>(null) } // Changed type
+    var showDeleteChannelDialog by remember { mutableStateOf<ChannelUiModel?>(null) } // Changed type
     var showRenameProjectDialog by remember { mutableStateOf(false) } // 프로젝트 이름 변경 다이얼로그
     var showDeleteProjectDialog by remember { mutableStateOf(false) } // 프로젝트 삭제 확인 다이얼로그
 
@@ -117,15 +119,15 @@ fun ProjectSettingScreen(
     }
 
     // 카테고리 삭제 확인 다이얼로그
-    showDeleteCategoryDialog?.let { category ->
+    showDeleteCategoryDialog?.let { categoryUiModel -> // Changed variable name and type
         AlertDialog(
             onDismissRequest = { showDeleteCategoryDialog = null },
             title = { Text("카테고리 삭제") },
-            text = { Text("'${category.name}' 카테고리를 삭제하시겠습니까? 카테고리 내의 모든 채널도 함께 삭제됩니다.") },
+            text = { Text("'${categoryUiModel.name}' 카테고리를 삭제하시겠습니까? 카테고리 내의 모든 채널도 함께 삭제됩니다.") }, // Used categoryUiModel.name
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.confirmDeleteCategory(category.id)
+                        viewModel.confirmDeleteCategory(categoryUiModel) // Pass CategoryUiModel
                         showDeleteCategoryDialog = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -136,15 +138,15 @@ fun ProjectSettingScreen(
     }
 
     // 채널 삭제 확인 다이얼로그
-    showDeleteChannelDialog?.let { channel ->
+    showDeleteChannelDialog?.let { channelUiModel -> // Changed variable name and type
         AlertDialog(
             onDismissRequest = { showDeleteChannelDialog = null },
             title = { Text("채널 삭제") },
-            text = { Text("'${channel.channelName}' 채널을 삭제하시겠습니까? 채널 내의 모든 메시지 기록이 삭제됩니다.") },
+            text = { Text("'${channelUiModel.name}' 채널을 삭제하시겠습니까? 채널 내의 모든 메시지 기록이 삭제됩니다.") }, // Used channelUiModel.name
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.confirmDeleteChannel(channel.id)
+                        viewModel.confirmDeleteChannel(channelUiModel) // Pass ChannelUiModel
                         showDeleteChannelDialog = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -194,9 +196,9 @@ fun ProjectSettingContent(
     modifier: Modifier = Modifier,
     uiState: ProjectSettingUiState,
     onCategoryEditClick: (String) -> Unit, // categoryId
-    onCategoryDeleteClick: (Category) -> Unit, // category 객체 전달
+    onCategoryDeleteClick: (CategoryUiModel) -> Unit, // Changed to CategoryUiModel
     onChannelEditClick: (String, String) -> Unit, // categoryId, channelId
-    onChannelDeleteClick: (ProjectChannel) -> Unit, // channel 객체 전달
+    onChannelDeleteClick: (ChannelUiModel) -> Unit, // Changed to ChannelUiModel
     onAddCategoryClick: () -> Unit,
     onAddChannelClick: (String) -> Unit, // categoryId
     onManageMembersClick: () -> Unit,
@@ -329,7 +331,7 @@ fun SettingMenuItem(
 // 카테고리 헤더
 @Composable
 fun CategoryHeader(
-    category: Category,
+    category: CategoryUiModel, // Changed to CategoryUiModel
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onAddChannelClick: () -> Unit,
@@ -363,7 +365,7 @@ fun CategoryHeader(
 // 채널 아이템
 @Composable
 fun ChannelItem(
-    channel: ProjectChannel,
+    channel: ChannelUiModel, // Changed to ChannelUiModel
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -376,16 +378,16 @@ fun ChannelItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 아이콘 (텍스트/음성 구분)
-        val icon = if (channel.channelType == ProjectChannelType.MESSAGES) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp
+        val icon = if (channel.channelType == ProjectChannelType.MESSAGES.name) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp // Compare with Enum.name
         Icon(
             imageVector = icon,
-            contentDescription = "${channel.channelType} 채널",
+            contentDescription = "${channel.channelType} 채널", // channelType is String
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.secondary
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = channel.name,
+            text = channel.name, // Use ChannelUiModel.name
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )

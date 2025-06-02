@@ -19,7 +19,13 @@ import com.example.core_navigation.core.AppNavigator
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.components.buttons.DebouncedBackButton
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_project.viewmodel.ProjectDetailViewModel
+// Import new UI models and VM-specific data classes
+import com.example.feature_project.model.CategoryUiModel
+import com.example.feature_project.model.ChannelUiModel
+import com.example.feature_project.viewmodel.CreateChannelDialogData
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,7 +182,7 @@ private fun CreateChannelDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     onNameChange: (String) -> Unit,
-    onChannelModeChange: (ChannelMode) -> Unit
+    onChannelModeChange: (ProjectChannelType) -> Unit
 ) {
     if (dialogData == null) return
 

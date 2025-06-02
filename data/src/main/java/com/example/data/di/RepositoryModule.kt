@@ -18,6 +18,7 @@ import com.example.data.repository.ReactionRepositoryImpl
 import com.example.data.repository.RoleRepositoryImpl
 import com.example.data.repository.ScheduleRepositoryImpl
 import com.example.data.repository.UserRepositoryImpl
+import com.example.data.repository.SearchRepositoryImpl
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.CategoryCollectionRepository
 import com.example.domain.repository.CategoryRepository
@@ -37,6 +38,7 @@ import com.example.domain.repository.MediaRepository
 import com.example.domain.repository.RoleRepository
 import com.example.domain.repository.ScheduleRepository
 import com.example.domain.repository.UserRepository
+import com.example.domain.repository.SearchRepository
 import com.example.data.repository.MediaRepositoryImpl
 import dagger.Binds
 import dagger.Module
@@ -123,4 +125,8 @@ abstract class RepositoryModule {
     @[Binds]
     @[Singleton]
     abstract fun bindCategoryCollectionRepository(impl: CategoryCollectionRepositoryImpl): CategoryCollectionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
 }

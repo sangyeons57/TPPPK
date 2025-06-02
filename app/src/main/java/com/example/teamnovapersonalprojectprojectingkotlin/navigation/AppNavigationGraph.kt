@@ -43,6 +43,7 @@ import com.example.feature_project.ui.JoinProjectScreen
 import com.example.feature_project.viewmodel.AddProjectViewModel
 import com.example.feature_project.viewmodel.JoinProjectViewModel
 import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.core.NavigationCommand
 import com.example.feature_auth.ui.FindPasswordScreen
 import com.example.feature_auth.ui.PrivacyPolicyScreen

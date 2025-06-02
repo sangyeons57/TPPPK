@@ -42,5 +42,23 @@ interface RoleRemoteDataSource {
      * @param roleId 삭제할 역할의 ID
      */
     suspend fun deleteRole(projectId: String, roleId: String): CustomResult<Unit, Exception>
+
+    /**
+     * Fetches the names of all permissions granted to a specific role in a project.
+     * These are typically the string representations of RolePermission enums.
+     * @param projectId The ID of the project.
+     * @param roleId The ID of the role.
+     * @return A [CustomResult] containing a list of permission name strings on success, or an [Exception] on failure.
+     */
+    suspend fun getRolePermissionNames(projectId: String, roleId: String): CustomResult<List<String>, Exception>
+
+    /**
+     * Sets (overwrites) the permissions for a specific role in a project.
+     * @param projectId The ID of the project.
+     * @param roleId The ID of the role.
+     * @param permissionNames A list of permission name strings (typically RolePermission enum names) to grant to the role.
+     * @return A [CustomResult] indicating success (Unit) or an [Exception] on failure.
+     */
+    suspend fun setRolePermissions(projectId: String, roleId: String, permissionNames: List<String>): CustomResult<Unit, Exception>
 }
 
