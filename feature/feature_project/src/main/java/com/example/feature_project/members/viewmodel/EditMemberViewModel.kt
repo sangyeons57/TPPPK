@@ -81,8 +81,8 @@ class EditMemberViewModel @Inject constructor(
                 is CustomResult.Success -> {
                     val member = memberResult.data
 
-                    // 현재 멤버가 가진 역할 ID Set 생성 (ProjectMember의 roles 필드 사용)
-                    originalSelectedRoleIds = member.roles?.map { it.id }?.filterNotNull()?.toSet().orEmpty() // Null-safe, filterNotNull
+                    // 현재 멤버가 가진 역할 ID Set 생성 (Member의 roleIds 필드 사용)
+                    originalSelectedRoleIds = member.roleIds.toSet() // Changed to use member.roleIds
 
                     _uiState.update { it.copy(memberInfo = member, isLoading = false) }
                 }
@@ -90,6 +90,18 @@ class EditMemberViewModel @Inject constructor(
                     val errorMsg = memberResult.exceptionOrNull()?.message ?: "데이터 로드 실패"
                     _uiState.update { it.copy(isLoading = false, error = errorMsg) }
                     _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 정보를 불러오는 데 실패했습니다: $errorMsg"))
+                }
+                CustomResult.Initial -> {
+                    _uiState.update { it.copy(isLoading = false, error = "Initial state, no data loaded.") }
+                }
+                CustomResult.Loading -> {
+                    // This case might be redundant if isLoading is already true from the start of loadInitialData
+                    _uiState.update { it.copy(isLoading = true) }
+                }
+                is CustomResult.Progress -> {
+                    // Handle progress if applicable, otherwise ignore or log
+                    // For now, ensure loading is true or update with specific progress if available
+                    _uiState.update { it.copy(isLoading = true) } // Or handle progress: it.copy(progress = memberResult.progress)
                 }
             }
         }

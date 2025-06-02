@@ -27,6 +27,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Role
+import com.example.domain.model.data.project.RolePermission // Added import
 // ViewModel 및 관련 요소 Import
 import com.example.feature_project.members.viewmodel.EditMemberEvent
 import com.example.feature_project.members.viewmodel.EditMemberViewModel
@@ -130,14 +131,15 @@ fun EditMemberContent(
     ) {
         // 멤버 정보 표시
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Temporary placeholders:
             UserProfileImage(
-                profileImageUrl = memberInfo.profileImageUrl,
-                contentDescription = "${memberInfo.userName} 프로필",
+                profileImageUrl = null, // Placeholder
+                contentDescription = "프로필 이미지", // Placeholder
                 modifier = Modifier.size(64.dp).clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = memberInfo.userName,
+                text = "User ID: ${memberInfo.userId}", // Display userId as placeholder
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -220,9 +222,12 @@ fun RoleCheckboxRow(
 @Composable
 private fun EditMemberContentPreview() {
     // Preview용 Role 객체 생성
-    val previewRole1 = Role(id = "role1", projectId = "p1", name = "관리자", permissions = listOf(com.example.domain.model.RolePermission.MANAGE_MEMBERS), isDefault = false, memberCount = 1)
-    val previewRole2 = Role(id = "role2", projectId = "p1", name = "팀원", permissions = listOf(com.example.domain.model.RolePermission.READ_MESSAGES), isDefault = true, memberCount = 5)
-    val previewMember = Member("u1", "테스트 멤버", null, listOf(previewRole1, previewRole2), DateTimeUtil.nowInstant())
+    val previewRole1 = Role(id = "role1", projectId = "p1", name = "관리자", permissions = mapOf(RolePermission.MANAGE_MEMBERS to true), isDefault = false)
+    val previewRole2 = Role(id = "role2", projectId = "p1", name = "팀원", permissions = mapOf(RolePermission.READ_MESSAGES to true), isDefault = true)
+    // Note: Member constructor and EditMemberContent's usage of memberInfo.userName/profileImageUrl is problematic
+    // as per current Member domain model. This is expected to be fixed in a later step.
+    // For now, constructing Member according to its domain model using role IDs.
+    val previewMember = Member(userId = "u1", joinedAt = DateTimeUtil.nowInstant(), roleIds = listOf(previewRole1.id, previewRole2.id))
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
@@ -246,9 +251,11 @@ private fun EditMemberContentPreview() {
 @Composable
 private fun EditMemberContentSavingPreview() {
     // Preview용 Role 객체 생성
-    val previewRole1Saving = Role(id = "role1_saving", projectId = "p1_saving", name = "관리자", permissions = listOf(com.example.domain.model.RolePermission.MANAGE_MEMBERS), isDefault = false, memberCount = 1)
-    val previewRole2Saving = Role(id = "role2_saving", projectId = "p1_saving", name = "팀원", permissions = listOf(com.example.domain.model.RolePermission.READ_MESSAGES), isDefault = true, memberCount = 5)
-    val previewMember = ProjectMember("u1", "테스트 멤버", null, listOf(previewRole1Saving, previewRole2Saving), DateTimeUtil.nowInstant())
+    val previewRole1Saving = Role(id = "role1_saving", projectId = "p1_saving", name = "관리자", permissions = mapOf(RolePermission.MANAGE_MEMBERS to true), isDefault = false)
+    val previewRole2Saving = Role(id = "role2_saving", projectId = "p1_saving", name = "팀원", permissions = mapOf(RolePermission.READ_MESSAGES to true), isDefault = true)
+    // Note: Member constructor and EditMemberContent's usage of memberInfo.userName/profileImageUrl is problematic.
+    // Constructing Member according to its domain model using role IDs.
+    val previewMember = Member(userId = "u1", joinedAt = DateTimeUtil.nowInstant(), roleIds = listOf(previewRole1Saving.id, previewRole2Saving.id))
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),

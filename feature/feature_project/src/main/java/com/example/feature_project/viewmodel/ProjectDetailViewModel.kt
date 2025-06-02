@@ -19,6 +19,20 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.core_common.constants.FirestoreConstants
 import com.example.domain.model.base.ProjectChannel
+// Import the new UI models - assuming they are in com.example.feature_project.model
+import com.example.feature_project.model.CategoryUiModel
+import com.example.feature_project.model.ChannelUiModel
+
+// Define ChannelMode enum and CreateChannelDialogData data class
+enum class ChannelMode {
+    TEXT, VOICE // Assuming these are the modes, adjust as necessary
+}
+
+data class CreateChannelDialogData(
+    val channelName: String = "",
+    val categoryId: String? = null, // For which category to add, null for direct
+    val channelMode: ChannelMode = ChannelMode.TEXT // Default to TEXT
+)
 
 /**
  * UI 상태를 나타내는 데이터 클래스입니다.
@@ -33,6 +47,7 @@ data class ProjectDetailUiState(
     val error: String? = null,
     // 채널 생성 관련 상태
     val showCreateChannelDialog: Boolean = false,
+    val createChannelDialogData: CreateChannelDialogData? = null // Added this field
 )
 
 

@@ -47,7 +47,7 @@ fun JoinProjectScreen(
             when (event) {
                 is JoinProjectEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is JoinProjectEvent.JoinSuccess -> {
-                    appNavigator.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Main.ROOT)))
+                    appNavigator.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack.fromRoute(AppRoutes.Main.ROOT))
                 }
                 is JoinProjectEvent.ClearFocus -> focusManager.clearFocus()
             }

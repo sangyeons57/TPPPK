@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.model.RolePermission
+import com.example.domain.model.data.project.RolePermission // Corrected import
 import com.example.domain.usecase.project.DeleteRoleUseCase
 import com.example.domain.usecase.project.role.CreateRoleUseCase
 import com.example.domain.usecase.project.role.GetRoleDetailsUseCase
@@ -84,7 +84,8 @@ class EditRoleViewModel @Inject constructor(
 
                 val role = result.getOrNull() // Role? 타입
                 if (role != null) {
-                    val loadedPermissionsMap = RolePermission.entries.associateWith { role.permissions.contains(it) }
+                    // role.permissions is now Map<RolePermission, Boolean>
+                    val loadedPermissionsMap = role.permissions
                     _uiState.update {
                         it.copy(
                             isLoading = false,

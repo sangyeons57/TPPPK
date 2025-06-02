@@ -16,12 +16,14 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 // import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
 import com.example.domain.usecase.project.* // Import project use cases
+import com.example.feature_project.model.CategoryUiModel // Added import
+import com.example.feature_project.model.ChannelUiModel // Added import
 
 // --- UI 상태 ---
 data class ProjectSettingUiState(
     val projectId: String = "",
     val projectName: String = "",
-    val categories: List<Category> = emptyList(),
+    val categories: List<CategoryUiModel> = emptyList(), // Changed to CategoryUiModel
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -36,8 +38,8 @@ sealed class ProjectSettingEvent {
     data class NavigateToCreateChannel(val projectId: String, val categoryId: String) : ProjectSettingEvent()
     data class NavigateToMemberList(val projectId: String) : ProjectSettingEvent()
     data class NavigateToRoleList(val projectId: String) : ProjectSettingEvent()
-    data class ShowDeleteCategoryConfirm(val category: Category) : ProjectSettingEvent()
-    data class ShowDeleteChannelConfirm(val channel: ProjectChannel) : ProjectSettingEvent()
+    data class ShowDeleteCategoryConfirm(val category: CategoryUiModel) : ProjectSettingEvent() // Changed
+    data class ShowDeleteChannelConfirm(val channel: ChannelUiModel) : ProjectSettingEvent() // Changed
     object ShowRenameProjectDialog : ProjectSettingEvent()
     object ShowDeleteProjectConfirm : ProjectSettingEvent()
 }
@@ -75,12 +77,22 @@ class ProjectSettingViewModel @Inject constructor(
             // delay(800) // Remove temporary delay
             when (result) {
                 is CustomResult.Success -> {
-                    val projectStructure = result.data // ProjectStructure 객체 받음
+                    val domainCategories = result.data // This is List<com.example.domain.model.base.Category>
+                    val uiCategories = domainCategories.map { domainCategory ->
+                        // TODO: Fetch actual channels for this domainCategory.id using another use case if needed.
+                        // For now, placeholder:
+                        val placeholderChannels = emptyList<ChannelUiModel>() // Empty list for now
+                        CategoryUiModel(
+                            id = domainCategory.id,
+                            name = domainCategory.name,
+                            channels = placeholderChannels
+                        )
+                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             // projectName은 ProjectStructure에 포함되지 않으므로 현재 상태 유지
-                            categories = projectStructure
+                            categories = uiCategories // Assign mapped UI models
                         )
                     }
                 }
@@ -105,15 +117,15 @@ class ProjectSettingViewModel @Inject constructor(
     fun requestEditCategory(categoryId: String) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToEditCategory(projectId, categoryId)) }
     }
-    fun requestDeleteCategory(category: Category) {
+    fun requestDeleteCategory(category: CategoryUiModel) { // Changed to CategoryUiModel
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteCategoryConfirm(category)) }
     }
-    fun confirmDeleteCategory(categoryId: String) {
+    fun confirmDeleteCategory(category: CategoryUiModel) { // Changed to CategoryUiModel
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteCategoryUseCase 호출
-            println("Deleting Category: $categoryId (UseCase)")
-            val result = deleteCategoryUseCase(categoryId)
+            println("Deleting Category: ${category.id} (UseCase)") // Used category.id
+            val result = deleteCategoryUseCase(category.id) // Used category.id
             // delay(500) // Remove delay
             if (result.isSuccess) {
                  _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리가 삭제되었습니다."))
@@ -133,15 +145,15 @@ class ProjectSettingViewModel @Inject constructor(
     fun requestEditChannel(categoryId: String, channelId: String) {
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToEditChannel(projectId, categoryId, channelId)) }
     }
-    fun requestDeleteChannel(channel: ProjectChannel) {
+    fun requestDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteChannelConfirm(channel)) }
     }
-    fun confirmDeleteChannel(channelId: String) {
+    fun confirmDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteChannelUseCase 호출
-            println("Deleting Channel: $channelId (UseCase)")
-             val result = deleteChannelUseCase(channelId)
+            println("Deleting Channel: ${channel.id} (UseCase)") // Used channel.id
+             val result = deleteChannelUseCase(channel.id) // Used channel.id
             // delay(500) // Remove delay
             when (result) {
                 is CustomResult.Success -> {

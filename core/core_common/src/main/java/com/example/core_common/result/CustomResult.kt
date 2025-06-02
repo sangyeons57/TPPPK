@@ -62,3 +62,10 @@ inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
         CustomResult.Failure(e)
     }
 }
+
+// Extension functions
+fun <S, E> CustomResult<S, E>.getOrNull(): S? =
+    if (this is CustomResult.Success) data else null
+
+fun <S, E> CustomResult<S, E>.exceptionOrNull(): E? =
+    if (this is CustomResult.Failure) error else null

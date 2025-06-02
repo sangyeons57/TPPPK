@@ -17,7 +17,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AppNavigator
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.RolePermission
+import com.example.domain.model.data.project.RolePermission // Corrected import
 // Domain 모델 및 ViewModel 관련 요소 Import
 import com.example.feature_project.roles.viewmodel.EditRoleEvent
 import com.example.feature_project.roles.viewmodel.EditRoleUiState

@@ -1,6 +1,7 @@
 package com.example.domain.model.base
 
 import com.google.firebase.firestore.DocumentId
+import com.example.domain.model.data.project.RolePermission // Added import
 
 /**
  * Represents a role within a project with specific permissions.
@@ -17,7 +18,7 @@ data class Role(
     @DocumentId val id: String = "",
     val projectId: String = "",
     val name: String = "",
-    val permissions: Map<String, Boolean> = emptyMap(),
+    val permissions: Map<RolePermission, Boolean> = emptyMap(), // Changed type
     val isDefault: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
@@ -28,7 +29,7 @@ data class Role(
      * @param permission The permission key to check.
      * @return `true` if the permission is granted, `false` otherwise.
      */
-    fun hasPermission(permission: String): Boolean = permissions[permission] ?: false
+    fun hasPermission(permission: RolePermission): Boolean = permissions[permission] ?: false // Changed parameter type
 
     /**
      * Creates a copy of this role with updated fields.
@@ -40,7 +41,7 @@ data class Role(
      */
     fun copyWith(
         name: String = this.name,
-        permissions: Map<String, Boolean> = this.permissions,
+        permissions: Map<RolePermission, Boolean> = this.permissions, // Changed parameter type
         isDefault: Boolean = this.isDefault
     ): Role = copy(
         name = name,
