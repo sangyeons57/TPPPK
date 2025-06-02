@@ -1,0 +1,48 @@
+```mermaid
+graph TD
+    A[Client App] --> B(Application Module: app)
+    B --> C{Core Modules}
+    C --> C1(core_common)
+    C --> C2(core_fcm)
+    C --> C3(core_logging)
+    C --> C4(core_navigation)
+    C --> C5(core_ui)
+
+    B --> D{Feature Modules}
+    D --> D1(feature_auth)
+    D --> D2(feature_chat)
+    D --> D3(feature_friends)
+    D --> D4(feature_main)
+    D --> D5(feature_profile)
+    D --> D6(feature_project)
+    D --> D7(feature_schedule)
+    D --> D8(feature_search)
+    D --> D9(feature_settings)
+    D --> D10(feature_dev)
+
+    B --> E(Data Layer: data)
+    B --> F(Domain Layer: domain)
+
+    E --> G[Firebase Firestore]
+    E --> H[Local Room DB]
+    F --> E
+
+    X[Firebase Cloud Functions: functions] --> G
+
+    subgraph Legend
+        direction LR
+        L1[Module]
+        L2{Group of Modules}
+        L3[External Service/DB]
+    end
+
+    style A fill:#lightgreen,stroke:#333,stroke-width:2px
+    style B fill:#lightblue,stroke:#333,stroke-width:2px
+    style C fill:#lightgrey,stroke:#333,stroke-width:2px
+    style D fill:#lightgrey,stroke:#333,stroke-width:2px
+    style E fill:#orange,stroke:#333,stroke-width:2px
+    style F fill:#yellow,stroke:#333,stroke-width:2px
+    style X fill:#violet,stroke:#333,stroke-width:2px
+    style G fill:#pink,stroke:#333,stroke-width:2px
+    style H fill:#pink,stroke:#333,stroke-width:2px
+```

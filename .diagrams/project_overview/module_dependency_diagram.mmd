@@ -1,0 +1,130 @@
+```mermaid
+classDiagram
+    class app
+    class app_api
+    class core_common
+    class core_fcm
+    class core_logging
+    class core_navigation
+    class core_ui
+    class data
+    class domain
+    class feature_auth
+    class feature_chat
+    class feature_friends
+    class feature_main
+    class feature_profile
+    class feature_project
+    class feature_schedule
+    class feature_search
+    class feature_settings
+    class feature_dev
+    class functions
+
+    app --> feature_auth
+    app --> feature_chat
+    app --> feature_friends
+    app --> feature_main
+    app --> feature_profile
+    app --> feature_project
+    app --> feature_schedule
+    app --> feature_search
+    app --> feature_settings
+    app --> feature_dev
+    app --> core_common
+    app --> core_fcm
+    app --> core_logging
+    app --> core_navigation
+    app --> core_ui
+    app --> data
+    app --> domain
+    app --> app_api
+
+    feature_auth --> domain
+    feature_auth --> core_ui
+    feature_auth --> core_navigation
+    feature_auth --> core_common
+    feature_auth --> app_api
+
+    feature_chat --> domain
+    feature_chat --> core_ui
+    feature_chat --> core_navigation
+    feature_chat --> core_common
+    feature_chat --> app_api
+
+    feature_friends --> domain
+    feature_friends --> core_ui
+    feature_friends --> core_navigation
+    feature_friends --> core_common
+    feature_friends --> app_api
+
+    feature_main --> domain
+    feature_main --> core_ui
+    feature_main --> core_navigation
+    feature_main --> core_common
+    feature_main --> app_api
+    feature_main --> feature_auth
+    feature_main --> feature_chat
+    feature_main --> feature_friends
+    feature_main --> feature_profile
+    feature_main --> feature_project
+    feature_main --> feature_schedule
+    feature_main --> feature_search
+    feature_main --> feature_settings
+
+
+    feature_profile --> domain
+    feature_profile --> core_ui
+    feature_profile --> core_navigation
+    feature_profile --> core_common
+    feature_profile --> app_api
+
+    feature_project --> domain
+    feature_project --> core_ui
+    feature_project --> core_navigation
+    feature_project --> core_common
+    feature_project --> app_api
+
+    feature_schedule --> domain
+    feature_schedule --> core_ui
+    feature_schedule --> core_navigation
+    feature_schedule --> core_common
+    feature_schedule --> app_api
+
+    feature_search --> domain
+    feature_search --> core_ui
+    feature_search --> core_navigation
+    feature_search --> core_common
+    feature_search --> app_api
+
+    feature_settings --> domain
+    feature_settings --> core_ui
+    feature_settings --> core_navigation
+    feature_settings --> core_common
+    feature_settings --> app_api
+
+    feature_dev --> domain
+    feature_dev --> core_ui
+    feature_dev --> core_navigation
+    feature_dev --> core_common
+
+    domain --> data
+    domain --> core_common
+
+    data --> core_common
+    data --> core_logging // For logging network/db operations
+
+    core_navigation --> core_common
+    core_ui --> core_common
+    core_fcm --> core_common
+    core_logging --> core_common
+
+    app_api --> core_common // app_api might define interfaces implemented by features, using common models
+
+    // 'functions' is somewhat standalone but interacts with 'data' (e.g., Firestore)
+    // This is harder to represent perfectly as a direct compile-time dependency
+    // but 'functions' conceptually uses data structures that might be defined in relation to 'data' or 'domain'
+    // For now, let's not draw a direct line from a module to 'functions' unless there's a shared library,
+    // as it's more of a runtime interaction with the backend.
+
+```
