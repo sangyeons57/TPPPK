@@ -11,6 +11,12 @@ import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emitAll
+import java.time.format.DateTimeParseException
 
 
 /**
@@ -18,7 +24,8 @@ import javax.inject.Inject
  * Firebase의 자체 캐싱 시스템을 활용하여 데이터를 관리합니다.
  */
 class ScheduleRepositoryImpl @Inject constructor(
-    private val scheduleRemoteDataSource: ScheduleRemoteDataSource
+    private val scheduleRemoteDataSource: ScheduleRemoteDataSource,
+    private val firebaseAuth: FirebaseAuth
 ) : ScheduleRepository {
 
     /**
@@ -141,10 +148,43 @@ class ScheduleRepositoryImpl @Inject constructor(
     }
 
     override fun getSchedulesOnDate(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
-        TODO("Not yet implemented")
+        val currentUser = firebaseAuth.currentUser
+        if (currentUser == null) {
+            return flowOf(CustomResult.Failure(Exception("User not authenticated")))
+        }
+        val userId = currentUser.uid
+
+        return flow {
+            val sourceFlow = scheduleRemoteDataSource.getSchedulesOnDate(userId, date)
+            emitAll(sourceFlow.map {
+                when (it) {
+                    is CustomResult.Success -> {
+                        try {
+                            val domainSchedules = it.data.map { dto -> dto.toDomain() }
+                            CustomResult.Success(domainSchedules)
+                        } catch (e: Exception) {
+                            CustomResult.Failure(e)
+                        }
+                    }
+                    is CustomResult.Failure -> CustomResult.Failure(it.error)
+                    else -> CustomResult.Failure(Exception("Unknown error"))
+                    // If CustomResult has other states like Loading, they would be implicitly passed
+                    // or could be explicitly handled if needed.
+                }
+            }.catch { e -> // Catch exceptions from sourceFlow or map
+                emit(CustomResult.Failure(e as Exception))
+            })
+        }
     }
 
     override fun getSchedulesForDate(date: String): Flow<CustomResult<List<Schedule>, Exception>> {
-        TODO("Not yet implemented")
+        return try {
+            val localDate = LocalDate.parse(date) // Assumes ISO_LOCAL_DATE format e.g. "2023-10-26"
+            getSchedulesOnDate(localDate) // Delegate to the LocalDate version
+        } catch (e: DateTimeParseException) {
+            flowOf(CustomResult.Failure(IllegalArgumentException("Invalid date format: '$date'. Expected yyyy-MM-dd.", e)))
+        } catch (e: Exception) {
+            flowOf(CustomResult.Failure(e))
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.example.domain.repository
 import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.base.User
@@ -122,4 +123,11 @@ interface UserRepository {
         adminUserId: String
     ): CustomResult<Unit, Exception>
 
+    /**
+     * 사용자 ID로 해당 사용자가 참여하고 있는 프로젝트들의 요약 정보(ProjectsWrapper) 스트림을 가져옵니다.
+     *
+     * @param userId 사용자 ID
+     * @return ProjectsWrapper 목록을 담은 Flow
+     */
+    fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapper>, Exception>>
 }

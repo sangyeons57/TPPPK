@@ -13,7 +13,7 @@ data class Schedule(
     val content: String = "",
     val startTime: Instant? = null,
     val endTime: Instant? = null,
-    val projectId: String = "",
+    val projectId: String? = null,
     val creatorId: String = "",
     val status: ScheduleStatus = ScheduleStatus.CONFIRMED, // "CONFIRMED", "TENTATIVE", "CANCELLED"
     val color: String? = null, // 예: "#FF5733"

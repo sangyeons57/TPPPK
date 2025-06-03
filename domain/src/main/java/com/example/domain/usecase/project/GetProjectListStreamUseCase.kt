@@ -13,6 +13,7 @@ class GetProjectListStreamUseCase @Inject constructor(
     private val projectRepository: ProjectRepository
 ) {
     operator fun invoke(): Flow<CustomResult<List<Project>, Exception>> {
-        return projectRepository.getProjectListStream()
+        TODO()
+        // return projectRepository.getProjectListStream()
     }
 }

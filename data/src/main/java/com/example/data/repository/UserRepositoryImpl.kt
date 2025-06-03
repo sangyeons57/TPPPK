@@ -8,6 +8,7 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.util.MediaUtil
 import com.example.data.datasource.remote.UserRemoteDataSource
 import com.example.data.model.remote.toDto
+import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.base.User
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onErrorResume
+import kotlinx.coroutines.flow.flowOf
 import java.io.InputStream
 import java.time.Instant
 import java.util.UUID
@@ -406,6 +408,29 @@ class UserRepositoryImpl @Inject constructor(
             userRemoteDataSource.updateUserMemo(memo)
         } catch (e: Exception) {
             CustomResult.Failure(e)
+        }
+    }
+
+    override fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapper>, Exception>> {
+        return userRemoteDataSource.getProjectWrappersStream(userId).map { result ->
+            when (result) {
+                is CustomResult.Success -> {
+                    val domainWrappers = result.data.map { dto -> dto.toDomain() }
+                    CustomResult.Success(domainWrappers)
+                }
+                is CustomResult.Failure -> {
+                    CustomResult.Failure(result.error)
+                }
+                is CustomResult.Loading -> {
+                    CustomResult.Loading
+                }
+                is CustomResult.Initial -> {
+                    CustomResult.Initial
+                }
+                is CustomResult.Progress -> {
+                    CustomResult.Progress(result.progress)
+                }
+            }
         }
     }
 }

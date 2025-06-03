@@ -8,6 +8,7 @@ import com.example.domain.model.base.User
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
 import com.example.domain.model.base.DMChannel // Added import for DMChannel
 import com.example.domain.model.base.Project
+import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
@@ -18,11 +19,13 @@ import com.example.domain.usecase.project.GetProjectDetailsStreamUseCase // Adde
 import com.example.domain.usecase.dm.AddDmChannelUseCase // Added
 import com.example.domain.usecase.project.CreateProjectUseCase // Added
 import com.example.domain.usecase.project.UpdateProjectStructureUseCase // Added
+import com.example.domain.usecase.user.GetUserProjectWrappersUseCase
 import com.example.feature_main.ui.DmUiModel
 import com.example.feature_main.ui.ProjectUiModel // Added
 import com.example.feature_main.ui.project.CategoryUiModel
 import com.example.feature_main.ui.project.ChannelUiModel
 import com.example.feature_main.ui.project.ProjectStructureUiState
+import com.example.feature_main.ui.toProjectUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -49,7 +52,7 @@ enum class TopSection {
 // 홈 화면 UI 상태
 data class HomeUiState(
     val selectedTopSection: TopSection = TopSection.DMS, // 기본 선택: DMS
-    val projects: List<ProjectUiModel> = emptyList(), // Changed to ProjectUiModel
+    val projects: List<ProjectUiModel> = emptyList(), // Now using ProjectUiModel
     val dms: List<DmUiModel> = emptyList(), // Use DmUiModel
     val isLoading: Boolean = false,
     val errorMessage: String = "default",
@@ -98,7 +101,7 @@ class HomeViewModel @Inject constructor(
     private val getUserDmChannelsUseCase: GetUserDmChannelsUseCase,
     private val getUserInfoUseCase: GetUserInfoUseCase,
     private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    private val getProjectListStreamUseCase: GetProjectListStreamUseCase, // Added
+    private val getUserProjectWrappersUseCase: GetUserProjectWrappersUseCase, // Added
     // private val getDmListStreamUseCase: GetDmListStreamUseCase, // Removed as getUserDmChannelsUseCase seems to cover DM list fetching
     private val getProjectDetailsStreamUseCase: GetProjectDetailsStreamUseCase, // Added
     private val addDmChannelUseCase: AddDmChannelUseCase, // Added
@@ -224,24 +227,24 @@ private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): Dm
     private fun loadProjects() {
         Log.d("HomeViewModel", "loadProjects called")
         viewModelScope.launch {
-            getProjectListStreamUseCase()
+            getUserProjectWrappersUseCase(currentUserId)
                 .collectLatest { result ->
                     when (result) {
                         is CustomResult.Loading -> {
                             _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
                         }
                         is CustomResult.Success -> {
-                            val projectUiModels = result.data.map { project ->
-                                project.toProjectUiModel() // Use the updated mapper
-                            }
+                            val projectWrappers = result.data
+                            // Assuming com.example.feature_main.ui.toProjectUiModel extension function exists or will be created
+                            val mappedProjectUiModels = projectWrappers.map { it.toProjectUiModel() }
                             _uiState.update { state ->
                                 state.copy(
-                                    projects = projectUiModels,
+                                    projects = mappedProjectUiModels, // Update with mapped models
                                     isLoading = false,
-                                    errorMessage = if (projectUiModels.isEmpty()) "프로젝트가 없습니다." else "default"
+                                    errorMessage = if (mappedProjectUiModels.isEmpty()) "프로젝트가 없습니다." else "default"
                                 )
                             }
-                            Log.d("HomeViewModel", "Projects loaded: ${projectUiModels.size}")
+                            Log.d("HomeViewModel", "Projects loaded: ${mappedProjectUiModels.size}")
                         }
                         is CustomResult.Failure -> {
                             Log.e("HomeViewModel", "Failed to load projects", result.error)
@@ -259,7 +262,7 @@ private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): Dm
                         is CustomResult.Progress -> {
                             // Handle progress if applicable, e.g. update a progress bar
                             // For now, we can treat it as loading
-                            val progressValue = result.progress ?: 0f
+                            val progressValue = result.progress
                             Log.d("HomeViewModel", "Project loading progress: $progressValue%")
                             _uiState.update { it.copy(isLoading = true) } // Keep isLoading true during progress
                         }
@@ -636,10 +639,7 @@ private fun loadProjectDetails(projectId: String) {
         return ProjectUiModel(
             id = this.id,
             name = this.name,
-            description = "No description available", // Placeholder as Project domain model lacks description
             imageUrl = this.imageUrl,
-            memberCount = 1, // Placeholder as Project domain model lacks member count, assuming at least owner
-            lastActivity = this.updatedAt?.let { formatTimestamp(it) } ?: "N/A"
         )
     }
 

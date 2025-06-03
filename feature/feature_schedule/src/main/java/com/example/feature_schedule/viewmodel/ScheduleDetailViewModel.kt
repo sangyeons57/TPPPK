@@ -127,8 +127,7 @@ class ScheduleDetailViewModel @Inject constructor(
         val end = this.endTime?.let { DateTimeUtil.formatTime(DateTimeUtil.toLocalDateTime(it)) } ?: "시간 없음"
         val timeString = "$start ~ $end"
 
-        // projectId는 이미 String 타입(null은 아님)
-        val projectName = if (this.projectId.isNotEmpty()) "Project ${this.projectId}" else null
+        val projectName = if (this.projectId.isNullOrEmpty()) null else "Project ${this.projectId}"
 
         return ScheduleDetailItem(
             id = this.id,

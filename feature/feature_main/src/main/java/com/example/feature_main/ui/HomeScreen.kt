@@ -329,12 +329,11 @@ fun HomeContent(
         Log.d("HomeContent", "projects: ${uiState.projects}")
         ProjectListScreen(
             projects = uiState.projects.map { projectItem -> 
-                Log.d("HomeContent", "Converting ProjectItem: id=${projectItem.id}, name=${projectItem.name}")
+                //Log.d("HomeContent", "Converting ProjectItem: id=${projectItem.id}, name=${projectItem.name}")
                 ProjectUiModel(
-                    id = projectItem.id, 
-                    name = projectItem.name, 
-                    description = projectItem.description, 
-                    imageUrl = null
+                    id = projectItem.id,
+                    name = projectItem.name,
+                    imageUrl = projectItem.imageUrl
                 ) 
             },
             selectedProjectId = uiState.selectedProjectId,
@@ -675,16 +674,6 @@ fun ProjectContentArea(
 fun HomeContentProjectsPreview() {
     val previewState = HomeUiState(
         selectedTopSection = TopSection.PROJECTS,
-        projects = List(5) { i ->
-            ProjectUiModel(
-                id = "p$i",
-                name = "미리보기 프로젝트 ${i + 1}",
-                description = "설명 ${i + 1}",
-                imageUrl = null, // Or some placeholder image URL
-                memberCount = i + 2, // Example member count
-                lastActivity = "${i}분 전"
-            )
-        },
         userInitial = "U", // 사용자 이니셜 추가
         userProfileImageUrl = null, // 프로필 이미지 URL 추가
         isLoading = false
@@ -757,24 +746,6 @@ fun HomeScreenPreview_Default() {
 fun HomeScreenPreview_WithData() {
 
     val sampleUiState = HomeUiState(
-        projects = listOf(
-            ProjectUiModel(
-                id = "proj1",
-                name = "Project Alpha",
-                description = "Description for Alpha",
-                imageUrl = null,
-                memberCount = 3, // Example
-                lastActivity = "10m ago"
-            ),
-            ProjectUiModel(
-                id = "proj2",
-                name = "Project Beta",
-                description = "Description for Beta",
-                imageUrl = null,
-                memberCount = 5, // Example
-                lastActivity = "1h ago"
-            )
-        ),
         dms = listOf(
             DmUiModel(
                 channelId = "dm1",

@@ -31,6 +31,4 @@ interface ProjectRepository {
 
     suspend fun deleteProject(projectId: String, currentUserId: String): CustomResult<Unit, Exception>
     suspend fun getProjectStructureStream(projectId: String): Flow<CustomResult<List<Category>, Exception>>
-
-    fun getProjectListStream(): Flow<CustomResult<List<Project>, Exception>>
 }
