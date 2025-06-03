@@ -1,0 +1,95 @@
+classDiagram
+    title Overall Project Structure and Feature Interactions
+
+    %% This diagram provides a high-level overview of the project's feature modules
+    %% and their primary dependencies on each other. It aims to illustrate how features
+    %% are interconnected, rather than detailing the internal architecture of each feature
+    %% (which is covered in individual f_*.mmd files).
+    %% Facade/Service classes here are conceptual representations of the main interaction points of each feature.
+
+    package "Auth Feature" as AuthPackage {
+        class AuthManager <<Service>>
+        note "Handles user authentication, session, registration, password reset."
+    }
+
+    package "User Profile Feature" as UserPackage {
+        class UserManager <<Service>>
+        note "Manages user profiles, status, nickname, and user search. (Often closely related to Profile & Auth)"
+    }
+
+    package "Chat Feature" as ChatPackage {
+        class ChatService <<Service>>
+        note "Manages real-time chat, messages, and channels (DM, Project)."
+    }
+
+    package "Friend Feature" as FriendPackage {
+        class FriendService <<Service>>
+        note "Manages friend lists, friend requests, and initiating DMs."
+    }
+
+    package "Project Feature" as ProjectPackage {
+        class ProjectService <<Service>>
+        note "Manages projects, members, roles, categories, channels within projects, and invites."
+    }
+
+    package "Schedule Feature" as SchedulePackage {
+        class ScheduleService <<Service>>
+        note "Manages personal and project-related schedules/events."
+    }
+
+    package "Search Feature" as SearchPackage {
+        class SearchService <<Service>>
+        note "Handles search functionalities (currently user search, extensible)."
+    }
+
+    package "Setting Feature" as SettingPackage {
+        class SettingService <<Service>>
+        note "Manages app settings, user account settings (password/nickname change, logout, withdrawal)."
+        class MigrationTool <<Tool>>
+        note "Developer tool for data migration tasks."
+    }
+
+    package "Main Feature" as MainPackage {
+        class MainScreenOrchestrator <<ViewModelAggregator>>
+        note "Represents the main UI container, aggregating data from various features for home, calendar, main profile tab."
+    }
+
+    %% Core Dependencies
+    %% Most features depend on AuthManager for user identity and UserManager for user details.
+    AuthManager ..> UserManager : "Can trigger user profile creation"
+    ChatService ..> AuthManager : "Uses for current user ID, auth context"
+    ChatService ..> UserManager : "Uses for user details of chat participants"
+    FriendService ..> AuthManager : "Uses for current user ID"
+    FriendService ..> UserManager : "Uses for user search, friend details"
+    ProjectService ..> AuthManager : "Uses for project ownership, member authentication"
+    ProjectService ..> UserManager : "Uses for project member details, user search"
+    ScheduleService ..> AuthManager : "Uses for user-specific schedules"
+    SettingService ..> AuthManager : "Uses for logout, password change, withdrawal"
+    SettingService ..> UserManager : "Uses for nickname change, fetching profile info"
+    MainScreenOrchestrator ..> AuthManager : "Uses for current user context"
+    MainScreenOrchestrator ..> UserManager : "Uses for profile display in main tab"
+
+    %% Feature-Specific Interactions
+    ChatService ..> ProjectService : "Optional: for project-specific channels"
+    FriendService ..> ChatService : "Uses for creating/getting DM channels"
+    ProjectService ..> ChatService : "Manages/creates project-specific channels"
+
+    ScheduleService ..> ProjectService : "Uses for project-specific schedules"
+
+    SearchService ..> UserManager : "Uses for searching users"
+    %% SearchService ..> ProjectService : "Potential: for project search"
+    %% SearchService ..> ChatService : "Potential: for message search"
+
+    MainScreenOrchestrator ..> ProjectService : "Uses for displaying project lists"
+    MainScreenOrchestrator ..> ChatService : "Uses for displaying DM channel lists"
+    MainScreenOrchestrator ..> ScheduleService : "Uses for calendar view"
+
+    SettingPackage.MigrationTool ..> ProjectService : "Potentially reads/migrates project data"
+    SettingPackage.MigrationTool ..> ChatService : "Potentially reads/migrates channel/message data"
+
+    %% Notes on overall structure:
+    %% - 'UserManager' is central for user data. 'AuthManager' handles authentication.
+    %% - Channel management is distributed: DMs may be linked via 'FriendService' to 'ChatService',
+    %%   project channels via 'ProjectService' to 'ChatService'.
+    %% - Dependencies indicate that one feature module utilizes services/data from another.
+    %% - The MigrationTool in Settings is a special case, potentially having broader read access for its tasks.
