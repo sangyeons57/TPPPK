@@ -25,7 +25,6 @@ classDiagram
                 -getCurrentUserUseCase: GetCurrentUserUseCase
                 -getUserInfoUseCase: GetUserInfoUseCase
                 -checkChannelPermissionUseCase: CheckChannelPermissionUseCase
-                %% -uploadImageToMessageUseCase: UploadImageToMessageUseCase (Potentially part of SendMessageUseCase flow)
                 +loadInitialMessages(channelId: String)
                 +loadMoreMessages()
                 +sendTextMessage(text: String)
@@ -34,17 +33,6 @@ classDiagram
                 +deleteUserMessage(messageId: String)
                 +loadChannelInfo(channelId: String)
             }
-            note right of ChatViewModel
-                Manages the UI state for the chat screen.
-                Handles loading messages, sending new messages (text/image),
-                editing/deleting messages, and displaying channel/user information.
-                Orchestrates multiple UseCases to achieve its functionality.
-                Data flow for sending a message:
-                (UI action) -> ChatViewModel.sendTextMessage() -> SendMessageUseCase
-                SendMessageUseCase -> MessageRepository (and UserRepository for sender info)
-                MessageRepository -> MessageRemoteDataSource (and MessageAttachmentRemoteDataSource if applicable)
-                (Result from UseCase) -> ChatViewModel -> (UI state update).
-            end note
         }
     end
     %% note for ChatViewModel "채팅 화면의 메시지 및 채널 정보 관리, 사용자 상호작용 처리" (Covered by new note)
@@ -57,34 +45,20 @@ classDiagram
         direction LR
         namespace UseCases_MessageNS {
             class GetMessagesStreamUseCase
-            note right of GetMessagesStreamUseCase: Provides a real-time stream of messages for a channel. Returns Flow<List<Message>>.
             class FetchPastMessagesUseCase
-            note right of FetchPastMessagesUseCase: Fetches older messages for pagination. Returns Result<List<Message>>.
             class SendMessageUseCase
-            note right of SendMessageUseCase
-                Business logic for sending a message (text or media).
-                Uses MessageRepository to persist the message and UserRepository for sender details.
-                Takes a domain model `MessageContent` as input.
-            end note
             class EditMessageUseCase
-            note right of EditMessageUseCase: Handles editing an existing message.
             class DeleteMessageUseCase
-            note right of DeleteMessageUseCase: Handles deleting a message.
-            %% class UploadImageToMessageUseCase %% Conceptual, likely integrated into SendMessageUseCase via MessageRepository
         }
         namespace UseCases_ChannelNS {
             class GetChannelUseCase
-            note right of GetChannelUseCase: Fetches details of a specific channel (DM or Project). Returns Flow<Channel?>.
         }
         namespace UseCases_UserNS {
             class GetCurrentUserUseCase
-            note right of GetCurrentUserUseCase: (From other features) Gets the current logged-in user.
             class GetUserInfoUseCase
-            note right of GetUserInfoUseCase: (From other features) Gets profile information for a specific user.
         }
         namespace UseCases_PermissionNS {
             class CheckChannelPermissionUseCase
-            note right of CheckChannelPermissionUseCase: (From other features) Checks if the current user has specific permissions in a channel.
         }
 
         namespace Repositories_DomainNS {
@@ -95,70 +69,39 @@ classDiagram
                 +sendMessage(channelId: String, message: Message): Result<Unit>
                 +editMessage(channelId: String, messageId: String, newText: String): Result<Unit>
                 +deleteMessage(channelId: String, messageId: String): Result<Unit>
-                +uploadMessageAttachment(channelId: String, attachmentUri: Uri): Result<String> %% Returns attachment URL
+                +uploadMessageAttachment(channelId: String, attachmentUri: Uri): Result<String>
             }
-            note right of MessageRepository
-                Interface for message data operations.
-                Abstracts storage for messages and attachments.
-                Its implementation maps MessageDTOs from data sources to `Message` domain models.
-                `uploadMessageAttachment` handles media upload, returning the URL.
-            end note
             class ChannelRepository {
                 <<Interface>>
                 +getChannelDetails(channelId: String): Flow<Channel?>
             }
-            note right of ChannelRepository
-                Interface for channel data operations.
-                Abstracts storage for different channel types (DM, Project Channel).
-                Its implementation maps DTOs (ProjectChannelDTO, DMChannelDTO) to a common `Channel` domain model or specific types.
-            end note
-            class UserRepository { <<Interface>> } %% Note: Detailed in other diagrams like f_AuthDiagram or f_ProfileDiagram
-            class ProjectRepository { <<Interface>> } %% Note: Detailed in f_ProjectDiagram
-            class RoleRepository { <<Interface>> } %% Note: Detailed in f_ProjectDiagram
+            class UserRepository { <<Interface>> }
+            class ProjectRepository { <<Interface>> }
+            class RoleRepository { <<Interface>> }
         }
-        %% Existing notes provide basic descriptions, new notes aim to elaborate on roles and data models.
-        %% note for MessageRepository "채팅 메시지 및 첨부파일 데이터 접근 인터페이스"
-        %% note for ChannelRepository "채팅 채널(DM, 프로젝트 채널) 정보 접근 인터페이스"
-        %% note for UserRepository "사용자 정보 접근 인터페이스 (채팅 참여자 정보 등)"
-        %% note for ProjectRepository "프로젝트 정보 접근 인터페이스 (채널 권한 확인용)"
-        %% note for RoleRepository "역할 정보 접근 인터페이스 (채널 권한 확인용)"
     end
 
-    %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
-    %% Repository Implementations provide concrete logic using DataSources.
-    %% DataSource Interfaces abstract specific data access mechanisms (e.g., Firestore queries, Storage uploads).
-    %% DataSource Implementations use actual backend services (Firebase Firestore, Firebase Storage).
-    %% DTOs (Data Transfer Objects like MessageDTO, ProjectChannelDTO) are used for external communication.
     subgraph Data Layer
         direction LR
         namespace RepositoryImpl_DataNS {
             class MessageRepositoryImpl {
                 -messageRemoteDataSource: MessageRemoteDataSource
-                -messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource %% For uploads
+                -messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource
             }
-            note right of MessageRepositoryImpl
-                Implements MessageRepository.
-                Uses MessageRemoteDataSource for message CRUD and MessageAttachmentRemoteDataSource for file uploads.
-                Responsible for mapping between `MessageDTO` (from DataSource) and `Message` (domain model).
-            end note
             class ChannelRepositoryImpl {
                 -projectChannelRemoteDataSource: ProjectChannelRemoteDataSource
                 -dmChannelRemoteDataSource: DMChannelRemoteDataSource
             }
-            note right of ChannelRepositoryImpl
-                Implements ChannelRepository.
-                Uses different DataSources (ProjectChannelRemoteDataSource, DMChannelRemoteDataSource)
-                to handle various channel types, mapping their DTOs to the `Channel` domain model.
-            end note
-            class UserRepositoryImpl %% Defined elsewhere
-            class ProjectRepositoryImpl %% Defined elsewhere
-            class RoleRepositoryImpl %% Defined elsewhere
+            class UserRepositoryImpl {
+
+            }
+            class ProjectRepositoryImpl {
+
+            }
+            class RoleRepositoryImpl {
+
+            }
         }
-        %% note for MessageRepositoryImpl "MessageRepository 구현체 (Remote)"
-        %% note for ChannelRepositoryImpl "ChannelRepository 구현체 (Remote)"
-        %% note for UserRepositoryImpl "UserRepository 구현체 (Remote)"
-        %% note for ProjectRepositoryImpl "ProjectRepository 구현체 (Remote)"
-        %% note for RoleRepositoryImpl "RoleRepository 구현체 (Remote)"
 
         namespace RemoteDataSources_DataNS {
             class MessageRemoteDataSource { <<Interface>>
@@ -168,45 +111,28 @@ classDiagram
                 +updateMessage(channelId: String, messageId: String, newText: String): Result<Unit>
                 +removeMessage(channelId: String, messageId: String): Result<Unit>
             }
-            note right of MessageRemoteDataSource
-                Interface for remote message data operations (e.g., Firestore).
-                Works with `MessageDTO` for data transfer.
-            end note
             class MessageAttachmentRemoteDataSource { <<Interface>>
                 +uploadAttachment(channelId: String, attachmentUri: Uri): Result<String> %% Returns URL
             }
-            note right of MessageAttachmentRemoteDataSource
-                Interface for remote message attachment operations (e.g., Firebase Storage).
-                Handles uploading files and returning their URLs.
-            end note
             class ProjectChannelRemoteDataSource { <<Interface>>
                  +getChannelInfo(channelId: String): Flow<ProjectChannelDTO?>
             }
-            note right of ProjectChannelRemoteDataSource: Interface for project-specific channel data (e.g., from Firestore), uses `ProjectChannelDTO`.
             class DMChannelRemoteDataSource { <<Interface>>
                 +getDmChannelInfo(channelId: String): Flow<DMChannelDTO?>
             }
-            note right of DMChannelRemoteDataSource: Interface for DM channel data (e.g., from Firestore), uses `DMChannelDTO`.
-            class UserRemoteDataSource { <<Interface>> } %% Defined elsewhere
-            class ProjectRemoteDataSource { <<Interface>> } %% Defined elsewhere
-            class RoleRemoteDataSource { <<Interface>> } %% Defined elsewhere
+            class UserRemoteDataSource { <<Interface>> }
+            class ProjectRemoteDataSource { <<Interface>> }
+            class RoleRemoteDataSource { <<Interface>> }
         }
-        %% note for MessageRemoteDataSource "원격 메시지 서비스 통신"
-        %% note for MessageAttachmentRemoteDataSource "원격 메시지 첨부파일(이미지 등) 업로드 서비스 통신"
-        %% note for ProjectChannelRemoteDataSource "원격 프로젝트 채널 정보 서비스 통신"
-        %% note for DMChannelRemoteDataSource "원격 DM 채널 정보 서비스 통신"
-        %% note for UserRemoteDataSource "원격 사용자 정보 서비스 통신"
-        %% note for ProjectRemoteDataSource "원격 프로젝트 정보 서비스 통신"
-        %% note for RoleRemoteDataSource "원격 역할 정보 서비스 통신"
 
         namespace DataSourceImpl_DataNS {
             class MessageRemoteDataSourceImpl { -firestore: FirebaseFirestore }
             class MessageAttachmentRemoteDataSourceImpl { -firebaseStorage: FirebaseStorage }
             class ProjectChannelRemoteDataSourceImpl { -firestore: FirebaseFirestore }
             class DMChannelRemoteDataSourceImpl { -firestore: FirebaseFirestore }
-            class UserRemoteDataSourceImpl { -firestore: FirebaseFirestore } %% Defined elsewhere
-            class ProjectRemoteDataSourceImpl { -firestore: FirebaseFirestore } %% Defined elsewhere
-            class RoleRemoteDataSourceImpl { -firestore: FirebaseFirestore } %% Defined elsewhere
+            class UserRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class ProjectRemoteDataSourceImpl { -firestore: FirebaseFirestore }
+            class RoleRemoteDataSourceImpl { -firestore: FirebaseFirestore }
         }
     end
 

@@ -87,17 +87,20 @@ class RoleRepositoryImpl @Inject constructor(
         isDefault: Boolean?,
     ): CustomResult<Unit, Exception> = resultTry {
         // 업데이트할 필드만 맵으로 구성
-        val updates = mutableMapOf<String, Any>()
+        val updates = mutableMapOf<String, Any?>() // Value type changed to Any?
         
-        // 각 필드가 null이 아닌 경우에만 업데이트 맵에 추가
+        // Add to map if parameter is not null.
+        // If parameter is null, it means "no change" for that field.
+        // The remote data source will filter out these nulls before sending to Firestore.
         name?.let { updates[FirestoreConstants.Project.Roles.NAME] = it }
         isDefault?.let { updates[FirestoreConstants.Project.Roles.IS_DEFAULT] = it }
         
-
         // 업데이트할 내용이 있는 경우에만 데이터소스 호출
         if (updates.isNotEmpty()) {
-            roleRemoteDataSource.updateRole(projectId, roleId, name!!)
+            // Pass the updates map directly
+            roleRemoteDataSource.updateRole(projectId, roleId, updates)
         }
+        // If updates is empty, resultTry will return CustomResult.Success(Unit) implicitly.
     }
 
     /**

@@ -71,13 +71,22 @@ class RoleRemoteDataSourceImpl @Inject constructor(
     override suspend fun updateRole(
         projectId: String,
         roleId: String,
-        newName: String
+        updates: Map<String, Any?> // Changed from newName: String
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
-            // 참고: isDefault가 true인 역할은 수정할 수 없도록 하는 로직은
-            // UseCase나 Repository 계층에서 처리하는 것이 좋습니다.
-            getRolesCollection(projectId).document(roleId)
-                .update("name", newName).await()
+            // Filter out null values from the updates map, as Firestore's update
+            // method might not handle nulls as expected for field removal
+            // or might cause issues if a field is intended to be explicitly set to null
+            // (though for 'name' and 'isDefault', null usually means "no change").
+            // For this specific case, if a value is null in the map, we assume it means
+            // "do not update this field". If a field should be DELETED,
+            // FieldValue.delete() should be used, which is not handled here.
+            val nonNullUpdates = updates.filterValues { it != null }
+
+            if (nonNullUpdates.isNotEmpty()) {
+                getRolesCollection(projectId).document(roleId)
+                    .update(nonNullUpdates).await() // Use the nonNullUpdates map
+            }
             Unit
         }
     }

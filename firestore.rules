@@ -1,253 +1,269 @@
 rules_version = '2';
 
 service cloud.firestore {
-  match /databases/{database}/documents {
+    match /databases/{database}/documents {
 
-    // === 유틸리티 함수 ===
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isCurrentUser(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function isProjectOwner(projectId) {
-      let projectDoc = get(/databases/$(database)/documents/projects/$(projectId));
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/projects/$(projectId)) &&
-             projectDoc.data.ownerId == request.auth.uid;
-    }
-
-    function isProjectMember(projectId) {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid));
-    }
-
-    // === 기본 규칙 ===
-    // 기본적으로 모든 접근을 거부하고, 명시적 규칙으로만 허용
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // === 사용자 (users) ===
-    match /users/{userId} {
-      // 프로필 읽기: 모든 사용자 (필요시 isAuthenticated()로 변경)
-      allow read: if true;
-      // 프로필 수정: 본인만
-      allow update: if isCurrentUser(userId);
-      // 사용자 생성: (일반적으로 Firebase Auth로 처리, 직접 생성 시 규칙 필요)
-      // allow create: if ...;
-      // 사용자 삭제: (일반적으로 직접 삭제 허용 안 함, 관리자 또는 서버 로직)
-      // allow delete: if ...;
-
-      // --- 사용자 서브컬렉션 --- 
-      // 친구 (friends)
-      match /friends/{friendUserId} {
-        // 친구 목록 읽기, 친구 정보 읽기: 본인만
-        allow read: if isCurrentUser(userId);
-        // 친구 요청 생성 (문서 ID는 상대방 ID, 요청자 정보는 문서 내 필드)
-        allow create: if isCurrentUser(userId) && 
-                        request.resource.data.senderId == request.auth.uid &&
-                        request.resource.data.receiverId == friendUserId &&
-                        request.resource.data.status == 'pending_sent';
-        // 친구 요청 업데이트 (수락/거절/취소)
-        allow update: if isCurrentUser(userId) || 
-                        (isAuthenticated() && resource.data.receiverId == request.auth.uid && resource.data.status == 'pending_sent');
-        // 친구 삭제
-        allow delete: if isCurrentUser(userId);
-      }
-
-      // DM 채널 정보 요약 (dm_wrapper)
-      match /dm_wrapper/{dmChannelId} {
-        // 본인의 DM 요약 정보만 읽기 가능
-        allow read, list: if isCurrentUser(userId);
-        // 쓰기 작업은 서버 함수 또는 특정 로직 통해 처리 (클라이언트 직접 쓰기 제한)
-      }
-
-      // 참여 프로젝트 정보 요약 (projects_wrapper)
-      match /projects_wrapper/{wrappedProjectId} {
-        // 본인의 프로젝트 요약 정보만 읽기 가능
-        allow read, list: if isCurrentUser(userId);
-        // 쓰기 작업은 서버 함수 또는 특정 로직 통해 처리
-      }
-    }
-
-    // === DM 채널 (dm_channels) ===
-    match /dm_channels/{dmChannelId} {
-      // DM 채널 정보 읽기: 참가자만
-      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
-      // DM 채널 생성: 인증된 사용자이고, 생성자가 참가자 중 한 명이며, 참가자는 2명
-      allow create: if isAuthenticated() && 
-                      request.auth.uid in request.resource.data.participants &&
-                      request.resource.data.participants.size() == 2;
-      // DM 채널 업데이트 (예: lastMessagePreview - 주로 서버에서 업데이트)
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants; // 제한적 업데이트만 허용
-      // DM 채널 삭제: (일반적으로 허용 안 함 또는 soft delete)
-      // allow delete: if ...;
-
-      // --- DM 채널 서브컬렉션 --- 
-      // 메시지 (messages)
-      match /messages/{messageId} {
-        let dmChannel = get(/databases/$(database)/documents/dm_channels/$(dmChannelId));
-        // 메시지 읽기: DM 채널 참가자만
-        allow read: if isAuthenticated() && request.auth.uid in dmChannel.data.participants;
-        // 메시지 생성: DM 채널 참가자이고, 발신자가 본인
-        allow create: if isAuthenticated() && 
-                        request.resource.data.senderId == request.auth.uid &&
-                        request.auth.uid in dmChannel.data.participants;
-        // 메시지 수정: 발신자 본인만
-        allow update: if isAuthenticated() && resource.data.senderId == request.auth.uid;
-        // 메시지 삭제: 발신자 본인만 (또는 soft delete)
-        allow delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
-
-        // 메시지 첨부파일 (message_attachments)
-        match /message_attachments/{attachmentId} {
-          // 첨부파일 읽기: DM 채널 참가자
-          allow read: if isAuthenticated() && request.auth.uid in dmChannel.data.participants;
-          // 첨부파일 생성: 메시지 생성자와 동일 조건
-          allow create: if isAuthenticated() && 
-                          request.auth.uid in dmChannel.data.participants &&
-                          get(/databases/$(database)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
-          // 첨부파일 수정/삭제: 메시지 생성자 (단순화)
-          allow update, delete: if isAuthenticated() && 
-                                  get(/databases/$(database)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
+        // === 유틸리티 함수 ===
+        function isAuthenticated() {
+            return request.auth != null;
         }
-      }
-    }
 
-    // === 프로젝트 (projects) ===
-    match /projects/{projectId} {
-      // 프로젝트 정보 읽기: 프로젝트 멤버만 (더 넓게 하려면 isAuthenticated())
-      allow read: if isProjectMember(projectId) || isProjectOwner(projectId); // 오너도 멤버로 간주하거나, 명시적 추가
-      // 프로젝트 생성: 인증된 사용자이고, 생성자가 소유자
-      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
-      // 프로젝트 업데이트/삭제: 프로젝트 소유자만
-      allow update, delete: if isProjectOwner(projectId);
-
-      // --- 프로젝트 서브컬렉션 --- 
-      // 멤버 (members)
-      match /members/{memberUserId} {
-        // 멤버 목록/정보 읽기: 프로젝트 멤버만
-        allow read: if isProjectMember(projectId);
-        // 멤버 추가/역할 수정: 프로젝트 소유자만
-        allow create, update: if isProjectOwner(projectId);
-        // 멤버 삭제 (추방/탈퇴): 프로젝트 소유자 또는 본인 탈퇴
-        allow delete: if isProjectOwner(projectId) || isCurrentUser(memberUserId);
-      }
-
-      // 역할 정의 (roles)
-      match /roles/{roleId} {
-        // 역할 목록/정보 읽기: 프로젝트 멤버만
-        allow read: if isProjectMember(projectId);
-        // 역할 생성/수정/삭제: 프로젝트 소유자만
-        allow write: if isProjectOwner(projectId);
-
-        // 역할에 부여된 권한 (granted_permissions)
-        // grantedPermissionId는 projects/{projectId}/permissions 컬렉션의 문서 ID를 참조
-        match /granted_permissions/{grantedPermissionId} {
-          // 역할에 부여된 권한 읽기: 프로젝트 멤버만
-          allow read: if isProjectMember(projectId);
-          // 권한 부여/해제: 프로젝트 소유자만
-          allow create, delete: if isProjectOwner(projectId);
-          // 업데이트는 일반적으로 create/delete로 처리
+        function isCurrentUser(userId) {
+            return isAuthenticated() && request.auth.uid == userId;
         }
-      }
 
-      // 사용 가능한 권한 정의 (permissions)
-      match /permissions/{permissionDefId} {
-        // 권한 정의 읽기: 프로젝트 멤버만
-        allow read: if isProjectMember(projectId);
-        // 권한 정의 생성/수정/삭제: 프로젝트 소유자만
-        allow write: if isProjectOwner(projectId);
-      }
+        function isProjectOwner(projectId) {
+            let projectDoc = get(/databases/$(database)/documents/projects/$(projectId));
+            return isAuthenticated() &&
+                exists(/databases/$(database)/documents/projects/$(projectId)) &&
+                projectDoc.data.ownerId == request.auth.uid;
+        }
 
-      // 초대 (invites)
-      match /invites/{inviteId} {
-        // 초대 정보 읽기: 프로젝트 소유자만 (또는 특정 조건 만족 시)
-        allow read: if isProjectOwner(projectId);
-        // 초대 생성: 프로젝트 소유자이고, 생성자가 본인
-        allow create: if isProjectOwner(projectId) && 
-                        request.resource.data.createdBy == request.auth.uid;
-        // 초대 상태 업데이트 (예: 만료 처리): 프로젝트 소유자
-        allow update: if isProjectOwner(projectId);
-        // 초대 삭제: 프로젝트 소유자
-        allow delete: if isProjectOwner(projectId);
-      }
-
-      // 카테고리 (categories)
-      match /categories/{categoryId} {
-        // 카테고리 읽기: 프로젝트 멤버만
-        allow read: if isProjectMember(projectId);
-        // 카테고리 생성/수정/삭제: 프로젝트 소유자만
-        allow write: if isProjectOwner(projectId);
-
-        // --- 카테고리 내 프로젝트 채널 (project_channels) --- 
-        match /project_channels/{projectChannelId} {
-          // 프로젝트 채널 정보 읽기: 프로젝트 멤버만
-          allow read: if isProjectMember(projectId);
-          // 프로젝트 채널 생성/수정/삭제: 프로젝트 소유자만
-          allow write: if isProjectOwner(projectId);
-
-          // 프로젝트 채널 메시지 (messages)
-          match /messages/{messageId} {
-            // 메시지 읽기: 프로젝트 멤버만
-            allow read: if isProjectMember(projectId);
-            // 메시지 생성: 프로젝트 멤버이고, 발신자가 본인
-            allow create: if isProjectMember(projectId) && 
-                            request.resource.data.senderId == request.auth.uid;
-            // 메시지 수정: 발신자 본인만
-            allow update: if isProjectMember(projectId) && resource.data.senderId == request.auth.uid;
-            // 메시지 삭제: 발신자 본인 또는 프로젝트 소유자
-            allow delete: if isProjectMember(projectId) && 
-                            (resource.data.senderId == request.auth.uid || isProjectOwner(projectId));
-            
-            // 메시지 첨부파일 (message_attachments)
-            match /message_attachments/{attachmentId} {
-              let messageDoc = get(/databases/$(database)/documents/projects/$(projectId)/categories/$(categoryId)/project_channels/$(projectChannelId)/messages/$(messageId));
-              // 첨부파일 읽기: 프로젝트 멤버
-              allow read: if isProjectMember(projectId);
-              // 첨부파일 생성: 메시지 생성자와 동일 조건 (프로젝트 멤버, 본인)
-              allow create: if isProjectMember(projectId) && messageDoc.data.senderId == request.auth.uid;
-              // 첨부파일 수정/삭제: 메시지 생성자 또는 프로젝트 소유자
-              allow update, delete: if isProjectMember(projectId) && 
-                                      (messageDoc.data.senderId == request.auth.uid || isProjectOwner(projectId));
+        function isProjectMember(projectId) {
+            // projectId가 null이거나 비어있지 않은지 확인하는 방어 코드 추가 가능
+            if (projectId == null || projectId == "") {
+                return false;
             }
-          }
+            return isAuthenticated() &&
+                exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid));
+        }
+
+        // === 기본 규칙 ===
+        // 기본적으로 모든 접근을 거부하고, 명시적 규칙으로만 허용
+        match /{document=**} {
+            allow read, write: if false;
+        }
+
+        // === 사용자 (users) ===
+        match /users/{userId} {
+            // 프로필 읽기: 인증된 사용자만
+            allow read: if isAuthenticated();
+            // 프로필 수정: 본인만
+            allow update: if isCurrentUser(userId);
+            // 사용자 생성: (일반적으로 Firebase Auth로 처리, 직접 생성 시 규칙 필요)
+            // allow create: if ...;
+            // 사용자 삭제: (일반적으로 직접 삭제 허용 안 함, 관리자 또는 서버 로직)
+            // allow delete: if ...;
+
+            // --- 사용자 서브컬렉션 ---
+            // 친구 (friends)
+            // friendUserId는 상대방의 userId를 의미. 문서는 userId의 하위 콜렉션에 생성됨.
+            // 친구 관계는 양쪽 사용자의 friends 콜렉션에 각각 문서가 생성/관리되어야 함 (클라이언트/서버 로직).
+            // 규칙은 각 개별 문서에 대한 접근 권한만 제어.
+            match /friends/{friendUserId} {
+                // 본인의 친구 목록 및 특정 친구 정보 읽기
+                allow read: if isCurrentUser(userId);
+
+                // 친구 문서 생성: 본인이 자신의 친구 목록에 항목을 추가하는 경우.
+                // 클라이언트는 적절한 초기 status ('REQUEST_SENT', 'REQUEST_RECEIVED' 등)와 함께 필요한 필드를 설정해야 함.
+                allow create: if isCurrentUser(userId) &&
+                              request.resource.data.keys().hasAll(['friendName', 'status', 'requestedAt']); // 예시: 필수 필드 검증
+
+                // 친구 문서 업데이트: 본인이 친구와의 관계 상태(status) 또는 친구 관련 정보(메모 등)를 변경하는 경우.
+                // 예: 친구 요청 수락/거절, 친구 삭제 전 상태 변경(soft delete), 별명 변경 등.
+                // status 필드 값에 따른 세부적인 필드 업데이트 규칙을 추가할 수 있음 (예: status가 'FRIENDS'일 때만 메모 수정 가능).
+                allow update: if isCurrentUser(userId);
+
+                // 친구 문서 삭제 (관계 끝기)
+                allow delete: if isCurrentUser(userId);
+      }
+
+            // DM 채널 정보 요약 (dm_wrapper)
+            match /dm_wrapper/{dmChannelId} {
+                // 본인의 DM 요약 정보만 읽기 가능
+                allow read, list: if isCurrentUser(userId);
+                // 쓰기 작업은 서버 함수 또는 특정 로직 통해 처리 (클라이언트 직접 쓰기 제한)
+            }
+
+            // 참여 프로젝트 정보 요약 (projects_wrapper)
+            match /projects_wrapper/{wrappedProjectId} {
+                // 본인의 프로젝트 요약 정보만 읽기 가능
+                allow read, list: if isCurrentUser(userId);
+                // 쓰기 작업은 서버 함수 또는 특정 로직 통해 처리
+            }
+        }
+
+        // === DM 채널 (dm_channels) ===
+        match /dm_channels/{dmChannelId} {
+            // DM 채널 정보 읽기: 참가자만
+            allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+            // DM 채널 생성: 인증된 사용자이고, 생성자가 참가자 중 한 명이며, 참가자는 2명
+            allow create: if isAuthenticated() &&
+                           request.auth.uid in request.resource.data.participants &&
+                           request.resource.data.participants.size() == 2;
+            // DM 채널 업데이트 (예: lastMessagePreview - 주로 서버에서 업데이트)
+            allow update: if isAuthenticated() && request.auth.uid in resource.data.participants; // 제한적 업데이트만 허용
+            // DM 채널 삭제: (일반적으로 허용 안 함 또는 soft delete)
+            // allow delete: if ...;
+
+            // --- DM 채널 서브콜렉션 ---
+            // 메시지 (messages)
+            match /messages/{messageId} {
+                let dmChannel = get(/databases/$(database)/documents/dm_channels/$(dmChannelId));
+                // 메시지 읽기: DM 채널 참가자만
+                allow read: if isAuthenticated() && request.auth.uid in dmChannel.data.participants;
+                // 메시지 생성: DM 채널 참가자이고, 발신자가 본인
+                allow create: if isAuthenticated() &&
+                             request.resource.data.senderId == request.auth.uid &&
+                             request.auth.uid in dmChannel.data.participants;
+                // 메시지 수정: 발신자 본인만
+                allow update: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+                // 메시지 삭제: 발신자 본인만 (또는 soft delete)
+                allow delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+
+                // 메시지 첨부파일 (message_attachments)
+                match /message_attachments/{attachmentId} {
+                    // 첨부파일 읽기: DM 채널 참가자
+                    allow read: if isAuthenticated() && request.auth.uid in dmChannel.data.participants;
+                    // 첨부파일 생성: 메시지 생성자와 동일 조건
+                    allow create: if isAuthenticated() &&
+                                   request.auth.uid in dmChannel.data.participants &&
+                                   get(/databases/$(database)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
+                    // 첨부파일 수정/삭제: 메시지 생성자 (단순화)
+                    allow update, delete: if isAuthenticated() &&
+                                         get(/databases/$(database)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
+                }
+            }
+        }
+
+        // === 프로젝트 (projects) ===
+        match /projects/{projectId} {
+            // 프로젝트 정보 읽기: 프로젝트 멤버만 (소유자도 isProjectMember 함수를 통해 멤버로 간주될 수 있도록 isProjectMember 함수 수정 또는 ownerId 직접 비교)
+            allow read: if isProjectMember(projectId) || isProjectOwner(projectId);
+            // 프로젝트 생성: 인증된 사용자이고, 생성자가 소유자
+            allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+            // 프로젝트 업데이트/삭제: 프로젝트 소유자만
+            allow update, delete: if isProjectOwner(projectId);
+
+            // --- 프로젝트 서브콜렉션 ---
+            // 멤버 (members)
+            match /members/{memberUserId} {
+                // 멤버 목록/정보 읽기: 프로젝트 멤버만
+                allow read: if isProjectMember(projectId);
+                // 멤버 추가/역할 수정: 프로젝트 소유자만
+                allow create, update: if isProjectOwner(projectId);
+                // 멤버 삭제 (추방/탈퇴): 프로젝트 소유자 또는 본인 탈퇴
+                allow delete: if isProjectOwner(projectId) || isCurrentUser(memberUserId);
+            }
+
+            // 역할 정의 (roles)
+            match /roles/{roleId} {
+                // 역할 목록/정보 읽기: 프로젝트 멤버만
+                allow read: if isProjectMember(projectId);
+                // 역할 생성/수정/삭제: 프로젝트 소유자만
+                allow write: if isProjectOwner(projectId); // create, update, delete 모두 포함
+
+                // 역할에 부여된 권한 (permissions) - 컬렉션 구조 문서에 따름
+                // 경로: /projects/{projectId}/roles/{roleId}/permissions/{permissionId}
+                // permissionId는 역할에 부여할 실제 권한의 ID (예: 'EDIT_TASK', 'VIEW_MEMBER').
+                match /permissions/{permissionId} {
+                    // 역할에 부여된 권한 읽기: 프로젝트 멤버만
+                    allow read: if isProjectMember(projectId);
+                    // 권한 부여/해제 (문서 생성/삭제): 프로젝트 소유자만
+                    allow create, delete: if isProjectOwner(projectId);
+                    // (업데이트는 일반적으로 create/delete로 처리)
+                }
+            }
+          // (업데이트는 일반적으로 create/delete로 처리)
         }
       }
+
+      // 사용 가능한 권한 정의 (permissions) - 프로젝트 레벨에서 정의되는 모든 권한의 마스터 목록
+      // 주의: 이 컬렉션(/projects/{projectId}/permissions/{permissionDefId})은
+      // 현재 논의된 컬렉션 구조 문서에 명시적으로 포함되어 있지 않습니다.
+      // 만약 이 컬렉션이 필요하다면, 컬렉션 구조 문서에 반영하고 규칙을 상세히 검토해야 합니다.
+            match /permissions/{permissionDefId} {
+                // 권한 정의 읽기: 프로젝트 멤버만 (또는 isAuthenticated() 등 정책에 따라)
+                allow read: if isProjectMember(projectId);
+                // 권한 정의 생성/수정/삭제: 프로젝트 소유자만 (또는 시스템 관리자)
+                allow write: if isProjectOwner(projectId);
+            }
+
+            // 초대 (invites)
+            match /invites/{inviteId} {
+                // 초대 정보 읽기: 프로젝트 소유자만 (또는 특정 조건 만족 시)
+                allow read: if isProjectOwner(projectId);
+                // 초대 생성: 프로젝트 소유자이고, 생성자가 본인
+                allow create: if isProjectOwner(projectId) &&
+                              request.resource.data.createdBy == request.auth.uid;
+                // 초대 상태 업데이트 (예: 만료 처리): 프로젝트 소유자
+                allow update: if isProjectOwner(projectId);
+                // 초대 삭제: 프로젝트 소유자
+                allow delete: if isProjectOwner(projectId);
+            }
+
+            // 카테고리 (categories)
+            match /categories/{categoryId} {
+                // 카테고리 읽기: 프로젝트 멤버만
+                allow read: if isProjectMember(projectId);
+                // 카테고리 생성/수정/삭제: 프로젝트 소유자만 (또는 특정 역할)
+                allow write: if isProjectOwner(projectId);
+
+                // --- 카테고리 내 프로젝트 채널 (project_channels) ---
+                match /project_channels/{projectChannelId} {
+                    // 프로젝트 채널 정보 읽기: 프로젝트 멤버만
+                    allow read: if isProjectMember(projectId);
+                    // 프로젝트 채널 생성/수정/삭제: 프로젝트 소유자만 (또는 특정 역할)
+                    allow write: if isProjectOwner(projectId);
+
+                    // 프로젝트 채널 메시지 (messages)
+                    match /messages/{messageId} {
+                        // 메시지 읽기: 프로젝트 멤버만
+                        allow read: if isProjectMember(projectId);
+                        // 메시지 생성: 프로젝트 멤버이고, 발신자가 본인
+                        allow create: if isProjectMember(projectId) &&
+                                       request.resource.data.senderId == request.auth.uid;
+                        // 메시지 수정: 발신자 본인만 (프로젝트 멤버 조건은 상위 경로에서 이미 만족)
+                        allow update: if resource.data.senderId == request.auth.uid; // isProjectMember는 이미 만족
+                        // 메시지 삭제: 발신자 본인 또는 프로젝트 소유자
+                        allow delete: if (resource.data.senderId == request.auth.uid || isProjectOwner(projectId)); // isProjectMember는 이미 만족
+
+                        // 메시지 첨부파일 (message_attachments)
+                        match /message_attachments/{attachmentId} {
+                            let messageDoc = get(/databases/$(database)/documents/projects/$(projectId)/categories/$(categoryId)/project_channels/$(projectChannelId)/messages/$(messageId));
+                            // 첨부파일 읽기: 프로젝트 멤버
+                            allow read: if isProjectMember(projectId);
+                            // 첨부파일 생성: 메시지 생성자와 동일 조건 (프로젝트 멤버, 본인)
+                            allow create: if isProjectMember(projectId) && messageDoc.data.senderId == request.auth.uid;
+                            // 첨부파일 수정/삭제: 메시지 생성자 또는 프로젝트 소유자
+                            allow update, delete: if isProjectMember(projectId) &&
+                                                 (messageDoc.data.senderId == request.auth.uid || isProjectOwner(projectId));
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    // === 일정 (schedules) ===
-    match /schedules/{scheduleId} {
-      // 일정 읽기:
-      // 1. 개인 일정: 생성자 본인만
-      // 2. 프로젝트 일정: 해당 프로젝트 멤버만
-      allow read: if isAuthenticated()
+        // === 일정 (schedules) ===
+        match /schedules/{scheduleId} {
+            // 일정 읽기:
+            // 1. 개인 일정 (projectId가 null): 생성자 본인만
+            // 2. 프로젝트 일정 (projectId가 존재): 해당 프로젝트 멤버만
+            allow read: if isAuthenticated() &&
+                         (
+                           (resource.data.projectId == null && resource.data.creatorId == request.auth.uid) ||
+                           (resource.data.projectId != null && isProjectMember(resource.data.projectId))
+                         );
 
-      //            (
-      //              (resource.data.projectId == null && resource.data.creatorId == request.auth.uid) || 
-      //              (resource.data.projectId != null && isProjectMember(resource.data.projectId))
-      //            );
-      
-      // 일정 생성:
-      // 1. 개인 일정: 생성자 본인
-      // 2. 프로젝트 일정: 해당 프로젝트 멤버이면서 생성자 본인
-      allow create: if isAuthenticated() && 
-                      request.resource.data.creatorId == request.auth.uid &&
-                      (
-                        (request.resource.data.projectId == null) || 
-                        (request.resource.data.projectId != null && isProjectMember(request.resource.data.projectId))
-                      );
-      
-      // 일정 수정/삭제:
-      // 1. 개인 일정: 생성자 본인만
-      // 2. 프로젝트 일정: 해당 프로젝트 소유자 또는 생성자 본인
-      allow update, delete: if isAuthenticated() && 
-                              (
-                                (resource.data.projectId == null && resource.data.creatorId == request.auth.uid) || 
-                                (resource.data.projectId != null && (isProjectOwner(resource.data.projectId) || resource.data.creatorId == request.auth.uid))
-                              );
+            // 일정 생성:
+            // 1. 개인 일정: 생성자 본인
+            // 2. 프로젝트 일정: 해당 프로젝트 멤버이면서 생성자 본인
+            allow create: if isAuthenticated() &&
+                           request.resource.data.creatorId == request.auth.uid &&
+                           (
+                             (request.resource.data.projectId == null) ||
+                             (request.resource.data.projectId != null && isProjectMember(request.resource.data.projectId))
+                           );
+
+            // 일정 수정/삭제:
+            // 1. 개인 일정: 생성자 본인만
+            // 2. 프로젝트 일정: 해당 프로젝트 소유자 또는 생성자 본인
+            allow update, delete: if isAuthenticated() &&
+                                   (
+                                     (resource.data.projectId == null && resource.data.creatorId == request.auth.uid) ||
+                                     (resource.data.projectId != null && (isProjectOwner(resource.data.projectId) || resource.data.creatorId == request.auth.uid))
+                                   );
+        }
     }
-  }
 }

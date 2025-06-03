@@ -32,9 +32,9 @@ interface RoleRemoteDataSource {
      * 프로젝트의 역할 이름을 수정합니다. (isDefault가 false인 역할만 가능)
      * @param projectId 대상 프로젝트의 ID
      * @param roleId 역할을 수정할 역할의 ID
-     * @param newName 새로운 역할의 이름
+     * @param updates A map containing the fields to update (e.g., "name" to String, "isDefault" to Boolean).
      */
-    suspend fun updateRole(projectId: String, roleId: String, newName: String): CustomResult<Unit, Exception>
+    suspend fun updateRole(projectId: String, roleId: String, updates: Map<String, Any?>): CustomResult<Unit, Exception>
 
     /**
      * 프로젝트에서 역할을 삭제합니다. (isDefault가 false인 역할만 가능)
