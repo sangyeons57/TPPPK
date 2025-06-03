@@ -1,5 +1,11 @@
 classDiagram
     title Project Feature Architecture
+    %% Layered Architecture: Feature (ViewModels) -> Domain (UseCases, Repository Interfaces) -> Data (Repository Implementations, DataSources).
+    %% Data Flow: External services (e.g., Firebase) are accessed by DataSource Implementations, which are abstracted by DataSource Interfaces.
+    %% Repository Implementations use DataSource Interfaces and are abstracted by Repository Interfaces.
+    %% UseCases consume Repository Interfaces for business logic. ViewModels use UseCases for UI state and interactions.
+    %% UI (not shown) observes ViewModels.
+    %% Data Models: DTOs (e.g., ProjectDTO) in Data layer, Domain Models (e.g., Project) in Domain/ViewModel layers.
 
     %% Feature Layer (ViewModels)
     subgraph Feature Layer - ViewModels

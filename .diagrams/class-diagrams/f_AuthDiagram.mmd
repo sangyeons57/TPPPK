@@ -1,21 +1,46 @@
 classDiagram
     title Auth Feature Architecture
+    %% This diagram illustrates the architecture of the Authentication feature,
+    %% following a layered approach: Feature (ViewModels) -> Domain (UseCases, Repository Interfaces) -> Data (Repository Implementations, DataSources).
+    %% Data Flow: External services (e.g., Firebase Auth, Firestore) are accessed by DataSource Implementations,
+    %% which are abstracted by DataSource Interfaces. Repository Implementations use these DataSource Interfaces
+    %% and are themselves abstracted by Repository Interfaces. UseCases consume Repository Interfaces to orchestrate
+    %% domain logic, and ViewModels use UseCases to manage UI state and handle user interactions.
+    %% UI (Activities/Fragments/Composables) would observe ViewModels.
 
     %% Feature Layer (ViewModels)
+    %% ViewModels are responsible for preparing and managing data for the UI.
+    %% They interact with UseCases to get data and process user actions.
+    %% UI models are implicitly managed here, often as StateFlow/LiveData exposed to the UI.
     subgraph Feature Layer - ViewModels
         direction LR
-        %% ViewModels 네임스페이스 (MMD 코드 가독성을 위함)
         namespace ViewModels_AuthNS {
             class SplashViewModel {
                 -checkSessionUseCase: CheckSessionUseCase
                 -checkAuthStatusUseCase: CheckAuthenticationStatusUseCase
                 +onAppStart()
             }
+            note right of SplashViewModel
+                Manages UI logic for the splash screen.
+                Initiates session and authentication status checks on app start.
+                Data flow: (UI events) -> SplashViewModel -> CheckSessionUseCase / CheckAuthStatusUseCase.
+                (UseCase results) -> SplashViewModel -> (UI state update).
+            end note
+
             class LoginViewModel {
                 -loginUseCase: LoginUseCase
                 -getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
                 +login(email, password)
             }
+            note right of LoginViewModel
+                Manages UI logic and state for the Login screen.
+                Handles user login attempts and displays error messages.
+                Data flow: (Login button click) -> LoginViewModel.login() -> LoginUseCase.
+                LoginUseCase -> AuthRepository -> AuthRemoteDataSource -> Firebase Auth.
+                (Result from LoginUseCase) -> LoginViewModel -> (UI state update: success/failure/error message).
+                Uses GetAuthErrorMessageUseCase to convert exceptions to user-friendly strings.
+            end note
+
             class SignUpViewModel {
                 -signUpUseCase: SignUpUseCase
                 -checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase
@@ -24,6 +49,13 @@ classDiagram
                 +signUp(email, password, nickname)
                 +sendVerificationEmail()
             }
+            note right of SignUpViewModel
+                Manages UI logic and state for the Sign-Up screen.
+                Handles user registration, nickname checks, and email verification requests.
+                Data flow similar to LoginViewModel, involving SignUpUseCase, CheckNicknameAvailabilityUseCase, etc.
+                SignUpUseCase also interacts with UserRepository for profile creation post-auth.
+            end note
+
             class FindPasswordViewModel {
                 -requestPasswordResetUseCase: RequestPasswordResetUseCase
                 -verifyPasswordResetCodeUseCase: VerifyPasswordResetCodeUseCase
@@ -32,73 +64,65 @@ classDiagram
                 +requestPasswordReset(email)
                 +verifyCodeAndResetPassword(code, newPassword)
             }
-            class TermsOfServiceViewModel {
-                %% Static content
+            note right of FindPasswordViewModel
+                Manages UI logic for the password reset process.
+                Handles requesting password reset, verifying codes, and setting new passwords.
+            end note
+
+            class TermsOfServiceViewModel { %% Static content, likely just displays terms. No complex data flow.
             }
-            class PrivacyPolicyViewModel {
-                %% Static content
+            class PrivacyPolicyViewModel { %% Static content, likely just displays policy. No complex data flow.
             }
         }
     end
-    note for SplashViewModel "스플래시 화면 UI 로직 및 세션 확인"
-    note for LoginViewModel "로그인 화면 UI 로직"
-    note for SignUpViewModel "회원가입 화면 UI 로직"
-    note for FindPasswordViewModel "비밀번호 찾기 화면 UI 로직"
-    note for TermsOfServiceViewModel "서비스 이용약관 표시"
-    note for PrivacyPolicyViewModel "개인정보처리방침 표시"
+    %% Existing notes provide basic descriptions, new notes aim to elaborate on roles and flow.
+    %% note for SplashViewModel "스플래시 화면 UI 로직 및 세션 확인"
+    %% note for LoginViewModel "로그인 화면 UI 로직"
+    %% note for SignUpViewModel "회원가입 화면 UI 로직"
+    %% note for FindPasswordViewModel "비밀번호 찾기 화면 UI 로직"
+    %% note for TermsOfServiceViewModel "서비스 이용약관 표시"
+    %% note for PrivacyPolicyViewModel "개인정보처리방침 표시"
 
     %% Domain Layer (UseCases & Repository Interfaces)
+    %% UseCases encapsulate specific business logic operations. They are called by ViewModels.
+    %% Repository Interfaces define contracts for data access, abstracting the Data layer.
+    %% Domain models are used here, representing core business entities/data structures.
     subgraph Domain Layer
         direction LR
-        %% Auth UseCases 네임스페이스
         namespace UseCases_AuthNS {
-            class CheckSessionUseCase {
-                -authRepository: AuthRepository
-                +invoke(): Flow<Boolean>
-            }
-            class CheckAuthenticationStatusUseCase {
-                -authRepository: AuthRepository
-                +invoke(): Flow<Boolean>
-            }
-            class LoginUseCase {
-                -authRepository: AuthRepository
-                +invoke(email, password): Result<Unit>
-            }
-            class GetAuthErrorMessageUseCase {
-                %% Error mapping logic
-                +invoke(throwable: Throwable): String
-            }
-            class SignUpUseCase {
-                -authRepository: AuthRepository
-                -userRepository: UserRepository %% For creating user profile part
-                +invoke(email, password, nickname): Result<Unit>
-            }
-            class SendEmailVerificationUseCase {
-                -authRepository: AuthRepository
-                +invoke(): Result<Unit>
-            }
-            class RequestPasswordResetUseCase {
-                -authRepository: AuthRepository
-                +invoke(email: String): Result<Unit>
-            }
-            class VerifyPasswordResetCodeUseCase {
-                -authRepository: AuthRepository
-                +invoke(code: String): Result<Unit>
-            }
-            class ResetPasswordUseCase {
-                -authRepository: AuthRepository
-                +invoke(code: String, newPassword: String): Result<Unit>
-            }
+            class CheckSessionUseCase
+            note right of CheckSessionUseCase: Orchestrates checking if a user session is active. Returns a Flow<Boolean>.
+            class CheckAuthenticationStatusUseCase
+            note right of CheckAuthenticationStatusUseCase: Observes changes in authentication status. Returns a Flow<Boolean>.
+            class LoginUseCase
+            note right of LoginUseCase
+                Handles the business logic for user login.
+                Interacts with AuthRepository.
+                Input: email, password. Output: Result<Unit>.
+            end note
+            class GetAuthErrorMessageUseCase
+            note right of GetAuthErrorMessageUseCase: Translates exceptions from auth operations into human-readable error messages.
+            class SignUpUseCase
+            note right of SignUpUseCase
+                Handles the business logic for user registration.
+                Interacts with AuthRepository (for creating auth user) and UserRepository (for creating user profile).
+                Input: email, password, nickname. Output: Result<Unit>.
+                Domain model for user profile data (e.g., nickname) is handled here.
+            end note
+            class SendEmailVerificationUseCase
+            note right of SendEmailVerificationUseCase: Initiates sending a verification email to the current user.
+            class RequestPasswordResetUseCase
+            note right of RequestPasswordResetUseCase: Handles requesting a password reset for a given email.
+            class VerifyPasswordResetCodeUseCase
+            note right of VerifyPasswordResetCodeUseCase: Verifies the password reset code provided by the user.
+            class ResetPasswordUseCase
+            note right of ResetPasswordUseCase: Resets the password using a verified code and new password.
         }
-        %% User UseCases 네임스페이스 (Auth 기능에서 일부 사용)
         namespace UseCases_UserNS {
-            class CheckNicknameAvailabilityUseCase {
-                -userRepository: UserRepository
-                +invoke(nickname: String): Result<Boolean>
-            }
+            class CheckNicknameAvailabilityUseCase
+            note right of CheckNicknameAvailabilityUseCase: Checks if a nickname is already taken. Interacts with UserRepository.
         }
 
-        %% Repositories 네임스페이스
         namespace Repositories_DomainNS {
             class AuthRepository {
                 <<Interface>>
@@ -112,35 +136,58 @@ classDiagram
                 +resetPassword(code: String, newPassword: String): Result<Unit>
                 +getCurrentUserId(): String?
             }
+            note right of AuthRepository
+                Interface for authentication data operations.
+                Abstracts the underlying data source (e.g., Firebase Auth).
+                Defines the contract for what auth operations can be performed by UseCases.
+                Handles domain models or primitive types relevant to auth (e.g., UID, email).
+                The implementation (AuthRepositoryImpl) will map DataSource DTOs/data to these domain representations if needed.
+            end note
+
             class UserRepository {
                 <<Interface>>
                 +isNicknameAvailable(nickname: String): Result<Boolean>
                 +createUserProfile(uid: String, email: String, nickname: String): Result<Unit>
-                %% Other methods omitted for brevity in Auth context
             }
+            note right of UserRepository
+                Interface for user profile data operations (relevant parts for Auth).
+                Abstracts user data storage (e.g., Firestore).
+                Used by SignUpUseCase to create a user profile after successful authentication.
+                Its implementation (UserRepositoryImpl) handles mapping between domain models (e.g., User) and DTOs (e.g., UserDTO).
+            end note
         }
-        note for AuthRepository "인증 데이터 접근 추상화 인터페이스"
-        note for UserRepository "사용자 데이터 접근 추상화 인터페이스 (Auth에서 일부 사용)"
+        %% note for AuthRepository "인증 데이터 접근 추상화 인터페이스" (Covered by new note)
+        %% note for UserRepository "사용자 데이터 접근 추상화 인터페이스 (Auth에서 일부 사용)" (Covered by new note)
     end
 
     %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)
+    %% Repository Implementations provide concrete implementations of Repository Interfaces using DataSources.
+    %% DataSource Interfaces define contracts for accessing specific data sources (remote or local).
+    %% DataSource Implementations provide concrete implementations for these interfaces (e.g., using Firebase).
+    %% Data models (DTOs - Data Transfer Objects) are typically used at this layer for communication with external services.
     subgraph Data Layer
         direction LR
-        %% Repository Implementations 네임스페이스
         namespace RepositoryImpl_DataNS {
             class AuthRepositoryImpl {
                 -authRemoteDataSource: AuthRemoteDataSource
-                %% -userLocalDataSource: UserLocalDataSource (EXCLUDED)
             }
+            note right of AuthRepositoryImpl
+                Implementation of AuthRepository.
+                Delegates calls to AuthRemoteDataSource.
+                Responsible for any mapping between data formats used by AuthRemoteDataSource and domain models expected by AuthRepository interface (though for auth, these are often simple types like String for UID).
+            end note
             class UserRepositoryImpl {
                 -userRemoteDataSource: UserRemoteDataSource
-                %% -userLocalDataSource: UserLocalDataSource (EXCLUDED)
             }
+            note right of UserRepositoryImpl
+                Implementation of UserRepository (focused on Auth context needs).
+                Delegates calls to UserRemoteDataSource.
+                Maps UserDTO from UserRemoteDataSource to User domain model (implicitly, as UserRepository methods use primitives or return simple results here).
+            end note
         }
-        note for AuthRepositoryImpl "AuthRepository 구현체 (Remote)"
-        note for UserRepositoryImpl "UserRepository 구현체 (Remote, Auth에서 사용되는 부분)"
+        %% note for AuthRepositoryImpl "AuthRepository 구현체 (Remote)" (Covered)
+        %% note for UserRepositoryImpl "UserRepository 구현체 (Remote, Auth에서 사용되는 부분)" (Covered)
 
-        %% Remote DataSources 네임스페이스
         namespace RemoteDataSources_DataNS {
             class AuthRemoteDataSource {
                 <<Interface>>
@@ -153,23 +200,32 @@ classDiagram
                 +observeAuthState(): Flow<String?> %% UID or null
                 +getCurrentUserId(): String?
             }
+            note right of AuthRemoteDataSource
+                Interface for abstracting remote authentication service operations (e.g., Firebase Auth).
+                Methods typically return raw data or DTOs from the backend (here, String UIDs/tokens or Result<Unit>).
+            end note
             class UserRemoteDataSource {
                 <<Interface>>
                 +isNicknameAvailable(nickname: String): Result<Boolean>
                 +createUser(userDto: UserDTO): Result<Unit>
             }
+            note right of UserRemoteDataSource
+                Interface for abstracting remote user data storage operations (e.g., Firestore).
+                Uses UserDTO for data transfer (e.g., creating a user document).
+            end note
         }
-        note for AuthRemoteDataSource "원격 인증 서비스(Firebase Auth) 통신"
-        note for UserRemoteDataSource "원격 사용자 데이터 서비스(Firestore) 통신 (Auth에서 사용되는 부분)"
+        %% note for AuthRemoteDataSource "원격 인증 서비스(Firebase Auth) 통신" (Covered)
+        %% note for UserRemoteDataSource "원격 사용자 데이터 서비스(Firestore) 통신 (Auth에서 사용되는 부분)" (Covered)
 
-        %% DataSource Implementations 네임스페이스
         namespace DataSourceImpl_DataNS {
             class AuthRemoteDataSourceImpl {
                 -firebaseAuth: FirebaseAuth
             }
+            note right of AuthRemoteDataSourceImpl: Concrete implementation using FirebaseAuth.
             class UserRemoteDataSourceImpl {
                 -firestore: FirebaseFirestore
             }
+            note right of UserRemoteDataSourceImpl: Concrete implementation using FirebaseFirestore for user data.
         }
     end
 
