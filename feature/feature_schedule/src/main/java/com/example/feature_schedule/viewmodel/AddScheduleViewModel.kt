@@ -238,7 +238,7 @@ class AddScheduleViewModel @Inject constructor(
             val schedule = Schedule(
                 id = UUID.randomUUID().toString(),
                 creatorId = userId,
-                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID }!!,
+                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID },
                 title = title,
                 content = content.takeIf { it.isNotEmpty() } ?: "", // 내용 없으면 null
                 startTime = instantStartTime,

@@ -1,5 +1,6 @@
 package com.example.feature_main.ui
 
+import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserStatus
 
 /**
@@ -10,7 +11,7 @@ data class UserProfileData(
     val name: String,
     val email: String?,
     val profileImageUrl: String?,
-    val statusMessage: String?, // Mapped from User.memo
+    val memo: String?, // Mapped from User.memo
     val userStatus: UserStatus
 )
 
@@ -20,7 +21,7 @@ fun User.toUserProfileData(): UserProfileData {
         name = this.name,
         email = this.email.ifEmpty { null },
         profileImageUrl = this.profileImageUrl,
-        statusMessage = this.memo, // Mapping 'memo' to 'statusMessage'
+        memo = this.memo, // Mapping 'memo' to 'statusMessage'
         userStatus = this.status
     )
 }

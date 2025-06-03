@@ -243,7 +243,7 @@ fun ProjectListItemPreview_Default() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Row(modifier=Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))) {
              ProjectListItem(
-                project = ProjectUiModel(id = "1", name = "Alpha", description = "A", imageUrl = null, memberCount = 10, lastActivity = "어제"),
+                project = ProjectUiModel(id = "1", name = "Alpha", imageUrl = null),
                 isSelected = false,
                 onProjectClick = {}
             )
@@ -257,7 +257,7 @@ fun ProjectListItemPreview_Selected() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Row(modifier=Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))) {
             ProjectListItem(
-                project = ProjectUiModel(id = "2", name = "Bravo", description = "B", imageUrl = null, memberCount = 5, lastActivity = "2시간 전"),
+                project = ProjectUiModel(id = "2", name = "Bravo", imageUrl = null),
                 isSelected = true,
                 onProjectClick = {}
             )
@@ -283,11 +283,11 @@ fun ProjectListScreenPreview_Empty() {
 @Composable
 fun ProjectListScreenPreview_WithItems() {
     val sampleProjects = listOf(
-        ProjectUiModel(id = "1", name = "녹색 프로젝트", description = "환경 보호 캠페인", imageUrl = null, memberCount = 12, lastActivity = "오전 10:00"),
-        ProjectUiModel(id = "2", name = "Alpha App", description = "새로운 모바일 앱 출시 준비", imageUrl = null, memberCount = 7, lastActivity = "방금 전"),
-        ProjectUiModel(id = "3", name = "커뮤니티 정원", description = "지역 사회를 위한 정원 조성", imageUrl = null, memberCount = 25, lastActivity = "1일 전"),
-        ProjectUiModel(id = "4", name = "스터디 그룹", description = "React 스터디", imageUrl = null, memberCount = 8, lastActivity = "30분 전"),
-        ProjectUiModel(id = "5", name = "개인 작업실", description = "사이드 프로젝트 진행", imageUrl = null, memberCount = 1, lastActivity = "오후 3:15")
+        ProjectUiModel(id = "1", name = "녹색 프로젝트", imageUrl = null),
+        ProjectUiModel(id = "2", name = "Alpha App", imageUrl = null),
+        ProjectUiModel(id = "3", name = "커뮤니티 정원", imageUrl = null),
+        ProjectUiModel(id = "4", name = "스터디 그룹", imageUrl = null),
+        ProjectUiModel(id = "5", name = "개인 작업실", imageUrl = null)
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectListScreen(
@@ -304,9 +304,9 @@ fun ProjectListScreenPreview_WithItems() {
 @Composable
 fun ProjectListScreenPreview_DmSelected() {
     val sampleProjects = listOf(
-        ProjectUiModel(id = "1", name = "녹색 프로젝트", description = "환경 보호 캠페인", imageUrl = null, memberCount = 12, lastActivity = "오전 10:00"),
-        ProjectUiModel(id = "2", name = "Alpha App", description = "새로운 모바일 앱 출시 준비", imageUrl = null, memberCount = 7, lastActivity = "방금 전"),
-        ProjectUiModel(id = "3", name = "커뮤니티 정원", description = "지역 사회를 위한 정원 조성", imageUrl = null, memberCount = 25, lastActivity = "1일 전")
+        ProjectUiModel(id = "1", name = "녹색 프로젝트", imageUrl = null),
+        ProjectUiModel(id = "2", name = "Alpha App", imageUrl = null),
+        ProjectUiModel(id = "3", name = "커뮤니티 정원", imageUrl = null)
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectListScreen(

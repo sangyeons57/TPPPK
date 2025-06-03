@@ -5,6 +5,8 @@ import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.model.remote.UserDTO
+import com.example.data.model.remote.ProjectsWrapperDTO
+import com.example.data.model.remote.DMWrapperDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -170,5 +172,56 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapperDTO>, Exception>> = callbackFlow {
+        if (userId.isEmpty()) {
+            trySend(CustomResult.Success(emptyList()))
+            awaitClose { }
+            return@callbackFlow
+        }
+
+        val wrappersCollection = usersCollection.document(userId)
+            .collection(FirestoreConstants.Users.ProjectsWrappers.COLLECTION_NAME)
+
+        val listenerRegistration = wrappersCollection.addSnapshotListener { snapshots, error ->
+            if (error != null) {
+                trySend(CustomResult.Failure(error))
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshots != null) {
+                val wrappers = snapshots.toObjects(ProjectsWrapperDTO::class.java)
+                trySend(CustomResult.Success(wrappers))
+            } else {
+                trySend(CustomResult.Failure(Exception("Project wrappers snapshot was null.")))
+            }
+        }
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    override fun getDmWrappersStream(userId: String): Flow<CustomResult<List<DMWrapperDTO>, Exception>> = callbackFlow {
+        if (userId.isEmpty()) {
+            trySend(CustomResult.Success(emptyList()))
+            awaitClose { }
+            return@callbackFlow
+        }
+
+        val wrappersCollection = usersCollection.document(userId)
+            .collection(FirestoreConstants.Users.DMWrappers.COLLECTION_NAME)
+
+        val listenerRegistration = wrappersCollection.addSnapshotListener { snapshots, error ->
+            if (error != null) {
+                trySend(CustomResult.Failure(error))
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshots != null) {
+                val wrappers = snapshots.toObjects(DMWrapperDTO::class.java)
+                trySend(CustomResult.Success(wrappers))
+            } else {
+                trySend(CustomResult.Failure(Exception("DM wrappers snapshot was null.")))
+            }
+        }
+        awaitClose { listenerRegistration.remove() }
+    }
 }
 

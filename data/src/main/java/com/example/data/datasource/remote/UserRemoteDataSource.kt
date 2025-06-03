@@ -4,6 +4,8 @@ package com.example.data.datasource.remote
 import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.data.model.remote.UserDTO
+import com.example.data.model.remote.ProjectsWrapperDTO // Added import
+import com.example.data.model.remote.DMWrapperDTO
 import kotlinx.coroutines.flow.Flow
 
 interface UserRemoteDataSource {
@@ -84,5 +86,19 @@ interface UserRemoteDataSource {
      * @param memo 새로운 메모
      */
     suspend fun updateUserMemo(memo: String): CustomResult<Unit, Exception>
+
+    /**
+     * 특정 userId를 가진 사용자의 프로젝트 요약 정보(ProjectsWrapper)를 실시간으로 관찰합니다.
+     * @param userId 관찰할 사용자의 ID
+     * @return ProjectsWrapperDTO 목록을 담은 Flow
+     */
+    fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapperDTO>, Exception>>
+
+    /**
+     * 특정 userId를 가진 사용자의 DM 요약 정보(DMWrapper)를 실시간으로 관찰합니다.
+     * @param userId 관찰할 사용자의 ID
+     * @return DMWrapperDTO 목록을 담은 Flow
+     */
+    fun getDmWrappersStream(userId: String): Flow<CustomResult<List<DMWrapperDTO>, Exception>>
 }
 

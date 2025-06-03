@@ -627,7 +627,7 @@ fun ScheduleListItem(
     val timeFormatter = remember { DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN) }
     
     // 프로젝트 색상 (임시)
-    val projectColor = schedule.projectId.let { getProjectColor(it) }
+    val projectColor = schedule.projectId.let { getProjectColor(it ?: "project sample") }
     
     // UTC LocalDateTime을 로컬 시간으로 변환
     val localStartTime = remember(schedule.startTime) {

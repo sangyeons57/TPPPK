@@ -233,8 +233,4 @@ class ProjectRepositoryImpl @Inject constructor(
             }
         }
     }
-
-    override fun getProjectListStream(): Flow<CustomResult<List<Project>, Exception>> {
-        TODO("Not yet implemented")
-    }
 }

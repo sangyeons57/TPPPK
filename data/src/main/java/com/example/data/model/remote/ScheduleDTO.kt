@@ -17,7 +17,7 @@ data class ScheduleDTO(
     val content: String = "",
     val startTime: Timestamp? = null,
     val endTime: Timestamp? = null,
-    val projectId: String = "",
+    val projectId: String? = null,
     val creatorId: String = "",
     val status: String = "CONFIRMED", // "CONFIRMED", "TENTATIVE", "CANCELLED"
     val color: String? = null, // 예: "#FF5733"

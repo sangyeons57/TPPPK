@@ -27,7 +27,7 @@ class PermissionRepositoryImpl @Inject constructor(
         // projectId is no longer strictly necessary here as permissions are globally defined by the enum,
         // but kept for consistency with the interface, or if future project-specific filtering is needed.
         return resultTry {
-            val allPermissions = RolePermission.values().map { enumEntry ->
+            val allPermissions = RolePermission.entries.map { enumEntry ->
                 Permission(
                     id = enumEntry.name, // e.g., "MANAGE_PROJECT"
                     name = formatEnumName(enumEntry.name), // e.g., "Manage Project"
