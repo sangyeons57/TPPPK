@@ -47,56 +47,65 @@ classDiagram
         namespace UseCases_ScheduleNS {
             class AddScheduleUseCase {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleData: Schedule): Result<String> %% Returns ScheduleId
+                -authRepository: AuthRepository
+                +invoke(title: String, description: String, date: LocalDate, time: LocalTime, projectId: String?): CustomResult<String, Exception> %% Returns ScheduleId
             }
             class GetScheduleDetailUseCase {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleId: String): Flow<Schedule?>
+                +invoke(scheduleId: String): Flow<CustomResult<Schedule, Exception>>
             }
             class UpdateScheduleUseCase {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleData: Schedule): Result<Unit>
+                +invoke(scheduleId: String, title: String, description: String, date: LocalDate, time: LocalTime, projectId: String?): CustomResult<Unit, Exception>
             }
             class DeleteScheduleUseCase {
                 -scheduleRepository: ScheduleRepository
-                +invoke(scheduleId: String): Result<Unit>
+                +invoke(scheduleId: String): CustomResult<Unit, Exception>
             }
             class GetSchedulesForDateUseCase {
                  %% Used by CalendarViewModel in feature_main and potentially here
                 -scheduleRepository: ScheduleRepository
-                +invoke(date: String): Flow<List<Schedule>>
+                -authRepository: AuthRepository
+                +invoke(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>>
             }
             class GetScheduleSummaryForMonthUseCase { 
                 %% Used by CalendarViewModel in feature_main
                 -scheduleRepository: ScheduleRepository
-                +invoke(year: Int, month: Int): Flow<Map<Int, Int>>
+                -authRepository: AuthRepository
+                +invoke(year: Int, month: Int): Flow<CustomResult<Map<Int, Int>, Exception>>
             }
         }
         namespace UseCases_ProjectNS {
              %% Used for selecting project for schedule
             class GetSchedulableProjectsUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(): Flow<List<Project>> %% Projects user can add schedules to
+                -authRepository: AuthRepository
+                +invoke(): Flow<CustomResult<List<Project>, Exception>> %% Projects user can add schedules to
             }
         }
 
         namespace Repositories_DomainNS {
             class ScheduleRepository {
                 <<Interface>>
-                +addSchedule(scheduleData: Schedule): Result<String>
-                +getScheduleById(scheduleId: String): Flow<Schedule?>
-                +updateSchedule(scheduleData: Schedule): Result<Unit>
-                +deleteSchedule(scheduleId: String): Result<Unit>
-                +getSchedulesForDate(date: String): Flow<List<Schedule>>
-                +getScheduleSummaryForMonth(year: Int, month: Int): Flow<Map<Int, Int>>
+                +addSchedule(userId: String, title: String, description: String, date: LocalDate, time: LocalTime, projectId: String?): CustomResult<String, Exception>
+                +getScheduleById(scheduleId: String): Flow<CustomResult<Schedule, Exception>>
+                +updateSchedule(scheduleId: String, title: String, description: String, date: LocalDate, time: LocalTime, projectId: String?): CustomResult<Unit, Exception>
+                +deleteSchedule(scheduleId: String): CustomResult<Unit, Exception>
+                +getSchedulesForDate(userId: String, date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>>
+                +getScheduleSummaryForMonth(userId: String, year: Int, month: Int): Flow<CustomResult<Map<Int, Int>, Exception>>
             }
             class ProjectRepository { %% Defined in other features, used here
                 <<Interface>>
-                +getProjectsForScheduling(): Flow<List<Project>> %% Simplified method name
+                +getProjectListStream(): Flow<CustomResult<List<Project>, Exception>>
+            }
+            class AuthRepository {
+                <<Interface>>
+                +getCurrentUserSession(): CustomResult<UserSession, Exception>
             }
         }
-        note for ScheduleRepository "일정 데이터 접근 인터페이스"
-        note for ProjectRepository "프로젝트 데이터 접근 인터페이스 (일정 대상 선택용)"
+        note for ScheduleRepository "일정 생성, 조회, 수정, 삭제 및 기간별 일정 요약 데이터 접근 인터페이스"
+        note for ProjectRepository "프로젝트 목록 조회 인터페이스 (일정 대상 선택용)"
+        note for AuthRepository "현재 사용자 세션 정보 접근 인터페이스"
     end
 
     %% Data Layer (Repository Implementation & Remote DataSources - Local Excluded)

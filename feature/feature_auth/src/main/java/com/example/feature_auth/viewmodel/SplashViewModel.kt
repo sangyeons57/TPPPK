@@ -66,17 +66,21 @@ class SplashViewModel @Inject constructor(
                 Log.d("SplashViewModel", "Auth check result: $result")
 
                 result.onSuccess { (isAuthenticated, isEmailVerified) ->
-                    if (isAuthenticated && isEmailVerified) {
-                        _eventFlow.emit(SplashEvent.NavigateToMain)
-                    } else {
-                        _eventFlow.emit(SplashEvent.NavigateToLogin)
+                    viewModelScope.launch {
+                        if (isAuthenticated && isEmailVerified) {
+                            _eventFlow.emit(SplashEvent.NavigateToMain)
+                        } else {
+                            _eventFlow.emit(SplashEvent.NavigateToLogin)
+                        }
                     }
                 }.onFailure { exception ->
-                    // Handle failure (e.g., network error during check)
-                    _uiState.update { it.copy(isLoading = false) }
-                    // Optionally show an error message or allow retry
-                     _eventFlow.emit(SplashEvent.NavigateToLogin) // Or show error state
-                     // Log error: Log.e("SplashViewModel", "Auth check failed", exception)
+                    viewModelScope.launch {
+                        // Handle failure (e.g., network error during check)
+                        _uiState.update { it.copy(isLoading = false) }
+                        // Optionally show an error message or allow retry
+                         _eventFlow.emit(SplashEvent.NavigateToLogin) // Or show error state
+                         // Log error: Log.e("SplashViewModel", "Auth check failed", exception)
+                    }
                 }
 
             } catch (e: Exception) { // Catch potential unexpected errors

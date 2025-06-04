@@ -21,7 +21,7 @@ class CheckSessionUseCase @Inject constructor(
      * @return 유효한 세션이 있으면 UserSession이 포함된 CustomResult.Success,
      *         없으면 CustomResult.Success(null), 오류 발생 시 CustomResult.Failure.
      */
-    suspend operator fun invoke(): CustomResult<UserSession?, Exception> {
+    suspend operator fun invoke(): CustomResult<UserSession, Exception> {
         return authRepository.getCurrentUserSession()
     }
 }

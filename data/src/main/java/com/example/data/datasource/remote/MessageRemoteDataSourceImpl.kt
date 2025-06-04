@@ -131,7 +131,8 @@ class MessageRemoteDataSourceImpl @Inject constructor(
      * 메시지의 반응 목록을 관찰합니다.
      */
     override fun observeReactions(channelPath: String, messageId: String): Flow<List<ReactionDTO>> {
-        return getReactionsCollection(channelPath, messageId).dataObjects()
+        return getReactionsCollection(channelPath, messageId).snapshots()
+            .map{ snapshot -> snapshot.toObjects(ReactionDTO::class.java) }
     }
 
     /**

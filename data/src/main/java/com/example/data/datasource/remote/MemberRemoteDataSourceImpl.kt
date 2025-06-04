@@ -48,13 +48,6 @@ class MemberRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun addMember(
-        projectId: String,
-        userId: String,
-        roleIds: String
-    ): CustomResult<Unit, Exception> {
-        TODO("Not yet implemented")
-    }
 
     override suspend fun addMember(
         projectId: String,

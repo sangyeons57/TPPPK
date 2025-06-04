@@ -30,7 +30,7 @@ class ProjectsWrapperRemoteDataSourceImpl @Inject constructor(
     }
 
     // 새로운 프로젝트 래퍼를 추가하는 함수
-    override suspend fun addProjectToUser(uid: String, projectWrapper: ProjectsWrapperDTO, projectId: String) : CustomResult<Unit, Exception> {
+    override suspend fun addProjectToUser(uid: String, projectId: String, projectWrapper: ProjectsWrapperDTO) : CustomResult<Unit, Exception> {
         // projectId를 문서 ID로 사용하여 추가
         return try {
             firestore.collection(FirestoreConstants.Collections.USERS).document(uid)

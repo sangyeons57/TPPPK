@@ -49,56 +49,59 @@ classDiagram
         namespace UseCases_Friend {
             class GetFriendsListStreamUseCase {
                 -friendRepository: FriendRepository
-                +invoke(): Flow<List<Friend>>
+                +invoke(currentUserId: String): Flow < CustomResult < List < Friend >, Exception > >
             }
             class FetchFriendsListUseCase {
                 -friendRepository: FriendRepository
-                +invoke(): Result<Unit>
+                +invoke(currentUserId: String): CustomResult < Unit, Exception >
             }
             class GetPendingFriendRequestsUseCase {
-                -friendRequestRepository: FriendRequestRepository
-                +invoke(): Flow<List<FriendRequest>>
+                -friendRepository: FriendRepository
+                +invoke(currentUserId: String): Flow < CustomResult < List < Friend >, Exception > >
             }
             class SendFriendRequestUseCase {
-                -friendRequestRepository: FriendRequestRepository
+                -friendRepository: FriendRepository
                 -userRepository: UserRepository %% For nickname validation/lookup
-                +invoke(receiverNickname: String): Result<Unit>
+                +invoke(targetNickname: String, currentUserId: String): CustomResult < Unit, Exception >
             }
             class AcceptFriendRequestUseCase {
-                -friendRequestRepository: FriendRequestRepository
-                -friendRepository: FriendRepository %% To update friend list
-                +invoke(requestId: String): Result<Unit>
+                -friendRepository: FriendRepository
+                +invoke(requesterId: String, currentUserId: String): CustomResult < Unit, Exception >
             }
             class RemoveOrDenyFriendUseCase {
-                -friendRepository: FriendRepository %% For removing a friend
-                -friendRequestRepository: FriendRequestRepository %% For denying a request
-                +invoke(targetUserId: String, isRequest: Boolean): Result<Unit>
+                -friendRepository: FriendRepository
+                +invoke(targetUserId: String, currentUserId: String, isRequest: Boolean): CustomResult < Unit, Exception >
+            }
+            class ValidateSearchQueryUseCase {
+                +invoke(query: String): CustomResult < String, Exception >
             }
         }
         %% User UseCases 네임스페이스 (Friends 기능에서 사용)
         namespace UseCases_User {
             class SearchUserByNameUseCase {
                 -userRepository: UserRepository
-                +invoke(nickname: String): Flow<List<User>>
+                +invoke(nickname: String): Flow < CustomResult < List < User >, Exception > >
             }
             class GetCurrentUserUseCase {
                 -userRepository: UserRepository
-                +invoke(): Flow<User?>
+                -authRepository: AuthRepository
+                +invoke(): CustomResult < User, Exception >
             }
             class GetUserInfoUseCase {
                 -userRepository: UserRepository
-                +invoke(userId: String): Flow<User?>
+                +invoke(userId: String): CustomResult < User, Exception >
             }
         }
         %% DM UseCases 네임스페이스 (Friends 기능에서 사용)
         namespace UseCases_DM {
              class CreateDmChannelUseCase {
-                -channelRepository: ChannelRepository
-                +invoke(targetUserId: String): Result<String> %% Returns channelId
+                -dmRepository: DMChannelRepository
+                +invoke(targetUserId: String): CustomResult < DMChannel, Exception >
             }
             class GetDmChannelIdUseCase {
-                -channelRepository: ChannelRepository
-                +invoke(targetUserId: String): Result<String?> %% Returns channelId or null
+                -dmRepository: DMChannelRepository
+                -authRepository: AuthRepository
+                +invoke(targetUserId: String): CustomResult < String, Exception >
             }
         }
 
@@ -106,29 +109,25 @@ classDiagram
         namespace Repositories_Domain {
             class FriendRepository {
                 <<Interface>>
-                +getFriendsStream(): Flow<List<Friend>>
-                +fetchFriends(): Result<Unit>
-                +removeFriend(friendId: String): Result<Unit>
-                +addFriendAfterAcceptingRequest(userId: String, friendId: String): Result<Unit>
-            }
-            class FriendRequestRepository {
-                <<Interface>>
-                +getPendingFriendRequests(): Flow<List<FriendRequest>>
-                +sendFriendRequest(receiverNickname: String): Result<Unit>
-                +acceptFriendRequest(requestId: String): Result<Unit>
-                +denyFriendRequest(requestId: String): Result<Unit>
+                +getFriendsStream(currentUserId: String): Flow < CustomResult < List < Friend >, Exception > >
+                +fetchFriends(currentUserId: String): CustomResult < Unit, Exception >
+                +removeFriend(friendId: String, currentUserId: String): CustomResult < Unit, Exception >
+                +acceptFriendRequest(requesterId: String, currentUserId: String): CustomResult < Unit, Exception >
+                +denyFriendRequest(requesterId: String, currentUserId: String): CustomResult < Unit, Exception >
+                +sendFriendRequest(targetNickname: String, currentUserId: String): CustomResult < Unit, Exception >
             }
             class UserRepository {
                 <<Interface>>
-                +searchUsersByName(nickname: String): Flow<List<User>>
-                +getCurrentUser(): Flow<User?>
-                +getUserById(userId: String): Flow<User?>
+                +searchUsersByName(nickname: String): Flow < CustomResult < List < User >, Exception > >
+                +getCurrentUser(userId: String): CustomResult < User, Exception >
+                +getUserById(userId: String): CustomResult < User, Exception >
                 %% Simplified for diagram
             }
-            class ChannelRepository {
+            class DMChannelRepository {
                 <<Interface>>
-                +createDmChannel(targetUserId: String): Result<String>
-                +getDmChannelIdWithUser(targetUserId: String): Result<String?>
+                +createDmChannel(targetUserId: String): CustomResult < String, Exception >
+                +getDmChannelWithUser(userIds: List<String>): CustomResult < DMChannel, Exception >
+                +getDmChannelById(channelId: String): CustomResult < DMChannel, Exception >
                 %% Simplified for diagram
             }
         }
@@ -170,25 +169,25 @@ classDiagram
         namespace RemoteDataSources_Data {
             class FriendRemoteDataSource {
                 <<Interface>>
-                +getFriends(): Flow<List<FriendDTO>>
-                +fetchFriendsFromServer(): Result<Unit>
-                +removeFriend(friendId: String): Result<Unit>
-                +getPendingRequests(): Flow<List<FriendRequestDTO>>
-                +sendFriendRequestToUser(receiverNickname: String): Result<Unit>
-                +acceptRequest(requestId: String): Result<Unit>
-                +denyRequest(requestId: String): Result<Unit>
-                +addFriend(userId: String, friendId: String): Result<Unit>
+                +getFriends(): Flow < List < FriendDTO > >
+                +fetchFriendsFromServer(): Result < Unit >
+                +removeFriend(friendId: String): Result < Unit >
+                +getPendingRequests(): Flow < List < FriendRequestDTO > >
+                +sendFriendRequestToUser(receiverNickname: String): Result < Unit >
+                +acceptRequest(requestId: String): Result < Unit >
+                +denyRequest(requestId: String): Result < Unit >
+                +addFriend(userId: String, friendId: String): Result < Unit >
             }
             class UserRemoteDataSource {
                 <<Interface>>
-                +searchUsers(nickname: String): Flow<List<UserDTO>>
-                +getCurrentUserDto(): Flow<UserDTO?>
-                +getUserDto(userId: String): Flow<UserDTO?>
+                +searchUsers(nickname: String): Flow < List < UserDTO > >
+                +getCurrentUserDto(): Flow < UserDTO? >
+                +getUserDto(userId: String): Flow < UserDTO? >
             }
             class DMChannelRemoteDataSource {
                 <<Interface>>
-                +createDmChannel(targetUserId: String): Result<String>
-                +findDmChannelIdWithUser(targetUserId: String): Result<String?>
+                +createDmChannel(targetUserId: String): Result < String >
+                +findDmChannelIdWithUser(targetUserId: String): Result < String? >
             }
         }
         note for FriendRemoteDataSource "원격 친구 및 요청 서비스 통신"
@@ -230,31 +229,30 @@ classDiagram
     %% UseCase -> Repository Interface
     GetFriendsListStreamUseCase ..> FriendRepository : accesses
     FetchFriendsListUseCase ..> FriendRepository : accesses
-    GetPendingFriendRequestsUseCase ..> FriendRequestRepository : accesses
-    SendFriendRequestUseCase ..> FriendRequestRepository : accesses
-    SendFriendRequestUseCase ..> UserRepository : accesses %% For nickname validation if done in usecase
-    AcceptFriendRequestUseCase ..> FriendRequestRepository : accesses
+    GetPendingFriendRequestsUseCase ..> FriendRepository : accesses
+    SendFriendRequestUseCase ..> FriendRepository : accesses
+    SendFriendRequestUseCase ..> UserRepository : accesses %% For nickname validation
     AcceptFriendRequestUseCase ..> FriendRepository : accesses
     RemoveOrDenyFriendUseCase ..> FriendRepository : accesses
-    RemoveOrDenyFriendUseCase ..> FriendRequestRepository : accesses
     SearchUserByNameUseCase ..> UserRepository : accesses
     GetCurrentUserUseCase ..> UserRepository : accesses
+    GetCurrentUserUseCase ..> AuthRepository : accesses
     GetUserInfoUseCase ..> UserRepository : accesses
-    CreateDmChannelUseCase ..> ChannelRepository : accesses
-    GetDmChannelIdUseCase ..> ChannelRepository : accesses
+    CreateDmChannelUseCase ..> DMChannelRepository : accesses
+    GetDmChannelIdUseCase ..> DMChannelRepository : accesses
+    GetDmChannelIdUseCase ..> AuthRepository : accesses
 
     %% Repository Implementation -> Repository Interface
     FriendRepository <|.. FriendRepositoryImpl : implements
-    FriendRequestRepository <|.. FriendRequestRepositoryImpl : implements
     UserRepository <|.. UserRepositoryImpl : implements
-    ChannelRepository <|.. ChannelRepositoryImpl : implements
+    DMChannelRepository <|.. DMChannelRepositoryImpl : implements
+    AuthRepository <|.. AuthRepositoryImpl : implements
 
     %% Repository Implementation -> DataSource Interface (Remote Only)
     FriendRepositoryImpl ..> FriendRemoteDataSource : uses
-    FriendRequestRepositoryImpl ..> FriendRemoteDataSource : uses
-    FriendRequestRepositoryImpl ..> UserRemoteDataSource : uses %% For nickname search to get UID
     UserRepositoryImpl ..> UserRemoteDataSource : uses
-    ChannelRepositoryImpl ..> DMChannelRemoteDataSource : uses
+    DMChannelRepositoryImpl ..> DMChannelRemoteDataSource : uses
+    AuthRepositoryImpl ..> AuthRemoteDataSource : uses
 
     %% DataSource Implementation -> DataSource Interface
     FriendRemoteDataSource <|.. FriendRemoteDataSourceImpl : implements

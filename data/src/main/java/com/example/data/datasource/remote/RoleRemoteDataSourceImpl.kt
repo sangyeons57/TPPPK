@@ -56,8 +56,8 @@ class RoleRemoteDataSourceImpl @Inject constructor(
         return getRolesCollection(projectId).document(roleId).snapshots()
             .map{
                 resultTry {
-                    it.toObject<RoleDTO>(RoleDTO::class.java)
-                } as CustomResult<RoleDTO, Exception>
+                    it.toObject<RoleDTO>(RoleDTO::class.java)?: throw Exception("Role not found")
+                }
             }
     }
 

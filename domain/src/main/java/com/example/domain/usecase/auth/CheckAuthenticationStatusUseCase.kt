@@ -9,7 +9,7 @@ import javax.inject.Inject
  */
 interface CheckAuthenticationStatusUseCase {
     // (isAuthenticated, isEmailVerified)
-    suspend operator fun invoke(): Result<Pair<Boolean, Boolean>>
+    suspend operator fun invoke(): CustomResult<Pair<Boolean, Boolean>, Exception>
 }
 
 /**
@@ -22,9 +22,9 @@ class CheckAuthenticationStatusUseCaseImpl @Inject constructor(
 
     /**
      * 유스케이스를 실행하여 사용자의 인증 및 이메일 인증 상태를 확인합니다.
-     * @return Result<Pair<Boolean, Boolean>> (인증 여부, 이메일 인증 여부) 확인 결과
+     * @return CustomResult<Pair<Boolean, Boolean>, Exception> (인증 여부, 이메일 인증 여부) 확인 결과
      */
-    override suspend fun invoke(): Result<Pair<Boolean, Boolean>> {
+    override suspend fun invoke(): CustomResult<Pair<Boolean, Boolean>, Exception> {
         return try {
             val isAuthenticated = authRepository.isLoggedIn()
             
@@ -37,9 +37,9 @@ class CheckAuthenticationStatusUseCaseImpl @Inject constructor(
                 false
             }
             
-            Result.success(Pair(isAuthenticated, isEmailVerified))
+            CustomResult.Success(Pair(isAuthenticated, isEmailVerified))
         } catch (e: Exception) {
-            Result.failure(e)
+            CustomResult.Failure(e)
         }
     }
 } 

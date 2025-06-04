@@ -55,9 +55,7 @@ service cloud.firestore {
                 allow read: if isCurrentUser(userId);
 
                 // 친구 문서 생성: 본인이 자신의 친구 목록에 항목을 추가하는 경우.
-                // 클라이언트는 적절한 초기 status ('REQUEST_SENT', 'REQUEST_RECEIVED' 등)와 함께 필요한 필드를 설정해야 함.
-                allow create: if isCurrentUser(userId) &&
-                              request.resource.data.keys().hasAll(['friendName', 'status', 'requestedAt']); // 예시: 필수 필드 검증
+                allow create: if isCurrentUser(userId);
 
                 // 친구 문서 업데이트: 본인이 친구와의 관계 상태(status) 또는 친구 관련 정보(메모 등)를 변경하는 경우.
                 // 예: 친구 요청 수락/거절, 친구 삭제 전 상태 변경(soft delete), 별명 변경 등.
@@ -66,7 +64,7 @@ service cloud.firestore {
 
                 // 친구 문서 삭제 (관계 끝기)
                 allow delete: if isCurrentUser(userId);
-      }
+            }
 
             // DM 채널 정보 요약 (dm_wrapper)
             match /dm_wrapper/{dmChannelId} {

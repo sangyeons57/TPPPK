@@ -82,10 +82,8 @@ fun AddProjectScreen(
             modifier = Modifier.padding(paddingValues), // Scaffold 패딩 적용
             uiState = uiState,
             onModeSelect = viewModel::onModeSelect,
-            onCreateModeSelect = viewModel::onCreateModeSelect,
             onJoinCodeChange = viewModel::onJoinCodeChange,
             onProjectNameChange = viewModel::onProjectNameChange,
-            onProjectDescriptionChange = viewModel::onProjectDescriptionChange,
             onJoinProjectClick = viewModel::onJoinProjectClick,
             onCreateProjectClick = viewModel::onCreateProjectClick
         )
@@ -101,14 +99,12 @@ fun AddProjectContent(
     modifier: Modifier = Modifier,
     uiState: AddProjectUiState,
     onModeSelect: (AddProjectMode) -> Unit,
-    onCreateModeSelect: (CreateProjectMode) -> Unit,
     onJoinCodeChange: (String) -> Unit,
     onProjectNameChange: (String) -> Unit,
-    onProjectDescriptionChange: (String) -> Unit,
     onJoinProjectClick: () -> Unit,
     onCreateProjectClick: () -> Unit
 ) {
-    val modes = AddProjectMode.values() // [JOIN, CREATE]
+    val modes = AddProjectMode.entries.toTypedArray() // [JOIN, CREATE]
 
     Column(
         modifier = modifier
@@ -161,15 +157,6 @@ fun AddProjectContent(
         AnimatedVisibility(visible = uiState.selectedMode == AddProjectMode.CREATE) {
             Column {
                 // 모드 선택 탭 (RadioGroup 대신 TabRow 사용)
-                TabRow(selectedTabIndex = uiState.createMode.ordinal) {
-                    CreateProjectMode.entries.forEach { mode ->
-                        Tab(
-                            selected = uiState.createMode == mode,
-                            onClick = { onCreateModeSelect(mode) },
-                            text = { Text(if (mode == CreateProjectMode.OPEN) "공개" else "비공개") }
-                        )
-                    }
-                }
 
                 OutlinedTextField(
                     value = uiState.projectName,
@@ -178,16 +165,6 @@ fun AddProjectContent(
                     label = { Text("프로젝트 이름") },
                     placeholder = { Text("새 프로젝트의 이름을 입력하세요") },
                     singleLine = true,
-                    enabled = !uiState.isLoading
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = uiState.projectDescription,
-                    onValueChange = onProjectDescriptionChange,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp), // 여러 줄 입력 가능하도록 높이 설정
-                    label = { Text("프로젝트 설명 (선택 사항)") },
-                    placeholder = { Text("프로젝트에 대한 간단한 설명을 입력하세요") },
-                    maxLines = 3, // 예시: 최대 3줄
                     enabled = !uiState.isLoading
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -216,8 +193,7 @@ fun AddProjectContentJoinPreview() {
         AddProjectContent(
             uiState = AddProjectUiState(selectedMode = AddProjectMode.JOIN),
             onModeSelect = {}, onJoinCodeChange = {}, onProjectNameChange = {},
-            onProjectDescriptionChange = {}, onJoinProjectClick = {}, onCreateProjectClick = {},
-            onCreateModeSelect = {}
+            onJoinProjectClick = {}, onCreateProjectClick = {},
         )
     }
 }
@@ -229,8 +205,7 @@ fun AddProjectContentCreatePreview() {
         AddProjectContent(
             uiState = AddProjectUiState(selectedMode = AddProjectMode.CREATE),
             onModeSelect = {}, onJoinCodeChange = {}, onProjectNameChange = {},
-            onProjectDescriptionChange = {}, onJoinProjectClick = {}, onCreateProjectClick = {},
-            onCreateModeSelect = {}
+             onJoinProjectClick = {}, onCreateProjectClick = {},
         )
     }
 }

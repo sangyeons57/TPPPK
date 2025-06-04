@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import com.example.core_common.constants.Constants
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
@@ -12,6 +13,9 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.base.Project
 import com.example.domain.repository.MediaRepository
 import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.ProjectsWrapperRepository // Changed from UserRepository
+import com.example.domain.model.base.ProjectsWrapper // Added for creating ProjectsWrapper domain object
+import android.util.Log
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -22,13 +26,14 @@ import java.io.InputStream
 import javax.inject.Inject
 
 
+
 class ProjectRepositoryImpl @Inject constructor(
     private val projectRemoteDataSource: ProjectRemoteDataSource,
     private val categoryRemoteDataSource: CategoryRemoteDataSource, // ProjectStructure 관리용
     private val projectChannelRemoteDataSource: ProjectChannelRemoteDataSource, // ProjectStructure 관리용
     private val memberRemoteDataSource: MemberRemoteDataSource, // 멤버 관리용
-    private val mediaRepository: MediaRepository // 이미지 업로드용
-    // private val projectMapper: ProjectMapper // 개별 매퍼 사용시
+    private val mediaRepository: MediaRepository, // 이미지 업로드용
+    private val projectsWrapperRepository: ProjectsWrapperRepository // Changed from UserRepository
 ) : ProjectRepository {
 
     /**
@@ -36,11 +41,7 @@ class ProjectRepositoryImpl @Inject constructor(
      * Firebase의 자체 캐싱 시스템을 활용합니다.
      * 
      * @param name 프로젝트 이름
-     * @param description 프로젝트 설명 (선택적)
      * @param ownerId 프로젝트 소유자 ID
-     * @param isPublic 공개 여부
-     * @param projectImageInputStream 프로젝트 이미지 입력 스트림 (선택적)
-     * @param imageMimeType 이미지 MIME 타입 (선택적)
      * @return 생성된 프로젝트 정보
      */
     override suspend fun createProject(
@@ -56,17 +57,49 @@ class ProjectRepositoryImpl @Inject constructor(
                 createdAt = Timestamp.now(),
                 updatedAt = Timestamp.now(),
             )
-            val createdProjectResult = projectRemoteDataSource.createProject(projectDto)
-            if (createdProjectResult is CustomResult.Failure) {
-                return CustomResult.Failure(createdProjectResult.error)
+            val projectIdResult = projectRemoteDataSource.createProject(projectDto)
+            if (projectIdResult is CustomResult.Failure) {
+                return CustomResult.Failure(projectIdResult.error)
             }
-            val createdProjectDto = (createdProjectResult as CustomResult.Success).data
+            val projectId = (projectIdResult as CustomResult.Success).data
+
+            val createdProjectDtoResult = projectRemoteDataSource.getProject(projectId)
+            if (createdProjectDtoResult is CustomResult.Failure) {
+                throw createdProjectDtoResult.error
+            }
+
+            val createdProjectDto = (createdProjectDtoResult as CustomResult.Success).data
+
             // 프로젝트 생성 후, owner를 멤버로 추가
-            val memberResult = memberRemoteDataSource.addMember(createdProjectDto, ownerId, "OWNER")
+            val memberResult = memberRemoteDataSource.addMember(projectId, ownerId, listOf(Constants.OWNER))
             if (memberResult is CustomResult.Failure) {
-                return CustomResult.Failure(memberResult.error)
+                throw memberResult.error
             }
-            createdProjectDto
+
+
+            // Create ProjectsWrapper domain object
+            val projectsWrapper = ProjectsWrapper(
+                projectName = createdProjectDto.name,
+                projectImageUrl = createdProjectDto.imageUrl,
+                // lastUpdatedAt and other fields can be set to default/current values if needed by domain model
+                // or if ProjectsWrapperRemoteDataSourceImpl handles their initial setting.
+                // For now, assuming they are optional or handled downstream.
+            )
+
+            val projectWrapperResult = projectsWrapperRepository.addProjectToUser(
+                userId = ownerId,
+                projectId = projectId,
+                projectsWrapper = projectsWrapper
+            )
+
+            if (projectWrapperResult is CustomResult.Failure) {
+                // Log the error, but proceed with returning project creation success 
+                // as the primary operation (project creation) was successful.
+                // Consider how to handle this failure more robustly if needed (e.g., cleanup, retry)
+                Log.e("ProjectRepositoryImpl", "Failed to add project wrapper for project ${createdProjectDto.id}", projectWrapperResult.error)
+            }
+
+            projectId
         }
     }
 

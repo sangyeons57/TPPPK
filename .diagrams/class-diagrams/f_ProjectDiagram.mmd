@@ -113,110 +113,112 @@ classDiagram
         namespace UseCases_ProjectNS {
             class CreateProjectUseCase {
                 -projectRepository: ProjectRepository
-                -roleRepository: RoleRepository
-                +invoke(name: String, description: String): Result<String> %% Returns ProjectId
+                -authRepository: AuthRepository
+                +invoke(name: String, description: String): CustomResult<String, Exception> %% Returns ProjectId
             }
-            class IsProjectNameAvailableUseCase {
+            class GetProjectDetailsStreamUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(name: String): Result<Boolean>
+                +invoke(projectId: String): Flow<CustomResult<Project, Exception>>
             }
             class JoinProjectWithCodeUseCase {
-                -inviteRepository: InviteRepository
                 -projectRepository: ProjectRepository
-                +invoke(code: String): Result<Unit>
+                +invoke(code: String): CustomResult<String, Exception> %% Returns ProjectId
             }
-            class GetProjectInfoFromTokenUseCase { %% Simplified name for GetProjectById or similar
+            class GetProjectListStreamUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String): Flow<Project>
+                +invoke(): Flow<CustomResult<List<Project>, Exception>>
             }
             class GetProjectStructureUseCase {
                 -projectRepository: ProjectRepository
-                %% -categoryRepository: CategoryRepository (Handled via ProjectRepository)
-                %% -channelRepository: ChannelRepository (Handled via ProjectRepository)
-                +invoke(projectId: String): Flow<ProjectStructure>
+                +invoke(projectId: String): Flow<CustomResult<ProjectStructure, Exception>>
             }
             class UpdateProjectStructureUseCase {
                 -projectRepository: ProjectRepository
-                %% -categoryRepository: CategoryRepository
-                %% -channelRepository: ChannelRepository
-                +invoke(projectId: String, newStructure: ProjectStructure): Result<Unit>
+                +invoke(projectId: String, newStructure: ProjectStructure): CustomResult<Unit, Exception>
             }
             class ObserveProjectMembersUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String): Flow<List<Member>>
-            }
-            class FetchProjectMembersUseCase {
-                -projectRepository: ProjectRepository
-                +invoke(projectId: String): Result<Unit>
+                +invoke(projectId: String): Flow<CustomResult<List<ProjectMember>, Exception>>
             }
             class RenameProjectUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String, newName: String): Result<Unit>
+                +invoke(projectId: String, newName: String): CustomResult<Unit, Exception>
             }
             class DeleteProjectUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String): Result<Unit>
+                +invoke(projectId: String): CustomResult < Unit, Exception >
             }
-            class AddProjectMemberUseCase {
-                -projectRepository: ProjectRepository %% To add member
-                -userRepository: UserRepository %% To validate/get user by name/id
-                -roleRepository: RoleRepository %% To assign default role or specific role
-                +invoke(projectId: String, userId: String, roleId: String): Result<Unit>
+            class AddCategoryUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(projectId: String, categoryName: String): CustomResult<String, Exception>
+            }
+            class AddChannelUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(projectId: String, categoryId: String, channelName: String, channelType: ChannelType): CustomResult<String, Exception>
             }
             class GetProjectMemberDetailsUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String, memberId: String): Flow<Member>
+                +invoke(projectId: String, memberId: String): Flow<CustomResult<ProjectMember, Exception>>
             }
             class UpdateMemberRolesUseCase {
                 -projectRepository: ProjectRepository
-                %% -roleRepository: RoleRepository (For role validation)
-                +invoke(projectId: String, memberId: String, newRoleIds: List<String>): Result<Unit>
+                +invoke(projectId: String, memberId: String, newRoleIds: List<String>): CustomResult<Unit, Exception>
             }
             class RemoveProjectMemberUseCase {
                 -projectRepository: ProjectRepository
-                +invoke(projectId: String, memberId: String): Result<Unit>
+                +invoke(projectId: String, memberId: String): CustomResult<Unit, Exception>
             }
             class CreateRoleUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, name: String, permissions: List): Result<String> %% RoleId
+                +invoke(projectId: String, name: String, permissions: List<RolePermission>): CustomResult<String, Exception> %% Returns RoleId
             }
             class GetProjectRolesUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String): Flow<List<Role>>
+                +invoke(projectId: String): Flow<CustomResult<List<Role>, Exception>>
             }
             class GetRoleDetailsUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, roleId: String): Flow<Role>
+                +invoke(projectId: String, roleId: String): Flow<CustomResult<Role, Exception>>
             }
             class UpdateRoleUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, roleId: String, newName: String, newPermissions: List): Result<Unit>
+                +invoke(projectId: String, roleId: String, newName: String, newPermissions: List<RolePermission>): CustomResult<Unit, Exception>
             }
             class DeleteRoleUseCase {
                 -roleRepository: RoleRepository
-                +invoke(projectId: String, roleId: String): Result<Unit>
+                +invoke(projectId: String, roleId: String): CustomResult<Unit, Exception>
             }
             class CreateCategoryChannelUseCase {
-                -channelRepository: ChannelRepository
-                -categoryRepository: CategoryRepository 
-                +invoke(projectId: String, categoryId: String, channelName: String, channelType: String): Result<String> %% ChannelId
+                -projectRepository: ProjectRepository
+                +invoke(projectId: String, categoryId: String, channelName: String, channelType: ChannelType): CustomResult<String, Exception> %% Returns ChannelId
             }
-            class DeleteCategoryUseCase{
-                -categoryRepository: CategoryRepository
-                -projectRepository: ProjectRepository 
-                +invoke(projectId: String, categoryId: String): Result<Unit>
+            class DeleteCategoryUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(projectId: String, categoryId: String): CustomResult<Unit, Exception>
             }
-            class DeleteChannelUseCase{
-                -channelRepository: ChannelRepository
-                -projectRepository: ProjectRepository 
-                +invoke(projectId: String, channelId: String): Result<Unit>
+            class DeleteChannelUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(projectId: String, channelId: String): CustomResult<Unit, Exception>
+            }
+            class RenameCategoryUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(projectId: String, categoryId: String, newName: String): CustomResult<Unit, Exception>
+            }
+            class RenameChannelUseCase {
+                -projectRepository: ProjectRepository
+                +invoke(projectId: String, channelId: String, newName: String): CustomResult<Unit, Exception>
             }
         }
 
         namespace UseCases_UserNS { 
             class SearchUserByNameUseCase {
                 -userRepository: UserRepository
-                +invoke(name: String): Flow<List<User>>
+                +invoke(name: String): Flow<CustomResult<List<User>, Exception>>
+            }
+            class AddProjectMemberUseCase {
+                -projectRepository: ProjectRepository
+                -userRepository: UserRepository
+                +invoke(projectId: String, userId: String, roleId: String): CustomResult<Unit, Exception>
             }
         }
         %% Permission UseCases (if any specific to project, else handled by main use cases)
@@ -225,7 +227,15 @@ classDiagram
                 -userRepository: UserRepository
                 -projectRepository: ProjectRepository
                 -roleRepository: RoleRepository
-                +invoke(userId: String, projectId: String, channelId: String, permission: String): Flow<Boolean>
+                +invoke(userId: String, projectId: String, channelId: String, permission: ChannelPermission): Flow<CustomResult<Boolean, Exception>>
+            }
+            class GetRolePermissionsUseCase {
+                -roleRepository: RoleRepository
+                +invoke(projectId: String, roleId: String): Flow<CustomResult<List<RolePermission>, Exception>>
+            }
+            class SetRolePermissionsUseCase {
+                -roleRepository: RoleRepository
+                +invoke(projectId: String, roleId: String, permissions: List<RolePermission>): CustomResult<Unit, Exception>
             }
         }
 
@@ -233,57 +243,53 @@ classDiagram
         namespace Repositories_DomainNS {
             class ProjectRepository {
                 <<Interface>>
-                +createProject(name: String, description: String, ownerId: String): Result<String>
-                +isProjectNameAvailable(name: String): Result<Boolean>
-                +joinProjectByCode(userId: String, code: String): Result<Unit>
-                +getProjectById(projectId: String): Flow<Project>
-                +getProjectStructure(projectId: String): Flow<ProjectStructure>
-                +updateProjectStructure(projectId: String, structure: ProjectStructure): Result<Unit>
-                +observeProjectMembers(projectId: String): Flow<List<Member>>
-                +fetchProjectMembers(projectId: String): Result<Unit>
-                +addMemberToProject(projectId: String, userId: String, roleIds: List<String>): Result<Unit>
-                +getMemberDetails(projectId: String, memberId: String): Flow<Member>
-                +updateMemberRoles(projectId: String, memberId: String, roleIds: List<String>): Result<Unit>
-                +removeMemberFromProject(projectId: String, memberId: String): Result<Unit>
-                +renameProject(projectId: String, newName: String): Result<Unit>
-                +deleteProject(projectId: String): Result<Unit>
-                %% Category/Channel specific methods can be here or in dedicated repos
-                +createCategoryInProject(projectId: String, categoryName: String): Result<String>
-                +createChannelInProjectCategory(projectId: String, categoryId: String, channelName: String, channelType: String): Result<String>
-                +deleteCategoryFromProject(projectId: String, categoryId: String): Result<Unit>
-                +deleteChannelFromProject(projectId: String, channelId: String): Result<Unit>
+                +createProject(name: String, ownerId: String): CustomResult<String, Exception>
+                +getProjectDetailsStream(projectId: String): Flow<CustomResult<Project, Exception>>
+                +getProjectListStream(): Flow<CustomResult<List<Project>, Exception>>
+                +getProjectStructureStream(projectId: String): Flow<CustomResult<ProjectStructure, Exception>>
+                +updateProjectStructure(projectId: String, structure: ProjectStructure): CustomResult<Unit, Exception>
+                +observeProjectMembers(projectId: String): Flow<CustomResult<List<ProjectMember>, Exception>>
+                +addMemberToProject(projectId: String, userId: String, roleIds: List<String>): CustomResult<Unit, Exception>
+                +getMemberDetails(projectId: String, memberId: String): Flow<CustomResult<ProjectMember, Exception>>
+                +updateMemberRoles(projectId: String, memberId: String, roleIds: List<String>): CustomResult<Unit, Exception>
+                +removeMemberFromProject(projectId: String, memberId: String): CustomResult<Unit, Exception>
+                +renameProject(projectId: String, newName: String): CustomResult<Unit, Exception>
+                +deleteProject(projectId: String): CustomResult<Unit, Exception>
+                +addCategory(projectId: String, categoryName: String): CustomResult<String, Exception>
+                +addChannel(projectId: String, categoryId: String, channelName: String, channelType: ChannelType): CustomResult<String, Exception>
+                +deleteCategory(projectId: String, categoryId: String): CustomResult<Unit, Exception>
+                +deleteChannel(projectId: String, channelId: String): CustomResult<Unit, Exception>
+                +renameCategory(projectId: String, categoryId: String, newName: String): CustomResult<Unit, Exception>
+                +renameChannel(projectId: String, channelId: String, newName: String): CustomResult<Unit, Exception>
             }
             class RoleRepository {
                 <<Interface>>
-                +createRoleInProject(projectId: String, name: String, permissions: List): Result<String>
-                +getRolesForProject(projectId: String): Flow<List<Role>>
-                +getRoleDetails(projectId: String, roleId: String): Flow<Role>
-                +updateRole(projectId: String, roleId: String, newName: String, newPermissions: List): Result<Unit>
-                +deleteRole(projectId: String, roleId: String): Result<Unit>
-                +assignDefaultRolesToOwner(projectId: String, ownerId: String): Result<Unit>
+                +createRole(projectId: String, name: String, permissions: List<RolePermission>): CustomResult<String, Exception>
+                +getRolesForProject(projectId: String): Flow<CustomResult<List<Role>, Exception>>
+                +getRoleDetails(projectId: String, roleId: String): Flow<CustomResult<Role, Exception>>
+                +updateRole(projectId: String, roleId: String, newName: String, newPermissions: List<RolePermission>): CustomResult<Unit, Exception>
+                +deleteRole(projectId: String, roleId: String): CustomResult<Unit, Exception>
+                +getRolePermissions(projectId: String, roleId: String): Flow<CustomResult<List<RolePermission>, Exception>>
+                +setRolePermissions(projectId: String, roleId: String, permissions: List<RolePermission>): CustomResult<Unit, Exception>
             }
-            class InviteRepository {
+            class UserRepository {
                 <<Interface>>
-                +validateInviteCode(code: String): Result<String> %% Returns ProjectId
-                +generateInviteCode(projectId: String): Result<String>
+                +searchUsersByName(nickname: String): Flow<CustomResult<List<User>, Exception>>
+                +getCurrentUser(userId: String): CustomResult<User, Exception>
+                +getUserById(userId: String): CustomResult<User, Exception>
             }
-            class CategoryRepository { %% If managed separately from ProjectRepository
+            class AuthRepository {
                 <<Interface>>
-                +createCategory(projectId: String, name: String): Result<String>
-                +deleteCategory(categoryId: String): Result<Unit>
-            }
-            class ChannelRepository { %% If managed separately from ProjectRepository
-                <<Interface>>
-                +createChannel(projectId: String, categoryId: String, name: String, type: String): Result<String>
-                +deleteChannel(channelId: String): Result<Unit>
+                +getCurrentUserSession(): CustomResult<UserSession, Exception>
+                +isLoggedIn(): Boolean
+                +isEmailVerified(): Boolean
             }
             %% UserRepository is defined in other features, assumed available
         }
-        note for ProjectRepository "프로젝트 생성, 조회, 멤버, 구조 등 핵심 관리 인터페이스"
-        note for RoleRepository "프로젝트 내 역할 관리 인터페이스"
-        note for InviteRepository "프로젝트 초대 코드 관리 인터페이스"
-        note for CategoryRepository "프로젝트 카테고리 관리 인터페이스 (ProjectRepo에 통합될 수 있음)"
-        note for ChannelRepository "프로젝트 채널 관리 인터페이스 (ProjectRepo에 통합될 수 있음)"
+        note for ProjectRepository "프로젝트 생성, 조회, 멤버, 구조, 카테고리, 채널 등 핵심 관리 인터페이스"
+        note for RoleRepository "프로젝트 내 역할 및 권한 관리 인터페이스"
+        note for UserRepository "사용자 정보 조회 및 검색 인터페이스"
+        note for AuthRepository "인증 상태 및 세션 관리 인터페이스"
     end
 
     %% Data Layer
@@ -322,54 +328,66 @@ classDiagram
         namespace RemoteDataSources_DataNS {
             class ProjectRemoteDataSource {
                 <<Interface>>
-                +createProject(projectDTO: ProjectDTO): Result<String>
-                +checkProjectName(name: String): Result<Boolean>
-                +getProject(projectId: String): Flow<ProjectDTO>
-                +getProjectStructureData(projectId: String): Flow<ProjectStructureDTO>
-                +updateProjectStructureData(projectId: String, structureDTO: ProjectStructureDTO): Result<Unit>
-                +renameProject(projectId: String, newName: String): Result<Unit>
-                +deleteProject(projectId: String): Result<Unit>
-            }
-            class ProjectsWrapperRemoteDataSource{
-                <<Interface>>
-                +getProjectsWrappers(userId: String): Flow<List<ProjectsWrapperDTO>>
+                +createProject(projectDTO: ProjectDTO): CustomResult<String, Exception>
+                +getProject(projectId: String): Flow<CustomResult<ProjectDTO, Exception>>
+                +getProjectList(userId: String): Flow<CustomResult<List<ProjectDTO>, Exception>>
+                +getProjectStructureData(projectId: String): Flow<CustomResult<ProjectStructureDTO, Exception>>
+                +updateProjectStructureData(projectId: String, structureDTO: ProjectStructureDTO): CustomResult<Unit, Exception>
+                +renameProject(projectId: String, newName: String): CustomResult<Unit, Exception>
+                +deleteProject(projectId: String): CustomResult<Unit, Exception>
+                +addCategory(projectId: String, categoryName: String): CustomResult<String, Exception>
+                +addChannel(projectId: String, categoryId: String, channelName: String, channelType: ChannelType): CustomResult<String, Exception>
+                +deleteCategory(projectId: String, categoryId: String): CustomResult<Unit, Exception>
+                +deleteChannel(projectId: String, channelId: String): CustomResult<Unit, Exception>
+                +renameCategory(projectId: String, categoryId: String, newName: String): CustomResult<Unit, Exception>
+                +renameChannel(projectId: String, channelId: String, newName: String): CustomResult<Unit, Exception>
             }
             class MemberRemoteDataSource {
                 <<Interface>>
-                +getMembers(projectId: String): Flow<List<MemberDTO>>
-                +fetchMembers(projectId: String): Result<Unit>
-                +addMember(projectId: String, userId: String, roleIds: List<String>): Result<Unit>
-                +getMember(projectId: String, memberId: String): Flow<MemberDTO>
-                +updateMemberRoles(projectId: String, memberId: String, roleIds: List<String>): Result<Unit>
-                +removeMember(projectId: String, memberId: String): Result<Unit>
+                +getMembers(projectId: String): Flow<CustomResult<List<MemberDTO>, Exception>>
+                +addMember(projectId: String, userId: String, roleIds: List<String>): CustomResult<Unit, Exception>
+                +getMember(projectId: String, memberId: String): Flow<CustomResult<MemberDTO, Exception>>
+                +updateMemberRoles(projectId: String, memberId: String, roleIds: List<String>): CustomResult<Unit, Exception>
+                +removeMember(projectId: String, memberId: String): CustomResult<Unit, Exception>
             }
             class RoleRemoteDataSource {
                 <<Interface>>
-                +createRole(projectId: String, roleDTO: RoleDTO): Result<String>
-                +getRoles(projectId: String): Flow<List<RoleDTO>>
-                +getRole(projectId: String, roleId: String): Flow<RoleDTO>
-                +updateRole(projectId: String, roleId: String, roleDTO: RoleDTO): Result<Unit>
-                +deleteRole(projectId: String, roleId: String): Result<Unit>
-                +setupDefaultRolesForProject(projectId: String, ownerId: String): Result<Unit>
+                +createRole(projectId: String, name: String, permissions: List<RolePermission>): CustomResult<String, Exception>
+                +getRoles(projectId: String): Flow<CustomResult<List<RoleDTO>, Exception>>
+                +getRole(projectId: String, roleId: String): Flow<CustomResult<RoleDTO, Exception>>
+                +updateRole(projectId: String, roleId: String, name: String, permissions: List<RolePermission>): CustomResult<Unit, Exception>
+                +deleteRole(projectId: String, roleId: String): CustomResult<Unit, Exception>
+                +getRolePermissions(projectId: String, roleId: String): Flow<CustomResult<List<RolePermission>, Exception>>
+                +setRolePermissions(projectId: String, roleId: String, permissions: List<RolePermission>): CustomResult<Unit, Exception>
             }
             class InviteRemoteDataSource {
                 <<Interface>>
-                +getProjectIdByInviteCode(code: String): Result<String>
-                +createInviteCode(projectId: String): Result<String>
+                +getProjectIdByInviteCode(code: String): CustomResult<String, Exception>
+                +createInviteCode(projectId: String): CustomResult<String, Exception>
             }
             class CategoryRemoteDataSource {
                 <<Interface>>
-                +createCategory(projectId: String, categoryDTO: CategoryDTO): Result<String>
-                +deleteCategory(categoryId: String): Result<Unit>
-                 %% updateCategory, getCategories etc.
+                +createCategory(projectId: String, categoryName: String): CustomResult<String, Exception>
+                +deleteCategory(projectId: String, categoryId: String): CustomResult<Unit, Exception>
+                +renameCategory(projectId: String, categoryId: String, newName: String): CustomResult<Unit, Exception>
             }
             class ProjectChannelRemoteDataSource {
                 <<Interface>>
-                +createChannel(projectId: String, categoryId: String, channelDTO: ChannelDTO): Result<String>
-                +deleteChannel(channelId: String): Result<Unit>
-                %% updateChannel, getChannels etc.
+                +createChannel(projectId: String, categoryId: String, channelName: String, channelType: ChannelType): CustomResult<String, Exception>
+                +deleteChannel(projectId: String, channelId: String): CustomResult<Unit, Exception>
+                +renameChannel(projectId: String, channelId: String, newName: String): CustomResult<Unit, Exception>
             }
-            %% UserRemoteDataSource is defined in other features
+            class UserRemoteDataSource {
+                <<Interface>>
+                +getUserById(userId: String): Flow<CustomResult<UserDTO, Exception>>
+                +searchUsersByName(nameQuery: String): Flow<CustomResult<List<UserDTO>, Exception>>
+            }
+            class AuthRemoteDataSource {
+                <<Interface>>
+                +getCurrentUserSession(): CustomResult<UserSessionDTO, Exception>
+                +isLoggedIn(): Boolean
+                +isEmailVerified(): Boolean
+            }
         }
         note for ProjectRemoteDataSource "원격 프로젝트 핵심 데이터 통신"
         note for ProjectsWrapperRemoteDataSource "원격 프로젝트 목록(상세 포함) 통신"
@@ -378,6 +396,8 @@ classDiagram
         note for InviteRemoteDataSource "원격 프로젝트 초대 코드 데이터 통신"
         note for CategoryRemoteDataSource "원격 카테고리 데이터 통신"
         note for ProjectChannelRemoteDataSource "원격 프로젝트 채널 데이터 통신"
+        note for UserRemoteDataSource "원격 사용자 데이터 통신"
+        note for AuthRemoteDataSource "원격 인증 데이터 통신"
 
         namespace DataSourceImpl_DataNS {
             class ProjectRemoteDataSourceImpl { -firestore: FirebaseFirestore }

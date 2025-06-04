@@ -53,64 +53,67 @@ classDiagram
             %% From other features, used here
             class GetCurrentUserStreamUseCase {
                 -userRepository: UserRepository
-                +invoke(): Flow<User?>
+                -authRepository: AuthRepository
+                +invoke(): Flow<CustomResult<User, Exception>>
             }
             class GetMyProfileUseCase {
                 -userRepository: UserRepository
-                +invoke(): Flow<User>
+                -authRepository: AuthRepository
+                +invoke(): Flow<CustomResult<User, Exception>>
             }
             class UpdateNicknameUseCase {
                 -userRepository: UserRepository
-                +invoke(nickname: String): Result<Unit>
+                -authRepository: AuthRepository
+                +invoke(nickname: String): CustomResult<Unit, Exception>
             }
             class CheckNicknameAvailabilityUseCase {
                 -userRepository: UserRepository
-                +invoke(nickname: String): Result<Boolean>
+                +invoke(nickname: String): CustomResult<Boolean, Exception>
             }
             class WithdrawUserUseCase {
                 -authRepository: AuthRepository
                 -userRepository: UserRepository
-                +invoke(): Result<Unit>
+                +invoke(): CustomResult<Unit, Exception>
             }
         }
         namespace UseCases_AuthNS {
             %% From other features, used here
             class LogoutUseCase {
                 -authRepository: AuthRepository
-                +invoke(): Result<Unit>
+                +invoke(): CustomResult<Unit, Exception>
             }
             class ChangePasswordUseCase {
                 -authRepository: AuthRepository
-                +invoke(currentPassword: String, newPassword: String): Result<Unit>
+                +invoke(currentPassword: String, newPassword: String): CustomResult<Unit, Exception>
             }
             class GetAuthErrorMessageUseCase {
                 %% Error mapping
-                +invoke(throwable: Throwable): String
+                +invoke(throwable: Exception): String
             }
         }
 
         namespace Repositories_DomainNS {
             class UserRepository { %% Defined elsewhere
                 <<Interface>>
-                +observeCurrentUser(): Flow<User?>
-                +getMyProfile(): Flow<User>
-                +updateNickname(nickname: String): Result<Unit>
-                +isNicknameAvailable(nickname: String): Result<Boolean>
-                +deleteUserAccountData(uid: String): Result<Unit> %% For WithdrawUserUseCase
+                +getUserProfile(userId: String): Flow<CustomResult<User, Exception>>
+                +updateNickname(userId: String, nickname: String): CustomResult<Unit, Exception>
+                +isNicknameAvailable(nickname: String): CustomResult<Boolean, Exception>
+                +deleteUserAccountData(userId: String): CustomResult<Unit, Exception> %% For WithdrawUserUseCase
             }
             class AuthRepository { %% Defined elsewhere
                 <<Interface>>
-                +logout(): Result<Unit>
-                +changePassword(currentPassword: String, newPassword: String): Result<Unit>
-                +deleteCurrentUserAccount(): Result<Unit> %% For WithdrawUserUseCase
+                +logout(): CustomResult<Unit, Exception>
+                +changePassword(currentPassword: String, newPassword: String): CustomResult<Unit, Exception>
+                +deleteCurrentUserAccount(): CustomResult<Unit, Exception> %% For WithdrawUserUseCase
+                +getCurrentUserSession(): CustomResult<UserSession, Exception>
             }
             class ProjectRepository { %% Defined elsewhere, for MigrationTool
                 <<Interface>>
-                +getAllProjectsBasicInfo(): Flow<List<Project>> %% Example method for migration tool
+                +getProjectListStream(): Flow<CustomResult<List<Project>, Exception>> %% For migration tool
             }
             class ChannelRepository { %% Defined elsewhere, for MigrationTool
                 <<Interface>>
-                +getAllChannelsForProject(projectId: String): Flow<List<Channel>> %% Example for migration
+                +getAllChannelsForProject(projectId: String): Flow<CustomResult<List<Channel>, Exception>> %% For migration
             }
         }
         note for UserRepository "사용자 정보 접근 인터페이스"

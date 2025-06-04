@@ -28,11 +28,6 @@ interface MemberRemoteDataSource {
      * @param userId 추가할 사용자의 ID (이것이 members 서브컬렉션의 문서 ID가 됨)
      * @param roleIds 부여할 역할의 ID
      */
-    suspend fun addMember(projectId: String, userId: String, roleIds: String): CustomResult<Unit, Exception>
-
-    /**
-     * 프로젝트에 맴버 설정하기
-     */
     suspend fun addMember(projectId: String, userId: String, roleIds: List<String>): CustomResult<Unit, Exception>
 
     /**

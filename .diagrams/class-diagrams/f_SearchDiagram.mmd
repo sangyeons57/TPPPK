@@ -28,7 +28,7 @@ classDiagram
         namespace UseCases_UserNS {
             class SearchUserByNameUseCase {
                 -userRepository: UserRepository
-                +invoke(nameQuery: String): Flow<List<User>>
+                +invoke(nameQuery: String): Flow<CustomResult<List<User>, Exception>>
             }
         }
         %% Project UseCases (검색 대상이 확장될 경우 추가)
@@ -50,16 +50,16 @@ classDiagram
         namespace Repositories_DomainNS {
             class UserRepository { %% Defined in other features, used here
                 <<Interface>>
-                +searchUsersByName(nameQuery: String): Flow<List<User>>
+                +searchUsersByName(nameQuery: String): Flow<CustomResult<List<User>, Exception>>
                 %% Other methods
             }
             %% class ProjectRepository { %% If project search is implemented
             %%     <<Interface>>
-            %%     +searchProjectsByName(nameQuery: String): Flow<List<Project>>
+            %%     +searchProjectsByName(nameQuery: String): Flow<CustomResult<List<Project>, Exception>>
             %% }
             %% class MessageRepository { %% If message search is implemented
             %%     <<Interface>>
-            %%     +searchMessages(query: String, channelId: String?): Flow<List<Message>>
+            %%     +searchMessages(query: String, channelId: String?): Flow<CustomResult<List<Message>, Exception>>
             %% }
         }
         note for UserRepository "사용자 검색을 위한 데이터 접근 인터페이스"

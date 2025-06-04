@@ -82,7 +82,7 @@ class InviteRemoteDataSourceImpl @Inject constructor(
                 .await()
             
             if (!querySnapshot.isEmpty) {
-                querySnapshot.documents.firstOrNull()?.toObject<InviteDTO>()
+                querySnapshot.documents.firstOrNull()?.toObject(InviteDTO::class.java)
             } else {
                 null
             }

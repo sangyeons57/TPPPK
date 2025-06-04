@@ -23,10 +23,8 @@ enum class CreateProjectMode {
 // 프로젝트 추가 UI 상태
 data class AddProjectUiState(
     val selectedMode: AddProjectMode = AddProjectMode.JOIN, // 기본: 참여
-    val createMode: CreateProjectMode = CreateProjectMode.OPEN, // 기본: 참여
     val joinCode: String = "",
     val projectName: String = "",
-    val projectDescription: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val projectAddedSuccessfully: Boolean = false // 성공 시 이전 화면 이동 트리거
@@ -59,17 +57,7 @@ class AddProjectViewModel @Inject constructor(
                 // 모드 변경 시 입력값 초기화 (선택 사항)
                 joinCode = "",
                 projectName = "",
-                projectDescription = "",
                 errorMessage = null
-            )
-        }
-    }
-
-    fun onCreateModeSelect(mode: CreateProjectMode) {
-        _uiState.update {
-            it.copy(
-                createMode = mode,
-                // 모드 변경 시 입력값 초기화 (선택 사항)
             )
         }
     }
@@ -83,9 +71,6 @@ class AddProjectViewModel @Inject constructor(
         _uiState.update { it.copy(projectName = name, errorMessage = null) }
     }
 
-    fun onProjectDescriptionChange(description: String) {
-        _uiState.update { it.copy(projectDescription = description, errorMessage = null) }
-    }
 
     // "프로젝트 참여" 버튼 클릭
     fun onJoinProjectClick() {
@@ -129,7 +114,6 @@ class AddProjectViewModel @Inject constructor(
     // "프로젝트 생성" 버튼 클릭
     fun onCreateProjectClick() {
         val name = _uiState.value.projectName
-        val description = _uiState.value.projectDescription
         if (name.isBlank()) {
             _uiState.update { it.copy(errorMessage = "프로젝트 이름을 입력해주세요.") }
             return
@@ -139,7 +123,7 @@ class AddProjectViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             
             // 프로젝트 생성 로직
-            val result = createProjectUseCase(name, description)
+            val result = createProjectUseCase(name)
 
             when (result) {
                 is CustomResult.Success -> {

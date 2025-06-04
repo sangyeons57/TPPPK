@@ -19,7 +19,7 @@ interface ProjectsWrapperRemoteDataSource {
      */
 
     // 새로운 프로젝트 래퍼를 추가하는 함수
-    suspend fun addProjectToUser(uid: String, projectWrapper: ProjectsWrapperDTO, projectId: String) : CustomResult<Unit, Exception>
+    suspend fun addProjectToUser(uid: String, projectId: String, projectWrapper: ProjectsWrapperDTO) : CustomResult<Unit, Exception>
 
     // 특정 프로젝트 래퍼를 삭제하는 함수
     suspend fun removeProjectFromUser(uid: String, projectId: String) : CustomResult<Unit, Exception>

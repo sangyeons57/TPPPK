@@ -44,40 +44,68 @@ classDiagram
     subgraph Domain Layer
         direction LR
         namespace UseCases_MessageNS {
-            class GetMessagesStreamUseCase
-            class FetchPastMessagesUseCase
-            class SendMessageUseCase
-            class EditMessageUseCase
-            class DeleteMessageUseCase
+            class GetMessagesStreamUseCase {
+                +invoke(channelId: String): Flow < CustomResult < List < Message >, Exception > >
+            }
+            class FetchPastMessagesUseCase {
+                +invoke(channelId: String, lastMessageTimestamp: Long?): CustomResult < List < Message >, Exception > >
+            }
+            class SendMessageUseCase {
+                +invoke(channelId: String, content: String, attachmentUri: Uri?): CustomResult < Message, Exception > >
+            }
+            class EditMessageUseCase {
+                +invoke(channelId: String, messageId: String, newContent: String): CustomResult < Unit, Exception > >
+            }
+            class DeleteMessageUseCase {
+                +invoke(channelId: String, messageId: String): CustomResult < Unit, Exception > >
+            }
         }
         namespace UseCases_ChannelNS {
-            class GetChannelUseCase
+            class GetChannelUseCase {
+                +invoke(channelId: String): Flow < CustomResult < Channel, Exception > >
+            }
         }
         namespace UseCases_UserNS {
-            class GetCurrentUserUseCase
-            class GetUserInfoUseCase
+            class GetCurrentUserUseCase {
+                +invoke(): CustomResult < User, Exception > >
+            }
+            class GetUserInfoUseCase {
+                +invoke(userId: String): CustomResult < User, Exception > >
+            }
         }
         namespace UseCases_PermissionNS {
-            class CheckChannelPermissionUseCase
+            class CheckChannelPermissionUseCase {
+                +invoke(channelId: String, permission: ChannelPermission): CustomResult < Boolean, Exception > >
+            }
         }
 
         namespace Repositories_DomainNS {
             class MessageRepository {
                 <<Interface>>
-                +getMessagesStream(channelId: String): Flow<List<Message>>
-                +fetchPastMessages(channelId: String, lastMessageTimestamp: Long?): Result<List<Message>>
-                +sendMessage(channelId: String, message: Message): Result<Unit>
-                +editMessage(channelId: String, messageId: String, newText: String): Result<Unit>
-                +deleteMessage(channelId: String, messageId: String): Result<Unit>
-                +uploadMessageAttachment(channelId: String, attachmentUri: Uri): Result<String>
+                +getMessagesStream(channelId: String): Flow<CustomResult<List<Message>, Exception>>
+                +fetchPastMessages(channelId: String, lastMessageTimestamp: Long?): CustomResult<List<Message>, Exception>
+                +sendMessage(channelId: String, content: String, attachmentUri: Uri?): CustomResult<Message, Exception>
+                +editMessage(channelId: String, messageId: String, newContent: String): CustomResult<Unit, Exception>
+                +deleteMessage(channelId: String, messageId: String): CustomResult<Unit, Exception>
+                +uploadMessageAttachment(channelId: String, attachmentUri: Uri): CustomResult<String, Exception>
             }
             class ChannelRepository {
                 <<Interface>>
-                +getChannelDetails(channelId: String): Flow<Channel?>
+                +getChannelDetails(channelId: String): Flow<CustomResult<Channel, Exception>>
             }
-            class UserRepository { <<Interface>> }
-            class ProjectRepository { <<Interface>> }
-            class RoleRepository { <<Interface>> }
+            class UserRepository { 
+                <<Interface>>
+                +getCurrentUser(): CustomResult<User, Exception>
+                +getUserById(userId: String): CustomResult<User, Exception>
+            }
+            class ProjectRepository { 
+                <<Interface>>
+                +getProjectById(projectId: String): Flow<CustomResult<Project, Exception>>
+            }
+            class RoleRepository { 
+                <<Interface>>
+                +checkChannelPermission(userId: String, channelId: String, permission: ChannelPermission): CustomResult<Boolean, Exception>
+            }
         }
     end
 
@@ -105,20 +133,20 @@ classDiagram
 
         namespace RemoteDataSources_DataNS {
             class MessageRemoteDataSource { <<Interface>>
-                +observeMessages(channelId: String): Flow<List<MessageDTO>>
-                +fetchOldMessages(channelId: String, lastTimestamp: Long?): Result<List<MessageDTO>>
-                +postMessage(channelId: String, messageDTO: MessageDTO): Result<Unit>
-                +updateMessage(channelId: String, messageId: String, newText: String): Result<Unit>
-                +removeMessage(channelId: String, messageId: String): Result<Unit>
+                +observeMessages(channelId: String): Flow < List < MessageDTO > >
+                +fetchOldMessages(channelId: String, lastTimestamp: Long?): Result < List < MessageDTO > >
+                +postMessage(channelId: String, messageDTO: MessageDTO): Result < Unit >
+                +updateMessage(channelId: String, messageId: String, newText: String): Result < Unit >
+                +removeMessage(channelId: String, messageId: String): Result < Unit >
             }
             class MessageAttachmentRemoteDataSource { <<Interface>>
-                +uploadAttachment(channelId: String, attachmentUri: Uri): Result<String> %% Returns URL
+                +uploadAttachment(channelId: String, attachmentUri: Uri): Result < String > %% Returns URL
             }
             class ProjectChannelRemoteDataSource { <<Interface>>
-                 +getChannelInfo(channelId: String): Flow<ProjectChannelDTO?>
+                 +getChannelInfo(channelId: String): Flow < ProjectChannelDTO? >
             }
             class DMChannelRemoteDataSource { <<Interface>>
-                +getDmChannelInfo(channelId: String): Flow<DMChannelDTO?>
+                +getDmChannelInfo(channelId: String): Flow < DMChannelDTO? >
             }
             class UserRemoteDataSource { <<Interface>> }
             class ProjectRemoteDataSource { <<Interface>> }

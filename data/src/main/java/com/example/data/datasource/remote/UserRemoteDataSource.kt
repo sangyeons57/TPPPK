@@ -101,4 +101,3 @@ interface UserRemoteDataSource {
      */
     fun getDmWrappersStream(userId: String): Flow<CustomResult<List<DMWrapperDTO>, Exception>>
 }
-
