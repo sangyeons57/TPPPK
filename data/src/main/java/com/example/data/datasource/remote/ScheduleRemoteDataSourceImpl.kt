@@ -1,6 +1,7 @@
 
 package com.example.data.datasource.remote
 
+import android.util.Log
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
@@ -133,15 +134,15 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
     override suspend fun getSchedulesOnDate(userId: String, date: LocalDate): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
 
         // DateTimeUtil을 사용하여 해당 날짜의 시작과 끝 Timestamp를 가져옵니다. (UTC 기준)
-        val startOfDayTimestamp = DateTimeUtil.localDateToStartOfDayInstant(date)
-        val endOfDayExclusiveTimestamp = DateTimeUtil.localDateToEndOfDayInstant(date)
+        val startOfDayTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.localDateToStartOfDayInstant(date))
+        val endOfDayExclusiveTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.localDateToEndOfDayInstant(date))
 
         val query = firestore.collection(FirestoreConstants.Collections.SCHEDULES)
             .whereEqualTo(FirestoreConstants.Schedule.CREATOR_ID, userId)
             .whereGreaterThanOrEqualTo(FirestoreConstants.Schedule.START_TIME, startOfDayTimestamp)
             .whereLessThan(FirestoreConstants.Schedule.START_TIME, endOfDayExclusiveTimestamp)
             .orderBy(FirestoreConstants.Schedule.START_TIME, Query.Direction.ASCENDING)
-
+        
         val listenerRegistration = query.addSnapshotListener { snapshots, error ->
             if (isClosedForSend) { // 채널이 닫혔는지 확인
                 return@addSnapshotListener
@@ -152,7 +153,8 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
                 return@addSnapshotListener
             }
             if (snapshots != null) {
-                val schedules = snapshots.toObjects<ScheduleDTO>(ScheduleDTO::class.java) // 여기에서 오류가 발생했었음
+                val schedules = snapshots.toObjects(ScheduleDTO::class.java) // 여기에서 오류가 발생했었음
+                Log.d("ScheduleRemoteDataSourceImpl", "schedules: $schedules")
                 trySend(CustomResult.Success(schedules))
             } else {
                 trySend(CustomResult.Success(emptyList()))

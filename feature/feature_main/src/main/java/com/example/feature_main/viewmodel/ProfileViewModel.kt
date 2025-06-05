@@ -103,11 +103,12 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // 프로필 이미지 변경 버튼 클릭
-    fun onEditProfileImageClick() {
+    fun onProfileImageClick() {
+        /** 프로필 이미지 클릭 은 지금  상태표시나 다른걸로 이동할 가능성 있음
         viewModelScope.launch {
             _eventFlow.emit(ProfileEvent.PickProfileImage)
         }
+        **/
     }
 
     // 상태 메시지 변경 버튼 클릭

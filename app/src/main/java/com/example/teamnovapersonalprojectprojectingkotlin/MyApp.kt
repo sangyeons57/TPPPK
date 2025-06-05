@@ -24,11 +24,9 @@ class MyApp : Application() {
         // Firebase 초기화
         initializeFirebase()
         
-        // Sentry 초기화
-        SentryUtil.SentryInit(this)
-
-
-        SentryUtil.logInfo("앱 시작됨", mapOf("startup_type" to "manual_init"))
+        // Sentry 초기화 :: 잠시 꺼두기
+        //SentryUtil.SentryInit(this)
+        //SentryUtil.logInfo("앱 시작됨", mapOf("startup_type" to "manual_init"))
     }
     
     /**

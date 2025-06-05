@@ -32,6 +32,8 @@ import com.example.data.datasource.remote.CategoryRemoteDataSource
 import com.example.data.datasource.remote.CategoryRemoteDataSourceImpl
 import com.example.data.datasource.remote.ProjectsWrapperRemoteDataSource
 import com.example.data.datasource.remote.ProjectsWrapperRemoteDataSourceImpl
+import com.example.data.datasource.remote.FileDataSource
+import com.example.data.datasource.remote.FileDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -175,4 +177,14 @@ abstract class DataSourceModule {
     abstract fun bindProjectsWrapperRemoteDataSource(
         projectsWrapperRemoteDataSourceImpl: ProjectsWrapperRemoteDataSourceImpl
     ): ProjectsWrapperRemoteDataSource
+
+    /**
+     * FileDataSource 인터페이스 요청 시
+     * FileDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindFileDataSource(
+        fileDataSourceImpl: FileDataSourceImpl
+    ): FileDataSource
 }

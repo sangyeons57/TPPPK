@@ -172,6 +172,22 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateUserProfileImageUrl(userId: String, imageUrl: String?): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        resultTry {
+            val userDocRef = usersCollection.document(userId)
+            val updateData = hashMapOf<String, Any?>()
+
+            // FirestoreConstants.Users.PROFILE_IMAGE_URL를 사용합니다.
+            updateData[FirestoreConstants.Users.PROFILE_IMAGE_URL] = imageUrl
+            
+            // FirestoreConstants.Users.UPDATED_AT를 사용합니다.
+            updateData[FirestoreConstants.Users.UPDATED_AT] = FieldValue.serverTimestamp()
+
+            userDocRef.update(updateData).await()
+            Unit
+        }
+    }
+
     override fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapperDTO>, Exception>> = callbackFlow {
         if (userId.isEmpty()) {
             trySend(CustomResult.Success(emptyList()))

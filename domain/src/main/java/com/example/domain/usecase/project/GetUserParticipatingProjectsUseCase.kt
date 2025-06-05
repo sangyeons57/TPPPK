@@ -1,5 +1,6 @@
 package com.example.domain.usecase.project
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.AuthUtil
@@ -39,29 +40,35 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
     override fun invoke(): Flow<CustomResult<List<Project>, Exception>> {
         val userId = authUtil.getCurrentUserId()
 
-        // ProjectsWrapper에서 프로젝트 ID를 추출하고, ProjectRepository를 통해 전체 프로젝트 정보를 가져옵니다.
-        return projectsWrapperRepository.getProjectsWrapperStream(userId)
-            .map { wrapperResults ->
-                resultTry {
-                    // 성공적으로 가져온 프로젝트 래퍼만 필터링
-                    val successWrappers = wrapperResults.mapNotNull { result ->
-                        when (result) {
-                            is CustomResult.Success -> result.data
-                            else -> null
-                        }
-                    }
+        if (userId.isBlank()) {
+            return flowOf(CustomResult.Failure(IllegalStateException("User not authenticated or user ID is blank.")))
+        }
 
+        // ProjectsWrapper에서 프로젝트 ID를 추출하고, ProjectRepository를 통해 전체 프로젝트 정보를 가져옵니다.
+        return projectsWrapperRepository.observeProjectsWrappers(userId) // Flow<List<ProjectsWrapper>> 반환
+            .map { wrappers -> // wrappers는 List<ProjectsWrapper> (각각 projectId만 포함)
+                resultTry { // resultTry는 suspend 람다를 실행하고 결과를 CustomResult로 래핑
                     // 프로젝트 ID 리스트 추출
-                    val projectIds = successWrappers.map { it.projectId }
-                    
+                    val projectIds = wrappers.map { it.projectId }
+
                     // 각 프로젝트 ID에 대한 전체 프로젝트 정보 가져오기
+                    // projectRepository.getProjectDetailsStream(projectId).first()는 suspend 함수 호출
                     val projects = projectIds.mapNotNull { projectId ->
                         val projectResult = projectRepository.getProjectDetailsStream(projectId).first()
+                        Log.d("GetUserParticipatingProjectsUseCaseImpl", projectResult.toString())
                         when (projectResult) {
-                            is CustomResult.Success -> projectResult.data
-                            else -> null
+                            is CustomResult.Success -> {
+                                Log.e("GetUserParticipatingProjectsUseCaseImpl", "Error fetching project details: ${projectResult.data}")
+                                projectResult.data
+                            }
+                            is CustomResult.Failure -> {
+                                Log.e("GetUserParticipatingProjectsUseCaseImpl", "Error fetching project details: ${projectResult.error}")
+                                null
+                            }
+                            else -> null // 실패한 개별 프로젝트 로드는 결과 목록에서 제외
                         }
                     }
+                    Log.d("GetUserParticipatingProjectsUseCaseImpl", projects.toString())
                     projects
                 }
             }

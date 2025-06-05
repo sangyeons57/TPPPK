@@ -1,94 +1,139 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    // === 유틸리티 함수 ===
-    
-    // 사용자 인증 여부 확인
+
+    // === Utility Functions ===
+
+    // Check if the user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // 요청 사용자와 ID 일치 여부 확인
+
+    // Check if the requesting user's ID matches the given userId
     function isCurrentUser(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // 프로젝트 소유자 여부 확인 (Firestore 데이터 기반)
+
+    // Check if the user is the owner of a project
+    // Assumes /projects/{projectId} document has an 'ownerId' field
     function isProjectOwner(projectId) {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
              firestore.get(/databases/(default)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
     }
-    
-    // 프로젝트 멤버 여부 확인 (Firestore 데이터 기반)
-    function isProjectMember(projectId) {
-      return isAuthenticated() && 
-             firestore.exists(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid));
+
+    // Check if the user is a participant in a DM channel
+    // Assumes /dm_channels/{dmChannelId}/participants/{userId} document exists
+    function isDMChannelParticipant(dmChannelId) {
+      return isAuthenticated() &&
+             firestore.exists(/databases/(default)/documents/dm_channels/$(dmChannelId)/participants/$(request.auth.uid));
     }
-    
-    // === 기본 규칙 ===
-    
-    // 기본적으로 모든 접근 거부
+
+    // Check if the user is the author of a DM message
+    // Assumes /dm_channels/{dmChannelId}/messages/{messageId} document has an 'authorId' field
+    function isDMMessageAuthor(dmChannelId, messageId) {
+      return isAuthenticated() &&
+             firestore.get(/databases/(default)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.authorId == request.auth.uid;
+    }
+
+    // Check if the user is the author of a project channel message
+    // Assumes /project_channels/{projectChannelId}/messages/{messageId} document has an 'authorId' field
+    // IMPORTANT: Adjust Firestore path if project channels are nested (e.g., /projects/{pId}/channels/{pcId}/messages/{mId})
+    function isProjectChannelMessageAuthor(projectChannelId, messageId) {
+      // This path assumes project_channels is a top-level collection.
+      // If project_channels is a subcollection of projects, the path would be:
+      // /databases/(default)/documents/projects/$(getProjectIdForChannel(projectChannelId))/project_channels/$(projectChannelId)/messages/$(messageId)
+      return isAuthenticated() &&
+             firestore.get(/databases/(default)/documents/project_channels/$(projectChannelId)/messages/$(messageId)).data.authorId == request.auth.uid;
+    }
+
+    // Get the projectId associated with a projectChannelId
+    // Assumes /project_channels/{projectChannelId} document has a 'projectId' field
+    // IMPORTANT: Adjust Firestore path as needed if project_channels is a subcollection.
+    function getProjectIdForChannel(projectChannelId) {
+        // If project_channels is a top-level collection with a projectId field:
+        return firestore.get(/databases/(default)/documents/project_channels/$(projectChannelId)).data.projectId;
+        // If project_channels is a subcollection, you might pass projectId directly or derive it differently.
+    }
+
+    // Placeholder: Check if user has read permission for a project channel.
+    // This function needs to know the projectId to correctly check member permissions.
+    // Assumes /projects/{projectId}/members/{userId} exists or has specific role/permission fields.
+    function hasProjectChannelReadPermission(projectId, projectChannelId) {
+      // Example: return isAuthenticated() && firestore.get(/databases/(default)/documents/projects/$(projectId)/project_channels/$(projectChannelId)/members/$(request.auth.uid)).data.canRead == true;
+      // Simpler: Check if user is a member of the project this channel belongs to.
+      return isAuthenticated() && firestore.exists(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid));
+    }
+
+    // Placeholder: Check if user can post (create files/messages) in a project channel.
+    // Assumes /projects/{projectId}/members/{userId} has a 'canPost' or similar role-based permission.
+    function canPostToProjectChannel(projectId, projectChannelId) {
+      // Example: return isAuthenticated() && firestore.get(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid)).data.canPostInChannel[$(projectChannelId)] == true;
+      // Simpler: Check if user is a member of the project this channel belongs to.
+      return isAuthenticated() && firestore.exists(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid));
+    }
+
+    // Placeholder: Check if user has delete permission for messages/files in a project channel.
+    // Assumes /projects/{projectId}/members/{userId} has a 'canDeleteMessages' or similar role-based permission.
+    function hasProjectChannelDeletePermission(projectId, projectChannelId) {
+      // Example: return isAuthenticated() && firestore.get(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid)).data.role == 'moderator';
+      return false; // Default to false, requiring explicit project owner or author status.
+    }
+
+    // === Default Deny Rule ===
+    // Deny all access by default to paths not explicitly matched.
     match /{allPaths=**} {
       allow read, write: if false;
     }
-    
-    // === 사용자 관련 규칙 ===
-    
-    // New User profile images path
-    // Allows public read, and only the user can write to their own profile image path.
-    match /profile_images/{userId}/{fileName} {
-      allow read: if true; // Public read access
-      allow write: if isCurrentUser(userId);
+
+    // === Rules based on firebase-storage.md ===
+
+    // 1. User Profile Images
+    // Path: user_profile_images/{userId}/{fileName}
+    match /user_profile_images/{userId}/{fileName} {
+      allow read: if isAuthenticated(); // As per markdown: (로그인)인증된 모두
+      allow write: if isCurrentUser(userId) &&
+                      request.resource.size < 1 * 1024 * 1024 && // Max 1MB
+                      request.resource.contentType.matches('image/.*'); // Only images
     }
 
-    // Old user profile image path - Commented out as it's being replaced
-    // match /users/{userId}/profile/{imageId} {
-    //  allow read: if isAuthenticated(); // 모든 인증된 사용자가 읽기 가능
-    //  allow write: if isCurrentUser(userId); // 본인만 쓰기 가능
-    // }
-    
-    // 사용자 개인 파일
-    match /users/{userId}/files/{allPaths=**} {
-      allow read, write: if isCurrentUser(userId); // 본인만 읽기/쓰기 가능
+    // 2. Project Profile Images
+    // Path: project_profile_images/{projectId}/{fileName}
+    match /project_profile_images/{projectId}/{fileName} {
+      allow read: if isAuthenticated(); // As per markdown: (로그인)인증된 모두
+      allow write: if isProjectOwner(projectId) &&
+                      request.resource.size < 2 * 1024 * 1024 && // Max 2MB
+                      request.resource.contentType.matches('image/.*'); // Only images
     }
-    
-    // === 프로젝트 관련 규칙 ===
-    
-    // 프로젝트 파일
-    match /projects/{projectId}/{allPaths=**} {
-      // 멤버는 읽기만 가능
-      allow read: if isProjectMember(projectId);
-      // 소유자는 읽기/쓰기 가능
-      allow write: if isProjectOwner(projectId);
+
+    // 3. DM Channel Files
+    // Path: dm_channel_files/{dmChannelId}/{messageId}/{fileType}/{fileName}
+    match /dm_channel_files/{dmChannelId}/{messageId}/{fileType}/{fileName} {
+      allow read: if isAuthenticated() &&
+                     (isDMMessageAuthor(dmChannelId, messageId) || isDMChannelParticipant(dmChannelId));
+      allow create: if isAuthenticated() && isDMChannelParticipant(dmChannelId) &&
+                       request.resource.size < 10 * 1024 * 1024; // Max 10MB for DM files
+                       // Add contentType validation based on {fileType} if needed
+      allow update, delete: if isAuthenticated() && isDMMessageAuthor(dmChannelId, messageId);
     }
-    
-    // === 임시 파일 관련 규칙 ===
-    
-    // 임시 업로드 폴더 (유효 시간 24시간 이내의 파일, maxAge 메타데이터 기반)
-    match /temp/{userId}/{fileName} {
-      // 본인만 접근 가능하며 maxAge 메타데이터 설정 필요
-      allow read: if isCurrentUser(userId);
-      
-      // 업로드 시 maxAge 메타데이터 설정 (24시간) 강제
-      allow create: if isCurrentUser(userId) && 
-                       request.resource.metadata.maxAge is number &&
-                       request.resource.metadata.maxAge <= 86400000;
-                       
-      // 본인이 생성한 파일만 삭제 가능
-      allow delete: if isCurrentUser(userId);
-    }
-    
-    // === 공개 파일 관련 규칙 ===
-    
-    // 공개 파일 (모든 인증된 사용자 읽기 가능, 관리자만 쓰기 가능)
-    match /public/{fileName} {
-      allow read: if isAuthenticated();
-      // 쓰기 불가 (Admin SDK를 통해서만 가능)
-      allow write: if false;
+
+    // 4. Project Channel Files
+    // Path: project_channel_files/{projectChannelId}/{messageId}/{fileType}/{fileName}
+    match /project_channel_files/{projectChannelId}/{messageId}/{fileType}/{fileName} {
+      // Get projectId for this channel to check project-level permissions
+      let projectId = getProjectIdForChannel(projectChannelId);
+
+      allow read: if isAuthenticated() &&
+                     (isProjectChannelMessageAuthor(projectChannelId, messageId) ||
+                      hasProjectChannelReadPermission(projectId, projectChannelId));
+      allow create: if isAuthenticated() && canPostToProjectChannel(projectId, projectChannelId) &&
+                       request.resource.size < 20 * 1024 * 1024; // Max 20MB for project files
+                       // Add contentType validation based on {fileType} if needed
+      allow update: if isAuthenticated() && isProjectChannelMessageAuthor(projectChannelId, messageId);
+      allow delete: if isAuthenticated() &&
+                       (isProjectChannelMessageAuthor(projectChannelId, messageId) ||
+                        isProjectOwner(projectId) || 
+                        hasProjectChannelDeletePermission(projectId, projectChannelId));
     }
   }
 }

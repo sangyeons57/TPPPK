@@ -13,13 +13,12 @@ import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetUserInfoUseCase
-import com.example.domain.usecase.project.GetProjectListStreamUseCase // Added
 
 import com.example.domain.usecase.project.GetProjectDetailsStreamUseCase // Added
 import com.example.domain.usecase.dm.AddDmChannelUseCase // Added
 import com.example.domain.usecase.project.CreateProjectUseCase // Added
+import com.example.domain.usecase.project.GetUserParticipatingProjectsUseCase
 import com.example.domain.usecase.project.UpdateProjectStructureUseCase // Added
-import com.example.domain.usecase.user.GetUserProjectWrappersUseCase
 import com.example.feature_main.ui.DmUiModel
 import com.example.feature_main.ui.ProjectUiModel // Added
 import com.example.feature_main.ui.project.CategoryUiModel
@@ -97,16 +96,12 @@ sealed class HomeEvent {
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    private val getUserInfoUseCase: GetUserInfoUseCase,
     private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val getUserDmChannelsUseCase: GetUserDmChannelsUseCase,
-    private val getUserInfoUseCase: GetUserInfoUseCase,
-    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    private val getUserProjectWrappersUseCase: GetUserProjectWrappersUseCase, // Added
-    // private val getDmListStreamUseCase: GetDmListStreamUseCase, // Removed as getUserDmChannelsUseCase seems to cover DM list fetching
-    private val getProjectDetailsStreamUseCase: GetProjectDetailsStreamUseCase, // Added
-    private val addDmChannelUseCase: AddDmChannelUseCase, // Added
-    private val createProjectUseCase: CreateProjectUseCase, // Added
-    private val updateProjectStructureUseCase: UpdateProjectStructureUseCase // Added
+    private val getProjectDetailsStreamUseCase: GetProjectDetailsStreamUseCase,
+    private val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCase,
+    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -227,7 +222,7 @@ private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): Dm
     private fun loadProjects() {
         Log.d("HomeViewModel", "loadProjects called")
         viewModelScope.launch {
-            getUserProjectWrappersUseCase(currentUserId)
+            getUserParticipatingProjectsUseCase()
                 .collectLatest { result ->
                     when (result) {
                         is CustomResult.Loading -> {

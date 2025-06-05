@@ -31,4 +31,14 @@ interface ProjectRepository {
 
     suspend fun deleteProject(projectId: String, currentUserId: String): CustomResult<Unit, Exception>
     suspend fun getProjectStructureStream(projectId: String): Flow<CustomResult<List<Category>, Exception>>
+
+    /**
+     * 프로젝트의 프로필 이미지 URL만 업데이트합니다.
+     * Firestore의 프로젝트 문서에 있는 imageUrl 필드를 직접 수정합니다.
+     *
+     * @param projectId 업데이트할 프로젝트의 ID.
+     * @param imageUrl 새 프로필 이미지의 다운로드 URL. null일 경우 필드를 제거하거나 기본값으로 설정합니다.
+     * @return 작업 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     */
+    suspend fun updateProjectProfileImageUrl(projectId: String, imageUrl: String?): CustomResult<Unit, Exception>
 }

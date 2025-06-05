@@ -10,6 +10,7 @@ import javax.inject.Inject
  * Use case to get a stream of project wrappers for a given user.
  * Project wrappers are lightweight references to projects the user is part of.
  */
+@Deprecated("Use GetUserParticipatingProjectsUseCase for full project details, or ProjectsWrapperRepository.observeProjectsWrappers(userId) for project IDs. This use case relies on a legacy data structure.")
 class GetUserProjectWrappersUseCase @Inject constructor(
     private val userRepository: UserRepository
 ) {

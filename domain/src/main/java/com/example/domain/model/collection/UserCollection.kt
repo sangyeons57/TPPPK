@@ -11,5 +11,6 @@ data class UserCollection(
     val user: User,
     val friends: List<Friend>? = null,
     val dmWrappers: List<DMWrapper>? = null,
+    @Deprecated("User's project participation is now primarily managed by ProjectsWrapperRepository. This field represents a legacy way of storing this data within the user document.")
     val projectsWrappers: List<ProjectsWrapper>? = null // 필드명은 ERD 기반 유지 또는 userProjects 등으로 변경 고려
 )

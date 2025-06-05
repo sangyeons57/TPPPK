@@ -2,8 +2,11 @@ package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
+import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.ProjectsWrapperRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import kotlin.Result
 
@@ -14,6 +17,7 @@ import kotlin.Result
  */
 class CreateProjectUseCase @Inject constructor(
     private val projectRepository: ProjectRepository,
+    private val projectsWrapperRepository: ProjectsWrapperRepository,
     private val authRepository: AuthRepository
 ) {
     /**
@@ -44,7 +48,25 @@ class CreateProjectUseCase @Inject constructor(
         // 모든 검증 통과 시 프로젝트 생성
         return when (session) {
             is CustomResult.Success -> {
-                return projectRepository.createProject(trimmedName, session.data.userId)
+                val projectIdResult = projectRepository.createProject(trimmedName, session.data.userId)
+                if (projectIdResult is CustomResult.Failure) {
+                    return CustomResult.Failure(projectIdResult.error)
+                } else if (projectIdResult !is CustomResult.Success) {
+                    return CustomResult.Failure(Exception("프로젝트 생성에 실패했습니다."))
+                }
+                val projectId = projectIdResult.data
+
+                // 생성된 프로젝트에 현재 사용자를 참여시킵니다.
+                val addProjectToUserResult = projectsWrapperRepository.addProjectToUser(session.data.userId, projectId)
+
+                if (addProjectToUserResult is CustomResult.Failure) {
+                    // 프로젝트 생성은 성공했으나 사용자를 참여시키는 데 실패한 경우입니다.
+                    // 필요에 따라 여기서 생성된 프로젝트를 삭제하는 등의 롤백 로직을 고려할 수 있으나,
+                    // 현재는 에러를 반환합니다.
+                    return CustomResult.Failure(addProjectToUserResult.error)
+                }
+
+                return CustomResult.Success(projectId)
             }
             else -> {
                 return CustomResult.Failure(Exception("로그인이 필요합니다."))

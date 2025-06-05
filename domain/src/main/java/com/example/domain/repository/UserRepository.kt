@@ -124,11 +124,22 @@ interface UserRepository {
     ): CustomResult<Unit, Exception>
 
     /**
+     * 사용자의 프로필 이미지 URL만 업데이트합니다.
+     * Firestore의 사용자 문서 내 'profileImageUrl' 필드를 업데이트합니다.
+     *
+     * @param userId 업데이트할 사용자의 ID.
+     * @param imageUrl 새 프로필 이미지의 다운로드 URL. null을 전달하면 이미지 URL을 제거하거나 기본값으로 설정합니다.
+     * @return 작업 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     */
+    suspend fun updateUserProfileImageUrl(userId: String, imageUrl: String?): CustomResult<Unit, Exception>
+
+    /**
      * 사용자 ID로 해당 사용자가 참여하고 있는 프로젝트들의 요약 정보(ProjectsWrapper) 스트림을 가져옵니다.
      *
      * @param userId 사용자 ID
      * @return ProjectsWrapper 목록을 담은 Flow
      */
+    @Deprecated("Use ProjectsWrapperRepository.observeProjectsWrappers(userId) to get project IDs, or GetUserParticipatingProjectsUseCase for full project details. This method relies on a legacy data structure within the user document.")
     fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapper>, Exception>>
 
 }

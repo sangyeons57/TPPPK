@@ -21,10 +21,7 @@ service cloud.firestore {
 
         function isProjectMember(projectId) {
             // projectId가 null이거나 비어있지 않은지 확인하는 방어 코드 추가 가능
-            if (projectId == null || projectId == "") {
-                return false;
-            }
-            return isAuthenticated() &&
+            return isAuthenticated() && projectId != null &&
                 exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid));
         }
 
@@ -69,15 +66,13 @@ service cloud.firestore {
             // DM 채널 정보 요약 (dm_wrapper)
             match /dm_wrapper/{dmChannelId} {
                 // 본인의 DM 요약 정보만 읽기 가능
-                allow read, list: if isCurrentUser(userId);
-                // 쓰기 작업은 서버 함수 또는 특정 로직 통해 처리 (클라이언트 직접 쓰기 제한)
+                allow read,create,update,delete: if isCurrentUser(userId);
             }
 
             // 참여 프로젝트 정보 요약 (projects_wrapper)
             match /projects_wrapper/{wrappedProjectId} {
                 // 본인의 프로젝트 요약 정보만 읽기 가능
-                allow read, list: if isCurrentUser(userId);
-                // 쓰기 작업은 서버 함수 또는 특정 로직 통해 처리
+                allow read,create,update,delete: if isCurrentUser(userId);
             }
         }
 
@@ -97,13 +92,13 @@ service cloud.firestore {
             // --- DM 채널 서브콜렉션 ---
             // 메시지 (messages)
             match /messages/{messageId} {
-                let dmChannel = get(/databases/$(database)/documents/dm_channels/$(dmChannelId));
                 // 메시지 읽기: DM 채널 참가자만
-                allow read: if isAuthenticated() && request.auth.uid in dmChannel.data.participants;
+                allow read: if isAuthenticated() &&
+                             request.auth.uid in get(/databases/$(database)/documents/dm_channels/$(dmChannelId)).data.participants;
                 // 메시지 생성: DM 채널 참가자이고, 발신자가 본인
                 allow create: if isAuthenticated() &&
                              request.resource.data.senderId == request.auth.uid &&
-                             request.auth.uid in dmChannel.data.participants;
+                             request.auth.uid in get(/databases/$(database)/documents/dm_channels/$(dmChannelId)).data.participants;
                 // 메시지 수정: 발신자 본인만
                 allow update: if isAuthenticated() && resource.data.senderId == request.auth.uid;
                 // 메시지 삭제: 발신자 본인만 (또는 soft delete)
@@ -112,11 +107,11 @@ service cloud.firestore {
                 // 메시지 첨부파일 (message_attachments)
                 match /message_attachments/{attachmentId} {
                     // 첨부파일 읽기: DM 채널 참가자
-                    allow read: if isAuthenticated() && request.auth.uid in dmChannel.data.participants;
+                    allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/dm_channels/$(dmChannelId)).data.participants;
                     // 첨부파일 생성: 메시지 생성자와 동일 조건
                     allow create: if isAuthenticated() &&
-                                   request.auth.uid in dmChannel.data.participants &&
-                                   get(/databases/$(database)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
+                        request.auth.uid in get(/databases/$(database)/documents/dm_channels/$(dmChannelId)).data.participants &&
+                        get(/databases/$(database)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
                     // 첨부파일 수정/삭제: 메시지 생성자 (단순화)
                     allow update, delete: if isAuthenticated() &&
                                          get(/databases/$(database)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
@@ -159,22 +154,7 @@ service cloud.firestore {
                     allow read: if isProjectMember(projectId);
                     // 권한 부여/해제 (문서 생성/삭제): 프로젝트 소유자만
                     allow create, delete: if isProjectOwner(projectId);
-                    // (업데이트는 일반적으로 create/delete로 처리)
                 }
-            }
-          // (업데이트는 일반적으로 create/delete로 처리)
-        }
-      }
-
-      // 사용 가능한 권한 정의 (permissions) - 프로젝트 레벨에서 정의되는 모든 권한의 마스터 목록
-      // 주의: 이 컬렉션(/projects/{projectId}/permissions/{permissionDefId})은
-      // 현재 논의된 컬렉션 구조 문서에 명시적으로 포함되어 있지 않습니다.
-      // 만약 이 컬렉션이 필요하다면, 컬렉션 구조 문서에 반영하고 규칙을 상세히 검토해야 합니다.
-            match /permissions/{permissionDefId} {
-                // 권한 정의 읽기: 프로젝트 멤버만 (또는 isAuthenticated() 등 정책에 따라)
-                allow read: if isProjectMember(projectId);
-                // 권한 정의 생성/수정/삭제: 프로젝트 소유자만 (또는 시스템 관리자)
-                allow write: if isProjectOwner(projectId);
             }
 
             // 초대 (invites)
@@ -218,20 +198,18 @@ service cloud.firestore {
 
                         // 메시지 첨부파일 (message_attachments)
                         match /message_attachments/{attachmentId} {
-                            let messageDoc = get(/databases/$(database)/documents/projects/$(projectId)/categories/$(categoryId)/project_channels/$(projectChannelId)/messages/$(messageId));
                             // 첨부파일 읽기: 프로젝트 멤버
                             allow read: if isProjectMember(projectId);
                             // 첨부파일 생성: 메시지 생성자와 동일 조건 (프로젝트 멤버, 본인)
-                            allow create: if isProjectMember(projectId) && messageDoc.data.senderId == request.auth.uid;
+                            allow create: if isProjectMember(projectId) && get(/databases/$(database)/documents/projects/$(projectId)/categories/$(categoryId)/project_channels/$(projectChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
                             // 첨부파일 수정/삭제: 메시지 생성자 또는 프로젝트 소유자
                             allow update, delete: if isProjectMember(projectId) &&
-                                                 (messageDoc.data.senderId == request.auth.uid || isProjectOwner(projectId));
+                                (get(/databases/$(database)/documents/projects/$(projectId)/categories/$(categoryId)/project_channels/$(projectChannelId)/messages/$(messageId)).data.senderId == request.auth.uid || isProjectOwner(projectId));
                         }
                     }
                 }
             }
         }
-    }
 
         // === 일정 (schedules) ===
         match /schedules/{scheduleId} {
@@ -239,20 +217,14 @@ service cloud.firestore {
             // 1. 개인 일정 (projectId가 null): 생성자 본인만
             // 2. 프로젝트 일정 (projectId가 존재): 해당 프로젝트 멤버만
             allow read: if isAuthenticated() &&
-                         (
-                           (resource.data.projectId == null && resource.data.creatorId == request.auth.uid) ||
-                           (resource.data.projectId != null && isProjectMember(resource.data.projectId))
-                         );
+                            (resource.data.creatorId == request.auth.uid ||
+                            isProjectMember(resource.data.projectId));
 
             // 일정 생성:
             // 1. 개인 일정: 생성자 본인
             // 2. 프로젝트 일정: 해당 프로젝트 멤버이면서 생성자 본인
             allow create: if isAuthenticated() &&
-                           request.resource.data.creatorId == request.auth.uid &&
-                           (
-                             (request.resource.data.projectId == null) ||
-                             (request.resource.data.projectId != null && isProjectMember(request.resource.data.projectId))
-                           );
+                           request.resource.data.creatorId == request.auth.uid;
 
             // 일정 수정/삭제:
             // 1. 개인 일정: 생성자 본인만

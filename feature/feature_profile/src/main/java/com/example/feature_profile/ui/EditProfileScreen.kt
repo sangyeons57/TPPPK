@@ -33,6 +33,7 @@ import com.example.feature_profile.viewmodel.EditProfileViewModel
 import kotlinx.coroutines.flow.collectLatest
 import android.Manifest // 권한 import
 import android.os.Build // Build version 확인
+import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -85,6 +86,7 @@ fun EditProfileScreen(
                 }
                 is EditProfileEvent.RequestImagePick -> {
                     // 권한 상태에 따라 이미지 선택기 실행 또는 권한 요청
+                    Log.d("EditProfileScreen", "Requesting image pick permission...")
                     if (permissionState.status.isGranted) {
                         imagePickerLauncher.launch("image/*")
                     } else {

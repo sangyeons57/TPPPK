@@ -39,7 +39,9 @@ import com.example.domain.repository.RoleRepository
 import com.example.domain.repository.ScheduleRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.repository.SearchRepository
+import com.example.domain.repository.FileRepository
 import com.example.data.repository.MediaRepositoryImpl
+import com.example.data.repository.FileRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -129,4 +131,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFileRepository(impl: FileRepositoryImpl): FileRepository
 }

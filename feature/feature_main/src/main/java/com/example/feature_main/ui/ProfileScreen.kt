@@ -123,7 +123,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxSize(), // Box 채우도록
                 isLoading = uiState.isLoading, // 부분 로딩 상태 전달
                 profile = uiState.userProfile,
-                onEditProfileImageClick = viewModel::onEditProfileImageClick,
+                onEditProfileImageClick = viewModel::onProfileImageClick,
                 // onEditStatusClick = viewModel::onEditStatusClick, // Replaced by direct state manipulation
                 onSettingsClick = viewModel::onSettingsClick,
                 onLogoutClick = viewModel::onLogoutClick,

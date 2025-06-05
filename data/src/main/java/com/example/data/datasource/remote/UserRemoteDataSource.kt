@@ -88,10 +88,20 @@ interface UserRemoteDataSource {
     suspend fun updateUserMemo(memo: String): CustomResult<Unit, Exception>
 
     /**
+     * Firestore에서 특정 사용자의 프로필 이미지 URL 필드만 업데이트합니다.
+     *
+     * @param userId 업데이트할 사용자의 ID.
+     * @param imageUrl 새 프로필 이미지의 다운로드 URL. null일 경우 필드를 제거하거나 기본값으로 설정할 수 있습니다.
+     * @return 작업 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     */
+    suspend fun updateUserProfileImageUrl(userId: String, imageUrl: String?): CustomResult<Unit, Exception>
+
+    /**
      * 특정 userId를 가진 사용자의 프로젝트 요약 정보(ProjectsWrapper)를 실시간으로 관찰합니다.
      * @param userId 관찰할 사용자의 ID
      * @return ProjectsWrapperDTO 목록을 담은 Flow
      */
+    @Deprecated("Reads from a legacy field in the user document. Project participation IDs are now primarily managed via ProjectsWrapperRemoteDataSource (accessed via ProjectsWrapperRepository).")
     fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapperDTO>, Exception>>
 
     /**

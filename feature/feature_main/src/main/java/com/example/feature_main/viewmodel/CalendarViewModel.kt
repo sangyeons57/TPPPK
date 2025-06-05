@@ -1,5 +1,6 @@
 package com.example.feature_main.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.AppNavigator
@@ -147,6 +148,7 @@ class CalendarViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) } // Set loading, clear error
             try {
                 val result = getSchedulesForDateUseCase(date).first()
+                Log.d("loadScheduleForDate",result.toString())
                 result.onSuccess { schedules ->
                     _uiState.update { state ->
                         state.copy(

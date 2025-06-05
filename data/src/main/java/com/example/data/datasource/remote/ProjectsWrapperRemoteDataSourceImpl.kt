@@ -19,14 +19,14 @@ class ProjectsWrapperRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ProjectsWrapperRemoteDataSource {
 
-    override fun observeProjectsWrappers(uid: String): Flow<List<ProjectsWrapperDTO>> {
+    override fun observeProjectsWrappers(uid: String): Flow<List<String>> {
         // ProjectsWrapper 데이터의 생성/삭제는 사용자가 프로젝트에 참여하거나 나갈 때
         // 서버(Cloud Functions)에서 처리하는 것이 데이터 정합성에 안전합니다.
         // 따라서 클라이언트에서는 이 목록을 관찰하는 기능만 구현합니다.
         return firestore.collection(FirestoreConstants.Collections.USERS).document(uid)
             .collection(FirestoreConstants.Users.ProjectsWrappers.COLLECTION_NAME)
             .snapshots()
-            .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(ProjectsWrapperDTO::class.java) } }
+            .map { snapshot -> snapshot.documents.map { it.id } } // 문서 ID (projectId) 목록을 반환
     }
 
     // 새로운 프로젝트 래퍼를 추가하는 함수

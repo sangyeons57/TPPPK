@@ -12,34 +12,26 @@ import com.example.data.model.remote.ProjectsWrapperDTO // Added for DTO mapping
 
 class ProjectsWrapperRepositoryImpl @Inject constructor(
     private val projectsWrapperRemoteDataSource: ProjectsWrapperRemoteDataSource
-    // TODO: 필요한 Mapper 주입
 ) : ProjectsWrapperRepository {
 
-    override fun getProjectsWrapperStream(userId: String): Flow<List<CustomResult<ProjectsWrapper, Exception>>> {
-        return projectsWrapperRemoteDataSource.observeProjectsWrappers(userId).map {
-            it.map { dto -> CustomResult.Success( dto.toDomain()) }
+    override fun observeProjectsWrappers(userId: String): Flow<List<ProjectsWrapper>> {
+        // 데이터소스는 Flow<List<String>> (projectId 목록)을 반환
+        // 이를 Flow<List<ProjectsWrapper>> (각 ProjectsWrapper는 projectId만 가짐)으로 변환
+        return projectsWrapperRemoteDataSource.observeProjectsWrappers(userId).map { projectIds ->
+            projectIds.map { projectId -> ProjectsWrapper(projectId = projectId) }
         }
     }
 
-    /**
-     * Adds a project wrapper to the specified user's collection by calling the remote data source.
-     *
-     * @param userId The ID of the user.
-     * @param projectId The ID of the project.
-     * @param projectsWrapper The project wrapper domain model to add.
-     * @return A [CustomResult] indicating success or failure.
-     */
     override suspend fun addProjectToUser(
         userId: String,
-        projectId: String,
-        projectsWrapper: ProjectsWrapper
+        projectId: String
     ): CustomResult<Unit, Exception> {
-        // Map domain model to DTO
-        val projectsWrapperDto = ProjectsWrapperDTO(
-            projectName = projectsWrapper.projectName,
-            projectImageUrl = projectsWrapper.projectImageUrl
-            // Assuming DTO does not have an 'id' field as projectId is used as document ID in Firestore
-        )
+        // ProjectsWrapperDTO는 이제 projectId만 가짐
+        val projectsWrapperDto = ProjectsWrapperDTO(projectId = projectId)
         return projectsWrapperRemoteDataSource.addProjectToUser(userId, projectId, projectsWrapperDto)
+    }
+
+    override suspend fun removeProjectFromUser(userId: String, projectId: String): CustomResult<Unit, Exception> {
+        return projectsWrapperRemoteDataSource.removeProjectFromUser(userId, projectId)
     }
 }

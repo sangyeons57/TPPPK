@@ -1,6 +1,6 @@
 package com.example.feature_main.ui // Adjusted package
 
-import com.example.domain.model.base.ProjectsWrapper // Import ProjectsWrapper
+import com.example.domain.model.base.Project // Import Project domain model
 import java.util.Date // Using java.util.Date as a placeholder
 
 /**
@@ -37,12 +37,12 @@ data class ProjectUiModel(
 }
 
 /**
- * Maps a ProjectsWrapper domain model to a ProjectUiModel.
+ * Maps a Project domain model to a ProjectUiModel.
  */
-fun ProjectsWrapper.toProjectUiModel(): ProjectUiModel {
+fun Project.toProjectUiModel(): ProjectUiModel {
     return ProjectUiModel(
-        id = this.projectId,
-        name = this.projectName,
-        imageUrl = this.projectImageUrl
+        id = this.id,
+        name = this.name,
+        imageUrl = this.imageUrl
     )
 }

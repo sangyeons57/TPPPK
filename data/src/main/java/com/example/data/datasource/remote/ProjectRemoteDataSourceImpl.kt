@@ -76,6 +76,21 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateProjectProfileImageUrl(projectId: String, imageUrl: String?): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        resultTry {
+            if (projectId.isBlank()) {
+                throw IllegalArgumentException("Project ID cannot be blank.")
+            }
+            val projectDocRef = projectsCollection.document(projectId)
+            val updateData = hashMapOf<String, Any?>(
+                FirestoreConstants.Project.IMAGE_URL to imageUrl, // FirestoreConstants.Project.IMAGE_URL 사용
+                FirestoreConstants.Project.UPDATED_AT to FieldValue.serverTimestamp() // FirestoreConstants.Project.UPDATED_AT 사용
+            )
+            projectDocRef.update(updateData).await()
+            Unit
+        }
+    }
+
     override suspend fun deleteProject(projectId: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             // 경고: 이 작업은 프로젝트 문서 자체만 삭제합니다.

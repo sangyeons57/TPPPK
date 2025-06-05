@@ -411,6 +411,18 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * 사용자의 프로필 이미지 URL만 업데이트합니다.
+     * Firestore의 사용자 문서에 있는 profileImageUrl 필드를 직접 수정합니다.
+     *
+     * @param userId 업데이트할 사용자의 ID.
+     * @param imageUrl 새 프로필 이미지의 다운로드 URL. null일 경우 필드를 제거하거나 기본값으로 설정합니다.
+     * @return 작업 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     */
+    override suspend fun updateUserProfileImageUrl(userId: String, imageUrl: String?): CustomResult<Unit, Exception> {
+        return userRemoteDataSource.updateUserProfileImageUrl(userId, imageUrl)
+    }
+
     override fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapper>, Exception>> {
         return userRemoteDataSource.getProjectWrappersStream(userId).map { result ->
             when (result) {

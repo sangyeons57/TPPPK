@@ -13,8 +13,7 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.base.Project
 import com.example.domain.repository.MediaRepository
 import com.example.domain.repository.ProjectRepository
-import com.example.domain.repository.ProjectsWrapperRepository // Changed from UserRepository
-import com.example.domain.model.base.ProjectsWrapper // Added for creating ProjectsWrapper domain object
+
 import android.util.Log
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
@@ -30,10 +29,7 @@ import javax.inject.Inject
 class ProjectRepositoryImpl @Inject constructor(
     private val projectRemoteDataSource: ProjectRemoteDataSource,
     private val categoryRemoteDataSource: CategoryRemoteDataSource, // ProjectStructure 관리용
-    private val projectChannelRemoteDataSource: ProjectChannelRemoteDataSource, // ProjectStructure 관리용
     private val memberRemoteDataSource: MemberRemoteDataSource, // 멤버 관리용
-    private val mediaRepository: MediaRepository, // 이미지 업로드용
-    private val projectsWrapperRepository: ProjectsWrapperRepository // Changed from UserRepository
 ) : ProjectRepository {
 
     /**
@@ -68,7 +64,6 @@ class ProjectRepositoryImpl @Inject constructor(
                 throw createdProjectDtoResult.error
             }
 
-            val createdProjectDto = (createdProjectDtoResult as CustomResult.Success).data
 
             // 프로젝트 생성 후, owner를 멤버로 추가
             val memberResult = memberRemoteDataSource.addMember(projectId, ownerId, listOf(Constants.OWNER))
@@ -76,28 +71,6 @@ class ProjectRepositoryImpl @Inject constructor(
                 throw memberResult.error
             }
 
-
-            // Create ProjectsWrapper domain object
-            val projectsWrapper = ProjectsWrapper(
-                projectName = createdProjectDto.name,
-                projectImageUrl = createdProjectDto.imageUrl,
-                // lastUpdatedAt and other fields can be set to default/current values if needed by domain model
-                // or if ProjectsWrapperRemoteDataSourceImpl handles their initial setting.
-                // For now, assuming they are optional or handled downstream.
-            )
-
-            val projectWrapperResult = projectsWrapperRepository.addProjectToUser(
-                userId = ownerId,
-                projectId = projectId,
-                projectsWrapper = projectsWrapper
-            )
-
-            if (projectWrapperResult is CustomResult.Failure) {
-                // Log the error, but proceed with returning project creation success 
-                // as the primary operation (project creation) was successful.
-                // Consider how to handle this failure more robustly if needed (e.g., cleanup, retry)
-                Log.e("ProjectRepositoryImpl", "Failed to add project wrapper for project ${createdProjectDto.id}", projectWrapperResult.error)
-            }
 
             projectId
         }
@@ -122,7 +95,6 @@ class ProjectRepositoryImpl @Inject constructor(
                 // Catch exceptions from the upstream flow (e.g., network issues in observeProject)
                 emit(CustomResult.Failure(Exception("Error observing project details: ${e.message}", e)))
             }
-            .onStart { emit(CustomResult.Loading) } // Emit Loading state when the flow collection starts
     }
 
 
@@ -265,5 +237,17 @@ class ProjectRepositoryImpl @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * 프로젝트의 프로필 이미지 URL만 업데이트합니다.
+     * Firestore의 프로젝트 문서에 있는 imageUrl 필드를 직접 수정합니다.
+     *
+     * @param projectId 업데이트할 프로젝트의 ID.
+     * @param imageUrl 새 프로필 이미지의 다운로드 URL. null일 경우 필드를 제거하거나 기본값으로 설정합니다.
+     * @return 작업 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     */
+    override suspend fun updateProjectProfileImageUrl(projectId: String, imageUrl: String?): CustomResult<Unit, Exception> {
+        return projectRemoteDataSource.updateProjectProfileImageUrl(projectId, imageUrl)
     }
 }

@@ -149,9 +149,7 @@ class ScheduleRepositoryImpl @Inject constructor(
 
     override fun getSchedulesOnDate(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
         val currentUser = firebaseAuth.currentUser
-        if (currentUser == null) {
-            return flowOf(CustomResult.Failure(Exception("User not authenticated")))
-        }
+            ?: return flowOf(CustomResult.Failure(Exception("User not authenticated")))
         val userId = currentUser.uid
 
         return flow {

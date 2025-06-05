@@ -54,15 +54,4 @@ object FirebaseModule {
         
         return firestore
     }
-
-    /**
-     * Firebase Storage 서비스를 제공합니다.
-     *
-     * @return FirebaseStorage 인스턴스
-     */
-    @Provides
-    @Singleton
-    fun provideFirebaseStorage(): FirebaseStorage {
-        return FirebaseStorage.getInstance()
-    }
 } 

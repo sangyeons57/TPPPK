@@ -221,9 +221,7 @@ class AuthRepositoryImpl @Inject constructor(
      */
     override suspend fun deleteCurrentUser(): CustomResult<Unit, Exception> {
         val firebaseUser = auth.currentUser
-        if (firebaseUser == null) {
-            return CustomResult.Failure(Exception("User not logged in"))
-        }
+            ?: return CustomResult.Failure(Exception("User not logged in"))
         return try {
             firebaseUser.delete().await()
             CustomResult.Success(Unit)
