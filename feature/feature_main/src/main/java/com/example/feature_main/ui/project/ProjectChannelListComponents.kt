@@ -37,10 +37,6 @@ import androidx.compose.ui.unit.sp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
 
-// 누락된 모델 import 추가
-import com.example.feature_main.ui.project.ProjectStructureUiState
-import com.example.feature_main.ui.project.CategoryUiModel
-import com.example.feature_main.ui.project.ChannelUiModel
 
 /**
  * 프로젝트의 카테고리 및 채널 목록을 표시하는 컴포넌트

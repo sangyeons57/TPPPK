@@ -2,6 +2,7 @@ package com.example.core_navigation.destination
 
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.core_navigation.core.NavDestination
 
 object AppRoutes {
 
@@ -173,6 +174,8 @@ object AppRoutes {
             navArgument(ARG_CATEGORY_ID) { type = NavType.Companion.StringType },
             navArgument(ARG_CHANNEL_ID) { type = NavType.Companion.StringType }
         )
+
+
 
         // Project Members
         fun memberList(projectId: String) = "$ROOT/$projectId/members"

@@ -7,9 +7,14 @@ import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.repository.CategoryCollectionRepository
 import com.example.domain.repository.CategoryRepository
 import com.example.domain.repository.ProjectChannelRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.catch
 import javax.inject.Inject
 
 /**
@@ -28,56 +33,45 @@ class CategoryCollectionRepositoryImpl @Inject constructor(
      * @return Flow<CustomResult<List<CategoryCollection>, Exception>> 카테고리 컬렉션 목록을 포함한 결과
      */
     override suspend fun getCategoryCollections(projectId: String): Flow<CustomResult<List<CategoryCollection>, Exception>> {
-        return flow {
-            try {
-                // 카테고리 목록을 가져옵니다
-                val categoriesResult = categoryRepository.getCategoriesStream(projectId).first()
-                
+        return categoryRepository.getCategoriesStream(projectId)
+            .flatMapLatest { categoriesResult ->
                 when (categoriesResult) {
                     is CustomResult.Success -> {
                         val categoryList = categoriesResult.data
-                        val categoryCollections = mutableListOf<CategoryCollection>()
-                        
-                        // 각 카테고리에 대해 채널 목록을 가져옵니다
-                        for (category in categoryList) {
-                            try {
-                                val channelsResult = projectChannelRepository.getProjectChannelsByCategoryStream(
-                                    projectId,
-                                    category.id
-                                ).first()
-                                
-                                val channels = when (channelsResult) {
-                                    is CustomResult.Success -> channelsResult.data
-                                    else -> emptyList()
-                                }
-                                
-                                categoryCollections.add(
-                                    CategoryCollection(
-                                        category = category,
-                                        channels = channels
-                                    )
-                                )
-                            } catch (e: Exception) {
-                                // 채널 가져오기 실패 시 빈 목록으로 처리
-                                categoryCollections.add(
-                                    CategoryCollection(
-                                        category = category,
-                                        channels = emptyList()
-                                    )
-                                )
-                            }
+
+                        if (categoryList.isEmpty()) {
+                            return@flatMapLatest flowOf(
+                                CustomResult.Success(emptyList())
+                            )
                         }
-                        
-                        emit(CustomResult.Success(categoryCollections))
+
+                        // 각 카테고리에 대한 채널 스트림을 결합(combine)
+                        val combinedFlows = categoryList.map { category ->
+                            projectChannelRepository
+                                .getProjectChannelsByCategoryStream(projectId, category.id)
+                                .map { channelsResult -> category to channelsResult }
+                        }
+
+                        combine(combinedFlows) { pairArray ->
+                            val collections = pairArray.map { (category, channelsResult) ->
+                                val channels = if (channelsResult is CustomResult.Success) {
+                                    channelsResult.data
+                                } else {
+                                    emptyList()
+                                }
+                                CategoryCollection(category = category, channels = channels)
+                            }
+                            CustomResult.Success(collections) as CustomResult<List<CategoryCollection>, Exception>
+                        }
                     }
-                    else -> {
-                        emit(CustomResult.Failure(Exception("카테고리 목록을 가져오는데 실패했습니다.")))
-                    }
+                    is CustomResult.Failure -> flowOf(CustomResult.Failure(categoriesResult.error))
+                    else -> flowOf(CustomResult.Loading)
                 }
-            } catch (e: Exception) {
-                emit(CustomResult.Failure(e))
             }
-        }
+            .catch { e ->
+                if (e is CancellationException) throw e
+                emit(CustomResult.Failure(Exception(e)))
+            }
     }
 
     /**
@@ -135,8 +129,8 @@ class CategoryCollectionRepositoryImpl @Inject constructor(
         channel: ProjectChannel
     ): CustomResult<CategoryCollection, Exception> {
         try {
-            // 채널 추가
-            val addChannelResult = projectChannelRepository.addProjectChannel(projectId, channel)
+            // 채널 추가 (카테고리 지정 버전 사용)
+            val addChannelResult = projectChannelRepository.setProjectChannel(projectId, categoryId, channel)
             
             if (addChannelResult is CustomResult.Failure) {
                 return CustomResult.Failure(addChannelResult.error)
@@ -172,7 +166,7 @@ class CategoryCollectionRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 특정 카테고리에서 채널을 삭제합니다.
+     * 카테고리에서 채널을 삭제합니다.
      * 
      * @param projectId 프로젝트 ID
      * @param categoryId 카테고리 ID
@@ -304,7 +298,7 @@ class CategoryCollectionRepositoryImpl @Inject constructor(
     ): CustomResult<CategoryCollection, Exception> {
         try {
             // 카테고리 추가
-            val addCategoryResult = categoryRepository.createCategory(projectId, category)
+            val addCategoryResult = categoryRepository.addCategory(projectId, category)
             
             if (addCategoryResult !is CustomResult.Success) {
                 return CustomResult.Failure(Exception("카테고리 추가에 실패했습니다."))

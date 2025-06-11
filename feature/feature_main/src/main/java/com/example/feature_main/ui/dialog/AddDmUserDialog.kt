@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.coroutines.delay
 
 /**
@@ -149,4 +150,21 @@ fun AddDmUserDialog(
             }
         }
     }
-} 
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AddDmUserDialogPreview() {
+    var username by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AddDmUserDialog(
+        onDismiss = { /*TODO*/ },
+        onSearch = { /*TODO*/ },
+        username = username,
+        onUsernameChange = { username = it },
+        isLoading = isLoading,
+        errorMessage = errorMessage
+    )
+}

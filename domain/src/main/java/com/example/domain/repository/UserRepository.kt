@@ -176,4 +176,11 @@ interface UserRepository {
      */
     suspend fun getUserByEmail(email: String): CustomResult<User, Exception>
 
+    /**
+     * 현재 로그인된 사용자의 메모(상태 메시지)를 업데이트합니다.
+     *
+     * @param newMemo 새로운 메모 문자열.
+     * @return 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     */
+    suspend fun updateCurrentUserMemo(newMemo: String): CustomResult<Unit, Exception>
 }

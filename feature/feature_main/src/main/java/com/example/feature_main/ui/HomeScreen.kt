@@ -1,14 +1,10 @@
 package com.example.feature_main.ui
 
-import com.example.feature_main.ui.DmUiModel // Added import
-import com.example.feature_main.ui.ProjectUiModel // Added import
 import android.os.Bundle
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
@@ -31,7 +27,6 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_main.viewmodel.HomeEvent
 import com.example.feature_main.viewmodel.HomeViewModel
-import com.example.feature_main.viewmodel.ProjectItem
 import com.example.feature_main.viewmodel.TopSection
 import kotlinx.coroutines.flow.collectLatest
 import com.example.feature_main.ui.project.ProjectChannelList
@@ -42,7 +37,6 @@ import com.example.feature_main.ui.wrapper.ProjectStructureEditDialogWrapper
 import androidx.navigation.NavHostController
 import com.example.feature_main.ui.project.CategoryUiModel
 import com.example.feature_main.ui.project.ChannelUiModel
-import com.example.feature_main.ui.project.ProjectStructureUiState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import androidx.compose.animation.AnimatedVisibility
@@ -52,6 +46,11 @@ import androidx.compose.animation.fadeOut
 import com.example.core_navigation.core.NavDestination
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_main.ui.components.MainHomeFloatingButton
+import com.example.feature_main.ui.dialog.AddProjectElementDialog
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.core_common.constants.FirestoreConstants
+import kotlinx.coroutines.launch
+import com.example.feature_main.ui.project.ProjectStructureUiState
 
 // 오버레이 투명도 상수
 private const val OVERLAY_ALPHA = 0.7f
@@ -62,7 +61,7 @@ private object HomeScreenStateKeys {
     const val SELECTED_PROJECT_ID = "selected_project_id"
     const val EXPANDED_CATEGORIES = "expanded_categories"
     const val SHOW_ADD_DM_DIALOG = "show_add_dm_dialog"
-    const val SHOW_PROJECT_STRUCTURE_DIALOG = "show_project_structure_dialog"
+
     const val SHOW_FLOATING_MENU = "show_floating_menu"
 }
 
@@ -87,11 +86,13 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     
     // 다이얼로그 상태 추가
     var showAddDmDialog by remember { mutableStateOf(false) }
-    var showProjectStructureEditDialog by remember { mutableStateOf(false) }
+    var showAddProjectElementDialog by remember { mutableStateOf(false) }
     var showFloatingMenu by remember { mutableStateOf(false) }
+    var currentProjectIdForDialog by remember { mutableStateOf<String?>(null) }
 
     // 상태 복원 (탭 전환 시)
     LaunchedEffect(savedState) {
@@ -117,7 +118,6 @@ fun HomeScreen(
             
             // 다이얼로그 상태 복원
             showAddDmDialog = bundle.getBoolean(HomeScreenStateKeys.SHOW_ADD_DM_DIALOG, false)
-            showProjectStructureEditDialog = bundle.getBoolean(HomeScreenStateKeys.SHOW_PROJECT_STRUCTURE_DIALOG, false)
             showFloatingMenu = bundle.getBoolean(HomeScreenStateKeys.SHOW_FLOATING_MENU, false)
             
             // 확장된 카테고리 복원
@@ -132,7 +132,6 @@ fun HomeScreen(
         uiState.selectedTopSection,
         uiState.selectedProjectId,
         showAddDmDialog,
-        showProjectStructureEditDialog,
         showFloatingMenu
     ) {
         onDispose {
@@ -141,7 +140,6 @@ fun HomeScreen(
                 putString(HomeScreenStateKeys.SELECTED_TOP_SECTION, uiState.selectedTopSection.name)
                 putString(HomeScreenStateKeys.SELECTED_PROJECT_ID, uiState.selectedProjectId ?: "")
                 putBoolean(HomeScreenStateKeys.SHOW_ADD_DM_DIALOG, showAddDmDialog)
-                putBoolean(HomeScreenStateKeys.SHOW_PROJECT_STRUCTURE_DIALOG, showProjectStructureEditDialog)
                 putBoolean(HomeScreenStateKeys.SHOW_FLOATING_MENU, showFloatingMenu)
             }
             
@@ -187,9 +185,9 @@ fun HomeScreen(
                 is HomeEvent.NavigateToChannel -> {
                     appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Chat.screen(event.channelId))))
                 }
-                is HomeEvent.EditProjectStructure -> {
-                    // 프로젝트 구조 편집 다이얼로그 표시
-                    showProjectStructureEditDialog = true
+                is HomeEvent.ShowAddProjectElementDialog -> {
+                    currentProjectIdForDialog = event.projectId
+                    showAddProjectElementDialog = true
                 }
             }
         }
@@ -214,7 +212,7 @@ fun HomeScreen(
                 onExpandedChange = { showFloatingMenu = it },
                 onAddProject = viewModel::onProjectAddButtonClick,
                 onAddDm = viewModel::onAddFriendClick,
-                onEditProjectStructure = viewModel::onEditProjectStructureClick
+                onAddProjectElement = { uiState.selectedProjectId?.let { viewModel.onAddProjectElement(it) } }
             )
         }
     ) { paddingValues ->
@@ -224,6 +222,19 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // AddProjectElementDialog
+            if (showAddProjectElementDialog && currentProjectIdForDialog != null) {
+                AddProjectElementDialog(
+                    projectId = currentProjectIdForDialog!!,
+                    onDismissRequest = {
+                        showAddProjectElementDialog = false
+                        currentProjectIdForDialog = null
+                        // 다이얼로그가 닫힐 때 프로젝트 구조를 새로고침합니다.
+                        // 이것이 채널/카테고리 추가 후 UI가 업데이트되지 않는 문제를 해결합니다.
+                        uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
+                    }
+                )
+            }
             // 메인 콘텐츠 (HomeContent)
             HomeContent(
                 modifier = Modifier.fillMaxSize(),
@@ -242,7 +253,7 @@ fun HomeScreen(
             
             // 배경 오버레이 (다이얼로그 또는 메뉴가 열렸을 때 표시)
             AnimatedVisibility(
-                visible = showAddDmDialog || showProjectStructureEditDialog || showFloatingMenu,
+                visible = showAddDmDialog || showFloatingMenu,
                 enter = fadeIn(tween(300)),
                 exit = fadeOut(tween(300)),
                 modifier = Modifier
@@ -281,31 +292,6 @@ fun HomeScreen(
                             // 스코프 없이 suspend 함수를 직접 호출할 수 없음
                             // 따라서 람다 내에서는 로깅만 수행하고, 이벤트를 통해 스낵바 표시
                             Log.d("HomeScreen", "Show snackbar: $message")
-                            viewModel.showErrorMessage(message)
-                        }
-                    )
-                }
-            }
-            
-            // 프로젝트 구조 편집 다이얼로그 추가
-            if (showProjectStructureEditDialog) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(2f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ProjectStructureEditDialogWrapper(
-                        projectId = uiState.selectedProjectId ?: "",
-                        onDismiss = { showProjectStructureEditDialog = false },
-                        onStructureUpdated = {
-                            // ViewModel에 프로젝트 구조를 새로고침하도록 요청
-                            // selectedProjectId가 null이 아님을 보장하거나, null 처리 필요
-                            uiState.selectedProjectId?.let { pid ->
-                                viewModel.refreshProjectStructure(pid)
-                            }
-                        },
-                        onShowSnackbar = { message ->
                             viewModel.showErrorMessage(message)
                         }
                     )
@@ -505,7 +491,7 @@ fun ProjectDetailContent(
                             )
                             
                             if (!uiState.projectDescription.isNullOrBlank()) {
-                    Text(
+                                Text(
                                     text = uiState.projectDescription,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
@@ -534,7 +520,7 @@ fun ProjectDetailContent(
                     HorizontalDivider(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 8.dp)
                     )
                     
                     // 프로젝트 컨텐츠 영역

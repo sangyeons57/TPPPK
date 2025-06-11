@@ -154,7 +154,7 @@ fun MainHomeFloatingButton(
     onExpandedChange: (Boolean) -> Unit,
     onAddProject: () -> Unit,
     onAddDm: () -> Unit,
-    onEditProjectStructure: () -> Unit,
+    onAddProjectElement: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -187,11 +187,11 @@ fun MainHomeFloatingButton(
             if (currentSection == TopSection.PROJECTS) {
                 add(FabMenuItem(
                     icon = Icons.Default.Edit,
-                    text = "프로젝트 구조 편집",
-                    contentDescription = "프로젝트 구조 편집",
+                    text = "프로젝트 요소 추가",
+                    contentDescription = "프로젝트 요소 추가",
                     onClick = {
                         onExpandedChange(false)
-                        onEditProjectStructure()
+                        onAddProjectElement()
                     }
                 ))
             }

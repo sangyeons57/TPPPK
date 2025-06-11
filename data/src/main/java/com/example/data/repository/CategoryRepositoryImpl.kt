@@ -19,7 +19,7 @@ class CategoryRepositoryImpl @Inject constructor(
      * 새로운 카테고리를 생성합니다.
      * Firebase의 자체 캐싱 시스템을 활용합니다.
      */
-    override suspend fun createCategory(
+    override suspend fun addCategory(
         projectId: String,
         category: Category
     ): CustomResult<String, Exception> {

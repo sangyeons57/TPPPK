@@ -28,6 +28,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -37,6 +38,7 @@ import com.example.feature_auth.ui.SplashScreen
 import com.example.feature_auth.viewmodel.LoginViewModel
 import com.example.feature_auth.viewmodel.SplashViewModel
 import com.example.feature_main.MainContainerScreen
+import com.example.feature_main.ui.dialog.AddProjectElementDialog
 import com.example.feature_main.viewmodel.HomeViewModel
 import com.example.feature_project.ui.AddProjectScreen
 import com.example.feature_project.ui.JoinProjectScreen

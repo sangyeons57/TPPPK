@@ -8,23 +8,18 @@ import com.example.domain.model.base.User
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
 import com.example.domain.model.base.DMChannel // Added import for DMChannel
 import com.example.domain.model.base.Project
-import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetUserInfoUseCase
 
 import com.example.domain.usecase.project.GetProjectDetailsStreamUseCase // Added
-import com.example.domain.usecase.dm.AddDmChannelUseCase // Added
-import com.example.domain.usecase.project.CreateProjectUseCase // Added
 import com.example.domain.usecase.project.GetUserParticipatingProjectsUseCase
-import com.example.domain.usecase.project.UpdateProjectStructureUseCase // Added
 import com.example.feature_main.ui.DmUiModel
 import com.example.feature_main.ui.ProjectUiModel // Added
 import com.example.feature_main.ui.project.CategoryUiModel
 import com.example.feature_main.ui.project.ChannelUiModel
 import com.example.feature_main.ui.project.ProjectStructureUiState
-import com.example.feature_main.ui.toProjectUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -44,9 +39,6 @@ enum class TopSection {
     PROJECTS, DMS
 }
 
-// ProjectItem REMOVED (replaced by ProjectUiModel)
-// DmItem REMOVED
-// ------------------------
 
 // 홈 화면 UI 상태
 data class HomeUiState(
@@ -65,7 +57,7 @@ data class HomeUiState(
     
     // 카테고리 및 채널 관련 상태
     val projectStructure: ProjectStructureUiState = ProjectStructureUiState(),
-    
+
     // 사용자 프로필 관련 상태
     val userInitial: String = "U", // 사용자 이니셜 (기본값: "U")
     val userProfileImageUrl: String? = null, // 사용자 프로필 이미지 URL
@@ -90,7 +82,7 @@ sealed class HomeEvent {
     object ShowAddFriendDialog : HomeEvent() // 또는 화면 이동
     object NavigateToAddProject : HomeEvent() // 프로젝트 추가 화면
     data class ShowSnackbar(val message: String) : HomeEvent()
-    object EditProjectStructure : HomeEvent() // 프로젝트 구조 편집
+    data class ShowAddProjectElementDialog(val projectId: String) : HomeEvent() // 프로젝트 구조 편집 다이얼로그 표시
 }
 
 
@@ -584,7 +576,6 @@ private fun loadProjectDetails(projectId: String) {
         }
     }
     
-    // 친구 추가/DM 버튼 클릭 시
     fun onAddFriendClick() {
         viewModelScope.launch {
             println("ViewModel: 친구 추가 버튼 클릭")
@@ -592,11 +583,15 @@ private fun loadProjectDetails(projectId: String) {
         }
     }
 
-    // 프로젝트 구조 편집 버튼 클릭 시
-    fun onEditProjectStructureClick() {
+    /**
+     * 프로젝트 요소(카테고리/채널) 추가 버튼 클릭 시 호출됩니다.
+     * 네비게이션 이벤트를 발생시켜 AddProjectElementDialog를 엽니다.
+     *
+     * @param projectId 현재 프로젝트의 ID.
+     */
+    fun onAddProjectElement(projectId: String) {
         viewModelScope.launch {
-            println("ViewModel: 프로젝트 구조 편집 버튼 클릭")
-            _eventFlow.emit(HomeEvent.EditProjectStructure)
+            _eventFlow.emit(HomeEvent.ShowAddProjectElementDialog(projectId))
         }
     }
 

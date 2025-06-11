@@ -11,6 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.dataObjects
 import com.google.firebase.firestore.snapshots
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -42,7 +43,20 @@ class CategoryRemoteDataSourceImpl @Inject constructor(
         projectId: String,
         categoryId: String
     ): Flow<CustomResult<CategoryDTO, Exception>> {
-        TODO("Not yet implemented")
+        return getCategoriesCollection(projectId).document(categoryId)
+            .snapshots()
+            .map { snapshot ->
+                val category = snapshot.toObject(CategoryDTO::class.java)
+                if (category != null) {
+                    CustomResult.Success(category)
+                } else {
+                    CustomResult.Failure(Exception("Category with id $categoryId not found."))
+                }
+            }
+            .catch { e ->
+                if (e is CancellationException) throw e
+                emit(CustomResult.Failure(Exception(e)))
+            }
     }
 
     override suspend fun addCategory(

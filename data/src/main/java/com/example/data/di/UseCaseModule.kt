@@ -28,8 +28,6 @@ import com.example.domain.usecase.project.RenameCategoryUseCase
 import com.example.domain.usecase.project.RenameCategoryUseCaseImpl
 import com.example.domain.usecase.project.RenameChannelUseCase
 import com.example.domain.usecase.project.RenameChannelUseCaseImpl
-import com.example.domain.usecase.project.AddChannelUseCase
-import com.example.domain.usecase.project.AddChannelUseCaseImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -50,6 +48,9 @@ abstract class UseCaseModule {
 
     @Binds
     abstract fun bindUpdateUserImageUseCase(impl: UpdateUserImageUseCaseImpl): UpdateUserImageUseCase
+
+    @Binds
+    abstract fun bindUpdateUserMemoUseCase(impl: UpdateUserMemoUseCaseImpl): UpdateUserMemoUseCase
 
     // --- Project UseCases ---
     @Binds
@@ -114,8 +115,8 @@ abstract class UseCaseModule {
     
     @Binds
     abstract fun bindAddChannelUseCase(
-        impl: AddChannelUseCaseImpl
-    ): AddChannelUseCase
+        impl: AddProjectChannelUseCaseImpl
+    ): AddProjectChannelUseCase
 
     // --- Project Member List UseCases ---
     @Binds

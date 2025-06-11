@@ -10,21 +10,43 @@ import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserImageUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import com.example.domain.usecase.auth.LogoutUseCase
-import com.example.domain.usecase.user.ChangeMemoUseCase // Placeholder
-import com.example.feature_main.ui.UserProfileData // Added
-import com.example.feature_main.ui.toUserProfileData
+import com.example.domain.usecase.user.UpdateUserMemoUseCase // Changed from ChangeMemoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
+/**
+ * UI-specific data class for displaying user profile information.
+ */
+data class UserProfileData(
+    val uid: String,
+    val name: String,
+    val email: String?,
+    val profileImageUrl: String?,
+    val memo: String?, // Mapped from User.memo
+    val userStatus: UserStatus
+)
+
+fun User.toUserProfileData(): UserProfileData {
+    return UserProfileData(
+        uid = this.uid,
+        name = this.name,
+        email = this.email.ifEmpty { null },
+        profileImageUrl = this.profileImageUrl,
+        memo = this.memo, // Mapping 'memo' to 'statusMessage'
+        userStatus = this.status
+    )
+}
+
 // 프로필 화면 UI 상태
 data class ProfileUiState(
     val isLoading: Boolean = false,
     val userProfile: UserProfileData? = null, // 사용자 프로필 데이터 (null 가능)
     val errorMessage: String? = null,
-    val showChangeStatusDialog: Boolean = false // Dialog visibility state
+    val showChangeStatusDialog: Boolean = false, // Dialog visibility state
+    val tempSelectedStatus: UserStatus? = null // Holds status selected in dialog before confirmation
 )
 
 // 프로필 화면 이벤트
@@ -45,7 +67,7 @@ class ProfileViewModel @Inject constructor(
     private val updateUserStatusUseCase: UpdateUserStatusUseCase,
     private val updateUserProfileImageUseCase: UpdateUserImageUseCase,
     private val logoutUseCase: LogoutUseCase,
-    private val changeMemoUseCase: ChangeMemoUseCase // Placeholder
+    private val updateUserMemoUseCase: UpdateUserMemoUseCase // Changed from changeMemoUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(isLoading = true)) // 초기 로딩 상태
@@ -123,12 +145,29 @@ class ProfileViewModel @Inject constructor(
     }
 
     // "상태 표시" 메뉴 아이템 클릭 시 (기존 onStatusClick)
-    fun onChangeStatusClick() { // Renamed for clarity
-        _uiState.update { it.copy(showChangeStatusDialog = true) }
+    fun onChangeStatusClick() {
+        // Initialize tempSelectedStatus with current user's status when dialog is opened
+        _uiState.update { currentState ->
+            currentState.copy(
+                showChangeStatusDialog = true,
+                tempSelectedStatus = currentState.userProfile?.userStatus
+            )
+        }
     }
 
     fun onDismissChangeStatusDialog() {
-        _uiState.update { it.copy(showChangeStatusDialog = false) }
+        val currentProfileStatus = _uiState.value.userProfile?.userStatus
+        val tempStatus = _uiState.value.tempSelectedStatus
+
+        if (tempStatus != null && tempStatus != currentProfileStatus) {
+            changeStatus(tempStatus) // Persist the change
+        }
+        // Reset dialog state
+        _uiState.update { it.copy(showChangeStatusDialog = false, tempSelectedStatus = null) }
+    }
+
+    fun onStatusSelectedInDialog(status: UserStatus) {
+        _uiState.update { it.copy(tempSelectedStatus = status) }
     }
 
     fun onChangeStatusSuccess(statusName: String) {
@@ -220,7 +259,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             // Simulate a call and success
-            when (val result = changeMemoUseCase(newMemo)) { // Assign to val and use actual use case call
+            when (val result = updateUserMemoUseCase(newMemo)) { // Assign to val and use actual use case call
                 is CustomResult.Success -> {
                     // Optionally update UI state if memo is directly displayed and needs immediate refresh
                     // _uiState.update { it.copy(userProfile = it.userProfile?.copy(memo = newMemo), isLoading = false) }
@@ -244,6 +283,13 @@ class ProfileViewModel @Inject constructor(
                 is CustomResult.Progress -> {
                     _uiState.update { it.copy(isLoading = true) } // Keep loading true, potentially update UI with progress
                     println("ViewModel: 메모 변경 진행 중 (${result.progress}%) - $result")
+                }
+                // Adding a general else to handle any other unhandled CustomResult states if they exist
+                // Or if your CustomResult is a sealed class with exhaustive when, this might not be strictly needed
+                // but can be a good fallback.
+                else -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    println("ViewModel: 메모 변경, 알 수 없거나 처리되지 않은 상태: $result")
                 }
             }
         }

@@ -16,6 +16,7 @@ data class ProjectStructureUiState(
     val selectedChannelId: String? = null
 )
 
+
 /**
  * 카테고리 UI 모델
  * @param id 카테고리 ID
