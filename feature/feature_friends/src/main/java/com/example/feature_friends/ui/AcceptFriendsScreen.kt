@@ -61,7 +61,7 @@ fun AcceptFriendsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("친구 요청 수락하기") },
+                title = { Text("친구 요청") },
                 navigationIcon = {
                     DebouncedBackButton(onClick = { appNavigator.navigateBack() })
                 }

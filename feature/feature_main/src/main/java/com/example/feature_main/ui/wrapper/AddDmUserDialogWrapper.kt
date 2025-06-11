@@ -5,9 +5,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.core_ui.dialogs.ui.AddDmUserDialog
-import com.example.feature_main.viewmodel.AddDmUserDialogViewModel
-import com.example.feature_main.viewmodel.AddDmUserEvent
+import com.example.feature_main.ui.dialog.AddDmUserDialog
+import com.example.feature_main.ui.dialog.AddDmUserDialogViewModel
+import com.example.feature_main.ui.dialog.AddDmUserEvent
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -31,7 +31,7 @@ fun AddDmUserDialogWrapper(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AddDmUserEvent.NavigateToDmChat -> {
-                    onNavigateToDm(event.dmChannelId)
+                    onNavigateToDm(event.channelId)
                     onDismiss()
                 }
                 is AddDmUserEvent.ShowSnackbar -> {
@@ -45,8 +45,8 @@ fun AddDmUserDialogWrapper(
     }
     
     AddDmUserDialog(
-        onDismiss = { viewModel.dismiss() },
-        onSearch = { viewModel.searchUser() },
+        onDismiss = viewModel::dismiss,
+        onSearch = viewModel::searchUser,
         username = uiState.username,
         onUsernameChange = { viewModel.onUsernameChange(it) },
         isLoading = uiState.isLoading,

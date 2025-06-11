@@ -1,5 +1,6 @@
 package com.example.domain.usecase.friend
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
@@ -24,15 +25,18 @@ class GetPendingFriendRequestsUseCase @Inject constructor(
      * @return Flow<CustomResult<List<Friend>, Exception>> 받은 친구 요청 목록 스트림.
      */
     operator fun invoke(currentUserId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        return friendRepository.getFriendsStream(currentUserId).map { result ->
+        return friendRepository.getFriendRequestsStream(currentUserId).map { result ->
             when (result) {
                 is CustomResult.Success -> {
                     // PENDING 상태인 친구 요청만 필터링
+                    result.data.map {
+                        Log.d("GetPendingFriendRequestsUseCase", "Received friends: ${it}")
+                    }
                     val pendingRequests = result.data.filter { it.status == FriendStatus.PENDING }
                     CustomResult.Success(pendingRequests)
                 }
                 is CustomResult.Failure -> {
-                    result
+                    CustomResult.Failure(result.error)
                 }
                 else -> {
                     CustomResult.Failure(Exception("Unknown error in GetPendingFriendRequestsUseCase"))

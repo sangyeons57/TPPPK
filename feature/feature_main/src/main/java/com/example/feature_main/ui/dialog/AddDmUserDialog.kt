@@ -1,4 +1,4 @@
-package com.example.core_ui.dialogs.ui
+package com.example.feature_main.ui.dialog
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +16,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
  * 사용자 이름을 입력하여 DM 대화를 시작할 사용자를 추가하는 다이얼로그
@@ -144,7 +143,7 @@ fun AddDmUserDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("찾기")
+                        Text("DM 추가")
                     }
                 }
             }

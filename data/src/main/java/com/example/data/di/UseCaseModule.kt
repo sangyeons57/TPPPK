@@ -7,6 +7,8 @@ import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCaseImpl
 import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCase
 import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCaseImpl
+import com.example.domain.usecase.auth.WithdrawMembershipUseCase
+import com.example.domain.usecase.auth.WithdrawMembershipUseCaseImpl
 import com.example.domain.usecase.friend.*
 import com.example.domain.usecase.project.member.*
 import com.example.domain.usecase.project.role.*
@@ -166,12 +168,18 @@ abstract class UseCaseModule {
     @Binds
     abstract fun bindSearchUserByNameUseCase(impl: SearchUserByNameUseCaseImpl): SearchUserByNameUseCase
 
+    @Binds
+    abstract fun bindSearchUsersByNameUseCase(impl: SearchUsersByNameUseCaseImpl): SearchUsersByNameUseCase
+
     // --- Auth UseCases ---
     @Binds
     abstract fun bindCheckAuthenticationStatusUseCase(impl: CheckAuthenticationStatusUseCaseImpl): CheckAuthenticationStatusUseCase
 
     @Binds
     abstract fun bindGetAuthErrorMessageUseCase(impl: GetAuthErrorMessageUseCaseImpl): GetAuthErrorMessageUseCase
+
+    @Binds
+    abstract fun bindWithdrawMembershipUseCase(impl: WithdrawMembershipUseCaseImpl): WithdrawMembershipUseCase
 
     // TODO: 다른 UseCase들도 여기에 바인딩 추가
 

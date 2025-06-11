@@ -9,16 +9,11 @@ import com.example.domain.repository.AuthRepository
 import com.example.data.util.FirebaseAuthWrapper
 import kotlinx.coroutines.tasks.await // await() 사용 위해 임포트
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import java.time.Instant
 import com.example.domain.model.base.User
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
 import com.google.firebase.auth.UserProfileChangeRequest
-import io.sentry.MeasurementUnit
 import kotlinx.coroutines.flow.map
 
 /**
@@ -43,13 +38,11 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun login(email: String, password: String): CustomResult<UserSession, Exception> {
         // 로그인 시도
         val loginResult = authRemoteDataSource.signIn(email, password)
-        
+
         return when (loginResult) {
             is CustomResult.Success -> {
                 // 로그인 성공 시 세션 정보 가져오기
-                val userSessionResult = getCurrentUserSession()
-                
-                when (userSessionResult) {
+                when (val userSessionResult = getCurrentUserSession()) {
                     is CustomResult.Success -> {
                         CustomResult.Success(userSessionResult.data)
                     }
@@ -149,6 +142,14 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     /**
+     * 이메일 인증 후 새 비밀번호를 설정합니다.
+     * 단순 위임 메소드.
+     */
+    override suspend fun updatePassword(newPassword: String): CustomResult<Unit, Exception> {
+        return authRemoteDataSource.updatePassword(newPassword)
+    }
+
+    /**
      * 로그인 오류에 대한 사용자 친화적인 오류 메시지를 반환합니다.
      * @param exception 발생한 예외
      * @return 사용자에게 표시할 오류 메시지
@@ -219,7 +220,7 @@ class AuthRepositoryImpl @Inject constructor(
      * 
      * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
      */
-    override suspend fun deleteCurrentUser(): CustomResult<Unit, Exception> {
+    override suspend fun withdrawCurrentUser(): CustomResult<Unit, Exception> {
         val firebaseUser = auth.currentUser
             ?: return CustomResult.Failure(Exception("User not logged in"))
         return try {
@@ -285,7 +286,7 @@ class AuthRepositoryImpl @Inject constructor(
                         userId = it.uid,
                         token = tokenResult?.token ?: "",
                         email = it.email,
-                        displayName = it.displayName,
+                        displayName = it.displayName!!,
                         photoUrl = it.photoUrl?.toString()
                     )
 
@@ -307,7 +308,6 @@ class AuthRepositoryImpl @Inject constructor(
      * @return 사용자 세션 정보의 Flow
      */
     override suspend fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
-        TODO("Not yet implemented")
         return authRemoteDataSource.observeAuthState().map { firebaseUser ->
             when (firebaseUser) {
                 is CustomResult.Success -> {
@@ -327,7 +327,7 @@ class AuthRepositoryImpl @Inject constructor(
                         userId = firebaseUser.data.uid,
                         token = tokenResult?.token ?: "",
                         email = firebaseUser.data.email,
-                        displayName = firebaseUser.data.displayName,
+                        displayName = firebaseUser.data.displayName!!,
                         photoUrl = firebaseUser.data.photoUrl?.toString()
                     )
 

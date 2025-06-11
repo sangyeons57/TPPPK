@@ -1,5 +1,6 @@
 package com.example.feature_friends.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -66,15 +67,20 @@ class AcceptFriendsViewModel @Inject constructor(
     fun loadPendingFriendRequests() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            
+
+            Log.d("AcceptFriendsViewModel", "1")
             try {
                 val currentUserId = authUtil.getCurrentUserId()
+                Log.d("AcceptFriendsViewModel", "2")
                 getPendingFriendRequestsUseCase(currentUserId).collect { result ->
+                    Log.d("AcceptFriendsViewModel", "3")
                     when (result) {
                         is CustomResult.Success -> {
+                            Log.d("AcceptFriendsViewModel", "4")
                             val friends = result.data
                             // Friend 객체를 UI 모델로 변환
                             val requests = friends.map { friend ->
+                                Log.d("AcceptFriendsViewModel", "5")
                                 FriendRequestItem(
                                     userId = friend.friendUid,
                                     userName = friend.friendName.ifEmpty { "사용자 ${friend.friendUid.takeLast(4)}" },
@@ -88,8 +94,10 @@ class AcceptFriendsViewModel @Inject constructor(
                                     friendRequests = requests
                                 )
                             }
+                            Log.d("AcceptFriendsViewModel", "6")
                         }
                         is CustomResult.Failure -> {
+                            Log.d("AcceptFriendsViewModel", "7")
                             val error = result.error
                             _uiState.update { 
                                 it.copy(
@@ -98,9 +106,12 @@ class AcceptFriendsViewModel @Inject constructor(
                                 )
                             }
                             _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 불러오는데 실패했습니다."))
+                            Log.d("AcceptFriendsViewModel", "8")
                         }
                         else -> {
                             // Loading, Initial, Progress 등의 상태 처리 (필요 시)
+                            Log.d("AcceptFriendsViewModel", "9")
+                            Log.d("AcceptFriendsViewModel", result.toString())
                         }
                     }
                 }

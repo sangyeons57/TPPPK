@@ -9,24 +9,47 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.core_navigation.core.AppNavigator
 import com.example.feature_settings.viewmodel.SettingsViewModel // Import the ViewModel
+import com.example.feature_settings.ui.WithdrawalDialog // Import the dialog
+import com.example.feature_settings.viewmodel.SettingsViewModel.WithdrawalUiEvent
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit,
+    appNavigator: AppNavigator,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val showWithdrawalDialog by viewModel.showWithdrawalDialog.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Collect UI events from the ViewModel to show Snackbars
+    LaunchedEffect(key1 = viewModel) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is WithdrawalUiEvent.Success -> {
+                    snackbarHostState.showSnackbar(message = event.message)
+                    // Navigation is handled in the ViewModel, so no action is needed here.
+                }
+                is WithdrawalUiEvent.Error -> {
+                    snackbarHostState.showSnackbar(message = event.message)
+                }
+            }
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { appNavigator.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -53,12 +76,12 @@ fun SettingsScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Withdraw Account",
+                    contentDescription = "회원 탈퇴",
                     tint = MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = "Withdraw Account",
+                    text = "회원 탈퇴",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -69,16 +92,24 @@ fun SettingsScreen(
         }
 
         if (showWithdrawalDialog) { // Observe ViewModel state
-            /**
             WithdrawalDialog(
                 onConfirm = {
-                    viewModel.confirmWithdrawal() // Use ViewModel
+                    viewModel.confirmWithdrawal()
                 },
                 onDismiss = {
-                    viewModel.dismissWithdrawalDialog() // Use ViewModel
+                    viewModel.dismissWithdrawalDialog()
                 }
             )
-            **/
         }
     }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenPreview() {
+    SettingsScreen(
+        appNavigator = TODO(),
+        viewModel = TODO()
+    )
 }

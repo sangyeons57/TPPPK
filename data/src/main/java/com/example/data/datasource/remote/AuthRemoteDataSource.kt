@@ -1,4 +1,3 @@
-
 package com.example.data.datasource.remote
 
 import com.google.firebase.auth.FirebaseUser
@@ -67,5 +66,13 @@ interface AuthRemoteDataSource {
      *         오류 발생 시 CustomResult.Failure 반환
      */
     suspend fun checkEmailVerification(): CustomResult<Boolean, Exception>
-}
 
+    /**
+     * 현재 로그인한 사용자의 비밀번호를 업데이트합니다.
+     * FirebaseAuth.currentUser!!.updatePassword(newPassword)의 래퍼입니다.
+     *
+     * @param newPassword 새 비밀번호
+     * @return 성공 시 [CustomResult.Success], 실패 시 [CustomResult.Failure]
+     */
+    suspend fun updatePassword(newPassword: String): CustomResult<Unit, Exception>
+}

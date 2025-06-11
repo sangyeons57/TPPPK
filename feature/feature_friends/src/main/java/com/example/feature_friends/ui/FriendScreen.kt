@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward // Icon for DM button
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +32,8 @@ import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
 import com.example.feature_friends.viewmodel.FriendsEvent
 import kotlinx.coroutines.flow.collectLatest
-import java.util.Date // Preview용 Date 임포트
+import kotlinx.coroutines.launch // Required for launching coroutines
+import java.util.Date
 
 /**
  * FriendsScreen: 친구 목록 표시 및 관리 화면 (Stateful)
@@ -45,6 +47,13 @@ fun FriendsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope() // Scope for launching coroutines
+
+    // State for ModalBottomSheet
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true // Ensures the sheet is fully expanded or hidden
+    )
 
     // 이벤트 처리
     LaunchedEffect(Unit) {
@@ -64,68 +73,94 @@ fun FriendsScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("친구") },
-                navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+
+                topBar = {
+                    TopAppBar(
+                        title = { Text("친구") },
+                        navigationIcon = {
+                            IconButton(onClick = { appNavigator.navigateBack() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
+                            }
+                        },
+                        actions = {
+                            // 친구 추가하기 텍스트 버튼 (기존 XML의 TextView 역할)
+                            TextButton(onClick = viewModel::requestAddFriendToggle) {
+                                Text("친구 추가하기")
+                            }
+                        }
+                    )
                 },
-                actions = {
-                    // 친구 추가하기 텍스트 버튼 (기존 XML의 TextView 역할)
-                    TextButton(onClick = viewModel::requestAddFriendToggle) {
-                        Text("친구 추가하기")
+                bottomBar = {
+                    // 친구 요청 수락하기 버튼 (기존 XML의 Button 역할)
+                    Button(
+                        onClick = viewModel::onAcceptFriendClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .navigationBarsPadding() // 하단 네비게이션 바 패딩 적용
+                    ) {
+                        Text("친구 요청")
                     }
                 }
-            )
-        },
-        bottomBar = {
-            // 친구 요청 수락하기 버튼 (기존 XML의 Button 역할)
-            Button(
-                onClick = viewModel::onAcceptFriendClick,
+            ) { paddingValues ->
+                // 로딩 및 에러 상태 처리
+                when {
+                    uiState.isLoading -> {
+                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    uiState.error != null -> {
+                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                            Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    uiState.friends.isEmpty() && !uiState.isLoading -> { // 로딩 중 아닐 때만 빈 상태 표시
+                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                            Text("친구가 없습니다. 친구를 추가해보세요!")
+                        }
+                    }
+                    else -> {
+                        FriendsListContent(
+                            modifier = Modifier.padding(paddingValues),
+                            friends = uiState.friends,
+                            onItemClick = { friendId ->
+                                scope.launch {
+                                    showBottomSheet = true
+                                    sheetState.show() // Show the bottom sheet
+                                }
+                            },
+                            onDmChannelClick = viewModel::onFriendClick // Navigate to DM
+                        )
+                    }
+                }
+    }
+
+    // Conditionally display ModalBottomSheet (M3)
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState
+        ) {
+            // Actual content for the bottom sheet
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
-                    .navigationBarsPadding() // 하단 네비게이션 바 패딩 적용
+                    .height(300.dp)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text("친구 요청 수락하기")
-            }
-        }
-    ) { paddingValues ->
-        // 로딩 및 에러 상태 처리
-        when {
-            uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-            uiState.error != null -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
-                }
-            }
-            uiState.friends.isEmpty() && !uiState.isLoading -> { // 로딩 중 아닐 때만 빈 상태 표시
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("친구가 없습니다. 친구를 추가해보세요!")
-                }
-            }
-            else -> {
-                FriendsListContent(
-                    modifier = Modifier.padding(paddingValues),
-                    friends = uiState.friends,
-                    onFriendClick = viewModel::onFriendClick // ViewModel 함수 호출
-                )
+                Text("Bottom Sheet Dialog Content")
             }
         }
     }
 
-    // 친구 추가 다이얼로그
+    // AddFriendDialog
     if (uiState.showAddFriendDialog) {
-        AddFriendDialog(
-            onDismissRequest = viewModel::requestAddFriendToggle
-        )
+        AddFriendDialog(onDismissRequest = viewModel::requestAddFriendToggle)
     }
+
+
 }
 
 /**
@@ -135,7 +170,8 @@ fun FriendsScreen(
 fun FriendsListContent(
     modifier: Modifier = Modifier,
     friends: List<FriendItem>,
-    onFriendClick: (String) -> Unit // friendId 전달
+    onItemClick: (String) -> Unit,    // For item click (show bottom sheet)
+    onDmChannelClick: (String) -> Unit // For DM button
 ) {
     LazyColumn(
         modifier = modifier
@@ -149,9 +185,10 @@ fun FriendsListContent(
         ) { friend ->
             FriendListItem(
                 friend = friend,
-                onClick = { onFriendClick(friend.friendId) } // 변경
+                onItemClick = { onItemClick(friend.friendId) },
+                onDmChannelClick = { onDmChannelClick(friend.friendId) }
             )
-            HorizontalDivider() // 아이템 사이에 구분선 추가
+            HorizontalDivider()
         }
     }
 }
@@ -162,14 +199,15 @@ fun FriendsListContent(
 @Composable
 fun FriendListItem(
     friend: FriendItem,
-    onClick: () -> Unit,
+    onItemClick: () -> Unit,  // Click for the whole item
+    onDmChannelClick: () -> Unit, // Click for DM button
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp), // 아이템 상하 패딩
+            .clickable(onClick = onItemClick) // Whole item click
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
@@ -191,19 +229,22 @@ fun FriendListItem(
             )
             // 예시: friend.relationshipTimestamp.toString() 등으로 시간 표시 가능
         }
-        // TODO: DM 바로가기 버튼 또는 다른 액션 버튼 추가 가능 (옵션)
-        // TextButton(onClick = onClick) { Text("DM") }
+        // DM 채널 바로가기 버튼
+        IconButton(onClick = onDmChannelClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward, // "입장" 아이콘
+                contentDescription = "DM ${friend.displayName}"
+            )
+        }
     }
 }
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, name = "Friends List Empty")
 @Composable
 private fun FriendsListEmptyPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        Scaffold(
+        Scaffold (
             topBar = { TopAppBar(title = { Text("친구") }) },
             bottomBar = { Button(onClick = {}, modifier = Modifier.fillMaxWidth().padding(16.dp)) { Text("친구 요청 수락하기") } }
         ) { padding ->

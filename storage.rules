@@ -109,31 +109,18 @@ service firebase.storage {
     // 3. DM Channel Files
     // Path: dm_channel_files/{dmChannelId}/{messageId}/{fileType}/{fileName}
     match /dm_channel_files/{dmChannelId}/{messageId}/{fileType}/{fileName} {
-      allow read: if isAuthenticated() &&
-                     (isDMMessageAuthor(dmChannelId, messageId) || isDMChannelParticipant(dmChannelId));
-      allow create: if isAuthenticated() && isDMChannelParticipant(dmChannelId) &&
-                       request.resource.size < 10 * 1024 * 1024; // Max 10MB for DM files
-                       // Add contentType validation based on {fileType} if needed
-      allow update, delete: if isAuthenticated() && isDMMessageAuthor(dmChannelId, messageId);
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
 
     // 4. Project Channel Files
-    // Path: project_channel_files/{projectChannelId}/{messageId}/{fileType}/{fileName}
     match /project_channel_files/{projectChannelId}/{messageId}/{fileType}/{fileName} {
-      // Get projectId for this channel to check project-level permissions
-      let projectId = getProjectIdForChannel(projectChannelId);
-
-      allow read: if isAuthenticated() &&
-                     (isProjectChannelMessageAuthor(projectChannelId, messageId) ||
-                      hasProjectChannelReadPermission(projectId, projectChannelId));
-      allow create: if isAuthenticated() && canPostToProjectChannel(projectId, projectChannelId) &&
-                       request.resource.size < 20 * 1024 * 1024; // Max 20MB for project files
-                       // Add contentType validation based on {fileType} if needed
-      allow update: if isAuthenticated() && isProjectChannelMessageAuthor(projectChannelId, messageId);
-      allow delete: if isAuthenticated() &&
-                       (isProjectChannelMessageAuthor(projectChannelId, messageId) ||
-                        isProjectOwner(projectId) || 
-                        hasProjectChannelDeletePermission(projectId, projectChannelId));
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
   }
 }

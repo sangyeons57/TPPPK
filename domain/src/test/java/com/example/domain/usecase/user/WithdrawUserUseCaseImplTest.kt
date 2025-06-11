@@ -32,7 +32,7 @@ class WithdrawUserUseCaseImplTest {
     @Test
     fun `invoke success should call both repositories and return success`() = runTest {
         // Arrange
-        `when`(mockAuthRepository.deleteCurrentUser()).thenReturn(Result.success(Unit))
+        `when`(mockAuthRepository.withdrawCurrentUser()).thenReturn(Result.success(Unit))
         `when`(mockUserRepository.clearSensitiveUserDataAndMarkAsWithdrawn()).thenReturn(Result.success(Unit))
 
         // Act
@@ -40,7 +40,7 @@ class WithdrawUserUseCaseImplTest {
 
         // Assert
         val inOrder = inOrder(mockAuthRepository, mockUserRepository)
-        inOrder.verify(mockAuthRepository).deleteCurrentUser()
+        inOrder.verify(mockAuthRepository).withdrawCurrentUser()
         inOrder.verify(mockUserRepository).clearSensitiveUserDataAndMarkAsWithdrawn()
         assertTrue(result.isSuccess)
     }
@@ -49,13 +49,13 @@ class WithdrawUserUseCaseImplTest {
     fun `invoke when deleteCurrentUser fails should not call clearSensitiveUserData and return failure`() = runTest {
         // Arrange
         val authException = Exception("Auth error")
-        `when`(mockAuthRepository.deleteCurrentUser()).thenReturn(Result.failure(authException))
+        `when`(mockAuthRepository.withdrawCurrentUser()).thenReturn(Result.failure(authException))
 
         // Act
         val result = withdrawUserUseCaseImpl()
 
         // Assert
-        verify(mockAuthRepository).deleteCurrentUser()
+        verify(mockAuthRepository).withdrawCurrentUser()
         verify(mockUserRepository, never()).clearSensitiveUserDataAndMarkAsWithdrawn()
         assertTrue(result.isFailure)
         assertEquals(authException, result.exceptionOrNull())
@@ -65,14 +65,14 @@ class WithdrawUserUseCaseImplTest {
     fun `invoke when clearSensitiveUserData fails should call both repositories and return failure`() = runTest {
         // Arrange
         val dbException = Exception("DB error")
-        `when`(mockAuthRepository.deleteCurrentUser()).thenReturn(Result.success(Unit))
+        `when`(mockAuthRepository.withdrawCurrentUser()).thenReturn(Result.success(Unit))
         `when`(mockUserRepository.clearSensitiveUserDataAndMarkAsWithdrawn()).thenReturn(Result.failure(dbException))
 
         // Act
         val result = withdrawUserUseCaseImpl()
 
         // Assert
-        verify(mockAuthRepository).deleteCurrentUser()
+        verify(mockAuthRepository).withdrawCurrentUser()
         verify(mockUserRepository).clearSensitiveUserDataAndMarkAsWithdrawn()
         assertTrue(result.isFailure)
         assertEquals(dbException, result.exceptionOrNull())

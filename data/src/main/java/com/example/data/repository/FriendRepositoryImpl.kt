@@ -1,15 +1,19 @@
 package com.example.data.repository
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.FriendRemoteDataSource
 import com.example.data.datasource.remote.UserRemoteDataSource // 사용자 검색 및 정보 업데이트 시 필요
 import com.example.data.model.remote.FriendDTO
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
 import com.example.domain.model.base.User
+import com.example.domain.model.data.UserSession
 import com.example.domain.repository.FriendRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -29,11 +33,14 @@ class FriendRepositoryImpl @Inject constructor(
      * @return 친구 목록을 담은 Flow
      */
     override fun getFriendsStream(currentUserId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        return friendRemoteDataSource.observeFriends(currentUserId).map { result -> 
+        Log.d("FriendRepositoryImpl", "currentUserId: $currentUserId")
+        return friendRemoteDataSource.observeFriends(currentUserId).map { result ->
             when (result) {
                 is CustomResult.Success -> {
                     try {
+                        Log.d("FriendRepositoryImpl", "getFriendsStream: $result")
                         val friends = result.data.map { dto ->
+                            Log.d("FriendRepositoryImpl", "getFriendsStream: $dto")
                             // Use toDomain() extension function instead of manual mapping
                             dto.toDomain()
                         }
@@ -58,27 +65,15 @@ class FriendRepositoryImpl @Inject constructor(
      * @param currentUserId 현재 사용자 ID
      * @return 친구 요청 목록을 담은 Flow
      */
-    override fun getFriendRequestsStream(currentUserId: String): Flow<CustomResult<List<FriendStatus>, Exception>> {
-        return friendRemoteDataSource.observeFriendRequests(currentUserId).map { result ->
-            when (result) {
-                is CustomResult.Success<List<FriendDTO>> -> {
-                    try {
-                        val statuses = result.data.map { dto ->
-                            // Use FriendStatus.valueOf with uppercase
-                            try {
-                                FriendStatus.valueOf(dto.status.uppercase())
-                            } catch (e: Exception) {
-                                FriendStatus.PENDING
-                            }
-                        }
-                        CustomResult.Success(statuses)
-                    } catch (e: Exception) {
-                        CustomResult.Failure(e)
-                    }
+    override fun getFriendRequestsStream(currentUserId: String): Flow<CustomResult<List<Friend>, Exception>> {
+        return friendRemoteDataSource.observeFriendRequests(currentUserId).map { friendDTOResult ->
+            when (friendDTOResult) {
+                is CustomResult.Success -> {
+                    CustomResult.Success( friendDTOResult.data.map {dto -> dto.toDomain()})
                 }
 
                 is CustomResult.Failure -> {
-                    CustomResult.Failure(result.error)
+                    CustomResult.Failure(friendDTOResult.error)
                 }
 
                 else -> {
@@ -95,35 +90,28 @@ class FriendRepositoryImpl @Inject constructor(
      * @param receiverNickname 요청을 받을 사용자의 닉네임
      * @return 성공 시 CustomResult.Success, 실패 시 CustomResult.Failure
      */
-    override suspend fun sendFriendRequest(senderId: String, receiverNickname: String): CustomResult<Unit, Exception> {
-        return resultTry {
-            // 닉네임으로 사용자 검색 - limit 제한 추가
-            val searchResult = userRemoteDataSource.searchUsersByName(receiverNickname, 10)
-            
-            when (searchResult) {
-                is CustomResult.Success -> {
-                    val receiverUser = searchResult.data.firstOrNull { it.name == receiverNickname }
-                        ?: throw Exception("User with nickname $receiverNickname not found")
-                    
-                    // friendRemoteDataSource.requestFriend 메소드 사용
-                    val result = friendRemoteDataSource.requestFriend(
-                        friendId = receiverUser.uid,
-                        myName = "Sender Name", // 여기에 실제 사용자 이름 필요
-                        myProfileImageUrl = null // 여기에 실제 프로필 URL 필요
-                    )
-                    
-                    when (result) {
-                        is CustomResult.Success -> CustomResult.Success(Unit)
-                        is CustomResult.Failure -> CustomResult.Failure(result.error)
-                        else -> CustomResult.Failure(Exception("Unknown error in sendFriendRequest"))
-                    }
-                }
-                is CustomResult.Failure -> {
-                    CustomResult.Failure(searchResult.error)
-                }
-                else -> {
-                    CustomResult.Failure(Exception("Unknown error in sendFriendRequest"))
-                }
+    override suspend fun sendFriendRequest(user: UserSession, receiverId: String): CustomResult<Unit, Exception> {
+        val friendResult = userRemoteDataSource.observeUser(receiverId).first()
+
+        return when (friendResult) {
+            is CustomResult.Success -> {
+                val myDTO = FriendDTO(
+                    friendUid = receiverId,
+                    status = FriendStatus.PENDING,
+                    requestedAt = DateTimeUtil.nowFirebaseTimestamp(),
+                )
+                val friendDTO = FriendDTO(
+                    friendUid = user.userId,
+                    status = FriendStatus.PENDING,
+                    requestedAt = DateTimeUtil.nowFirebaseTimestamp(),
+                )
+                friendRemoteDataSource.requestFriend(myDTO, friendDTO)
+            }
+            is CustomResult.Failure -> {
+                CustomResult.Failure(friendResult.error)
+            }
+            else -> {
+                CustomResult.Failure(Exception("Unknown error in sendFriendRequest"))
             }
         }
     }
@@ -181,35 +169,6 @@ class FriendRepositoryImpl @Inject constructor(
                 is CustomResult.Success -> CustomResult.Success(Unit)
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 else -> CustomResult.Failure(Exception("Unknown error in removeFriend"))
-            }
-        }
-    }
-
-    /**
-     * 사용자를 닉네임으로 검색합니다.
-     * 
-     * @param nickname 검색할 닉네임
-     * @param currentUserId 현재 사용자 ID
-     * @return 검색된 사용자 목록
-     */
-    override suspend fun searchUsersForFriend(nickname: String, currentUserId: String): CustomResult<List<User>, Exception> {
-        return resultTry {
-            // limit 인자 이름이 다른 경우 수정 (매개변수 이름 제거)
-            val searchResult = userRemoteDataSource.searchUsersByName(nickname, 10)
-
-            when (searchResult) {
-                is CustomResult.Success -> {
-                    // 자기 자신 제외
-                    val filteredUsers = searchResult.data.map{ userDTO -> userDTO.toDomain() }.filter { it.uid != currentUserId }
-                    return CustomResult.Success(filteredUsers)
-                }
-                is CustomResult.Failure -> {
-                    throw searchResult.error
-                }
-
-                else -> {
-                    throw Exception("Unknown error in searchUsersForFriend")
-                }
             }
         }
     }

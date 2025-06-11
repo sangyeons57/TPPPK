@@ -31,9 +31,8 @@ interface FriendRemoteDataSource {
      * @param myProfileImageUrl 내 프로필 이미지 URL (상대방의 friends 컬렉션 내 friendProfileImageUrl 필드에 저장될 값)
      */
     suspend fun requestFriend(
-        friendId: String,
-        myName: String,
-        myProfileImageUrl: String?
+        friendDTO: FriendDTO,
+        myDTO: FriendDTO
     ): CustomResult<Unit, Exception>
 
     /**

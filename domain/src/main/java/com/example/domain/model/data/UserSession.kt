@@ -13,7 +13,7 @@ data class UserSession(
     val userId: String,
     val token: String,
     val email: String? = null,
-    val displayName: String? = null,
+    val displayName: String,
     val photoUrl: String? = null
     // Add other relevant session/user data as needed
 )

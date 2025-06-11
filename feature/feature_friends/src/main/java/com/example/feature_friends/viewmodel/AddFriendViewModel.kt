@@ -76,69 +76,59 @@ class AddFriendViewModel @Inject constructor(
             try {
                 // 사용자 검색 - 이름으로 검색
                 val currentUserId = authUtil.getCurrentUserId()
-                val searchResult = searchUserByNameUseCase(usernameToSearch)
-                
-                when (searchResult) {
-                    is CustomResult.Success -> {
-                        val users = searchResult.data
-                        
-                        // 결과가 있는 경우
-                        if (users.isNotEmpty()) {
-                            // 첫 번째 사용자 결과 사용
-                            val targetUser = users.first()
-                            val targetUserId = targetUser.uid
-                            
-                            // 자기 자신에게는 친구 요청을 보낼 수 없음
-                            if (targetUserId == currentUserId) {
-                                _uiState.update { it.copy(
-                                    isLoading = false,
-                                    error = "자기 자신에게는 친구 요청을 보낼 수 없습니다."
-                                )}
-                                return@launch
-                            }
-                            
-                            // 친구 요청 보내기
-                            val requestResult = sendFriendRequestUseCase(targetUserId)
-                            when (requestResult) {
-                                is CustomResult.Success -> {
-                                    _uiState.update { it.copy(
-                                        isLoading = false, 
-                                        infoMessage = "${targetUser.name}님에게 친구 요청을 보냈습니다.", 
-                                        addFriendSuccess = true
-                                    )}
-                                    _eventFlow.emit(AddFriendEvent.ShowSnackbar("친구 요청을 보냈습니다."))
-                                }
-                                is CustomResult.Failure -> {
-                                    _uiState.update { it.copy(
-                                        isLoading = false, 
-                                        error = requestResult.error.message ?: "친구 요청 실패"
-                                    )}
-                                }
-                                else -> {
+                searchUserByNameUseCase(usernameToSearch).collect{ userResult ->
+                    when(userResult) {
+                        is CustomResult.Success -> {
+                            val user = userResult.data
+
+                            // 결과가 있는 경우
+                                // 첫 번째 사용자 결과 사용
+
+                                // 자기 자신에게는 친구 요청을 보낼 수 없음
+                                if (user.uid == currentUserId) {
                                     _uiState.update { it.copy(
                                         isLoading = false,
-                                        error = "처리 중 오류가 발생했습니다."
+                                        error = "자기 자신에게는 친구 요청을 보낼 수 없습니다."
                                     )}
                                 }
-                            }
-                        } else {
+
+                                // 친구 요청 보내기
+                                val requestResult = sendFriendRequestUseCase(user.uid)
+                                when (requestResult) {
+                                    is CustomResult.Success -> {
+                                        _uiState.update { it.copy(
+                                            isLoading = false,
+                                            infoMessage = "${user.name}님에게 친구 요청을 보냈습니다.",
+                                            addFriendSuccess = true
+                                        )}
+                                        _eventFlow.emit(AddFriendEvent.ShowSnackbar("친구 요청을 보냈습니다."))
+                                    }
+                                    is CustomResult.Failure -> {
+                                        _uiState.update { it.copy(
+                                            isLoading = false,
+                                            error = requestResult.error.message ?: "친구 요청 실패"
+                                        )}
+                                    }
+                                    else -> {
+                                        _uiState.update { it.copy(
+                                            isLoading = false,
+                                            error = "처리 중 오류가 발생했습니다."
+                                        )}
+                                    }
+                                }
+                        }
+                        is CustomResult.Failure -> {
                             _uiState.update { it.copy(
-                                isLoading = false, 
+                                isLoading = false,
                                 error = "사용자를 찾을 수 없습니다: $usernameToSearch"
                             )}
                         }
-                    }
-                    is CustomResult.Failure -> {
-                        _uiState.update { it.copy(
-                            isLoading = false, 
-                            error = searchResult.error.message ?: "사용자 검색 중 오류 발생"
-                        )}
-                    }
-                    else -> {
-                        _uiState.update { it.copy(
-                            isLoading = false,
-                            error = "처리 중 오류가 발생했습니다."
-                        )}
+                        else -> {
+                            _uiState.update { it.copy(
+                                isLoading = false,
+                                error = "처리 중 오류가 발생했습니다."
+                            )}
+                        }
                     }
                 }
             } catch (e: Exception) {

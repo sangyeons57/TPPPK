@@ -2,8 +2,9 @@ package com.example.feature_project.members.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.domain.usecase.project.member.AddProjectMemberUseCase
-import com.example.domain.usecase.user.SearchUserByNameUseCase // Or relevant search use case
+import com.example.domain.usecase.user.SearchUsersByNameUseCase
 import com.example.feature_project.members.ui.UserSearchResult // Use existing UI model
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -29,7 +30,7 @@ sealed class AddMemberDialogEvent {
 
 @HiltViewModel
 class AddMemberViewModel @Inject constructor(
-    private val searchUserByNameUseCase: SearchUserByNameUseCase, // Or SearchUsersUseCase
+    private val searchUsersByNameUseCase: SearchUsersByNameUseCase, // Or SearchUsersUseCase
     private val addProjectMemberUseCase: AddProjectMemberUseCase
 ) : ViewModel() {
 
@@ -51,19 +52,28 @@ class AddMemberViewModel @Inject constructor(
         searchJob = viewModelScope.launch {
             delay(300) // Debounce
             _uiState.update { it.copy(isLoading = true) }
-            val result = searchUserByNameUseCase(query) // Assuming it takes query and returns Result<List<User>>
-            result.onSuccess { users ->
-                val uiResults = users.map { user -> // Map Domain User to UserSearchResult
-                    UserSearchResult(
-                        userId = user.uid, // Adjust field names based on actual User model
-                        userName = user.name,
-                        userEmail = user.email,
-                        profileImageUrl = user.profileImageUrl
-                    )
+            searchUsersByNameUseCase(query, 10).collect{ userResult ->
+                when(userResult) {
+                    is CustomResult.Success -> {
+                        val users = userResult.data
+                        val uiResults = users.map { user -> // Map Domain User to UserSearchResult
+                            UserSearchResult(
+                                userId = user.uid, // Adjust field names based on actual User model
+                                userName = user.name,
+                                userEmail = user.email,
+                                profileImageUrl = user.profileImageUrl
+                            )
+                        }
+                        _uiState.update { it.copy(searchResults = uiResults, isLoading = false) }
+                    }
+
+                    is CustomResult.Failure ->{
+                        _uiState.update { it.copy(isLoading = false, error = "검색 실패: ${userResult.error.message}") }
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false, error = "검색 실패: $userResult") }
+                    }
                 }
-                _uiState.update { it.copy(searchResults = uiResults, isLoading = false) }
-            }.onFailure { exception ->
-                _uiState.update { it.copy(isLoading = false, error = "검색 실패: ${exception.message}") }
             }
         }
     }

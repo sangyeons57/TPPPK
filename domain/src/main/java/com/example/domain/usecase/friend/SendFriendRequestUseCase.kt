@@ -28,8 +28,7 @@ class SendFriendRequestUseCaseImpl @Inject constructor(
         val session = authRepository.getCurrentUserSession()
         when (session) {
             is CustomResult.Success -> {
-                val currentUserId = session.data.userId
-                return friendRepository.sendFriendRequest(currentUserId, targetUserId)
+                return friendRepository.sendFriendRequest(session.data, targetUserId)
             }
             else -> {
                 return CustomResult.Failure(Exception("User not logged in"))

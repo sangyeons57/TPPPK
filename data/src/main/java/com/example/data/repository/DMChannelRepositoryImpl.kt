@@ -51,9 +51,7 @@ class DMChannelRepositoryImpl @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     override suspend fun getCurrentDmChannelsStream(): Flow<CustomResult<List<DMChannel>, Exception>> {
         val currentUserId = getCurrentUserId()
-        if (currentUserId == null) {
-            return flowOf(CustomResult.Failure(Exception("User not logged in.")))
-        }
+            ?: return flowOf(CustomResult.Failure(Exception("User not logged in.")))
 
         return userRemoteDataSource.getDmWrappersStream(currentUserId).flatMapLatest { dmWrappersResult ->
             when (dmWrappersResult) {

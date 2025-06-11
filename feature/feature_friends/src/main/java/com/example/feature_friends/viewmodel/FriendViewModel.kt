@@ -69,11 +69,17 @@ class FriendViewModel @Inject constructor(
      * 친구 목록 실시간 스트림을 구독하고 UI 상태를 업데이트합니다.
      */
     private fun observeFriendRelationships() {
+        Log.d("FriendViewModel", "1")
         viewModelScope.launch {
+            Log.d("FriendViewModel", "2")
             val currentUserId = authUtil.getCurrentUserId()
             getFriendsListStreamUseCase(currentUserId)
-                .onStart { _uiState.update { it.copy(isLoading = true, error = null) } }
+                .onStart {
+                    Log.d("FriendViewModel", "3")
+                    _uiState.update { it.copy(isLoading = true, error = null) }
+                }
                 .catch { e ->
+                    Log.d("FriendViewModel", "4")
                     val errorMessage = e.localizedMessage ?: "알 수 없는 스트림 오류"
                     _uiState.update {
                         it.copy(
@@ -82,15 +88,19 @@ class FriendViewModel @Inject constructor(
                         )
                     }
                     _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 목록 로딩 실패: $errorMessage"))
+                    Log.d("FriendViewModel", "4")
                 }
                 .collect { result ->
+                    Log.d("FriendViewModel", "5")
                     when(result) {
                         is CustomResult.Success -> {
+                            Log.d("FriendViewModel", "6")
                             val friends = result.data
                             val friendItems = mutableListOf<FriendItem>()
                             
                             // 각 친구에 대해 사용자 정보 조회
                             for (friend in friends) {
+                                Log.d("FriendViewModel", "6.5")
                                 val userResult = getUserUseCase(friend.friendUid).first()
                                 val user = when (userResult) {
                                     is CustomResult.Success -> userResult.data
@@ -117,11 +127,13 @@ class FriendViewModel @Inject constructor(
                             }
                         }
                         is CustomResult.Failure -> {
+                            Log.d("FriendViewModel", "7")
                             val errorMessage = result.error.localizedMessage ?: "알 수 없는 오류"
                             _uiState.update { it.copy(error = errorMessage, isLoading = false) }
                             _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 목록 업데이트 실패: $errorMessage"))
                         }
                         else -> {
+                            Log.d("FriendViewModel", "8")
                             // Loading, Initial, Progress 등의 상태 처리 (필요 시)
                         }
                     }
@@ -148,11 +160,7 @@ class FriendViewModel @Inject constructor(
             when (result) {
                 is CustomResult.Success -> {
                     val channelId = result.data
-                    if (channelId != null) {
-                        _eventFlow.emit(FriendsEvent.NavigateToChat(channelId))
-                    } else {
-                        _eventFlow.emit(FriendsEvent.ShowSnackbar("채팅방 정보가 없습니다."))
-                    }
+                    _eventFlow.emit(FriendsEvent.NavigateToChat(channelId))
                 }
                 is CustomResult.Failure -> {
                     val error = result.error

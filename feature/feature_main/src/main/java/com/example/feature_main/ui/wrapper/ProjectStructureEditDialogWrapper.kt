@@ -5,7 +5,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.feature_main.ui.dialog.ProjectStructureEditDialog
 import com.example.feature_main.viewmodel.ProjectStructureEditDialogViewModel
 import com.example.feature_main.viewmodel.ProjectStructureEditEvent
 import kotlinx.coroutines.flow.collectLatest
@@ -55,9 +54,11 @@ fun ProjectStructureEditDialogWrapper(
     }
     
     // 수정된 다이얼로그 호출
+    /** 다른 방식으로 할 예정
     ProjectStructureEditDialog(
         uiState = uiState, // Pass the ViewModel's entire UiState
         onDismissRequest = onDismiss,
         onSaveClick = { viewModel.saveProjectStructure(uiState.projectStructure) } // Pass the inner projectStructure
     )
+    **/
 } 

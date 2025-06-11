@@ -29,16 +29,11 @@ classDiagram
         class DMWrapper["dm_wrapper/{dmChannelId}"] {
             <<SubCollection>>
             +String otherUserId
-            +String otherUserName
-            +String? otherUserProfileImageUrl
-            +String? lastMessagePreview
-            +Timestamp? lastMessageTimestamp 
         }
 
         class ProjectsWrapper["projects_wrapper/{projectId}"] {
             <<SubCollection>>
-            +String projectName
-            +String? projectImageUrl
+            +String order
         }
 
     }

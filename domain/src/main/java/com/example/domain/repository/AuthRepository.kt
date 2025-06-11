@@ -33,10 +33,19 @@ interface AuthRepository {
     
     suspend fun checkEmailVerification(): CustomResult<Boolean,  Exception> // 이메일 인증 확인
 
+    /**
+     * 이메일 인증 완료 후 새 비밀번호를 설정합니다.
+     * FirebaseAuth.currentUser!!.updatePassword(newPassword) 에 대한 래퍼입니다.
+     *
+     * @param newPassword 새 비밀번호
+     * @return 성공 시 [CustomResult.Success], 실패 시 [CustomResult.Failure]
+     */
+    suspend fun updatePassword(newPassword: String): CustomResult<Unit, Exception>
+
     suspend fun updateUserName(newDisplayName: String): CustomResult<User, Exception> // 사용자 이름 업데이트
 
     // --- 회원 탈퇴 ---
-    suspend fun deleteCurrentUser(): CustomResult<Unit,  Exception> // 현재 Firebase Auth 사용자 삭제
+    suspend fun withdrawCurrentUser(): CustomResult<Unit,  Exception> // 현재 Firebase Auth 사용자 삭제
 
     // --- 에러 처리 ---
     suspend fun getLoginErrorMessage(exception: Throwable): String

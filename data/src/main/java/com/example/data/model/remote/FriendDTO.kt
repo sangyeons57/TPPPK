@@ -11,10 +11,8 @@ import com.example.core_common.util.DateTimeUtil
  */
 data class FriendDTO(
     @DocumentId val friendUid: String = "",
-    val friendName: String = "",
-    val friendProfileImageUrl: String? = null,
     // "requested", "accepted", "pending", "blocked"
-    val status: String = "",
+    val status: FriendStatus = FriendStatus.UNKNOWN,
     val requestedAt: Timestamp? = null,
     val acceptedAt: Timestamp? = null
 ) {
@@ -25,13 +23,7 @@ data class FriendDTO(
     fun toDomain(): Friend {
         return Friend(
             friendUid = friendUid,
-            friendName = friendName,
-            friendProfileImageUrl = friendProfileImageUrl,
-            status = try {
-                FriendStatus.valueOf(status.uppercase())
-            } catch (e: Exception) {
-                FriendStatus.PENDING
-            },
+            status = status,
             requestedAt = requestedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             acceptedAt = acceptedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)}
         )
@@ -45,9 +37,7 @@ data class FriendDTO(
 fun Friend.toDto(): FriendDTO {
     return FriendDTO(
         friendUid = friendUid,
-        friendName = friendName,
-        friendProfileImageUrl = friendProfileImageUrl,
-        status = status.name.lowercase(),
+        status = status,
         requestedAt = requestedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         acceptedAt = acceptedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
     )

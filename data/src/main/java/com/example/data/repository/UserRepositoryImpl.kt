@@ -3,6 +3,7 @@ package com.example.data.repository
 import android.net.Uri
 import android.util.Log
 import com.example.core_common.result.CustomResult
+import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.util.MediaUtil
@@ -15,6 +16,7 @@ import com.example.domain.model.base.User
 import com.example.domain.repository.MediaRepository
 import com.example.domain.repository.UserRepository
 import com.google.type.DateTime
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -320,19 +322,16 @@ class UserRepositoryImpl @Inject constructor(
      * @param limit 검색 결과 제한 개수
      * @return 검색된 사용자 목록
      */
-    override suspend fun searchUsersByName(name: String, limit: Int): CustomResult<List<User>, Exception> {
-        return try {
-            val result = userRemoteDataSource.searchUsersByName(name)
-            when (result) {
+    override suspend fun searchUsersByNameStream(name: String, limit: Int): Flow<CustomResult<List<User>, Exception>> {
+        return userRemoteDataSource.searchUsersByName(name, limit.toLong()).map{ userResult ->
+            when (userResult) {
                 is CustomResult.Success -> {
-                    val users = result.data.take(limit).map { it.toDomain() }
+                    val users = userResult.data.take(limit).map { it.toDomain() }
                     CustomResult.Success(users)
                 }
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                is CustomResult.Failure -> CustomResult.Failure(userResult.error)
                 else -> CustomResult.Failure(Exception("Unknown error in searchUsersByName"))
             }
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
         }
     }
 
@@ -423,6 +422,66 @@ class UserRepositoryImpl @Inject constructor(
         return userRemoteDataSource.updateUserProfileImageUrl(userId, imageUrl)
     }
 
+    /**
+     * 이메일로 사용자 단건 조회 (단발성)
+     */
+    override suspend fun getUserByEmail(email: String): CustomResult<User, Exception> {
+        return when (val result = userRemoteDataSource.getUserByEmail(email)) {
+            is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            else -> CustomResult.Failure(Exception("Unknown result in getUserByEmail"))
+        }
+    }
+
+    /**
+     * 정확한 이름으로 단일 사용자를 가져옵니다. Flow를 반환합니다.
+     *
+     * @param name 정확히 일치하는 사용자 이름
+     * @return 사용자 정보를 담은 Flow 또는 null을 담은 Flow, 실패 시 Exception
+     */
+    override fun getUserByExactNameStream(name: String): Flow<CustomResult<User, Exception>> {
+        return userRemoteDataSource.getUserByExactNameStream(name).map { result ->
+            when (result) {
+                is CustomResult.Success -> {
+                    val userDto = result.data // UserDTO (non-nullable)
+                    CustomResult.Success(userDto.toDomain()) // Returns CustomResult<User, Nothing>
+                }
+                is CustomResult.Failure -> {
+                    CustomResult.Failure(result.error) // Returns CustomResult<Nothing, E>
+                }
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Initial -> CustomResult.Initial
+                // Progress state might not be applicable here if it's a simple fetch,
+                // but including for completeness if the datasource might emit it.
+                is CustomResult.Progress -> CustomResult.Progress(result.progress)
+            }
+        }
+    }
+
+    /**
+     * Searches for a single user by their exact name and returns a Flow that emits the User.
+     * The Flow will emit updates if the user's data changes in Firestore.
+     *
+     * @param name The exact name of the user to search for.
+     * @return A Flow emitting [CustomResult.Success] with [User] if found, or [CustomResult.Failure] otherwise.
+     */
+    override suspend fun searchUserByNameStream(name: String): Flow<CustomResult<User, Exception>> {
+        return userRemoteDataSource.searchUserByName(name).map { result -> // Calling the new datasource method
+            when (result) {
+                is CustomResult.Success -> {
+                    val userDto = result.data // UserDTO
+                    CustomResult.Success(userDto.toDomain()) // Convert DTO to Domain User
+                }
+                is CustomResult.Failure -> {
+                    CustomResult.Failure(result.error) // Pass through the error
+                }
+                is CustomResult.Loading -> CustomResult.Loading // Pass through Loading state
+                is CustomResult.Initial -> CustomResult.Initial // Pass through Initial state
+                is CustomResult.Progress -> CustomResult.Progress(result.progress) // Pass through Progress state
+            }
+        }
+    }
+
     override fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapper>, Exception>> {
         return userRemoteDataSource.getProjectWrappersStream(userId).map { result ->
             when (result) {
@@ -444,6 +503,33 @@ class UserRepositoryImpl @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Processes user withdrawal by anonymizing their data in Firestore
+     * and setting their account status to WITHDRAWN.
+     *
+     * @param uid The ID of the user to process.
+     * @return CustomResult indicating success or failure.
+     */
+    override suspend fun processUserWithdrawal(uid: String): CustomResult<Unit, Exception> = resultTry {
+        Log.d("UserRepositoryImpl", "Processing withdrawal for user: $uid")
+        val updates = mapOf(
+            FirestoreConstants.Users.NAME to "UNKNOWN",
+            // 이메일은 원본을 유지하여 재활성화 시 매핑 문제를 방지합니다.
+            // FirestoreConstants.Users.EMAIL 항목은 더 이상 익명화하지 않습니다.
+            FirestoreConstants.Users.PROFILE_IMAGE_URL to null,
+            FirestoreConstants.Users.MEMO to null,
+            FirestoreConstants.Users.FCM_TOKEN to null,
+            FirestoreConstants.Users.ACCOUNT_STATUS to UserAccountStatus.WITHDRAWN,
+            FirestoreConstants.Users.UPDATED_AT to FieldValue.serverTimestamp() // Handled by UserRemoteDataSource
+        )
+        val result = userRemoteDataSource.updateUserFields(uid, updates)
+        if (result is CustomResult.Failure) {
+            throw result.error
+        }
+        Log.d("UserRepositoryImpl", "User $uid withdrawal data processed successfully.")
+        // CustomResult.Success(Unit) is implicitly returned by resultTry on success
     }
 
 }

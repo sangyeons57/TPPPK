@@ -2,12 +2,14 @@ package com.example.data.repository
 
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.DMWrapperRemoteDataSource
-import com.example.data.model.remote.toDto
+import com.example.data.model.remote.DMWrapperDTO // Assuming DMWrapperDTO is in this package
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.repository.DMWrapperRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue // Import for serverTimestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+// import java.util.Date // For initial timestamp if needed, though serverTimestamp is preferred
 import javax.inject.Inject
 
 class DMWrapperRepositoryImpl @Inject constructor(
@@ -16,11 +18,9 @@ class DMWrapperRepositoryImpl @Inject constructor(
 ) : DMWrapperRepository {
 
     override fun getDMWrappersStream(userId: String): Flow<CustomResult<List<DMWrapper>, Exception>> {
-        // Use the parameterized version of observeDmWrappers method
         return dmWrapperRemoteDataSource.observeDmWrappers(userId)
             .map { dtoList ->
                 try {
-                    // Convert list of DTOs to domain models
                     val domainList = dtoList.map { it.toDomain() }
                     CustomResult.Success(domainList)
                 } catch (e: Exception) {
@@ -29,18 +29,15 @@ class DMWrapperRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun getDMWrapperStream(dmChannelId: String): Flow<CustomResult<DMWrapper, Exception>> {
-        // Since there's no direct method to get a single DM wrapper stream,
-        // we'll filter the results from observeDmWrappers
-        return dmWrapperRemoteDataSource.observeDmWrappers()
+    override fun getDMWrapperStream(currentUserId: String, dmChannelId: String): Flow<CustomResult<DMWrapper, Exception>> {
+        return dmWrapperRemoteDataSource.observeDmWrappers(currentUserId)
             .map { dtoList ->
                 try {
-                    // Find the specific DMWrapper by channel ID
                     val dto = dtoList.find { it.dmChannelId == dmChannelId }
                     if (dto != null) {
                         CustomResult.Success(dto.toDomain())
                     } else {
-                        CustomResult.Failure(Exception("DM channel not found: $dmChannelId"))
+                        CustomResult.Failure(Exception("DMWrapper for DM channel not found: $dmChannelId"))
                     }
                 } catch (e: Exception) {
                     CustomResult.Failure(e)
@@ -48,33 +45,31 @@ class DMWrapperRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun createDmChannel(otherUserId: String): CustomResult<String, Exception> {
-        // This implementation depends on the project's requirements
-        // and should use Firebase Auth for the current user ID
-        return try {
-            val currentUserId = auth.currentUser?.uid 
-                ?: return CustomResult.Failure(Exception("User not logged in"))
-                
-            // For now, return a placeholder implementation
-            // This should be replaced with actual Firebase implementation
-            CustomResult.Failure(Exception("Implementation pending for createDmChannel"))
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
+    override suspend fun createDMWrapper(
+        userId: String,
+        dmChannelId: String,
+        otherUserId: String,
+    ): CustomResult<String, Exception> {
+
+        val newDmWrapperDto = DMWrapperDTO(
+            dmChannelId = dmChannelId,
+            otherUserId = otherUserId
+            // Fields like otherUserId, otherUserName, otherUserProfileImageUrl
+            // would typically be populated when creating the user-specific copies
+            // or by a Cloud Function that enriches the global wrapper.
+        )
+
+        return dmWrapperRemoteDataSource.createDMWrapper(userId, newDmWrapperDto)
     }
 
-    override fun findDmChannelWithUser(otherUserId: String): CustomResult<String, Exception> {
-        // This implementation depends on the project's requirements
-        // We need to search existing DM channels to find one with the specified user
-        return try {
-            val currentUserId = auth.currentUser?.uid 
-                ?: return CustomResult.Failure(Exception("User not logged in"))
-                
-            // For now, return a placeholder implementation
-            // This should be replaced with actual Firebase implementation
-            CustomResult.Failure(Exception("Implementation pending for findDmChannelWithUser"))
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
+    override suspend fun findDmChannelIdWithUser(currentUserId: String, otherUserId: String): CustomResult<String, Exception> {
+
+        return when (val result = dmWrapperRemoteDataSource.findDMWrapperByExactParticipants(currentUserId, otherUserId)) {
+            is CustomResult.Success -> CustomResult.Success(result.data.dmChannelId) // Found existing wrapper, return its channelId
+            is CustomResult.Failure -> {
+                CustomResult.Failure(result.error) // Propagate error
+            }
+            else -> CustomResult.Failure(Exception("Unknown error type from findDMWrapperByExactParticipants"))
         }
     }
 }

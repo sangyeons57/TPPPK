@@ -168,39 +168,39 @@ class HomeViewModel @Inject constructor(
     }
 
     // Mapper function DMChannel -> DmUiModel
-// DMChannel 객체에서 DmUiModel에 필요한 정보를 추출합니다.
-private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): DmUiModel {
-    val partnerId = dmChannel.participants.firstOrNull { it != currentUserId }
-    var partnerName = "Unknown User"
-    var partnerProfileImageUrl: String? = null
+    // DMChannel 객체에서 DmUiModel에 필요한 정보를 추출합니다.
+    private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): DmUiModel {
+        val partnerId = dmChannel.participants.firstOrNull { it != currentUserId }
+        var partnerName = "Unknown User"
+        var partnerProfileImageUrl: String? = null
 
-    if (partnerId != null && partnerId.isNotEmpty()) {
-        // GetUserInfoUseCase returns Flow<CustomResult<User, Exception>>
-        // We take the first result from this flow.
-        when (val userInfoResult = getUserInfoUseCase(partnerId).first()) {
-            is CustomResult.Success -> {
-                partnerName = userInfoResult.data.name // Assuming User model has 'name'
-                partnerProfileImageUrl = userInfoResult.data.profileImageUrl // Assuming User model has 'profileImageUrl'
-                Log.d("HomeViewModel", "Partner info success for $partnerId: Name=$partnerName")
-            }
-            is CustomResult.Failure -> {
-                Log.e("HomeViewModel", "Failed to get partner info for $partnerId", userInfoResult.error)
-            }
-            else -> { 
-                Log.d("HomeViewModel", "Fetching partner info for $partnerId resulted in: $userInfoResult (e.g. Loading/Initial)")
+        if (partnerId != null && partnerId.isNotEmpty()) {
+            // GetUserInfoUseCase returns Flow<CustomResult<User, Exception>>
+            // We take the first result from this flow.
+            when (val userInfoResult = getUserInfoUseCase(partnerId).first()) {
+                is CustomResult.Success -> {
+                    partnerName = userInfoResult.data.name // Assuming User model has 'name'
+                    partnerProfileImageUrl = userInfoResult.data.profileImageUrl // Assuming User model has 'profileImageUrl'
+                    Log.d("HomeViewModel", "Partner info success for $partnerId: Name=$partnerName")
+                }
+                is CustomResult.Failure -> {
+                    Log.e("HomeViewModel", "Failed to get partner info for $partnerId", userInfoResult.error)
+                }
+                else -> {
+                    Log.d("HomeViewModel", "Fetching partner info for $partnerId resulted in: $userInfoResult (e.g. Loading/Initial)")
+                }
             }
         }
-    }
 
-    return DmUiModel(
-        channelId = dmChannel.id,
-        partnerName = partnerName,
-        partnerProfileImageUrl = partnerProfileImageUrl,
-        lastMessage = dmChannel.lastMessagePreview,
-        lastMessageTimestamp = dmChannel.lastMessageTimestamp!!, // Corrected from updatedAt
-        unreadCount = 0 // Placeholder - unread count not in DMChannel model
-    )
-}
+        return DmUiModel(
+            channelId = dmChannel.id,
+            partnerName = partnerName,
+            partnerProfileImageUrl = partnerProfileImageUrl,
+            lastMessage = dmChannel.lastMessagePreview,
+            lastMessageTimestamp = dmChannel.lastMessageTimestamp!!, // Corrected from updatedAt
+            unreadCount = 0 // Placeholder - unread count not in DMChannel model
+        )
+    }
 
     // 상단 탭 선택 시 호출
     fun onTopSectionSelect(section: TopSection) {
@@ -211,9 +211,10 @@ private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): Dm
 
     // 현재 선택된 탭에 맞는 데이터 로드 함수
     private fun loadDataForSelectedSection() {
-        loadProjects() // 프로젝트는 currentUserId와 무관하게 로드 가능
+        if (_uiState.value.selectedTopSection == TopSection.PROJECTS) {
+            loadProjects() // 프로젝트는 currentUserId와 무관하게 로드 가능
 
-        if (_uiState.value.selectedTopSection == TopSection.DMS) {
+        } else if (_uiState.value.selectedTopSection == TopSection.DMS) {
             loadDms() // currentUserId 체크는 이제 usecase 내부에서 처리
         }
     }

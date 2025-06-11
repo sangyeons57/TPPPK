@@ -85,7 +85,7 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProfileEvent.NavigateToSettings -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)))
+                is ProfileEvent.NavigateToSettings -> appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.APP_SETTINGS)))
                 is ProfileEvent.NavigateToEditProfile -> {
                     Log.d("ProfileScreen", "Navigating to Edit Profile Screen")
                     appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)))

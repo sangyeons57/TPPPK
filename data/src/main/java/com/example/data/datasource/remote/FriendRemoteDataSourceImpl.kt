@@ -4,6 +4,7 @@ package com.example.data.datasource.remote
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.data.model.remote.FriendDTO
+import com.example.domain.model.enum.FriendStatus
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -53,7 +54,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 val friendsCollection = firestore.collection(FirestoreConstants.Collections.USERS)
                     .document(userId)
                     .collection(FirestoreConstants.Users.Friends.COLLECTION_NAME)
-                    .whereEqualTo(FirestoreConstants.Users.Friends.STATUS, "accepted")
+                    .whereEqualTo(FirestoreConstants.Users.Friends.STATUS, FriendStatus.ACCEPTED)
                     .snapshots()
                 
                 friendsCollection.collect { snapshot ->
@@ -67,7 +68,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     }
     
     override fun observeFriendRequests(userId: String): Flow<CustomResult<List<FriendDTO>, Exception>> {
-        return kotlinx.coroutines.flow.flow {
+        return flow {
             try {
                 if (userId.isEmpty()) {
                     emit(CustomResult.Failure(Exception("User ID is empty")))
@@ -77,7 +78,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 val friendsCollection = firestore.collection(FirestoreConstants.Collections.USERS)
                     .document(userId)
                     .collection(FirestoreConstants.Users.Friends.COLLECTION_NAME)
-                    .whereEqualTo(FirestoreConstants.Users.Friends.STATUS, "pending")
+                    .whereEqualTo(FirestoreConstants.Users.Friends.STATUS, FriendStatus.PENDING)
                     .snapshots()
                 
                 friendsCollection.collect { snapshot ->
@@ -91,9 +92,8 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun requestFriend(
-        friendId: String, // 내가 요청을 보내는 상대방의 User ID
-        myName: String,   // 상대방의 friends 컬렉션에 저장될 나의 이름
-        myProfileImageUrl: String? // 상대방의 friends 컬렉션에 저장될 나의 프로필 이미지
+        friendDTO: FriendDTO,
+        myDTO: FriendDTO
     ): CustomResult<Unit, Exception> {
         return resultTry {
             val myUid = getCurrentUserId().getOrThrow() // 나의 User ID
@@ -106,12 +106,10 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 //    friendName, friendProfileImageUrl 필드에는 상대방의 정보를 저장해야 하나,
                 //    이 단계에서는 알 수 없으므로 Repository에서 User 정보를 조회 후 업데이트하거나,
                 //    Cloud Function으로 처리하는 것이 좋습니다. 여기서는 임시값을 넣습니다.
-                val myFriendDocRef = getMyFriendsCollectionRef()?.document(friendId)
+                val myFriendDocRef = getMyFriendsCollectionRef()?.document(friendDTO.friendUid)
                     ?: throw Exception("Failed to get my friends collection reference.")
                 val myFriendData = FriendDTO(
-                    friendName = "Loading...", // 상대방 이름, 추후 업데이트 필요
-                    friendProfileImageUrl = null, // 상대방 프로필 이미지, 추후 업데이트 필요
-                    status = "requested",
+                    status = FriendStatus.PENDING,
                     requestedAt = now,
                     acceptedAt = null
                 )
@@ -120,12 +118,10 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 // 2. 상대방의 friends 컬렉션에 나의 정보를 저장 (상태: pending)
                 //    문서 ID는 나의 UID (myUid)
                 //    friendName, friendProfileImageUrl 필드에는 나의 정보를 저장.
-                val theirFriendDocRef = getOthersFriendsCollectionRef(friendId).document(myUid)
+                val theirFriendDocRef = getOthersFriendsCollectionRef(friendDTO.friendUid).document(myDTO.friendUid)
                 val theirFriendData = FriendDTO(
-                    friendUid = myUid,
-                    friendName = myName,
-                    friendProfileImageUrl = myProfileImageUrl,
-                    status = "pending",
+                    friendUid = myDTO.friendUid,
+                    status = FriendStatus.PENDING,
                     requestedAt = now,
                     acceptedAt = null
                 )
@@ -142,7 +138,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
 
             firestore.runBatch { batch ->
                 val now = Timestamp.now()
-                val updateData = mapOf(FirestoreConstants.Users.Friends.STATUS to "accepted", FirestoreConstants.Users.Friends.ACCEPTED_AT to now)
+                val updateData = mapOf(FirestoreConstants.Users.Friends.STATUS to FriendStatus.ACCEPTED, FirestoreConstants.Users.Friends.ACCEPTED_AT to now)
 
                 // 1. 나의 friends 컬렉션에서 해당 요청 문서의 상태를 "accepted"로 변경
                 val myFriendDocRef = getMyFriendsCollectionRef()?.document(requesterId)
@@ -168,9 +164,10 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                     ?: throw Exception("Failed to get my friends collection reference for friend.")
                 batch.delete(myFriendDocRef)
 
-                // 2. 상대방의 friends 컬렉션에서 나의 문서 삭제
+                //2. 상대방의 friends 컬렉션에서 나의 문서 삭제
                 val theirFriendDocRef = getOthersFriendsCollectionRef(friendId).document(myUid)
-                batch.delete(theirFriendDocRef)
+                batch.delete(theirFriendDocRef) 
+
             }.await()
         }
     }

@@ -40,22 +40,16 @@ object FirestoreConstants {
         object DMWrappers { // users/{userId}/dm_wrapper/{dmChannelId}
             const val COLLECTION_NAME = "dm_wrapper"
             const val OTHER_USER_ID = "otherUserId"
-            const val OTHER_USER_NAME = "otherUserName"
-            const val OTHER_USER_PROFILE_IMAGE_URL = "otherUserProfileImageUrl"
-            const val LAST_MESSAGE_PREVIEW = "lastMessagePreview"
-            const val LAST_MESSAGE_TIMESTAMP = "lastMessageTimestamp"
         }
 
         object ProjectsWrappers { // users/{userId}/projects_wrapper/{projectId}
             const val COLLECTION_NAME = "projects_wrapper"
-            const val PROJECT_NAME = "projectName"
-            const val PROJECT_IMAGE_URL = "projectImageUrl"
+            const val ORDER = "order"
         }
     }
 
     object DMChannel { // dm_channels/{dmChannelId}
-        const val USER_ID_1 = "userId1"
-        const val USER_ID_2 = "userId2"
+        const val PARTICIPANTS = "participants" // List<String> = "userId1"
         const val LAST_MESSAGE_PREVIEW = "lastMessagePreview"
         const val LAST_MESSAGE_TIMESTAMP = "lastMessageTimestamp"
         const val CREATED_AT = "createdAt"

@@ -8,6 +8,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.LoginUseCase
+import com.example.domain.usecase.auth.WithdrawnAccountException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -157,18 +158,20 @@ class LoginViewModel @Inject constructor(
 
             when (result) {
                 is CustomResult.Success -> {
-                    // 로그인 성공
-                    val user = result.data
-                    _eventFlow.emit(LoginEvent.LoginSuccess(user.userId))
-                    // 성공 시 isLoading은 false로 바꿀 필요 없음 (화면 전환)
+                    // 로그인 성공 (LoginUseCase에서 이미 계정 상태 확인 완료)
+                    val userSession = result.data
+                    _eventFlow.emit(LoginEvent.LoginSuccess(userSession.userId))
                 }
                 is CustomResult.Failure -> {
-                    // 로그인 실패
                     val exception = result.error
                     Log.e("LoginViewModel", "Login failed", exception)
-                    val errorMessage = getAuthErrorMessageUseCase(exception.message ?: "unknown_error")
-                    _uiState.update { it.copy(isLoading = false) } // 로딩 종료
-                    _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage)) // 스낵바로 에러 알림
+                    val errorMessage = if (exception is WithdrawnAccountException) {
+                        exception.message ?: "탈퇴한 계정입니다."
+                    } else {
+                        getAuthErrorMessageUseCase(exception.message ?: "unknown_error")
+                    }
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage))
                 }
                 else -> {
                     _uiState.update { it.copy(isLoading = false) }

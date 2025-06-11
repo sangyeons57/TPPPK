@@ -90,12 +90,7 @@ class FindPasswordViewModel @Inject constructor(
             }.onFailure { exception ->
                 viewModelScope.launch {
                     // Exception을 AuthErrorType.RESET_PASSWORD_FAILURE로 처리하거나 구체적인 오류 메시지 생성
-                    val errorMessage = if (exception is Exception) {
-                        getAuthErrorMessageUseCase(exception)
-                    } else {
-                        getAuthErrorMessageUseCase(AuthErrorType.RESET_PASSWORD_FAILURE)
-                    }
-                    _uiState.update { it.copy(isLoading = false, errorMessage = errorMessage) }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = getAuthErrorMessageUseCase(exception)) }
                 }
             }
         }

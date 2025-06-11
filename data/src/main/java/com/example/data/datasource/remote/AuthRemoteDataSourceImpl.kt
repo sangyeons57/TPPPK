@@ -1,4 +1,3 @@
-
 package com.example.data.datasource.remote
 
 import com.example.core_common.result.CustomResult
@@ -112,5 +111,21 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             CustomResult.Failure(e)
         }
     }
+    
+    /**
+     * 비밀번호 업데이트 구현
+     */
+    override suspend fun updatePassword(newPassword: String): CustomResult<Unit, Exception> {
+        return try {
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                currentUser.updatePassword(newPassword).await()
+                CustomResult.Success(Unit)
+            } else {
+                CustomResult.Failure(Exception("No user is currently signed in"))
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
+    }
 }
-

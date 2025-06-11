@@ -16,11 +16,6 @@ enum class ProjectChannelType(val value: String) {
     TASKS("TASKS"),
 
     /**
-     * 공지사항 전달용 채널 (예시)
-     */
-    ANNOUNCEMENTS("ANNOUNCEMENTS"),
-
-    /**
      * 알 수 없거나 정의되지 않은 채널 유형
      */
     UNKNOWN("UNKNOWN");

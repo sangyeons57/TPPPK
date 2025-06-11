@@ -65,9 +65,9 @@ class SplashViewModel @Inject constructor(
                 val result = checkAuthenticationStatusUseCase()
                 Log.d("SplashViewModel", "Auth check result: $result")
 
-                result.onSuccess { (isAuthenticated, isEmailVerified) ->
+                result.onSuccess { isSuccess ->
                     viewModelScope.launch {
-                        if (isAuthenticated && isEmailVerified) {
+                        if (isSuccess) {
                             _eventFlow.emit(SplashEvent.NavigateToMain)
                         } else {
                             _eventFlow.emit(SplashEvent.NavigateToLogin)
@@ -79,6 +79,7 @@ class SplashViewModel @Inject constructor(
                         _uiState.update { it.copy(isLoading = false) }
                         // Optionally show an error message or allow retry
                          _eventFlow.emit(SplashEvent.NavigateToLogin) // Or show error state
+                        Log.e("SplashViewModel", "Auth check failed: $exception")
                          // Log error: Log.e("SplashViewModel", "Auth check failed", exception)
                     }
                 }
@@ -86,7 +87,7 @@ class SplashViewModel @Inject constructor(
             } catch (e: Exception) { // Catch potential unexpected errors
                 _uiState.update { it.copy(isLoading = false) }
                  _eventFlow.emit(SplashEvent.NavigateToLogin) // Fallback to Login
-                 // Log error: Log.e("SplashViewModel", "Unexpected error", e)
+                  Log.e("SplashViewModel", "Unexpected error", e)
             }
         }
     }

@@ -34,13 +34,13 @@ service cloud.firestore {
         // === 사용자 (users) ===
         match /users/{userId} {
             // 프로필 읽기: 인증된 사용자만
-            allow read: if isAuthenticated();
+            allow read: if true;
             // 프로필 수정: 본인만
             allow update: if isCurrentUser(userId);
             // 사용자 생성: (일반적으로 Firebase Auth로 처리, 직접 생성 시 규칙 필요)
-            // allow create: if ...;
+            allow create: if true;
             // 사용자 삭제: (일반적으로 직접 삭제 허용 안 함, 관리자 또는 서버 로직)
-            // allow delete: if ...;
+            allow delete: if false;
 
             // --- 사용자 서브컬렉션 ---
             // 친구 (friends)
@@ -52,12 +52,17 @@ service cloud.firestore {
                 allow read: if isCurrentUser(userId);
 
                 // 친구 문서 생성: 본인이 자신의 친구 목록에 항목을 추가하는 경우.
-                allow create: if isCurrentUser(userId);
+                // 테스트를 위해 풀어둠
+                // 그러나 다른 사용자가 친구 추가를 위해 Firestore Cloud Function 이 필요함
+                allow create: if true;
 
                 // 친구 문서 업데이트: 본인이 친구와의 관계 상태(status) 또는 친구 관련 정보(메모 등)를 변경하는 경우.
                 // 예: 친구 요청 수락/거절, 친구 삭제 전 상태 변경(soft delete), 별명 변경 등.
                 // status 필드 값에 따른 세부적인 필드 업데이트 규칙을 추가할 수 있음 (예: status가 'FRIENDS'일 때만 메모 수정 가능).
-                allow update: if isCurrentUser(userId);
+                // allow update: if isCurrentUser(userId);
+                // 테스트를 위해 풀어둠
+                // 그러나 다른 사용자가 친구 추가를 위해 Firestore Cloud Function 이 필요함
+                allow update: if true;
 
                 // 친구 문서 삭제 (관계 끝기)
                 allow delete: if isCurrentUser(userId);
@@ -79,15 +84,13 @@ service cloud.firestore {
         // === DM 채널 (dm_channels) ===
         match /dm_channels/{dmChannelId} {
             // DM 채널 정보 읽기: 참가자만
-            allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+            allow read: if isAuthenticated();
             // DM 채널 생성: 인증된 사용자이고, 생성자가 참가자 중 한 명이며, 참가자는 2명
-            allow create: if isAuthenticated() &&
-                           request.auth.uid in request.resource.data.participants &&
-                           request.resource.data.participants.size() == 2;
+            allow create: if isAuthenticated();
             // DM 채널 업데이트 (예: lastMessagePreview - 주로 서버에서 업데이트)
-            allow update: if isAuthenticated() && request.auth.uid in resource.data.participants; // 제한적 업데이트만 허용
+            allow update: if isAuthenticated();
             // DM 채널 삭제: (일반적으로 허용 안 함 또는 soft delete)
-            // allow delete: if ...;
+            allow delete: if false;
 
             // --- DM 채널 서브콜렉션 ---
             // 메시지 (messages)
@@ -121,12 +124,14 @@ service cloud.firestore {
 
         // === 프로젝트 (projects) ===
         match /projects/{projectId} {
-            // 프로젝트 정보 읽기: 프로젝트 멤버만 (소유자도 isProjectMember 함수를 통해 멤버로 간주될 수 있도록 isProjectMember 함수 수정 또는 ownerId 직접 비교)
-            allow read: if isProjectMember(projectId) || isProjectOwner(projectId);
+            // 프로젝트 정보 읽기: 프로젝트 멤버만
+            allow read: if isProjectMember(projectId);
             // 프로젝트 생성: 인증된 사용자이고, 생성자가 소유자
             allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
-            // 프로젝트 업데이트/삭제: 프로젝트 소유자만
-            allow update, delete: if isProjectOwner(projectId);
+            // 프로젝트 업데이트/삭제: 프로젝트 멤버만
+            allow update: if isProjectMember(projectId);
+            // 프로젝트 소유자만 삭제 가능
+            allow delete: if isProjectOwner(projectId);
 
             // --- 프로젝트 서브콜렉션 ---
             // 멤버 (members)

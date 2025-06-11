@@ -49,8 +49,10 @@ import com.example.feature_auth.ui.FindPasswordScreen
 import com.example.feature_auth.ui.PrivacyPolicyScreen
 import com.example.feature_auth.ui.SignUpScreen
 import com.example.feature_auth.ui.TermsOfServiceScreen
+import com.example.feature_friends.ui.AcceptFriendsScreen
 import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_profile.ui.EditProfileScreen
+import com.example.feature_settings.ui.SettingsScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -114,6 +116,9 @@ fun AppNavigationGraph(
         // 프로필 수정 화면 (Settings Route)
         composable(AppRoutes.Settings.EDIT_MY_PROFILE) {
             EditProfileScreen(appNavigator = appNavigator)
+        }
+        composable(AppRoutes.Settings.APP_SETTINGS) {
+            SettingsScreen(appNavigator = appNavigator)
         }
     }
 }
@@ -189,6 +194,9 @@ fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
     ) {
         composable(AppRoutes.Friends.LIST) {
             FriendsScreen(appNavigator = appNavigator)
+        }
+        composable(AppRoutes.Friends.ACCEPT_REQUESTS) {
+            AcceptFriendsScreen(appNavigator = appNavigator)
         }
         // TODO: 친구 요청 수락 화면 등 추가 경로 정의
         // composable(AppRoutes.Friends.ACCEPT_REQUESTS) { ... }

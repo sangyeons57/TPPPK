@@ -1,4 +1,3 @@
-
 package com.example.data.datasource.remote
 
 import android.net.Uri
@@ -48,19 +47,19 @@ interface UserRemoteDataSource {
     suspend fun uploadProfileImage(imageUri: Uri): CustomResult<String, Exception>
 
     /**
-     * 이름(닉네임)으로 사용자를 검색합니다.
-     * @param nameQuery 검색할 이름 문자열
-     * @return 검색 결과에 해당하는 사용자 DTO 목록
-     */
-    suspend fun searchUsersByName(nameQuery: String): CustomResult<List<UserDTO>, Exception>
-    
-    /**
      * 이름(닉네임)으로 사용자를 검색하고 결과 수를 제한합니다.
      * @param nameQuery 검색할 이름 문자열
      * @param maxResults 결과 수 제한
      * @return 검색 결과에 해당하는 사용자 DTO 목록
      */
-    suspend fun searchUsersByName(nameQuery: String, maxResults: Int): CustomResult<List<UserDTO>, Exception>
+    suspend fun searchUsersByName(nameQuery: String, maxResults: Long): Flow<CustomResult<List<UserDTO>, Exception>>
+
+    /**
+     * 이름(닉네임)으로 사용자를 실시간으로 검색합니다.
+     * @param nameQuery 검색할 이름 문자열
+     * @return 사용자 DTO를 담은 Flow
+     */
+    suspend fun searchUserByName(nameQuery: String): Flow<CustomResult<UserDTO, Exception>>
 
     /**
      * 닉네임(이름)이 이미 사용 중인지 확인합니다.
@@ -97,10 +96,25 @@ interface UserRemoteDataSource {
     suspend fun updateUserProfileImageUrl(userId: String, imageUrl: String?): CustomResult<Unit, Exception>
 
     /**
+     * 이메일로 단일 사용자를 조회합니다 (단발성).
+     * @param email 조회할 이메일
+     */
+    suspend fun getUserByEmail(email: String): CustomResult<UserDTO, Exception>
+
+    /**
      * 특정 userId를 가진 사용자의 프로젝트 요약 정보(ProjectsWrapper)를 실시간으로 관찰합니다.
      * @param userId 관찰할 사용자의 ID
      * @return ProjectsWrapperDTO 목록을 담은 Flow
      */
+    /**
+     * 정확한 이름으로 단일 사용자를 실시간으로 가져옵니다.
+     * Firestore에서 'name' 필드가 정확히 일치하는 사용자를 찾습니다.
+     *
+     * @param name 정확히 일치하는 사용자 이름
+     * @return UserDTO를 담은 Flow, 실패 시 Exception (사용자를 찾지 못하거나 파싱 오류 발생 시 Failure)
+     */
+    fun getUserByExactNameStream(name: String): Flow<CustomResult<UserDTO, Exception>>
+
     @Deprecated("Reads from a legacy field in the user document. Project participation IDs are now primarily managed via ProjectsWrapperRemoteDataSource (accessed via ProjectsWrapperRepository).")
     fun getProjectWrappersStream(userId: String): Flow<CustomResult<List<ProjectsWrapperDTO>, Exception>>
 
@@ -110,4 +124,13 @@ interface UserRemoteDataSource {
      * @return DMWrapperDTO 목록을 담은 Flow
      */
     fun getDmWrappersStream(userId: String): Flow<CustomResult<List<DMWrapperDTO>, Exception>>
+
+    /**
+     * Updates specific fields for a user in Firestore.
+     *
+     * @param uid The ID of the user to update.
+     * @param updates A map of field names to their new values. `FieldValue.serverTimestamp()` can be used for timestamps.
+     * @return CustomResult indicating success or failure.
+     */
+    suspend fun updateUserFields(uid: String, updates: Map<String, Any?>): CustomResult<Unit, Exception>
 }

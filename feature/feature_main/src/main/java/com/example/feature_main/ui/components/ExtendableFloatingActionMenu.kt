@@ -74,54 +74,12 @@ data class FabMenuItem(
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun ExtendableFloatingActionMenu(
-    currentSection: TopSection,
+    modifier: Modifier = Modifier,
+    menuItems: List<FabMenuItem>,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    onAddProject: () -> Unit,
-    onAddDm: () -> Unit,
-    onEditProjectStructure: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
-    // 현재 선택된 섹션에 따라 메뉴 아이템 목록 생성
-    val menuItems = remember(currentSection) {
-        buildList {
-            // 프로젝트 추가 항목 (공통)
-            add(FabMenuItem(
-                icon = Icons.Default.Group,
-                text = "프로젝트 추가",
-                contentDescription = "새 프로젝트 추가",
-                onClick = {
-                    onExpandedChange(false)
-                    onAddProject()
-                }
-            ))
-            
-            // DM 추가 항목 (공통)
-            add(FabMenuItem(
-                icon = Icons.Default.Person,
-                text = "DM 추가",
-                contentDescription = "새 DM 대화 추가",
-                onClick = {
-                    onExpandedChange(false)
-                    onAddDm()
-                }
-            ))
-            
-            // 프로젝트 구조 편집 항목 (프로젝트 탭에서만 표시)
-            if (currentSection == TopSection.PROJECTS) {
-                add(FabMenuItem(
-                    icon = Icons.Default.Edit,
-                    text = "프로젝트 구조 편집",
-                    contentDescription = "프로젝트 구조 편집",
-                    onClick = {
-                        onExpandedChange(false)
-                        onEditProjectStructure()
-                    }
-                ))
-            }
-        }
-    }
-    
+
     // 메인 FAB 회전 애니메이션
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 45f else 0f,
@@ -171,10 +129,10 @@ fun ExtendableFloatingActionMenu(
             
             // 메인 FAB
             FloatingActionButton(
-            onClick = { onExpandedChange(!isExpanded) },
-                modifier = Modifier.semantics {
-                    contentDescription = if (isExpanded) "메뉴 닫기" else "메뉴 열기"
-                }
+                onClick = { onExpandedChange(!isExpanded) },
+                    modifier = Modifier.semantics {
+                        contentDescription = if (isExpanded) "메뉴 닫기" else "메뉴 열기"
+                    }
             ) {
                 // 메뉴 확장 상태에 따라 + 아이콘 회전
                 Icon(
@@ -188,6 +146,66 @@ fun ExtendableFloatingActionMenu(
         }
     }
 }
+
+@Composable
+fun MainHomeFloatingButton(
+    currentSection: TopSection,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onAddProject: () -> Unit,
+    onAddDm: () -> Unit,
+    onEditProjectStructure: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    // 현재 선택된 섹션에 따라 메뉴 아이템 목록 생성
+    val menuItems = remember(currentSection) {
+        buildList {
+            // 프로젝트 추가 항목 (공통)
+            add(FabMenuItem(
+                icon = Icons.Default.Group,
+                text = "프로젝트 추가",
+                contentDescription = "새 프로젝트 추가",
+                onClick = {
+                    onExpandedChange(false)
+                    onAddProject()
+                }
+            ))
+
+            // DM 추가 항목 (공통)
+            add(FabMenuItem(
+                icon = Icons.Default.Person,
+                text = "DM 추가",
+                contentDescription = "새 DM 대화 추가",
+                onClick = {
+                    onExpandedChange(false)
+                    onAddDm()
+                }
+            ))
+
+            // 프로젝트 구조 편집 항목 (프로젝트 탭에서만 표시)
+            if (currentSection == TopSection.PROJECTS) {
+                add(FabMenuItem(
+                    icon = Icons.Default.Edit,
+                    text = "프로젝트 구조 편집",
+                    contentDescription = "프로젝트 구조 편집",
+                    onClick = {
+                        onExpandedChange(false)
+                        onEditProjectStructure()
+                    }
+                ))
+            }
+        }
+    }
+
+    ExtendableFloatingActionMenu(
+        menuItems = menuItems,
+        isExpanded = isExpanded,
+        onExpandedChange = onExpandedChange,
+        modifier = modifier
+    )
+}
+
 
 /**
  * 메뉴 아이템 행 (아이콘 + 텍스트)

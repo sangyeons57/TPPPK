@@ -1,4 +1,4 @@
-package com.example.core_ui.dialogs.ui
+package com.example.feature_main.ui.dialog
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer

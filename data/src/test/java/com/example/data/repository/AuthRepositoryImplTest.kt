@@ -55,7 +55,7 @@ class AuthRepositoryImplTest {
         `when`(mockFirebaseUser.delete()).thenReturn(Tasks.forResult(null))
 
         // Act
-        val result = authRepositoryImpl.deleteCurrentUser()
+        val result = authRepositoryImpl.withdrawCurrentUser()
 
         // Assert
         verify(mockFirebaseUser).delete()
@@ -68,7 +68,7 @@ class AuthRepositoryImplTest {
         `when`(mockFirebaseAuth.currentUser).thenReturn(null)
 
         // Act
-        val result = authRepositoryImpl.deleteCurrentUser()
+        val result = authRepositoryImpl.withdrawCurrentUser()
 
         // Assert
         verify(mockFirebaseUser, never()).delete()
@@ -84,7 +84,7 @@ class AuthRepositoryImplTest {
         `when`(mockFirebaseUser.delete()).thenReturn(Tasks.forException(firebaseException))
 
         // Act
-        val result = authRepositoryImpl.deleteCurrentUser()
+        val result = authRepositoryImpl.withdrawCurrentUser()
 
         // Assert
         verify(mockFirebaseUser).delete()

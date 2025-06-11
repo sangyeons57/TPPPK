@@ -51,6 +51,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import com.example.core_navigation.core.NavDestination
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.feature_main.ui.components.MainHomeFloatingButton
 
 // 오버레이 투명도 상수
 private const val OVERLAY_ALPHA = 0.7f
@@ -70,8 +71,11 @@ private object HomeScreenStateKeys {
  * - 왼쪽: 프로필/프로젝트 사이드바
  * - 중간: DM 목록 또는 선택한 프로젝트의 채널 목록
  * - 오른쪽: (채팅 화면으로 이동)
- * 
- * @param savedState 화면 상태를 복원하기 위한 Bundle (탭 전환 시 상태 유지)
+ *
+ * @param modifier UI 요소에 적용할 Modifier.
+ * @param appNavigator 내비게이션 이벤트를 처리하는 AppNavigator.
+ * @param viewModel HomeViewModel 인스턴스, 화면의 상태 및 비즈니스 로직 관리.
+ * @param savedState 화면 상태를 복원하기 위한 Bundle (탭 전환 시 상태 유지).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -204,7 +208,7 @@ fun HomeScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            ExtendableFloatingActionMenu(
+            MainHomeFloatingButton(
                 currentSection = uiState.selectedTopSection,
                 isExpanded = showFloatingMenu,
                 onExpandedChange = { showFloatingMenu = it },
@@ -831,12 +835,10 @@ fun HomeScreenInScaffoldPreview() {
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             floatingActionButton = {
                 ExtendableFloatingActionMenu(
-                    currentSection = TopSection.PROJECTS, // 또는 TopSection.DMS
-                    onAddProject = { Log.d("Preview", "Add Project Clicked") },
-                    onAddDm = { Log.d("Preview", "Add DM Clicked") },
-                    onEditProjectStructure = { Log.d("Preview", "Edit Project Structure Clicked") },
                     isExpanded = TODO(),
                     onExpandedChange = TODO(),
+                    modifier = TODO(),
+                    menuItems = TODO(),
                 )
             },
             floatingActionButtonPosition = FabPosition.End

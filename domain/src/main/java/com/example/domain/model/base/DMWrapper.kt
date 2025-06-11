@@ -5,10 +5,6 @@ import java.time.Instant
 
 data class DMWrapper(
     @DocumentId val dmChannelId: String = "",
-    val otherUserId: String = "",
-    val otherUserName: String = "",
-    val otherUserProfileImageUrl: String? = null,
-    val lastMessagePreview: String? = null,
-    val lastMessageTimestamp: Instant? = null
+    val otherUserId: String = ""
 )
 

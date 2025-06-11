@@ -21,6 +21,11 @@ enum class UserAccountStatus(val value: String) {
     DELETED("DELETED"),
 
     /**
+     * 사용자가 탈퇴하여 계정 정보가 익명화되고 비활성화된 상태입니다.
+     */
+    WITHDRAWN("WITHDRAWN"),
+
+    /**
      * 알 수 없거나 정의되지 않은 계정 상태
      */
     UNKNOWN("UNKNOWN");
