@@ -9,6 +9,10 @@ import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCase
 import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCaseImpl
 import com.example.domain.usecase.auth.WithdrawMembershipUseCase
 import com.example.domain.usecase.auth.WithdrawMembershipUseCaseImpl
+import com.example.domain.usecase.category.GetCategoryDetailsUseCase
+import com.example.domain.usecase.category.GetCategoryDetailsUseCaseImpl
+import com.example.domain.usecase.category.UpdateCategoryUseCase
+import com.example.domain.usecase.category.UpdateCategoryUseCaseImpl
 import com.example.domain.usecase.friend.*
 import com.example.domain.usecase.project.member.*
 import com.example.domain.usecase.project.role.*
@@ -28,6 +32,10 @@ import com.example.domain.usecase.project.RenameCategoryUseCase
 import com.example.domain.usecase.project.RenameCategoryUseCaseImpl
 import com.example.domain.usecase.project.RenameChannelUseCase
 import com.example.domain.usecase.project.RenameChannelUseCaseImpl
+import com.example.domain.usecase.projectchannel.GetProjectChannelDetailsUseCase
+import com.example.domain.usecase.projectchannel.GetProjectChannelDetailsUseCaseImpl
+import com.example.domain.usecase.projectchannel.UpdateProjectChannelUseCase
+import com.example.domain.usecase.projectchannel.UpdateProjectChannelUseCaseImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -187,4 +195,15 @@ abstract class UseCaseModule {
     @Binds
     abstract fun bindSendFriendRequestUseCase(impl: SendFriendRequestUseCaseImpl): SendFriendRequestUseCase
 
-} 
+    @Binds
+    abstract fun bindGetCategoryDetailUseCase(impl: GetCategoryDetailsUseCaseImpl): GetCategoryDetailsUseCase
+
+    @Binds
+    abstract fun bindUpdateCategoryUseCase(impl: UpdateCategoryUseCaseImpl): UpdateCategoryUseCase
+
+    @Binds
+    abstract fun bindGetProjectChannelDetailUseCase(impl: GetProjectChannelDetailsUseCaseImpl): GetProjectChannelDetailsUseCase
+
+    @Binds
+    abstract fun bindUpdateProjectChannelUseCase(impl: UpdateProjectChannelUseCaseImpl): UpdateProjectChannelUseCase
+}

@@ -14,6 +14,7 @@ data class ProjectChannelDTO(
     @DocumentId val id: String = "",
     val channelName: String = "",
     val channelType: String = "MESSAGES", // "MESSAGES", "TASKS" 등
+    val order: Double = 0.0, // Added order field
     @ServerTimestamp val createdAt: Timestamp? = null,
     @ServerTimestamp val updatedAt: Timestamp? = null
 ) {
@@ -30,8 +31,12 @@ data class ProjectChannelDTO(
             } catch (e: Exception) {
                 ProjectChannelType.MESSAGES
             },
+            order = order, // Added order mapping
             createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+            // Note: ProjectChannel domain model has more fields (categoryId, createdBy, etc.)
+            // which are not present in this DTO. This DTO might be a partial representation.
+            // For update operations, ensure all necessary fields are handled or consider a specific UpdateChannelDTO.
         )
     }
 }
@@ -45,6 +50,11 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
         id = id,
         channelName = channelName,
         channelType = channelType.name.lowercase(),
+        order = order, // Added order mapping
+        // createdAt and updatedAt are set by @ServerTimestamp on write, 
+        // so sending them from client during an update might be ignored or could be problematic.
+        // For updates, often only mutable fields are sent. 
+        // However, toDto() is a general mapper, so keeping them for now.
         createdAt = createdAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         updatedAt = updatedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
     )

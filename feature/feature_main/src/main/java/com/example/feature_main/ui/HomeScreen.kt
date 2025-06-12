@@ -7,13 +7,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,7 +31,6 @@ import com.example.feature_main.ui.project.ProjectChannelList
 import com.example.feature_main.viewmodel.HomeUiState
 import com.example.feature_main.ui.components.ExtendableFloatingActionMenu
 import com.example.feature_main.ui.wrapper.AddDmUserDialogWrapper
-import com.example.feature_main.ui.wrapper.ProjectStructureEditDialogWrapper
 import androidx.navigation.NavHostController
 import com.example.feature_main.ui.project.CategoryUiModel
 import com.example.feature_main.ui.project.ChannelUiModel
@@ -48,8 +45,7 @@ import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_main.ui.components.MainHomeFloatingButton
 import com.example.feature_main.ui.dialog.AddProjectElementDialog
 import androidx.compose.runtime.rememberCoroutineScope
-import com.example.core_common.constants.FirestoreConstants
-import kotlinx.coroutines.launch
+import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialog
 import com.example.feature_main.ui.project.ProjectStructureUiState
 
 // 오버레이 투명도 상수
@@ -189,6 +185,11 @@ fun HomeScreen(
                     currentProjectIdForDialog = event.projectId
                     showAddProjectElementDialog = true
                 }
+
+                is HomeEvent.NavigateToEditCategory -> TODO()
+                is HomeEvent.NavigateToEditChannel -> TODO()
+                is HomeEvent.NavigateToReorderCategory -> TODO()
+                is HomeEvent.NavigateToReorderChannel -> TODO()
             }
         }
     }
@@ -199,6 +200,13 @@ fun HomeScreen(
             snackbarHostState.showSnackbar(uiState.errorMessage, duration = SnackbarDuration.Short)
             viewModel.errorMessageShown()
         }
+    }
+
+    if(uiState.showBottomSheet) {
+        BottomSheetDialog(
+            items = uiState.showBottomSheetItems,
+            onDismiss = viewModel::onProjectItemActionSheetDismiss
+        )
     }
 
     Scaffold(
@@ -247,7 +255,10 @@ fun HomeScreen(
                     viewModel.onTopSectionSelect(TopSection.DMS)
                 },
                 onCategoryClick = viewModel::onCategoryClick,
+                onClickTopSection = viewModel::onClickTopSection,
+                onCategoryLongPress = viewModel::onCategoryLongPress,
                 onChannelClick = viewModel::onChannelClick,
+                onChannelLongPress = viewModel::onChannelLongPress,
                 onDmItemClick = viewModel::onDmItemClick
             )
             
@@ -310,8 +321,11 @@ fun HomeContent(
     uiState: HomeUiState,
     onProjectSelect: (projectId: String) -> Unit,
     onProfileClick: () -> Unit,
+    onClickTopSection: () -> Unit,
     onCategoryClick: (category: CategoryUiModel) -> Unit,
+    onCategoryLongPress: (category: CategoryUiModel) -> Unit = {},
     onChannelClick: (channel: ChannelUiModel) -> Unit,
+    onChannelLongPress: (channel: ChannelUiModel) -> Unit = {},
     onDmItemClick: (dm: DmUiModel) -> Unit
 ) {
     Row(modifier = modifier.fillMaxSize()) {
@@ -344,7 +358,7 @@ fun HomeContent(
                 .padding(start = 8.dp, end = 4.dp)
         ) {
             // 섹션 헤더
-            HomeMiddleSectionHeader(uiState = uiState)
+            HomeMiddleSectionHeader(uiState = uiState, onClickTopSection = onClickTopSection)
             Spacer(modifier = Modifier.height(8.dp))
 
             // 컨텐츠 분기
@@ -354,7 +368,9 @@ fun HomeContent(
                         ProjectChannelList(
                             structureUiState = uiState.projectStructure,
                             onCategoryClick = onCategoryClick,
+                            onCategoryLongPress = onCategoryLongPress,
                             onChannelClick = onChannelClick,
+                            onChannelLongPress = onChannelLongPress,
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
@@ -369,7 +385,7 @@ fun HomeContent(
                     } else if (uiState.dms.isEmpty()) {
                         EmptyStateMessage("DM이 없습니다")
                     } else {
-                        DmListScreen(
+                        DmListComponent(
                             dms = uiState.dms,
                             onDmItemClick = onDmItemClick,
                             isLoading = false,
@@ -387,6 +403,7 @@ fun HomeContent(
  */
 @Composable
 fun HomeMiddleSectionHeader(
+    onClickTopSection: () -> Unit,
     uiState: HomeUiState
 ) {
     Surface(
@@ -401,16 +418,19 @@ fun HomeMiddleSectionHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
-                    uiState.projectName.ifBlank { "프로젝트" }
-                } else {
-                    "Direct Messages"
-                },
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Button(onClick = onClickTopSection)
+            {
+                Text(
+                    text = if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
+                        uiState.projectName.ifBlank { "프로젝트" }
+                    } else {
+                        "Direct Messages"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -432,233 +452,6 @@ fun EmptyStateMessage(message: String, modifier: Modifier = Modifier) {
     }
 }
 
-// DmListScreen 및 관련 컴포넌트는 이제 별도의 파일(DmListScreen.kt)로 이동했습니다.
-
-/**
- * 프로젝트 상세 정보를 표시하는 화면
- */
-@Composable
-fun ProjectDetailContent(
-    uiState: HomeUiState,
-    viewModel: HomeViewModel,
-    modifier: Modifier = Modifier
-) {
-    Box(modifier = modifier.fillMaxSize()) {
-        when {
-            uiState.isLoading -> {
-                // 로딩 중 표시
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            uiState.errorMessage != "default" && uiState.errorMessage.isNotBlank() -> {
-                // 오류 표시
-                Box(
-                modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "오류: ${uiState.errorMessage}", 
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            else -> {
-                // 프로젝트 상세 정보 표시
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    // 프로젝트 헤더
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = uiState.projectName,
-                                style = MaterialTheme.typography.headlineMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            
-                            if (!uiState.projectDescription.isNullOrBlank()) {
-                                Text(
-                                    text = uiState.projectDescription,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        
-                        // 프로젝트 설정 버튼
-                        IconButton(
-                            onClick = { 
-                                val projectId = uiState.selectedProjectId
-                                if (projectId != null) {
-                                    viewModel.onProjectSettingsClick(projectId)
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "프로젝트 설정"
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    )
-                    
-                    // 프로젝트 컨텐츠 영역
-                    ProjectContentArea(
-                        uiState = uiState,
-                        viewModel = viewModel,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * 프로젝트 컨텐츠 영역 (카테고리 및 채널 목록 + 선택된 채널의 컨텐츠)
- */
-@Composable
-fun ProjectContentArea(
-    uiState: HomeUiState,
-    viewModel: HomeViewModel,
-    modifier: Modifier = Modifier
-) {
-    // 프로젝트 구조 로딩 중이면 로딩 인디케이터 표시
-    if (uiState.projectStructure.isLoading) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-    
-    // 프로젝트 구조 오류 발생 시 오류 메시지 표시
-    if (uiState.projectStructure.error != null) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "오류: ${uiState.projectStructure.error}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-        return
-    }
-    
-    // 카테고리 및 채널 목록이 없으면 안내 메시지 표시
-    if (uiState.projectStructure.categories.isEmpty() && uiState.projectStructure.directChannel.isEmpty()) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "카테고리 및 채널이 없습니다.",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "프로젝트 설정에서 카테고리와 채널을 추가해보세요.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
-        }
-        return
-    }
-    
-    // 프로젝트 컨텐츠 (카테고리 및 채널 목록 + 선택된 채널의 컨텐츠)
-    Row(
-        modifier = modifier
-    ) {
-        // 좌측: 채널 목록 (전체 폭의 30%)
-        Surface(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(0.3f)
-                .padding(end = 8.dp),
-            shape = MaterialTheme.shapes.small,
-            tonalElevation = 1.dp
-        ) {
-            ProjectChannelList(
-                structureUiState = uiState.projectStructure,
-                onCategoryClick = { category ->
-                    viewModel.onCategoryClick(category)
-                },
-                onChannelClick = { channel ->
-                    viewModel.onChannelClick(channel)
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        
-        // 우측: 선택된 채널의 컨텐츠 (전체 폭의 70%)
-            Surface(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(0.7f),
-            shape = MaterialTheme.shapes.small,
-                tonalElevation = 1.dp
-        ) {
-            // 선택된 채널이 없으면 안내 메시지 표시
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "채널을 선택하세요",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "좌측 패널에서 채널을 선택하면 해당 채널의 컨텐츠가 표시됩니다.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-            }
-            
-            // TODO: 선택된 채널의 컨텐츠 표시 (ChannelScreen 또는 필요한 컴포넌트)
-        }
-    }
-}
-
 @Preview(showBackground = true)
 @Composable
 fun HomeContentProjectsPreview() {
@@ -670,12 +463,16 @@ fun HomeContentProjectsPreview() {
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         HomeContent(
-            uiState = previewState, 
-            onProjectSelect = { Log.d("Preview", "Project selected: $it") }, 
+            uiState = previewState,
+            onProjectSelect = { Log.d("Preview", "Project selected: $it") },
             onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
-            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") }, 
-            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") }, 
-            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") }
+            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") },
+            onCategoryLongPress = {},
+            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") },
+            onChannelLongPress = {},
+            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
+            modifier = TODO(),
+            onClickTopSection = TODO()
         );
     }
 }
@@ -692,12 +489,16 @@ fun HomeContentDmsPreview() {
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         HomeContent(
-            uiState = previewState, 
-            onProjectSelect = { Log.d("Preview", "Project selected: $it") }, 
+            uiState = previewState,
+            onProjectSelect = { Log.d("Preview", "Project selected: $it") },
             onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
-            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") }, 
-            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") }, 
-            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") }
+            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") },
+            onCategoryLongPress = {},
+            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") },
+            onChannelLongPress = {},
+            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
+            modifier = TODO(),
+            onClickTopSection = TODO()
         );
     }
 }
@@ -711,12 +512,16 @@ fun HomeContentLoadingPreview() {
                 isLoading = true,
                 userInitial = "U", // 사용자 이니셜 추가
                 userProfileImageUrl = null, // 프로필 이미지 URL 추가
-            ), 
-            onProjectSelect = { Log.d("Preview", "Project selected: $it") }, 
+            ),
+            onProjectSelect = { Log.d("Preview", "Project selected: $it") },
             onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
-            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") }, 
-            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") }, 
-            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") }
+            onCategoryClick = { Log.d("Preview", "Category clicked: ${it.name}") },
+            onCategoryLongPress = {},
+            onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") },
+            onChannelLongPress = {},
+            onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
+            modifier = TODO(),
+            onClickTopSection = TODO()
         );
     }
 }
@@ -802,11 +607,34 @@ fun HomeScreenPreview_WithData() {
              HomeContent(
                  modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()),
                  uiState = sampleUiState, // Pass the state directly
-                 onProjectSelect = { projectId -> Log.d("Preview", "Project selected in HomeContent: $projectId") },
+                 onProjectSelect = { projectId ->
+                     Log.d(
+                         "Preview",
+                         "Project selected in HomeContent: $projectId"
+                     )
+                 },
                  onProfileClick = { Log.d("Preview", "Profile clicked") }, // 프로필 클릭 핸들러 추가
-                 onCategoryClick = { category -> Log.d("Preview", "Category clicked in HomeContent: ${category.name}") },
-                 onChannelClick = { channel -> Log.d("Preview", "Channel clicked in HomeContent: ${channel.name}") },
-                 onDmItemClick = { dm -> Log.d("Preview", "DM clicked in HomeContent: ${dm.partnerName}") }
+                 onCategoryClick = { category ->
+                     Log.d(
+                         "Preview",
+                         "Category clicked in HomeContent: ${category.name}"
+                     )
+                 },
+                 onCategoryLongPress = {},
+                 onChannelClick = { channel ->
+                     Log.d(
+                         "Preview",
+                         "Channel clicked in HomeContent: ${channel.name}"
+                     )
+                 },
+                 onChannelLongPress = {},
+                 onDmItemClick = { dm ->
+                     Log.d(
+                         "Preview",
+                         "DM clicked in HomeContent: ${dm.partnerName}"
+                     )
+                 },
+                 onClickTopSection = TODO()
              )
         }
     }

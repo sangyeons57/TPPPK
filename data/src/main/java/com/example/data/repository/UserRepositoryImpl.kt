@@ -426,11 +426,32 @@ class UserRepositoryImpl @Inject constructor(
      * 이메일로 사용자 단건 조회 (단발성)
      */
     override suspend fun getUserByEmail(email: String): CustomResult<User, Exception> {
-        return when (val result = userRemoteDataSource.getUserByEmail(email)) {
-            is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
-            else -> CustomResult.Failure(Exception("Unknown result in getUserByEmail"))
+        return when (val res = userRemoteDataSource.getUserByEmail(email)) {
+            is CustomResult.Success -> CustomResult.Success(res.data.toDomain())
+            is CustomResult.Failure -> CustomResult.Failure(res.error)
+            else -> CustomResult.Failure(Exception("Unknown error in getUserByEmail"))
         }
+    }
+
+    /**
+     * 서버에서만 사용자 정보를 가져와 캐시 정합성을 확인합니다.
+     */
+    override suspend fun fetchUserRemote(userId: String): CustomResult<User, Exception> {
+        return when (val res = userRemoteDataSource.fetchUserByIdServer(userId)) {
+            is CustomResult.Success -> CustomResult.Success(res.data.toDomain())
+            is CustomResult.Failure -> CustomResult.Failure(res.error)
+            else -> CustomResult.Failure(Exception("Unknown error fetching remote user"))
+        }
+    }
+
+    /**
+     * 현재 로그인된 사용자의 메모(상태 메시지)를 업데이트합니다.
+     *
+     * @param newMemo 새로운 메모 문자열.
+     * @return 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     */
+    override suspend fun updateCurrentUserMemo(newMemo: String): CustomResult<Unit, Exception> {
+        return userRemoteDataSource.updateUserMemo(newMemo)
     }
 
     /**
@@ -530,16 +551,6 @@ class UserRepositoryImpl @Inject constructor(
         }
         Log.d("UserRepositoryImpl", "User $uid withdrawal data processed successfully.")
         // CustomResult.Success(Unit) is implicitly returned by resultTry on success
-    }
-
-    /**
-     * 현재 로그인된 사용자의 메모(상태 메시지)를 업데이트합니다.
-     *
-     * @param newMemo 새로운 메모 문자열.
-     * @return 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
-     */
-    override suspend fun updateCurrentUserMemo(newMemo: String): CustomResult<Unit, Exception> {
-        return userRemoteDataSource.updateUserMemo(newMemo)
     }
 
 }

@@ -21,6 +21,11 @@ class SignUpUseCase @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
 ) {
+    // Centralized TAG for Logcat filtering
+    companion object {
+        private const val TAG = "SignUpUseCase"
+    }
+
     /**
      * 이메일, 비밀번호, 닉네임을 이용하여 회원가입을 수행합니다.
      * 1. Firebase Authentication에 계정 생성
@@ -40,11 +45,13 @@ class SignUpUseCase @Inject constructor(
         consentTimeStamp: Instant = Instant.now()
     ): CustomResult<User, Exception> {
 
+        Log.d(TAG, "Starting sign-up | email=$email, nickname=$nickname")
         // 0. Firebase Authentication 회원가입 시도
         when (val signUpRes = authRepository.signup(email, password)) {
             is CustomResult.Success -> {
                 // 신규 회원가입 성공 → Firestore 프로필 생성
                 val uid = signUpRes.data
+                Log.d(TAG, "Auth signup success. uid=$uid")
                 val newUser = User(
                     uid = uid,
                     email = email,
@@ -53,14 +60,20 @@ class SignUpUseCase @Inject constructor(
                 )
 
                 return when (val createRes = userRepository.createUserProfile(newUser)) {
-                    is CustomResult.Success -> CustomResult.Success(newUser)
-                    is CustomResult.Failure -> CustomResult.Failure(createRes.error)
+                    is CustomResult.Success -> {
+                        Log.d(TAG, "Firestore profile created successfully for uid=$uid")
+                        CustomResult.Success(newUser)
+                    }
+                    is CustomResult.Failure -> {
+                        Log.d(TAG, "Failed to create user profile: ${createRes.error}")
+                        CustomResult.Failure(createRes.error)
+                    }
                     else -> CustomResult.Failure(Exception("Unknown error creating user profile"))
                 }
             }
             is CustomResult.Failure -> {
                 // 이메일 중복 등으로 회원가입 실패한 경우 → 재활성화 가능성 확인
-                Log.d("SignUpUseCase", "signUpRes.error: ${signUpRes.error}")
+                Log.d(TAG, "signUpRes.error: ${signUpRes.error}")
                 val err = signUpRes.error
                 val errMsg = err.message ?: ""
                 val isEmailInUse = err is FirebaseAuthUserCollisionException || errMsg.contains("already in use", ignoreCase = true)
@@ -68,6 +81,7 @@ class SignUpUseCase @Inject constructor(
                     when (val userRes = userRepository.getUserByEmail(email)) {
                         is CustomResult.Success -> {
                             val existingUser = userRes.data
+                            Log.d(TAG, "Existing user fetched. status=${existingUser.accountStatus}")
                             return if (existingUser.accountStatus == UserAccountStatus.WITHDRAWN) {
                                 reactivateWithdrawnAccount(email, password, nickname, consentTimeStamp)
                             } else {
@@ -75,6 +89,7 @@ class SignUpUseCase @Inject constructor(
                             }
                         }
                         else -> {
+                            Log.d(TAG, "Failed to fetch user by email: ${userRes}")
                             // Firestore에서 사용자를 찾지 못하거나 오류 → 원본 오류 반환
                             return CustomResult.Failure(signUpRes.error)
                         }
@@ -83,7 +98,10 @@ class SignUpUseCase @Inject constructor(
                     return CustomResult.Failure(signUpRes.error)
                 }
             }
-            else -> return CustomResult.Failure(Exception("Unknown sign-up error"))
+            else -> {
+                Log.d(TAG, "Returning unreachable failure (this should not happen)")
+                return CustomResult.Failure(Exception("Unknown sign-up error"))
+            }
         }
 
         // Unreachable but required by Kotlin
@@ -100,13 +118,22 @@ class SignUpUseCase @Inject constructor(
         newNickname: String,
         consentTimeStamp: Instant,
     ): CustomResult<User, Exception> {
+        Log.d(TAG, "Reactivating withdrawn account for email=$email")
         // 1. 기존 계정으로 로그인 (사용자가 입력한 비밀번호가 기존 비밀번호라고 가정)
         val loginRes = authRepository.login(email, newPassword)
-        if (loginRes is CustomResult.Failure) return CustomResult.Failure(loginRes.error)
+        if (loginRes is CustomResult.Failure) {
+            Log.d(TAG, "Login failed during reactivation: ${loginRes.error}")
+            return CustomResult.Failure(loginRes.error)
+        }
+        Log.d(TAG, "Login success during reactivation")
 
         // 2. 인증 메일 발송 (새로 로그인한 사용자로)
         val sendRes = authRepository.sendEmailVerification()
-        if (sendRes is CustomResult.Failure) return CustomResult.Failure(sendRes.error)
+        if (sendRes is CustomResult.Failure) {
+            Log.d(TAG, "Send verification email failed: ${sendRes.error}")
+            return CustomResult.Failure(sendRes.error)
+        }
+        Log.d(TAG, "Verification email sent. Waiting for verification...")
 
         // 3. 이메일 인증 Polling
         val timeoutMs = 3 * 60 * 1000L // 3분
@@ -118,26 +145,37 @@ class SignUpUseCase @Inject constructor(
                 is CustomResult.Success -> {
                     if (checkRes.data) {
                         verified = true
+                        Log.d(TAG, "Email verification complete!")
                         break
                     }
                 }
-                is CustomResult.Failure -> return CustomResult.Failure(checkRes.error)
+                is CustomResult.Failure -> {
+                    Log.d(TAG, "Verification check failed: ${checkRes.error}")
+                    return CustomResult.Failure(checkRes.error)
+                }
                 else -> {}
             }
             delay(intervalMs)
         }
 
         if (!verified) {
+            Log.d(TAG, "Email verification timeout")
             return CustomResult.Failure(Exception("Email verification timeout"))
         }
 
-        // 4. 비밀번호 업데이트 (새 비밀번호로 설정)
+        // 4. 비밀번호 업데이트
         val pwUpdateRes = authRepository.updatePassword(newPassword)
-        if (pwUpdateRes is CustomResult.Failure) return CustomResult.Failure(pwUpdateRes.error)
+        if (pwUpdateRes is CustomResult.Failure) {
+            Log.d(TAG, "Password update failed: ${pwUpdateRes.error}")
+            return CustomResult.Failure(pwUpdateRes.error)
+        }
 
-        // 5. Firestore 사용자 정보 업데이트 (닉네임, accountStatus = ACTIVE, consentTimeStamp 등)
+        // 5. Firestore 사용자 정보 업데이트
         val currentSessionRes = authRepository.getCurrentUserSession()
-        if (currentSessionRes is CustomResult.Failure) return CustomResult.Failure(currentSessionRes.error)
+        if (currentSessionRes is CustomResult.Failure) {
+            Log.d(TAG, "Failed to get current user session: ${currentSessionRes.error}")
+            return CustomResult.Failure(currentSessionRes.error)
+        }
 
         val uid = (currentSessionRes as CustomResult.Success).data.userId
 
@@ -150,10 +188,12 @@ class SignUpUseCase @Inject constructor(
         )
 
         val updateRes = userRepository.updateUserProfile(uid, updatedUser)
-        if (updateRes is CustomResult.Failure) return CustomResult.Failure(updateRes.error)
+        if (updateRes is CustomResult.Failure) {
+            Log.d(TAG, "Firestore update failed: ${updateRes.error}")
+            return CustomResult.Failure(updateRes.error)
+        }
 
-        // 6. Firestore 계정 상태가 이미 ACTIVE로 업데이트되었으므로 추가 상태 업데이트는 생략합니다.
-
+        Log.d(TAG, "Account reactivated successfully for uid=$uid")
         return CustomResult.Success(updatedUser)
     }
 }

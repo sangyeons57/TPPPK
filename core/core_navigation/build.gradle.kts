@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.core_navigation"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29

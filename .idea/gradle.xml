@@ -22,6 +22,8 @@
             <option value="$PROJECT_DIR$/domain" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/feature_auth" />
+            <option value="$PROJECT_DIR$/feature/feature_category_edit" />
+            <option value="$PROJECT_DIR$/feature/feature_channel_edit" />
             <option value="$PROJECT_DIR$/feature/feature_chat" />
             <option value="$PROJECT_DIR$/feature/feature_dev" />
             <option value="$PROJECT_DIR$/feature/feature_friends" />

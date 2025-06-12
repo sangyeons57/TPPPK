@@ -1,6 +1,5 @@
 package com.example.feature_main.ui
 
-import com.example.feature_main.ui.DmUiModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,7 +26,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
  * @param modifier Modifier
  */
 @Composable
-fun DmListScreen(
+fun DmListComponent(
     modifier: Modifier = Modifier,
     dms: List<DmUiModel>,
     onDmItemClick: (dm: DmUiModel) -> Unit,
@@ -162,7 +160,7 @@ fun DmListScreenPreview() {
                 unreadCount = 2
             )
         )
-        DmListScreen(dms = sampleDms, onDmItemClick = {}, isLoading = false)
+        DmListComponent(dms = sampleDms, onDmItemClick = {}, isLoading = false)
     }
 }
 
@@ -170,7 +168,7 @@ fun DmListScreenPreview() {
 @Composable
 fun DmListScreenEmptyPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        DmListScreen(dms = emptyList(), onDmItemClick = {}, isLoading = false)
+        DmListComponent(dms = emptyList(), onDmItemClick = {}, isLoading = false)
     }
 }
 
@@ -178,6 +176,6 @@ fun DmListScreenEmptyPreview() {
 @Composable
 fun DmListScreenLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        DmListScreen(dms = emptyList(), onDmItemClick = {}, isLoading = true)
+        DmListComponent(dms = emptyList(), onDmItemClick = {}, isLoading = true)
     }
 } 

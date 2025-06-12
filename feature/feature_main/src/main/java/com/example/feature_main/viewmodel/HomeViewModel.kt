@@ -1,9 +1,13 @@
 package com.example.feature_main.viewmodel
 
 import android.util.Log
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogBuilder
+import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
 import com.example.domain.model.base.User
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
 import com.example.domain.model.base.DMChannel // Added import for DMChannel
@@ -63,7 +67,15 @@ data class HomeUiState(
     val userProfileImageUrl: String? = null, // 사용자 프로필 이미지 URL
     
     // 표시 관련 상태
-    val isDetailFullScreen: Boolean = false // 전체 화면 모드 플래그
+    val isDetailFullScreen: Boolean = false, // 전체 화면 모드 플래그
+
+    // --- Bottom-sheet (long-press) dialog state ---
+    val showBottomSheet: Boolean = false,
+    val showBottomSheetItems: List<BottomSheetDialogItem> = emptyList(),
+
+    val targetDMChannelForSheet: DmUiModel? = null,
+    val targetCategoryForSheet: CategoryUiModel? = null,
+    val targetChannelForSheet: ChannelUiModel? = null
 )
 
 // 프로젝트 멤버 정보
@@ -83,6 +95,12 @@ sealed class HomeEvent {
     object NavigateToAddProject : HomeEvent() // 프로젝트 추가 화면
     data class ShowSnackbar(val message: String) : HomeEvent()
     data class ShowAddProjectElementDialog(val projectId: String) : HomeEvent() // 프로젝트 구조 편집 다이얼로그 표시
+
+    // --- New navigation events for long-press actions ---
+    data class NavigateToEditCategory(val projectId: String, val categoryId: String) : HomeEvent()
+    data class NavigateToEditChannel(val projectId: String, val categoryId: String, val channelId: String) : HomeEvent()
+    data class NavigateToReorderCategory(val projectId: String) : HomeEvent()
+    data class NavigateToReorderChannel(val projectId: String, val categoryId: String) : HomeEvent()
 }
 
 
@@ -483,10 +501,14 @@ private fun loadProjectDetails(projectId: String) {
                 }
             }
             
+            // 내부 categoryExpandedStates 캐시도 업데이트
+            val categoryMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
+            updatedCategories.forEach { category ->
+                categoryMap[category.id] = category.isExpanded
+            }
+
             state.copy(
-                projectStructure = state.projectStructure.copy(
-                    categories = updatedCategories
-                )
+                projectStructure = state.projectStructure.copy(categories = updatedCategories)
             )
         }
     }
@@ -692,5 +714,105 @@ private fun loadProjectDetails(projectId: String) {
         viewModelScope.launch {
             _eventFlow.emit(HomeEvent.ShowSnackbar(message))
         }
+    }
+
+    fun onClickTopSection(){
+        _uiState.update {
+            it.copy(
+                showBottomSheetItems = BottomSheetDialogBuilder()
+                    .text(text = "프로젝트" )
+                    .build(),
+                showBottomSheet = true
+            )
+        }
+    }
+    // ----------------------------
+    // Long-press handlers & helpers
+    // ----------------------------
+
+    fun onCategoryLongPress(category: CategoryUiModel) {
+        _uiState.update {
+            it.copy(
+                showBottomSheetItems = BottomSheetDialogBuilder()
+                    .button(
+                        label= "프로젝트 카테고리 편집",
+                        icon = Icons.Default.Edit,
+                        onClick = { onEditSelectedProjectCategory() }
+                    ).build(),
+                showBottomSheet = true,
+
+                targetCategoryForSheet = category,
+                targetChannelForSheet = null
+            )
+        }
+    }
+
+    fun onChannelLongPress(channel: ChannelUiModel) {
+        _uiState.update {
+            it.copy(
+                showBottomSheetItems = BottomSheetDialogBuilder()
+                    .button(
+                        label = "프로젝트 체널 편집",
+                        icon = Icons.Default.Edit,
+                        onClick = { onEditSelectedProjectChannel() }
+                    ).build(),
+                showBottomSheet = true,
+
+                targetCategoryForSheet = null,
+                targetChannelForSheet = channel
+            )
+        }
+    }
+
+    fun onProjectItemActionSheetDismiss() {
+        _uiState.update {
+            it.copy(
+                showBottomSheet = false,
+
+                targetCategoryForSheet = null,
+                targetChannelForSheet = null
+            )
+        }
+    }
+
+    fun onEditSelectedProjectChannel() {
+        val projectId = _uiState.value.selectedProjectId
+        val channel = _uiState.value.targetChannelForSheet
+
+        if (projectId != null && channel != null) {
+            val categoryId = getCategoryIdForChannel(channel.id)
+            if (categoryId != null) {
+                viewModelScope.launch {
+                    _eventFlow.emit(HomeEvent.NavigateToEditChannel(projectId, categoryId, channel.id))
+                }
+            } else {
+                // Handle case where categoryId is not found for the channel (e.g., direct channel or error)
+                Log.w("HomeViewModel", "Category ID not found for channel: ${channel.id}")
+                // Optionally, show a snackbar message to the user
+                // viewModelScope.launch { _eventFlow.emit(HomeEvent.ShowSnackbar("채널의 카테고리를 찾을 수 없습니다.")) }
+            }
+        }
+        onProjectItemActionSheetDismiss()
+    }
+
+    fun onEditSelectedProjectCategory() {
+        val projectId = _uiState.value.selectedProjectId
+        val category = _uiState.value.targetCategoryForSheet
+
+        if (projectId != null && category != null) {
+            viewModelScope.launch {
+                _eventFlow.emit(HomeEvent.NavigateToEditCategory(projectId, category.id))
+            }
+        }
+        onProjectItemActionSheetDismiss()
+    }
+
+
+    private fun getCategoryIdForChannel(channelId: String): String? {
+        val structure = _uiState.value.projectStructure
+        structure.categories.forEach { cat ->
+            if (cat.channels.any { it.id == channelId }) return cat.id
+        }
+        return null // Direct channel or not found
     }
 }

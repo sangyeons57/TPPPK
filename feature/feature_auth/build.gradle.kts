@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.feature_auth"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
@@ -53,11 +53,11 @@ dependencies {
     // Jetpack Compose UI
     implementation(platform(libs.androidx.compose.bom)) // BOM 버전은 프로젝트와 통일
     implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.material3)
-    implementation(libs.androidx.material.icons.core) // 아이콘 사용
-    implementation(libs.material.icons.extended) // 아이콘 사용
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.runtime) // 아이콘 사용
 
     // ViewModel & Lifecycle for Compose
     implementation(libs.androidx.lifecycle.viewmodel.compose)

@@ -3,7 +3,7 @@ package com.example.feature_main.ui.project
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,7 +45,9 @@ import com.example.domain.model.enum.ProjectChannelType
 fun ProjectChannelList(
     structureUiState: ProjectStructureUiState,
     onCategoryClick: (CategoryUiModel) -> Unit,
+    onCategoryLongPress: (CategoryUiModel) -> Unit,
     onChannelClick: (ChannelUiModel) -> Unit,
+    onChannelLongPress: (ChannelUiModel) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -57,6 +59,7 @@ fun ProjectChannelList(
                 ChannelItem(
                     channel = channel,
                     onClick = { onChannelClick(channel) },
+                    onLongPress = { onChannelLongPress(channel) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -77,7 +80,9 @@ fun ProjectChannelList(
             CategoryItem(
                 category = category,
                 onCategoryClick = { onCategoryClick(category) },
+                onCategoryLongPress = { onCategoryLongPress(category) },
                 onChannelClick = onChannelClick,
+                onChannelLongPress = onChannelLongPress,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -91,7 +96,9 @@ fun ProjectChannelList(
 fun CategoryItem(
     category: CategoryUiModel,
     onCategoryClick: () -> Unit,
+    onCategoryLongPress: () -> Unit,
     onChannelClick: (ChannelUiModel) -> Unit,
+    onChannelLongPress: (ChannelUiModel) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -99,7 +106,8 @@ fun CategoryItem(
         CategoryHeader(
             name = category.name,
             isExpanded = category.isExpanded,
-            onClick = onCategoryClick
+            onClick = onCategoryClick,
+            onLongClick = onCategoryLongPress
         )
         
         // 채널 목록 (펼쳐진 상태일 때만 표시)
@@ -109,6 +117,7 @@ fun CategoryItem(
                     ChannelItem(
                         channel = channel,
                         onClick = { onChannelClick(channel) },
+                        onLongPress = { onChannelLongPress(channel) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 8.dp) // 들여쓰기 효과
@@ -129,6 +138,7 @@ fun CategoryHeader(
     name: String,
     isExpanded: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val arrowRotation by animateFloatAsState(
@@ -139,7 +149,10 @@ fun CategoryHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -172,6 +185,7 @@ fun CategoryHeader(
 fun ChannelItem(
     channel: ChannelUiModel,
     onClick: () -> Unit,
+    onLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val iconColor = if (channel.isSelected)
@@ -198,7 +212,10 @@ fun ChannelItem(
                 else
                     Color.Transparent
             )
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
             .padding(vertical = 8.dp, horizontal = 12.dp), // 패딩 조정
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -238,7 +255,8 @@ fun ChannelItemPreview_TextSelected() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ChannelItem(
             channel = ChannelUiModel(id = "ch1", name = "일반 대화", mode = ProjectChannelType.MESSAGES, isSelected = true),
-            onClick = {}
+            onClick = {},
+            onLongPress = {}
         )
     }
 }
@@ -251,7 +269,7 @@ fun ChannelItemPreview_TextSelected() {
 @Composable
 fun CategoryHeaderPreview_Expanded() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        CategoryHeader(name = "개발팀", isExpanded = true, onClick = {})
+        CategoryHeader(name = "개발팀", isExpanded = true, onClick = {}, onLongClick = {})
     }
 }
 
@@ -262,7 +280,7 @@ fun CategoryHeaderPreview_Expanded() {
 @Composable
 fun CategoryHeaderPreview_Collapsed() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        CategoryHeader(name = "디자인팀", isExpanded = false, onClick = {})
+        CategoryHeader(name = "디자인팀", isExpanded = false, onClick = {}, onLongClick = {})
     }
 }
 
@@ -280,7 +298,9 @@ fun CategoryItemPreview_Expanded() {
         CategoryItem(
             category = CategoryUiModel(id = "cat1", name = "엔지니어링", channels = sampleChannels, isExpanded = true),
             onCategoryClick = {},
-            onChannelClick = {}
+            onCategoryLongPress = {},
+            onChannelClick = {},
+            onChannelLongPress = {}
         )
     }
 }
@@ -295,7 +315,9 @@ fun CategoryItemPreview_Collapsed() {
         CategoryItem(
             category = CategoryUiModel(id = "cat2", name = "마케팅", channels = emptyList(), isExpanded = false),
             onCategoryClick = {},
-            onChannelClick = {}
+            onCategoryLongPress = {},
+            onChannelClick = {},
+            onChannelLongPress = {}
         )
     }
 }
@@ -337,7 +359,9 @@ fun ProjectChannelListPreview_Default() {
         ProjectChannelList(
             structureUiState = uiState,
             onCategoryClick = {},
-            onChannelClick = {}
+            onCategoryLongPress = {},
+            onChannelClick = {},
+            onChannelLongPress = {}
         )
     }
 }
@@ -358,7 +382,9 @@ fun ProjectChannelListPreview_Empty() {
         ProjectChannelList(
             structureUiState = uiState,
             onCategoryClick = {},
-            onChannelClick = {}
+            onCategoryLongPress = {},
+            onChannelClick = {},
+            onChannelLongPress = {}
         )
     }
 }

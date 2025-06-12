@@ -177,6 +177,12 @@ interface UserRepository {
     suspend fun getUserByEmail(email: String): CustomResult<User, Exception>
 
     /**
+     * Firestore 캐시를 무시하고 서버에서만 사용자 정보를 가져옵니다.
+     * 로그인 시 캐시 무결성 확인용.
+     */
+    suspend fun fetchUserRemote(userId: String): CustomResult<User, Exception>
+
+    /**
      * 현재 로그인된 사용자의 메모(상태 메시지)를 업데이트합니다.
      *
      * @param newMemo 새로운 메모 문자열.

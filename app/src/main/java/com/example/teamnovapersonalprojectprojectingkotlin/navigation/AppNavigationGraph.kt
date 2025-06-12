@@ -354,5 +354,29 @@ fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
                 appNavigator = appNavigator,
             )
         }
+
+        // 카테고리 수정 화면
+        composable(
+            route = AppRoutes.Project.editCategoryRoute(),
+            arguments = AppRoutes.Project.editCategoryArguments
+        ) {
+            // EditCategoryScreen 에는 projectId 와 categoryId 가 필요하며,
+            // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.
+            com.example.feature_category_edit.ui.EditCategoryScreen(
+                onNavigateBack = { appNavigator.navigateBack() }
+            )
+        }
+
+        // 채널 수정 화면
+        composable(
+            route = AppRoutes.Project.editChannelRoute(),
+            arguments = AppRoutes.Project.editChannelArguments
+        ) {
+            // EditProjectChannelScreen 에는 projectId, categoryId, channelId 가 필요하며,
+            // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.
+            com.example.feature_channel_edit.ui.EditProjectChannelScreen(
+                onNavigateBack = { appNavigator.navigateBack() }
+            )
+        }
     }
 } 

@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.domain"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
@@ -54,6 +54,7 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(project(":feature:feature_chat")) // Added to resolve ChatViewModel in tests
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 

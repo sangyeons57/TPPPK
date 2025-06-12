@@ -1,8 +1,10 @@
 package com.example.data.repository
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.ProjectChannelRemoteDataSource // 프로젝트 채널 데이터 소스 import
 import com.example.data.model.remote.ProjectChannelDTO
+import com.example.data.model.remote.toDto
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.repository.ProjectChannelRepository
 import kotlinx.coroutines.CancellationException
@@ -54,7 +56,7 @@ class ProjectChannelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setProjectChannel(projectId: String, categoryId: String, channel: ProjectChannel): CustomResult<Unit, Exception> {
-        return try {
+        return resultTry {
             val result = projectChannelRemoteDataSource.addProjectChannel(
                 projectId = projectId,
                 categoryId = categoryId,
@@ -65,16 +67,23 @@ class ProjectChannelRepositoryImpl @Inject constructor(
                 onSuccess = { CustomResult.Success(Unit) },
                 onFailure = { CustomResult.Failure(it as? Exception ?: Exception(it)) }
             )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            CustomResult.Failure(e)
         }
     }
 
     override suspend fun updateProjectChannel(projectId: String, channel: ProjectChannel): CustomResult<Unit, Exception> {
-        // TODO: 기존 ChannelRepositoryImpl의 프로젝트 채널 업데이트 로직 구현
-        // 예: return projectChannelRemoteDataSource.updateProjectChannel(projectId, channel.toDto())
-        throw NotImplementedError("구현 필요: updateProjectChannel")
+        return try {
+            // Convert ProjectChannel domain model to ProjectChannelDTO
+            // The toDto() extension function is available from ProjectChannelDTO.kt
+            val channelDto = channel.toDto()
+            // The ProjectChannelDTO now includes the 'order' field.
+            // The 'updatedAt' field in DTO will be handled by @ServerTimestamp in Firestore if set up correctly,
+            // or the value from channel.updatedAt (converted to Timestamp) will be written.
+            // For updates, it's common to only send changed fields, but here we send the whole DTO.
+            projectChannelRemoteDataSource.updateProjectChannel(projectId, channelDto)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            com.example.core_common.result.CustomResult.Failure(e) // Ensure CustomResult is used
+        }
     }
 
     override suspend fun deleteProjectChannel(projectId: String, channelId: String): CustomResult<Unit, Exception> {

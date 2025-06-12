@@ -102,6 +102,12 @@ interface UserRemoteDataSource {
     suspend fun getUserByEmail(email: String): CustomResult<UserDTO, Exception>
 
     /**
+     * 서버에서만 단일 사용자 정보를 가져옵니다. Firestore 캐시를 무시합니다.
+     * @param userId 조회할 사용자 ID
+     */
+    suspend fun fetchUserByIdServer(userId: String): CustomResult<UserDTO, Exception>
+
+    /**
      * 특정 userId를 가진 사용자의 프로젝트 요약 정보(ProjectsWrapper)를 실시간으로 관찰합니다.
      * @param userId 관찰할 사용자의 ID
      * @return ProjectsWrapperDTO 목록을 담은 Flow

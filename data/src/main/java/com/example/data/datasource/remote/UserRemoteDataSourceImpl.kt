@@ -11,6 +11,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -356,6 +357,13 @@ class UserRemoteDataSourceImpl @Inject constructor(
             }
         }
         awaitClose { listenerRegistration.remove() }
+    }
+
+    override suspend fun fetchUserByIdServer(userId: String): CustomResult<UserDTO, Exception> = withContext(Dispatchers.IO) {
+        resultTry {
+            val document = usersCollection.document(userId).get(Source.SERVER).await()
+            document.toObject(UserDTO::class.java) ?: throw Exception("User data could not be parsed.")
+        }
     }
 
 }

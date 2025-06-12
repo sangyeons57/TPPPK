@@ -1,14 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
-    
-    alias(libs.plugins.ksp)
     alias(libs.plugins.org.jetbrains.kotlin.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.example.feature_settings"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29

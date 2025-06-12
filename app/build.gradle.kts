@@ -12,12 +12,12 @@ plugins {
 
 android {
     namespace = "com.example.teamnovapersonalprojectprojectingkotlin"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.teamnovapersonalprojectprojectingkotlin"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -94,6 +94,8 @@ dependencies {
     implementation(project(":feature:feature_search"))
     implementation(project(":feature:feature_profile"))
     implementation(project(":feature:feature_dev")) // DevMenuScreen 호출 시
+    implementation(project(":feature:feature_category_edit"))
+    implementation(project(":feature:feature_channel_edit"))
 
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
