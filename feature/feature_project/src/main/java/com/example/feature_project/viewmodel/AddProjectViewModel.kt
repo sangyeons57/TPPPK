@@ -123,9 +123,7 @@ class AddProjectViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             
             // 프로젝트 생성 로직
-            val result = createProjectUseCase(name)
-
-            when (result) {
+            when (val result = createProjectUseCase(name)) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트를 생성했습니다!"))
                     _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }

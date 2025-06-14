@@ -1,7 +1,7 @@
 package com.example.data.di
 
 import com.example.data.repository.AuthRepositoryImpl
-import com.example.data.repository.CategoryCollectionRepositoryImpl
+import com.example.data.repository.collection.CategoryCollectionRepositoryImpl
 import com.example.data.repository.CategoryRepositoryImpl
 import com.example.data.repository.DMChannelRepositoryImpl
 import com.example.data.repository.DMWrapperRepositoryImpl
@@ -20,7 +20,7 @@ import com.example.data.repository.ScheduleRepositoryImpl
 import com.example.data.repository.UserRepositoryImpl
 import com.example.data.repository.SearchRepositoryImpl
 import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.CategoryCollectionRepository
+import com.example.domain.repository.collection.CategoryCollectionRepository
 import com.example.domain.repository.CategoryRepository
 import com.example.domain.repository.DMChannelRepository
 import com.example.domain.repository.DMWrapperRepository

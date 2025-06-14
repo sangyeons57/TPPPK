@@ -72,7 +72,6 @@ private object HomeScreenStateKeys {
  * @param viewModel HomeViewModel 인스턴스, 화면의 상태 및 비즈니스 로직 관리.
  * @param savedState 화면 상태를 복원하기 위한 Bundle (탭 전환 시 상태 유지).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,

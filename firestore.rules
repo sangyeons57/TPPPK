@@ -131,7 +131,7 @@ service cloud.firestore {
             // 프로젝트 업데이트/삭제: 프로젝트 멤버만
             allow update: if isProjectMember(projectId);
             // 프로젝트 소유자만 삭제 가능
-            allow delete: if isProjectOwner(projectId);
+            allow delete: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid; 
 
             // --- 프로젝트 서브콜렉션 ---
             // 멤버 (members)

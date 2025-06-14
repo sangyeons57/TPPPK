@@ -3,6 +3,8 @@ package com.example.data.model.remote
 import com.example.domain.model._new.enum.MessageAttachmentType
 import com.example.domain.model.base.MessageAttachment
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
+import com.example.core_common.constants.FirestoreConstants
 
 /**
  * 메시지 첨부파일 정보를 나타내는 DTO 클래스
@@ -10,8 +12,10 @@ import com.google.firebase.firestore.DocumentId
 data class MessageAttachmentDTO(
     @DocumentId val id: String = "",
     // "IMAGE", "FILE", "VIDEO" 등
+    @get:PropertyName(FirestoreConstants.MessageFields.Attachments.ATTACHMENT_TYPE)
     val attachmentType: String = "FILE",
     // Firebase Storage 등에 업로드된 파일의 URL
+    @get:PropertyName(FirestoreConstants.MessageFields.Attachments.ATTACHMENT_URL)
     val attachmentUrl: String = "",
     val fileName: String? = null,
     val fileSize: Long? = null

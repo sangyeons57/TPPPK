@@ -1,10 +1,11 @@
-package com.example.data.repository
+package com.example.data.repository.collection
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.collection.CategoryCollection
-import com.example.domain.repository.CategoryCollectionRepository
+import com.example.domain.repository.collection.CategoryCollectionRepository
 import com.example.domain.repository.CategoryRepository
 import com.example.domain.repository.ProjectChannelRepository
 import kotlinx.coroutines.CancellationException
@@ -35,6 +36,7 @@ class CategoryCollectionRepositoryImpl @Inject constructor(
     override suspend fun getCategoryCollections(projectId: String): Flow<CustomResult<List<CategoryCollection>, Exception>> {
         return categoryRepository.getCategoriesStream(projectId)
             .flatMapLatest { categoriesResult ->
+                Log.d("CategoryCollectionRepositoryImpl", "getCategoryCollections: $categoriesResult")
                 when (categoriesResult) {
                     is CustomResult.Success -> {
                         val categoryList = categoriesResult.data

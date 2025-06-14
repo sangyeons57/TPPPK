@@ -5,6 +5,8 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
+import com.example.core_common.constants.FirestoreConstants
+import com.google.firebase.firestore.PropertyName
 import com.example.core_common.util.DateTimeUtil
 
 /*
@@ -12,7 +14,9 @@ import com.example.core_common.util.DateTimeUtil
  */
 data class MemberDTO(
     @DocumentId val userId: String = "",
+    @get:PropertyName(FirestoreConstants.Project.Members.JOINED_AT)
     @ServerTimestamp val joinedAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Project.Members.ROLE_ID)
     val roleIds: List<String> = emptyList()
 ) {
     /**

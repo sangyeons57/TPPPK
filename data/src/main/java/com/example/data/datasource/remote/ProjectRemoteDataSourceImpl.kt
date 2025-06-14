@@ -33,7 +33,7 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun getProject(projectId: String): CustomResult<ProjectDTO, Exception> = withContext(Dispatchers.IO) {
-        resultTry<ProjectDTO> {
+        resultTry {
             if (projectId.isBlank()) {
                 throw Exception("Invalid project ID.")
             }
@@ -44,17 +44,7 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun createProject(projectDTO: ProjectDTO): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
-            val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
-            
-            // Ensure ownerId is set from auth, potentially overriding DTO if necessary,
-            // or validate that DTO's ownerId matches current user if it's pre-set.
-            // For now, assuming DTO might not have ownerId or it should be overwritten by current user.
-            val newProject = projectDTO.copy(
-                ownerId = uid
-                // createdAt, updatedAt은 DTO에서 @ServerTimestamp로 자동 설정됩니다.
-            )
-
-            val documentReference = projectsCollection.add(newProject).await()
+            val documentReference = projectsCollection.add(projectDTO).await()
             documentReference.id // 성공 시 새 문서의 ID를 반환
         }
     }

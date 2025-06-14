@@ -1,8 +1,9 @@
 package com.example.domain.usecase.project
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.collection.CategoryCollection
-import com.example.domain.repository.CategoryCollectionRepository
+import com.example.domain.repository.collection.CategoryCollectionRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -31,6 +32,8 @@ class GetProjectAllCategoriesUseCaseImpl @Inject constructor(
      */
     override suspend fun invoke(projectId: String): Flow<CustomResult<List<CategoryCollection>, Exception>> {
         // CategoryCollectionRepository에 데이터 가져오기 위임
-        return categoryCollectionRepository.getCategoryCollections(projectId)
+        val c = categoryCollectionRepository.getCategoryCollections(projectId)
+        Log.d("GetProjectAllCategoriesUseCaseImpl", "invoke: $c")
+        return c
     }
 }

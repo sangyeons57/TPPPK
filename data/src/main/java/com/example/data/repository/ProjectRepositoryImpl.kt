@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.ProjectRemoteDataSource
 import com.example.data.datasource.remote.CategoryRemoteDataSource
 import com.example.data.datasource.remote.MemberRemoteDataSource // ProjectMember 관리를 위해 필요
@@ -44,20 +45,14 @@ class ProjectRepositoryImpl @Inject constructor(
                 // id는 Firestore에서 자동 생성
                 name = name,
                 ownerId = ownerId,
-                createdAt = Timestamp.now(),
-                updatedAt = Timestamp.now(),
+                createdAt = DateTimeUtil.nowFirebaseTimestamp(),
+                updatedAt = DateTimeUtil.nowFirebaseTimestamp()
             )
             val projectIdResult = projectRemoteDataSource.createProject(projectDto)
             if (projectIdResult is CustomResult.Failure) {
                 return CustomResult.Failure(projectIdResult.error)
             }
             val projectId = (projectIdResult as CustomResult.Success).data
-
-            val createdProjectDtoResult = projectRemoteDataSource.getProject(projectId)
-            if (createdProjectDtoResult is CustomResult.Failure) {
-                throw createdProjectDtoResult.error
-            }
-
 
             // 프로젝트 생성 후, owner를 멤버로 추가
             val memberResult = memberRemoteDataSource.addMember(projectId, ownerId, listOf(Constants.OWNER))

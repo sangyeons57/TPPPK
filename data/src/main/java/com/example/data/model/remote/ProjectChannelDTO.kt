@@ -6,16 +6,23 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_common.constants.FirestoreConstants
+import com.google.firebase.firestore.PropertyName
 
 /*
  * 프로젝트 채널 정보를 나타내는 DTO 클래스
  */
 data class ProjectChannelDTO(
     @DocumentId val id: String = "",
+    @get:PropertyName(FirestoreConstants.Project.Channels.CHANNEL_NAME)
     val channelName: String = "",
+    @get:PropertyName(FirestoreConstants.Project.Channels.CHANNEL_TYPE)
     val channelType: String = "MESSAGES", // "MESSAGES", "TASKS" 등
+    @get:PropertyName(FirestoreConstants.Project.Channels.ORDER)
     val order: Double = 0.0, // Added order field
+    @get:PropertyName(FirestoreConstants.Project.Channels.CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Project.Channels.UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp? = null
 ) {
     /*

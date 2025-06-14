@@ -1,6 +1,7 @@
 
 package com.example.data.datasource.remote
 
+import android.util.Log
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
@@ -33,7 +34,7 @@ class CategoryRemoteDataSourceImpl @Inject constructor(
 
     override fun observeCategories(projectId: String): Flow<CustomResult<List<CategoryDTO>, Exception>> {
         return getCategoriesCollection(projectId)
-            .orderBy("order", Query.Direction.ASCENDING)
+            .orderBy(FirestoreConstants.Project.Categories.ORDER, Query.Direction.ASCENDING)
             .snapshots()
             .map { snapshot -> CustomResult.Success(snapshot.toObjects(CategoryDTO::class.java)) }
             .catch { error -> CustomResult.Failure(Exception(error)) }
@@ -64,6 +65,7 @@ class CategoryRemoteDataSourceImpl @Inject constructor(
         categoryDTO: CategoryDTO
     ): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
+            Log.d("CategoryRemoteDataSourceImpl", "Adding category: $categoryDTO")
             val docRef = getCategoriesCollection(projectId).add(categoryDTO).await()
             docRef.id
         }
@@ -86,9 +88,9 @@ class CategoryRemoteDataSourceImpl @Inject constructor(
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val updateData = mapOf(
-                "name" to newName,
-                "order" to newOrder,
-                "updatedAt" to FieldValue.serverTimestamp()
+                FirestoreConstants.Project.Categories.NAME to newName,
+                FirestoreConstants.Project.Categories.ORDER to newOrder,
+                FirestoreConstants.Project.Categories.UPDATED_AT to FieldValue.serverTimestamp()
             )
             getCategoriesCollection(projectId).document(categoryId).update(updateData).await()
             Unit

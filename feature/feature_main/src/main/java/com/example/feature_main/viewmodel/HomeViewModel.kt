@@ -424,9 +424,10 @@ private fun loadProjectDetails(projectId: String) {
                     val categoryCollections = result.data
                     val categoriesMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
 
-                    val categoryUiModels = categoryCollections.map { categoryCollection ->
+                    val categoryUiModels = categoryCollections.filter { categoryCollection -> categoryCollection.category.isCategory }.map { categoryCollection ->
                         val categoryDomain = categoryCollection.category
                         val isExpanded = categoriesMap.getOrPut(categoryDomain.id) { true } // Default to expanded
+
                         CategoryUiModel(
                             id = categoryDomain.id,
                             name = categoryDomain.name,

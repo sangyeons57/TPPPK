@@ -58,19 +58,20 @@ class CreateProjectUseCase @Inject constructor(
         if (trimmedName.length < 2 || trimmedName.length > 30) {
             return CustomResult.Failure(IllegalArgumentException("프로젝트 이름은 2~30자 사이여야 합니다."))
         }
-        
 
-        val session = authRepository.getCurrentUserSession()
 
+        Log.d("CreateProjectUseCase", "1");
         // 모든 검증 통과 시 프로젝트 생성
-        return when (session) {
+        when (val session = authRepository.getCurrentUserSession()) {
             is CustomResult.Success -> {
+                Log.d("CreateProjectUseCase", "2");
                 val projectIdResult = projectRepository.createProject(trimmedName, session.data.userId)
                 if (projectIdResult is CustomResult.Failure) {
                     return CustomResult.Failure(projectIdResult.error)
                 } else if (projectIdResult !is CustomResult.Success) {
                     return CustomResult.Failure(Exception("프로젝트 생성에 실패했습니다."))
                 }
+                Log.d("CreateProjectUseCase", "3");
                 val projectId = projectIdResult.data
 
                 // 생성된 프로젝트에 현재 사용자를 참여시킵니다.
@@ -82,6 +83,7 @@ class CreateProjectUseCase @Inject constructor(
                     // 현재는 에러를 반환합니다.
                     return CustomResult.Failure(addProjectToUserResult.error)
                 }
+                Log.d("CreateProjectUseCase", "4");
 
                 // "카테고리 없음" 카테고리 자동 생성
                 val noCategory = Category(
@@ -89,7 +91,8 @@ class CreateProjectUseCase @Inject constructor(
                     order = Constants.NO_CATEGORY_ORDER,
                     createdBy = session.data.userId,
                     createdAt = DateTimeUtil.nowInstant(),
-                    updatedAt = DateTimeUtil.nowInstant()
+                    updatedAt = DateTimeUtil.nowInstant(),
+                    isCategory = false,
                 )
                 // Firestore의 경우 projectId는 Category 객체에 포함되지 않고, 컬렉션 경로의 일부로 사용됨
                 // 따라서 categoryRepository.addCategory(projectId, noCategory) 형태가 될 것임
@@ -99,7 +102,9 @@ class CreateProjectUseCase @Inject constructor(
                     // 중요: 이 부분은 프로젝트 정책에 따라 롤백 처리 등을 고려해야 할 수 있음
                     Log.e("CreateProjectUseCase", "Failed to create default 'No Category' for project $projectId: ${addNoCategoryResult.error.message}")
                 }
+                Log.d("AddCategoryUseCaseImpl", "Category added with ID: ${noCategory}")
 
+                Log.d("CreateProjectUseCase", "5");
                 return CustomResult.Success(projectId)
             }
             else -> {

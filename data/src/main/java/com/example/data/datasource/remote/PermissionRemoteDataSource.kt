@@ -1,6 +1,7 @@
 
 package com.example.data.datasource.remote
 
+import com.example.core_common.result.CustomResult
 import com.example.data.model.remote.PermissionDTO
 import kotlinx.coroutines.flow.Flow
 
@@ -21,7 +22,7 @@ interface PermissionRemoteDataSource {
      * @param roleId 권한을 추가할 역할의 ID
      * @param permission 추가할 권한 정보 DTO
      */
-    suspend fun addPermissionToRole(projectId: String, roleId: String, permission: PermissionDTO): Result<Unit>
+    suspend fun addPermissionToRole(projectId: String, roleId: String, permission: PermissionDTO): CustomResult<Unit, Exception>
 
     /**
      * 특정 역할에서 권한을 제거합니다.
@@ -29,7 +30,7 @@ interface PermissionRemoteDataSource {
      * @param roleId 권한을 제거할 역할의 ID
      * @param permissionId 제거할 권한의 ID (보통 권한 이름)
      */
-    suspend fun removePermissionFromRole(projectId: String, roleId: String, permissionId: String): Result<Unit>
+    suspend fun removePermissionFromRole(projectId: String, roleId: String, permissionId: String): CustomResult<Unit, Exception>
 
 }
 

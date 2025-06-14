@@ -6,16 +6,23 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_common.constants.FirestoreConstants
+import com.google.firebase.firestore.PropertyName
 
 /**
  * 프로젝트 정보를 나타내는 DTO 클래스
  */
 data class ProjectDTO(
     @DocumentId val id: String = "",
+    @get:PropertyName(FirestoreConstants.Project.NAME)
     val name: String = "",
+    @get:PropertyName(FirestoreConstants.Project.IMAGE_URL)
     val imageUrl: String? = null,
+    @get:PropertyName(FirestoreConstants.Project.OWNER_ID)
     val ownerId: String = "",
+    @get:PropertyName(FirestoreConstants.Project.CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Project.UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp? = null,
 ) {
     /**

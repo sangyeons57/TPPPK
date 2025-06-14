@@ -1,5 +1,6 @@
 package com.example.data.model.remote
 
+import com.example.core_common.constants.FirestoreConstants
 import com.example.domain.model._new.enum.InviteStatus
 import com.example.domain.model.base.Invite
 import com.google.firebase.Timestamp
@@ -7,17 +8,18 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.google.firebase.firestore.PropertyName
 
 /*
  * 초대 정보를 나타내는 DTO 클래스
  */
 data class InviteDTO(
     @DocumentId val id: String = "",
-    val inviteCode: String = "", // 고유한 초대 코드
-    val status: String = "ACTIVE", // "ACTIVE", "INACTIVE", "EXPIRED"
-    val createdBy: String = "", // 초대를 생성한 사용자의 ID
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    val expiresAt: Timestamp? = null // 만료 시간 (null이면 무제한)
+    @get:PropertyName(FirestoreConstants.Project.Invites.INVITE_LINK) val inviteCode: String = "", // 고유한 초대 코드, 상수명은 INVITE_LINK
+    @get:PropertyName(FirestoreConstants.Project.Invites.STATUS) val status: String = "ACTIVE", // "ACTIVE", "INACTIVE", "EXPIRED"
+    @get:PropertyName(FirestoreConstants.Project.Invites.CREATED_BY) val createdBy: String = "", // 초대를 생성한 사용자의 ID
+    @get:PropertyName(FirestoreConstants.Project.Invites.CREATED_AT) @ServerTimestamp val createdAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Project.Invites.EXPIRES_AT) val expiresAt: Timestamp? = null // 만료 시간 (null이면 무제한)
 ) {
     /*
      * DTO를 도메인 모델로 변환

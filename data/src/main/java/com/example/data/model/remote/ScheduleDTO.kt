@@ -7,21 +7,33 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_common.constants.FirestoreConstants
+import com.google.firebase.firestore.PropertyName
 
 /**
  * 일정 정보를 나타내는 DTO 클래스
  */
 data class ScheduleDTO(
     @DocumentId val id: String = "",
+    @get:PropertyName(FirestoreConstants.Schedule.TITLE)
     val title: String = "",
+    @get:PropertyName(FirestoreConstants.Schedule.CONTENT)
     val content: String = "",
+    @get:PropertyName(FirestoreConstants.Schedule.START_TIME)
     val startTime: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Schedule.END_TIME)
     val endTime: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Schedule.PROJECT_ID)
     val projectId: String? = null,
+    @get:PropertyName(FirestoreConstants.Schedule.CREATOR_ID)
     val creatorId: String = "",
+    @get:PropertyName(FirestoreConstants.Schedule.STATUS)
     val status: String = "CONFIRMED", // "CONFIRMED", "TENTATIVE", "CANCELLED"
+    @get:PropertyName(FirestoreConstants.Schedule.COLOR)
     val color: String? = null, // 예: "#FF5733"
+    @get:PropertyName(FirestoreConstants.Schedule.CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Schedule.UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp? = null
 ) {
     /**

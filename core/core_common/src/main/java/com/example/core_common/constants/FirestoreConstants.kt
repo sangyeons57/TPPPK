@@ -103,6 +103,7 @@ object FirestoreConstants {
             const val CREATED_BY = "createdBy"
             const val CREATED_AT = "createdAt"
             const val UPDATED_AT = "updatedAt"
+            const val IS_CATEGORY = "isCategory"
 
             const val _DIRECT_CHANNELS_CATEGORY = "directChannels"
         }

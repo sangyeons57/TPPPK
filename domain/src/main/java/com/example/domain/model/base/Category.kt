@@ -10,6 +10,7 @@ data class Category(
     val order: Double = 0.0,
     val createdBy: String = "",
     val createdAt: Instant? = null,
-    val updatedAt: Instant? = null
+    val updatedAt: Instant? = null,
+    val isCategory: Boolean = true,
 )
 

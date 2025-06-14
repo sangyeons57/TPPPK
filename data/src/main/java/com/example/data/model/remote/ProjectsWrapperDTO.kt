@@ -2,9 +2,12 @@ package com.example.data.model.remote
 
 import com.example.domain.model.base.ProjectsWrapper
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
+import com.example.core_common.constants.FirestoreConstants
 
 data class ProjectsWrapperDTO(
     @DocumentId val projectId: String = "",
+    @get:PropertyName(FirestoreConstants.Users.ProjectsWrappers.ORDER)
     val order: String = ""
 ) {
     /**

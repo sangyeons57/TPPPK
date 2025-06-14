@@ -6,21 +6,33 @@ import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.base.User
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
+import com.example.core_common.constants.FirestoreConstants
 
 /**
  * 사용자 정보를 나타내는 DTO 클래스
  */
 data class UserDTO(
     @DocumentId val uid: String = "",
+    @get:PropertyName(FirestoreConstants.Users.EMAIL)
     val email: String = "",
+    @get:PropertyName(FirestoreConstants.Users.NAME)
     val name: String = "",
+    @get:PropertyName(FirestoreConstants.Users.CONSENT_TIMESTAMP)
     val consentTimeStamp: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Users.PROFILE_IMAGE_URL)
     val profileImageUrl: String? = null,
+    @get:PropertyName(FirestoreConstants.Users.MEMO)
     val memo: String? = null,
+    @get:PropertyName(FirestoreConstants.Users.STATUS)
     val status: String = "offline", // "online", "offline", "away" 등
+    @get:PropertyName(FirestoreConstants.Users.CREATED_AT)
     val createdAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Users.UPDATED_AT)
     val updatedAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.Users.FCM_TOKEN)
     val fcmToken: String? = null,
+    @get:PropertyName(FirestoreConstants.Users.ACCOUNT_STATUS)
     val accountStatus: String = "active" // "active", "suspended", "deleted" 등
 ) {
     /**

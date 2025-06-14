@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_common.constants.FirestoreConstants
 import com.google.firebase.firestore.PropertyName
 
 /*
@@ -13,13 +14,21 @@ import com.google.firebase.firestore.PropertyName
  */
 data class MessageDTO(
     @DocumentId val id: String = "",
+    @get:PropertyName(FirestoreConstants.MessageFields.SENDER_ID)
     val senderId: String = "",
+    @get:PropertyName(FirestoreConstants.MessageFields.SENDER_NAME)
     val senderName: String = "",
+    @get:PropertyName(FirestoreConstants.MessageFields.SENDER_PROFILE_IMAGE_URL)
     val senderProfileImageUrl: String? = null,
-    @PropertyName("sendMessage") val content: String = "", // Firestore field is "sendMessage"
+    @get:PropertyName(FirestoreConstants.MessageFields.SEND_MESSAGE)
+    val content: String = "",
+    @get:PropertyName(FirestoreConstants.MessageFields.SENT_AT)
     @ServerTimestamp val sentAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.MessageFields.UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp? = null,
+    @get:PropertyName(FirestoreConstants.MessageFields.REPLY_TO_MESSAGE_ID)
     val replyToMessageId: String? = null,
+    @get:PropertyName(FirestoreConstants.MessageFields.IS_DELETED)
     val isDeleted: Boolean = false
 ) {
     /*

@@ -1,4 +1,4 @@
-package com.example.domain.repository
+package com.example.domain.repository.collection
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category

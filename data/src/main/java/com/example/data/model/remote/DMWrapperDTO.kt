@@ -1,13 +1,16 @@
 package com.example.data.model.remote
 
+import com.example.core_common.constants.FirestoreConstants
 import com.example.domain.model.base.DMWrapper
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
 
 /**
  * DM 채널 정보와 상대방 ID를 나타내는 DTO 클래스
  */
 data class DMWrapperDTO(
     @DocumentId val dmChannelId: String = "",
+    @get:PropertyName(FirestoreConstants.Users.DMWrappers.OTHER_USER_ID) 
     val otherUserId: String = ""
 ) {
     /**

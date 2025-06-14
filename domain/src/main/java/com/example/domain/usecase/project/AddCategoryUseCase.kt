@@ -1,5 +1,6 @@
 package com.example.domain.usecase.project
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Category
@@ -62,8 +63,7 @@ class AddCategoryUseCaseImpl @Inject constructor(
         categoryName: String
     ): CustomResult<Category, Exception> {
         // 1. Get current user ID
-        val currentUserResult = authRepository.getCurrentUserId()
-        val currentUserId = when (currentUserResult) {
+        val currentUserId = when (val currentUserResult = authRepository.getCurrentUserId()) {
             is CustomResult.Success -> currentUserResult.data
             is CustomResult.Failure -> return CustomResult.Failure(currentUserResult.error) // Propagate error
             else -> return CustomResult.Failure(Exception("Failed to get current user ID."))
@@ -99,7 +99,7 @@ class AddCategoryUseCaseImpl @Inject constructor(
             order = nextOrder,
             createdBy = currentUserId,
             createdAt = DateTimeUtil.nowInstant(),
-            updatedAt = DateTimeUtil.nowInstant()
+            updatedAt = DateTimeUtil.nowInstant(),
         )
 
         // 4. Add category using repository

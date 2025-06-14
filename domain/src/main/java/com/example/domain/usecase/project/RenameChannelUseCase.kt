@@ -2,8 +2,7 @@ package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.collection.CategoryCollection
-import com.example.domain.repository.CategoryCollectionRepository
-import kotlinx.coroutines.flow.first
+import com.example.domain.repository.collection.CategoryCollectionRepository
 import javax.inject.Inject
 
 /**

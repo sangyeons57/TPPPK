@@ -76,10 +76,9 @@ fun ProjectDetailScreen(
                     // Navigate to ChatScreen
                     val command = when {
                         channel.isDirect -> NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channel.id))
-                        channel.categoryId != null -> NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channel.id))
-                        else -> null // Should not happen if isDirect or categoryId is consistent
+                        else -> NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channel.id))
                     }
-                    command?.let { appNavigator.navigate(it) }
+                    command.let { appNavigator.navigate(it) }
                 },
                 onAddChannelInCategoryClick = { categoryId ->
                     viewModel.showCreateCategoryChannelDialog(categoryId)

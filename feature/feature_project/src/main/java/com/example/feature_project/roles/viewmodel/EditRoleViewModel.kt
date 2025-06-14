@@ -65,7 +65,7 @@ class EditRoleViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
-        if (roleId != null && projectId != null) {
+        if (roleId != null) {
             loadRoleDetails(projectId, roleId)
         }
     }

@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 
 @Singleton
 class PermissionRemoteDataSourceImpl @Inject constructor(
@@ -43,7 +44,7 @@ class PermissionRemoteDataSourceImpl @Inject constructor(
         projectId: String,
         roleId: String,
         permission: PermissionDTO
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             // 권한의 이름(예: "CAN_DELETE_MESSAGE")을 문서 ID로 사용하여 중복을 방지합니다.
             getPermissionsCollection(projectId, roleId).document(permission.id).set(permission).await()
@@ -55,20 +56,10 @@ class PermissionRemoteDataSourceImpl @Inject constructor(
         projectId: String,
         roleId: String,
         permissionId: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): CustomResult<Unit,Exception> = withContext(Dispatchers.IO) {
         resultTry {
             getPermissionsCollection(projectId, roleId).document(permissionId).delete().await()
             Unit
-        }
-    }
-
-    
-    private inline fun <T> resultTry(block: () -> T): Result<T> {
-        return try {
-            Result.success(block())
-        } catch (e: Throwable) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            Result.failure(e)
         }
     }
 }
