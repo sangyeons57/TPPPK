@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,10 +19,10 @@ import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.feature_model.CategoryUiModel
+import com.example.feature_model.ChannelUiModel
 import com.example.feature_project.viewmodel.ProjectDetailViewModel
 // Import new UI models and VM-specific data classes
-import com.example.feature_project.model.CategoryUiModel
-import com.example.feature_project.model.ChannelUiModel
 import com.example.feature_project.viewmodel.CreateChannelDialogData
 
 
@@ -135,8 +134,8 @@ private fun ProjectStructureList(
 
 @Composable
 private fun CategoryItem(
-    category: CategoryUiModel,
-    onChannelClick: (ChannelUiModel) -> Unit,
+    category: com.example.feature_model.CategoryUiModel,
+    onChannelClick: (com.example.feature_model.ChannelUiModel) -> Unit,
     onAddChannelClick: () -> Unit
 ) {
     Column {
@@ -161,7 +160,7 @@ private fun CategoryItem(
 
 @Composable
 private fun ChannelItem(
-    channel: ChannelUiModel,
+    channel: com.example.feature_model.ChannelUiModel,
     onClick: () -> Unit
 ) {
     Text(

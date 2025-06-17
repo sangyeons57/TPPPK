@@ -5,8 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
+import com.example.core_common.result.CustomResult
+import com.example.domain.usecase.project.AddProjectChannelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -43,7 +44,7 @@ interface ProjectStructureRepository {
 @HiltViewModel
 class CreateChannelViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    // TODO: private val repository: ProjectStructureRepository
+    private val addProjectChannelUseCase: AddProjectChannelUseCase
 ) : ViewModel() {
 
     // SavedStateHandle 확장 함수와 AppDestination 상수를 사용하여 ID들 가져오기
@@ -93,18 +94,18 @@ class CreateChannelViewModel @Inject constructor(
             _eventFlow.emit(CreateChannelEvent.ClearFocus)
             println("ViewModel: Creating ${currentType} channel '$currentName' in project $projectId / category $categoryId")
 
-            // --- TODO: 실제 채널 생성 로직 (repository.createChannel) ---
-            delay(1000)
-            val success = true
-            // val result = repository.createChannel(projectId, categoryId, currentName, currentType)
-            // -----------------------------------------------------------
-
-            if (success /*result.isSuccess*/) {
-                _eventFlow.emit(CreateChannelEvent.ShowSnackbar("채널이 생성되었습니다."))
-                _uiState.update { it.copy(isLoading = false, createSuccess = true) }
-            } else {
-                val errorMessage = "채널 생성 실패" // result.exceptionOrNull()?.message ?: "채널 생성 실패"
-                _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+            when (val result = addProjectChannelUseCase(projectId = projectId, categoryId = categoryId, channelName = currentName, channelType = currentType)) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(CreateChannelEvent.ShowSnackbar("채널이 생성되었습니다: ${result.data.channelName}"))
+                    _uiState.update { it.copy(isLoading = false, createSuccess = true) }
+                }
+                is CustomResult.Failure -> {
+                    val errorMessage = result.error.message ?: "채널 생성 실패"
+                    _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false, error = "채널 생성 실패") }
+                }
             }
         }
     }

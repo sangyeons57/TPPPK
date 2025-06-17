@@ -3,7 +3,6 @@ package com.example.feature_project.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.usecase.projectstructure.CreateCategoryChannelUseCase
 import com.example.domain.usecase.projectstructure.CreateDirectChannelUseCase
@@ -12,19 +11,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
 // Import the new UI models - assuming they are in com.example.feature_project.model
-import com.example.feature_project.model.CategoryUiModel
-import com.example.feature_project.model.ChannelUiModel
-import kotlinx.coroutines.flow.first
+import com.example.feature_model.CategoryUiModel
+import com.example.feature_model.ChannelUiModel
 
 // Define ChannelMode enum and CreateChannelDialogData data class
 
@@ -41,8 +35,8 @@ data class CreateChannelDialogData(
 data class ProjectDetailUiState(
     val projectId: String,
     val projectName: String = "", // TODO: 프로젝트 이름도 가져오도록 수정
-    val categories: List<CategoryUiModel> = emptyList(),
-    val directChannels: List<ChannelUiModel> = emptyList(),
+    val categories: List<com.example.feature_model.CategoryUiModel> = emptyList(),
+    val directChannels: List<com.example.feature_model.ChannelUiModel> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
     // 채널 생성 관련 상태

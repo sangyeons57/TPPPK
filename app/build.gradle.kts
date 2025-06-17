@@ -87,6 +87,7 @@ dependencies {
     implementation(project(":feature:feature_main"))
     implementation(project(":feature:feature_auth"))
     implementation(project(":feature:feature_project"))
+    implementation(project(":feature:feature_project_setting"))
     implementation(project(":feature:feature_friends"))
     implementation(project(":feature:feature_settings"))
     implementation(project(":feature:feature_chat"))

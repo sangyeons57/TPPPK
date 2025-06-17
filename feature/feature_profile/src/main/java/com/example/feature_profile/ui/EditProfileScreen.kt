@@ -38,8 +38,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext // Context 접근
-import com.example.domain.model.base.User
 import com.google.accompanist.permissions.ExperimentalPermissionsApi // Accompanist
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -171,7 +169,7 @@ fun EditProfileContent(
     ) {
         // Profile Image
         UserProfileImage(
-            profileImageUrl = uiState.user?.profileImageUrl,
+            profileImageUrl = uiState.user?.profileImageUrl?.value,
             contentDescription = "Profile Image",
             modifier = Modifier
                 .size(120.dp)
@@ -182,6 +180,8 @@ fun EditProfileContent(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
+
+        /**
         OutlinedTextField(
             value = uiState.user?.name ?: "", // Use uiState.user directly
             onValueChange = onNameChanged,
@@ -189,6 +189,7 @@ fun EditProfileContent(
             modifier = Modifier.fillMaxWidth(),
             enabled = uiState.user != null // Disable if user data is not loaded
         )
+        */
 
         Spacer(modifier = Modifier.weight(1F)) // Pushes save button to bottom
 
@@ -219,7 +220,7 @@ fun EditProfileContent(
 fun EditProfileContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditProfileContent(
-            uiState = EditProfileUiState(user = User(name = "김철수", email="e"), isLoading = false),
+            uiState = TODO(),
             onNameChanged = {},
             onProfileImageClicked = {},
             onSaveProfileClicked = {}

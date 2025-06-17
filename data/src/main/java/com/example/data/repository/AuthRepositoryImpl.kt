@@ -75,24 +75,6 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 현재 인증된 사용자의 ID를 반환합니다.
-     * Firebase의 자체 캐싱 시스템을 활용합니다.
-     * @return 사용자 ID 또는 null(로그아웃 상태일 경우)
-     */
-    override suspend fun getCurrentUserId(): CustomResult<String, Exception> {
-        val user = authRemoteDataSource.getCurrentUser()
-
-        return when (user) {
-            is CustomResult.Success -> {
-                CustomResult.Success(user.data.uid)
-            }
-            else -> {
-                CustomResult.Failure(Exception("User not logged in"))
-            }
-        }
-    }
-
-    /**
      * 로그아웃합니다.
      * Firebase의 자체 캐싱 시스템을 활용합니다.
      * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
@@ -199,20 +181,6 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * FirebaseUser를 Domain User 모델로 변환하는 확장 함수
-     * 
-     * @param defaultName 표시이름이 없을 경우 사용할 기본 이름
-     * @return 변환된 User 도메인 모델
-     */
-    private fun FirebaseUser.toDomainUser(defaultName: String? = null): User {
-        return User(
-            uid = this.uid,
-            email = this.email ?: "",
-            name = this.displayName ?: defaultName ?: "Anonymous",
-            profileImageUrl = this.photoUrl?.toString()
-        )
-    }
 
     /**
      * 현재 로그인된 사용자 계정을 삭제합니다.
@@ -233,36 +201,6 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateUserName(newDisplayName: String): CustomResult<User, Exception> {
-        val firebaseUser = FirebaseAuth.getInstance().currentUser
-
-        return if (firebaseUser != null) {
-            val profileUpdates = UserProfileChangeRequest.Builder()
-                .setDisplayName(newDisplayName)
-                .build()
-            try {
-                firebaseUser.updateProfile(profileUpdates).await() // kotlinx-coroutines-play-services await()
-                Log.d(TAG, "User display name updated successfully.")
-                // After successful update, re-fetch the current user to ensure the data is fresh.
-                val updatedFirebaseUser = FirebaseAuth.getInstance().currentUser
-                if (updatedFirebaseUser != null) {
-                    // Assuming toDomainUser() is an extension function for FirebaseUser
-                    // and correctly maps to the non-nullable domain User model.
-                    CustomResult.Success(updatedFirebaseUser.toDomainUser())
-                } else {
-                    Log.e(TAG, "Current Firebase user is null after profile update operation.")
-                    CustomResult.Failure(Exception("User session seems to be lost after profile update."))
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update user display name during await.", e)
-                CustomResult.Failure(e)
-            }
-        } else {
-            Log.w(TAG, "Attempted to update display name, but no user is logged in.")
-            CustomResult.Failure(Exception("User not logged in. Cannot update display name."))
-        }
-    }
-    
     /**
      * 현재 사용자의 세션 정보를 가져옵니다.
      * Firebase의 현재 사용자 정보를 기반으로 UserSession 객체를 생성합니다.

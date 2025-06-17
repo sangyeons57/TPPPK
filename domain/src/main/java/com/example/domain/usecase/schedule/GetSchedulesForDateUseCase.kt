@@ -28,6 +28,6 @@ class GetSchedulesForDateUseCaseImpl @Inject constructor(
      * @return Result<List<Schedule>> 일정 목록 로드 결과
      */
     override suspend fun invoke(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
-        return scheduleRepository.getSchedulesOnDate(date)
+        return scheduleRepository.findByDate(date)
     }
 } 

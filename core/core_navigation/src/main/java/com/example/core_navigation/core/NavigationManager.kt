@@ -1,7 +1,11 @@
 package com.example.core_navigation.core
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
+import androidx.collection.forEach
+import androidx.collection.valueIterator
+import androidx.navigation.ActivityNavigator
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
@@ -218,6 +222,7 @@ class NavigationManager @Inject constructor() : AppNavigator {
         return map
     }
 
+    @SuppressLint("RestrictedApi")
     private fun canNavigateDirectly(navController: NavHostController, route: String): Boolean {
         return try {
             val cleanRoute = route.substringBefore("?")
@@ -229,9 +234,7 @@ class NavigationManager @Inject constructor() : AppNavigator {
 
             // 2. 그래프 내 모든 Destination의 route와 비교 (플레이스홀더 포함 경로 비교에 필요)
             // NavGraph.nodes는 SparseArrayCompat<NavDestination> 타입
-            val nodes = navController.graph.nodes
-            for (i in 0 until nodes.size()) {
-                val destination = nodes.valueAt(i)
+            navController.graph.nodes.forEach { i , destination ->
                 if (destination.route == cleanRoute) {
                     return true
                 }

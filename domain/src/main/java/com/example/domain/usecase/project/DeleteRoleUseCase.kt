@@ -28,7 +28,7 @@ class DeleteRoleUseCaseImpl @Inject constructor(
      * @return Result<Unit> 역할 삭제 처리 결과
      */
     override suspend fun invoke(projectId: String, roleId: String): CustomResult<Unit, Exception> {
-        return when (val uid = authRepository.getCurrentUserId()){
+        return when (val sessionResult = authRepository.getCurrentUserSession()){
             is CustomResult.Success -> {
                 return projectRoleRepository.deleteRole(projectId, roleId)
             }

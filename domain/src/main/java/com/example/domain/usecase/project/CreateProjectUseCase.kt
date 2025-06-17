@@ -6,7 +6,7 @@ import com.example.domain.repository.CategoryRepository // Added
 import com.example.domain.repository.ProjectRepository
 import com.example.domain.repository.ProjectsWrapperRepository
 import com.example.domain.model.base.Category // Added
-import com.example.domain.model.Constants // Added
+import com.example.core_common.constants.Constants // Added
 import android.util.Log // Added for logging failure of default category creation
 import com.example.core_common.util.DateTimeUtil
 import javax.inject.Inject
@@ -87,6 +87,7 @@ class CreateProjectUseCase @Inject constructor(
 
                 // "카테고리 없음" 카테고리 자동 생성
                 val noCategory = Category(
+                    id = Constants.NO_CATEGORY_ID,
                     name = Constants.NO_CATEGORY_NAME,
                     order = Constants.NO_CATEGORY_ORDER,
                     createdBy = session.data.userId,
@@ -96,7 +97,7 @@ class CreateProjectUseCase @Inject constructor(
                 )
                 // Firestore의 경우 projectId는 Category 객체에 포함되지 않고, 컬렉션 경로의 일부로 사용됨
                 // 따라서 categoryRepository.addCategory(projectId, noCategory) 형태가 될 것임
-                val addNoCategoryResult = categoryRepository.addCategory(projectId, noCategory)
+                val addNoCategoryResult = categoryRepository.setDirectCategory(projectId, Constants.NO_CATEGORY_ID ,noCategory)
                 if (addNoCategoryResult is CustomResult.Failure) {
                     // "카테고리 없음" 생성 실패 시 로그만 남기고 프로젝트 생성은 성공으로 간주
                     // 중요: 이 부분은 프로젝트 정책에 따라 롤백 처리 등을 고려해야 할 수 있음

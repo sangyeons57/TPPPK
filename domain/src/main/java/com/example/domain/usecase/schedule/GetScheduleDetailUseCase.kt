@@ -26,6 +26,6 @@ class GetScheduleDetailUseCaseImpl @Inject constructor(
      * @return Result<Schedule> 일정 상세 정보 로드 결과
      */
     override suspend fun invoke(scheduleId: String): CustomResult<Schedule, Exception> {
-        return scheduleRepository.getScheduleDetails(scheduleId)
+        return scheduleRepository.findById(scheduleId)
     }
 } 

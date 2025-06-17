@@ -72,4 +72,8 @@ class DMWrapperRepositoryImpl @Inject constructor(
             else -> CustomResult.Failure(Exception("Unknown error type from findDMWrapperByExactParticipants"))
         }
     }
+
+    override suspend fun deleteDMWrapper(currentUserId: String, dmChannelId: String): CustomResult<Unit, Exception> {
+        return dmWrapperRemoteDataSource.deleteDMWrapper(currentUserId, dmChannelId)
+    }
 }

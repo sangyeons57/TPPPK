@@ -10,26 +10,39 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
- * 현재 사용자의 상태를 가져오는 UseCase
- * 
- * @property userRepository 사용자 관련 기능을 제공하는 Repository
+ * 현재 사용자의 상태를 가져오는 UseCase 인터페이스
  */
-class GetCurrentStatusUseCase @Inject constructor(
-    private val userRepository: UserRepository,
-    private val authRepository: AuthRepository
-) {
+interface GetCurrentStatusUseCase {
     /**
      * 현재 사용자의 상태를 가져옵니다.
      *
      * @return 성공 시 사용자 상태가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(): Flow<CustomResult<UserStatus, Exception>> {
+    suspend operator fun invoke(): Flow<CustomResult<UserStatus, Exception>>
+}
+
+/**
+ * 현재 사용자의 상태를 가져오는 UseCase 구현체
+ * 
+ * @property userRepository 사용자 관련 기능을 제공하는 Repository
+ * @property authRepository 인증 관련 기능을 제공하는 Repository
+ */
+class GetCurrentStatusUseCaseImpl @Inject constructor(
+    private val userRepository: UserRepository,
+    private val authRepository: AuthRepository
+) : GetCurrentStatusUseCase {
+    /**
+     * 현재 사용자의 상태를 가져옵니다.
+     *
+     * @return 성공 시 사용자 상태가 포함된 Result, 실패 시 에러 정보가 포함된 Result
+     */
+    override suspend operator fun invoke(): Flow<CustomResult<UserStatus, Exception>> {
         val session = authRepository.getCurrentUserSession()
         return when (session) {
             is CustomResult.Success -> {
-                userRepository.getUserStream(session.data.userId).map {
+                userRepository.observe(session.data.userId).map {
                     if (it is CustomResult.Success) {
-                        CustomResult.Success(it.data.status)
+                        CustomResult.Success(it.data.userStatus)
                     }  else {
                         CustomResult.Failure(Exception("Unknown error"))
                     }

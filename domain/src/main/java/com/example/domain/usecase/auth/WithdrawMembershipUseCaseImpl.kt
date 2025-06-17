@@ -2,8 +2,11 @@ package com.example.domain.usecase.auth
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
+import com.example.domain.event.EventDispatcher
+import com.example.domain.event.user.UserAccountWithdrawnEvent
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.UserRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -49,31 +52,27 @@ class WithdrawMembershipUseCaseImpl @Inject constructor(
         Log.d("WithdrawMembershipUseCaseImpl", "Current user UID: $uid. Proceeding with data anonymization.")
 
         // 2. Process user data withdrawal (anonymize in Firestore)
-        when (val processResult = userRepository.processUserWithdrawal(uid)) {
+        when ( val userResult = userRepository.observe(uid).first()) {
             is CustomResult.Success -> {
-                Log.d("WithdrawMembershipUseCaseImpl", "User data anonymized successfully for UID: $uid. Proceeding to sign out.")
-                // 3. Sign out the user
-                return when (val signOutResult = authRepository.logout()) {
+                val user = userResult.data
+                user.markAsWithdrawn()
+                val result = userRepository.save(user)
+                EventDispatcher.publish(UserAccountWithdrawnEvent(uid))
+                return when (result) {
                     is CustomResult.Success -> {
-                        Log.d("WithdrawMembershipUseCaseImpl", "User signed out successfully. Withdrawal complete.")
+                        Log.d(
+                            "WithdrawMembershipUseCaseImpl",
+                            "User data withdrawal successful for UID: $uid."
+                        )
                         CustomResult.Success(Unit)
                     }
-                    is CustomResult.Failure -> {
-                        Log.e("WithdrawMembershipUseCaseImpl", "Failed to sign out user after data anonymization.", signOutResult.error)
-                        // Even if sign-out fails, the data processing part was successful.
-                        // Depending on desired behavior, this could still be a partial success or a failure.
-                        // For now, returning the sign-out failure.
-                        CustomResult.Failure(signOutResult.error ?: Exception("Sign out failed after data processing."))
-                    }
-                    else -> {
-                        Log.e("WithdrawMembershipUseCaseImpl", "Unknown error during sign out.")
-                        CustomResult.Failure(Exception("Unknown error during sign out."))
-                    }
+                    is CustomResult.Failure -> CustomResult.Failure(result.error)
+                    else -> CustomResult.Failure(Exception("Unknown error during data processing."))
                 }
             }
             is CustomResult.Failure -> {
-                Log.e("WithdrawMembershipUseCaseImpl", "Failed to process user data withdrawal for UID: $uid.", processResult.error)
-                return CustomResult.Failure(processResult.error ?: Exception("Failed to process user data withdrawal."))
+                Log.e("WithdrawMembershipUseCaseImpl", "Failed to process user data withdrawal for UID: $uid.", userResult.error)
+                return CustomResult.Failure(userResult.error)
             }
             else -> {
                  Log.e("WithdrawMembershipUseCaseImpl", "Unknown error during data processing for UID: $uid.")

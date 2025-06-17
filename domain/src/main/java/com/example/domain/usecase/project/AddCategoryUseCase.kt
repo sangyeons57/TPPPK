@@ -1,12 +1,11 @@
 package com.example.domain.usecase.project
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Category
 import com.example.domain.repository.AuthRepository // Added
 import com.example.domain.repository.CategoryRepository // Added
-import com.example.domain.model.Constants // Added
+import com.example.core_common.constants.Constants // Added
 import kotlinx.coroutines.flow.first // Added
 import javax.inject.Inject
 
@@ -63,9 +62,9 @@ class AddCategoryUseCaseImpl @Inject constructor(
         categoryName: String
     ): CustomResult<Category, Exception> {
         // 1. Get current user ID
-        val currentUserId = when (val currentUserResult = authRepository.getCurrentUserId()) {
-            is CustomResult.Success -> currentUserResult.data
-            is CustomResult.Failure -> return CustomResult.Failure(currentUserResult.error) // Propagate error
+        val currentUserSession = when (val currentUserSessionResult = authRepository.getCurrentUserSession()) {
+            is CustomResult.Success -> currentUserSessionResult.data
+            is CustomResult.Failure -> return CustomResult.Failure(currentUserSessionResult.error) // Propagate error
             else -> return CustomResult.Failure(Exception("Failed to get current user ID."))
         }
 
@@ -97,7 +96,7 @@ class AddCategoryUseCaseImpl @Inject constructor(
         val newCategory = Category(
             name = categoryName.trim(),
             order = nextOrder,
-            createdBy = currentUserId,
+            createdBy = currentUserSession.userId,
             createdAt = DateTimeUtil.nowInstant(),
             updatedAt = DateTimeUtil.nowInstant(),
         )

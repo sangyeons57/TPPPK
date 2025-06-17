@@ -54,6 +54,7 @@ import com.example.feature_auth.ui.TermsOfServiceScreen
 import com.example.feature_friends.ui.AcceptFriendsScreen
 import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_profile.ui.EditProfileScreen
+import com.example.feature_project_setting_screen.viewmodel.ui.ProjectSettingScreen
 import com.example.feature_settings.ui.SettingsScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -216,7 +217,18 @@ fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
         // 프로젝트 생성 화면
         composable(AppRoutes.Project.ADD) {
             val viewModel = hiltViewModel<AddProjectViewModel>()
+          // TODO: AddRoleScreen/EditRoleScreen for adding roles
             AddProjectScreen(appNavigator)
+        }
+
+        // Project Settings Screen
+        composable(
+            route = AppRoutes.Project.settingsRoute(),
+            arguments = AppRoutes.Project.settingsArguments
+        ) {
+            ProjectSettingScreen(
+                appNavigator = appNavigator
+            )
         }
         
         // 프로젝트 참가 화면

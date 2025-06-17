@@ -3,11 +3,9 @@ package com.example.domain.usecase.schedule
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.ScheduleRepository
-import com.google.firebase.auth.FirebaseAuth
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
-import kotlin.time.Instant
 
 /**
  * 특정 월의 일정 요약 정보를 가져오는 유스케이스입니다.
@@ -28,7 +26,7 @@ class GetScheduleSummaryForMonthUseCase @Inject constructor(
     suspend operator fun invoke(yearMonth: YearMonth): CustomResult<Set<LocalDate>, Exception> {
         val userSession =  authRepository.getCurrentUserSession()
         return when (userSession) {
-            is CustomResult.Success -> scheduleRepository.getScheduleSummaryForMonth(userSession.data.userId, yearMonth)
+            is CustomResult.Success -> scheduleRepository.findByDateSummaryForMonth(userSession.data.userId, yearMonth)
             else -> CustomResult.Failure(Exception("로그인이 필요합니다."))
         }
     }

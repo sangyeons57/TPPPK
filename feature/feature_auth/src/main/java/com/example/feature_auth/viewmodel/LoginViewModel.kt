@@ -168,7 +168,7 @@ class LoginViewModel @Inject constructor(
                     val errorMessage = if (exception is WithdrawnAccountException) {
                         exception.message ?: "탈퇴한 계정입니다."
                     } else {
-                        getAuthErrorMessageUseCase(exception.message ?: "unknown_error")
+                        getAuthErrorMessageUseCase(exception)
                     }
                     _uiState.update { it.copy(isLoading = false) }
                     _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage))

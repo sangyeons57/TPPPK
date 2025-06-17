@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserStatus
+import com.example.domain.model.vo.user.UserMemo
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserImageUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
@@ -31,12 +32,12 @@ data class UserProfileData(
 
 fun User.toUserProfileData(): UserProfileData {
     return UserProfileData(
-        uid = this.uid,
-        name = this.name,
-        email = this.email.ifEmpty { null },
-        profileImageUrl = this.profileImageUrl,
-        memo = this.memo, // Mapping 'memo' to 'statusMessage'
-        userStatus = this.status
+        uid = this.uid.value,
+        name = this.name.value,
+        email = this.email.value.ifEmpty { null },
+        profileImageUrl = this.profileImageUrl?.value,
+        memo = this.memo?.value, // Mapping 'memo' to 'statusMessage'
+        userStatus = this.userStatus
     )
 }
 
@@ -259,7 +260,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             // Simulate a call and success
-            when (val result = updateUserMemoUseCase(newMemo)) { // Assign to val and use actual use case call
+            when (val result = updateUserMemoUseCase(UserMemo(newMemo))) { // Assign to val and use actual use case call
                 is CustomResult.Success -> {
                     // Optionally update UI state if memo is directly displayed and needs immediate refresh
                     // _uiState.update { it.copy(userProfile = it.userProfile?.copy(memo = newMemo), isLoading = false) }

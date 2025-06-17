@@ -1,6 +1,6 @@
 package com.example.data.repository
 
-import com.example.core_common.constants.FirestoreConstants
+// import removed: FirestoreConstants not used anymore
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.ScheduleRemoteDataSource
 import com.example.data.model.remote.toDto
@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import java.time.format.DateTimeParseException
 
 
@@ -35,10 +36,10 @@ class ScheduleRepositoryImpl @Inject constructor(
      * @param schedule 생성할 일정 정보
      * @return 생성된 일정 정보 (서버에서 부여된 ID 포함)
      */
-    override suspend fun createSchedule(schedule: Schedule): CustomResult<String, Exception> {
+    override suspend fun save(schedule: Schedule): CustomResult<String, Exception> {
         return try {
             val scheduleDto = schedule.toDto() // ID는 비어있을 수 있음
-            val result = scheduleRemoteDataSource.createSchedule(scheduleDto)
+            val result = scheduleRemoteDataSource.saveSchedule(scheduleDto)
             when (result) {
                 is CustomResult.Success -> {
                     CustomResult.Success(result.data)
@@ -58,9 +59,9 @@ class ScheduleRepositoryImpl @Inject constructor(
      * @param scheduleId 일정 ID
      * @return 일정 상세 정보
      */
-    override suspend fun getScheduleDetails(scheduleId: String): CustomResult<Schedule, Exception> {
+    override suspend fun findById(scheduleId: String): CustomResult<Schedule, Exception> {
         return try {
-            val result = scheduleRemoteDataSource.getSchedule(scheduleId)
+            val result = scheduleRemoteDataSource.findById(scheduleId)
             when (result) {
                 is CustomResult.Success -> {
                     try {
@@ -79,27 +80,6 @@ class ScheduleRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 일정 정보를 업데이트합니다.
-     * Firebase의 자체 캐싱 시스템을 활용합니다.
-     * 
-     * @param schedule 업데이트할 일정 정보 (ID 필수)
-     * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
-     */
-    override suspend fun updateSchedule(schedule: Schedule): CustomResult<Unit, Exception> {
-        return try {
-            val scheduleDto = schedule.toDto() // ID가 반드시 포함되어야 함
-            val result = scheduleRemoteDataSource.updateSchedule(scheduleDto)
-            when (result) {
-                is CustomResult.Success -> CustomResult.Success(Unit)
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                else -> CustomResult.Failure(Exception("Unknown error"))
-            }
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
-    }
-
-    /**
      * 일정을 삭제합니다.
      * Firebase의 자체 캐싱 시스템을 활용합니다.
      * 
@@ -107,7 +87,7 @@ class ScheduleRepositoryImpl @Inject constructor(
      * @param currentUserId 현재 사용자 ID (권한 확인용)
      * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
      */
-    override suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception> {
+    override suspend fun delete(scheduleId: String): CustomResult<Unit, Exception> {
         return try {
             val result = scheduleRemoteDataSource.deleteSchedule(scheduleId)
             when (result) {
@@ -120,15 +100,15 @@ class ScheduleRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getScheduleSummaryForMonth(
+    override suspend fun findByDateSummaryForMonth(
         userId: String,
         yearMonth: YearMonth
     ): CustomResult<Set<LocalDate>, Exception> {
-        return scheduleRemoteDataSource.getScheduleSummaryForMonth(userId, yearMonth)
+        return scheduleRemoteDataSource.findDateSummaryForMonth(userId, yearMonth)
     }
 
-    override suspend fun getSchedulesForMonth(userId: String, yearMonth: YearMonth): Flow<CustomResult<List<Schedule>, Exception>> {
-        return scheduleRemoteDataSource.getSchedulesForMonth(userId, yearMonth).map { result ->
+    override suspend fun findByMonth(userId: String, yearMonth: YearMonth): Flow<CustomResult<List<Schedule>, Exception>> {
+        return scheduleRemoteDataSource.findByMonth(userId, yearMonth).map { result ->
             when (result) {
                 is CustomResult.Success -> {
                     try {
@@ -147,13 +127,29 @@ class ScheduleRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getSchedulesOnDate(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
+    override fun observe(scheduleId: String): Flow<CustomResult<Schedule, Exception>> {
+        return scheduleRemoteDataSource.observeSchedule(scheduleId).map { result ->
+            when (result) {
+                is CustomResult.Success -> {
+                    try {
+                        CustomResult.Success(result.data.toDomain())
+                    } catch (e: Exception) {
+                        CustomResult.Failure(e)
+                    }
+                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                else -> CustomResult.Failure(Exception("Unknown error"))
+            }
+        }
+    }
+
+    override fun findByDate(date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
         val currentUser = firebaseAuth.currentUser
             ?: return flowOf(CustomResult.Failure(Exception("User not authenticated")))
         val userId = currentUser.uid
 
         return flow {
-            val sourceFlow = scheduleRemoteDataSource.getSchedulesOnDate(userId, date)
+            val sourceFlow = scheduleRemoteDataSource.findByDate(userId, date)
             emitAll(sourceFlow.map {
                 when (it) {
                     is CustomResult.Success -> {
@@ -175,10 +171,10 @@ class ScheduleRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getSchedulesForDate(date: String): Flow<CustomResult<List<Schedule>, Exception>> {
+    override fun findByDate(date: String): Flow<CustomResult<List<Schedule>, Exception>> {
         return try {
             val localDate = LocalDate.parse(date) // Assumes ISO_LOCAL_DATE format e.g. "2023-10-26"
-            getSchedulesOnDate(localDate) // Delegate to the LocalDate version
+            findByDate(localDate) // Delegate to the LocalDate version
         } catch (e: DateTimeParseException) {
             flowOf(CustomResult.Failure(IllegalArgumentException("Invalid date format: '$date'. Expected yyyy-MM-dd.", e)))
         } catch (e: Exception) {

@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.tasks.await
@@ -39,30 +40,15 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
 
     private val schedulesCollection = firestore.collection(SCHEDULES_COLLECTION)
 
-    override fun getSchedulesForProject(
-        projectId: String,
-        startAt: Timestamp,
-        endAt: Timestamp
-    ): Flow<List<ScheduleDTO>> {
-        // 참고: 이 쿼리를 사용하려면 Firestore에서 (projectId, startTime)에 대한
-        // 복합 색인(composite index) 생성이 필요합니다.
-        return schedulesCollection
-            .whereEqualTo("projectId", projectId)
-            .whereGreaterThanOrEqualTo("startTime", startAt)
-            .whereLessThanOrEqualTo("startTime", endAt) // endTime으로 필터링하는 것이 더 정확할 수 있으나, startTime 기준으로 조회
-            .snapshots()
-            .map { snapshot -> snapshot.toObjects(ScheduleDTO::class.java) }
-    }
-
-    override suspend fun getSchedule(scheduleId: String): CustomResult<ScheduleDTO, Exception> = resultTry {
+    override suspend fun findById(scheduleId: String): CustomResult<ScheduleDTO, Exception> {
         if (scheduleId.isBlank()) {
-            throw IllegalArgumentException("Schedule ID cannot be empty.")
+            return CustomResult.Failure(IllegalArgumentException("Schedule ID cannot be empty."))
         }
         val document = schedulesCollection.document(scheduleId).get().await()
-        document.toObject(ScheduleDTO::class.java) as ScheduleDTO
+        return CustomResult.Success(document.toObject(ScheduleDTO::class.java) as ScheduleDTO)
     }
 
-    override suspend fun createSchedule(schedule: ScheduleDTO): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
+    private suspend fun createSchedule(schedule: ScheduleDTO): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val uid = auth.currentUser?.uid ?: throw Exception("User not logged in.")
             // 생성자 ID와 생성 시간을 주입 (DTO에 ServerTimestamp가 있으므로 Firestore에서 자동 설정됨)
@@ -72,7 +58,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateSchedule(schedule: ScheduleDTO): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+    private suspend fun updateSchedule(schedule: ScheduleDTO): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             if (schedule.id.isBlank()) {
                 throw IllegalArgumentException("Schedule ID cannot be empty for an update.")
@@ -90,8 +76,15 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
             updateData["updatedAt"] = FieldValue.serverTimestamp()
             
             schedulesCollection.document(schedule.id).update(updateData).await()
-            Unit
+            schedule.id
         }
+    }
+
+    override suspend fun saveSchedule(schedule: ScheduleDTO): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
+        if (schedule.id.isNotBlank()) {
+            return@withContext updateSchedule(schedule)
+        }
+        return@withContext createSchedule(schedule)
     }
 
     override suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
@@ -101,7 +94,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun getSchedulesForMonth(userId : String, yearMonth: YearMonth): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
+    override suspend fun findByMonth(userId : String, yearMonth: YearMonth): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
 
         val startOfMonthTimestamp = DateTimeUtil.yearMonthToStartOfMonthTimestamp(yearMonth)
         val endOfMonthTimestamp = DateTimeUtil.yearMonthToEndOfMonthExclusiveTimestamp(yearMonth)
@@ -119,7 +112,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
                 return@addSnapshotListener
             }
             if (snapshots != null) {
-                val schedules = snapshots.toObjects<ScheduleDTO>(ScheduleDTO::class.java)
+                val schedules = snapshots.toObjects(ScheduleDTO::class.java)
                 trySend(CustomResult.Success(schedules))
             } else {
                 // 스냅샷이 null인 경우는 Firestore 문서가 없을 때도 발생 가능 (Listener 초기 호출 시)
@@ -131,7 +124,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
     }
 
 
-    override suspend fun getSchedulesOnDate(userId: String, date: LocalDate): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
+    override suspend fun findByDate(userId: String, date: LocalDate): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
 
         // DateTimeUtil을 사용하여 해당 날짜의 시작과 끝 Timestamp를 가져옵니다. (UTC 기준)
         val startOfDayTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.localDateToStartOfDayInstant(date))
@@ -163,7 +156,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         awaitClose { listenerRegistration.remove() }
     }
 
-    override suspend fun getScheduleSummaryForMonth(
+    override suspend fun findDateSummaryForMonth(
         userId: String,
         yearMonth: YearMonth
     ): CustomResult<Set<LocalDate>, Exception> = withContext(Dispatchers.IO) {
@@ -185,6 +178,28 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
 
             datesWithSchedules
         }
+    }
+
+    override fun observeSchedule(scheduleId: String): Flow<CustomResult<ScheduleDTO, Exception>> = callbackFlow{
+        val listenerRegistration = schedulesCollection.document(scheduleId)
+            .addSnapshotListener { snapshot, error ->
+                if(error != null){
+                    trySend(CustomResult.Failure(error))
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && snapshot.exists()) {
+                    val schedule = snapshot.toObject(ScheduleDTO::class.java)
+                    if(schedule != null){
+                        trySend(CustomResult.Success(schedule))
+                    } else {
+                        trySend(CustomResult.Failure(Exception("Failed to parse schedule data.")))
+                    }
+                } else {
+                    trySend(CustomResult.Failure(Exception("Schedule document does not exist.")))
+                }
+            }
+        awaitClose{ listenerRegistration.remove() }
     }
 }
 

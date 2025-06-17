@@ -8,6 +8,10 @@ import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.constants.FirestoreConstants
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.ProjectId
+import com.example.domain.model.vo.schedule.ScheduleContent
+import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.google.firebase.firestore.PropertyName
 
 /**
@@ -41,22 +45,21 @@ data class ScheduleDTO(
      * @return Schedule 도메인 모델
      */
     fun toDomain(): Schedule {
-        return Schedule(
-            id = id,
-            title = title,
-            content = content,
-            startTime = startTime?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            endTime = endTime?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            projectId = projectId,
-            creatorId = creatorId,
+        return Schedule.registerNewSchedule(
+            scheduleId = com.example.domain.model.vo.DocumentId(id),
+            title = ScheduleTitle(title),
+            content = ScheduleContent(content),
+            startTime = startTime.let{DateTimeUtil.firebaseTimestampToInstant(it!!)},
+            endTime = endTime.let{DateTimeUtil.firebaseTimestampToInstant(it!!)},
+            projectId = ProjectId(projectId?:""),
+            creatorId = OwnerId(creatorId),
             status = try {
                 ScheduleStatus.valueOf(status.uppercase())
             } catch (e: Exception) {
                 ScheduleStatus.CONFIRMED
             },
-            color = color,
-            createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+            createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it!!)},
+            updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it!!)}
         )
     }
 }
@@ -67,16 +70,15 @@ data class ScheduleDTO(
  */
 fun Schedule.toDto(): ScheduleDTO {
     return ScheduleDTO(
-        id = id,
-        title = title,
-        content = content,
-        startTime = startTime?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        endTime = endTime?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        projectId = projectId,
-        creatorId = creatorId,
+        id = id.value,
+        title = title.value,
+        content = content.value,
+        startTime = startTime.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        endTime = endTime.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        projectId = projectId?.value,
+        creatorId = creatorId.value,
         status = status.name.lowercase(),
-        color = color,
-        createdAt = createdAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
     )
 }

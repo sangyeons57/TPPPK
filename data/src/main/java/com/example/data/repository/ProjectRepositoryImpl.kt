@@ -7,7 +7,7 @@ import com.example.data.datasource.remote.ProjectRemoteDataSource
 import com.example.data.datasource.remote.CategoryRemoteDataSource
 import com.example.data.datasource.remote.MemberRemoteDataSource // ProjectMember 관리를 위해 필요
 import com.example.data.model.remote.ProjectDTO
-import com.example.domain.model.Constants
+import com.example.core_common.constants.Constants
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.Project
 import com.example.domain.repository.ProjectRepository
@@ -93,8 +93,6 @@ class ProjectRepositoryImpl @Inject constructor(
      * 
      * @param projectId 프로젝트 ID
      * @param name 새 프로젝트 이름 (선택적)
-     * @param description 새 프로젝트 설명 (선택적)
-     * @param isPublic 새 공개 여부 (선택적)
      */
     override suspend fun updateProjectInfo(
         projectId: String,
@@ -117,7 +115,7 @@ class ProjectRepositoryImpl @Inject constructor(
             val updateResult = projectRemoteDataSource.updateProjectDetails(projectId, newProject)
             when (updateResult) {
                 is CustomResult.Success -> Unit
-                is CustomResult.Failure -> Exception(updateResult.error)
+                is CustomResult.Failure -> updateResult.error
                 else -> CustomResult.Failure(Exception("Unknown error"))
             }
         }

@@ -27,6 +27,6 @@ class GetUserUseCaseImpl @Inject constructor(
      * @return Flow<Result<User>> 사용자 정보 로드 결과 Flow
      */
     override operator fun invoke(userId: String): Flow<CustomResult<User, Exception>> {
-        return userRepository.getUserStream(userId)
+        return userRepository.observe(userId)
     }
 } 

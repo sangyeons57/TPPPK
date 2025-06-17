@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -14,6 +15,7 @@ fun BottomSheetDialog(
     items: List<BottomSheetDialogItem>,
     onDismiss: () -> Unit
 ) {
+    Log.d("BottomSheetDialog", "BottomSheetDialog is being composed")
     val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(

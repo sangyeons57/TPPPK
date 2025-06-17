@@ -6,8 +6,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.schedule.ScheduleContent
+import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.example.domain.usecase.schedule.DeleteScheduleUseCase
 import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,12 +19,12 @@ import javax.inject.Inject
 
 // --- 데이터 모델 ---
 data class ScheduleDetailItem(
-    val id: String,
-    val title: String,
+    val id: DocumentId,
+    val title: ScheduleTitle,
     val projectName: String?, // 프로젝트 이름 (없을 수도 있음)
     val date: String, // 포맷된 날짜 문자열 (예: "2025년 4월 15일 (화)")
     val time: String, // 포맷된 시간 범위 문자열 (예: "오후 2:00 ~ 오후 3:30", "하루 종일")
-    val content: String? // 일정 내용
+    val content: ScheduleContent // 일정 내용
 )
 
 // --- UI 상태 ---
@@ -120,14 +122,14 @@ class ScheduleDetailViewModel @Inject constructor(
         val datePattern = "yyyy년 M월 d일 (E)" // Define pattern locally or in DateTimeUtil if widely used
 
         // null 체크 추가 및 DateTimeUtil 메서드 수정
-        val dateString = this.startTime?.let { DateTimeUtil.formatDate(DateTimeUtil.toLocalDateTime(it)) } ?: "날짜 없음"
+        val dateString = this.startTime.let { DateTimeUtil.formatDate(DateTimeUtil.toLocalDateTime(it)) }
 
         // 시간 포맷팅 - null 체크 추가
-        val start = this.startTime?.let { DateTimeUtil.formatTime(DateTimeUtil.toLocalDateTime(it)) } ?: "시간 없음"
-        val end = this.endTime?.let { DateTimeUtil.formatTime(DateTimeUtil.toLocalDateTime(it)) } ?: "시간 없음"
+        val start = this.startTime.let { DateTimeUtil.formatTime(DateTimeUtil.toLocalDateTime(it)) }
+        val end = this.endTime.let { DateTimeUtil.formatTime(DateTimeUtil.toLocalDateTime(it)) } ?: "시간 없음"
         val timeString = "$start ~ $end"
 
-        val projectName = if (this.projectId.isNullOrEmpty()) null else "Project ${this.projectId}"
+        val projectName = if (this.projectId?.value.isNullOrEmpty()) null else "Project ${this.projectId}"
 
         return ScheduleDetailItem(
             id = this.id,

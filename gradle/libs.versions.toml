@@ -5,7 +5,7 @@ mockitoCore = "5.18.0"
 mockitoJunitJupiter = "5.18.0"
 mockitoKotlin = "5.4.0"
 pluginGoogle = "2.1.21-2.0.2"
-pluginAgp = "8.10.1"
+pluginAgp = "8.11.0-rc02"
 pluginSentry = "5.7.0"
 pluginGms = "4.4.2"
 hilt = "2.56.2"
@@ -42,6 +42,7 @@ gmsPlayServicesBase = "18.7.0"
 workRuntime = "2.10.1"
 firebaseFirestoreKtx = "25.1.4"
 accompanistPermissions = "0.37.3"
+foundationAndroid = "1.8.2"
 
 [libraries]
 androidx-animation = { module = "androidx.compose.animation:animation" }
@@ -131,6 +132,7 @@ google-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebas
 
 # Accompanist Permissions 라이브러리 별칭 추가
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
+androidx-foundation-android = { group = "androidx.compose.foundation", name = "foundation-android", version.ref = "foundationAndroid" }
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

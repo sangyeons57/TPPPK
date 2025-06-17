@@ -113,10 +113,10 @@ class Calendar24HourViewModel @Inject constructor(
                             
                             // UI 모델로 변환
                             ScheduleItem24Hour(
-                                id = schedule.id,
-                                title = schedule.title,
-                                startTime = schedule.startTime!!,
-                                endTime = schedule.endTime!!,
+                                id = schedule.id.value,
+                                title = schedule.title.value,
+                                startTime = schedule.startTime,
+                                endTime = schedule.endTime,
                                 color = scheduleColor
                             )
                         }
@@ -302,9 +302,11 @@ class ScheduleColorManager {
     fun getColorForSchedule(schedule: Schedule): ULong {
         // 프로젝트 ID가 있고, 해당 프로젝트에 기본 타입이 지정되어 있는 경우
         val projectId = schedule.projectId
-        if (projectDefaultTypes.containsKey(projectId)) {
-            val type = projectDefaultTypes[projectId]!!
-            return if (highContrastMode) getHighContrastColor(type) else getColor(type)
+        if (projectId != null) {
+            if (projectDefaultTypes.containsKey(projectId.value)) {
+                val type = projectDefaultTypes[projectId.value]!!
+                return if (highContrastMode) getHighContrastColor(type) else getColor(type)
+            }
         }
         
         // 타입을 추론해서 색상 결정
@@ -415,8 +417,8 @@ class ScheduleColorManager {
      * @return 유추된 일정 타입
      */
     fun inferScheduleType(schedule: Schedule): ScheduleType {
-        val titleLower = schedule.title.lowercase()
-        val contentLower = schedule.content?.lowercase() ?: ""
+        val titleLower = schedule.title.value.lowercase()
+        val contentLower = schedule.content.value.lowercase() ?: ""
         
         // 키워드 세트 정의 (더 많은 키워드 추가)
         val importantKeywords = setOf("긴급", "중요", "우선", "필수", "critical", "urgent", "important")

@@ -3,6 +3,7 @@ package com.example.data.datasource.remote
 
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 import com.example.data.model.remote.DMChannelDTO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -73,13 +74,6 @@ class DMChannelRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    private inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
-        return try {
-            CustomResult.Success(block())
-        } catch (e: Exception) {
-            if (e is java.util.concurrent.CancellationException) throw e
-            CustomResult.Failure(e)
-        }
-    }
+
 }
 

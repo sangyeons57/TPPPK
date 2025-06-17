@@ -8,6 +8,12 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.example.core_common.constants.FirestoreConstants
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.model.vo.user.UserFcmToken
+import com.example.domain.model.vo.user.UserMemo
+import com.example.domain.model.vo.user.UserName
+import java.time.Instant
 
 /**
  * 사용자 정보를 나타내는 DTO 클래스
@@ -40,25 +46,25 @@ data class UserDTO(
      * @return User 도메인 모델
      */
     fun toDomain(): User {
-        return User(
-            uid = uid,
-            email = email,
-            name = name,
-            consentTimeStamp = consentTimeStamp?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            profileImageUrl = profileImageUrl,
-            memo = memo,
-            status = try {
+        return User.fromDataSource(
+            uid = com.example.domain.model.vo.DocumentId(uid),
+            email = UserEmail(email), // Wrap in Value Object
+            name = UserName(name),   // Wrap in Value Object
+            consentTimeStamp = consentTimeStamp?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
+            profileImageUrl = profileImageUrl.takeIf { !it.isNullOrBlank() }?.let { ImageUrl(it) }, // Wrap in Value Object.ImageUrl(profileImageUrl),
+            memo = memo?.let { UserMemo(it) }, // Wrap in Value Object
+            userStatus = try {
                 UserStatus.valueOf(status.uppercase())
             } catch (e: Exception) {
-                UserStatus.OFFLINE
+                UserStatus.OFFLINE // Default to OFFLINE if parsing fails
             },
-            createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            fcmToken = fcmToken,
+            createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
+            updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
+            fcmToken = UserFcmToken(fcmToken),
             accountStatus = try {
                 UserAccountStatus.valueOf(accountStatus.uppercase())
             } catch (e: Exception) {
-                UserAccountStatus.ACTIVE
+                UserAccountStatus.ACTIVE // Default to ACTIVE if parsing fails
             }
         )
     }
@@ -70,16 +76,16 @@ data class UserDTO(
  */
 fun User.toDto(): UserDTO {
     return UserDTO(
-        uid = uid,
-        email = email,
-        name = name,
-        consentTimeStamp = consentTimeStamp?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        profileImageUrl = profileImageUrl,
-        memo = memo,
-        status = status.name.lowercase(),
-        createdAt = createdAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        fcmToken = fcmToken,
+        uid = uid.value,
+        email = email.value, // Extract primitive value
+        name = name.value,   // Extract primitive value
+        consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp), // consentTimeStamp is non-null in User
+        profileImageUrl = profileImageUrl?.value,
+        memo = memo?.value,  // Extract primitive value if memo is not null
+        status = userStatus.name.lowercase(), // Corrected from 'status' to 'userStatus'
+        createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt), // createdAt is non-null in User
+        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt), // updatedAt is non-null in User
+        fcmToken = fcmToken?.value,
         accountStatus = accountStatus.name.lowercase()
     )
 }

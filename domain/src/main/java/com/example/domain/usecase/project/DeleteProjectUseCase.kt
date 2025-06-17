@@ -1,5 +1,10 @@
 package com.example.domain.usecase.project
 
+import com.example.core_common.result.CustomResult
+import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.AuthRepository
+import com.example.domain.repository.DMWrapperRepository
+import com.example.domain.repository.ProjectsWrapperRepository
 import javax.inject.Inject
 
 /**
@@ -11,11 +16,13 @@ interface DeleteProjectUseCase {
 
 /**
  * DeleteProjectUseCase의 구현체
- * @param projectSettingRepository 프로젝트 설정 관련 데이터 접근을 위한 Repository (가정)
+ * @param projectRepository 프로젝트 관련 데이터 접근을 위한 Repository
+ * @param authRepository 인증 관련 데이터 접근을 위한 Repository
  */
 class DeleteProjectUseCaseImpl @Inject constructor(
-    // TODO: ProjectSettingRepository 또는 ProjectRepository 주입 필요
-    // private val projectSettingRepository: ProjectSettingRepository
+    private val projectRepository: ProjectRepository,
+    private val authRepository: AuthRepository,
+    private val projWrapperRepository: ProjectsWrapperRepository,
 ) : DeleteProjectUseCase {
 
     /**
@@ -24,9 +31,25 @@ class DeleteProjectUseCaseImpl @Inject constructor(
      * @return Result<Unit> 삭제 처리 결과
      */
     override suspend fun invoke(projectId: String): Result<Unit> {
-        // TODO: Repository 호출 로직 구현 필요
-        // return projectSettingRepository.deleteProject(projectId)
-        println("UseCase: DeleteProjectUseCase - $projectId (TODO: Implement actual logic)")
-        return Result.success(Unit) // Return success for now
+        // 현재 로그인된 사용자 ID 확인
+        val currentUserSessionResult = authRepository.getCurrentUserSession()
+        val currentUserSession = when (currentUserSessionResult) {
+            is CustomResult.Success -> currentUserSessionResult.data
+            is CustomResult.Failure -> return Result.failure(currentUserSessionResult.error)
+            else -> return Result.failure(Exception("Unknown error :: getUeserId"))
+        }
+
+        when(val dmWrapperResult = projWrapperRepository.removeProjectFromUser(currentUserSession.userId, projectId)) {
+            is CustomResult.Success -> Unit
+            is CustomResult.Failure -> return Result.failure(dmWrapperResult.error)
+            else -> return Result.failure(Exception("Unknown error :: deleteProjectWrapper"))
+        }
+
+        // 프로젝트 삭제 시도
+        return when (val repoResult = projectRepository.deleteProject(projectId, currentUserSession.userId)) {
+            is CustomResult.Success -> Result.success(Unit)
+            is CustomResult.Failure -> Result.failure(repoResult.error)
+            else -> Result.failure(Exception("Unknown error :: deleteProject"))
+        }
     }
-} 
+}

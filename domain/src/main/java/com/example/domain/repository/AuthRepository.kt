@@ -17,9 +17,7 @@ interface AuthRepository {
     // --- 로그인/로그아웃/상태 관련 ---
     suspend fun login(email: String, password: String): CustomResult<UserSession,Exception>
     suspend fun isLoggedIn(): Boolean // 로그인 상태 확인 (Splash)
-    
-    suspend fun getCurrentUserId(): CustomResult<String, Exception> // 현재 인증된 사용자의 ID 반환
-    
+
     suspend fun logout(): CustomResult<Unit, Exception> // 로그아웃
 
     suspend fun signup(email: String, password: String): CustomResult<String, Exception> //회원가입
@@ -42,7 +40,6 @@ interface AuthRepository {
      */
     suspend fun updatePassword(newPassword: String): CustomResult<Unit, Exception>
 
-    suspend fun updateUserName(newDisplayName: String): CustomResult<User, Exception> // 사용자 이름 업데이트
 
     // --- 회원 탈퇴 ---
     suspend fun withdrawCurrentUser(): CustomResult<Unit,  Exception> // 현재 Firebase Auth 사용자 삭제

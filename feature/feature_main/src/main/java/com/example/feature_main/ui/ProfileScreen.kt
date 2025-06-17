@@ -361,11 +361,10 @@ private fun getStatusIcon(status: UserStatus): ImageVector {
 @Preview(showBackground = true)
 @Composable
 fun ProfileContentPreview() {
-    val previewProfile = User("id", "김미리", "preview@example.com")
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProfileContent(
             isLoading = false,
-            profile = previewProfile.toUserProfileData(),
+            profile = TODO(),
             onEditProfileImageClick = {},
             // onEditStatusClick = {}, // Removed
             onSettingsClick = {},
@@ -375,7 +374,7 @@ fun ProfileContentPreview() {
             onEditProfileClick = {}, // Preview에 추가
             // Preview parameters for status editing
             isEditingStatusMessage = false,
-            editableStatusMessage = previewProfile.memo ?: "Compose 공부 중!",
+            editableStatusMessage = "Compose 공부 중!",
             onStatusMessageChange = {},
             onToggleEditStatus = {},
             onSubmitStatusMessage = {}
@@ -386,11 +385,10 @@ fun ProfileContentPreview() {
 @Preview(showBackground = true, name = "ProfileContent Editing Status")
 @Composable
 fun ProfileContentEditingPreview() {
-    val previewProfile = User("id", "김미리", "preview@example.com")
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProfileContent(
             isLoading = false,
-            profile = previewProfile.toUserProfileData(),
+            profile = TODO(),
             onEditProfileImageClick = {},
             onSettingsClick = {},
             onLogoutClick = {},

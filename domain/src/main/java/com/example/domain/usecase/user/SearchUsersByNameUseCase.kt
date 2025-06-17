@@ -25,7 +25,7 @@ class SearchUsersByNameUseCaseImpl @Inject constructor(
      * @return 검색 결과에 해당하는 사용자 목록 또는 에러를 포함하는 Result
      */
     override suspend operator fun invoke(name: String, limit: Int): Flow<CustomResult<List<User>, Exception>> {
-        return userRepository.searchUsersByNameStream(name, limit)
+        return userRepository.findAllByNameStream(name, limit)
     }
 
 }

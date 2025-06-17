@@ -1,11 +1,16 @@
 package com.example.domain.usecase.user
 
 import android.content.Context
+import android.media.Image
 import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.MediaUtil
+import com.example.domain.event.DomainEvent
+import com.example.domain.event.EventDispatcher
+import com.example.domain.event.user.UserProfileImageChangedEvent
 import com.example.domain.model.base.User
+import com.example.domain.model.vo.ImageUrl
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.flow.first
@@ -37,33 +42,25 @@ class UploadProfileImageUseCase @Inject constructor(
         
         return when (session) {
             is CustomResult.Success -> {
-                resultTry {
-                    // 2. URI에서 InputStream 가져오기
-                    val inputStream = context.contentResolver.openInputStream(imageUri)
-                        ?: throw IOException("Failed to open input stream from URI")
-                    
-                    // 3. MIME 타입 가져오기
-                    val mimeType = MediaUtil.getMimeType(context, imageUri) ?: "image/jpeg" // 기본값 설정
-
-                    val user = userRepository.getUserStream(session.data.userId).first()
-                    if (user !is CustomResult.Success) {
-                        throw Exception("Failed to get user")
-                    }
-
-                    // 4. 사용자 프로필 이미지 업데이트
-                    val result = userRepository.updateUserProfile(
-                        userId = session.data.userId,
-                        user = user.data,
-                        localImageUri = imageUri
-                    )
-
-                    // 5. 스트림 닫기
-                    inputStream.close()
-
-                    // 6. 결과 반환
-
-                    return result
+                val userResult = userRepository.observe(session.data.userId).first()
+                if (userResult !is CustomResult.Success) {
+                    throw Exception("Failed to get user")
                 }
+                val user = userResult.data
+
+                // 4. 사용자 프로필 이미지 업데이트
+                user.changeProfileImage(ImageUrl.toImageUrl(imageUri))
+
+                return when (val result = userRepository.save(user) ){
+                    is CustomResult.Success -> {
+                        EventDispatcher.publish(UserProfileImageChangedEvent(user.uid.value))
+                        CustomResult.Success(user)
+                    }
+                    is CustomResult.Failure -> CustomResult.Failure(result.error)
+                    else -> CustomResult.Failure(Exception("Unknown error"))
+                }
+
+                // 6. 결과 반환
             }
             is CustomResult.Failure -> {
                 CustomResult.Failure(session.error)

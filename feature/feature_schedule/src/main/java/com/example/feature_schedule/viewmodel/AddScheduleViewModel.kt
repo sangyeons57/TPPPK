@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model._new.enum.ScheduleStatus
 import com.example.domain.model.base.Schedule
 import com.example.domain.usecase.project.GetUserParticipatingProjectsUseCase
 import com.example.domain.usecase.schedule.AddScheduleUseCase
@@ -179,19 +180,13 @@ class AddScheduleViewModel @Inject constructor(
     fun onSaveClick() {
         val currentState = _uiState.value
         val date = currentState.selectedDate
-        val project = currentState.selectedProject // null일 수 있음
+        val project = currentState.selectedProject
         val title = currentState.scheduleTitle.trim()
         val content = currentState.scheduleContent.trim()
         val start = currentState.startTime
         val end = currentState.endTime
 
-        // 필수 입력 값 유효성 검사
         var hasError = false
-        // 프로젝트 선택은 필수가 아니므로 검사 제거
-//        if (project == null) {
-//            _uiState.update { it.copy(errorMessage = "프로젝트를 선택해주세요.") } // 일반 에러로 표시
-//            hasError = true
-//        }
         if (title.isBlank()) {
             _uiState.update { it.copy(titleError = "일정 제목을 입력해주세요.") }
             hasError = true
@@ -200,7 +195,6 @@ class AddScheduleViewModel @Inject constructor(
             _uiState.update { it.copy(timeError = "시간을 설정해주세요.") }
             hasError = true
         } else if (!currentState.isTimeValid) {
-            // validateTimeRange에서 이미 timeError가 설정됨
             hasError = true
         }
 
@@ -212,42 +206,21 @@ class AddScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            // 로컬 LocalDateTime 생성
             val localStartTime = LocalDateTime.of(date, start!!)
             val localEndTime = LocalDateTime.of(date, end!!)
-
-            // UTC LocalDateTime으로 변환
             val instantStartTime = DateTimeUtil.toInstant(localStartTime)
             val instantEndTime = DateTimeUtil.toInstant(localEndTime)
 
-            // 현재 사용자 ID 가져오기
-            val userId = try {
-                AuthUtil.getCurrentUserId()
-            } catch (e: IllegalStateException) {
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false, 
-                        errorMessage = "일정을 저장하려면 로그인이 필요합니다."
-                    ) 
-                }
-                return@launch
-            }
-
-            // Schedule 객체 생성 (UTC 시간 사용)
-            // project가 null이면 projectId도 null이 됨
-            val schedule = Schedule(
-                id = UUID.randomUUID().toString(),
-                creatorId = userId,
-                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID },
+            val result = addScheduleUseCase(
                 title = title,
-                content = content.takeIf { it.isNotEmpty() } ?: "", // 내용 없으면 null
+                content = content,
                 startTime = instantStartTime,
                 endTime = instantEndTime,
-                createdAt = DateTimeUtil.nowInstant()
+                status = ScheduleStatus.CONFIRMED, // Default for new schedules
+                color = null, // Color selection UI not implemented yet
+                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID }
             )
-            
-            // Use UseCase to add the schedule
-            val result = addScheduleUseCase(schedule);
+
             when (result) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(AddScheduleEvent.ShowSnackbar("일정이 추가되었습니다."))
@@ -263,7 +236,12 @@ class AddScheduleViewModel @Inject constructor(
                     }
                 }
                 else -> {
-                    // 로딩 상태 등 무시
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "알 수 없는 오류"
+                        )
+                    }
                 }
             }
         }

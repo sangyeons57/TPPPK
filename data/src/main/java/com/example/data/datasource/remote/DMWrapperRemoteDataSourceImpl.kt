@@ -7,6 +7,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.model.remote.DMWrapperDTO
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.snapshots
@@ -27,27 +28,18 @@ class DMWrapperRemoteDataSourceImpl @Inject constructor(
         // private const val USER_SPECIFIC_DM_WRAPPER_SUBCOLLECTION = "dm_wrappers"
     }
 
+    private fun getCollection(userId: String): CollectionReference {
+        return firestore.collection(FirestoreConstants.Collections.USERS).document(userId).collection(DMWrappers.COLLECTION_NAME)
+    }
+
     // Existing observeDmWrappers methods - these might need adjustment
     // if we move to a single global dm_wrappers collection and query by participantId.
     // For now, let's assume they remain as is, implying dm_wrappers are per-user.
     // This means createDMWrapper will need to write to two locations.
 
-    override fun observeDmWrappers(): Flow<List<DMWrapperDTO>> {
-        val uid = auth.currentUser?.uid
-            ?: return kotlinx.coroutines.flow.flow { throw Exception("User not logged in.") }
-
-        // This observes the user-specific copy of DM wrappers
-        return firestore.collection(FirestoreConstants.Collections.USERS).document(uid)
-            .collection(DMWrappers.COLLECTION_NAME) // Assuming subcollection name is consistent
-            .snapshots()
-            .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(DMWrapperDTO::class.java) } }
-    }
-
     override fun observeDmWrappers(userId: String): Flow<List<DMWrapperDTO>> {
-        // This observes a specific user's copy of DM wrappers
-        return firestore.collection(FirestoreConstants.Collections.USERS).document(userId)
-            .collection(DMWrappers.COLLECTION_NAME) // Assuming subcollection name is consistent
-            .snapshots()
+        // This observes the user-specific copy of DM wrappers
+        return getCollection(userId).snapshots()
             .map { snapshot -> snapshot.documents.mapNotNull { it.toObject(DMWrapperDTO::class.java) } }
     }
 
@@ -67,9 +59,7 @@ class DMWrapperRemoteDataSourceImpl @Inject constructor(
             // Additionally, if you maintain per-user copies as implied by observeDmWrappers:
             // This part needs careful consideration for atomicity (e.g., using batched writes or Cloud Functions)
             // For simplicity here, we'll just write them. If one fails, there could be inconsistency.
-            firestore.collection(FirestoreConstants.Collections.USERS).document(userId)
-                .collection(DMWrappers.COLLECTION_NAME) // Using the same name for subcollection
-                .document(dmWrapperDto.dmChannelId) // Use the same ID as the global one
+            getCollection(userId).document(dmWrapperDto.dmChannelId) // Use the same ID as the global one
                 .set(dmWrapperDto) // Set the same DTO
                 .await()
             CustomResult.Success(dmWrapperDto.dmChannelId)
@@ -87,14 +77,27 @@ class DMWrapperRemoteDataSourceImpl @Inject constructor(
         // Ensure the input list is sorted for the query, as Firestore array equality depends on order and elements.
 
         return resultTry {
-            val document = firestore.collection(FirestoreConstants.Collections.USERS).document(userId)
-                .collection(DMWrappers.COLLECTION_NAME)
+            val document = getCollection(userId)
                 .document(otherUserId)
                 .get()
                 .await()
 
             document.toObject(DMWrapperDTO::class.java)
                     ?: throw Exception("Failed to parse DMWrapperDTO from Firestore document: ${document.id}")
+        }
+    }
+
+    override suspend fun deleteDMWrapper(
+        userId: String,
+        dmWrapperId: String
+    ): CustomResult<Unit, Exception> {
+        return resultTry {
+            getCollection(userId)
+                .document(dmWrapperId)
+                .delete()
+                .await()
+
+            Unit
         }
     }
 }

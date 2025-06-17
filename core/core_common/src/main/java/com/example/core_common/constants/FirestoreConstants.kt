@@ -30,8 +30,6 @@ object FirestoreConstants {
 
         object Friends { // users/{userId}/friends/{friendId}
             const val COLLECTION_NAME = "friends"
-            const val FRIEND_NAME = "friendName" // Denormalized from User
-            const val FRIEND_PROFILE_IMAGE_URL = "friendProfileImageUrl" // Denormalized
             const val STATUS = "status" // "PENDING_SENT", "PENDING_RECEIVED", "ACCEPTED", "DECLINED", "BLOCKED"
             const val REQUESTED_AT = "requestedAt"
             const val ACCEPTED_AT = "acceptedAt"

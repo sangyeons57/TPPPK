@@ -55,7 +55,7 @@ class AddDmChannelUseCase @Inject constructor(
             }
         }
 
-        val partnerUserResult: CustomResult<User, Exception> = userRepository.getUserByExactNameStream(partnerName)
+        val partnerUserResult: CustomResult<User, Exception> = userRepository.findByNameStream(partnerName)
             .filter { it !is CustomResult.Loading && it !is CustomResult.Initial } 
             .first()
 
@@ -75,20 +75,20 @@ class AddDmChannelUseCase @Inject constructor(
             }
         }
 
-        if (session.userId == partnerId) {
+        if (session.userId == partnerId.value) {
             emit(CustomResult.Failure(IllegalArgumentException("Cannot create DM channel with oneself.")))
             return@flow
         }
 
         // 5. DM 채널 생성 또는 가져오기 (DMChannelRepository)
-        when (val dmChannelCreationResult = dmChannelRepository.createDmChannel(partnerId)) {
+        when (val dmChannelCreationResult = dmChannelRepository.createDmChannel(partnerId.value)) {
             is CustomResult.Success -> {
                 val dmChannelId = dmChannelCreationResult.data
                 // DMWrapper 생성 요청
                 val dmWrapperCreationResult = dmWrapperRepository.createDMWrapper(
                     userId = session.userId,
                     dmChannelId = dmChannelId,
-                    otherUserId = partnerId
+                    otherUserId = partnerId.value
                 )
 
                 // DMWrapper 생성 결과에 따라 최종 상태 emit

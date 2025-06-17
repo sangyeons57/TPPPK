@@ -5,8 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
+import com.example.core_common.result.CustomResult
+import com.example.domain.usecase.project.AddCategoryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -37,7 +38,7 @@ interface ProjectStructureRepository { // 프로젝트 구조 관련 Repository
 @HiltViewModel
 class CreateCategoryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    // TODO: private val repository: ProjectStructureRepository
+    private val addCategoryUseCase: AddCategoryUseCase
 ) : ViewModel() {
 
     // SavedStateHandle 확장 함수와 AppDestination 상수를 사용하여 projectId 가져오기
@@ -79,18 +80,18 @@ class CreateCategoryViewModel @Inject constructor(
             _eventFlow.emit(CreateCategoryEvent.ClearFocus) // 키보드 숨기기 요청
             println("ViewModel: Creating category '$currentName' for project $projectId")
 
-            // --- TODO: 실제 카테고리 생성 로직 (repository.createCategory) ---
-            delay(1000) // 임시 딜레이
-            val success = true // Random.nextBoolean()
-            // val result = repository.createCategory(projectId, currentName)
-            // -----------------------------------------------------------------
-
-            if (success /*result.isSuccess*/) {
-                _eventFlow.emit(CreateCategoryEvent.ShowSnackbar("카테고리가 생성되었습니다."))
-                _uiState.update { it.copy(isLoading = false, createSuccess = true) } // 성공 상태 업데이트 -> 네비게이션 트리거
-            } else {
-                val errorMessage = "카테고리 생성 실패" // result.exceptionOrNull()?.message ?: "카테고리 생성 실패"
-                _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+            when (val result = addCategoryUseCase(projectId = projectId, categoryName = currentName)) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(CreateCategoryEvent.ShowSnackbar("카테고리가 생성되었습니다: ${result.data.name}"))
+                    _uiState.update { it.copy(isLoading = false, createSuccess = true) }
+                }
+                is CustomResult.Failure -> {
+                    val errorMessage = result.error.message ?: "카테고리 생성 실패"
+                    _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+                }
+                else -> { // Handle other unexpected states
+                    _uiState.update { it.copy(isLoading = false, error = "카테고리 생성 중 알 수 없는 상태가 발생했습니다.") }
+                }
             }
         }
     }

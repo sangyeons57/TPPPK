@@ -3,11 +3,13 @@ package com.example.feature_main.viewmodel
 import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogBuilder
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
+import com.example.core_common.constants.Constants
 import com.example.domain.model.base.User
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
 import com.example.domain.model.base.DMChannel // Added import for DMChannel
@@ -150,13 +152,13 @@ class HomeViewModel @Inject constructor(
                     result.fold(
                         onSuccess = { user ->
                             Log.d("HomeViewModel", "User received from UseCase: ${user.uid}")
-                            currentUserId = user.uid
+                            currentUserId = user.uid.value
 
                             // 사용자 이니셜과 프로필 이미지 URL 업데이트
                             _uiState.update { state ->
                                 state.copy(
-                                    userInitial = user.name.firstOrNull()?.toString() ?: "U",
-                                    userProfileImageUrl = user.profileImageUrl
+                                    userInitial = user.name.value.firstOrNull()?.toString() ?: "U",
+                                    userProfileImageUrl = user.profileImageUrl?.value
                                 )
                             }
                         },
@@ -184,13 +186,13 @@ class HomeViewModel @Inject constructor(
         var partnerName = "Unknown User"
         var partnerProfileImageUrl: String? = null
 
-        if (partnerId != null && partnerId.isNotEmpty()) {
+        if (!partnerId.isNullOrEmpty()) {
             // GetUserInfoUseCase returns Flow<CustomResult<User, Exception>>
             // We take the first result from this flow.
             when (val userInfoResult = getUserInfoUseCase(partnerId).first()) {
                 is CustomResult.Success -> {
-                    partnerName = userInfoResult.data.name // Assuming User model has 'name'
-                    partnerProfileImageUrl = userInfoResult.data.profileImageUrl // Assuming User model has 'profileImageUrl'
+                    partnerName = userInfoResult.data.name.value // Assuming User model has 'name'
+                    partnerProfileImageUrl = userInfoResult.data.profileImageUrl?.toString() // Assuming User model has 'profileImageUrl'
                     Log.d("HomeViewModel", "Partner info success for $partnerId: Name=$partnerName")
                 }
                 is CustomResult.Failure -> {
@@ -361,129 +363,139 @@ class HomeViewModel @Inject constructor(
     }
 
     // 프로젝트 상세 정보 로드
-private fun loadProjectDetails(projectId: String) { 
-    viewModelScope.launch {
-        Log.d("HomeViewModel", "loadProjectDetails called for projectId: $projectId")
-        getProjectDetailsStreamUseCase(projectId)
-            .collectLatest { result: CustomResult<Project, Exception> ->
-                Log.d("HomeViewModel", "Received project details result: $result")
+    private fun loadProjectDetails(projectId: String) {
+        viewModelScope.launch {
+            Log.d("HomeViewModel", "loadProjectDetails called for projectId: $projectId")
+            getProjectDetailsStreamUseCase(projectId)
+                .collectLatest { result: CustomResult<Project, Exception> ->
+                    Log.d("HomeViewModel", "Received project details result: $result")
+                    when (result) {
+                        is CustomResult.Loading -> {
+                            _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                        }
+                        is CustomResult.Success -> {
+                            val project = result.data
+                            _uiState.update { state ->
+                                state.copy(
+                                    projectName = project.name,
+                                    projectDescription = "Project description placeholder for ${project.name}",
+                                    isLoading = false,
+                                    errorMessage = "default"
+                                )
+                            }
+                            Log.d("HomeViewModel", "Project details loaded: ${project.name}")
+                        }
+                        is CustomResult.Failure -> {
+                            Log.e("HomeViewModel", "Failed to load project details for $projectId", result.error)
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    errorMessage = result.error.message ?: "프로젝트 상세 정보를 가져오지 못했습니다."
+                                )
+                            }
+                        }
+                        is CustomResult.Initial -> {
+                            _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                            Log.d("HomeViewModel", "Project details loading initial state.")
+                        }
+                        is CustomResult.Progress -> {
+                            val progressValue = result.progress ?: 0f
+                            Log.d("HomeViewModel", "Project details loading progress: $progressValue%")
+                            _uiState.update { it.copy(isLoading = true) }
+                        }
+                    }
+                }
+        }
+    }
+    
+    // 프로젝트 구조 (카테고리 및 채널) 로드
+    private fun loadProjectStructure(projectId: String) {
+        viewModelScope.launch {
+            Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
+            val projectStructureFlow = getProjectAllCategoriesUseCase(projectId)
+
+            projectStructureFlow.collectLatest { result: CustomResult<List<CategoryCollection>, Exception> ->
+                Log.d("HomeViewModel", "Received project structure result: $result")
                 when (result) {
                     is CustomResult.Loading -> {
-                        _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                        _uiState.update { state ->
+                            state.copy(projectStructure = state.projectStructure.copy(isLoading = true, error = "default"))
+                        }
                     }
                     is CustomResult.Success -> {
-                        val project = result.data
-                        _uiState.update { state ->
-                            state.copy(
-                                projectName = project.name,
-                                projectDescription = "Project description placeholder for ${project.name}", 
-                                isLoading = false,
-                                errorMessage = "default"
+                        val categoryCollections = result.data
+                        val categoriesMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
+
+                        val categoryUiModels = categoryCollections.filter { categoryCollection -> categoryCollection.category.isCategory }.map { categoryCollection ->
+                            val categoryDomain = categoryCollection.category
+                            val isExpanded = categoriesMap.getOrPut(categoryDomain.id) { true } // Default to expanded
+
+                            CategoryUiModel(
+                                id = categoryDomain.id,
+                                name = categoryDomain.name,
+                                channels = categoryCollection.channels.map { channelDomain ->
+                                    ChannelUiModel(
+                                        id = channelDomain.id,
+                                        name = channelDomain.channelName,
+                                        // Assuming ProjectChannel has channelMode, otherwise adjust
+                                        mode = channelDomain.channelType, // Provide a default or handle null
+                                        isSelected = channelDomain.id == selectedChannelId // Use .value for StateFlow
+                                    )
+                                },
+                                isExpanded = isExpanded
                             )
                         }
-                        Log.d("HomeViewModel", "Project details loaded: ${project.name}")
+
+                        val directChannelUiModels = categoryCollections.filter { categoryCollection -> categoryCollection.category.id == Constants.NO_CATEGORY_ID }
+                            .flatMap {categoryCollection -> categoryCollection.channels}
+                            .map {projectChannel ->
+                                ChannelUiModel(
+                                    id = projectChannel.id,
+                                    name = projectChannel.channelName,
+                                    mode = projectChannel.channelType,
+                                )
+                        }
+
+                        _uiState.update { state ->
+                            state.copy(
+                                projectStructure = ProjectStructureUiState(
+                                    categories = categoryUiModels,
+                                    directChannel = directChannelUiModels,
+                                    isLoading = false,
+                                    error = "default"
+                                )
+                            )
+                        }
+                        Log.d("HomeViewModel", "Project structure loaded for $projectId")
                     }
                     is CustomResult.Failure -> {
-                        Log.e("HomeViewModel", "Failed to load project details for $projectId", result.error)
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                errorMessage = result.error.message ?: "프로젝트 상세 정보를 가져오지 못했습니다."
+                        Log.e("HomeViewModel", "Failed to load project structure for $projectId", result.error)
+                        _uiState.update { state ->
+                            state.copy(
+                                projectStructure = state.projectStructure.copy(
+                                    isLoading = false,
+                                    error = result.error.message ?: "프로젝트 구조를 가져오지 못했습니다."
+                                )
                             )
                         }
                     }
                     is CustomResult.Initial -> {
-                        _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
-                        Log.d("HomeViewModel", "Project details loading initial state.")
+                         _uiState.update { state ->
+                            state.copy(projectStructure = state.projectStructure.copy(isLoading = true, error = "default"))
+                        }
+                        Log.d("HomeViewModel", "Project structure loading initial state.")
                     }
                     is CustomResult.Progress -> {
                         val progressValue = result.progress ?: 0f
-                        Log.d("HomeViewModel", "Project details loading progress: $progressValue%")
-                        _uiState.update { it.copy(isLoading = true) }
-                    }
-                }
-            }
-    }
-}
-    
-    // 프로젝트 구조 (카테고리 및 채널) 로드
-    private fun loadProjectStructure(projectId: String) { 
-    viewModelScope.launch {
-        Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
-        val projectStructureFlow = getProjectAllCategoriesUseCase(projectId)
-
-        projectStructureFlow.collectLatest { result: CustomResult<List<CategoryCollection>, Exception> ->
-            Log.d("HomeViewModel", "Received project structure result: $result")
-            when (result) {
-                is CustomResult.Loading -> {
-                    _uiState.update { state ->
-                        state.copy(projectStructure = state.projectStructure.copy(isLoading = true, error = "default"))
-                    }
-                }
-                is CustomResult.Success -> {
-                    val categoryCollections = result.data
-                    val categoriesMap = categoryExpandedStates.getOrPut(projectId) { mutableMapOf() }
-
-                    val categoryUiModels = categoryCollections.filter { categoryCollection -> categoryCollection.category.isCategory }.map { categoryCollection ->
-                        val categoryDomain = categoryCollection.category
-                        val isExpanded = categoriesMap.getOrPut(categoryDomain.id) { true } // Default to expanded
-
-                        CategoryUiModel(
-                            id = categoryDomain.id,
-                            name = categoryDomain.name,
-                            channels = categoryCollection.channels.map { channelDomain ->
-                                ChannelUiModel(
-                                    id = channelDomain.id,
-                                    name = channelDomain.channelName,
-                                    // Assuming ProjectChannel has channelMode, otherwise adjust
-                                    mode = channelDomain.channelType, // Provide a default or handle null
-                                    isSelected = channelDomain.id == selectedChannelId // Use .value for StateFlow
-                                )
-                            },
-                            isExpanded = isExpanded
-                        )
-                    }
-
-                    _uiState.update { state ->
-                        state.copy(
-                            projectStructure = ProjectStructureUiState(
-                                categories = categoryUiModels,
-                                directChannel = emptyList(), // Direct channels not handled by CategoryCollection
-                                isLoading = false,
-                                error = "default"
-                            )
-                        )
-                    }
-                    Log.d("HomeViewModel", "Project structure loaded for $projectId")
-                }
-                is CustomResult.Failure -> {
-                    Log.e("HomeViewModel", "Failed to load project structure for $projectId", result.error)
-                    _uiState.update { state ->
-                        state.copy(
-                            projectStructure = state.projectStructure.copy(
-                                isLoading = false,
-                                error = result.error.message ?: "프로젝트 구조를 가져오지 못했습니다."
-                            )
-                        )
-                    }
-                }
-                is CustomResult.Initial -> {
-                     _uiState.update { state ->
-                        state.copy(projectStructure = state.projectStructure.copy(isLoading = true, error = "default"))
-                    }
-                    Log.d("HomeViewModel", "Project structure loading initial state.")
-                }
-                is CustomResult.Progress -> {
-                    val progressValue = result.progress ?: 0f
-                    Log.d("HomeViewModel", "Project structure loading progress: $progressValue%")
-                     _uiState.update { state ->
-                        state.copy(projectStructure = state.projectStructure.copy(isLoading = true))
+                        Log.d("HomeViewModel", "Project structure loading progress: $progressValue%")
+                         _uiState.update { state ->
+                            state.copy(projectStructure = state.projectStructure.copy(isLoading = true))
+                        }
                     }
                 }
             }
         }
     }
-}
 
     // 카테고리 클릭 시 (접기/펼치기)
     fun onCategoryClick(category: CategoryUiModel) {
@@ -717,14 +729,37 @@ private fun loadProjectDetails(projectId: String) {
         }
     }
 
+    fun onProjectSettingsClicked() {
+        val currentProjectId = _uiState.value.selectedProjectId
+        if (currentProjectId != null) {
+            viewModelScope.launch {
+                _eventFlow.emit(HomeEvent.NavigateToProjectSettings(currentProjectId))
+            }
+        } else {
+            Log.w("HomeViewModel", "Project settings clicked but no project is selected.")
+            // Optionally, show a snackbar message to the user
+            // viewModelScope.launch { _eventFlow.emit(HomeEvent.ShowSnackbar("선택된 프로젝트가 없습니다.")) }
+        }
+        onProjectItemActionSheetDismiss() // Dismiss the bottom sheet
+    }
+
     fun onClickTopSection(){
+        Log.d("HomeViewModel", "onClickTopSection called")
         _uiState.update {
-            it.copy(
-                showBottomSheetItems = BottomSheetDialogBuilder()
-                    .text(text = "프로젝트" )
-                    .build(),
-                showBottomSheet = true
-            )
+            if (uiState.value.selectedTopSection == TopSection.PROJECTS) {
+                it.copy(
+                    showBottomSheetItems = BottomSheetDialogBuilder()
+                        .button(
+                            label = "프로젝트 설정",
+                            onClick = { onProjectSettingsClicked() },
+                            icon = Icons.Filled.Settings
+                        )
+                        .build(),
+                    showBottomSheet = true
+                )
+            } else {
+                it.copy(showBottomSheet = false)
+            }
         }
     }
     // ----------------------------

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
  */
 interface CategoryRepository {
     suspend fun addCategory(projectId: String, category: Category): CustomResult<String, Exception>
+    suspend fun setDirectCategory(projectId: String, categoryId: String, category: Category): CustomResult<Unit, Exception>
     suspend fun updateCategory(projectId: String, category: Category): CustomResult<Unit, Exception>
     suspend fun deleteCategory(projectId: String, categoryId: String): CustomResult<Unit, Exception>
     suspend fun getCategory(projectId: String, categoryId: String): CustomResult<Category, Exception> // 이전 단계에서 추가됨 (또는 getCategoryById)

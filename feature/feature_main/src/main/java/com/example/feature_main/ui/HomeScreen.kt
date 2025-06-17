@@ -160,6 +160,9 @@ fun HomeScreen(
                 is HomeEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
+                is HomeEvent.NavigateToProjectSettings -> {
+                    appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Project.settings(event.projectId))))
+                }
                 is HomeEvent.ShowAddProjectDialog -> {
                     snackbarHostState.showSnackbar("프로젝트 추가 다이얼로그 (미구현)")
                 }
@@ -169,9 +172,6 @@ fun HomeScreen(
                 }
                 is HomeEvent.NavigateToAddProject -> {
                     appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Project.ADD)))
-                }
-                is HomeEvent.NavigateToProjectSettings -> {
-                    appNavigator.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Project.settings(event.projectId))))
                 }
                 is HomeEvent.NavigateToDmChat -> {
                     Log.d("HomeScreen", "Navigating to DM Chat with ID: ${event.dmId}")
@@ -406,30 +406,29 @@ fun HomeMiddleSectionHeader(
     uiState: HomeUiState
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .clickable(onClick = onClickTopSection),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shadowElevation = 2.dp
+        shadowElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 18.dp)
+                .height(32.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = onClickTopSection)
-            {
-                Text(
-                    text = if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
-                        uiState.projectName.ifBlank { "프로젝트" }
-                    } else {
-                        "Direct Messages"
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
+                    uiState.projectName.ifBlank { "프로젝트" }
+                } else {
+                    "Direct Messages"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

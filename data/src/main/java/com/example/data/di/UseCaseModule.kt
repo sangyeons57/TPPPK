@@ -1,6 +1,10 @@
 package com.example.data.di
 
 import com.example.domain.usecase.user.* // 생성한 UseCase 임포트
+import com.example.domain.usecase.user.GetCurrentStatusUseCaseImpl
+import com.example.domain.usecase.user.GetCurrentUserStreamUseCaseImpl
+import com.example.domain.usecase.user.GetUserInfoUseCaseImpl
+import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCaseImpl
 import com.example.domain.usecase.project.* // project 패키지 UseCase 임포트
 import com.example.domain.usecase.schedule.* // schedule 패키지 UseCase 임포트
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
@@ -59,6 +63,18 @@ abstract class UseCaseModule {
 
     @Binds
     abstract fun bindUpdateUserMemoUseCase(impl: UpdateUserMemoUseCaseImpl): UpdateUserMemoUseCase
+
+    @Binds
+    abstract fun bindGetCurrentStatusUseCase(impl: GetCurrentStatusUseCaseImpl): GetCurrentStatusUseCase
+
+    @Binds
+    abstract fun bindGetCurrentUserStreamUseCase(impl: GetCurrentUserStreamUseCaseImpl): GetCurrentUserStreamUseCase
+
+    @Binds
+    abstract fun bindGetUserInfoUseCase(impl: GetUserInfoUseCaseImpl): GetUserInfoUseCase
+
+    @Binds
+    abstract fun bindCheckNicknameAvailabilityUseCase(impl: CheckNicknameAvailabilityUseCaseImpl): CheckNicknameAvailabilityUseCase
 
     // --- Project UseCases ---
     @Binds

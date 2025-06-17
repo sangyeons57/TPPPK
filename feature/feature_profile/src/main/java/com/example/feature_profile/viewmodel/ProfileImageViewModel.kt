@@ -90,7 +90,7 @@ class ProfileImageViewModel @Inject constructor(
                     is CustomResult.Success -> {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            profileImageUrl = result.data.profileImageUrl
+                            profileImageUrl = result.data.profileImageUrl?.value
                         )
                     }
                     is CustomResult.Failure -> {

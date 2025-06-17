@@ -85,7 +85,7 @@ class AddFriendViewModel @Inject constructor(
                                 // 첫 번째 사용자 결과 사용
 
                                 // 자기 자신에게는 친구 요청을 보낼 수 없음
-                                if (user.uid == currentUserId) {
+                                if (user.uid.value == currentUserId) {
                                     _uiState.update { it.copy(
                                         isLoading = false,
                                         error = "자기 자신에게는 친구 요청을 보낼 수 없습니다."
@@ -93,7 +93,7 @@ class AddFriendViewModel @Inject constructor(
                                 }
 
                                 // 친구 요청 보내기
-                                val requestResult = sendFriendRequestUseCase(user.uid)
+                                val requestResult = sendFriendRequestUseCase(user.uid.value)
                                 when (requestResult) {
                                     is CustomResult.Success -> {
                                         _uiState.update { it.copy(

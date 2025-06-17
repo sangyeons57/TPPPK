@@ -55,9 +55,8 @@ class ProjectRemoteDataSourceImpl @Inject constructor(
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             val updateData = mutableMapOf<String, Any?>()
-            updateData["name"] = projectDTO.name
-            updateData["imageUrl"] = projectDTO.imageUrl // Assuming imageUrl is part of ProjectDTO
-            updateData["updatedAt"] = FieldValue.serverTimestamp()
+            updateData[FirestoreConstants.Project.NAME] = projectDTO.name
+            updateData[FirestoreConstants.Project.IMAGE_URL] = projectDTO.imageUrl // Assuming imageUrl is part of ProjectDTO
             // Consider other fields from projectDTO that might need updating.
             // For now, only name and imageUrl as per original logic.
 

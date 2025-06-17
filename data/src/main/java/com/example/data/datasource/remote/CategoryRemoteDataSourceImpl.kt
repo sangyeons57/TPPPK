@@ -73,10 +73,12 @@ class CategoryRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun setDirectCategory(
         projectId: String,
+        categoryId: String,
         categoryDTO: CategoryDTO
     ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
-            val docRef = getCategoriesCollection(projectId).document().set(categoryDTO).await()
+            getCategoriesCollection(projectId).document(categoryId).set(categoryDTO).await()
+            Unit
         }
     }
 

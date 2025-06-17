@@ -55,9 +55,9 @@ class LoginUseCase @Inject constructor(
                         Log.d(TAG, "Account Status: ${user}")
                         if (user.accountStatus == UserAccountStatus.WITHDRAWN) {
                             Log.d(TAG, "Cached status=WITHDRAWN, verifying against server...")
-                            when (val remoteRes = userRepository.fetchUserRemote(userSession.userId)) {
+                            when (val userResult = userRepository.observe(userSession.userId).first()) {
                                 is CustomResult.Success -> {
-                                    val remoteUser = remoteRes.data
+                                    val remoteUser = userResult.data
                                     Log.d(TAG, "Server status=${remoteUser.accountStatus}")
                                     if (remoteUser.accountStatus == UserAccountStatus.WITHDRAWN) {
                                         authRepository.logout()
@@ -69,7 +69,7 @@ class LoginUseCase @Inject constructor(
                                 }
                                 is CustomResult.Failure -> {
                                     authRepository.logout()
-                                    CustomResult.Failure(remoteRes.error ?: Exception("원격 사용자 확인 실패"))
+                                    CustomResult.Failure(userResult.error)
                                 }
                                 else -> {
                                     authRepository.logout()

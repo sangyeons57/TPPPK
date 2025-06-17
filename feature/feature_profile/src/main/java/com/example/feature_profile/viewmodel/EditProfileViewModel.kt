@@ -6,7 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.usecase.user.GetCurrentUserUseCase
+import com.example.domain.model.vo.user.UserName
+import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserProfileParams
 import com.example.domain.usecase.user.UpdateUserProfileUseCase
 import com.example.domain.usecase.user.UploadProfileImageUseCase
@@ -38,7 +39,7 @@ sealed interface EditProfileEvent {
  */
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserStreamUseCase,
     private val updateUserProfileUseCase: UpdateUserProfileUseCase,
     private val uploadProfileImageUseCase: UploadProfileImageUseCase,
     private val dispatcherProvider: DispatcherProvider
@@ -94,9 +95,7 @@ class EditProfileViewModel @Inject constructor(
      * 사용자가 이름을 변경할 때 호출됩니다.
      */
     fun onNameChanged(newName: String) {
-        _uiState.update { currentState ->
-            currentState.copy(user = currentState.user?.copy(name = newName))
-        }
+        uiState.value.user?.changeName(UserName(newName))
     }
 
     /**
@@ -127,8 +126,8 @@ class EditProfileViewModel @Inject constructor(
                 is CustomResult.Success -> {
                     val user = result.data
                     _uiState.update { currentState ->
+                        currentState.user?.changeProfileImage(user.profileImageUrl)
                         currentState.copy(
-                            user = currentState.user?.copy(profileImageUrl = user.profileImageUrl),
                             isLoading = false,
                             errorMessage = null
                         )
@@ -158,15 +157,15 @@ class EditProfileViewModel @Inject constructor(
     fun onSaveProfileClicked() {
         viewModelScope.launch(dispatcherProvider.io) {
             _uiState.value.user?.let { currentUser ->
-                if (currentUser.name.isBlank()) {
+                if (currentUser.name.value.isBlank()) {
                     _eventFlow.emit(EditProfileEvent.ShowSnackbar("Name cannot be empty."))
                     return@launch
                 }
 
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
                 val params = UpdateUserProfileParams(
-                    name = currentUser.name,
-                    profileImageUrl = currentUser.profileImageUrl
+                    name = currentUser.name.value,
+                    profileImageUrl = currentUser.profileImageUrl?.value
                 )
                 
                 val result = updateUserProfileUseCase(params)

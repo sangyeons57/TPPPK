@@ -64,6 +64,11 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.ProjectId
+import com.example.domain.model.vo.schedule.ScheduleContent
+import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.example.feature_main.R
 import com.example.feature_main.viewmodel.CalendarUiState
 import java.time.DayOfWeek
@@ -73,6 +78,9 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.delay
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -585,7 +593,7 @@ fun ScheduleSection(
                     ) { schedule ->
                         ScheduleListItem(
                             schedule = schedule,
-                            onClick = { onScheduleClick(schedule.id) }
+                            onClick = { onScheduleClick(schedule.id.value) }
                         )
                     }
                 }
@@ -627,14 +635,14 @@ fun ScheduleListItem(
     val timeFormatter = remember { DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN) }
     
     // 프로젝트 색상 (임시)
-    val projectColor = schedule.projectId.let { getProjectColor(it ?: "project sample") }
+    val projectColor = schedule.projectId?.value.let { getProjectColor(it ?: "project sample") }
     
     // UTC LocalDateTime을 로컬 시간으로 변환
     val localStartTime = remember(schedule.startTime) {
-        schedule.startTime.let { DateTimeUtil.toLocalDateTime(it!!, ZoneId.systemDefault()) }
+        schedule.startTime.let { DateTimeUtil.toLocalDateTime(it, ZoneId.systemDefault()) }
     }
     val localEndTime = remember(schedule.endTime) {
-        schedule.endTime.let { DateTimeUtil.toLocalDateTime(it!!, ZoneId.systemDefault()) }
+        schedule.endTime.let { DateTimeUtil.toLocalDateTime(it, ZoneId.systemDefault()) }
     }
 
     Card(
@@ -672,7 +680,7 @@ fun ScheduleListItem(
             ) {
                 // 일정 제목
                 Text(
-                    text = schedule.title,
+                    text = schedule.title.value,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -768,8 +776,8 @@ fun ScheduleListItemAllDayPreview() {
     val sample = getSampleSchedulesForPreview("previewUser").last { 
         val startDateTime = DateTimeUtil.toLocalDateTime(it.startTime!!)
         val endDateTime = DateTimeUtil.toLocalDateTime(it.endTime!!)
-        startDateTime.toLocalTime() == java.time.LocalTime.MIDNIGHT &&
-        endDateTime.toLocalTime() == java.time.LocalTime.MAX.minusNanos(1)
+        startDateTime.toLocalTime() == LocalTime.MIDNIGHT &&
+        endDateTime.toLocalTime() == LocalTime.MAX.minusNanos(1)
     }
     
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -844,7 +852,7 @@ fun CalendarContentPreview_February() {
 
 
     val uiState = CalendarUiState(
-        currentYearMonth = java.time.YearMonth.from(february),
+        currentYearMonth = YearMonth.from(february),
         datesInMonth = datesInFebruary.take(35), // Take 5 weeks for preview
         selectedDate = february.plusDays(10),
         datesWithSchedules = setOf(february.plusDays(5), february.plusDays(15)),
@@ -896,62 +904,49 @@ fun DayOfWeekHeaderPreview() {
  */
 private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser"): List<Schedule> {
     val today = LocalDate.now()
-    val time1 = java.time.LocalTime.of(10, 0)
-    val time2 = java.time.LocalTime.of(11, 30)
-    val time3 = java.time.LocalTime.of(14, 0)
-    val time4 = java.time.LocalTime.of(15, 0)
+    val time1 = LocalTime.of(10, 0)
+    val time2 = LocalTime.of(11, 30)
+    val time3 = LocalTime.of(14, 0)
+    val time4 = LocalTime.of(15, 0)
     val now = DateTimeUtil.nowInstant()
 
     return listOf(
-        Schedule(
-            id = "1", 
-            projectId = "projA", 
-            title = "팀 회의: 주간 보고", 
-            content = "지난 주 성과 및 이번 주 계획 논의", 
-            startTime = DateTimeUtil.toInstant(java.time.LocalDateTime.of(today, time1))!!,
-            endTime = DateTimeUtil.toInstant(java.time.LocalDateTime.of(today, time2))!!,
-            creatorId = creatorId,
-            createdAt = now
+        Schedule.registerNewSchedule(
+            scheduleId = DocumentId("1"),
+            projectId = ProjectId("projA"),
+            title = ScheduleTitle("팀 회의: 주간 보고"),
+            content = ScheduleContent("지난 주 성과 및 이번 주 계획 논의"),
+            startTime = DateTimeUtil.toInstant(LocalDateTime.of(today, time1)),
+            endTime = DateTimeUtil.toInstant(LocalDateTime.of(today, time2)),
+            creatorId = OwnerId(creatorId),
+            createdAt = now,
+            status = TODO(),
+            updatedAt = TODO()
         ),
-        Schedule(
-            id = "2", 
-            projectId = "projB", 
-            title = "디자인 검토", 
-            content = "새로운 랜딩 페이지 시안 검토",
-            startTime = DateTimeUtil.localDateAndTimeToInstant(today, time3)!!,
-            endTime = DateTimeUtil.localDateAndTimeToInstant(today, time4)!!,
-            creatorId = creatorId,
-            createdAt = now
+        Schedule.registerNewSchedule(
+            scheduleId = TODO(),
+            projectId = TODO(),
+            creatorId = TODO(),
+            createdAt = TODO(),
+            title = TODO(),
+            content = TODO(),
+            startTime = TODO(),
+            endTime = TODO(),
+            status = TODO(),
+            updatedAt = TODO()
         ),
-        Schedule(
-            id = "3", 
-            projectId = "projA", 
-            title = "클라이언트 미팅", 
-            content = "",
-            startTime = DateTimeUtil.localDateAndTimeToInstant(today.minusDays(1), time1)!!,
-            endTime = DateTimeUtil.localDateAndTimeToInstant(today.plusDays(1), time1.plusHours(1))!!,
-            creatorId = creatorId,
-            createdAt = now
+        Schedule.registerNewSchedule(
+            scheduleId = DocumentId("3"),
+            projectId = ProjectId("projA"),
+            title = ScheduleTitle("클라이언트 미팅"),
+            content = ScheduleContent(""),
+            startTime = DateTimeUtil.localDateAndTimeToInstant(today.minusDays(1), time1),
+            endTime = DateTimeUtil.localDateAndTimeToInstant( today.plusDays(1), time1.plusHours(1)
+            ),
+            creatorId = OwnerId(creatorId),
+            createdAt = TODO(),
+            status = TODO(),
+            updatedAt = TODO(),
         ),
-        Schedule(
-            id = "4", 
-            projectId = "",
-            title = "개인 약속: 병원", 
-            content = "정기 검진",
-            startTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.of(9, 0))!!,
-            endTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.of(9, 30))!!,
-            creatorId = creatorId,
-            createdAt = now
-        ),
-        Schedule(
-            id = "5", 
-            projectId = "projC", 
-            title = "프로젝트 킥오프",
-            content = "신규 프로젝트 시작",
-            startTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.MIDNIGHT)!!,
-            endTime = DateTimeUtil.localDateAndTimeToInstant(today, java.time.LocalTime.MAX.minusNanos(1))!!,
-            creatorId = creatorId,
-            createdAt = now
-        )
     )
 } 

@@ -10,6 +10,9 @@ import javax.inject.Inject
  * 사용자 상태 메시지 업데이트 유스케이스 인터페이스
  */
 interface UpdateUserStatusUseCase {
+    /**
+     * Updates the current user's online status through domain behaviour and persists it.
+     */
     suspend operator fun invoke(status: UserStatus): CustomResult<Unit, Exception>
 }
 
@@ -28,12 +31,23 @@ class UpdateUserStatusUseCaseImpl @Inject constructor(
      * @return Result<Unit> 업데이트 처리 결과
      */
     override suspend fun invoke(status: UserStatus): CustomResult<Unit, Exception> {
-        // TODO: UserRepository에 updateStatusMessage(newStatus) 함수 구현 필요
-        // 해당 함수가 없다면 updateUserMemo 사용 고려
-        val seesionResult = authRepository.getCurrentUserSession()
-        return when (seesionResult) {
-            is CustomResult.Success -> userRepository.updateUserConnectionStatus(seesionResult.data.userId, status)
-            else -> CustomResult.Failure(Exception("Failed to get current user session"))
+        val sessionRes = authRepository.getCurrentUserSession()
+        if (sessionRes !is CustomResult.Success) {
+            return CustomResult.Failure(Exception("User not logged in"))
+        }
+        val userRes = userRepository.findById(sessionRes.data.userId)
+        if (userRes is CustomResult.Failure) {
+            return CustomResult.Failure(userRes.error)
+        } else if (userRes !is CustomResult.Success) {
+            return CustomResult.Failure(Exception("User not found"))
+        }
+        val user = userRes.data
+        user.updateUserStatus(status)
+        val saveRes = userRepository.save(user)
+        return when (saveRes) {
+            is CustomResult.Success -> CustomResult.Success(Unit)
+            is CustomResult.Failure -> CustomResult.Failure(saveRes.error)
+            else -> CustomResult.Failure(Exception("Unknown error"))
         }
         // Remove temporary delay
         // kotlin.coroutines.delay(300)

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete // 삭제 아이콘
 import androidx.compose.material.icons.filled.Edit // 수정 아이콘
 import androidx.compose.material3.*
@@ -23,6 +22,9 @@ import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY // Add this
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.schedule.ScheduleContent
+import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.example.feature_schedule.viewmodel.ScheduleDetailEvent
 import com.example.feature_schedule.viewmodel.ScheduleDetailItem
 import com.example.feature_schedule.viewmodel.ScheduleDetailUiState
@@ -155,7 +157,7 @@ fun ScheduleDetailContent(
                 ) {
                     // 제목
                     Text(
-                        text = schedule.title,
+                        text = schedule.title.value,
                         style = MaterialTheme.typography.headlineMedium, // 제목 스타일 조정
                         fontWeight = FontWeight.Bold
                     )
@@ -199,7 +201,7 @@ fun ScheduleDetailContent(
 
                     // 내용
                     Text(
-                        text = schedule.content ?: "내용 없음",
+                        text = schedule.content.value ?: "내용 없음",
                         style = MaterialTheme.typography.bodyLarge,
                         lineHeight = 24.sp // 줄 간격 조정
                     )
@@ -224,12 +226,12 @@ fun ScheduleDetailContent(
 @Composable
 private fun ScheduleDetailContentPreview() {
     val previewSchedule = ScheduleDetailItem(
-        id = "1",
-        title = "프리뷰 일정 제목",
+        id = DocumentId("test"),
+        title = ScheduleTitle("프리뷰 일정 제목"),
         projectName = "샘플 프로젝트",
         date = "2025년 4월 15일 (화)",
         time = "오후 2:00 ~ 오후 3:30",
-        content = "이것은 프리뷰를 위한 일정 상세 내용입니다.\n여러 줄에 걸쳐서 표시될 수 있습니다.\nCompose로 마이그레이션 중입니다."
+        content = ScheduleContent("이것은 프리뷰를 위한 일정 상세 내용입니다.\n여러 줄에 걸쳐서 표시될 수 있습니다.\nCompose로 마이그레이션 중입니다.")
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ScheduleDetailContent(

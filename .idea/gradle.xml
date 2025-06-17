@@ -28,8 +28,10 @@
             <option value="$PROJECT_DIR$/feature/feature_dev" />
             <option value="$PROJECT_DIR$/feature/feature_friends" />
             <option value="$PROJECT_DIR$/feature/feature_main" />
+            <option value="$PROJECT_DIR$/feature/feature_model" />
             <option value="$PROJECT_DIR$/feature/feature_profile" />
             <option value="$PROJECT_DIR$/feature/feature_project" />
+            <option value="$PROJECT_DIR$/feature/feature_project_setting" />
             <option value="$PROJECT_DIR$/feature/feature_schedule" />
             <option value="$PROJECT_DIR$/feature/feature_search" />
             <option value="$PROJECT_DIR$/feature/feature_settings" />

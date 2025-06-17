@@ -30,4 +30,9 @@ interface DMWrapperRepository {
      * @return DM 채널 ID (찾은 경우), null (찾지 못한 경우), 또는 오류
      */
     suspend fun findDmChannelIdWithUser(currentUserId: String, otherUserId: String): CustomResult<String, Exception>
+
+    /**
+     *
+     */
+    suspend fun deleteDMWrapper(currentUserId: String, dmChannelId: String): CustomResult<Unit, Exception>
 }

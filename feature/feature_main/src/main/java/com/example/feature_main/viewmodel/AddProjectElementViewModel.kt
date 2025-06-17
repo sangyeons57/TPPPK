@@ -123,14 +123,15 @@ class AddProjectElementViewModel @Inject constructor(
                 is CustomResult.Success -> {
                     _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Category '${result.data.name}' created successfully."))
                     _eventFlow.emit(AddProjectElementEvent.DismissDialog)
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 is CustomResult.Failure -> {
-                    _uiState.update { it.copy(isLoading = false) }
                     _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Error: ${result.error.message}"))
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 else -> {
-                    _uiState.update { it.copy(isLoading = false) }
                     _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Error: Unknown error."))
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             }
         }
@@ -167,14 +168,15 @@ class AddProjectElementViewModel @Inject constructor(
                 is CustomResult.Success -> {
                     _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Channel '${result.data.channelName}' created successfully."))
                     _eventFlow.emit(AddProjectElementEvent.DismissDialog)
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 is CustomResult.Failure -> {
-                    _uiState.update { it.copy(isLoading = false) }
                     _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Error: ${result.error.message}"))
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 else  -> {
-                   _uiState.update { it.copy(isLoading = false) }
                     _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Error: Unknown error."))
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             }
         }

@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.schedule.ScheduleContent
+import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
 import com.example.domain.usecase.schedule.UpdateScheduleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +19,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant // Added
 import java.time.LocalDate
 import java.time.LocalDateTime // Added
 import java.time.LocalTime
@@ -25,9 +27,10 @@ import javax.inject.Inject
 
 // 일정 수정 화면 UI 상태
 data class EditScheduleUiState(
-    val scheduleId: String? = null,
-    val title: String = "",
-    val content: String? = null,
+    val scheduleId: DocumentId? = null,
+    val schedule: Schedule? = null,
+    val title: ScheduleTitle = ScheduleTitle(""),
+    val content: ScheduleContent = ScheduleContent(""),
     val date: LocalDate? = null,
     val startTime: LocalTime? = null,
     val endTime: LocalTime? = null,
@@ -79,17 +82,18 @@ class EditScheduleViewModel @Inject constructor(
 
     private fun loadScheduleDetails(scheduleId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(scheduleId = scheduleId, isLoading = true, error = null) }
+            _uiState.update { it.copy(scheduleId = DocumentId(scheduleId), isLoading = true, error = null) }
             try {
                 val result = getScheduleDetailUseCase(scheduleId)
                 result.onSuccess { schedule ->
                     _uiState.update {
                         it.copy(
                             title = schedule.title,
+                            schedule = schedule,
                             content = schedule.content,
-                            date = DateTimeUtil.toLocalDateTime(schedule.startTime!!).toLocalDate(),
-                            startTime = DateTimeUtil.toLocalTime(schedule.startTime!!),
-                            endTime = DateTimeUtil.toLocalTime(schedule.endTime!!),
+                            date = DateTimeUtil.toLocalDateTime(schedule.startTime).toLocalDate(),
+                            startTime = DateTimeUtil.toLocalTime(schedule.startTime),
+                            endTime = DateTimeUtil.toLocalTime(schedule.endTime),
                             isLoading = false
                         )
                     }
@@ -113,11 +117,11 @@ class EditScheduleViewModel @Inject constructor(
     }
 
     fun onTitleChanged(newTitle: String) {
-        _uiState.update { it.copy(title = newTitle) }
+        _uiState.update { it.copy(title = ScheduleTitle(newTitle)) }
     }
 
     fun onContentChanged(newContent: String) {
-        _uiState.update { it.copy(content = newContent) }
+        _uiState.update { it.copy(content = ScheduleContent(newContent)) }
     }
 
     fun onTimeClick() {
@@ -166,11 +170,15 @@ class EditScheduleViewModel @Inject constructor(
 
     fun onSaveClicked() {
         val currentState = _uiState.value
-        if (currentState.scheduleId == null) {
+        if (currentState.scheduleId == null ) {
             viewModelScope.launch { _eventFlow.emit(EditScheduleEvent.ShowSnackbar("오류: 일정 ID가 없습니다.")) }
             return
         }
-        if (currentState.title.isBlank()) {
+        if (currentState.schedule == null ) {
+            viewModelScope.launch { _eventFlow.emit(EditScheduleEvent.ShowSnackbar("오류: 일정 객체가 없습니다.")) }
+            return
+        }
+        if (currentState.title.value.isBlank()) {
             viewModelScope.launch { _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정 제목을 입력해주세요.")) }
             return
         }
@@ -189,25 +197,11 @@ class EditScheduleViewModel @Inject constructor(
             // Convert LocalDate/LocalTime from UI back to Instant for domain model
             val startInstant = DateTimeUtil.toInstant(LocalDateTime.of(currentState.date, currentState.startTime))
             val endInstant = DateTimeUtil.toInstant(LocalDateTime.of(currentState.date, currentState.endTime))
+            currentState.schedule.updateDetails(currentState.title, currentState.content)
+            currentState.schedule.reschedule(startInstant, endInstant)
 
-            if (startInstant == null || endInstant == null) {
-                 _uiState.update { it.copy(isSaving = false, error = "시간 변환 오류") }
-                 _eventFlow.emit(EditScheduleEvent.ShowSnackbar("시간 변환 중 오류가 발생했습니다."))
-                 return@launch
-            }
-            
-            val updatedSchedule = Schedule(
-                id = currentState.scheduleId,
-                creatorId = "", // Per instruction for now
-                projectId = "", // Per instruction for now
-                title = currentState.title,
-                content = currentState.content!!,
-                startTime = startInstant,
-                endTime = endInstant,
-                createdAt = Instant.now() // Per instruction, or fetch original
-            )
 
-            val result = updateScheduleUseCase(updatedSchedule)
+            val result = updateScheduleUseCase(currentState.schedule)
             result.onSuccess {
                 viewModelScope.launch {
                     _uiState.update { it.copy(isSaving = false) }

@@ -32,7 +32,13 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model._new.enum.ScheduleStatus
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.ProjectId
+import com.example.domain.model.vo.schedule.ScheduleContent
+import com.example.domain.model.vo.schedule.ScheduleTitle
 
 /**
  * 캘린더 모듈
@@ -177,45 +183,53 @@ private object PreviewUtils {
         val today = LocalDate.now()
         val now = Instant.now()
         return listOf(
-            Schedule(
-                id = "s1",
-                projectId = "p1",
-                title = "팀 회의",
-                content = "주간 진행 상황 공유",
+            Schedule.registerNewSchedule(
+                scheduleId = DocumentId("s1"),
+                projectId = ProjectId("p1"),
+                title = ScheduleTitle("팀 회의"),
+                content = ScheduleContent("주간 진행 상황 공유"),
                 startTime = LocalDateTime.of(today, LocalTime.of(10, 0)).atZone(ZoneId.systemDefault()).toInstant(),
                 endTime = LocalDateTime.of(today, LocalTime.of(11, 30)).atZone(ZoneId.systemDefault()).toInstant(),
-                creatorId = "sample_creator_id_1",
-                createdAt = now
+                creatorId = OwnerId("sample_creator_id_1"),
+                createdAt = now,
+                updatedAt = now,
+                status = ScheduleStatus.CONFIRMED
             ),
-            Schedule(
-                id = "s2",
-                projectId = "",
-                title = "점심 약속",
-                content = "김대표님과 식사",
+            Schedule.registerNewSchedule(
+                scheduleId = DocumentId("s2"),
+                projectId = ProjectId("p2"),
+                title = ScheduleTitle("점심 약속"),
+                content = ScheduleContent("김대표님과 식사"),
                 startTime = LocalDateTime.of(today, LocalTime.of(12, 0)).atZone(ZoneId.systemDefault()).toInstant(),
                 endTime = LocalDateTime.of(today, LocalTime.of(13, 0)).atZone(ZoneId.systemDefault()).toInstant(),
-                creatorId = "sample_creator_id_2",
-                createdAt = now
+                creatorId = OwnerId("sample_creator_id_2"),
+                createdAt = now,
+                updatedAt = now,
+                status = ScheduleStatus.UNKNOWN
             ),
-            Schedule(
-                id = "s3",
-                projectId = "p2",
-                title = "프로젝트 회의",
-                content = "UI 디자인 검토",
+            Schedule.registerNewSchedule(
+                scheduleId = DocumentId("s3"),
+                projectId = ProjectId("p2"),
+                title = ScheduleTitle("프로젝트 회의"),
+                content = ScheduleContent("UI 디자인 검토"),
                 startTime = LocalDateTime.of(today, LocalTime.of(14, 0)).atZone(ZoneId.systemDefault()).toInstant(),
                 endTime = LocalDateTime.of(today, LocalTime.of(15, 30)).atZone(ZoneId.systemDefault()).toInstant(),
-                creatorId = "sample_creator_id_3",
-                createdAt = now
+                creatorId = OwnerId("sample_creator_id_3"),
+                createdAt = now,
+                updatedAt = now,
+                status = ScheduleStatus.CANCELLED
             ),
-             Schedule(
-                id = "s4",
-                projectId = "p1",
-                title = "종일 이벤트",
-                content = "워크샵 준비",
+             Schedule.registerNewSchedule(
+                scheduleId = DocumentId("s4"),
+                projectId = ProjectId("p1"),
+                title = ScheduleTitle("종일 이벤트"),
+                content = ScheduleContent("워크샵 준비"),
                 startTime = LocalDateTime.of(today, LocalTime.MIDNIGHT).atZone(ZoneId.systemDefault()).toInstant(),
                 endTime = LocalDateTime.of(today, LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant(),
-                creatorId = "sample_creator_id_4",
-                createdAt = now
+                creatorId = OwnerId("sample_creator_id_4"),
+                createdAt = now,
+                updatedAt = now,
+                status = ScheduleStatus.COMPLETED
             )
         )
     }

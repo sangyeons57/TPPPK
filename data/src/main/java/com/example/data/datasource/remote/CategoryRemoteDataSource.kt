@@ -24,7 +24,7 @@ interface CategoryRemoteDataSource {
      */
     suspend fun addCategory(projectId: String, categoryDTO: CategoryDTO): CustomResult<String, Exception>
 
-    suspend fun setDirectCategory(projectId: String, categoryDTO: CategoryDTO): CustomResult<Unit, Exception>
+    suspend fun setDirectCategory(projectId: String, categoryId: String, categoryDTO: CategoryDTO): CustomResult<Unit, Exception>
 
     /**
      * 카테고리의 이름 또는 순서를 수정합니다.

@@ -26,6 +26,14 @@ class CategoryRepositoryImpl @Inject constructor(
         return categoryRemoteDataSource.addCategory(projectId, category.toDto())
     }
 
+    override suspend fun setDirectCategory(
+        projectId: String,
+        categoryId: String,
+        category: Category
+    ): CustomResult<Unit, Exception> {
+        return categoryRemoteDataSource.setDirectCategory(projectId, categoryId, category.toDto())
+    }
+
     /**
      * 기존 카테고리를 업데이트합니다.
      * Firebase의 자체 캐싱 시스템을 활용합니다.

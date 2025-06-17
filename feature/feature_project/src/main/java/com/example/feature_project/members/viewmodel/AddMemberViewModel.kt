@@ -58,10 +58,10 @@ class AddMemberViewModel @Inject constructor(
                         val users = userResult.data
                         val uiResults = users.map { user -> // Map Domain User to UserSearchResult
                             UserSearchResult(
-                                userId = user.uid, // Adjust field names based on actual User model
-                                userName = user.name,
-                                userEmail = user.email,
-                                profileImageUrl = user.profileImageUrl
+                                userId = user.uid.value, // Adjust field names based on actual User model
+                                userName = user.name.value,
+                                userEmail = user.email.value,
+                                profileImageUrl = user.profileImageUrl?.value
                             )
                         }
                         _uiState.update { it.copy(searchResults = uiResults, isLoading = false) }

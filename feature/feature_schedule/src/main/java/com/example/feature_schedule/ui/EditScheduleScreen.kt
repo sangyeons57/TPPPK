@@ -181,7 +181,7 @@ fun EditScheduleContent(
                     }
 
                     OutlinedTextField(
-                        value = uiState.title,
+                        value = uiState.title.value,
                         onValueChange = onTitleChanged,
                         label = { Text("일정 제목") },
                         modifier = Modifier.fillMaxWidth(),
@@ -191,7 +191,7 @@ fun EditScheduleContent(
                     )
 
                     OutlinedTextField(
-                        value = uiState.content ?: "",
+                        value = uiState.content.value,
                         onValueChange = onContentChanged,
                         label = { Text("상세 내용 (선택 사항)") },
                         modifier = Modifier.fillMaxWidth().height(150.dp),
@@ -224,7 +224,7 @@ fun EditScheduleContent(
                     Button(
                         onClick = onSaveClicked,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isSaving && uiState.title.isNotBlank()
+                        enabled = !uiState.isSaving && uiState.title.value.isNotBlank()
                     ) {
                         if (uiState.isSaving) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)

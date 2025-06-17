@@ -106,16 +106,18 @@ class FriendViewModel @Inject constructor(
                                     is CustomResult.Success -> userResult.data
                                     else -> null
                                 }
-                                
-                                friendItems.add(FriendItem(
-                                    user = user,
-                                    friendId = friend.friendUid,
-                                    status = friend.status,
-                                    profileImageUrl = friend.friendProfileImageUrl ?: user?.profileImageUrl,
-                                    requestedAt = friend.requestedAt,
-                                    acceptedAt = friend.acceptedAt,
-                                    displayName = user?.name ?: friend.friendName.ifEmpty { "사용자 ${friend.friendUid.takeLast(4)}" }
-                                ))
+
+                                if (user != null) {
+                                    friendItems.add(FriendItem(
+                                        user = user,
+                                        friendId = friend.friendUid,
+                                        status = friend.status,
+                                        profileImageUrl = friend.friendProfileImageUrl ?: user.profileImageUrl?.value,
+                                        requestedAt = friend.requestedAt,
+                                        acceptedAt = friend.acceptedAt,
+                                        displayName = user.name.value
+                                    ))
+                                }
                             }
                             
                             _uiState.update {
