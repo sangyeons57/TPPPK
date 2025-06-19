@@ -3,9 +3,12 @@ package com.example.data.model.remote
 import com.example.domain.model.base.DMChannel
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
+import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
 
 import com.google.firebase.firestore.PropertyName
 
@@ -22,31 +25,31 @@ data class DMChannelDTO(
     @get:PropertyName(LAST_MESSAGE_TIMESTAMP)
     @ServerTimestamp val lastMessageTimestamp: Timestamp? = null,
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp? = null,
+    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp? = null,
+    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
 ) {
 
     companion object {
-        const val COLLECTION_NAME = "dm_channels"
-        const val PARTICIPANTS = "participants" // List<String> = "userId1"
-        const val LAST_MESSAGE_PREVIEW = "lastMessagePreview"
-        const val LAST_MESSAGE_TIMESTAMP = "lastMessageTimestamp"
-        const val CREATED_AT = "createdAt"
-        const val UPDATED_AT = "updatedAt"
+        const val COLLECTION_NAME = DMChannel.COLLECTION_NAME
+        const val PARTICIPANTS = DMChannel.KEY_PARTICIPANTS
+        const val LAST_MESSAGE_PREVIEW = DMChannel.KEY_LAST_MESSAGE_PREVIEW
+        const val LAST_MESSAGE_TIMESTAMP = DMChannel.KEY_LAST_MESSAGE_TIMESTAMP
+        const val CREATED_AT = DMChannel.KEY_CREATED_AT
+        const val UPDATED_AT = DMChannel.KEY_UPDATED_AT
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return DMChannel 도메인 모델
      */
     fun toDomain(): DMChannel {
-        return DMChannel(
-            id = id,
-            participants = participants,
-            lastMessagePreview = lastMessagePreview,
+        return DMChannel.fromDataSource(
+            id = VODocumentId(id),
+            participants = participants.map { UserId(it) },
+            lastMessagePreview = lastMessagePreview?.let{ DMChannelLastMessagePreview(it) },
             lastMessageTimestamp = lastMessageTimestamp?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt),
+            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt)
         )
     }
 }
@@ -57,11 +60,11 @@ data class DMChannelDTO(
  */
 fun DMChannel.toDto(): DMChannelDTO {
     return DMChannelDTO(
-        id = id,
-        participants = participants,
-        lastMessagePreview = lastMessagePreview,
+        id = id.value,
+        participants = participants.map { it.value },
+        lastMessagePreview = lastMessagePreview?.value,
         lastMessageTimestamp = lastMessageTimestamp?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        createdAt = createdAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
+        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
     )
 }

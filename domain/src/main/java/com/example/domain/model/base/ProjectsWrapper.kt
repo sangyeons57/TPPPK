@@ -3,10 +3,11 @@ package com.example.domain.model.base
 import com.example.domain.event.AggregateRoot
 import com.example.domain.event.projectwrapper.ProjectWrapperCreatedEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
 import java.time.Instant
 
 class ProjectsWrapper(
-    val initialOrder: String,
+    val initialOrder: ProjectWrapperOrder,
     val initialCreatedAt: Instant,
     val initialUpdatedAt: Instant,
     override val id: DocumentId,
@@ -14,7 +15,7 @@ class ProjectsWrapper(
 ) : AggregateRoot() {
     val createdAt: Instant = initialCreatedAt
 
-    var order: String = initialOrder
+    var order: ProjectWrapperOrder = initialOrder
         private set
     var updatedAt: Instant = initialUpdatedAt
         private set
@@ -33,7 +34,7 @@ class ProjectsWrapper(
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_UPDATED_AT = "updatedAt"
 
-        fun create(id: DocumentId, order: String): ProjectsWrapper {
+        fun create(id: DocumentId, order: ProjectWrapperOrder): ProjectsWrapper {
             val now = Instant.now()
             val projectsWrapper = ProjectsWrapper(
                 initialOrder = order,
@@ -54,7 +55,7 @@ class ProjectsWrapper(
 
         fun fromDataSource(
             id: DocumentId,
-            order: String,
+            order: ProjectWrapperOrder,
             createdAt: Instant,
             updatedAt: Instant
         ): ProjectsWrapper {

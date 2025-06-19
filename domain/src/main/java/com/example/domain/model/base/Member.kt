@@ -57,7 +57,7 @@ class Member private constructor(
     }
 
     companion object {
-        const val KEY_COLLECTION_NAME = "members"
+        const val COLLECTION_NAME = "members"
         const val KEY_JOINED_AT = "joinedAt"
         const val KEY_ROLE_ID = "roleIds" // List<String>
         const val KEY_UPDATED_AT = "updatedAt"

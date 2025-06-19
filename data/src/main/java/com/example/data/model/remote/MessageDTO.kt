@@ -6,7 +6,12 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
-
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.model.vo.message.MessageIsDeleted
+import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.PropertyName
 
 /*
@@ -23,9 +28,9 @@ data class MessageDTO(
     @get:PropertyName(SEND_MESSAGE)
     val content: String = "",
     @get:PropertyName(SENT_AT)
-    @ServerTimestamp val sentAt: Timestamp? = null,
+    @ServerTimestamp val sentAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp? = null,
+    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(REPLY_TO_MESSAGE_ID)
     val replyToMessageId: String? = null,
     @get:PropertyName(IS_DELETED)
@@ -33,49 +38,49 @@ data class MessageDTO(
 ) {
 
     companion object {
-        const val COLLECTION_NAME = "messages"
-        const val SENDER_ID = "senderId"
-        const val SENDER_NAME = "senderName"
-        const val SENDER_PROFILE_IMAGE_URL = "senderProfileImageUrl"
-        const val SEND_MESSAGE = "content"
-        const val SENT_AT = "sentAt"
-        const val UPDATED_AT = "updatedAt"
-        const val REPLY_TO_MESSAGE_ID = "replyToMessageId"
-        const val IS_DELETED = "isDeleted"
+        const val COLLECTION_NAME = Message.COLLECTION_NAME
+        const val SENDER_ID = Message.KEY_SENDER_ID
+        const val SENDER_NAME = Message.KEY_SENDER_NAME
+        const val SENDER_PROFILE_IMAGE_URL = Message.KEY_SENDER_PROFILE_IMAGE_URL
+        const val SEND_MESSAGE = Message.KEY_SEND_MESSAGE
+        const val SENT_AT = Message.KEY_SENT_AT
+        const val UPDATED_AT = Message.KEY_UPDATED_AT
+        const val REPLY_TO_MESSAGE_ID = Message.KEY_REPLY_TO_MESSAGE_ID
+        const val IS_DELETED = Message.KEY_IS_DELETED
     }
-    /*
+    /**
      * DTO를 도메인 모델로 변환
      * @return Message 도메인 모델
      */
     fun toDomain(): Message {
-        return Message(
-            id = id,
-            senderId = senderId,
-            senderName = senderName,
-            senderProfileImageUrl = senderProfileImageUrl,
-            content = content,
-            sentAt = sentAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            replyToMessageId = replyToMessageId,
-            isDeleted = isDeleted
+        return Message.fromDataSource(
+            id = VODocumentId(id),
+            senderId = UserId(senderId),
+            senderName = Name(senderName),
+            senderProfileImageUrl = senderProfileImageUrl?.let{ImageUrl(it)},
+            content = MessageContent(content),
+            createdAt = sentAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+            updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+            replyToMessageId = replyToMessageId?.let{VODocumentId(it)},
+            isDeleted = MessageIsDeleted(isDeleted)
         )
     }
 }
 
-/*
+/**
  * Message 도메인 모델을 DTO로 변환하는 확장 함수
  * @return MessageDTO 객체
  */
 fun Message.toDto(): MessageDTO {
     return MessageDTO(
-        id = id,
-        senderId = senderId,
-        senderName = senderName,
-        senderProfileImageUrl = senderProfileImageUrl,
-        content = content,
-        sentAt = sentAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        replyToMessageId = replyToMessageId,
-        isDeleted = isDeleted
+        id = id.value,
+        senderId = senderId.value,
+        senderName = senderName.value,
+        senderProfileImageUrl = senderProfileImageUrl?.value,
+        content = content.value,
+        sentAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        replyToMessageId = replyToMessageId?.value,
+        isDeleted = isDeleted.value
     )
 }

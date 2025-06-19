@@ -6,11 +6,13 @@ import com.example.domain.event.permission.PermissionCreatedEvent
 import com.example.domain.event.permission.PermissionDescriptionUpdatedEvent
 import com.example.domain.event.permission.PermissionNameUpdatedEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.permission.PermissionDescription
 import java.time.Instant
 
 class Permission private constructor(
-    initialName: String,
-    initialDescription: String,
+    initialName: Name,
+    initialDescription: PermissionDescription,
     initialCreatedAt: Instant,
     initialUpdatedAt: Instant,
     override val id: DocumentId,
@@ -20,9 +22,9 @@ class Permission private constructor(
     val createdAt: Instant = initialCreatedAt
 
 
-    var name: String = initialName
+    var name: Name = initialName
         private set
-    var description: String = initialDescription
+    var description: PermissionDescription = initialDescription
         private set
     var updatedAt: Instant = initialUpdatedAt
         private set
@@ -39,7 +41,7 @@ class Permission private constructor(
     /**
      * Updates the name of the permission.
      */
-    fun updateName(newName: String) {
+    fun updateName(newName: Name) {
         if (this.name == newName) return
 
         this.name = newName
@@ -50,7 +52,7 @@ class Permission private constructor(
     /**
      * Updates the description of the permission.
      */
-    fun updateDescription(newDescription: String) {
+    fun updateDescription(newDescription: PermissionDescription) {
         if (this.description == newDescription) return
 
         this.description = newDescription
@@ -71,8 +73,8 @@ class Permission private constructor(
             val now = Instant.now()
             val permission = Permission(
                 id = id,
-                initialName = name,
-                initialDescription = description,
+                initialName = Name(name),
+                initialDescription = PermissionDescription(description),
                 initialCreatedAt = now,
                 initialUpdatedAt = now,
                 isNew = true
@@ -86,8 +88,8 @@ class Permission private constructor(
          */
         fun fromDataSource(
             id: DocumentId,
-            name: String,
-            description: String,
+            name: Name,
+            description: PermissionDescription,
             createdAt: Instant,
             updatedAt: Instant
         ): Permission {

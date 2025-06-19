@@ -36,23 +36,23 @@ data class ScheduleDTO(
     @get:PropertyName(COLOR)
     val color: String? = null, // 예: "#FF5733"
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp? = null,
+    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp? = null
+    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) {
 
     companion object {
-        const val COLLECTION_NAME = "schedules"
-        const val TITLE = "title"
-        const val CONTENT = "content"
-        const val START_TIME = "startTime"
-        const val END_TIME = "endTime"
-        const val PROJECT_ID = "projectId"
-        const val CREATOR_ID = "creatorId"
-        const val STATUS = "status"
-        const val COLOR = "color"
-        const val CREATED_AT = "createdAt"
-        const val UPDATED_AT = "updatedAt"
+        const val COLLECTION_NAME = Schedule.COLLECTION_NAME
+        const val TITLE = Schedule.KEY_TITLE
+        const val CONTENT = Schedule.KEY_CONTENT
+        const val START_TIME = Schedule.KEY_START_TIME
+        const val END_TIME = Schedule.KEY_END_TIME
+        const val PROJECT_ID = Schedule.KEY_PROJECT_ID
+        const val CREATOR_ID = Schedule.KEY_CREATOR_ID
+        const val STATUS = Schedule.KEY_STATUS
+        const val COLOR = Schedule.KEY_COLOR
+        const val CREATED_AT = Schedule.KEY_CREATED_AT
+        const val UPDATED_AT = Schedule.KEY_UPDATED_AT
     }
     /**
      * DTO를 도메인 모델로 변환

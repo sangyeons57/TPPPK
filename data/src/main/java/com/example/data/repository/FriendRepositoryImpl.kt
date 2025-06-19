@@ -9,7 +9,6 @@ import com.example.data.datasource.remote.UserRemoteDataSource // 사용자 검�
 import com.example.data.model.remote.FriendDTO
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
-import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
 import com.example.domain.repository.FriendRepository
 import kotlinx.coroutines.flow.Flow
@@ -96,12 +95,12 @@ class FriendRepositoryImpl @Inject constructor(
         return when (friendResult) {
             is CustomResult.Success -> {
                 val myDTO = FriendDTO(
-                    friendUid = receiverId,
+                    id = receiverId,
                     status = FriendStatus.PENDING,
                     requestedAt = DateTimeUtil.nowFirebaseTimestamp(),
                 )
                 val friendDTO = FriendDTO(
-                    friendUid = user.userId,
+                    id = user.userId,
                     status = FriendStatus.PENDING,
                     requestedAt = DateTimeUtil.nowFirebaseTimestamp(),
                 )

@@ -197,28 +197,4 @@ class UserRemoteDataSourceImpl @Inject constructor(
         awaitClose { listenerRegistration.remove() }
     }
 
-    override suspend fun update(aggregateRoot: AggregateRoot): CustomResult<com.example.domain.model.vo.DocumentId, Exception> {
-        val firestoreFieldMap = aggregateRoot.getChangedFields().entries.associate { (key, value) ->
-            val firestoreKey = when (key) {
-                "email" -> UserDTO.EMAIL
-                "name" -> UserDTO.NAME
-                "consentTimeStamp" -> UserDTO.CONSENT_TIMESTAMP
-                "profileImageUrl" -> UserDTO.PROFILE_IMAGE_URL
-                "memo" -> UserDTO.MEMO
-                "userStatus" -> UserDTO.STATUS
-                "createdAt" -> UserDTO.CREATED_AT
-                "updatedAt" -> UserDTO.UPDATED_AT
-                "fcmToken" -> UserDTO.FCM_TOKEN
-                "accountStatus" -> UserDTO.ACCOUNT_STATUS
-                else -> key // 알 수 없는 키는 그대로 전달
-            }
-            firestoreKey to value
-        }
-
-        return resultTry {
-            if (!aggregateRoot.id.isAssigned()) throw IllegalArgumentException("ID cannot be empty when updating")
-            collection.document(aggregateRoot.id.value).update(firestoreFieldMap).await()
-            aggregateRoot.id
-        }
-    }
 }

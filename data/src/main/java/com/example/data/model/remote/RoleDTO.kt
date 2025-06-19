@@ -1,7 +1,10 @@
 package com.example.data.model.remote
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Role
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.role.RoleIsDefault
+import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
@@ -15,15 +18,15 @@ data class RoleDTO(
     @DocumentId var id: String = "",
     @get:PropertyName(NAME) var name: String = "",
     @get:PropertyName(IS_DEFAULT) var isDefault: Boolean = false,
-    @ServerTimestamp @get:PropertyName(CREATED_AT) var createdAt: Timestamp? = null,
-    @ServerTimestamp @get:PropertyName(UPDATED_AT) var updatedAt: Timestamp? = null
+    @ServerTimestamp @get:PropertyName(CREATED_AT) var createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @ServerTimestamp @get:PropertyName(UPDATED_AT) var updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) {
     companion object {
-        const val COLLECTION_NAME = "roles"
-        const val NAME = "name"
-        const val IS_DEFAULT = "isDefault"
-        const val CREATED_AT = "createdAt"
-        const val UPDATED_AT = "updatedAt"
+        const val COLLECTION_NAME = Role.COLLECTION_NAME
+        const val NAME = Role.KEY_NAME
+        const val IS_DEFAULT = Role.KEY_IS_DEFAULT
+        const val CREATED_AT = Role.KEY_CREATED_AT
+        const val UPDATED_AT = Role.KEY_UPDATED_AT
     }
 }
 
@@ -33,13 +36,12 @@ data class RoleDTO(
  */
 fun RoleDTO.toDomain(): Role {
     // Firestore에서 읽은 타임스탬프가 null일 경우를 대비하여 현재 시간으로 대체
-    val now = Instant.now()
     return Role.fromDataSource(
-        id = DocumentId(this.id),
-        name = this.name,
-        isDefault = this.isDefault,
-        createdAt = this.createdAt?.toDate()?.toInstant() ?: now,
-        updatedAt = this.updatedAt?.toDate()?.toInstant() ?: now
+        id = VODocumentId(this.id),
+        name = Name(this.name),
+        isDefault = RoleIsDefault(this.isDefault),
+        createdAt = this.createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+        updatedAt = this.updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
     )
 }
 
@@ -50,10 +52,9 @@ fun RoleDTO.toDomain(): Role {
 fun Role.toDto(): RoleDTO {
     return RoleDTO(
         id = this.id.value,
-        name = this.name,
-        isDefault = this.isDefault,
-        // Timestamps are handled by the server, so they are null when creating/updating from the client.
-        createdAt = null,
-        updatedAt = null
+        name = this.name.value,
+        isDefault = this.isDefault.value,
+        createdAt = DateTimeUtil.instantToFirebaseTimestamp(this.createdAt),
+        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(this.updatedAt)
     )
 }

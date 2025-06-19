@@ -8,9 +8,9 @@ import com.example.domain.event.friend.FriendProfileImageChangedEvent
 import com.example.domain.event.friend.FriendStatusChangedEvent
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.friend.FriendName
-import com.example.domain.model.vo.friend.FriendProfileImageUrl
 import java.time.Instant
 
 class Friend private constructor(
@@ -19,8 +19,8 @@ class Friend private constructor(
     initialAcceptedAt: Instant?,  // This could be when the friend request was accepted
 
     // Mutable properties
-    initialName: FriendName,
-    initialProfileImageUrl: FriendProfileImageUrl?,
+    initialName: Name,
+    initialProfileImageUrl: ImageUrl?,
     initialStatus: FriendStatus,
     initialCreatedAt: Instant,
     initialUpdatedAt: Instant,
@@ -33,10 +33,10 @@ class Friend private constructor(
     var acceptedAt: Instant? = initialAcceptedAt // Made var in case it needs to be set by a method
         private set
 
-    var name: FriendName = initialName
+    var name: Name = initialName
         private set
 
-    var profileImageUrl: FriendProfileImageUrl? = initialProfileImageUrl
+    var profileImageUrl: ImageUrl? = initialProfileImageUrl
         private set
 
     var status: FriendStatus = initialStatus
@@ -49,19 +49,27 @@ class Friend private constructor(
 
 
     override fun getCurrentStateMap(): Map<String, Any?> {
-        TODO("Not yet implemented")
+        return mapOf(
+            KEY_STATUS to status,
+            KEY_REQUESTED_AT to requestedAt,
+            KEY_ACCEPTED_AT to acceptedAt,
+            KEY_NAME to name,
+            KEY_PROFILE_IMAGE_URL to profileImageUrl,
+            KEY_CREATED_AT to createdAt,
+            KEY_UPDATED_AT to updatedAt
+        )
     }
 
     // --- Business Methods ---
 
-    fun changeName(newName: FriendName) {
+    fun changeName(newName: Name) {
         if (this.name == newName) return
         this.name = newName
         this.updatedAt = Instant.now()
         this.pushDomainEvent(FriendNameChangedEvent(this.id, newName))
     }
 
-    fun changeProfileImage(newProfileImageUrl: FriendProfileImageUrl?) {
+    fun changeProfileImage(newProfileImageUrl: ImageUrl?) {
         if (this.profileImageUrl == newProfileImageUrl) return
         this.profileImageUrl = newProfileImageUrl
         this.updatedAt = Instant.now()
@@ -123,11 +131,15 @@ class Friend private constructor(
         const val KEY_STATUS = "status" // "PENDING_SENT", "PENDING_RECEIVED", "ACCEPTED", "DECLINED", "BLOCKED"
         const val KEY_REQUESTED_AT = "requestedAt"
         const val KEY_ACCEPTED_AT = "acceptedAt"
+        const val KEY_NAME = "name"
+        const val KEY_PROFILE_IMAGE_URL = "profileImageUrl"
+        const val KEY_CREATED_AT = "createdAt"
+        const val KEY_UPDATED_AT = "updatedAt"
 
         fun newRequest(
             id: DocumentId,
-            name: FriendName,
-            profileImageUrl: FriendProfileImageUrl?,
+            name: Name,
+            profileImageUrl: ImageUrl?,
             requestedAt: Instant // Time the request is made
         ): Friend {
             val now = Instant.now()
@@ -150,8 +162,8 @@ class Friend private constructor(
 
         fun receivedRequest(
             id: DocumentId,
-            name: FriendName,
-            profileImageUrl: FriendProfileImageUrl?,
+            name: Name,
+            profileImageUrl: ImageUrl?,
             requestedAt: Instant // Time the request was received
         ): Friend {
             val now = Instant.now()
@@ -174,8 +186,8 @@ class Friend private constructor(
         // Factory method for reconstructing from data source
         fun fromDataSource(
             id: DocumentId,
-            name: FriendName,
-            profileImageUrl: FriendProfileImageUrl?,
+            name: Name,
+            profileImageUrl: ImageUrl?,
             status: FriendStatus,
             requestedAt: Instant?,
             acceptedAt: Instant?,

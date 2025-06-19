@@ -1,11 +1,11 @@
 
 package com.example.data.datasource.remote
 
-import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.CategoryDTO
+import com.example.data.model.remote.ProjectDTO
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -37,7 +37,7 @@ class CategoryRemoteDataSourceImpl @Inject constructor(
      * @return List<CategoryDTO>를 방출하는 Flow.
      */
     override fun observeCategories(projectId: String): Flow<CustomResult<List<CategoryDTO>, Exception>> = callbackFlow {
-        val categoriesCollection = firestore.collection(FirestoreConstants.Collections.PROJECTS)
+        val categoriesCollection = firestore.collection(ProjectDTO.COLLECTION_NAME)
             .document(projectId)
             .collection(CategoryDTO.COLLECTION_NAME)
             .orderBy(CategoryDTO.ORDER, Query.Direction.ASCENDING) // 'order' 필드로 정렬

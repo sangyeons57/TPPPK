@@ -9,11 +9,13 @@ import com.example.domain.event.project.ProjectCreatedEvent
 import com.example.domain.event.project.ProjectImageUrlChangedEvent
 import com.example.domain.event.project.ProjectNameChangedEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
 
 class Project private constructor(
-    initialName: String,
-    initialImageUrl: String?,
+    initialName: Name,
+    initialImageUrl: ImageUrl?,
     initialOwnerId: OwnerId,
     initialCreatedAt: Instant,
     initialUpdatedAt: Instant,
@@ -26,9 +28,9 @@ class Project private constructor(
     val createdAt: Instant = initialCreatedAt
 
     // Mutable properties with private setters
-    var name: String = initialName
+    var name: Name = initialName
         private set
-    var imageUrl: String? = initialImageUrl
+    var imageUrl: ImageUrl? = initialImageUrl
         private set
     var updatedAt: Instant = initialUpdatedAt
         private set
@@ -38,14 +40,16 @@ class Project private constructor(
         return mapOf(
             KEY_NAME to this.name,
             KEY_IMAGE_URL to this.imageUrl,
-            KEY_UPDATED_AT to this.updatedAt
+            KEY_CREATED_AT to this.createdAt,
+            KEY_UPDATED_AT to this.updatedAt,
+            KEY_OWNER_ID to this.ownerId
         )
     }
 
     /**
      * Changes the name of the project, firing a domain event if the name is different.
      */
-    fun changeName(newName: String) {
+    fun changeName(newName: Name) {
         if (this.name == newName) return
 
         val oldName = this.name
@@ -57,7 +61,7 @@ class Project private constructor(
     /**
      * Changes the image URL of the project, firing a domain event.
      */
-    fun changeImageUrl(newImageUrl: String?) {
+    fun changeImageUrl(newImageUrl: ImageUrl?) {
         if (this.imageUrl == newImageUrl) return
 
         this.imageUrl = newImageUrl
@@ -77,8 +81,8 @@ class Project private constructor(
          */
         fun create(
             id: DocumentId,
-            name: String,
-            imageUrl: String?,
+            name: Name,
+            imageUrl: ImageUrl?,
             ownerId: OwnerId
         ): Project {
             val now = Instant.now()
@@ -100,8 +104,8 @@ class Project private constructor(
          */
         fun fromDataSource(
             id: DocumentId,
-            name: String,
-            imageUrl: String?,
+            name: Name,
+            imageUrl: ImageUrl?,
             ownerId: OwnerId,
             createdAt: Instant,
             updatedAt: Instant

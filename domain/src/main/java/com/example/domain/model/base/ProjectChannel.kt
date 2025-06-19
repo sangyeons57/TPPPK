@@ -8,10 +8,12 @@ import com.example.domain.event.projectchannel.ProjectChannelCreatedEvent
 import com.example.domain.event.projectchannel.ProjectChannelNameUpdatedEvent
 import com.example.domain.event.projectchannel.ProjectChannelOrderChangedEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 
 class ProjectChannel private constructor(
-    initialChannelName: String,
-    initialOrder: Double,
+    initialChannelName: Name,
+    initialOrder: ProjectChannelOrder,
     initialChannelType: ProjectChannelType,
     initialCreatedAt: Instant,
     initialUpdatedAt: Instant,
@@ -23,20 +25,20 @@ class ProjectChannel private constructor(
 
     var channelType: ProjectChannelType = initialChannelType
         private set
-    var channelName: String = initialChannelName
+    var channelName: Name = initialChannelName
         private set
-    var order: Double = initialOrder
+    var order: ProjectChannelOrder = initialOrder
         private set
     var updatedAt: Instant = initialUpdatedAt
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            CHANNEL_NAME to this.channelName,
-            CHANNEL_TYPE to this.channelType,
-            ORDER to this.order,
-            UPDATED_AT to this.updatedAt,
-            CREATED_AT to this.createdAt
+            KEY_CHANNEL_NAME to this.channelName,
+            KEY_CHANNEL_TYPE to this.channelType,
+            KEY_ORDER to this.order,
+            KEY_UPDATED_AT to this.updatedAt,
+            KEY_CREATED_AT to this.createdAt
         )
     }
 
@@ -45,7 +47,7 @@ class ProjectChannel private constructor(
      *
      * @throws IllegalArgumentException if the new name is blank.
      */
-    fun updateName(newName: String) {
+    fun updateName(newName: Name) {
         if (this.channelName == newName) return
         if (newName.isBlank()) {
             throw IllegalArgumentException("Channel name cannot be empty.")
@@ -62,9 +64,9 @@ class ProjectChannel private constructor(
      *
      * @throws IllegalArgumentException if the new order is not a positive number.
      */
-    fun changeOrder(newOrder: Double) {
+    fun changeOrder(newOrder: ProjectChannelOrder) {
         if (this.order == newOrder) return
-        if (newOrder <= 0) {
+        if (newOrder.value <= 0) {
             throw IllegalArgumentException("Channel order must be a positive number.")
         }
 
@@ -75,20 +77,20 @@ class ProjectChannel private constructor(
 
     companion object {
         const val COLLECTION_NAME = "project_channels"
-        const val CHANNEL_NAME = "channelName"
-        const val CHANNEL_TYPE = "channelType"
-        const val ORDER = "order"
-        const val CREATED_AT = "createdAt"
-        const val UPDATED_AT = "updatedAt"
+        const val KEY_CHANNEL_NAME = "channelName"
+        const val KEY_CHANNEL_TYPE = "channelType"
+        const val KEY_ORDER = "order"
+        const val KEY_CREATED_AT = "createdAt"
+        const val KEY_UPDATED_AT = "updatedAt"
 
         /**
          * Factory method for creating a new project channel.
          */
         fun create(
             id: DocumentId,
-            channelName: String,
+            channelName: Name,
             channelType: ProjectChannelType,
-            order: Double
+            order: ProjectChannelOrder
         ): ProjectChannel {
             val now = Instant.now()
             val channel = ProjectChannel(
@@ -117,8 +119,8 @@ class ProjectChannel private constructor(
          */
         fun fromDataSource(
             id: DocumentId,
-            channelName: String,
-            order: Double,
+            channelName: Name,
+            order: ProjectChannelOrder,
             channelType: ProjectChannelType,
             createdAt: Instant,
             updatedAt: Instant

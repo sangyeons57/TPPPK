@@ -7,7 +7,6 @@ import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.DMWrapperDTO
 import com.example.domain.model.vo.DocumentId
-import com.example.core_common.constants.FirestorePaths
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose

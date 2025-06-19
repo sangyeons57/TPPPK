@@ -2,6 +2,7 @@ package com.example.domain.event.role
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.role.RoleIsDefault
 import java.time.Instant
 
 /**
@@ -9,6 +10,6 @@ import java.time.Instant
  */
 data class RoleDefaultStatusChangedEvent(
     val roleId: DocumentId,
-    val newDefaultStatus: Boolean,
+    val newDefaultStatus: RoleIsDefault,
     override val occurredOn: Instant
 ) : DomainEvent

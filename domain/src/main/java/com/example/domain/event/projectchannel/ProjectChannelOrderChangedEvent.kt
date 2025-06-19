@@ -2,6 +2,7 @@ package com.example.domain.event.projectchannel
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import java.time.Instant
 
 /**
@@ -9,6 +10,6 @@ import java.time.Instant
  */
 data class ProjectChannelOrderChangedEvent(
     val channelId: DocumentId,
-    val newOrder: Double,
+    val newOrder: ProjectChannelOrder,
     override val occurredOn: Instant
 ) : DomainEvent

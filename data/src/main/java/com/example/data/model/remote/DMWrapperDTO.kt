@@ -1,31 +1,44 @@
 package com.example.data.model.remote
 
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.DMWrapper
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
+import com.google.firebase.firestore.ServerTimestamp
+import com.google.firebase.Timestamp
 
 /**
  * DM 채널 정보와 상대방 ID를 나타내는 DTO 클래스
  */
 data class DMWrapperDTO(
-    @DocumentId val dmChannelId: String = "",
+    @DocumentId val id: String = "",
     @get:PropertyName(OTHER_USER_ID) 
-    val otherUserId: String = ""
+    val otherUserId: String = "",
+    @get:PropertyName(CREATED_AT)
+    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @get:PropertyName(UPDATED_AT)
+    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
 ) {
 
     companion object {
-        const val COLLECTION_NAME = "dm_wrapper"
-        const val OTHER_USER_ID = "otherUserId"
+        const val COLLECTION_NAME = DMWrapper.COLLECTION_NAME
+        const val OTHER_USER_ID = DMWrapper.KEY_OTHER_USER_ID
+        const val CREATED_AT = DMWrapper.KEY_CREATED_AT
+        const val UPDATED_AT = DMWrapper.KEY_UPDATED_AT
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return DMWrapper 도메인 모델
      */
     fun toDomain(): DMWrapper {
-        return DMWrapper(
-            dmChannelId = dmChannelId,
-            otherUserId = otherUserId
+        return DMWrapper.fromDataSource(
+            id = VODocumentId(id),
+            otherUserId = UserId(otherUserId),
+            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt),
+            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt)
         )
     }
 }
@@ -36,7 +49,9 @@ data class DMWrapperDTO(
  */
 fun DMWrapper.toDto(): DMWrapperDTO {
     return DMWrapperDTO(
-        dmChannelId = dmChannelId,
-        otherUserId = otherUserId
+        id = id.value,
+        otherUserId = otherUserId.value,
+        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
     )
 }

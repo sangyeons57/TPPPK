@@ -14,7 +14,6 @@ import javax.inject.Inject
 
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
-    private val defaultDatasource: DefaultDatasource,
     private val mediaRepository: MediaRepository // 이미지 처리를 위해 필요
 ) : UserRepository {
 

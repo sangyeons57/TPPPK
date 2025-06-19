@@ -32,7 +32,7 @@ class Category private constructor(
     initialOrder: CategoryOrder,
     initialCreatedBy: OwnerId,
     initialCreatedAt: Instant,
-    initialUpdatedAt: Instant?,
+    initialUpdatedAt: Instant,
     initialIsCategory: IsCategoryFlag,
     override val id: DocumentId,
     override val isNew: Boolean,
@@ -55,7 +55,7 @@ class Category private constructor(
         private set
     val createdBy: OwnerId = initialCreatedBy
     val createdAt: Instant = initialCreatedAt
-    var updatedAt: Instant? = initialUpdatedAt
+    var updatedAt: Instant = initialUpdatedAt
         private set
     val isCategory: IsCategoryFlag = initialIsCategory
 
@@ -196,7 +196,7 @@ class Category private constructor(
             order: CategoryOrder,
             createdBy: OwnerId,
             createdAt: Instant,
-            updatedAt: Instant?,
+            updatedAt: Instant,
             isCategory: IsCategoryFlag
         ): Category {
             val category = Category(

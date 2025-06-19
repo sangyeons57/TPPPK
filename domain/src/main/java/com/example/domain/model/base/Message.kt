@@ -9,31 +9,36 @@ import com.example.domain.event.message.MessageContentUpdatedEvent
 import com.example.domain.event.message.MessageDeletedEvent
 import com.example.domain.event.message.MessageSentEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.model.vo.message.MessageIsDeleted
 
 class Message private constructor(
-    initialSenderId: DocumentId,
-    initialSenderName: String,
-    initialSenderProfileImageUrl: String?,
-    initialContent: String,
+    initialSenderId: UserId,
+    initialSenderName: Name,
+    initialSenderProfileImageUrl: ImageUrl?,
+    initialContent: MessageContent,
     initialReplyToMessageId: DocumentId?,
     initialCreatedAt: Instant,
     initialUpdatedAt: Instant,
-    initialIsDeleted: Boolean,
+    initialIsDeleted: MessageIsDeleted,
     override val id: DocumentId,
     override var isNew: Boolean
 ) : AggregateRoot() {
 
-    val senderId: DocumentId = initialSenderId
-    val senderName: String = initialSenderName
-    val senderProfileImageUrl: String? = initialSenderProfileImageUrl
+    val senderId: UserId = initialSenderId
+    val senderName: Name = initialSenderName
+    val senderProfileImageUrl: ImageUrl? = initialSenderProfileImageUrl
     val replyToMessageId: DocumentId? = initialReplyToMessageId
     val createdAt: Instant = initialCreatedAt
 
-    var content: String = initialContent
+    var content: MessageContent = initialContent
         private set
     var updatedAt: Instant = initialUpdatedAt
         private set
-    var isDeleted: Boolean = initialIsDeleted
+    var isDeleted: MessageIsDeleted = initialIsDeleted
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -52,8 +57,8 @@ class Message private constructor(
     /**
      * Updates the content of the message.
      */
-    fun updateContent(newContent: String) {
-        if (this.content == newContent || isDeleted) return
+    fun updateContent(newContent: MessageContent) {
+        if (this.content == newContent || isDeleted.value) return
 
         this.content = newContent
         this.updatedAt = Instant.now()
@@ -64,9 +69,9 @@ class Message private constructor(
      * Marks the message as deleted.
      */
     fun delete() {
-        if (isDeleted) return
+        if (isDeleted.value) return
 
-        this.isDeleted = true
+        this.isDeleted = MessageIsDeleted.TRUE
         this.updatedAt = Instant.now()
         pushDomainEvent(MessageDeletedEvent(this.id, this.updatedAt))
     }
@@ -86,10 +91,10 @@ class Message private constructor(
          */
         fun create(
             id: DocumentId,
-            senderId: DocumentId,
-            senderName: String,
-            senderProfileImageUrl: String?,
-            content: String,
+            senderId: UserId,
+            senderName: Name,
+            senderProfileImageUrl: ImageUrl?,
+            content: MessageContent,
             replyToMessageId: DocumentId?
         ): Message {
             val now = Instant.now()
@@ -101,7 +106,7 @@ class Message private constructor(
                 initialReplyToMessageId = replyToMessageId,
                 initialCreatedAt = now,
                 initialUpdatedAt = now,
-                initialIsDeleted = false,
+                initialIsDeleted = MessageIsDeleted.FALSE,
                 id = id,
                 isNew = true
             )
@@ -114,14 +119,14 @@ class Message private constructor(
          */
         fun fromDataSource(
             id: DocumentId,
-            senderId: DocumentId,
-            senderName: String,
-            senderProfileImageUrl: String?,
-            content: String,
+            senderId: UserId,
+            senderName: Name,
+            senderProfileImageUrl: ImageUrl?,
+            content: MessageContent,
             replyToMessageId: DocumentId?,
             createdAt: Instant,
             updatedAt: Instant,
-            isDeleted: Boolean
+            isDeleted: MessageIsDeleted
         ): Message {
             return Message(
                 initialSenderId = senderId,

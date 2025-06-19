@@ -7,12 +7,14 @@ import com.example.domain.event.role.RoleCreatedEvent
 import com.example.domain.event.role.RoleDefaultStatusChangedEvent
 import com.example.domain.event.role.RoleNameChangedEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.role.RoleIsDefault
 import java.time.Instant
 
 class Role private constructor(
     // Constructor parameters to initialize the state
-    initialName: String,
-    initialIsDefault: Boolean,
+    initialName: Name,
+    initialIsDefault: RoleIsDefault,
     initialCreatedAt: Instant,
     initialUpdatedAt: Instant,
     override val id: DocumentId,
@@ -23,9 +25,9 @@ class Role private constructor(
     val createdAt: Instant = initialCreatedAt
 
     // Mutable properties with private setters
-    var name: String = initialName
+    var name: Name = initialName
         private set
-    var isDefault: Boolean = initialIsDefault
+    var isDefault: RoleIsDefault = initialIsDefault
         private set
     var updatedAt: Instant = initialUpdatedAt
         private set
@@ -43,7 +45,7 @@ class Role private constructor(
     /**
      * Changes the name of the role, firing a domain event if the name is actually different.
      */
-    fun changeName(newName: String) {
+    fun changeName(newName: Name) {
         if (this.name == newName) return // No change, no event
 
         val oldName = this.name
@@ -55,7 +57,7 @@ class Role private constructor(
     /**
      * Changes the default status of the role, firing a domain event if the status changes.
      */
-    fun setDefault(newDefaultStatus: Boolean) {
+    fun setDefault(newDefaultStatus: RoleIsDefault) {
         if (this.isDefault == newDefaultStatus) return // No change, no event
 
         this.isDefault = newDefaultStatus
@@ -75,8 +77,8 @@ class Role private constructor(
          */
         fun create(
             id: DocumentId,
-            name: String,
-            isDefault: Boolean
+            name: Name,
+            isDefault: RoleIsDefault
         ): Role {
             val now = Instant.now()
             val role = Role(
@@ -97,8 +99,8 @@ class Role private constructor(
          */
         fun fromDataSource(
             id: DocumentId,
-            name: String,
-            isDefault: Boolean,
+            name: Name,
+            isDefault: RoleIsDefault,
             createdAt: Instant,
             updatedAt: Instant
         ): Role {

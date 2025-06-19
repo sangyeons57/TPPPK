@@ -2,6 +2,7 @@ package com.example.domain.event.projectwrapper
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
 import java.time.Instant
 
 /**
@@ -9,6 +10,6 @@ import java.time.Instant
  */
 data class ProjectWrapperCreatedEvent(
     val id: DocumentId,
-    val order: String,
+    val order: ProjectWrapperOrder,
     override val occurredOn: Instant
 ) : DomainEvent

@@ -3,6 +3,7 @@ package com.example.domain.event.project
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.Name
 import java.time.Instant
 
 /**
@@ -11,6 +12,6 @@ import java.time.Instant
 data class ProjectCreatedEvent(
     val projectId: DocumentId,
     val ownerId: OwnerId,
-    val name: String,
+    val name: Name,
     override val occurredOn: Instant
 ) : DomainEvent

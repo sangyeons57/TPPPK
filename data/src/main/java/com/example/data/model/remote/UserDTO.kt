@@ -13,6 +13,7 @@ import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserFcmToken
 import com.example.domain.model.vo.user.UserMemo
 import com.example.domain.model.vo.user.UserName
+import com.example.domain.model.vo.DocumentId as VODocumentId
 import java.time.Instant
 
 /**
@@ -33,9 +34,9 @@ data class UserDTO(
     @get:PropertyName(STATUS)
     val status: String = "offline", // "online", "offline", "away" 등
     @get:PropertyName(CREATED_AT)
-    val createdAt: Timestamp? = null,
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp? = null,
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(FCM_TOKEN)
     val fcmToken: String? = null,
     @get:PropertyName(ACCOUNT_STATUS)
@@ -43,17 +44,17 @@ data class UserDTO(
 ) {
 
     companion object {
-        const val COLLECTION_NAME = "users"
-        const val EMAIL = "email"
-        const val NAME = "name"
-        const val CONSENT_TIMESTAMP = "consentTimeStamp"
-        const val PROFILE_IMAGE_URL = "profileImageUrl"
-        const val MEMO = "memo"
-        const val STATUS = "status" // User's online/offline status
-        const val CREATED_AT = "createdAt"
-        const val UPDATED_AT = "updatedAt"
-        const val FCM_TOKEN = "fcmToken"
-        const val ACCOUNT_STATUS = "accountStatus"
+        const val COLLECTION_NAME = User.COLLECTION_NAME
+        const val EMAIL = User.KEY_EMAIL
+        const val NAME = User.KEY_NAME
+        const val CONSENT_TIMESTAMP = User.KEY_CONSENT_TIMESTAMP
+        const val PROFILE_IMAGE_URL = User.KEY_PROFILE_IMAGE_URL
+        const val MEMO = User.KEY_MEMO
+        const val STATUS = User.KEY_USER_STATUS // User's online/offline status
+        const val CREATED_AT = User.KEY_CREATED_AT
+        const val UPDATED_AT = User.KEY_UPDATED_AT
+        const val FCM_TOKEN = User.KEY_FCM_TOKEN
+        const val ACCOUNT_STATUS = User.KEY_ACCOUNT_STATUS
     }
     /**
      * DTO를 도메인 모델로 변환
@@ -61,7 +62,7 @@ data class UserDTO(
      */
      fun toDomain(): User {
         return User.fromDataSource(
-            uid = com.example.domain.model.vo.DocumentId(uid),
+            id = VODocumentId(uid),
             email = UserEmail(email), // Wrap in Value Object
             name = UserName(name),   // Wrap in Value Object
             consentTimeStamp = consentTimeStamp?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
@@ -72,8 +73,8 @@ data class UserDTO(
             } catch (e: Exception) {
                 UserStatus.OFFLINE // Default to OFFLINE if parsing fails
             },
-            createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
-            updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
+            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt), // Provide a default if null
+            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt), // Provide a default if null
             fcmToken = UserFcmToken(fcmToken),
             accountStatus = try {
                 UserAccountStatus.valueOf(accountStatus.uppercase())
@@ -90,7 +91,7 @@ data class UserDTO(
  */
 fun User.toDto(): UserDTO {
     return UserDTO(
-        uid = uid.value,
+        uid = id.value,
         email = email.value, // Extract primitive value
         name = name.value,   // Extract primitive value
         consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp), // consentTimeStamp is non-null in User

@@ -254,7 +254,7 @@ class User private constructor(
     }
 
     companion object {
-        const val KEY_COLLECTION_NAME = "users"
+        const val COLLECTION_NAME = "users"
         const val KEY_EMAIL = "email"
         const val KEY_NAME = "name"
         const val KEY_CONSENT_TIMESTAMP = "consentTimeStamp"
@@ -269,32 +269,31 @@ class User private constructor(
         /**
          * Creates a new User instance for registration.
          *
-         * @param uid Unique identifier for the user.
+         * @param id Unique identifier for the user.
          * @param email User's email address.
          * @param name User's display name.
          * @param consentTimeStamp Timestamp of user's consent.
          * @param profileImageUrl Optional initial profile image URL.
-         * @param initialMemo Optional initial memo.
          * @param initialFcmToken Optional initial FCM token.
          * @return A new User instance.
          */
         fun registerNewUser(
-            initialId: DocumentId,
-            initialEmail: UserEmail,
-            initialName: UserName,
-            initialConsentTimeStamp: Instant,
-            initialProfileImageUrl: ImageUrl? = null,
-            initialMemo: UserMemo? = null,
+            id: DocumentId,
+            email: UserEmail,
+            name: UserName,
+            consentTimeStamp: Instant,
+            profileImageUrl: ImageUrl? = null,
+            memo: UserMemo? = null,
             initialFcmToken: UserFcmToken? = null
         ): User {
             val now = DateTimeUtil.nowInstant()
             val user = User(
-                initialId = initialId,
-                initialEmail = initialEmail,
-                initialName = initialName,
-                initialConsentTimeStamp = initialConsentTimeStamp,
-                initialProfileImageUrl = initialProfileImageUrl,
-                initialMemo = initialMemo,
+                initialId = id,
+                initialEmail = email,
+                initialName = name,
+                initialConsentTimeStamp = consentTimeStamp,
+                initialProfileImageUrl = profileImageUrl,
+                initialMemo = memo,
                 initialUserStatus = UserStatus.OFFLINE, // Default to offline
                 initialCreatedAt = now,
                 initialUpdatedAt = now,
@@ -302,7 +301,7 @@ class User private constructor(
                 initialAccountStatus = UserAccountStatus.ACTIVE,
                 isNew = true // Default to active
             )
-            user.pushDomainEvent(UserCreatedEvent(initialId.value))
+            user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
         }
 
@@ -312,33 +311,33 @@ class User private constructor(
          * Further validation or transformation can be added if necessary.
          */
         fun fromDataSource(
-            initialId: DocumentId,
-            initialEmail: UserEmail,
-            initialName: UserName,
-            initialConsentTimeStamp: Instant,
-            initialProfileImageUrl: ImageUrl?,
-            initialMemo: UserMemo?,
-            initialUserStatus: UserStatus,
-            initialCreatedAt: Instant,
-            initialUpdatedAt: Instant,
-            initialFcmToken: UserFcmToken?,
-            initialAccountStatus: UserAccountStatus
+            id: DocumentId,
+            email: UserEmail,
+            name: UserName,
+            consentTimeStamp: Instant,
+            profileImageUrl: ImageUrl?,
+            memo: UserMemo?,
+            userStatus: UserStatus,
+            createdAt: Instant,
+            updatedAt: Instant,
+            fcmToken: UserFcmToken?,
+            accountStatus: UserAccountStatus
         ): User {
             val user = User(
-                initialId= initialId,
-                initialEmail= initialEmail,
-                initialName= initialName,
-                initialConsentTimeStamp = initialConsentTimeStamp,
-                initialProfileImageUrl = initialProfileImageUrl,
-                initialMemo = initialMemo,
-                initialUserStatus = initialUserStatus,
-                initialCreatedAt = initialCreatedAt,
-                initialUpdatedAt = initialUpdatedAt,
-                initialFcmToken = initialFcmToken,
-                initialAccountStatus = initialAccountStatus,
+                initialId= id,
+                initialEmail= email,
+                initialName= name,
+                initialConsentTimeStamp = consentTimeStamp,
+                initialProfileImageUrl = profileImageUrl,
+                initialMemo = memo,
+                initialUserStatus = userStatus,
+                initialCreatedAt = createdAt,
+                initialUpdatedAt = updatedAt,
+                initialFcmToken = fcmToken,
+                initialAccountStatus = accountStatus,
                 isNew = false
             )
-            user.pushDomainEvent(UserCreatedEvent(initialId.value))
+            user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
         }
     }

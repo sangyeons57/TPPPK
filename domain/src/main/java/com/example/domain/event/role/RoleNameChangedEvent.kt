@@ -2,6 +2,7 @@ package com.example.domain.event.role
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
 import java.time.Instant
 
 /**
@@ -9,7 +10,7 @@ import java.time.Instant
  */
 data class RoleNameChangedEvent(
     val roleId: DocumentId,
-    val oldName: String,
-    val newName: String,
+    val oldName: Name,
+    val newName: Name,
     override val occurredOn: Instant
 ) : DomainEvent

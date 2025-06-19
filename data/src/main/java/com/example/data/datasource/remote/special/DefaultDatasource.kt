@@ -1,6 +1,5 @@
 package com.example.data.datasource.remote.special
 
-import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.domain.event.AggregateRoot
@@ -24,7 +23,7 @@ interface DefaultDatasource<T: Any> {
         source: Source = Source.DEFAULT,
     ): CustomResult<T, Exception>
 
-    suspend fun create(dto: Any): CustomResult<DocumentId, Exception>
+    suspend fun create(dto: T): CustomResult<DocumentId, Exception>
     suspend fun update(aggregateRoot: AggregateRoot): CustomResult<DocumentId, Exception>
     suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
 }
@@ -54,7 +53,6 @@ abstract class  DefaultDatasourceImpl<T: Any>(
      * Most concrete datasources will **override** this to build nested paths.
      */
     override fun setCollection(vararg ids: String): DefaultDatasource<T> {
-        FirestoreConstants
         require(ids.isNotEmpty()) { "At least one path segment must be provided to setCollection()." }
         collection = firestore.collection(ids.joinToString("/"))
         return this
@@ -103,7 +101,7 @@ abstract class  DefaultDatasourceImpl<T: Any>(
         }
     }
 
-    override suspend fun create(dto: Any): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun create(dto: T): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("create")
         resultTry {
             val ref = collection.add(dto).await()

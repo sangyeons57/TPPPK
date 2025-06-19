@@ -5,25 +5,28 @@ import com.example.domain.event.AggregateRoot
 import com.example.domain.event.messageattachment.MessageAttachmentAddedEvent
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
 import java.time.Instant
 
 class MessageAttachment private constructor(
     initialAttachmentType: MessageAttachmentType, // e.g., IMAGE, FILE, VIDEO
-    initialAttachmentUrl: String, // URL to the file in storage
+    initialAttachmentUrl: MessageAttachmentUrl, // URL to the file in storage
     initialCreatedAt: Instant,
     initialUpdatedAt: Instant,
-    initialFileName: String?,
-    initialFileSize: Long?,
+    initialFileName: MessageAttachmentFileName?,
+    initialFileSize: MessageAttachmentFileSize?,
     override val id: DocumentId,
     override val isNew: Boolean
 ) : AggregateRoot() {
 
     val attachmentType: MessageAttachmentType = initialAttachmentType
-    val attachmentUrl: String = initialAttachmentUrl
+    val attachmentUrl: MessageAttachmentUrl = initialAttachmentUrl
     val createdAt: Instant = initialCreatedAt
     val updatedAt: Instant = initialUpdatedAt
-    val fileName: String? = initialFileName
-    val fileSize: Long? = initialFileSize
+    val fileName: MessageAttachmentFileName? = initialFileName
+    val fileSize: MessageAttachmentFileSize? = initialFileSize
 
     /**
      * A MessageAttachment's state is immutable once created.
@@ -56,9 +59,9 @@ class MessageAttachment private constructor(
         fun create(
             id: DocumentId,
             attachmentType: MessageAttachmentType,
-            attachmentUrl: String,
-            fileName: String?,
-            fileSize: Long?
+            attachmentUrl: MessageAttachmentUrl,
+            fileName: MessageAttachmentFileName?,
+            fileSize: MessageAttachmentFileSize?
         ): MessageAttachment {
             val now = Instant.now()
             val attachment = MessageAttachment(
@@ -75,7 +78,9 @@ class MessageAttachment private constructor(
                 attachmentId = id,
                 attachmentType = attachmentType,
                 attachmentUrl = attachmentUrl,
-                occurredOn = now
+                occurredOn = now,
+                fileName = fileName,
+                fileSize = fileSize
             ))
             return attachment
         }
@@ -86,11 +91,11 @@ class MessageAttachment private constructor(
         fun fromDataSource(
             id: DocumentId,
             attachmentType: MessageAttachmentType,
-            attachmentUrl: String,
+            attachmentUrl: MessageAttachmentUrl,
             createdAt: Instant,
             updatedAt: Instant,
-            fileName: String?,
-            fileSize: Long?
+            fileName: MessageAttachmentFileName?,
+            fileSize: MessageAttachmentFileSize?
         ): MessageAttachment {
             return MessageAttachment(
                 initialAttachmentType = attachmentType,

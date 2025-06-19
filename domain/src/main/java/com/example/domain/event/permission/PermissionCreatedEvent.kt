@@ -2,6 +2,8 @@ package com.example.domain.event.permission
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.permission.PermissionDescription
 import java.time.Instant
 
 /**
@@ -9,7 +11,7 @@ import java.time.Instant
  */
 data class PermissionCreatedEvent(
     val permissionId: DocumentId,
-    val name: String,
-    val description: String,
+    val name: Name,
+    val description: PermissionDescription,
     override val occurredOn: Instant
 ) : DomainEvent

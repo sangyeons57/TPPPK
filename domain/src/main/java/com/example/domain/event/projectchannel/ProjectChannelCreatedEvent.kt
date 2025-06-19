@@ -3,6 +3,8 @@ package com.example.domain.event.projectchannel
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import java.time.Instant
 
 /**
@@ -10,8 +12,8 @@ import java.time.Instant
  */
 data class ProjectChannelCreatedEvent(
     val channelId: DocumentId,
-    val channelName: String,
+    val channelName: Name,
     val channelType: ProjectChannelType,
-    val order: Double,
+    val order: ProjectChannelOrder,
     override val occurredOn: Instant
 ) : DomainEvent

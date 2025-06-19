@@ -2,6 +2,7 @@ package com.example.domain.event.project
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
 import java.time.Instant
 
 /**
@@ -9,6 +10,6 @@ import java.time.Instant
  */
 data class ProjectImageUrlChangedEvent(
     val projectId: DocumentId,
-    val newImageUrl: String?,
+    val newImageUrl: ImageUrl?,
     override val occurredOn: Instant
 ) : DomainEvent

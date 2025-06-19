@@ -6,7 +6,10 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
-
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.PropertyName
 
 /**
@@ -21,31 +24,31 @@ data class ProjectDTO(
     @get:PropertyName(OWNER_ID)
     val ownerId: String = "",
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp? = null,
+    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp? = null
+    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) {
 
     companion object {
-        const val COLLECTION_NAME = "projects"
-        const val NAME = "name"
-        const val IMAGE_URL = "imageUrl"
-        const val OWNER_ID = "ownerId"
-        const val CREATED_AT = "createdAt"
-        const val UPDATED_AT = "updatedAt"
+        const val COLLECTION_NAME = Project.COLLECTION_NAME
+        const val NAME = Project.KEY_NAME
+        const val IMAGE_URL = Project.KEY_IMAGE_URL
+        const val OWNER_ID = Project.KEY_OWNER_ID
+        const val CREATED_AT = Project.KEY_CREATED_AT
+        const val UPDATED_AT = Project.KEY_UPDATED_AT
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return Project 도메인 모델
      */
     fun toDomain(): Project {
-        return Project(
-            id = id,
-            name = name,
-            imageUrl = imageUrl,
-            ownerId = ownerId,
-            createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+        return Project.fromDataSource(
+            id = VODocumentId(id),
+            name = Name(name),
+            imageUrl = imageUrl?.let{ImageUrl(it)},
+            ownerId = OwnerId(ownerId),
+            createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+            updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
         )
     }
 }
@@ -56,11 +59,11 @@ data class ProjectDTO(
  */
 fun Project.toDto(): ProjectDTO {
     return ProjectDTO(
-        id = id,
-        name = name,
-        imageUrl = imageUrl,
-        ownerId = ownerId,
-        createdAt = createdAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
+        id = id.value,
+        name = name.value,
+        imageUrl = imageUrl?.value,
+        ownerId = ownerId.value,
+        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
     )
 }
