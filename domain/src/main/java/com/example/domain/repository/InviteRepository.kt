@@ -1,10 +1,9 @@
 package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model._new.enum.InviteStatus
+import com.example.domain.model.enum.InviteStatus
 import com.example.domain.model.base.Invite
 import kotlinx.coroutines.flow.Flow
-import kotlin.Result
 
 /**
  * 초대 코드 생성, 조회, 사용 등 관련 데이터 처리를 위한 인터페이스입니다.

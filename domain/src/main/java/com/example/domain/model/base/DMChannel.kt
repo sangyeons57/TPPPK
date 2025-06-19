@@ -5,7 +5,7 @@ import com.example.domain.event.DomainEvent
 import com.example.domain.event.dmchannel.DMChannelCreatedEvent
 import com.example.domain.event.dmchannel.DMChannelLastMessageUpdatedEvent
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.dmchannel.DMChannelId
+import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
 import java.time.Instant
 
@@ -23,42 +23,29 @@ import java.time.Instant
  * @property updatedAt The timestamp when the channel was last updated.
  */
 class DMChannel private constructor(
-    id: DMChannelId,
-    participants: List<DocumentId>,
-    lastMessagePreview: DMChannelLastMessagePreview?,
-    lastMessageTimestamp: Instant?,
-    createdAt: Instant,
-    updatedAt: Instant
-) : AggregateRoot {
+    initialParticipants: List<UserId>,
+    initialLastMessagePreview: DMChannelLastMessagePreview?,
+    initialLastMessageTimestamp: Instant?,
+    initialCreatedAt: Instant,
+    initialUpdatedAt: Instant,
+    override val id: DocumentId,
+    override val isNew: Boolean,
+) : AggregateRoot() {
 
-    /** Unique identifier of the DM channel. */
-    val id: DMChannelId = id
     /** List of user document IDs participating in this DM channel. */
-    var participants: List<DocumentId> = participants
+    var participants: List<UserId> = initialParticipants
         private set
     /** Preview of the last message sent in the channel. Null if no messages yet. */
-    var lastMessagePreview: DMChannelLastMessagePreview? = lastMessagePreview
+    var lastMessagePreview: DMChannelLastMessagePreview? = initialLastMessagePreview
         private set
     /** Timestamp of the last message sent in the channel. Null if no messages yet. */
-    var lastMessageTimestamp: Instant? = lastMessageTimestamp
+    var lastMessageTimestamp: Instant? = initialLastMessageTimestamp
         private set
     /** Timestamp indicating when the DM channel was created. */
-    val createdAt: Instant = createdAt
+    val createdAt: Instant = initialCreatedAt
     /** Timestamp indicating when the DM channel was last updated, either by a new message or participant change. */
-    var updatedAt: Instant = updatedAt
+    var updatedAt: Instant = initialUpdatedAt
         private set
-
-    private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
-
-    override fun pullDomainEvents(): List<DomainEvent> {
-        val events = _domainEvents.toList() // Make a copy
-        _domainEvents.clear()
-        return events
-    }
-
-    override fun clearDomainEvents() {
-        _domainEvents.clear()
-    }
 
     /**
      * Updates the preview and timestamp of the last message in this DM channel.
@@ -75,7 +62,17 @@ class DMChannel private constructor(
         this.lastMessagePreview = newPreview
         this.lastMessageTimestamp = newTimestamp
         this.updatedAt = Instant.now()
-        this._domainEvents.add(DMChannelLastMessageUpdatedEvent(this.id))
+        this.pushDomainEvent(DMChannelLastMessageUpdatedEvent(this.id))
+    }
+
+    override fun getCurrentStateMap(): Map<String, Any?> {
+        return mapOf(
+            KEY_PARTICIPANTS to participants,
+            KEY_LAST_MESSAGE_PREVIEW to lastMessagePreview,
+            KEY_LAST_MESSAGE_TIMESTAMP to lastMessageTimestamp,
+            KEY_CREATED_AT to createdAt,
+            KEY_UPDATED_AT to updatedAt,
+        )
     }
 
     // fun addParticipant(participantId: DocumentId, currentTime: Instant)
@@ -94,6 +91,12 @@ class DMChannel private constructor(
     }
 
     companion object {
+        const val COLLECTION_NAME = "dm_channels"
+        const val KEY_PARTICIPANTS = "participants" // List<String> = "userId1"
+        const val KEY_LAST_MESSAGE_PREVIEW = "lastMessagePreview"
+        const val KEY_LAST_MESSAGE_TIMESTAMP = "lastMessageTimestamp"
+        const val KEY_CREATED_AT = "createdAt"
+        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Creates a new DMChannel instance.
          *
@@ -104,8 +107,8 @@ class DMChannel private constructor(
          * @throws IllegalArgumentException if `initialParticipants` has less than two participants.
          */
         fun create(
-            id: DMChannelId,
-            initialParticipants: List<DocumentId>,
+            id: DocumentId,
+            initialParticipants: List<UserId>,
             currentTime: Instant
         ): DMChannel {
             require(initialParticipants.size >= 2) { "DMChannel must have at least two participants." }
@@ -117,13 +120,14 @@ class DMChannel private constructor(
 
             val channel = DMChannel(
                 id = id,
-                participants = distinctParticipants, // Use distinct participants
-                lastMessagePreview = null,
-                lastMessageTimestamp = null,
-                createdAt = currentTime,
-                updatedAt = currentTime
+                initialParticipants = distinctParticipants, // Use distinct participants
+                initialLastMessagePreview = null,
+                initialLastMessageTimestamp = null,
+                initialCreatedAt = currentTime,
+                initialUpdatedAt = currentTime,
+                isNew = true,
             )
-            channel._domainEvents.add(DMChannelCreatedEvent(channel.id)) // Add this line
+            channel.pushDomainEvent(DMChannelCreatedEvent(channel.id)) // Add this line
             return channel
         }
 
@@ -141,21 +145,24 @@ class DMChannel private constructor(
          * @return A DMChannel instance reconstructed from the provided data.
          */
         fun fromDataSource(
-            id: DMChannelId,
-            participants: List<DocumentId>,
+            id: DocumentId,
+            participants: List<UserId>,
             lastMessagePreview: DMChannelLastMessagePreview?,
             lastMessageTimestamp: Instant?,
             createdAt: Instant,
             updatedAt: Instant
         ): DMChannel {
-            return DMChannel(
+            val channel = DMChannel(
                 id = id,
-                participants = participants,
-                lastMessagePreview = lastMessagePreview,
-                lastMessageTimestamp = lastMessageTimestamp,
-                createdAt = createdAt,
-                updatedAt = updatedAt
+                initialParticipants = participants,
+                initialLastMessagePreview = lastMessagePreview,
+                initialLastMessageTimestamp = lastMessageTimestamp,
+                initialCreatedAt = createdAt,
+                initialUpdatedAt = updatedAt,
+                isNew = false,
             )
+            channel.pushDomainEvent(DMChannelCreatedEvent(channel.id)) // Add this line
+            return channel
         }
     }
 }

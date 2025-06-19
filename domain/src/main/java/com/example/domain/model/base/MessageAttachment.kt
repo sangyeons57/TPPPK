@@ -1,13 +1,107 @@
 package com.example.domain.model.base
 
-import com.example.domain.model._new.enum.MessageAttachmentType
-import com.google.firebase.firestore.DocumentId
 
-data class MessageAttachment(
-    @DocumentId val id: String = "",
-    // "IMAGE", "FILE", "VIDEO" 등
-    val attachmentType: MessageAttachmentType = MessageAttachmentType.FILE,
-    // Firebase Storage 등에 업로드된 파일의 URL
-    val attachmentUrl: String = "",
-)
+import com.example.domain.event.AggregateRoot
+import com.example.domain.event.messageattachment.MessageAttachmentAddedEvent
+import com.example.domain.model.enum.MessageAttachmentType
+import com.example.domain.model.vo.DocumentId
+import java.time.Instant
 
+class MessageAttachment private constructor(
+    initialAttachmentType: MessageAttachmentType, // e.g., IMAGE, FILE, VIDEO
+    initialAttachmentUrl: String, // URL to the file in storage
+    initialCreatedAt: Instant,
+    initialUpdatedAt: Instant,
+    initialFileName: String?,
+    initialFileSize: Long?,
+    override val id: DocumentId,
+    override val isNew: Boolean
+) : AggregateRoot() {
+
+    val attachmentType: MessageAttachmentType = initialAttachmentType
+    val attachmentUrl: String = initialAttachmentUrl
+    val createdAt: Instant = initialCreatedAt
+    val updatedAt: Instant = initialUpdatedAt
+    val fileName: String? = initialFileName
+    val fileSize: Long? = initialFileSize
+
+    /**
+     * A MessageAttachment's state is immutable once created.
+     * There are no properties to update, so this map is empty.
+     */
+    override fun getCurrentStateMap(): Map<String, Any?> {
+        return mapOf(
+            KEY_ATTACHMENT_TYPE to this.attachmentType,
+            KEY_ATTACHMENT_URL to this.attachmentUrl,
+            KEY_CREATED_AT to this.createdAt,
+            KEY_UPDATED_AT to this.updatedAt,
+            KEY_FILE_NAME to this.fileName,
+            KEY_FILE_SIZE to this.fileSize,
+        )
+    }
+
+    // A MessageAttachment is immutable, so there are no business logic methods for state change.
+
+    companion object {
+        const val COLLECTION_NAME = "message_attachments"
+        const val KEY_ATTACHMENT_TYPE = "attachmentType"
+        const val KEY_ATTACHMENT_URL = "attachmentUrl"
+        const val KEY_FILE_NAME = "fileName"
+        const val KEY_FILE_SIZE = "fileSize"
+        const val KEY_CREATED_AT = "createdAt"
+        const val KEY_UPDATED_AT = "updatedAt"
+        /**
+         * Factory method for creating a new message attachment.
+         */
+        fun create(
+            id: DocumentId,
+            attachmentType: MessageAttachmentType,
+            attachmentUrl: String,
+            fileName: String?,
+            fileSize: Long?
+        ): MessageAttachment {
+            val now = Instant.now()
+            val attachment = MessageAttachment(
+                initialAttachmentType = attachmentType,
+                initialAttachmentUrl = attachmentUrl,
+                initialCreatedAt = now,
+                initialUpdatedAt = now,
+                initialFileName = fileName,
+                initialFileSize = fileSize,
+                id = id,
+                isNew = true,
+            )
+            attachment.pushDomainEvent(MessageAttachmentAddedEvent(
+                attachmentId = id,
+                attachmentType = attachmentType,
+                attachmentUrl = attachmentUrl,
+                occurredOn = now
+            ))
+            return attachment
+        }
+
+        /**
+         * Factory method to reconstitute a MessageAttachment from a data source.
+         */
+        fun fromDataSource(
+            id: DocumentId,
+            attachmentType: MessageAttachmentType,
+            attachmentUrl: String,
+            createdAt: Instant,
+            updatedAt: Instant,
+            fileName: String?,
+            fileSize: Long?
+        ): MessageAttachment {
+            return MessageAttachment(
+                initialAttachmentType = attachmentType,
+                initialAttachmentUrl = attachmentUrl,
+                initialCreatedAt = createdAt,
+                initialUpdatedAt = updatedAt,
+                initialFileName = fileName,
+                initialFileSize = fileSize,
+                id = id,
+                isNew = false,
+            )
+        }
+    }
+}

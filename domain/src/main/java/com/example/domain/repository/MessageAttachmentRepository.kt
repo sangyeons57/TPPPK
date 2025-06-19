@@ -1,8 +1,8 @@
 package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model._new.enum.MessageAttachmentType
 import com.example.domain.model.base.MessageAttachment
+import com.example.domain.model.enum.MessageAttachmentType
 import kotlinx.coroutines.flow.Flow
 
 interface MessageAttachmentRepository {

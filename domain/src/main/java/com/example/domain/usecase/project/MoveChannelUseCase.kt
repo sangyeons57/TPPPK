@@ -70,13 +70,13 @@ class MoveChannelUseCaseImpl @Inject constructor() : MoveChannelUseCase {
             val currentCategories = categories.toMutableList()
 
             // 1. 원본 카테고리 검색
-            val sourceCategoryIndex = currentCategories.indexOfFirst { it.category.id == fromCategoryId }
+            val sourceCategoryIndex = currentCategories.indexOfFirst { it.category.id.value == fromCategoryId }
             if (sourceCategoryIndex == -1) {
                 return CustomResult.Failure(Exception("Source category not found"))
             }
             
             // 2. 대상 카테고리 검색
-            val targetCategoryIndex = currentCategories.indexOfFirst { it.category.id == toCategoryId }
+            val targetCategoryIndex = currentCategories.indexOfFirst { it.category.id.value == toCategoryId }
             if (targetCategoryIndex == -1) {
                 return CustomResult.Failure(Exception("Target category not found"))
             }

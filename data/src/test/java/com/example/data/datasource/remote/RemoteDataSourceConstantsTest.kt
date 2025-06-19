@@ -42,22 +42,22 @@ class RemoteDataSourceConstantsTest {
         MockitoAnnotations.openMocks(this)
         
         // 기본 모의 설정
-        `when`(firestore.collection(FirestoreConstants.Collections.PROJECTS)).thenReturn(collectionReference)
+        `when`(firestore.collection(FirestoreConstants.Project.COLLECTION_NAME)).thenReturn(collectionReference)
         `when`(collectionReference.document("project123")).thenReturn(projectDocRef)
-        `when`(projectDocRef.collection(FirestoreConstants.Collections.CATEGORIES)).thenReturn(categoryCollectionRef)
+        `when`(projectDocRef.collection(FirestoreConstants.Project.Categories.COLLECTION_NAME)).thenReturn(categoryCollectionRef)
         `when`(categoryCollectionRef.orderBy(FirestoreConstants.CategoryFields.ORDER)).thenReturn(query)
     }
 
     @Test
     fun `verify collection constants are used correctly`() {
         // 컬렉션 참조 검증
-        firestore.collection(FirestoreConstants.Collections.PROJECTS)
+        firestore.collection(FirestoreConstants.Project.COLLECTION_NAME)
         verify(firestore).collection("projects")
         
-        firestore.collection(FirestoreConstants.Collections.USERS)
+        firestore.collection(FirestoreConstants.Users.COLLECTION_NAME)
         verify(firestore).collection("users")
         
-        firestore.collection(FirestoreConstants.Collections.CHANNELS)
+        firestore.collection(FirestoreConstants.Project.Channels.COLLECTION_NAME)
         verify(firestore).collection("channels")
     }
 
@@ -65,8 +65,8 @@ class RemoteDataSourceConstantsTest {
     fun `verify field constants are used correctly in queries`() {
         // 프로젝트 구조 조회 시 필드 상수 사용 검증
         val projectId = "project123"
-        firestore.collection(FirestoreConstants.Collections.PROJECTS).document(projectId)
-            .collection(FirestoreConstants.Collections.CATEGORIES)
+        firestore.collection(FirestoreConstants.Project.COLLECTION_NAME).document(projectId)
+            .collection(FirestoreConstants.Project.Categories.COLLECTION_NAME)
             .orderBy(FirestoreConstants.CategoryFields.ORDER)
         
         verify(projectDocRef).collection("categories")

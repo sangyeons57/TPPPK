@@ -1,4 +1,4 @@
-package com.example.domain.model._new.enum
+package com.example.domain.model.enum
 
 /**
  * 메시지 첨부 파일의 유형을 나타내는 열거형입니다.

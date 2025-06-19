@@ -1,6 +1,6 @@
 package com.example.data.model.remote
 
-import com.example.core_common.constants.FirestoreConstants
+
 import com.example.domain.model.base.DMWrapper
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
@@ -10,9 +10,14 @@ import com.google.firebase.firestore.PropertyName
  */
 data class DMWrapperDTO(
     @DocumentId val dmChannelId: String = "",
-    @get:PropertyName(FirestoreConstants.Users.DMWrappers.OTHER_USER_ID) 
+    @get:PropertyName(OTHER_USER_ID) 
     val otherUserId: String = ""
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "dm_wrapper"
+        const val OTHER_USER_ID = "otherUserId"
+    }
     /**
      * DTO를 도메인 모델로 변환
      * @return DMWrapper 도메인 모델

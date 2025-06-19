@@ -80,7 +80,7 @@ class AddProjectChannelUseCaseImpl @Inject constructor(
         // 1. Fetch the category collection to get current channels in the target category
         val categoryCollectionsResult = categoryCollectionRepository.getCategoryCollections(projectId).first()
         val targetCategoryCollection = when (categoryCollectionsResult) {
-            is CustomResult.Success -> categoryCollectionsResult.data.find { it.category.id == categoryId }
+            is CustomResult.Success -> categoryCollectionsResult.data.find { it.category.id.value == categoryId }
             is CustomResult.Failure -> return CustomResult.Failure(categoryCollectionsResult.error)
             else -> return CustomResult.Failure(Exception("Failed to get category collections."))
         }

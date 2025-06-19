@@ -9,6 +9,11 @@ import com.example.domain.model.base.Category // Added
 import com.example.core_common.constants.Constants // Added
 import android.util.Log // Added for logging failure of default category creation
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.model.vo.category.CategoryOrder
+import com.example.domain.model.vo.category.IsCategoryFlag
 import javax.inject.Inject
 
 /**
@@ -86,14 +91,12 @@ class CreateProjectUseCase @Inject constructor(
                 Log.d("CreateProjectUseCase", "4");
 
                 // "카테고리 없음" 카테고리 자동 생성
-                val noCategory = Category(
-                    id = Constants.NO_CATEGORY_ID,
-                    name = Constants.NO_CATEGORY_NAME,
-                    order = Constants.NO_CATEGORY_ORDER,
-                    createdBy = session.data.userId,
-                    createdAt = DateTimeUtil.nowInstant(),
-                    updatedAt = DateTimeUtil.nowInstant(),
-                    isCategory = false,
+                val noCategory = Category.create(
+                    id = DocumentId(Constants.NO_CATEGORY_ID),
+                    name = CategoryName.NO_CATEGORY_NAME,
+                    order = CategoryOrder(Constants.NO_CATEGORY_ORDER),
+                    createdBy = OwnerId(session.data.userId),
+                    isCategory = IsCategoryFlag.FALSE,
                 )
                 // Firestore의 경우 projectId는 Category 객체에 포함되지 않고, 컬렉션 경로의 일부로 사용됨
                 // 따라서 categoryRepository.addCategory(projectId, noCategory) 형태가 될 것임

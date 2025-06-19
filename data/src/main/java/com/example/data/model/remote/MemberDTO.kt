@@ -5,7 +5,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
-import com.example.core_common.constants.FirestoreConstants
+
 import com.google.firebase.firestore.PropertyName
 import com.example.core_common.util.DateTimeUtil
 
@@ -14,11 +14,17 @@ import com.example.core_common.util.DateTimeUtil
  */
 data class MemberDTO(
     @DocumentId val userId: String = "",
-    @get:PropertyName(FirestoreConstants.Project.Members.JOINED_AT)
+    @get:PropertyName(JOINED_AT)
     @ServerTimestamp val joinedAt: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Project.Members.ROLE_ID)
+    @get:PropertyName(ROLE_ID)
     val roleIds: List<String> = emptyList()
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "members"
+        const val JOINED_AT = "joinedAt"
+        const val ROLE_ID = "roleIds" // List<String>
+    }
     /**
      * DTO를 도메인 모델로 변환
      * @return Member 도메인 모델

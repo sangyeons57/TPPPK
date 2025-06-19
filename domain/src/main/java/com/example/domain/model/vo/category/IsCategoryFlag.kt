@@ -8,4 +8,10 @@ import kotlin.jvm.JvmInline
  * This VO wraps this boolean flag.
  */
 @JvmInline
-value class IsCategoryFlag(val value: Boolean)
+value class IsCategoryFlag(val value: Boolean){
+    companion object {
+        val BASE = IsCategoryFlag(true)
+        val TRUE = IsCategoryFlag(true)
+        val FALSE = IsCategoryFlag(false)
+    }
+}

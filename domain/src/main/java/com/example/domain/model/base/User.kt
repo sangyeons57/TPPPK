@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.vo.user.UserEmail
@@ -30,63 +31,68 @@ import java.time.Instant
  * This class is responsible for managing its own state and enforcing business rules.
  */
 class User private constructor(
-    uid: DocumentId,
-    email: UserEmail,
-    name: UserName,
-    consentTimeStamp: Instant,
-    profileImageUrl: ImageUrl?,
-    memo: UserMemo?,
-    userStatus: UserStatus,
-    createdAt: Instant,
-    updatedAt: Instant,
-    fcmToken: UserFcmToken?,
-    accountStatus: UserAccountStatus
-) : AggregateRoot {
+    initialId: DocumentId,
+    initialEmail: UserEmail,
+    initialName: UserName,
+    initialConsentTimeStamp: Instant,
+    initialProfileImageUrl: ImageUrl?,
+    initialMemo: UserMemo?,
+    initialUserStatus: UserStatus,
+    initialCreatedAt: Instant,
+    initialUpdatedAt: Instant,
+    initialFcmToken: UserFcmToken?,
+    initialAccountStatus: UserAccountStatus,
+    override val isNew: Boolean,
+) : AggregateRoot() {
 
-    /** Collects domain events raised by this aggregate until they are dispatched. */
-    private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
 
     // Immutable properties
-    val uid: DocumentId = uid
-    val email: UserEmail = email
-    val consentTimeStamp: Instant = consentTimeStamp
-    val createdAt: Instant = createdAt
+    override val id: DocumentId = initialId
+    val email: UserEmail = initialEmail
+    val consentTimeStamp: Instant = initialConsentTimeStamp
+    val createdAt: Instant = initialCreatedAt
 
 
     // Exposed mutable properties with restricted setters
-    var name: UserName = name
+    var name: UserName = initialName
         private set
 
-    var profileImageUrl: ImageUrl? = profileImageUrl
+    var profileImageUrl: ImageUrl? = initialProfileImageUrl
         private set
 
-    var memo: UserMemo? = memo
+    var memo: UserMemo? = initialMemo
         private set
 
-    var userStatus: UserStatus = userStatus
+    var userStatus: UserStatus = initialUserStatus
         private set
 
-    var updatedAt: Instant = updatedAt
+    var updatedAt: Instant = initialUpdatedAt
         private set
 
-    var fcmToken: UserFcmToken? = fcmToken
+    var fcmToken: UserFcmToken? = initialFcmToken
         private set
 
-    var accountStatus: UserAccountStatus = accountStatus
+    var accountStatus: UserAccountStatus = initialAccountStatus
         private set
 
     /**
      * Returns and clears the accumulated domain events.
      */
-    override fun pullDomainEvents(): List<DomainEvent> {
-        val copy = _domainEvents.toList()
-        _domainEvents.clear()
-        return copy
-    }
 
-    override fun clearDomainEvents() {
-        _domainEvents.clear()
-    } 
+    override fun getCurrentStateMap(): Map<String, Any?> {
+        return mapOf(
+            KEY_EMAIL to email.value,
+            KEY_NAME to name.value,
+            KEY_CONSENT_TIMESTAMP to consentTimeStamp,
+            KEY_PROFILE_IMAGE_URL to profileImageUrl?.value,
+            KEY_MEMO to memo?.value,
+            KEY_USER_STATUS to userStatus,
+            KEY_CREATED_AT to createdAt,
+            KEY_UPDATED_AT to updatedAt,
+            KEY_FCM_TOKEN to fcmToken?.value,
+            KEY_ACCOUNT_STATUS to accountStatus
+        )
+    }
 
     // Secondary constructor for convenience if some fields can be truly optional at creation
     // For now, we assume all parameters in the primary internal constructor are essential for a valid User object
@@ -107,7 +113,7 @@ class User private constructor(
         this.name = newName
         this.profileImageUrl = newProfileImageUrl
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserProfileUpdatedEvent(uid.value))
+        pushDomainEvent(UserProfileUpdatedEvent(id.value))
     }
 
     /**
@@ -118,7 +124,7 @@ class User private constructor(
         if (this.name == newName) return
         this.name = newName
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserNameChangedEvent(uid.value))
+        pushDomainEvent(UserNameChangedEvent(id.value))
     }
 
     /**
@@ -129,7 +135,7 @@ class User private constructor(
         if (this.profileImageUrl == newProfileImageUrl) return
         this.profileImageUrl = newProfileImageUrl
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserProfileImageChangedEvent(uid.value))
+        pushDomainEvent(UserProfileImageChangedEvent(id.value))
     }
 
     /**
@@ -143,7 +149,7 @@ class User private constructor(
 
         this.memo = newMemo
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserMemoChangedEvent(uid.value))
+        pushDomainEvent(UserMemoChangedEvent(id.value))
     }
 
     /**
@@ -157,7 +163,7 @@ class User private constructor(
 
         this.userStatus = newStatus
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserStatusChangedEvent(uid.value, newStatus))
+        pushDomainEvent(UserStatusChangedEvent(id.value, newStatus))
     }
 
     /**
@@ -172,7 +178,7 @@ class User private constructor(
 
         this.fcmToken = newToken
         this.updatedAt = DateTimeUtil.nowInstant()
-        _domainEvents.add(UserFcmTokenUpdatedEvent(uid.value))
+        pushDomainEvent(UserFcmTokenUpdatedEvent(id.value))
     }
 
     /**
@@ -185,7 +191,7 @@ class User private constructor(
 
         profileImageUrl = null
         updatedAt = DateTimeUtil.nowInstant()
-        _domainEvents.add(UserProfileImageChangedEvent(uid.value))
+        pushDomainEvent(UserProfileImageChangedEvent(id.value))
     }
 
     /**
@@ -199,7 +205,7 @@ class User private constructor(
         // Original stricter rule: if (this.accountStatus == UserAccountStatus.ACTIVE)
         this.accountStatus = UserAccountStatus.SUSPENDED
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserAccountSuspendedEvent(uid.value))
+        pushDomainEvent(UserAccountSuspendedEvent(id.value))
     }
 
     /**
@@ -213,7 +219,7 @@ class User private constructor(
         // Original stricter rule: if (this.accountStatus == UserAccountStatus.SUSPENDED)
         this.accountStatus = UserAccountStatus.ACTIVE
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserAccountActivatedEvent(uid.value))
+        pushDomainEvent(UserAccountActivatedEvent(id.value))
     }
 
     /**
@@ -228,7 +234,7 @@ class User private constructor(
         this.userStatus = UserStatus.OFFLINE // Ensure offline status on withdrawal
         this.fcmToken = null // Clear FCM token on withdrawal
         this.updatedAt = Instant.now()
-        _domainEvents.add(UserAccountWithdrawnEvent(uid.value))
+        pushDomainEvent(UserAccountWithdrawnEvent(id.value))
     }
 
     /**
@@ -240,14 +246,26 @@ class User private constructor(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
         other as User
-        return uid == other.uid
+        return id == other.id
     }
 
     override fun hashCode(): Int {
-        return uid.hashCode()
+        return id.hashCode()
     }
 
     companion object {
+        const val KEY_COLLECTION_NAME = "users"
+        const val KEY_EMAIL = "email"
+        const val KEY_NAME = "name"
+        const val KEY_CONSENT_TIMESTAMP = "consentTimeStamp"
+        const val KEY_PROFILE_IMAGE_URL = "profileImageUrl"
+        const val KEY_MEMO = "memo"
+        const val KEY_USER_STATUS = "userStatus"
+        const val KEY_CREATED_AT = "createdAt"
+        const val KEY_UPDATED_AT = "updatedAt"
+        const val KEY_FCM_TOKEN = "fcmToken"
+        const val KEY_ACCOUNT_STATUS = "accountStatus"
+
         /**
          * Creates a new User instance for registration.
          *
@@ -261,29 +279,30 @@ class User private constructor(
          * @return A new User instance.
          */
         fun registerNewUser(
-            uid: DocumentId,
-            email: UserEmail,
-            name: UserName,
-            consentTimeStamp: Instant,
-            profileImageUrl: ImageUrl? = null,
+            initialId: DocumentId,
+            initialEmail: UserEmail,
+            initialName: UserName,
+            initialConsentTimeStamp: Instant,
+            initialProfileImageUrl: ImageUrl? = null,
             initialMemo: UserMemo? = null,
             initialFcmToken: UserFcmToken? = null
         ): User {
             val now = DateTimeUtil.nowInstant()
             val user = User(
-                uid = uid,
-                email = email,
-                name = name,
-                consentTimeStamp = consentTimeStamp,
-                profileImageUrl = profileImageUrl,
-                memo = initialMemo,
-                userStatus = UserStatus.OFFLINE, // Default to offline
-                createdAt = now,
-                updatedAt = now,
-                fcmToken = initialFcmToken,
-                accountStatus = UserAccountStatus.ACTIVE // Default to active
+                initialId = initialId,
+                initialEmail = initialEmail,
+                initialName = initialName,
+                initialConsentTimeStamp = initialConsentTimeStamp,
+                initialProfileImageUrl = initialProfileImageUrl,
+                initialMemo = initialMemo,
+                initialUserStatus = UserStatus.OFFLINE, // Default to offline
+                initialCreatedAt = now,
+                initialUpdatedAt = now,
+                initialFcmToken = initialFcmToken,
+                initialAccountStatus = UserAccountStatus.ACTIVE,
+                isNew = true // Default to active
             )
-            user._domainEvents.add(UserCreatedEvent(uid.value))
+            user.pushDomainEvent(UserCreatedEvent(initialId.value))
             return user
         }
 
@@ -293,23 +312,33 @@ class User private constructor(
          * Further validation or transformation can be added if necessary.
          */
         fun fromDataSource(
-            uid: DocumentId,
-            email: UserEmail,
-            name: UserName,
-            consentTimeStamp: Instant,
-            profileImageUrl: ImageUrl?,
-            memo: UserMemo?,
-            userStatus: UserStatus,
-            createdAt: Instant,
-            updatedAt: Instant,
-            fcmToken: UserFcmToken?,
-            accountStatus: UserAccountStatus
+            initialId: DocumentId,
+            initialEmail: UserEmail,
+            initialName: UserName,
+            initialConsentTimeStamp: Instant,
+            initialProfileImageUrl: ImageUrl?,
+            initialMemo: UserMemo?,
+            initialUserStatus: UserStatus,
+            initialCreatedAt: Instant,
+            initialUpdatedAt: Instant,
+            initialFcmToken: UserFcmToken?,
+            initialAccountStatus: UserAccountStatus
         ): User {
             val user = User(
-                uid, email, name, consentTimeStamp, profileImageUrl, memo,
-                userStatus, createdAt, updatedAt, fcmToken, accountStatus
+                initialId= initialId,
+                initialEmail= initialEmail,
+                initialName= initialName,
+                initialConsentTimeStamp = initialConsentTimeStamp,
+                initialProfileImageUrl = initialProfileImageUrl,
+                initialMemo = initialMemo,
+                initialUserStatus = initialUserStatus,
+                initialCreatedAt = initialCreatedAt,
+                initialUpdatedAt = initialUpdatedAt,
+                initialFcmToken = initialFcmToken,
+                initialAccountStatus = initialAccountStatus,
+                isNew = false
             )
-            user._domainEvents.add(UserCreatedEvent(uid.value))
+            user.pushDomainEvent(UserCreatedEvent(initialId.value))
             return user
         }
     }

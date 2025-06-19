@@ -59,16 +59,9 @@ class UpdateCategoryUseCaseImpl @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Invalid category order. Must be between 0.0 and $totalCategories."))
         }
 
-        // Create the updated category object.
-        // The `updatedAt` field should ideally be set by the server/database upon write.
-        // Passing Instant.now() here marks the time of this domain logic execution.
-        // The repository/datasource layer should handle the definitive server timestamp.
-        val updatedCategory = categoryToUpdate.copy(
-            name = newName,
-            order = newOrder,
-            updatedAt = Instant.now() // Placeholder, actual update time set by Firestore ideally
-        )
+        // Perform update within aggregate to keep invariants and raise events
+        categoryToUpdate.update(newName, newOrder)
 
-        return categoryRepository.updateCategory(projectId, updatedCategory)
+        return categoryRepository.updateCategory(projectId, categoryToUpdate)
     }
 }

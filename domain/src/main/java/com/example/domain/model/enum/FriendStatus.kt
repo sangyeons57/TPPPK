@@ -9,6 +9,7 @@ enum class FriendStatus(val value: String) {
      * 친구 요청을 보냈거나 받은 상태 (상대방의 수락 대기 중)
      */
     PENDING("PENDING"),
+    REQUESTED("REQUESTED"),
 
     /**
      * 친구 관계가 수락된 상태

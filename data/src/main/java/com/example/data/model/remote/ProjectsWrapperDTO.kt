@@ -3,13 +3,18 @@ package com.example.data.model.remote
 import com.example.domain.model.base.ProjectsWrapper
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
-import com.example.core_common.constants.FirestoreConstants
+
 
 data class ProjectsWrapperDTO(
     @DocumentId val projectId: String = "",
-    @get:PropertyName(FirestoreConstants.Users.ProjectsWrappers.ORDER)
+    @get:PropertyName(ORDER)
     val order: String = ""
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "projects_wrapper"
+        const val ORDER = "order"
+    }
     /**
      * DTO를 도메인 모델로 변환
      * @return ProjectsWrapper 도메인 모델

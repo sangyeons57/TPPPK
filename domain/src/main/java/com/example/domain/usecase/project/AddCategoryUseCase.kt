@@ -6,6 +6,11 @@ import com.example.domain.model.base.Category
 import com.example.domain.repository.AuthRepository // Added
 import com.example.domain.repository.CategoryRepository // Added
 import com.example.core_common.constants.Constants // Added
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.model.vo.category.CategoryOrder
+import com.example.domain.model.vo.category.IsCategoryFlag
 import kotlinx.coroutines.flow.first // Added
 import javax.inject.Inject
 
@@ -77,10 +82,10 @@ class AddCategoryUseCaseImpl @Inject constructor(
                 // New categories should be ordered after regular categories.
                 // 기존 카테고리들의 최대 order 값을 찾습니다. "카테고리 없음"의 order (0.0) 보다 큰 값을 기준으로 합니다.
                 // 만약 "카테고리 없음"만 있거나 아무 카테고리도 없다면, 새로운 카테고리는 1.0부터 시작합니다.
-                val newOrder = if (categories.isEmpty() || (categories.size == 1 && categories.first().order == Constants.NO_CATEGORY_ORDER)) {
+                val newOrder = if (categories.isEmpty() || (categories.size == 1 && categories.first().order.value == Constants.NO_CATEGORY_ORDER)) {
                     1.0 // First actual category gets order 1.0
                 } else {
-                    (categories.filter { it.order > Constants.NO_CATEGORY_ORDER }.maxOfOrNull { it.order } ?: 0.0) + 1.0
+                    (categories.filter { it.order.value > Constants.NO_CATEGORY_ORDER }.maxOfOrNull { it.order.value } ?: 0.0) + 1.0
                 }
                 newOrder
             }
@@ -93,20 +98,20 @@ class AddCategoryUseCaseImpl @Inject constructor(
         }
 
         // 3. Create new Category object
-        val newCategory = Category(
-            name = categoryName.trim(),
-            order = nextOrder,
-            createdBy = currentUserSession.userId,
-            createdAt = DateTimeUtil.nowInstant(),
-            updatedAt = DateTimeUtil.nowInstant(),
+        val newCategory = Category.create(
+            name = CategoryName(categoryName.trim()),
+            order = CategoryOrder(nextOrder),
+            createdBy = OwnerId(currentUserSession.userId),
+            id = DocumentId.EMPTY,
+            isCategory = IsCategoryFlag.TRUE,
         )
 
         // 4. Add category using repository
         return when (val addResult = categoryRepository.addCategory(projectId, newCategory)) {
             is CustomResult.Success -> {
-                // The repository returns the ID. We can update our newCategory object's ID if needed,
-                // but since we generated it, it should be the same. We return the full Category object.
-                CustomResult.Success(newCategory.copy(id = addResult.data)) // Ensure ID from repo is used
+                // Assign the id returned from repository to the aggregate using domain helper
+                val categoryWithId = newCategory.withId(DocumentId(addResult.data))
+                CustomResult.Success(categoryWithId)
             }
             is CustomResult.Failure -> CustomResult.Failure(addResult.error)
             else -> return CustomResult.Failure(Exception("Failed to add category."))

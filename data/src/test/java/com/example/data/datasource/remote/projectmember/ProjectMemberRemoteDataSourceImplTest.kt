@@ -70,14 +70,15 @@ class ProjectMemberRemoteDataSourceImplTest {
         // Common mock setups
         `when`(auth.currentUser).thenReturn(mockFirebaseUser)
 
-        `when`(firestore.collection(FirestoreConstants.Collections.PROJECTS)).thenReturn(projectsCollectionRef)
-        `when`(projectsCollectionRef.document(testProjectId)).thenReturn(projectDocRef)
+        // Mocking Firestore structure
+        `when`(firestore.collection(FirestoreConstants.Project.COLLECTION_NAME)).thenReturn(projectsCollectionRef)
+        `when`(projectsCollectionRef.document(anyString())).thenReturn(projectDocRef)
 
-        `when`(projectDocRef.collection(FirestoreConstants.Collections.MEMBERS)).thenReturn(membersCollectionRef)
-        `when`(membersCollectionRef.document(testUserId)).thenReturn(memberDocRef)
-        
-        `when`(firestore.collection(FirestoreConstants.Collections.USERS)).thenReturn(usersCollectionRef)
-        `when`(usersCollectionRef.document(testUserId)).thenReturn(userDocRef)
+        `when`(projectDocRef.collection(FirestoreConstants.Project.Members.COLLECTION_NAME)).thenReturn(membersCollectionRef)
+        `when`(membersCollectionRef.document(anyString())).thenReturn(memberDocRef)
+
+        `when`(firestore.collection(FirestoreConstants.Users.COLLECTION_NAME)).thenReturn(usersCollectionRef)
+        `when`(usersCollectionRef.document(anyString())).thenReturn(userDocRef)
         `when`(usersCollectionRef.document(testOwnerId)).thenReturn(userDocRef) // For owner check
 
         // Mock Task<Void> for set, update, delete operations

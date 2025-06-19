@@ -3,17 +3,16 @@ package com.example.data.repository
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
-import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.datasource.remote.PermissionRemoteDataSource // 권한 목록 조회 시 필요할 수 있음
+import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.model.remote.RoleDTO
 import com.example.domain.model.base.Role
+import com.example.domain.model.project.RolePermission
 import com.example.domain.repository.RoleRepository
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
-import kotlin.Result
 
 class RoleRepositoryImpl @Inject constructor(
     private val roleRemoteDataSource: RoleRemoteDataSource,
@@ -133,13 +132,13 @@ class RoleRepositoryImpl @Inject constructor(
         }.first()
     }
 
-    override suspend fun getRolePermissions(projectId: String, roleId: String): CustomResult<List<com.example.domain.model.data.project.RolePermission>, Exception> {
+    override suspend fun getRolePermissions(projectId: String, roleId: String): CustomResult<List<RolePermission>, Exception> {
         return resultTry {
             when (val result = roleRemoteDataSource.getRolePermissionNames(projectId, roleId)) { // Needs to be in RoleRemoteDataSource
                 is CustomResult.Success -> {
                     result.data.mapNotNull { name ->
                         try {
-                            com.example.domain.model.data.project.RolePermission.valueOf(name)
+                            RolePermission.valueOf(name)
                         } catch (e: IllegalArgumentException) {
                             null
                         }
@@ -153,7 +152,7 @@ class RoleRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun setRolePermissions(projectId: String, roleId: String, permissions: List<com.example.domain.model.data.project.RolePermission>): CustomResult<Unit, Exception> = resultTry {
+    override suspend fun setRolePermissions(projectId: String, roleId: String, permissions: List<RolePermission>): CustomResult<Unit, Exception> = resultTry {
         val permissionNames = permissions.map { it.name }
         roleRemoteDataSource.setRolePermissions(projectId, roleId, permissionNames) // Assumes this method in RoleRemoteDataSource
     }

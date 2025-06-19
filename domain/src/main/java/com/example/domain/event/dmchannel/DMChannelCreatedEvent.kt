@@ -1,7 +1,7 @@
 package com.example.domain.event.dmchannel
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.dmchannel.DMChannelId
+import com.example.domain.model.vo.DocumentId
 import java.time.Instant
 
 /**
@@ -11,6 +11,6 @@ import java.time.Instant
  * @property occurredOn The timestamp when the event occurred.
  */
 data class DMChannelCreatedEvent(
-    val dmChannelId: DMChannelId,
+    val dmChannelId: DocumentId,
     override val occurredOn: Instant = Instant.now()
 ) : DomainEvent

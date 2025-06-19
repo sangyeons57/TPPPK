@@ -2,16 +2,11 @@ package com.example.data.repository
 
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.InviteRemoteDataSource
-import com.example.data.model.remote.InviteDTO
-import com.example.domain.model._new.enum.InviteStatus
+import com.example.domain.model.enum.InviteStatus
 import com.example.domain.model.base.Invite
 import com.example.domain.repository.InviteRepository
-import com.google.firebase.Timestamp // Timestamp 사용 시
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import java.util.UUID // 초대 코드 생성용
 import javax.inject.Inject
-import kotlin.Result
 
 class InviteRepositoryImpl @Inject constructor(
     private val inviteRemoteDataSource: InviteRemoteDataSource

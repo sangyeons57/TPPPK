@@ -1,67 +1,138 @@
 package com.example.domain.model.base
 
 import com.example.domain.model.enum.ProjectChannelType
-import com.google.firebase.firestore.DocumentId
 import java.time.Instant
 
-import com.example.core_common.result.CustomResult
-import java.time.ZoneId
+import com.example.domain.event.AggregateRoot
+import com.example.domain.event.projectchannel.ProjectChannelCreatedEvent
+import com.example.domain.event.projectchannel.ProjectChannelNameUpdatedEvent
+import com.example.domain.event.projectchannel.ProjectChannelOrderChangedEvent
+import com.example.domain.model.vo.DocumentId
 
-/**
- * Represents a channel within a project category.
- *
- * @property id Unique identifier of the channel, typically set by Firestore.
- * @property channelName The name of the channel.
- * @property order The display order of the channel within its category. Lower numbers appear first.
- * @property channelType The type of the channel (e.g., MESSAGES, TASKS).
- * @property createdAt Timestamp of when the channel was created.
- * @property updatedAt Timestamp of when the channel was last updated.
- */
-data class ProjectChannel(
-    @DocumentId val id: String = "",
-    val channelName: String = "",
-    val order: Double = 0.0,
-    val channelType: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
-    val createdAt: Instant? = null,
-    val updatedAt: Instant? = null
-) {
-    /**
-     * Updates the channel's details after validation.
-     *
-     * @param newName The proposed new name for the channel.
-     * @param newOrder The proposed new order for the channel.
-     * @param channelsInSameCategory A list of all other channels in the same category, used for order validation.
-     * @return A [CustomResult] containing the updated [ProjectChannel] on success, or an [Exception] on failure.
-     */
-    fun updateDetails(
-        newName: String,
-        newOrder: Double,
-        channelsInSameCategory: List<ProjectChannel>
-    ): CustomResult<ProjectChannel, Exception> {
-        // Validate name
-        if (newName.isBlank()) {
-            return CustomResult.Failure(IllegalArgumentException("Channel name cannot be empty."))
-        }
+class ProjectChannel private constructor(
+    initialChannelName: String,
+    initialOrder: Double,
+    initialChannelType: ProjectChannelType,
+    initialCreatedAt: Instant,
+    initialUpdatedAt: Instant,
+    override val id: DocumentId,
+    override val isNew: Boolean
+) : AggregateRoot() {
 
-        // Validate order
-        if (newOrder <= 0) {
-            return CustomResult.Failure(IllegalArgumentException("Channel order must be a positive number."))
-        }
+    val createdAt: Instant = initialCreatedAt
 
-        // Check for order uniqueness within the same category (excluding itself if it's an update)
-        val conflictingChannel = channelsInSameCategory.find { it.id != this.id && it.order == newOrder }
-        if (conflictingChannel != null) {
-            return CustomResult.Failure(IllegalArgumentException("Channel order '%.2f' already exists in this category.".format(newOrder)))
-        }
+    var channelType: ProjectChannelType = initialChannelType
+        private set
+    var channelName: String = initialChannelName
+        private set
+    var order: Double = initialOrder
+        private set
+    var updatedAt: Instant = initialUpdatedAt
+        private set
 
-        // All validations passed, create a new instance with updated values
-        return CustomResult.Success(
-            this.copy(
-                channelName = newName,
-                order = newOrder,
-                updatedAt = Instant.now().atZone(ZoneId.systemDefault()).toInstant() // Ensure UTC or consistent timezone
-            )
+    override fun getCurrentStateMap(): Map<String, Any?> {
+        return mapOf(
+            CHANNEL_NAME to this.channelName,
+            CHANNEL_TYPE to this.channelType,
+            ORDER to this.order,
+            UPDATED_AT to this.updatedAt,
+            CREATED_AT to this.createdAt
         )
+    }
+
+    /**
+     * Updates the name of the channel after validation.
+     *
+     * @throws IllegalArgumentException if the new name is blank.
+     */
+    fun updateName(newName: String) {
+        if (this.channelName == newName) return
+        if (newName.isBlank()) {
+            throw IllegalArgumentException("Channel name cannot be empty.")
+        }
+
+        this.channelName = newName
+        this.updatedAt = Instant.now()
+        pushDomainEvent(ProjectChannelNameUpdatedEvent(this.id, this.channelName, this.updatedAt))
+    }
+
+    /**
+     * Changes the order of the channel after validation.
+     * Note: Uniqueness of the order should be validated by a domain or application service.
+     *
+     * @throws IllegalArgumentException if the new order is not a positive number.
+     */
+    fun changeOrder(newOrder: Double) {
+        if (this.order == newOrder) return
+        if (newOrder <= 0) {
+            throw IllegalArgumentException("Channel order must be a positive number.")
+        }
+
+        this.order = newOrder
+        this.updatedAt = Instant.now()
+        pushDomainEvent(ProjectChannelOrderChangedEvent(this.id, this.order, this.updatedAt))
+    }
+
+    companion object {
+        const val COLLECTION_NAME = "project_channels"
+        const val CHANNEL_NAME = "channelName"
+        const val CHANNEL_TYPE = "channelType"
+        const val ORDER = "order"
+        const val CREATED_AT = "createdAt"
+        const val UPDATED_AT = "updatedAt"
+
+        /**
+         * Factory method for creating a new project channel.
+         */
+        fun create(
+            id: DocumentId,
+            channelName: String,
+            channelType: ProjectChannelType,
+            order: Double
+        ): ProjectChannel {
+            val now = Instant.now()
+            val channel = ProjectChannel(
+                id = id,
+                initialChannelName = channelName,
+                initialOrder = order,
+                initialChannelType = channelType,
+                initialCreatedAt = now,
+                initialUpdatedAt = now,
+                isNew = true
+            )
+            channel.pushDomainEvent(
+                ProjectChannelCreatedEvent(
+                    channelId = channel.id,
+                    channelName = channel.channelName,
+                    channelType = channel.channelType,
+                    order = channel.order,
+                    occurredOn = now
+                )
+            )
+            return channel
+        }
+
+        /**
+         * Factory method to reconstitute a ProjectChannel from a data source.
+         */
+        fun fromDataSource(
+            id: DocumentId,
+            channelName: String,
+            order: Double,
+            channelType: ProjectChannelType,
+            createdAt: Instant,
+            updatedAt: Instant
+        ): ProjectChannel {
+            return ProjectChannel(
+                id = id,
+                initialChannelName = channelName,
+                initialOrder = order,
+                initialChannelType = channelType,
+                initialCreatedAt = createdAt,
+                initialUpdatedAt = updatedAt,
+                isNew = false
+            )
+        }
     }
 }
 

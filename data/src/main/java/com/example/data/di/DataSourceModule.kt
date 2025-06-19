@@ -26,14 +26,16 @@ import com.example.data.datasource.remote.ScheduleRemoteDataSource
 import com.example.data.datasource.remote.ScheduleRemoteDataSourceImpl
 import com.example.data.datasource.remote.UserRemoteDataSource
 import com.example.data.datasource.remote.UserRemoteDataSourceImpl
-import com.example.data.datasource.remote.AuthRemoteDataSource
-import com.example.data.datasource.remote.AuthRemoteDataSourceImpl
 import com.example.data.datasource.remote.CategoryRemoteDataSource
 import com.example.data.datasource.remote.CategoryRemoteDataSourceImpl
 import com.example.data.datasource.remote.ProjectsWrapperRemoteDataSource
 import com.example.data.datasource.remote.ProjectsWrapperRemoteDataSourceImpl
-import com.example.data.datasource.remote.FileDataSource
-import com.example.data.datasource.remote.FileDataSourceImpl
+import com.example.data.datasource.remote.special.AuthRemoteDataSource
+import com.example.data.datasource.remote.special.AuthRemoteDataSourceImpl
+import com.example.data.datasource.remote.special.DefaultDatasource
+import com.example.data.datasource.remote.special.DefaultDatasourceImpl
+import com.example.data.datasource.remote.special.FileDataSource
+import com.example.data.datasource.remote.special.FileDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -187,4 +189,13 @@ abstract class DataSourceModule {
     abstract fun bindFileDataSource(
         fileDataSourceImpl: FileDataSourceImpl
     ): FileDataSource
+
+    /**
+     * 지금 다른 방식 사용중
+    @Binds
+    @Singleton
+    abstract fun bindDefaultDataSource(
+        defaultDatasourceImpl: DefaultDatasourceImpl
+    ): DefaultDatasource
+    **/
 }

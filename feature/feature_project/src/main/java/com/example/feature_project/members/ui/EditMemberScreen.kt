@@ -27,7 +27,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.R
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Role
-import com.example.domain.model.data.project.RolePermission // Added import
+import com.example.domain.model.project.RolePermission // Added import
 // ViewModel 및 관련 요소 Import
 import com.example.feature_project.members.viewmodel.EditMemberEvent
 import com.example.feature_project.members.viewmodel.EditMemberViewModel

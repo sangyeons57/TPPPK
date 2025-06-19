@@ -7,54 +7,49 @@ import com.example.domain.event.friend.FriendNameChangedEvent
 import com.example.domain.event.friend.FriendProfileImageChangedEvent
 import com.example.domain.event.friend.FriendStatusChangedEvent
 import com.example.domain.model.enum.FriendStatus
-import com.example.domain.model.vo.friend.FriendId
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.friend.FriendName
 import com.example.domain.model.vo.friend.FriendProfileImageUrl
 import java.time.Instant
 
 class Friend private constructor(
     // Immutable properties
-    id: FriendId,
-    requestedAt: Instant?, // This could be when the friend request was sent by the current user or received
-    acceptedAt: Instant?,  // This could be when the friend request was accepted
+    initialRequestedAt: Instant?, // This could be when the friend request was sent by the current user or received
+    initialAcceptedAt: Instant?,  // This could be when the friend request was accepted
 
     // Mutable properties
-    name: FriendName,
-    profileImageUrl: FriendProfileImageUrl?,
-    status: FriendStatus,
-    createdAt: Instant,
-    updatedAt: Instant
+    initialName: FriendName,
+    initialProfileImageUrl: FriendProfileImageUrl?,
+    initialStatus: FriendStatus,
+    initialCreatedAt: Instant,
+    initialUpdatedAt: Instant,
+    override val id :DocumentId,
+    override val isNew: Boolean
 
-) : AggregateRoot {
+) : AggregateRoot() {
 
-    val id: FriendId = id
-    val requestedAt: Instant? = requestedAt
-    var acceptedAt: Instant? = acceptedAt // Made var in case it needs to be set by a method
+    val requestedAt: Instant? = initialRequestedAt
+    var acceptedAt: Instant? = initialAcceptedAt // Made var in case it needs to be set by a method
         private set
 
-    var name: FriendName = name
+    var name: FriendName = initialName
         private set
 
-    var profileImageUrl: FriendProfileImageUrl? = profileImageUrl
+    var profileImageUrl: FriendProfileImageUrl? = initialProfileImageUrl
         private set
 
-    var status: FriendStatus = status
+    var status: FriendStatus = initialStatus
         private set
 
-    val createdAt: Instant = createdAt
-    var updatedAt: Instant = updatedAt
+    val createdAt: Instant = initialCreatedAt
+    var updatedAt: Instant = initialUpdatedAt
         private set
 
-    private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
 
-    override fun pullDomainEvents(): List<DomainEvent> {
-        val events = _domainEvents.toList()
-        _domainEvents.clear()
-        return events
-    }
 
-    override fun clearDomainEvents() {
-        _domainEvents.clear()
+    override fun getCurrentStateMap(): Map<String, Any?> {
+        TODO("Not yet implemented")
     }
 
     // --- Business Methods ---
@@ -63,14 +58,14 @@ class Friend private constructor(
         if (this.name == newName) return
         this.name = newName
         this.updatedAt = Instant.now()
-        _domainEvents.add(FriendNameChangedEvent(this.id, newName))
+        this.pushDomainEvent(FriendNameChangedEvent(this.id, newName))
     }
 
     fun changeProfileImage(newProfileImageUrl: FriendProfileImageUrl?) {
         if (this.profileImageUrl == newProfileImageUrl) return
         this.profileImageUrl = newProfileImageUrl
         this.updatedAt = Instant.now()
-        _domainEvents.add(FriendProfileImageChangedEvent(this.id, newProfileImageUrl))
+        this.pushDomainEvent(FriendProfileImageChangedEvent(this.id, newProfileImageUrl))
     }
 
     fun acceptRequest() {
@@ -78,7 +73,7 @@ class Friend private constructor(
             this.status = FriendStatus.ACCEPTED
             this.acceptedAt = Instant.now()
             this.updatedAt = Instant.now()
-            _domainEvents.add(FriendStatusChangedEvent(this.id, this.status))
+            this.pushDomainEvent(FriendStatusChangedEvent(this.id, this.status))
         }
         // Consider if any action/event is needed if status is not PENDING/REQUESTED
     }
@@ -88,7 +83,7 @@ class Friend private constructor(
         this.status = FriendStatus.BLOCKED
         // acceptedAt might be nulled out or kept depending on business rule
         this.updatedAt = Instant.now()
-        _domainEvents.add(FriendStatusChangedEvent(this.id, this.status))
+        this.pushDomainEvent(FriendStatusChangedEvent(this.id, this.status))
     }
 
     fun removeFriend() {
@@ -105,14 +100,14 @@ class Friend private constructor(
         // this.name = FriendName("Unknown") // Masking name might be a policy
         // this.profileImageUrl = null
         this.updatedAt = Instant.now()
-        _domainEvents.add(FriendStatusChangedEvent(this.id, this.status))
+        this.pushDomainEvent(FriendStatusChangedEvent(this.id, this.status))
     }
 
     fun markAsPending() {
         if (this.status == FriendStatus.PENDING) return
         this.status = FriendStatus.PENDING
         this.updatedAt = Instant.now()
-        _domainEvents.add(FriendStatusChangedEvent(this.id, this.status))
+        this.pushDomainEvent(FriendStatusChangedEvent(this.id, this.status))
     }
 
     fun markAsRequested() {
@@ -120,70 +115,65 @@ class Friend private constructor(
         if (this.status == FriendStatus.REQUESTED) return
         this.status = FriendStatus.REQUESTED
         this.updatedAt = Instant.now()
-        _domainEvents.add(FriendStatusChangedEvent(this.id, this.status))
-    }
-
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as Friend
-        return id == other.id
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
+        this.pushDomainEvent(FriendStatusChangedEvent(this.id, this.status))
     }
 
     companion object {
+        const val COLLECTION_NAME = "friends"
+        const val KEY_STATUS = "status" // "PENDING_SENT", "PENDING_RECEIVED", "ACCEPTED", "DECLINED", "BLOCKED"
+        const val KEY_REQUESTED_AT = "requestedAt"
+        const val KEY_ACCEPTED_AT = "acceptedAt"
+
         fun newRequest(
-            id: FriendId,
+            id: DocumentId,
             name: FriendName,
             profileImageUrl: FriendProfileImageUrl?,
             requestedAt: Instant // Time the request is made
         ): Friend {
             val now = Instant.now()
             val friend = Friend(
+                initialName = name,
+                initialProfileImageUrl = profileImageUrl,
+                initialStatus = FriendStatus.REQUESTED, // Current user sent the request
+                initialRequestedAt = requestedAt,
+                initialAcceptedAt = null,
+                initialCreatedAt = now,
+                initialUpdatedAt = now,
                 id = id,
-                name = name,
-                profileImageUrl = profileImageUrl,
-                status = FriendStatus.REQUESTED, // Current user sent the request
-                requestedAt = requestedAt,
-                acceptedAt = null,
-                createdAt = now,
-                updatedAt = now
+                isNew = true
             )
-            friend._domainEvents.add(FriendCreatedEvent(id))
+            friend.pushDomainEvent(FriendCreatedEvent(id))
             // Optionally, add a FriendStatusChangedEvent if REQUESTED is considered a status change from an initial null state
             // friend._domainEvents.add(FriendStatusChangedEvent(id, FriendStatus.REQUESTED))
             return friend
         }
 
         fun receivedRequest(
-            id: FriendId,
+            id: DocumentId,
             name: FriendName,
             profileImageUrl: FriendProfileImageUrl?,
             requestedAt: Instant // Time the request was received
         ): Friend {
             val now = Instant.now()
             val friend = Friend(
+                initialName = name,
+                initialProfileImageUrl = profileImageUrl,
+                initialStatus = FriendStatus.PENDING, // Current user received the request, it's pending their action
+                initialRequestedAt = requestedAt,
+                initialAcceptedAt = null,
+                initialCreatedAt = now,
+                initialUpdatedAt = now,
                 id = id,
-                name = name,
-                profileImageUrl = profileImageUrl,
-                status = FriendStatus.PENDING, // Current user received the request, it's pending their action
-                requestedAt = requestedAt,
-                acceptedAt = null,
-                createdAt = now,
-                updatedAt = now
+                isNew = true
             )
-            friend._domainEvents.add(FriendCreatedEvent(id))
+            friend.pushDomainEvent(FriendCreatedEvent(id))
             // friend._domainEvents.add(FriendStatusChangedEvent(id, FriendStatus.PENDING))
             return friend
         }
 
         // Factory method for reconstructing from data source
         fun fromDataSource(
-            id: FriendId,
+            id: DocumentId,
             name: FriendName,
             profileImageUrl: FriendProfileImageUrl?,
             status: FriendStatus,
@@ -193,14 +183,15 @@ class Friend private constructor(
             updatedAt: Instant
         ): Friend {
             return Friend(
+                initialName = name,
+                initialProfileImageUrl = profileImageUrl,
+                initialStatus = status,
+                initialRequestedAt = requestedAt,
+                initialAcceptedAt = acceptedAt,
+                initialCreatedAt = createdAt,
+                initialUpdatedAt = updatedAt,
                 id = id,
-                name = name,
-                profileImageUrl = profileImageUrl,
-                status = status,
-                requestedAt = requestedAt,
-                acceptedAt = acceptedAt,
-                createdAt = createdAt,
-                updatedAt = updatedAt
+                isNew = false
             )
             // No domain event on reconstruction from data source usually, unless specific logic dictates it.
         }

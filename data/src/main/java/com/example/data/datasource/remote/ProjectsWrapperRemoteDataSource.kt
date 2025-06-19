@@ -3,28 +3,61 @@ package com.example.data.datasource.remote
 
 import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
+import com.example.data.datasource.remote.special.DefaultDatasource
+import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.ProjectsWrapperDTO
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-interface ProjectsWrapperRemoteDataSource {
+interface ProjectsWrapperRemoteDataSource : DefaultDatasource<ProjectsWrapperDTO> {
+    fun observeProjectsWrappers(userId: String): Flow<CustomResult<List<String>, Exception>>
+    suspend fun addProjectToUser(userId: String, projectId: String, dto: ProjectsWrapperDTO): CustomResult<Unit, Exception>
+    suspend fun removeProjectFromUser(userId: String, projectId: String): CustomResult<Unit, Exception>
+}
 
-    /**
-     * 현재 로그인한 사용자가 참여하고 있는 프로젝트의 ID 목록을 실시간으로 관찰합니다.
-     * @param uid 사용자 ID
-     * @return 프로젝트 ID 목록을 담은 Flow
-     */
-    fun observeProjectsWrappers(uid: String): Flow<List<String>>
+@Singleton
+class ProjectsWrapperRemoteDataSourceImpl @Inject constructor(
+    private val firestore: FirebaseFirestore
+) : DefaultDatasourceImpl<ProjectsWrapperDTO>(firestore, ProjectsWrapperDTO::class.java),
+    ProjectsWrapperRemoteDataSource {
 
-    /**
-     *
-     */
+    override fun observeProjectsWrappers(userId: String): Flow<CustomResult<List<String>, Exception>> {
+        setCollection(userId)
+        return callbackFlow {
+            val listener = collection.addSnapshotListener { snapshot, error ->
+                if (error != null) { trySend(CustomResult.Failure(error)); close(error); return@addSnapshotListener }
+                val ids = snapshot?.documents?.map { it.id } ?: emptyList()
+                trySend(CustomResult.Success(ids))
+            }
+            awaitClose { listener.remove() }
+        }.flowOn(Dispatchers.IO)
+    }
 
-    // 사용자의 프로젝트 목록에 새 프로젝트를 추가합니다. (ProjectWrapper 생성)
-    // projectWrapper DTO는 이제 projectId 필드만 가집니다.
-    suspend fun addProjectToUser(uid: String, projectId: String, projectWrapper: ProjectsWrapperDTO) : CustomResult<Unit, Exception>
+    override suspend fun addProjectToUser(userId: String, projectId: String, dto: ProjectsWrapperDTO): CustomResult<Unit, Exception> {
+        setCollection(userId)
+        return withContext(Dispatchers.IO) {
+            resultTry {
+                collection.document(projectId).set(dto).await(); Unit
+            }
+        }
+    }
 
-    // 특정 프로젝트 래퍼를 삭제하는 함수
-    suspend fun removeProjectFromUser(uid: String, projectId: String) : CustomResult<Unit, Exception>
+    override suspend fun removeProjectFromUser(userId: String, projectId: String): CustomResult<Unit, Exception> {
+        setCollection(userId)
+        return withContext(Dispatchers.IO) {
+            resultTry {
+                collection.document(projectId).delete().await(); Unit
+            }
+        }
+    }
 }
 

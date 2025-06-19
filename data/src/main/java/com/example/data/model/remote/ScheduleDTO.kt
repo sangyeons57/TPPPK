@@ -7,7 +7,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.constants.FirestoreConstants
+
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.schedule.ScheduleContent
@@ -19,47 +19,62 @@ import com.google.firebase.firestore.PropertyName
  */
 data class ScheduleDTO(
     @DocumentId val id: String = "",
-    @get:PropertyName(FirestoreConstants.Schedule.TITLE)
+    @get:PropertyName(TITLE)
     val title: String = "",
-    @get:PropertyName(FirestoreConstants.Schedule.CONTENT)
+    @get:PropertyName(CONTENT)
     val content: String = "",
-    @get:PropertyName(FirestoreConstants.Schedule.START_TIME)
+    @get:PropertyName(START_TIME)
     val startTime: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Schedule.END_TIME)
+    @get:PropertyName(END_TIME)
     val endTime: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Schedule.PROJECT_ID)
+    @get:PropertyName(PROJECT_ID)
     val projectId: String? = null,
-    @get:PropertyName(FirestoreConstants.Schedule.CREATOR_ID)
+    @get:PropertyName(CREATOR_ID)
     val creatorId: String = "",
-    @get:PropertyName(FirestoreConstants.Schedule.STATUS)
-    val status: String = "CONFIRMED", // "CONFIRMED", "TENTATIVE", "CANCELLED"
-    @get:PropertyName(FirestoreConstants.Schedule.COLOR)
+    @get:PropertyName(STATUS)
+    val status: ScheduleStatus = ScheduleStatus.CONFIRMED, // "CONFIRMED", "TENTATIVE", "CANCELLED"
+    @get:PropertyName(COLOR)
     val color: String? = null, // 예: "#FF5733"
-    @get:PropertyName(FirestoreConstants.Schedule.CREATED_AT)
+    @get:PropertyName(CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Schedule.UPDATED_AT)
+    @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp? = null
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "schedules"
+        const val TITLE = "title"
+        const val CONTENT = "content"
+        const val START_TIME = "startTime"
+        const val END_TIME = "endTime"
+        const val PROJECT_ID = "projectId"
+        const val CREATOR_ID = "creatorId"
+        const val STATUS = "status"
+        const val COLOR = "color"
+        const val CREATED_AT = "createdAt"
+        const val UPDATED_AT = "updatedAt"
+    }
     /**
      * DTO를 도메인 모델로 변환
      * @return Schedule 도메인 모델
      */
     fun toDomain(): Schedule {
+        requireNotNull(startTime) { "startTime is null in ScheduleDTO with id=$id" }
+        requireNotNull(endTime) { "endTime is null in ScheduleDTO with id=$id" }
+        requireNotNull(createdAt) { "createdAt is null in ScheduleDTO with id=$id" }
+        requireNotNull(updatedAt) { "updatedAt is null in ScheduleDTO with id=$id" }
+
         return Schedule.registerNewSchedule(
             scheduleId = com.example.domain.model.vo.DocumentId(id),
             title = ScheduleTitle(title),
             content = ScheduleContent(content),
-            startTime = startTime.let{DateTimeUtil.firebaseTimestampToInstant(it!!)},
-            endTime = endTime.let{DateTimeUtil.firebaseTimestampToInstant(it!!)},
+            startTime = DateTimeUtil.firebaseTimestampToInstant(startTime),
+            endTime = DateTimeUtil.firebaseTimestampToInstant(endTime),
             projectId = ProjectId(projectId?:""),
             creatorId = OwnerId(creatorId),
-            status = try {
-                ScheduleStatus.valueOf(status.uppercase())
-            } catch (e: Exception) {
-                ScheduleStatus.CONFIRMED
-            },
-            createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it!!)},
-            updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it!!)}
+            status = status,
+            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt),
+            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt)
         )
     }
 }
@@ -73,12 +88,12 @@ fun Schedule.toDto(): ScheduleDTO {
         id = id.value,
         title = title.value,
         content = content.value,
-        startTime = startTime.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        endTime = endTime.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        startTime = DateTimeUtil.instantToFirebaseTimestamp(startTime),
+        endTime = DateTimeUtil.instantToFirebaseTimestamp(endTime),
         projectId = projectId?.value,
         creatorId = creatorId.value,
-        status = status.name.lowercase(),
-        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        status = status,
+        createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt),
+        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt),
     )
 }

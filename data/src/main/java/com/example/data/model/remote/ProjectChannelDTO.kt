@@ -6,7 +6,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.constants.FirestoreConstants
+
 import com.google.firebase.firestore.PropertyName
 
 /*
@@ -14,17 +14,26 @@ import com.google.firebase.firestore.PropertyName
  */
 data class ProjectChannelDTO(
     @DocumentId val id: String = "",
-    @get:PropertyName(FirestoreConstants.Project.Channels.CHANNEL_NAME)
+    @get:PropertyName(CHANNEL_NAME)
     val channelName: String = "",
-    @get:PropertyName(FirestoreConstants.Project.Channels.CHANNEL_TYPE)
-    val channelType: String = "MESSAGES", // "MESSAGES", "TASKS" 등
-    @get:PropertyName(FirestoreConstants.Project.Channels.ORDER)
+    @get:PropertyName(CHANNEL_TYPE)
+    val channelType: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
+    @get:PropertyName(ORDER)
     val order: Double = 0.0, // Added order field
-    @get:PropertyName(FirestoreConstants.Project.Channels.CREATED_AT)
+    @get:PropertyName(CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Project.Channels.UPDATED_AT)
+    @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp? = null
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "project_channels"
+        const val CHANNEL_NAME = "channelName"
+        const val CHANNEL_TYPE = "channelType"
+        const val ORDER = "order"
+        const val CREATED_AT = "createdAt"
+        const val UPDATED_AT = "updatedAt"
+    }
     /*
      * DTO를 도메인 모델로 변환
      * @return ProjectChannel 도메인 모델
@@ -33,11 +42,7 @@ data class ProjectChannelDTO(
         return ProjectChannel(
             id = id,
             channelName = channelName,
-            channelType = try {
-                ProjectChannelType.valueOf(channelType.uppercase())
-            } catch (e: Exception) {
-                ProjectChannelType.MESSAGES
-            },
+            channelType = channelType,
             order = order, // Added order mapping
             createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             updatedAt = updatedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)}
@@ -56,7 +61,7 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
     return ProjectChannelDTO(
         id = id,
         channelName = channelName,
-        channelType = channelType.name.lowercase(),
+        channelType = channelType,
         order = order, // Added order mapping
         // createdAt and updatedAt are set by @ServerTimestamp on write, 
         // so sending them from client during an update might be ignored or could be problematic.

@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.enum.UserAccountStatus
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.usecase.user.GetUserUseCase
@@ -55,7 +56,7 @@ class LoginUseCase @Inject constructor(
                         Log.d(TAG, "Account Status: ${user}")
                         if (user.accountStatus == UserAccountStatus.WITHDRAWN) {
                             Log.d(TAG, "Cached status=WITHDRAWN, verifying against server...")
-                            when (val userResult = userRepository.observe(userSession.userId).first()) {
+                            when (val userResult = userRepository.observe(DocumentId(userSession.userId)).first()) {
                                 is CustomResult.Success -> {
                                     val remoteUser = userResult.data
                                     Log.d(TAG, "Server status=${remoteUser.accountStatus}")

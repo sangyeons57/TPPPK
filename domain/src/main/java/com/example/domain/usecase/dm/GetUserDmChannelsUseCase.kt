@@ -60,7 +60,7 @@ class GetUserDmChannelsUseCase @Inject constructor(
                             // Fetch all DMChannels concurrently
                             val dmChannelDetailedResults = coroutineScope {
                                 wrappers.map { wrapper ->
-                                    async { dmChannelRepository.getDmChannelById(wrapper.dmChannelId) }
+                                    async { dmChannelRepository.getDmChannelById(wrapper.dmChannelId.value) }
                                 }.awaitAll()
                             }
 

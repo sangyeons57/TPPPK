@@ -6,7 +6,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.constants.FirestoreConstants
+
 import com.google.firebase.firestore.PropertyName
 
 /**
@@ -14,17 +14,26 @@ import com.google.firebase.firestore.PropertyName
  */
 data class ProjectDTO(
     @DocumentId val id: String = "",
-    @get:PropertyName(FirestoreConstants.Project.NAME)
+    @get:PropertyName(NAME)
     val name: String = "",
-    @get:PropertyName(FirestoreConstants.Project.IMAGE_URL)
+    @get:PropertyName(IMAGE_URL)
     val imageUrl: String? = null,
-    @get:PropertyName(FirestoreConstants.Project.OWNER_ID)
+    @get:PropertyName(OWNER_ID)
     val ownerId: String = "",
-    @get:PropertyName(FirestoreConstants.Project.CREATED_AT)
+    @get:PropertyName(CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Project.UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp? = null,
+    @get:PropertyName(UPDATED_AT)
+    @ServerTimestamp val updatedAt: Timestamp? = null
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "projects"
+        const val NAME = "name"
+        const val IMAGE_URL = "imageUrl"
+        const val OWNER_ID = "ownerId"
+        const val CREATED_AT = "createdAt"
+        const val UPDATED_AT = "updatedAt"
+    }
     /**
      * DTO를 도메인 모델로 변환
      * @return Project 도메인 모델

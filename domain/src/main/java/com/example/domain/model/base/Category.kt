@@ -6,7 +6,7 @@ import com.example.domain.event.category.CategoryCreatedEvent // These will be d
 import com.example.domain.event.category.CategoryNameChangedEvent // These will be defined in the next step
 import com.example.domain.event.category.CategoryOrderChangedEvent // These will be defined in the next step
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.category.CategoryId
+import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.model.vo.category.IsCategoryFlag
@@ -28,45 +28,70 @@ import java.time.Instant
 class Category private constructor(
     // Constructor parameters are intentionally without val/var
     // and match the properties declared in the class body.
-    id: CategoryId,
-    name: CategoryName,
-    order: CategoryOrder,
-    createdBy: DocumentId,
-    createdAt: Instant,
-    updatedAt: Instant?,
-    isCategory: IsCategoryFlag
-) : AggregateRoot {
+    initialName: CategoryName,
+    initialOrder: CategoryOrder,
+    initialCreatedBy: OwnerId,
+    initialCreatedAt: Instant,
+    initialUpdatedAt: Instant?,
+    initialIsCategory: IsCategoryFlag,
+    override val id: DocumentId,
+    override val isNew: Boolean,
+) : AggregateRoot() {
 
-    val id: CategoryId = id
-    var name: CategoryName = name
-        private set
-    var order: CategoryOrder = order
-        private set
-    val createdBy: DocumentId = createdBy
-    val createdAt: Instant = createdAt
-    var updatedAt: Instant? = updatedAt
-        private set
-    val isCategory: IsCategoryFlag = isCategory
+    override fun getCurrentStateMap(): Map<String, Any?> {
+        return mapOf(
+            KEY_NAME to name.value,
+            KEY_ORDER to order.value,
+            KEY_CREATED_BY to createdBy.value,
+            KEY_CREATED_AT to createdAt,
+            KEY_UPDATED_AT to updatedAt,
+            KEY_IS_CATEGORY to isCategory.value
+        )
+    }
 
-    private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
+    var name: CategoryName = initialName
+        private set
+    var order: CategoryOrder = initialOrder
+        private set
+    val createdBy: OwnerId = initialCreatedBy
+    val createdAt: Instant = initialCreatedAt
+    var updatedAt: Instant? = initialUpdatedAt
+        private set
+    val isCategory: IsCategoryFlag = initialIsCategory
 
     /**
-     * Retrieves all domain events that have occurred since the last call and clears the list.
-     * @return A list of [DomainEvent] objects.
+     * Updates mutable fields (name and/or order). If any field actually changes, `updatedAt` is refreshed and
+     * appropriate domain events are raised.
+     *
+     * @param newName  Optional new name; if null, name is unchanged.
+     * @param newOrder Optional new order; if null, order is unchanged.
      */
-    override fun pullDomainEvents(): List<DomainEvent> {
-        val events = _domainEvents.toList() // Make a copy
-        _domainEvents.clear()
-        return events
+    fun update(newName: CategoryName? = null, newOrder: CategoryOrder? = null): Category {
+        var changed = false
+        if (newName != null && this.name != newName) {
+            this.name = newName
+            this.pushDomainEvent(CategoryNameChangedEvent(this.id.value))
+            changed = true
+        }
+        if (newOrder != null && this.order != newOrder) {
+            this.order = newOrder
+            this.pushDomainEvent(CategoryOrderChangedEvent(this.id.value))
+            changed = true
+        }
+        if (changed) {
+            this.updatedAt = Instant.now()
+        }
+        return this
     }
 
     /**
-     * Clears all domain events currently held by the aggregate.
-     * Typically used by the event dispatcher after processing events.
+     * Updates only the `updatedAt` value (e.g., when the category's child collection changes order).
      */
-    override fun clearDomainEvents() {
-        _domainEvents.clear()
+    fun touch(time: Instant = Instant.now()): Category {
+        this.updatedAt = time
+        return this
     }
+
 
     /**
      * Changes the name of the category.
@@ -80,7 +105,7 @@ class Category private constructor(
 
         this.name = newName
         this.updatedAt = Instant.now()
-        _domainEvents.add(CategoryNameChangedEvent(this.id.value))
+        this.pushDomainEvent(CategoryNameChangedEvent(this.id.value))
     }
 
     /**
@@ -95,7 +120,7 @@ class Category private constructor(
 
         this.order = newOrder
         this.updatedAt = Instant.now()
-        _domainEvents.add(CategoryOrderChangedEvent(this.id.value))
+        this.pushDomainEvent(CategoryOrderChangedEvent(this.id.value))
     }
 
     override fun equals(other: Any?): Boolean {
@@ -110,6 +135,13 @@ class Category private constructor(
     }
 
     companion object {
+        const val COLLECTION_NAME = "categories"
+        const val KEY_NAME = "name"
+        const val KEY_ORDER = "order"
+        const val KEY_CREATED_BY = "createdBy"
+        const val KEY_CREATED_AT = "createdAt"
+        const val KEY_UPDATED_AT = "updatedAt"
+        const val KEY_IS_CATEGORY = "isCategory"
         /**
          * Creates a new Category instance.
          * This factory method is the designated way to create new categories.
@@ -123,23 +155,24 @@ class Category private constructor(
          * @return A new [Category] instance, ready to be persisted.
          */
         fun create(
-            id: CategoryId,
+            id: DocumentId,
             name: CategoryName,
             order: CategoryOrder,
-            createdBy: DocumentId,
+            createdBy: OwnerId,
             isCategory: IsCategoryFlag = IsCategoryFlag(true)
         ): Category {
             val now = Instant.now()
             val category = Category(
                 id = id,
-                name = name,
-                order = order,
-                createdBy = createdBy,
-                createdAt = now,
-                updatedAt = now,
-                isCategory = isCategory
+                initialName = name,
+                initialOrder = order,
+                initialCreatedBy = createdBy,
+                initialCreatedAt = now,
+                initialUpdatedAt = now,
+                initialIsCategory = isCategory,
+                isNew = true
             )
-            category._domainEvents.add(CategoryCreatedEvent(id.value))
+            category.pushDomainEvent(CategoryCreatedEvent(id.value))
             return category
         }
 
@@ -158,23 +191,26 @@ class Category private constructor(
          * @return An instance of [Category] populated with data source values.
          */
         fun fromDataSource(
-            id: CategoryId,
+            id: DocumentId,
             name: CategoryName,
             order: CategoryOrder,
-            createdBy: DocumentId,
+            createdBy: OwnerId,
             createdAt: Instant,
             updatedAt: Instant?,
             isCategory: IsCategoryFlag
         ): Category {
-            return Category(
+            val category = Category(
                 id = id,
-                name = name,
-                order = order,
-                createdBy = createdBy,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
-                isCategory = isCategory
+                initialName = name,
+                initialOrder = order,
+                initialCreatedBy = createdBy,
+                initialCreatedAt = createdAt,
+                initialUpdatedAt = updatedAt,
+                initialIsCategory = isCategory,
+                isNew = false
             )
+            category.pushDomainEvent(CategoryCreatedEvent(id.value))
+            return category
         }
     }
 }

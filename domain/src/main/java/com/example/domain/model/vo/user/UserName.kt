@@ -4,7 +4,8 @@ package com.example.domain.model.vo.user
  * Represents a user's name as a Value Object.
  * Ensures the name meets certain criteria (e.g., not empty, length limits).
  */
-data class UserName(val value: String) {
+@JvmInline
+value class UserName(val value: String) {
     init {
         require(value.isNotBlank()) { "User name cannot be blank." }
         require(value.length <= MAX_LENGTH) { "User name cannot exceed $MAX_LENGTH characters." }

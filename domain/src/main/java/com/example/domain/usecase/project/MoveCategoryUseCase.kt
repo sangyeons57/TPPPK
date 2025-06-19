@@ -3,6 +3,7 @@ package com.example.domain.usecase.project
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.collection.CategoryCollection
+import com.example.domain.model.vo.category.CategoryOrder
 import javax.inject.Inject
 
 /**
@@ -67,9 +68,8 @@ class MoveCategoryUseCaseImpl @Inject constructor() : MoveCategoryUseCase {
             val now = DateTimeUtil.nowInstant()
             val updatedCategories = currentCategories.mapIndexed { index, categoryCollection ->
                 // 카테고리의 order와 updatedAt 필드만 업데이트
-                val updatedCategory = categoryCollection.category.copy(
-                    order = index.toDouble(), 
-                    updatedAt = now
+                val updatedCategory = categoryCollection.category.update(
+                    newOrder = CategoryOrder(index.toDouble())
                 )
                 
                 // 채널은 그대로 유지하고 카테고리만 업데이트된 새 CategoryCollection 반환

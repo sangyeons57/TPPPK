@@ -2,7 +2,6 @@ package com.example.data.repository
 
 import android.content.ContentValues.TAG
 import android.util.Log
-import com.example.data.datasource.remote.AuthRemoteDataSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.example.domain.repository.AuthRepository
@@ -12,7 +11,13 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import com.example.domain.model.base.User
 import com.example.core_common.result.CustomResult
+import com.example.data.datasource.remote.special.AuthRemoteDataSource
 import com.example.domain.model.data.UserSession
+import com.example.domain.model.vo.Email
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.Token
+import com.example.domain.model.vo.UserId
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.flow.map
 
@@ -221,11 +226,11 @@ class AuthRepositoryImpl @Inject constructor(
                     }
 
                     val userSession = UserSession(
-                        userId = it.uid,
-                        token = tokenResult?.token ?: "",
-                        email = it.email,
-                        displayName = it.displayName!!,
-                        photoUrl = it.photoUrl?.toString()
+                        userId = UserId(it.uid),
+                        token = tokenResult?.token?.let { value -> Token(value) },
+                        email = it.email?.let { value -> Email(value) },
+                        displayName = it.displayName?.let { value -> Name(value) },
+                        photoUrl = it.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                     )
 
                     CustomResult.Success(userSession)
@@ -262,11 +267,11 @@ class AuthRepositoryImpl @Inject constructor(
                     }
 
                     val userSession = UserSession(
-                        userId = firebaseUser.data.uid,
-                        token = tokenResult?.token ?: "",
-                        email = firebaseUser.data.email,
-                        displayName = firebaseUser.data.displayName!!,
-                        photoUrl = firebaseUser.data.photoUrl?.toString()
+                        userId = UserId(firebaseUser.data.uid),
+                        token = tokenResult?.token?.let { value -> Token(value) },
+                        email = firebaseUser.data.email?.let { value -> Email(value) },
+                        displayName = firebaseUser.data.displayName?.let { value -> Name(value) },
+                        photoUrl = firebaseUser.data.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                     )
 
                     return@map CustomResult.Success(userSession)

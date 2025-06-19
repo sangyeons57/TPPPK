@@ -6,7 +6,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.constants.FirestoreConstants
+
 import com.google.firebase.firestore.PropertyName
 
 /**
@@ -15,17 +15,26 @@ import com.google.firebase.firestore.PropertyName
 data class DMChannelDTO(
     @DocumentId val id: String = "",
     // userId1, userId2 대신 참여자 목록으로 관리하면 확장성 및 쿼리에 유리합니다.
-    @get:PropertyName(FirestoreConstants.DMChannel.PARTICIPANTS)
+    @get:PropertyName(PARTICIPANTS)
     val participants: List<String> = emptyList(),
-    @get:PropertyName(FirestoreConstants.DMChannel.LAST_MESSAGE_PREVIEW)
+    @get:PropertyName(LAST_MESSAGE_PREVIEW)
     val lastMessagePreview: String? = null,
-    @get:PropertyName(FirestoreConstants.DMChannel.LAST_MESSAGE_TIMESTAMP)
+    @get:PropertyName(LAST_MESSAGE_TIMESTAMP)
     @ServerTimestamp val lastMessageTimestamp: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.DMChannel.CREATED_AT)
+    @get:PropertyName(CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.DMChannel.UPDATED_AT)
+    @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp? = null,
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "dm_channels"
+        const val PARTICIPANTS = "participants" // List<String> = "userId1"
+        const val LAST_MESSAGE_PREVIEW = "lastMessagePreview"
+        const val LAST_MESSAGE_TIMESTAMP = "lastMessageTimestamp"
+        const val CREATED_AT = "createdAt"
+        const val UPDATED_AT = "updatedAt"
+    }
     /**
      * DTO를 도메인 모델로 변환
      * @return DMChannel 도메인 모델

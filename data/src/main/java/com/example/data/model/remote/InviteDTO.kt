@@ -1,6 +1,6 @@
 package com.example.data.model.remote
 
-import com.example.core_common.constants.FirestoreConstants
+
 import com.example.domain.model._new.enum.InviteStatus
 import com.example.domain.model.base.Invite
 import com.google.firebase.Timestamp
@@ -15,12 +15,22 @@ import com.google.firebase.firestore.PropertyName
  */
 data class InviteDTO(
     @DocumentId val id: String = "",
-    @get:PropertyName(FirestoreConstants.Project.Invites.INVITE_LINK) val inviteCode: String = "", // 고유한 초대 코드, 상수명은 INVITE_LINK
-    @get:PropertyName(FirestoreConstants.Project.Invites.STATUS) val status: String = "ACTIVE", // "ACTIVE", "INACTIVE", "EXPIRED"
-    @get:PropertyName(FirestoreConstants.Project.Invites.CREATED_BY) val createdBy: String = "", // 초대를 생성한 사용자의 ID
-    @get:PropertyName(FirestoreConstants.Project.Invites.CREATED_AT) @ServerTimestamp val createdAt: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Project.Invites.EXPIRES_AT) val expiresAt: Timestamp? = null // 만료 시간 (null이면 무제한)
+    @get:PropertyName(INVITE_LINK) val inviteCode: String = "", // 고유한 초대 코드, 상수명은 INVITE_LINK
+    @get:PropertyName(STATUS) val status: InviteStatus = InviteStatus.ACTIVE, // "ACTIVE", "INACTIVE", "EXPIRED"
+    @get:PropertyName(CREATED_BY) val createdBy: String = "", // 초대를 생성한 사용자의 ID
+    @get:PropertyName(CREATED_AT) @ServerTimestamp val createdAt: Timestamp? = null,
+    @get:PropertyName(EXPIRES_AT) val expiresAt: Timestamp? = null // 만료 시간 (null이면 무제한)
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "invites"
+        const val INVITE_LINK = "inviteCode"
+        const val STATUS = "status"
+        const val CREATED_BY = "createdBy"
+        const val CREATED_AT = "createdAt"
+        const val UPDATED_AT = "updatedAt"
+        const val EXPIRES_AT = "expiresAt"
+    }
     /*
      * DTO를 도메인 모델로 변환
      * @return Invite 도메인 모델
@@ -29,11 +39,7 @@ data class InviteDTO(
         return Invite(
             id = id,
             inviteCode = inviteCode,
-            status = try {
-                InviteStatus.valueOf(status.uppercase())
-            } catch (e: Exception) {
-                InviteStatus.ACTIVE
-            },
+            status = status,
             createdBy = createdBy,
             createdAt = createdAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             expiresAt = expiresAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)}
@@ -49,7 +55,7 @@ fun Invite.toDto(): InviteDTO {
     return InviteDTO(
         id = id,
         inviteCode = inviteCode,
-        status = status.name.lowercase(),
+        status = status,
         createdBy = createdBy,
         createdAt = createdAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         expiresAt = expiresAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)}

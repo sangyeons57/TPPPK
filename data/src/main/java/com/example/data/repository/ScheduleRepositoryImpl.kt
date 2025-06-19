@@ -37,18 +37,25 @@ class ScheduleRepositoryImpl @Inject constructor(
      * @return 생성된 일정 정보 (서버에서 부여된 ID 포함)
      */
     override suspend fun save(schedule: Schedule): CustomResult<String, Exception> {
-        return try {
+        return resultTry {
             val scheduleDto = schedule.toDto() // ID는 비어있을 수 있음
-            val result = scheduleRemoteDataSource.saveSchedule(scheduleDto)
-            when (result) {
-                is CustomResult.Success -> {
-                    CustomResult.Success(result.data)
+            if(schedule.id.isAssigned()){
+                //update
+                val result = scheduleRemoteDataSource.updateSchedule(scheduleDto)
+                when (result) {
+                    is CustomResult.Success -> CustomResult.Success(result.data)
+                    is CustomResult.Failure -> CustomResult.Failure(result.error)
+                    else -> CustomResult.Failure(Exception("Unknown error"))
                 }
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                else -> CustomResult.Failure(Exception("Unknown error"))
+            } else {
+                //create
+                val result = scheduleRemoteDataSource.createSchedule(scheduleDto)
+                when (result) {
+                    is CustomResult.Success -> CustomResult.Success(result.data)
+                    is CustomResult.Failure -> CustomResult.Failure(result.error)
+                    else -> CustomResult.Failure(Exception("Unknown error"))
+                }
             }
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
         }
     }
 

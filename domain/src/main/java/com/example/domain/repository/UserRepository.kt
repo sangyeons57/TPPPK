@@ -6,35 +6,34 @@ import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.base.User
+import com.example.domain.model.vo.DocumentId
 import kotlinx.coroutines.flow.Flow
 
 /**
  * 사용자 정보 조회, 업데이트, 계정 관리 등과 관련된 데이터 처리를 위한 인터페이스입니다.
  */
-interface UserRepository {
-    // --- Domain Aggregate Operations (new) ---
+interface UserRepository : DefaultRepository<User> {
     /**
      * Saves the [user] aggregate using Firestore upsert (set with merge=true).
      * New document will be created if absent, otherwise merged with existing fields.
      */
-    suspend fun save(user: com.example.domain.model.base.User): com.example.core_common.result.CustomResult<String, Exception>
+    override suspend fun save(user: User): CustomResult<DocumentId, Exception>
 
     /**
      * Deletes the user document (soft or hard depending on implementation).
      */
-    suspend fun delete(userId: String): com.example.core_common.result.CustomResult<Unit, Exception>
+    override suspend fun delete(userId: DocumentId): CustomResult<Unit, Exception>
 
     /**
      * Retrieves a [User] aggregate by id.
      */
-    suspend fun findById(userId: String): com.example.core_common.result.CustomResult<com.example.domain.model.base.User, Exception>
+    override suspend fun findById(userId: DocumentId): CustomResult<User, Exception>
 
     /**
      * Observes the [User] aggregate in real time.
      */
-    fun observe(userId: String): kotlinx.coroutines.flow.Flow<com.example.core_common.result.CustomResult<com.example.domain.model.base.User, Exception>>
+    override fun observe(userId: DocumentId): Flow<CustomResult<User, Exception>>
 
-    // --- Query helpers ---
 
     /**
      * 주어진 이름(닉네임)과 정확히 일치하는 사용자 1명을 스트림으로 반환합니다.

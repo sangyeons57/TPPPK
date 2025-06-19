@@ -4,6 +4,9 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.collection.CategoryCollection
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.category.CategoryName
 import javax.inject.Inject
 
 /**
@@ -39,15 +42,15 @@ data class DraggableItem(
  * 드래그 가능한 아이템의 타입을 나타내는 sealed 인터페이스
  */
 sealed interface DraggableItemType {
-    val id: String
-    val name: String
+    val id: DocumentId
+    val name: Name
 
     /**
      * 카테고리 타입의 드래그 가능한 아이템
      */
     data class CategoryItem(val category: Category) : DraggableItemType {
-        override val id: String get() = category.id
-        override val name: String get() = category.name
+        override val id: DocumentId get() = category.id
+        override val name: Name get() = category.name.getName()
     }
 
     /**
@@ -57,8 +60,8 @@ sealed interface DraggableItemType {
         val channel: ProjectChannel,
         val currentParentCategoryId: String
     ) : DraggableItemType {
-        override val id: String get() = channel.id
-        override val name: String get() = channel.channelName
+        override val id: DocumentId get() = DocumentId(channel.id)
+        override val name: Name get() = Name(channel.channelName)
     }
 }
 
@@ -84,7 +87,7 @@ class ConvertProjectStructureToDraggableItemsUseCaseImpl @Inject constructor() :
                 // 카테고리 추가
                 draggableItems.add(
                     DraggableItem(
-                        id = category.id,
+                        id = category.id.value,
                         depth = 0,
                         parentId = null,
                         canAcceptChildren = true,
@@ -99,10 +102,10 @@ class ConvertProjectStructureToDraggableItemsUseCaseImpl @Inject constructor() :
                         DraggableItem(
                             id = channel.id,
                             depth = 1,
-                            parentId = category.id,
+                            parentId = category.id.value,
                             canAcceptChildren = false,
                             maxRelativeChildDepth = 0, // 채널은 자식을 가질 수 없음
-                            item = DraggableItemType.ChannelItem(channel, category.id)
+                            item = DraggableItemType.ChannelItem(channel, category.id.value)
                         )
                     )
                 }

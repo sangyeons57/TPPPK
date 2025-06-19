@@ -4,7 +4,7 @@ import com.example.domain.model._new.enum.MessageAttachmentType
 import com.example.domain.model.base.MessageAttachment
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
-import com.example.core_common.constants.FirestoreConstants
+
 
 /**
  * 메시지 첨부파일 정보를 나타내는 DTO 클래스
@@ -12,27 +12,34 @@ import com.example.core_common.constants.FirestoreConstants
 data class MessageAttachmentDTO(
     @DocumentId val id: String = "",
     // "IMAGE", "FILE", "VIDEO" 등
-    @get:PropertyName(FirestoreConstants.MessageFields.Attachments.ATTACHMENT_TYPE)
-    val attachmentType: String = "FILE",
+    @get:PropertyName(ATTACHMENT_TYPE)
+    val attachmentType: MessageAttachmentType = MessageAttachmentType.FILE,
     // Firebase Storage 등에 업로드된 파일의 URL
-    @get:PropertyName(FirestoreConstants.MessageFields.Attachments.ATTACHMENT_URL)
+    @get:PropertyName(ATTACHMENT_URL)
     val attachmentUrl: String = "",
+    @get:PropertyName(FILE_NAME)
     val fileName: String? = null,
+    @get:PropertyName(FILE_SIZE)
     val fileSize: Long? = null
 ) {
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return MessageAttachment 도메인 모델
-     */
+
+    companion object {
+        const val COLLECTION_NAME = "message_attachments"
+        const val ATTACHMENT_TYPE = "attachmentType"
+        const val ATTACHMENT_URL = "attachmentUrl"
+        const val FILE_NAME = "fileName"
+        const val FILE_SIZE = "fileSize"
+    }
     fun toDomain(): MessageAttachment {
-        return MessageAttachment(
+        return MessageAttachment.toDataSource(
             id = id,
-            attachmentType = try {
-                MessageAttachmentType.valueOf(attachmentType.uppercase())
-            } catch (e: Exception) {
-                MessageAttachmentType.FILE
-            },
-            attachmentUrl = attachmentUrl
+            attachmentType = attachmentType,
+            attachmentUrl = attachmentUrl,
+            fileName = fileName,
+            fileSize = fileSize,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            isNew = isNew
         )
     }
 }
@@ -44,7 +51,7 @@ data class MessageAttachmentDTO(
 fun MessageAttachment.toDto(): MessageAttachmentDTO {
     return MessageAttachmentDTO(
         id = id,
-        attachmentType = attachmentType.name.lowercase(),
+        attachmentType = attachmentType,
         attachmentUrl = attachmentUrl,
         fileName = null, // 도메인 모델에 없는 필드는 null로 처리
         fileSize = null  // 도메인 모델에 없는 필드는 null로 처리

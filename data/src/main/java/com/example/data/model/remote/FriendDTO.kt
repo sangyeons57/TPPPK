@@ -5,7 +5,7 @@ import com.example.domain.model.base.Friend
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.constants.FirestoreConstants
+
 import com.google.firebase.firestore.PropertyName
 
 /*
@@ -14,13 +14,20 @@ import com.google.firebase.firestore.PropertyName
 data class FriendDTO(
     @DocumentId val friendUid: String = "",
     // "requested", "accepted", "pending", "blocked"
-    @get:PropertyName(FirestoreConstants.Users.Friends.STATUS)
+    @get:PropertyName(STATUS)
     val status: FriendStatus = FriendStatus.UNKNOWN,
-    @get:PropertyName(FirestoreConstants.Users.Friends.REQUESTED_AT)
+    @get:PropertyName(REQUESTED_AT)
     val requestedAt: Timestamp? = null,
-    @get:PropertyName(FirestoreConstants.Users.Friends.ACCEPTED_AT)
+    @get:PropertyName(ACCEPTED_AT)
     val acceptedAt: Timestamp? = null
 ) {
+
+    companion object {
+        const val COLLECTION_NAME = "friends"
+        const val STATUS = "status" // "PENDING_SENT", "PENDING_RECEIVED", "ACCEPTED", "DECLINED", "BLOCKED"
+        const val REQUESTED_AT = "requestedAt"
+        const val ACCEPTED_AT = "acceptedAt"
+    }
     /*
      * DTO를 도메인 모델로 변환
      * @return Friend 도메인 모델

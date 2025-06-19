@@ -9,10 +9,8 @@ import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.exception.AccountAlreadyExistsException
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.usecase.auth.ReactivateAccountUseCase
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.util.NoSuchElementException
@@ -25,7 +23,7 @@ import javax.inject.Inject
  * @property userRepository 사용자 관련 기능을 제공하는 Repository
  * @property reactivateAccountUseCase 계정 재활성화 기능을 제공하는 UseCase
  */
-class SignUpUseCase @Inject constructor(
+class SignUpUseCaseImpl @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val reactivateAccountUseCase: ReactivateAccountUseCase
@@ -60,7 +58,7 @@ class SignUpUseCase @Inject constructor(
                 val uid = signUpRes.data
                 Log.d(TAG, "Auth signup success. uid=$uid")
                 val newUser = User.registerNewUser(
-                    uid = DocumentId(uid),
+                    uid = uid,
                     email = UserEmail(email),
                     name = UserName(nickname),
                     consentTimeStamp = consentTimeStamp
@@ -71,6 +69,7 @@ class SignUpUseCase @Inject constructor(
                             Log.d(TAG, "User aggregate persisted successfully for uid=$uid")
                             CustomResult.Success(newUser)
                         }
+
                         is CustomResult.Failure -> {
                             Log.d(TAG, "Failed to persist user aggregate: ${saveResult.error}")
                             saveResult
@@ -119,5 +118,60 @@ class SignUpUseCase @Inject constructor(
                 return CustomResult.Failure(Exception("Sign-up process is currently in progress."))
             }
         }
+    }
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            when (val checkRes = authRepository.checkEmailVerification()) {
+                is CustomResult.Success -> {
+                    if (checkRes.data) {
+                        verified = true
+                        Log.d(TAG, "Email verification complete!")
+                        break
+                    }
+                }
+                is CustomResult.Failure -> {
+                    Log.d(TAG, "Verification check failed: ${checkRes.error}")
+                    return CustomResult.Failure(checkRes.error)
+                }
+                else -> {}
+            }
+            delay(intervalMs)
+        }
+
+        if (!verified) {
+            Log.d(TAG, "Email verification timeout")
+            return CustomResult.Failure(Exception("Email verification timeout"))
+        }
+
+        // 4. 비밀번호 업데이트
+        val pwUpdateRes = authRepository.updatePassword(newPassword)
+        if (pwUpdateRes is CustomResult.Failure) {
+            Log.d(TAG, "Password update failed: ${pwUpdateRes.error}")
+            return CustomResult.Failure(pwUpdateRes.error)
+        }
+
+        // 5. Firestore 사용자 정보 업데이트
+        val currentSessionRes = authRepository.getCurrentUserSession()
+        if (currentSessionRes is CustomResult.Failure) {
+            Log.d(TAG, "Failed to get current user session: ${currentSessionRes.error}")
+            return CustomResult.Failure(currentSessionRes.error)
+        }
+
+        val uid = (currentSessionRes as CustomResult.Success).data.userId
+
+        val userRes = userRepository.findById(uid)
+        if (userRes is CustomResult.Failure) {
+            Log.d(TAG, "Failed to fetch existing user during reactivation: ${userRes.error}")
+            return CustomResult.Failure(userRes.error)
+        }
+        val user = (userRes as CustomResult.Success).data
+        user.activateAccount()
+        user.updateProfile(UserName(newNickname), user.profileImageUrl)
+        val saveRes = userRepository.save(user)
+        if (saveRes is CustomResult.Failure) {
+            Log.d(TAG, "Failed to persist reactivated user: ${saveRes.error}")
+            return CustomResult.Failure(saveRes.error)
+        }
+        Log.d(TAG, "Account reactivated successfully for uid=$uid")
+        return CustomResult.Success(user)
     }
 }

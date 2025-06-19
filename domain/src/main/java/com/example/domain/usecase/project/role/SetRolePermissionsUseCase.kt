@@ -1,7 +1,7 @@
 package com.example.domain.usecase.project.role
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.data.project.RolePermission
+import com.example.domain.model.project.RolePermission
 import com.example.domain.repository.RoleRepository
 import javax.inject.Inject
 

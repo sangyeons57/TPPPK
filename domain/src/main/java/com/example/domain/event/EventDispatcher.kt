@@ -1,5 +1,6 @@
 package com.example.domain.event
 
+import com.example.domain.model.vo.DocumentId
 import java.time.Instant
 
 /**
@@ -10,9 +11,40 @@ interface DomainEvent {
     val occurredOn: Instant
 }
 
-interface AggregateRoot {
-    fun pullDomainEvents(): List<DomainEvent>
-    fun clearDomainEvents()
+abstract class AggregateRoot() {
+    /** Collects domain events raised by this aggregate until they are dispatched. */
+    abstract val id: DocumentId
+    abstract val isNew : Boolean
+    private val originalState: Map<String, Any?> = this.getCurrentStateMap()
+
+    private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
+
+    abstract fun getCurrentStateMap(): Map<String, Any?>
+
+    fun pullDomainEvents(): List<DomainEvent> {
+        val copy = _domainEvents.toList()
+        _domainEvents.clear()
+        return copy
+    }
+    fun clearDomainEvents() {
+        _domainEvents.clear()
+    }
+    fun pushDomainEvent(event: DomainEvent) {
+        _domainEvents.add(event)
+    }
+    fun getChangedFields(): Map<String, Any?> {
+        val newState = this.getCurrentStateMap()
+        val changedFields = mutableMapOf<String, Any?>()
+        if(isNew){
+            return newState
+        }
+        originalState.forEach { (key, value) ->
+            if (newState[key] != value) {
+                changedFields[key] = newState[key]
+            }
+        }
+        return changedFields
+    }
 }
 
 /**

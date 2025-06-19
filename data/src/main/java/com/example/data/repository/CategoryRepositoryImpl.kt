@@ -23,7 +23,8 @@ class CategoryRepositoryImpl @Inject constructor(
         projectId: String,
         category: Category
     ): CustomResult<String, Exception> {
-        return categoryRemoteDataSource.addCategory(projectId, category.toDto())
+        categoryRemoteDataSource.setCollection(projectId).create(category.toDto())
+        return categoryRemoteDataSource.create(projectId, category.toDto())
     }
 
     override suspend fun setDirectCategory(
