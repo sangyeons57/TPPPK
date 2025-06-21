@@ -1,6 +1,7 @@
 package com.example.data.model.remote
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
@@ -32,7 +33,7 @@ data class MessageAttachmentDTO(
     @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = MessageAttachment.COLLECTION_NAME
@@ -42,8 +43,20 @@ data class MessageAttachmentDTO(
         const val FILE_SIZE = MessageAttachment.KEY_FILE_SIZE
         const val CREATED_AT = MessageAttachment.KEY_CREATED_AT
         const val UPDATED_AT = MessageAttachment.KEY_UPDATED_AT
+
+        fun from(messageAttachment: MessageAttachment): MessageAttachmentDTO {
+            return MessageAttachmentDTO(
+                id = messageAttachment.id.value,
+                attachmentType = messageAttachment.attachmentType,
+                attachmentUrl = messageAttachment.attachmentUrl.value,
+                fileName = messageAttachment.fileName?.value,
+                fileSize = messageAttachment.fileSize?.value,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(messageAttachment.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(messageAttachment.updatedAt),
+            )
+        }
     }
-    fun toDomain(): MessageAttachment {
+    override fun toDomain(): MessageAttachment {
         return MessageAttachment.fromDataSource(
             id = VODocumentId(id),
             attachmentType = attachmentType,

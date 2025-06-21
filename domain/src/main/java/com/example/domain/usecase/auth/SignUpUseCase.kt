@@ -6,10 +6,9 @@ import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.model.enum.UserAccountStatus
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import com.example.domain.exception.AccountAlreadyExistsException
-import com.example.domain.usecase.auth.ReactivateAccountUseCase
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.flow.first
 import java.time.Instant

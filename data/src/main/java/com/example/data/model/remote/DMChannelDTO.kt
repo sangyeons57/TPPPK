@@ -7,6 +7,7 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
 
@@ -28,7 +29,7 @@ data class DMChannelDTO(
     @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = DMChannel.COLLECTION_NAME
@@ -37,12 +38,23 @@ data class DMChannelDTO(
         const val LAST_MESSAGE_TIMESTAMP = DMChannel.KEY_LAST_MESSAGE_TIMESTAMP
         const val CREATED_AT = DMChannel.KEY_CREATED_AT
         const val UPDATED_AT = DMChannel.KEY_UPDATED_AT
+
+        fun from (domain: DMChannel): DMChannelDTO {
+            return DMChannelDTO(
+                id = domain.id.value,
+                participants = domain.participants.map { it.value },
+                lastMessagePreview = domain.lastMessagePreview?.value,
+                lastMessageTimestamp = domain.lastMessageTimestamp?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt),
+            )
+        }
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return DMChannel 도메인 모델
      */
-    fun toDomain(): DMChannel {
+    override fun toDomain(): DMChannel {
         return DMChannel.fromDataSource(
             id = VODocumentId(id),
             participants = participants.map { UserId(it) },

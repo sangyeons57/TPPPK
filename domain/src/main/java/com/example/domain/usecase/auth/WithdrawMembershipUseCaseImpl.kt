@@ -4,8 +4,8 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.event.user.UserAccountWithdrawnEvent
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

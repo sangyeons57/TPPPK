@@ -1,10 +1,9 @@
 package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
-import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Category
-import com.example.domain.repository.AuthRepository // Added
-import com.example.domain.repository.CategoryRepository // Added
+import com.example.domain.repository.base.AuthRepository // Added
+import com.example.domain.repository.base.CategoryRepository // Added
 import com.example.core_common.constants.Constants // Added
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.OwnerId

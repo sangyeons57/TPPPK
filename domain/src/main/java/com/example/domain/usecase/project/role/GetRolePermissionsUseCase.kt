@@ -1,8 +1,8 @@
 package com.example.domain.usecase.project.role
 
 import com.example.domain.model.project.RolePermission
-import com.example.domain.repository.PermissionRepository
-import com.example.domain.repository.RoleRepository
+import com.example.domain.repository.base.PermissionRepository
+import com.example.domain.repository.base.RoleRepository
 import javax.inject.Inject
 
 /**

@@ -2,7 +2,7 @@ package com.example.domain.usecase.category
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
-import com.example.domain.repository.CategoryRepository
+import com.example.domain.repository.base.CategoryRepository
 import javax.inject.Inject
 
 /**

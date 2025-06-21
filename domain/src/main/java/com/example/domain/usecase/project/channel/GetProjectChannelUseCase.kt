@@ -2,11 +2,9 @@ package com.example.domain.usecase.project.channel
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.repository.ProjectChannelRepository
+import com.example.domain.repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * 특정 채널의 정보 스트림을 가져오는 유스케이스입니다.

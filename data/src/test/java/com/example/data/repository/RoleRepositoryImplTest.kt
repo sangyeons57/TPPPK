@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.PermissionRemoteDataSource
 import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.model.remote.RoleDTO
-import com.example.data.model.remote.toDomain
+import com.example.data.repository.base.RoleRepositoryImpl
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.Timestamp

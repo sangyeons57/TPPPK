@@ -1,8 +1,8 @@
 package com.example.domain.usecase.project.role
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.RoleRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.RoleRepository
 import javax.inject.Inject
 import kotlin.Result
 

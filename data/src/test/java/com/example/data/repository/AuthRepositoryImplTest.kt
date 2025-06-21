@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import com.example.data.datasource.remote.auth.AuthRemoteDataSource
 import com.example.data.model.mapper.UserMapper
+import com.example.data.repository.base.AuthRepositoryImpl
 import com.example.data.util.FirebaseAuthWrapper
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth

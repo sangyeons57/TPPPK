@@ -7,6 +7,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId
@@ -39,7 +40,7 @@ data class ScheduleDTO(
     @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = Schedule.COLLECTION_NAME
@@ -53,12 +54,26 @@ data class ScheduleDTO(
         const val COLOR = Schedule.KEY_COLOR
         const val CREATED_AT = Schedule.KEY_CREATED_AT
         const val UPDATED_AT = Schedule.KEY_UPDATED_AT
+        fun from(entity: Schedule): ScheduleDTO {
+            return ScheduleDTO(
+                id = entity.id.value,
+                title = entity.title.value,
+                content = entity.content.value,
+                startTime = DateTimeUtil.instantToFirebaseTimestamp(entity.startTime),
+                endTime = DateTimeUtil.instantToFirebaseTimestamp(entity.endTime),
+                projectId = entity.projectId?.value,
+                creatorId = entity.creatorId.value,
+                status = entity.status,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(entity.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(entity.updatedAt)
+            )
+        }
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return Schedule 도메인 모델
      */
-    fun toDomain(): Schedule {
+    override fun toDomain(): Schedule {
         requireNotNull(startTime) { "startTime is null in ScheduleDTO with id=$id" }
         requireNotNull(endTime) { "endTime is null in ScheduleDTO with id=$id" }
         requireNotNull(createdAt) { "createdAt is null in ScheduleDTO with id=$id" }

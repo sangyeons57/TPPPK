@@ -4,7 +4,7 @@ import com.example.domain.model.MessageResult
 import com.example.domain.model.SearchResultItem
 import com.example.domain.model.SearchScope
 import com.example.domain.model.UserResult
-import com.example.domain.repository.SearchRepository
+import com.example.domain.repository.base.SearchRepository
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 

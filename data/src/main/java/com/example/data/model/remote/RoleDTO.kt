@@ -1,6 +1,8 @@
 package com.example.data.model.remote
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
+import com.example.domain.event.AggregateRoot
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
@@ -20,29 +22,35 @@ data class RoleDTO(
     @get:PropertyName(IS_DEFAULT) var isDefault: Boolean = false,
     @ServerTimestamp @get:PropertyName(CREATED_AT) var createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @ServerTimestamp @get:PropertyName(UPDATED_AT) var updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-) {
+) : DTO {
     companion object {
         const val COLLECTION_NAME = Role.COLLECTION_NAME
         const val NAME = Role.KEY_NAME
         const val IS_DEFAULT = Role.KEY_IS_DEFAULT
         const val CREATED_AT = Role.KEY_CREATED_AT
         const val UPDATED_AT = Role.KEY_UPDATED_AT
-    }
-}
 
-/**
- * RoleDTO를 Role 도메인 모델로 변환하는 확장 함수
- * @return Role 도메인 모델
- */
-fun RoleDTO.toDomain(): Role {
-    // Firestore에서 읽은 타임스탬프가 null일 경우를 대비하여 현재 시간으로 대체
-    return Role.fromDataSource(
-        id = VODocumentId(this.id),
-        name = Name(this.name),
-        isDefault = RoleIsDefault(this.isDefault),
-        createdAt = this.createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-        updatedAt = this.updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
-    )
+        fun from(role: Role): RoleDTO {
+            return RoleDTO(
+                id = role.id.value,
+                name = role.name.value,
+                isDefault = role.isDefault.value,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(role.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(role.updatedAt)
+            )
+        }
+    }
+
+    override fun toDomain(): AggregateRoot {
+        // Firestore에서 읽은 타임스탬프가 null일 경우를 대비하여 현재 시간으로 대체
+        return Role.fromDataSource(
+            id = VODocumentId(this.id),
+            name = Name(this.name),
+            isDefault = RoleIsDefault(this.isDefault),
+            createdAt = this.createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+            updatedAt = this.updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+        )
+    }
 }
 
 /**

@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface CategoryRemoteDataSource : DefaultDatasource<CategoryDTO> { // DefaultDatasource 상속
+interface CategoryRemoteDataSource : DefaultDatasource { // DefaultDatasource 상속
 
     /**
      * 특정 프로젝트의 모든 카테고리 목록을 순서대로 실시간 관찰합니다.

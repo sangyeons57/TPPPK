@@ -1,10 +1,9 @@
 package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.base.Category
 import com.example.domain.model.collection.CategoryCollection
-import com.example.domain.repository.CategoryRepository
-import com.example.domain.repository.ProjectChannelRepository
+import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.base.ProjectChannelRepository
 import javax.inject.Inject
 
 /**

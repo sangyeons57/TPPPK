@@ -1,6 +1,7 @@
 package com.example.data.model.remote
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
@@ -33,7 +34,7 @@ data class CategoryDTO(
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(IS_CATEGORY) 
     val isCategory: Boolean = true
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = Category.COLLECTION_NAME
@@ -48,7 +49,7 @@ data class CategoryDTO(
      * DTO를 도메인 모델로 변환
      * @return Category 도메인 모델
      */
-    fun toDomain(): Category {
+    override fun toDomain(): Category {
         return Category.fromDataSource(
             id = DocumentId(id),
             name = CategoryName(name),

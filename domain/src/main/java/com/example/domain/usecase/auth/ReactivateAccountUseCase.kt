@@ -4,8 +4,8 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import java.time.Instant
 import javax.inject.Inject
 

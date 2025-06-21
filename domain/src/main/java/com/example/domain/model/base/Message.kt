@@ -9,16 +9,12 @@ import com.example.domain.event.message.MessageContentUpdatedEvent
 import com.example.domain.event.message.MessageDeletedEvent
 import com.example.domain.event.message.MessageSentEvent
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
 
 class Message private constructor(
     initialSenderId: UserId,
-    initialSenderName: Name,
-    initialSenderProfileImageUrl: ImageUrl?,
     initialContent: MessageContent,
     initialReplyToMessageId: DocumentId?,
     initialCreatedAt: Instant,
@@ -29,8 +25,6 @@ class Message private constructor(
 ) : AggregateRoot() {
 
     val senderId: UserId = initialSenderId
-    val senderName: Name = initialSenderName
-    val senderProfileImageUrl: ImageUrl? = initialSenderProfileImageUrl
     val replyToMessageId: DocumentId? = initialReplyToMessageId
     val createdAt: Instant = initialCreatedAt
 
@@ -44,8 +38,6 @@ class Message private constructor(
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_SENDER_ID to this.senderId,
-            KEY_SENDER_NAME to this.senderName,
-            KEY_SENDER_PROFILE_IMAGE_URL to this.senderProfileImageUrl,
             KEY_SEND_MESSAGE to this.content,
             KEY_REPLY_TO_MESSAGE_ID to this.replyToMessageId,
             KEY_SENT_AT to this.createdAt,
@@ -79,8 +71,6 @@ class Message private constructor(
     companion object {
         const val COLLECTION_NAME = "messages"
         const val KEY_SENDER_ID = "senderId"
-        const val KEY_SENDER_NAME = "senderName"
-        const val KEY_SENDER_PROFILE_IMAGE_URL = "senderProfileImageUrl"
         const val KEY_SEND_MESSAGE = "content"
         const val KEY_SENT_AT = "sentAt"
         const val KEY_UPDATED_AT = "updatedAt"
@@ -92,16 +82,12 @@ class Message private constructor(
         fun create(
             id: DocumentId,
             senderId: UserId,
-            senderName: Name,
-            senderProfileImageUrl: ImageUrl?,
             content: MessageContent,
             replyToMessageId: DocumentId?
         ): Message {
             val now = Instant.now()
             val message = Message(
                 initialSenderId = senderId,
-                initialSenderName = senderName,
-                initialSenderProfileImageUrl = senderProfileImageUrl,
                 initialContent = content,
                 initialReplyToMessageId = replyToMessageId,
                 initialCreatedAt = now,
@@ -120,8 +106,6 @@ class Message private constructor(
         fun fromDataSource(
             id: DocumentId,
             senderId: UserId,
-            senderName: Name,
-            senderProfileImageUrl: ImageUrl?,
             content: MessageContent,
             replyToMessageId: DocumentId?,
             createdAt: Instant,
@@ -130,8 +114,6 @@ class Message private constructor(
         ): Message {
             return Message(
                 initialSenderId = senderId,
-                initialSenderName = senderName,
-                initialSenderProfileImageUrl = senderProfileImageUrl,
                 initialContent = content,
                 initialReplyToMessageId = replyToMessageId,
                 initialCreatedAt = createdAt,

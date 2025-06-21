@@ -1,6 +1,5 @@
 package com.example.data.datasource.remote
 
-import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.special.DefaultDatasource
@@ -17,7 +16,7 @@ import javax.inject.Singleton
  * 초대 데이터는 `projects/{projectId}/invites/{inviteId}` 경로에 저장되므로,
  * 모든 작업 전에 `setCollection(projectId)`를 호출하여 프로젝트 컨텍스트를 설정해야 합니다.
  */
-interface InviteRemoteDataSource : DefaultDatasource<InviteDTO> {
+interface InviteRemoteDataSource : DefaultDatasource {
 
     /**
      * 프로젝트 ID와 초대 코드로 특정 초대 정보를 가져옵니다.

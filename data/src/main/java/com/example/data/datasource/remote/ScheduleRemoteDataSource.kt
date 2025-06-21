@@ -2,7 +2,6 @@
 package com.example.data.datasource.remote
 
 import android.util.Log
-import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.DateTimeUtil
@@ -23,7 +22,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface ScheduleRemoteDataSource: DefaultDatasource<ScheduleDTO> {
+interface ScheduleRemoteDataSource: DefaultDatasource {
 
     /**
      * Firestore에서 지정된 년도와 월에 해당하는 모든 스케줄 DTO를 가져옵니다.

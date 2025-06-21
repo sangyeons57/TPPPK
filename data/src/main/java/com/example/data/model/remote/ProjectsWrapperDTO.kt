@@ -5,6 +5,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.Timestamp
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.domain.model.vo.DocumentId as VODocumentId
@@ -17,19 +18,28 @@ data class ProjectsWrapperDTO(
     @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = ProjectsWrapper.COLLECTION_NAME
         const val ORDER = ProjectsWrapper.KEY_ORDER
         const val CREATED_AT = ProjectsWrapper.KEY_CREATED_AT
         const val UPDATED_AT = ProjectsWrapper.KEY_UPDATED_AT
+
+        fun from (projectsWrapper: ProjectsWrapper): ProjectsWrapperDTO {
+            return ProjectsWrapperDTO(
+                projectId = projectsWrapper.id.value,
+                order = projectsWrapper.order.value,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(projectsWrapper.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(projectsWrapper.updatedAt),
+            )
+        }
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return ProjectsWrapper 도메인 모델
      */
-    fun toDomain(): ProjectsWrapper {
+    override fun toDomain(): ProjectsWrapper {
         return ProjectsWrapper.fromDataSource(
             id = VODocumentId(projectId),
             order = ProjectWrapperOrder(order),

@@ -7,7 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface RoleRemoteDataSource : DefaultDatasource<RoleDTO> {
+interface RoleRemoteDataSource : DefaultDatasource {
 
 }
 

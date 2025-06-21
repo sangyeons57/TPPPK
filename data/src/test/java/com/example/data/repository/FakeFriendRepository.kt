@@ -2,7 +2,7 @@ package com.example.data.repository
 
 import com.example.domain.model.Friend
 import com.example.domain.model.FriendRequest
-import com.example.domain.repository.FriendRepository
+import com.example.domain.repository.base.FriendRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

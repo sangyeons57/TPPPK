@@ -21,7 +21,7 @@ import javax.inject.Singleton
  * - `ids[0]` (첫 번째 인자): `projectId` (String)
  * - `ids[1]` (두 번째 인자): `roleId` (String)
  */
-interface PermissionRemoteDataSource : DefaultDatasource<PermissionDTO>
+interface PermissionRemoteDataSource : DefaultDatasource
 
 @Singleton
 class PermissionRemoteDataSourceImpl @Inject constructor(

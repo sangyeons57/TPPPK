@@ -1,7 +1,7 @@
 package com.example.domain.usecase.user
 
 import android.net.Uri
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
 
 /**

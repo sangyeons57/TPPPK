@@ -4,7 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.ui.project.RoleSortOption
-import com.example.domain.repository.RoleRepository
+import com.example.domain.repository.base.RoleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -44,7 +44,7 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
         filterIsDefault: Boolean?,
         sortBy: RoleSortOption?
     ): Flow<List<Role>> {
-        return roleRepository.getProjectRolesStream(projectId).map { customResult ->
+        return roleRepository.observeProjectRoles(projectId).map { customResult ->
             val roles = when (customResult) {
                 is CustomResult.Success -> customResult.data
                 is CustomResult.Failure -> {

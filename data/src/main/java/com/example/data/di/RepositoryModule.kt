@@ -1,53 +1,54 @@
 package com.example.data.di
 
-import com.example.data.repository.AuthRepositoryImpl
+import com.example.data.repository.base.AuthRepositoryImpl
 import com.example.data.repository.collection.CategoryCollectionRepositoryImpl
-import com.example.data.repository.CategoryRepositoryImpl
-import com.example.data.repository.DMChannelRepositoryImpl
-import com.example.data.repository.DMWrapperRepositoryImpl
-import com.example.data.repository.FriendRepositoryImpl
-import com.example.data.repository.InviteRepositoryImpl
-import com.example.data.repository.MemberRepositoryImpl
-import com.example.data.repository.MessageAttachmentRepositoryImpl
-import com.example.data.repository.MessageRepositoryImpl
-import com.example.data.repository.PermissionRepositoryImpl
-import com.example.data.repository.ProjectChannelRepositoryImpl
-import com.example.data.repository.ProjectRepositoryImpl
-import com.example.data.repository.ProjectsWrapperRepositoryImpl
-import com.example.data.repository.ReactionRepositoryImpl
-import com.example.data.repository.RoleRepositoryImpl
-import com.example.data.repository.ScheduleRepositoryImpl
-import com.example.data.repository.UserRepositoryImpl
-import com.example.data.repository.SearchRepositoryImpl
-import com.example.domain.repository.AuthRepository
+import com.example.data.repository.base.CategoryRepositoryImpl
+import com.example.data.repository.base.DMChannelRepositoryImpl
+import com.example.data.repository.base.DMWrapperRepositoryImpl
+import com.example.data.repository.base.FriendRepositoryImpl
+import com.example.data.repository.base.InviteRepositoryImpl
+import com.example.data.repository.base.MemberRepositoryImpl
+import com.example.data.repository.base.MessageAttachmentRepositoryImpl
+import com.example.data.repository.base.MessageRepositoryImpl
+import com.example.data.repository.base.PermissionRepositoryImpl
+import com.example.data.repository.base.ProjectChannelRepositoryImpl
+import com.example.data.repository.base.ProjectRepositoryImpl
+import com.example.data.repository.base.ProjectsWrapperRepositoryImpl
+import com.example.data.repository.base.ReactionRepositoryImpl
+import com.example.data.repository.base.RoleRepositoryImpl
+import com.example.data.repository.base.ScheduleRepositoryImpl
+import com.example.data.repository.base.UserRepositoryImpl
+import com.example.data.repository.base.SearchRepositoryImpl
+import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.collection.CategoryCollectionRepository
-import com.example.domain.repository.CategoryRepository
-import com.example.domain.repository.DMChannelRepository
-import com.example.domain.repository.DMWrapperRepository
-import com.example.domain.repository.FriendRepository
-import com.example.domain.repository.InviteRepository
-import com.example.domain.repository.MemberRepository
-import com.example.domain.repository.MessageAttachmentRepository
-import com.example.domain.repository.MessageRepository
-import com.example.domain.repository.PermissionRepository
-import com.example.domain.repository.ProjectChannelRepository
-import com.example.domain.repository.ProjectRepository
-import com.example.domain.repository.ProjectsWrapperRepository
-import com.example.domain.repository.ReactionRepository
-import com.example.domain.repository.MediaRepository
-import com.example.domain.repository.RoleRepository
-import com.example.domain.repository.ScheduleRepository
-import com.example.domain.repository.UserRepository
-import com.example.domain.repository.SearchRepository
-import com.example.domain.repository.FileRepository
-import com.example.data.repository.MediaRepositoryImpl
-import com.example.data.repository.FileRepositoryImpl
+import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.base.DMChannelRepository
+import com.example.domain.repository.base.DMWrapperRepository
+import com.example.domain.repository.base.FriendRepository
+import com.example.domain.repository.base.InviteRepository
+import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.base.MessageAttachmentRepository
+import com.example.domain.repository.base.MessageRepository
+import com.example.domain.repository.base.PermissionRepository
+import com.example.domain.repository.base.ProjectChannelRepository
+import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectsWrapperRepository
+import com.example.domain.repository.base.ReactionRepository
+import com.example.domain.repository.base.MediaRepository
+import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ScheduleRepository
+import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.base.SearchRepository
+import com.example.domain.repository.base.FileRepository
+import com.example.data.repository.base.MediaRepositoryImpl
+import com.example.data.repository.base.FileRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/**
 @[Module]
 @[InstallIn(SingletonComponent::class)]
 abstract class RepositoryModule {
@@ -136,3 +137,4 @@ abstract class RepositoryModule {
     @Singleton
     abstract fun bindFileRepository(impl: FileRepositoryImpl): FileRepository
 }
+*/

@@ -2,10 +2,9 @@ package com.example.domain.usecase.user
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * 이름(닉네임)으로 사용자를 검색하는 UseCase입니다.

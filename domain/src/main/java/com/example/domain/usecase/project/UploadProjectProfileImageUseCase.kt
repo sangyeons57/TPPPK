@@ -3,8 +3,8 @@ package com.example.domain.usecase.project
 import android.net.Uri
 import com.example.core_common.constants.FirebaseStorageConstants
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.MediaRepository
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.base.MediaRepository
+import com.example.domain.repository.base.ProjectRepository
 import kotlinx.coroutines.flow.first
 import java.util.UUID
 import javax.inject.Inject

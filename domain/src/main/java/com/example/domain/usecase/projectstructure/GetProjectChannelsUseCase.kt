@@ -2,9 +2,7 @@ package com.example.domain.usecase.projectstructure
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
-import com.example.domain.repository.CategoryRepository
-import com.example.domain.repository.ProjectChannelRepository
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.base.ProjectRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

@@ -6,8 +6,8 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.repository.collection.CategoryCollectionRepository
-import com.example.domain.repository.CategoryRepository
-import com.example.domain.repository.ProjectChannelRepository
+import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.base.ProjectChannelRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest

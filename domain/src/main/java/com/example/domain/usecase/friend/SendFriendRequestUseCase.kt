@@ -1,10 +1,9 @@
 package com.example.domain.usecase.friend
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.FriendRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.FriendRepository
 import javax.inject.Inject
-import kotlin.Result
 
 interface SendFriendRequestUseCase {
     suspend operator fun invoke(targetUserId: String): CustomResult<Unit, Exception>

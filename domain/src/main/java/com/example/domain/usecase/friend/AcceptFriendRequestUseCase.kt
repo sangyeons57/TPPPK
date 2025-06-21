@@ -1,9 +1,8 @@
 package com.example.domain.usecase.friend
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.FriendRepository
+import com.example.domain.repository.base.FriendRepository
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * 친구 요청을 수락하는 UseCase

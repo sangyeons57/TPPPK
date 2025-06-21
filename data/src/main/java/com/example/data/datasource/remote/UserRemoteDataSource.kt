@@ -18,7 +18,7 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface UserRemoteDataSource : DefaultDatasource<UserDTO> {
+interface UserRemoteDataSource : DefaultDatasource {
 
     /**
      * 주어진 이름(닉네임)과 정확히 일치하는 사용자 정보를 실시간 스트림으로 반환합니다.

@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Name
 
@@ -31,7 +32,7 @@ data class FriendDTO(
     val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = Friend.COLLECTION_NAME
@@ -42,17 +43,30 @@ data class FriendDTO(
         const val PROFILE_IMAGE_URL = Friend.KEY_PROFILE_IMAGE_URL
         const val CREATED_AT = Friend.KEY_CREATED_AT
         const val UPDATED_AT = Friend.KEY_UPDATED_AT
+
+        fun from (friend: Friend): FriendDTO {
+            return FriendDTO(
+                id = friend.id.value,
+                status = friend.status,
+                requestedAt = friend.requestedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+                acceptedAt = friend.acceptedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+                name = friend.name.value,
+                profileImageUrl = friend.profileImageUrl?.value,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(friend.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(friend.updatedAt)
+            )
+        }
     }
-    /*
+    /**
      * DTO를 도메인 모델로 변환
      * @return Friend 도메인 모델
      */
-    fun toDomain(): Friend {
+    override fun toDomain(): Friend {
         return Friend.fromDataSource(
             id = VODocumentId(id),
             status = status,
-            requestedAt = DateTimeUtil.firebaseTimestampToInstant(requestedAt),
-            acceptedAt = DateTimeUtil.firebaseTimestampToInstant(acceptedAt),
+            requestedAt = requestedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+            acceptedAt = acceptedAt?.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             name = Name(name),
             profileImageUrl = profileImageUrl?.let{ ImageUrl(it) },
             createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt),

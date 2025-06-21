@@ -2,7 +2,7 @@ package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.base.ProjectRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

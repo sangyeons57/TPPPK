@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.role
 import com.example.domain.model.Role
 import com.example.domain.model.RolePermission
 import com.example.domain.model.project.RoleSortOption
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf

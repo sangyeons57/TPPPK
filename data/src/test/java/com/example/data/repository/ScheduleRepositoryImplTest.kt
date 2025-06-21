@@ -6,6 +6,7 @@ import com.example.data.datasource.remote.schedule.ScheduleRemoteDataSource
 import com.example.data.model.remote.schedule.ScheduleDto
 import com.example.data.model.mapper.toDomain
 import com.example.data.model.mapper.toDto
+import com.example.data.repository.base.ScheduleRepositoryImpl
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
 import kotlinx.coroutines.test.runTest

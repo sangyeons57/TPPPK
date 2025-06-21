@@ -1,21 +1,15 @@
 package com.example.domain.usecase.user
 
 import android.content.Context
-import android.media.Image
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.core_common.result.resultTry
-import com.example.core_common.util.MediaUtil
-import com.example.domain.event.DomainEvent
 import com.example.domain.event.EventDispatcher
 import com.example.domain.event.user.UserProfileImageChangedEvent
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.ImageUrl
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
-import java.io.IOException
-import java.io.InputStream
 import javax.inject.Inject
 import dagger.hilt.android.qualifiers.ApplicationContext
 

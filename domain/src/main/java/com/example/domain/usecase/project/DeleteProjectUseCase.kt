@@ -1,10 +1,9 @@
 package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.ProjectRepository
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.DMWrapperRepository
-import com.example.domain.repository.ProjectsWrapperRepository
+import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.ProjectsWrapperRepository
 import javax.inject.Inject
 
 /**

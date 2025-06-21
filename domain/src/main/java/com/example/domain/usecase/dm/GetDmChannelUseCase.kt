@@ -1,11 +1,9 @@
 package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.data.UserSession
 import com.example.domain.model.base.DMChannel
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.DMChannelRepository
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.DMChannelRepository
 import javax.inject.Inject
 
 /**
@@ -25,7 +23,7 @@ class GetDmChannelUseCase @Inject constructor(
             is CustomResult.Success -> {
                 val currentUserSession = currentUserSessionResult.data
                 val userIds : List<String> = listOf(currentUserSession.userId, targetUserId)
-                return dmRepository.getDmChannelWithUser(userIds)
+                return dmRepository.findByOtherUserId(userIds)
             }
             is CustomResult.Failure -> {
                 return CustomResult.Failure(currentUserSessionResult.error)

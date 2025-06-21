@@ -15,7 +15,7 @@ import javax.inject.Singleton
  * 멤버 데이터는 `projects/{projectId}/members/{userId}` 경로에 저장되며, `userId`가 문서 ID가 됩니다.
  * 모든 작업 전에 `setCollection(projectId)`를 호출하여 프로젝트 컨텍스트를 설정해야 합니다.
  */
-interface MemberRemoteDataSource : DefaultDatasource<MemberDTO> {
+interface MemberRemoteDataSource : DefaultDatasource {
 
 }
 

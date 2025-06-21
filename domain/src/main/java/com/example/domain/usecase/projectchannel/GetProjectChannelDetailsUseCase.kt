@@ -2,7 +2,7 @@ package com.example.domain.usecase.projectchannel
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.repository.ProjectChannelRepository
+import com.example.domain.repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

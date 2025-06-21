@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.model.vo.DocumentId as VODocumentId
@@ -26,7 +27,7 @@ data class ProjectChannelDTO(
     @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = ProjectChannel.COLLECTION_NAME
@@ -40,7 +41,7 @@ data class ProjectChannelDTO(
      * DTO를 도메인 모델로 변환
      * @return ProjectChannel 도메인 모델
      */
-    fun toDomain(): ProjectChannel {
+    override fun toDomain(): ProjectChannel {
         return ProjectChannel.fromDataSource(
             id = VODocumentId(id),
             channelName = Name(channelName),

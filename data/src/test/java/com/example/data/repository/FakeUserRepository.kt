@@ -3,7 +3,7 @@ package com.example.data.repository
 import android.net.Uri
 import com.example.domain.model.User
 import com.example.domain.model.UserStatus
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.UserRepository
 import com.google.firebase.auth.FirebaseUser
 import java.util.concurrent.ConcurrentHashMap
 

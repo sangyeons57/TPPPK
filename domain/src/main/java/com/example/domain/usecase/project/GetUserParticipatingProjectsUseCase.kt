@@ -5,13 +5,11 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.AuthUtil
 import com.example.domain.model.base.Project
-import com.example.domain.model.base.ProjectsWrapper
-import com.example.domain.repository.ProjectRepository
-import com.example.domain.repository.ProjectsWrapperRepository
+import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectsWrapperRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 

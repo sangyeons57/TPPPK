@@ -15,7 +15,7 @@ import javax.inject.Singleton
 import com.example.data.model.remote.ProjectDTO
 import kotlinx.coroutines.tasks.await
 
-interface ProjectRemoteDataSource : DefaultDatasource<ProjectDTO> {
+interface ProjectRemoteDataSource : DefaultDatasource {
 
     /**
      * Firestore에서 특정 프로젝트의 프로필 이미지 URL 필드만 업데이트합니다.

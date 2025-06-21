@@ -1,14 +1,13 @@
 package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.CategoryRepository // Added
-import com.example.domain.repository.ProjectRepository
-import com.example.domain.repository.ProjectsWrapperRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.CategoryRepository // Added
+import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.domain.model.base.Category // Added
 import com.example.core_common.constants.Constants // Added
 import android.util.Log // Added for logging failure of default category creation
-import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.category.CategoryName

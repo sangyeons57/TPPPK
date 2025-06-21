@@ -2,15 +2,13 @@ package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
-import com.example.domain.model.base.DMWrapper
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.DMChannelRepository
-import com.example.domain.repository.DMWrapperRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.DMChannelRepository
+import com.example.domain.repository.base.DMWrapperRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 

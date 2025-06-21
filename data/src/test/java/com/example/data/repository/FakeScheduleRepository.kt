@@ -1,7 +1,7 @@
 package com.example.data.repository
 
 import com.example.domain.model.Schedule
-import com.example.domain.repository.ScheduleRepository
+import com.example.domain.repository.base.ScheduleRepository
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId

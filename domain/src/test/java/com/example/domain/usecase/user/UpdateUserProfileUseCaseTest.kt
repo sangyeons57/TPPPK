@@ -1,6 +1,6 @@
 package com.example.domain.usecase.user
 
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

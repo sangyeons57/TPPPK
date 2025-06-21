@@ -21,6 +21,7 @@ import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import com.example.core_common.constants.FirestoreConstants // Added
+import com.example.data.repository.base.UserRepositoryImpl
 import com.example.domain.model.AccountStatus // Added
 import com.google.android.gms.tasks.Tasks // Added
 import com.google.firebase.auth.FirebaseUser // Added

@@ -2,7 +2,7 @@ package com.example.data.repository
 
 import com.example.domain.model.Project
 import com.example.domain.model.ProjectInfo
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.base.ProjectRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

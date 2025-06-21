@@ -5,8 +5,8 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.AuthRepository
-import com.example.domain.repository.UserRepository
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import com.example.domain.usecase.user.GetUserUseCase
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject

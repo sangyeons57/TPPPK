@@ -1,6 +1,7 @@
 package com.example.data.model.remote
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.base.User
@@ -41,7 +42,7 @@ data class UserDTO(
     val fcmToken: String? = null,
     @get:PropertyName(ACCOUNT_STATUS)
     val accountStatus: String = "active" // "active", "suspended", "deleted" 등
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = User.COLLECTION_NAME
@@ -55,12 +56,28 @@ data class UserDTO(
         const val UPDATED_AT = User.KEY_UPDATED_AT
         const val FCM_TOKEN = User.KEY_FCM_TOKEN
         const val ACCOUNT_STATUS = User.KEY_ACCOUNT_STATUS
+
+        fun from(domain: User) : UserDTO{
+            return UserDTO(
+                uid = domain.id.value,
+                email = domain.email.value,
+                name = domain.name.value,
+                consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp),
+                profileImageUrl = domain.profileImageUrl?.value,
+                memo = domain.memo?.value,
+                status = domain.userStatus.name,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt),
+                fcmToken = domain.fcmToken?.value,
+                accountStatus = domain.accountStatus.name
+            )
+        }
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return User 도메인 모델
      */
-     fun toDomain(): User {
+    override fun toDomain(): User {
         return User.fromDataSource(
             id = VODocumentId(uid),
             email = UserEmail(email), // Wrap in Value Object

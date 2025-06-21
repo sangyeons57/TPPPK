@@ -5,7 +5,7 @@ import com.example.data.util.FlowTestExtensions.EventCollector
 import com.example.data.util.FlowTestExtensions.getValue
 import com.example.domain.model.DmConversation
 import com.example.domain.model.Project
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.ChannelRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

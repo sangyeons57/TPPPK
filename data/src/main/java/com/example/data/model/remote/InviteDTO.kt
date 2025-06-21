@@ -8,6 +8,7 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.enum.InviteStatus
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.invite.InviteCode
@@ -24,7 +25,7 @@ data class InviteDTO(
     @get:PropertyName(EXPIRES_AT) val expiresAt: Timestamp? = null, // 만료 시간 (null이면 무제한)
     @get:PropertyName(CREATED_AT) @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT) @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-) {
+) : DTO {
 
     companion object {
         const val COLLECTION_NAME = Invite.COLLECTION_NAME
@@ -34,12 +35,24 @@ data class InviteDTO(
         const val CREATED_AT = Invite.KEY_CREATED_AT
         const val UPDATED_AT = Invite.KEY_UPDATED_AT
         const val EXPIRES_AT = Invite.KEY_EXPIRES_AT
+
+        fun from(invite: Invite): InviteDTO {
+            return InviteDTO(
+                id = invite.id.value,
+                inviteCode = invite.inviteCode.value,
+                status = invite.status,
+                createdBy = invite.createdBy.value,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(invite.createdAt),
+                expiresAt = invite.expiresAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(invite.updatedAt),
+            )
+        }
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return Invite 도메인 모델
      */
-    fun toDomain(): Invite {
+    override fun toDomain(): Invite  {
         return Invite.fromDataSource (
             id = VODocumentId(id),
             inviteCode = InviteCode(inviteCode),

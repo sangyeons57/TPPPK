@@ -3,8 +3,8 @@ package com.example.domain.usecase.projectstructure
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.repository.ProjectChannelRepository
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.base.ProjectChannelRepository
+import com.example.domain.repository.base.ProjectRepository
 import javax.inject.Inject
 import kotlin.Result
 

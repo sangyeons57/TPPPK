@@ -5,7 +5,7 @@ import com.example.domain.model.ui.search.MessageResult
 import com.example.domain.model.ui.search.SearchResultItem
 import com.example.domain.model.ui.search.SearchScope
 import com.example.domain.model.ui.search.UserResult
-import com.example.domain.repository.SearchRepository
+import com.example.domain.repository.base.SearchRepository
 import javax.inject.Inject
 
 /**

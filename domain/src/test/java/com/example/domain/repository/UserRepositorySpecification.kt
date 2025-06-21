@@ -1,5 +1,6 @@
 package com.example.domain.repository
 
+import com.example.domain.repository.base.UserRepository
 import org.junit.Assert
 import org.junit.Test
 

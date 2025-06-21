@@ -5,6 +5,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.core_common.util.DateTimeUtil
+import com.example.data.model.DTO
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.reaction.Emoji
 import com.google.firebase.firestore.PropertyName
@@ -23,19 +24,29 @@ data class ReactionDTO(
     @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-) {
+) : DTO {
     companion object {
         const val COLLECTION_NAME = Reaction.COLLECTION_NAME
         const val USER_ID = Reaction.KEY_USER_ID
         const val EMOJI = Reaction.KEY_EMOJI
         const val CREATED_AT = Reaction.KEY_CREATED_AT
         const val UPDATED_AT = Reaction.KEY_UPDATED_AT
+
+        fun from(reaction: Reaction): ReactionDTO {
+            return ReactionDTO(
+                id = reaction.id.value,
+                userId = reaction.userId.value,
+                emoji = reaction.emoji.value,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(reaction.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(reaction.updatedAt)
+            )
+        }
     }
     /**
      * DTO를 도메인 모델로 변환
      * @return Reaction 도메인 모델
      */
-    fun toDomain(): Reaction {
+    override fun toDomain(): Reaction {
         return Reaction.fromDataSource(
             id = VODocumentId(id),
             userId = UserId(userId),

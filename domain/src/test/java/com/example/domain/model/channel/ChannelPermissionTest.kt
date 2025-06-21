@@ -9,7 +9,7 @@ import org.mockito.Mock // Or io.mockk.mockk
 import org.mockito.junit.MockitoJUnitRunner // Or equivalent test runner
 import com.example.domain.model.Role
 import com.example.domain.model.RolePermission
-import com.example.domain.repository.ProjectRoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import kotlinx.coroutines.runBlocking // For testing suspend functions
 import org.mockito.Mockito.`when` // Or io.mockk.coEvery for MockK
 

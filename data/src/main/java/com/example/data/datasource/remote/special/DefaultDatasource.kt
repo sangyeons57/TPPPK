@@ -2,7 +2,7 @@ package com.example.data.datasource.remote.special
 
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
-import com.example.domain.event.AggregateRoot
+import com.example.data.model.DTO
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
@@ -14,17 +14,21 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
-interface DefaultDatasource<T: Any> {
-    fun setCollection(vararg ids: String) : DefaultDatasource<T>
+interface Datasource {
 
-    fun observe(id: DocumentId): Flow<CustomResult<T, Exception>>
+}
+
+interface DefaultDatasource : Datasource {
+    fun setCollection(vararg ids: String) : DefaultDatasource
+
+    fun observe(id: DocumentId): Flow<CustomResult<DTO, Exception>>
     suspend fun findById(
         id: DocumentId,
         source: Source = Source.DEFAULT,
-    ): CustomResult<T, Exception>
+    ): CustomResult<DTO, Exception>
 
-    suspend fun create(dto: T): CustomResult<DocumentId, Exception>
-    suspend fun update(aggregateRoot: AggregateRoot): CustomResult<DocumentId, Exception>
+    suspend fun create(dto: DTO): CustomResult<DocumentId, Exception>
+    suspend fun update(id: DocumentId, data: Map<String, Any?>): CustomResult<DocumentId, Exception>
     suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
 }
 
@@ -39,10 +43,10 @@ interface DefaultDatasource<T: Any> {
  *
  * @param firestore Firestore instance injected from DI container.
  */
-abstract class  DefaultDatasourceImpl<T: Any>(
+abstract class DefaultDatasourceImpl <Dto> (
     private val firestore: FirebaseFirestore,
-    private val clazz: Class<T>
-) : DefaultDatasource<T> {
+    private val clazz: Class<Dto>
+) : DefaultDatasource where Dto: DTO {
 
     /** Firestore collection reference – must be set via [setCollection] */
     lateinit var collection: CollectionReference
@@ -52,7 +56,7 @@ abstract class  DefaultDatasourceImpl<T: Any>(
      * Default implementation: treat the passed segments as a single collection path.
      * Most concrete datasources will **override** this to build nested paths.
      */
-    override fun setCollection(vararg ids: String): DefaultDatasource<T> {
+    override fun setCollection(vararg ids: String): DefaultDatasource {
         require(ids.isNotEmpty()) { "At least one path segment must be provided to setCollection()." }
         collection = firestore.collection(ids.joinToString("/"))
         return this
@@ -70,7 +74,7 @@ abstract class  DefaultDatasourceImpl<T: Any>(
 
     // region —— CRUD & observe implementation ——
 
-    override fun observe(id: DocumentId): Flow<CustomResult<T, Exception>> = callbackFlow{
+    override fun observe(id: DocumentId): Flow<CustomResult<DTO, Exception>> = callbackFlow{
         checkCollectionInitialized("observe")
         val listener = collection.document(id.value).addSnapshotListener{ snapshot, error ->
             if(error != null) {
@@ -93,7 +97,7 @@ abstract class  DefaultDatasourceImpl<T: Any>(
     override suspend fun findById(
         id: DocumentId,
         source: Source,
-    ): CustomResult<T, Exception> = withContext(Dispatchers.IO) {
+    ): CustomResult<DTO, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("findById")
         resultTry {
             val snapshot = collection.document(id.value).get(source).await()
@@ -101,7 +105,7 @@ abstract class  DefaultDatasourceImpl<T: Any>(
         }
     }
 
-    override suspend fun create(dto: T): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun create(dto: DTO): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("create")
         resultTry {
             val ref = collection.add(dto).await()
@@ -109,13 +113,12 @@ abstract class  DefaultDatasourceImpl<T: Any>(
         }
     }
 
-    override suspend fun update(aggregateRoot: AggregateRoot): CustomResult<DocumentId, Exception> = withContext(
-        Dispatchers.IO) {
+    override suspend fun update(id: DocumentId, data: Map<String, Any?>): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("update")
         resultTry {
-            if (!aggregateRoot.id.isAssigned()) throw IllegalArgumentException("ID cannot be empty when updating")
-            collection.document(aggregateRoot.id.value).update(aggregateRoot.getChangedFields()).await()
-            aggregateRoot.id
+            if (id.isAssigned()) throw IllegalArgumentException("ID cannot be empty when updating")
+            collection.document(id.value).update(data).await()
+            id
         }
     }
 

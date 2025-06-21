@@ -1,7 +1,7 @@
 package com.example.data.repository
 
 import com.example.domain.model.User
-import com.example.domain.repository.AuthRepository
+import com.example.domain.repository.base.AuthRepository
 import java.util.concurrent.ConcurrentHashMap
 import java.time.Instant
 

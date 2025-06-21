@@ -24,7 +24,7 @@ import javax.inject.Singleton
  * DMWrapper는 `users/{userId}/dm_wrappers/{dmChannelId}` 경로에 저장되므로,
  * 모든 작업 전에 `setCollection(userId)`를 호출하여 사용자 컨텍스트를 설정해야 합니다.
  */
-interface DMWrapperRemoteDataSource : DefaultDatasource<DMWrapperDTO> {
+interface DMWrapperRemoteDataSource : DefaultDatasource {
     /**
      * 특정 사용자의 DMWrapper 중에서 지정된 상대방 사용자 ID(`otherUserId`)를 가진 문서를 찾습니다.
      * **중요:** 이 메서드를 호출하기 전에 `setCollection(userId)`를 통해 사용자 컨텍스트를 설정해야 합니다.

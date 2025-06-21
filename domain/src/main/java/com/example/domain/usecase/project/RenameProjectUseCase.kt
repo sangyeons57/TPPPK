@@ -1,6 +1,6 @@
 package com.example.domain.usecase.project
 
-import com.example.domain.repository.ProjectRepository
+import com.example.domain.repository.base.ProjectRepository
 import javax.inject.Inject
 
 /**

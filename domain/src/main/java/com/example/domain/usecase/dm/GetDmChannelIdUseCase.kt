@@ -1,9 +1,8 @@
 package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.DMChannelRepository
+import com.example.domain.repository.base.DMChannelRepository
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * 특정 사용자와의 DM 채널 ID를 가져오는 UseCase

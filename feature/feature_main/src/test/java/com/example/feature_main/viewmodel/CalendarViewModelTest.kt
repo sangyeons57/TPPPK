@@ -4,7 +4,7 @@ import com.example.data.util.CoroutinesTestRule
 import com.example.data.util.FlowTestExtensions.EventCollector
 import com.example.data.util.FlowTestExtensions.getValue
 import com.example.domain.model.Schedule
-import com.example.domain.repository.ScheduleRepository
+import com.example.domain.repository.base.ScheduleRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runBlockingTest
