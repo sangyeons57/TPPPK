@@ -1,6 +1,8 @@
 package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.repository.base.MemberRepository
 import javax.inject.Inject
 
@@ -26,7 +28,6 @@ class DeleteProjectMemberUseCaseImpl @Inject constructor(
      * @return Result<Unit> 삭제 처리 결과
      */
     override suspend fun invoke(projectId: String, userId: String): CustomResult<Unit, Exception> {
-        // TODO: Repository에 deleteMember 함수 구현 확인 필요
-        return projectMemberRepository.removeProjectMember(projectId, userId)
+        return projectMemberRepository.delete(DocumentId(userId))
     }
 } 

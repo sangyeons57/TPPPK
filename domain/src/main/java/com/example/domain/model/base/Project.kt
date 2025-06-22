@@ -12,9 +12,10 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.project.ProjectName
 
 class Project private constructor(
-    initialName: Name,
+    initialName: ProjectName,
     initialImageUrl: ImageUrl?,
     initialOwnerId: OwnerId,
     initialCreatedAt: Instant,
@@ -28,7 +29,7 @@ class Project private constructor(
     val createdAt: Instant = initialCreatedAt
 
     // Mutable properties with private setters
-    var name: Name = initialName
+    var name: ProjectName = initialName
         private set
     var imageUrl: ImageUrl? = initialImageUrl
         private set
@@ -49,7 +50,7 @@ class Project private constructor(
     /**
      * Changes the name of the project, firing a domain event if the name is different.
      */
-    fun changeName(newName: Name) {
+    fun changeName(newName: ProjectName) {
         if (this.name == newName) return
 
         val oldName = this.name
@@ -80,8 +81,7 @@ class Project private constructor(
          * Factory method to create a new Project.
          */
         fun create(
-            id: DocumentId,
-            name: Name,
+            name: ProjectName,
             imageUrl: ImageUrl?,
             ownerId: OwnerId
         ): Project {
@@ -93,9 +93,8 @@ class Project private constructor(
                 initialCreatedAt = now,
                 initialUpdatedAt = now,
                 isNew = true,
-                id = id
+                id = DocumentId.EMPTY
             )
-            project.pushDomainEvent(ProjectCreatedEvent(project.id, project.ownerId, project.name, now))
             return project
         }
 
@@ -104,7 +103,7 @@ class Project private constructor(
          */
         fun fromDataSource(
             id: DocumentId,
-            name: Name,
+            name: ProjectName,
             imageUrl: ImageUrl?,
             ownerId: OwnerId,
             createdAt: Instant,

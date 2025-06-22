@@ -1,6 +1,9 @@
 package com.example.domain.usecase.user
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.event.EventDispatcher
+import com.example.domain.model.base.User
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
@@ -38,38 +41,27 @@ class RemoveProfileImageUseCaseImpl @Inject constructor(
      * @return 성공 시 Unit이 포함된 CustomResult.Success, 실패 시 Exception이 포함된 CustomResult.Failure
      */
     override suspend operator fun invoke(): CustomResult<String, Exception> {
-        val sessionResult = authRepository.getCurrentUserSession()
-        val userId = when (sessionResult) {
+        TODO("not implemented yet [Firebase 에서 구현 해야함 제거된거 다른곳에서 적용해야함]")
+        val userId = when (val sessionResult = authRepository.getCurrentUserSession()) {
             is CustomResult.Success -> sessionResult.data.userId
             is CustomResult.Failure -> return CustomResult.Failure(sessionResult.error ?: Exception("User not logged in"))
-            // Assuming getCurrentUserSession, as a suspend function, resolves to Success or Failure.
-            // If it could return Loading/Initial as terminal states, handle them or consider it an unexpected state.
-            is CustomResult.Loading, is CustomResult.Initial, is CustomResult.Progress  -> return CustomResult.Failure(Exception("User session check in progress or uninitialized"))
+            is CustomResult.Initial -> return CustomResult.Initial
+            is CustomResult.Loading -> return CustomResult.Loading
+            is CustomResult.Progress -> return CustomResult.Progress(sessionResult.progress)
         }
 
         // Fetch the user object using its ID.
-        return when (val userFetchResult = userRepository.findById(userId)) {
-            is CustomResult.Success -> {
-                val user = userFetchResult.data
-                
-                // Call the domain logic on the User object to remove the profile image.
-                // This method modifies the 'user' object in place and handles domain events.
-                // It also includes checks for account status (e.g., withdrawn) and no-op changes.
-                user.changeProfileImage(null)
-
-                // Save the modified User object through the repository.
-                // The save method handles persisting changes and publishing domain events.
-                userRepository.save(user)
-            }
-            is CustomResult.Failure -> {
-                // Return the failure result from fetching the user.
-                CustomResult.Failure(userFetchResult.error)
-            }
-            // Assuming findById, as a suspend function, resolves to Success or Failure.
-            // Handling Loading/Initial as terminal states implies an unexpected behavior from findById.
-            is CustomResult.Loading, is CustomResult.Initial, is CustomResult.Progress -> {
-                CustomResult.Failure(Exception("Failed to retrieve user information: repository in unexpected state"))
-            }
+        val user = when (val userFetchResult = userRepository.findById(DocumentId.from(userId))) {
+            is CustomResult.Success -> userFetchResult.data  as User
+            is CustomResult.Failure -> return CustomResult.Failure(userFetchResult.error)
+            is CustomResult.Loading -> return CustomResult.Loading
+            is CustomResult.Initial -> return CustomResult.Initial
+            is CustomResult.Progress -> return CustomResult.Progress(userFetchResult.progress)
+        }
+        user.removeProfileImage()
+        return userRepository.save(user).suspendSuccessProcess {
+            EventDispatcher.publish(user)
+            CustomResult.Success(it.value)
         }
     }
 }

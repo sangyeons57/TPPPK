@@ -6,17 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
-import com.example.domain.model.base.Friend
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.FriendStatus
-import com.example.domain.usecase.dm.GetDmChannelIdUseCase
+import com.example.domain.usecase.dm.GetDmChannelUseCase
 import com.example.domain.usecase.friend.GetFriendsListStreamUseCase
-import com.example.domain.usecase.user.GetUserUseCase
-import com.example.feature_friends.ui.FriendListItem
+import com.example.domain.usecase.user.GetUserStreamUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
 import java.time.Instant
 import javax.inject.Inject
 
@@ -49,8 +46,8 @@ sealed class FriendsEvent {
 @HiltViewModel
 class FriendViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    private val getUserUseCase: GetUserUseCase,
-    private val getDmChannelIdUseCase: GetDmChannelIdUseCase,
+    private val getUserUseCase: GetUserStreamUseCase,
+    private val getDmChannelUseCase: GetDmChannelUseCase,
     private val getFriendsListStreamUseCase: GetFriendsListStreamUseCase,
     private val authUtil: AuthUtil
 ) : ViewModel() {
@@ -158,7 +155,7 @@ class FriendViewModel @Inject constructor(
      */
     fun onFriendClick(friendId: String) {
         viewModelScope.launch {
-            val result = getDmChannelIdUseCase(friendId)
+            val result = getDmChannelUseCase(friendId)
             when (result) {
                 is CustomResult.Success -> {
                     val channelId = result.data

@@ -22,32 +22,6 @@ class UpdateProjectStructureUseCase @Inject constructor(
      * @return 작업 결과
      */
     suspend operator fun invoke(projectId: String, categoryCollections: List<CategoryCollection>): CustomResult<Unit, Exception> {
-        try {
-            // 카테고리 목록 추출
-            val categories = categoryCollections.map { it.category }
-            
-            // 카테고리 업데이트
-            val categoryResult = categoryRepository.updateCategories(projectId, categories)
-            if (categoryResult is CustomResult.Failure) {
-                return categoryResult
-            }
-            
-            // 각 카테고리별 채널 업데이트
-            for (categoryCollection in categoryCollections) {
-                val categoryId = categoryCollection.category.id
-                
-                // 각 채널 업데이트
-                for (channel in categoryCollection.channels) {
-                    val channelResult = projectChannelRepository.updateProjectChannel(projectId, channel)
-                    if (channelResult is CustomResult.Failure) {
-                        return channelResult
-                    }
-                }
-            }
-            
-            return CustomResult.Success(Unit)
-        } catch (e: Exception) {
-            return CustomResult.Failure(e)
-        }
+        TODO("not implemented [도메인 모델 수정을 이용해서 작업대체가능함]")
     }
 }

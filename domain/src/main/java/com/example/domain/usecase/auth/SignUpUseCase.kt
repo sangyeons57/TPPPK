@@ -2,6 +2,7 @@ package com.example.domain.usecase.auth
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
+import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
@@ -9,6 +10,7 @@ import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.exception.AccountAlreadyExistsException
+import com.example.domain.model.vo.DocumentId
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -22,7 +24,7 @@ import javax.inject.Inject
  * @property userRepository 사용자 관련 기능을 제공하는 Repository
  * @property reactivateAccountUseCase 계정 재활성화 기능을 제공하는 UseCase
  */
-class SignUpUseCaseImpl @Inject constructor(
+class SignUpUseCase @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val reactivateAccountUseCase: ReactivateAccountUseCase
@@ -57,7 +59,7 @@ class SignUpUseCaseImpl @Inject constructor(
                 val uid = signUpRes.data
                 Log.d(TAG, "Auth signup success. uid=$uid")
                 val newUser = User.registerNewUser(
-                    uid = uid,
+                    id = DocumentId.from(uid),
                     email = UserEmail(email),
                     name = UserName(nickname),
                     consentTimeStamp = consentTimeStamp
@@ -66,6 +68,7 @@ class SignUpUseCaseImpl @Inject constructor(
                     when (saveResult) {
                         is CustomResult.Success -> {
                             Log.d(TAG, "User aggregate persisted successfully for uid=$uid")
+                            EventDispatcher.publish(newUser)
                             CustomResult.Success(newUser)
                         }
 
@@ -88,7 +91,7 @@ class SignUpUseCaseImpl @Inject constructor(
 
                 Log.d(TAG, "Email collision detected. Checking for withdrawn account...")
                 try {
-                    return when (val userRes = userRepository.findByEmailStream(email).first()) {
+                    return when (val userRes = userRepository.observeByEmail(email).first()) {
                         is CustomResult.Success -> {
                             val existingUser = userRes.data
                             Log.d(TAG, "Existing user found with status: ${existingUser.accountStatus}")
@@ -117,60 +120,5 @@ class SignUpUseCaseImpl @Inject constructor(
                 return CustomResult.Failure(Exception("Sign-up process is currently in progress."))
             }
         }
-    }
-        while (System.currentTimeMillis() - startTime < timeoutMs) {
-            when (val checkRes = authRepository.checkEmailVerification()) {
-                is CustomResult.Success -> {
-                    if (checkRes.data) {
-                        verified = true
-                        Log.d(TAG, "Email verification complete!")
-                        break
-                    }
-                }
-                is CustomResult.Failure -> {
-                    Log.d(TAG, "Verification check failed: ${checkRes.error}")
-                    return CustomResult.Failure(checkRes.error)
-                }
-                else -> {}
-            }
-            delay(intervalMs)
-        }
-
-        if (!verified) {
-            Log.d(TAG, "Email verification timeout")
-            return CustomResult.Failure(Exception("Email verification timeout"))
-        }
-
-        // 4. 비밀번호 업데이트
-        val pwUpdateRes = authRepository.updatePassword(newPassword)
-        if (pwUpdateRes is CustomResult.Failure) {
-            Log.d(TAG, "Password update failed: ${pwUpdateRes.error}")
-            return CustomResult.Failure(pwUpdateRes.error)
-        }
-
-        // 5. Firestore 사용자 정보 업데이트
-        val currentSessionRes = authRepository.getCurrentUserSession()
-        if (currentSessionRes is CustomResult.Failure) {
-            Log.d(TAG, "Failed to get current user session: ${currentSessionRes.error}")
-            return CustomResult.Failure(currentSessionRes.error)
-        }
-
-        val uid = (currentSessionRes as CustomResult.Success).data.userId
-
-        val userRes = userRepository.findById(uid)
-        if (userRes is CustomResult.Failure) {
-            Log.d(TAG, "Failed to fetch existing user during reactivation: ${userRes.error}")
-            return CustomResult.Failure(userRes.error)
-        }
-        val user = (userRes as CustomResult.Success).data
-        user.activateAccount()
-        user.updateProfile(UserName(newNickname), user.profileImageUrl)
-        val saveRes = userRepository.save(user)
-        if (saveRes is CustomResult.Failure) {
-            Log.d(TAG, "Failed to persist reactivated user: ${saveRes.error}")
-            return CustomResult.Failure(saveRes.error)
-        }
-        Log.d(TAG, "Account reactivated successfully for uid=$uid")
-        return CustomResult.Success(user)
     }
 }

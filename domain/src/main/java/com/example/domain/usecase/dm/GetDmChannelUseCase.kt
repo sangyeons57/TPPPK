@@ -2,36 +2,27 @@ package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
-import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.DMChannelRepository
 import javax.inject.Inject
 
 /**
- * 특정 사용자와의 DM 채널 정보를 가져오는 유스케이스입니다.
+ * 특정 사용자와의 DM 채널 ID를 가져오는 UseCase
+ * 
+ * @property dmRepository DM 채널 관련 기능을 제공하는 Repository
  */
 class GetDmChannelUseCase @Inject constructor(
-    private val dmRepository: DMChannelRepository,
-    private val authRepository: AuthRepository
+    private val dmRepository: DMChannelRepository
 ) {
+    /**
+     * 특정 사용자와의 DM 채널 ID를 가져옵니다.
+     *
+     * @param targetUserId 상대방 사용자 ID
+     * @return 성공 시 채널 ID (없으면 null)가 포함된 Result, 실패 시 에러 정보가 포함된 Result
+     */
     suspend operator fun invoke(targetUserId: String): CustomResult<DMChannel, Exception> {
         if (targetUserId.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("Target user ID cannot be blank."))
         }
-        val currentUserSessionResult = authRepository.getCurrentUserSession()
-
-        return when (currentUserSessionResult) {
-            is CustomResult.Success -> {
-                val currentUserSession = currentUserSessionResult.data
-                val userIds : List<String> = listOf(currentUserSession.userId, targetUserId)
-                return dmRepository.findByOtherUserId(userIds)
-            }
-            is CustomResult.Failure -> {
-                return CustomResult.Failure(currentUserSessionResult.error)
-            }
-            else -> {
-                return CustomResult.Failure(Exception("Unknown error occurred."))
-            }
-        }
-
+        return dmRepository.findByOtherUserId(targetUserId)
     }
 } 

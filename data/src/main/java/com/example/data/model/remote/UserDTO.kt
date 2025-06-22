@@ -21,7 +21,7 @@ import java.time.Instant
  * 사용자 정보를 나타내는 DTO 클래스
  */
 data class UserDTO(
-        @DocumentId val uid: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(EMAIL)
     val email: String = "",
     @get:PropertyName(NAME)
@@ -32,8 +32,8 @@ data class UserDTO(
     val profileImageUrl: String? = null,
     @get:PropertyName(MEMO)
     val memo: String? = null,
-    @get:PropertyName(STATUS)
-    val status: String = "offline", // "online", "offline", "away" 등
+    @get:PropertyName(USER_STATUS)
+    val status: UserStatus = UserStatus.OFFLINE, // "online", "offline", "away" 등
     @get:PropertyName(CREATED_AT)
     val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
@@ -41,7 +41,7 @@ data class UserDTO(
     @get:PropertyName(FCM_TOKEN)
     val fcmToken: String? = null,
     @get:PropertyName(ACCOUNT_STATUS)
-    val accountStatus: String = "active" // "active", "suspended", "deleted" 등
+    val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE // "active", "suspended", "deleted" 등
 ) : DTO {
 
     companion object {
@@ -51,7 +51,7 @@ data class UserDTO(
         const val CONSENT_TIMESTAMP = User.KEY_CONSENT_TIMESTAMP
         const val PROFILE_IMAGE_URL = User.KEY_PROFILE_IMAGE_URL
         const val MEMO = User.KEY_MEMO
-        const val STATUS = User.KEY_USER_STATUS // User's online/offline status
+        const val USER_STATUS = User.KEY_USER_STATUS // User's online/offline status
         const val CREATED_AT = User.KEY_CREATED_AT
         const val UPDATED_AT = User.KEY_UPDATED_AT
         const val FCM_TOKEN = User.KEY_FCM_TOKEN
@@ -59,17 +59,17 @@ data class UserDTO(
 
         fun from(domain: User) : UserDTO{
             return UserDTO(
-                uid = domain.id.value,
+                id = domain.id.value,
                 email = domain.email.value,
                 name = domain.name.value,
                 consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp),
                 profileImageUrl = domain.profileImageUrl?.value,
                 memo = domain.memo?.value,
-                status = domain.userStatus.name,
+                status = domain.userStatus,
                 createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt),
                 updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt),
                 fcmToken = domain.fcmToken?.value,
-                accountStatus = domain.accountStatus.name
+                accountStatus = domain.accountStatus
             )
         }
     }
@@ -79,25 +79,17 @@ data class UserDTO(
      */
     override fun toDomain(): User {
         return User.fromDataSource(
-            id = VODocumentId(uid),
+            id = VODocumentId(id),
             email = UserEmail(email), // Wrap in Value Object
             name = UserName(name),   // Wrap in Value Object
             consentTimeStamp = consentTimeStamp?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
             profileImageUrl = profileImageUrl.takeIf { !it.isNullOrBlank() }?.let { ImageUrl(it) }, // Wrap in Value Object.ImageUrl(profileImageUrl),
             memo = memo?.let { UserMemo(it) }, // Wrap in Value Object
-            userStatus = try {
-                UserStatus.valueOf(status.uppercase())
-            } catch (e: Exception) {
-                UserStatus.OFFLINE // Default to OFFLINE if parsing fails
-            },
+            userStatus = status ,
             createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt), // Provide a default if null
             updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt), // Provide a default if null
             fcmToken = UserFcmToken(fcmToken),
-            accountStatus = try {
-                UserAccountStatus.valueOf(accountStatus.uppercase())
-            } catch (e: Exception) {
-                UserAccountStatus.ACTIVE // Default to ACTIVE if parsing fails
-            }
+            accountStatus = accountStatus
         )
     }
 }
@@ -108,16 +100,16 @@ data class UserDTO(
  */
 fun User.toDto(): UserDTO {
     return UserDTO(
-        uid = id.value,
+        id = id.value,
         email = email.value, // Extract primitive value
         name = name.value,   // Extract primitive value
         consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp), // consentTimeStamp is non-null in User
         profileImageUrl = profileImageUrl?.value,
         memo = memo?.value,  // Extract primitive value if memo is not null
-        status = userStatus.name.lowercase(), // Corrected from 'status' to 'userStatus'
+        status = userStatus, // Corrected from 'status' to 'userStatus'
         createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt), // createdAt is non-null in User
         updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt), // updatedAt is non-null in User
         fcmToken = fcmToken?.value,
-        accountStatus = accountStatus.name.lowercase()
+        accountStatus = accountStatus
     )
 }

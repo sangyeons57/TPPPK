@@ -13,7 +13,8 @@ class MemberRepositoryFactoryImpl @Inject constructor(
 
     override fun create(input: MemberRepositoryFactoryContext): MemberRepository {
         return MemberRepositoryImpl(
-            memberRemoteDataSource = memberRemoteDataSource
+            memberRemoteDataSource = memberRemoteDataSource,
+            factoryContext = input,
         )
     }
 }

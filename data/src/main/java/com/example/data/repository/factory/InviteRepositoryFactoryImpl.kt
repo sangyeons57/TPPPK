@@ -13,7 +13,8 @@ class InviteRepositoryFactoryImpl @Inject constructor(
 
     override fun create(input: InviteRepositoryFactoryContext): InviteRepository {
         return InviteRepositoryImpl(
-            inviteRemoteDataSource = inviteRemoteDataSource
+            inviteRemoteDataSource = inviteRemoteDataSource,
+            factoryContext = input,
         )
     }
 }

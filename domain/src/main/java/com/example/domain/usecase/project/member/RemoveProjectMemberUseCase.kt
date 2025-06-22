@@ -1,6 +1,7 @@
 package com.example.domain.usecase.project.member
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.MemberRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -12,11 +13,10 @@ interface RemoveProjectMemberUseCase {
     /**
      * Removes a user from a project.
      *
-     * @param projectId The ID of the project.
      * @param userId The ID of the user to remove.
      * @return A [Result] indicating success or failure.
      */
-    suspend operator fun invoke(projectId: String, userId: String): CustomResult<Unit, Exception>
+    suspend operator fun invoke(userId: String): CustomResult<Unit, Exception>
 }
 
 /**
@@ -26,14 +26,13 @@ class RemoveProjectMemberUseCaseImpl @Inject constructor(
     private val projectMemberRepository: MemberRepository
 ) : RemoveProjectMemberUseCase {
 
-    /**
-     * Removes a user from a project.
-     *
-     * @param projectId The ID of the project.
-     * @param userId The ID of the user to remove.
-     * @return A [Result] indicating success or failure.
-     */
-    override suspend fun invoke(projectId: String, userId: String): CustomResult<Unit, Exception> {
-        return projectMemberRepository.removeProjectMember(projectId, userId)
+    override suspend fun invoke(userId: String): CustomResult<Unit, Exception> {
+        return when (val result = projectMemberRepository.delete(DocumentId(userId))) {
+            is CustomResult.Success -> CustomResult.Success(Unit)
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
 }

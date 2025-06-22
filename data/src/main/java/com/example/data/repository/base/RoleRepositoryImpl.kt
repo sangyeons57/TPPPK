@@ -25,17 +25,6 @@ class RoleRepositoryImpl @Inject constructor(
     // private val roleMapper: RoleMapper // 개별 매퍼 사용시
 ) : DefaultRepositoryImpl(roleRemoteDataSource, factoryContext.collectionPath), RoleRepository {
 
-    /**
-     * 프로젝트의 역할 목록을 스트림으로 가져옵니다.
-     * Firebase 캐싱을 활용하여 실시간으로 업데이트된 역할 목록을 제공합니다.
-     *
-     * @param projectId 프로젝트 ID
-     * @return 역할 목록 스트림
-     */
-    override fun observeProjectRoles(projectId: String): Flow<CustomResult<List<Role>, Exception>> {
-        TODO("Not yet implemented")
-    }
-
     override suspend fun getRolePermissions(
         projectId: String,
         roleId: String
@@ -52,5 +41,11 @@ class RoleRepositoryImpl @Inject constructor(
         } else {
             roleRemoteDataSource.create(entity.toDto())
         }
+    }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Role)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Role"))
+        return roleRemoteDataSource.create(entity.toDto())
     }
 }

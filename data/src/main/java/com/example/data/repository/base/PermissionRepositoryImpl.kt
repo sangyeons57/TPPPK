@@ -7,6 +7,7 @@ import com.example.data.model.remote.PermissionDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.event.AggregateRoot
+import com.example.domain.model.base.Member
 // import com.example.data.datasource.remote.PermissionRemoteDataSource // No longer needed for getAllPermissions, keep if getPermissionById still needs it
 import com.example.domain.model.base.Permission
 import com.example.domain.model.data.project.RolePermission // Import RolePermission enum
@@ -15,6 +16,8 @@ import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.permission.PermissionDescription
 import com.example.domain.repository.DefaultRepositoryFactoryContext
 import com.example.domain.repository.base.PermissionRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 // import kotlinx.coroutines.flow.Flow // Not used in this file anymore
 // import kotlinx.coroutines.flow.map // Not used in this file anymore
 import javax.inject.Inject
@@ -33,10 +36,6 @@ class PermissionRepositoryImpl @Inject constructor(
     }
 
 
-    override suspend fun getAllPermissions(projectId: String): CustomResult<List<Permission>, Exception> {
-        TODO("Not yet implemented")
-    }
-
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Permission)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Permission"))
@@ -46,6 +45,12 @@ class PermissionRepositoryImpl @Inject constructor(
         } else {
             permissionRemoteDataSource.create(entity.toDto())
         }
+    }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Permission)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Permission"))
+        return permissionRemoteDataSource.create(entity.toDto())
     }
 
 }

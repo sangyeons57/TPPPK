@@ -16,7 +16,7 @@ import com.google.firebase.firestore.PropertyName
  * 프로젝트 채널 정보를 나타내는 DTO 클래스
  */
 data class ProjectChannelDTO(
-    @DocumentId val id: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(CHANNEL_NAME)
     val channelName: String = "",
     @get:PropertyName(CHANNEL_TYPE)

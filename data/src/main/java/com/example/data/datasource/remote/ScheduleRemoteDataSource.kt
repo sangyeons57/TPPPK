@@ -63,7 +63,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         val startOfMonthTimestamp = DateTimeUtil.yearMonthToStartOfMonthTimestamp(yearMonth)
         val endOfMonthTimestamp = DateTimeUtil.yearMonthToEndOfMonthExclusiveTimestamp(yearMonth)
 
-        val query = firestore.collection(FirestoreConstants.Collections.SCHEDULES) // agés FirestoreConstants.Collections.SCHEDULES 사용
+        val query = firestore.collection(ScheduleDTO.COLLECTION_NAME) // agés FirestoreConstants.Collections.SCHEDULES 사용
             .whereEqualTo(ScheduleDTO.CREATOR_ID, userId) // agés FirestoreConstants.Schedule.CREATOR_ID 사용
             .whereGreaterThanOrEqualTo(ScheduleDTO.START_TIME, startOfMonthTimestamp) // agés FirestoreConstants.Schedule.START_TIME 사용
             .whereLessThan(ScheduleDTO.START_TIME, endOfMonthTimestamp)
@@ -94,7 +94,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
         val startOfDayTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.localDateToStartOfDayInstant(date))
         val endOfDayExclusiveTimestamp = DateTimeUtil.instantToFirebaseTimestamp(DateTimeUtil.localDateToEndOfDayInstant(date))
 
-        val query = firestore.collection(FirestoreConstants.Collections.SCHEDULES)
+        val query = firestore.collection(ScheduleDTO.COLLECTION_NAME)
             .whereEqualTo(ScheduleDTO.CREATOR_ID, userId)
             .whereGreaterThanOrEqualTo(ScheduleDTO.START_TIME, startOfDayTimestamp)
             .whereLessThan(ScheduleDTO.START_TIME, endOfDayExclusiveTimestamp)
@@ -128,7 +128,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
             val startOfMonthTimestamp = DateTimeUtil.yearMonthToStartOfMonthTimestamp(yearMonth)
             val endOfMonthExclusiveTimestamp = DateTimeUtil.yearMonthToEndOfMonthExclusiveTimestamp(yearMonth)
 
-            val querySnapshot = firestore.collection(FirestoreConstants.Collections.SCHEDULES)
+            val querySnapshot = firestore.collection(ScheduleDTO.COLLECTION_NAME)
                 .whereEqualTo(ScheduleDTO.CREATOR_ID, userId)
                 .whereGreaterThanOrEqualTo(ScheduleDTO.START_TIME, startOfMonthTimestamp)
                 .whereLessThan(ScheduleDTO.START_TIME, endOfMonthExclusiveTimestamp)

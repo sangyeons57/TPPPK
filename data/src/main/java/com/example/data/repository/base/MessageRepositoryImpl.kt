@@ -33,4 +33,10 @@ class MessageRepositoryImpl @Inject constructor(
             messageRemoteDataSource.create(entity.toDto())
         }
     }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Message)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Message"))
+        return messageRemoteDataSource.create(entity.toDto())
+    }
 }

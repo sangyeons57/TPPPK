@@ -7,8 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.ui.enum.SignUpFormFocusTarget
-import com.example.domain.model.ui.data.UiEvent
-import com.example.domain.usecase.auth.CheckEmailVerificationUseCase
 import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.SendEmailVerificationUseCase
 import com.example.domain.usecase.auth.SignUpUseCase

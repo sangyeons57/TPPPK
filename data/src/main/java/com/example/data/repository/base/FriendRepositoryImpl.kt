@@ -31,46 +31,13 @@ class FriendRepositoryImpl @Inject constructor(
 ) : DefaultRepositoryImpl(friendRemoteDataSource, factoryContext.collectionPath), FriendRepository {
 
     /**
-     * 현재 사용자의 친구 목록을 실시간 스트림으로 가져옵니다.
-     * 
-     * @param currentUserId 현재 사용자 ID
-     * @return 친구 목록을 담은 Flow
-     */
-    override fun getFriendsStream(currentUserId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        Log.d("FriendRepositoryImpl", "currentUserId: $currentUserId")
-        return friendRemoteDataSource.observeFriends(currentUserId).map { result ->
-            when (result) {
-                is CustomResult.Success -> {
-                    try {
-                        Log.d("FriendRepositoryImpl", "getFriendsStream: $result")
-                        val friends = result.data.map { dto ->
-                            Log.d("FriendRepositoryImpl", "getFriendsStream: $dto")
-                            // Use toDomain() extension function instead of manual mapping
-                            dto.toDomain()
-                        }
-                        CustomResult.Success(friends)
-                    } catch (e: Exception) {
-                        CustomResult.Failure(e)
-                    }
-                }
-                is CustomResult.Failure -> {
-                    CustomResult.Failure(result.error)
-                }
-                else -> {
-                    CustomResult.Failure(Exception("Unknown error in getFriendsStream"))
-                }
-            }
-        }
-    }
-
-    /**
      * 현재 사용자에게 온 친구 요청 목록을 실시간 스트림으로 가져옵니다.
      * 
      * @param currentUserId 현재 사용자 ID
      * @return 친구 요청 목록을 담은 Flow
      */
-    override fun getFriendRequestsStream(currentUserId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        return friendRemoteDataSource.observeFriendRequests(currentUserId).map { friendDTOResult ->
+    override fun getFriendRequestsStream(): Flow<CustomResult<List<Friend>, Exception>> {
+        return friendRemoteDataSource.observeFriendRequests().map { friendDTOResult ->
             when (friendDTOResult) {
                 is CustomResult.Success -> {
                     CustomResult.Success( friendDTOResult.data.map {dto -> dto.toDomain()})
@@ -79,10 +46,9 @@ class FriendRepositoryImpl @Inject constructor(
                 is CustomResult.Failure -> {
                     CustomResult.Failure(friendDTOResult.error)
                 }
-
-                else -> {
-                    CustomResult.Failure(Exception("Unknown error in getFriendRequestsStream"))
-                }
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Initial -> CustomResult.Initial
+                is CustomResult.Progress -> CustomResult.Progress(friendDTOResult.progress)
             }
         }
     }
@@ -95,6 +61,12 @@ class FriendRepositoryImpl @Inject constructor(
         } else {
             friendRemoteDataSource.create(entity.toDto())
         }
+    }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Friend)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Friend"))
+        return friendRemoteDataSource.create(entity.toDto())
     }
 
 }

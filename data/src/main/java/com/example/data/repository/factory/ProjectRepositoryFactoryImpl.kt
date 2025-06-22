@@ -19,7 +19,8 @@ class ProjectRepositoryFactoryImpl @Inject constructor(
         return ProjectRepositoryImpl(
             projectRemoteDataSource = projectRemoteDataSource,
             categoryRemoteDataSource = categoryRemoteDataSource,
-            memberRemoteDataSource = memberRemoteDataSource
+            memberRemoteDataSource = memberRemoteDataSource,
+            factoryContext = input,
         )
     }
 }

@@ -6,6 +6,7 @@ import com.example.domain.repository.base.AuthRepository // Added
 import com.example.domain.repository.base.CategoryRepository // Added
 import com.example.core_common.constants.Constants // Added
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
@@ -100,20 +101,19 @@ class AddCategoryUseCaseImpl @Inject constructor(
         val newCategory = Category.create(
             name = CategoryName(categoryName.trim()),
             order = CategoryOrder(nextOrder),
-            createdBy = OwnerId(currentUserSession.userId),
-            id = DocumentId.EMPTY,
-            isCategory = IsCategoryFlag.TRUE,
+            createdBy = OwnerId.from(currentUserSession.userId),
         )
 
         // 4. Add category using repository
-        return when (val addResult = categoryRepository.addCategory(projectId, newCategory)) {
+        return when (val addResult = categoryRepository.save(newCategory)) {
             is CustomResult.Success -> {
                 // Assign the id returned from repository to the aggregate using domain helper
-                val categoryWithId = newCategory.withId(DocumentId(addResult.data))
-                CustomResult.Success(categoryWithId)
+                CustomResult.Success(newCategory)
             }
             is CustomResult.Failure -> CustomResult.Failure(addResult.error)
-            else -> return CustomResult.Failure(Exception("Failed to add category."))
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(addResult.progress)
+            is CustomResult.Initial -> CustomResult.Initial
         }
     }
 }

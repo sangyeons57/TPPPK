@@ -33,5 +33,10 @@ class InviteRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Invite)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Invite"))
+        return inviteRemoteDataSource.create(entity.toDto())
+    }
 
 }

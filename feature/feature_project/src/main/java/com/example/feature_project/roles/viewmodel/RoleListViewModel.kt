@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.usecase.project.role.DeleteProjectRoleUseCase // Added
 import com.example.domain.usecase.project.role.GetProjectRolesUseCase // Added
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -41,7 +40,6 @@ sealed class RoleListEvent {
 class RoleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getProjectRolesUseCase: GetProjectRolesUseCase, // Added
-    private val deleteProjectRoleUseCase: DeleteProjectRoleUseCase // Added
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
@@ -100,6 +98,7 @@ class RoleListViewModel @Inject constructor(
     fun confirmDeleteRole(roleId: String) {
         viewModelScope.launch {
             // Optional: _uiState.update { it.copy(isLoading = true) } // Indicate loading for delete
+            /**
             val result = deleteProjectRoleUseCase(projectId, roleId)
             when (result){
                 is CustomResult.Success -> {
@@ -112,6 +111,7 @@ class RoleListViewModel @Inject constructor(
                     _eventFlow.emit(RoleListEvent.ShowSnackbar("알 수 없는 오류가 발생했습니다."))
                 }
             }
+            */
             // Optional: _uiState.update { it.copy(isLoading = false) }
         }
     }

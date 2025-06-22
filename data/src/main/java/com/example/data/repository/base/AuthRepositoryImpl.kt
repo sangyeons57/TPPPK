@@ -1,8 +1,6 @@
 package com.example.data.repository.base
 
 import android.util.Log
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.example.domain.repository.base.AuthRepository
 import com.example.data.util.FirebaseAuthWrapper
 import kotlinx.coroutines.tasks.await // await() 사용 위해 임포트
@@ -10,7 +8,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
-import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.ImageUrl
@@ -24,7 +21,6 @@ import kotlinx.coroutines.flow.map
  * 인증 관련 작업과 세션 관리를 담당합니다.
  */
 class AuthRepositoryImpl @Inject constructor(
-    private val auth: FirebaseAuth, // FirebaseAuth 주입
     private val authWrapper: FirebaseAuthWrapper, // 추가: FirebaseAuthWrapper 주입
     private val authRemoteDataSource: AuthRemoteDataSource,
 ): AuthRepository {
@@ -73,7 +69,6 @@ class AuthRepositoryImpl @Inject constructor(
      * @return 로그인 상태 (true: 로그인됨, false: 로그아웃됨)
      */
     override suspend fun isLoggedIn(): Boolean {
-        Log.d("AuthRepositoryImpl", ""+ auth.currentUser)
         return authWrapper.getCurrentUser() != null
     }
 
@@ -192,15 +187,17 @@ class AuthRepositoryImpl @Inject constructor(
      * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
      */
     override suspend fun withdrawCurrentUser(): CustomResult<Unit, Exception> {
-        val firebaseUser = auth.currentUser
-            ?: return CustomResult.Failure(Exception("User not logged in"))
-        return try {
-            firebaseUser.delete().await()
-            CustomResult.Success(Unit)
-        } catch (e: Exception) {
-            // Log the exception for debugging purposes
-            Log.e("AuthRepositoryImpl", "Error deleting user: ${e.message}", e)
-            CustomResult.Failure(e)
+        return when(val firebaseUser = authRemoteDataSource.getCurrentUser()) {
+            is CustomResult.Success -> {
+                firebaseUser.data.delete().await()
+                CustomResult.Success(Unit)
+            }
+            is CustomResult.Failure -> {
+                CustomResult.Failure(firebaseUser.error)
+            }
+            else -> {
+                CustomResult.Failure(Exception("Unknown error occurred during login"))
+            }
         }
     }
 
@@ -211,32 +208,33 @@ class AuthRepositoryImpl @Inject constructor(
      * @return 현재 사용자의 세션 정보가 포함된 CustomResult 또는 null
      */
     override suspend fun getCurrentUserSession(): CustomResult<UserSession, Exception> {
-        return auth.currentUser.let {
-            when (it) {
-                is FirebaseUser -> {
-                    // 로그인된 상태 - 토큰 가져오기
-                    val tokenResult = try {
-                        it.getIdToken(false).await()
-                    } catch (e: Exception) {
-                        // 토큰 가져오기 실패 시 빈 토큰으로 처리
-                        Log.w("AuthRepositoryImpl", "Failed to get token: ${e.message}")
-                        null
-                    }
-
-                    val userSession = UserSession(
-                        userId = UserId(it.uid),
-                        token = tokenResult?.token?.let { value -> Token(value) },
-                        email = it.email?.let { value -> Email(value) },
-                        displayName = it.displayName?.let { value -> Name(value) },
-                        photoUrl = it.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
-                    )
-
-                    CustomResult.Success(userSession)
+        return when (val result = authRemoteDataSource.getCurrentUser()) {
+            is CustomResult.Success -> {
+                val firebaseUser = result.data
+                // 로그인된 상태 - 토큰 가져오기
+                val tokenResult = try {
+                    firebaseUser.getIdToken(false).await()
+                } catch (e: Exception) {
+                    // 토큰 가져오기 실패 시 빈 토큰으로 처리
+                    Log.w("AuthRepositoryImpl", "Failed to get token: ${e.message}")
+                    null
                 }
 
-                else -> {
-                    CustomResult.Failure(Exception("No user is currently signed in"))
-                }
+                val userSession = UserSession(
+                    userId = UserId(firebaseUser.uid),
+                    token = tokenResult?.token?.let { value -> Token(value) },
+                    email = firebaseUser.email?.let { value -> Email(value) },
+                    displayName = firebaseUser.displayName?.let { value -> Name(value) },
+                    photoUrl = firebaseUser.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
+                )
+
+                CustomResult.Success(userSession)
+            }
+            is CustomResult.Failure -> {
+                CustomResult.Failure(result.error)
+            }
+            else -> {
+                CustomResult.Failure(Exception("Unknown error occurred during login"))
             }
         }
     }

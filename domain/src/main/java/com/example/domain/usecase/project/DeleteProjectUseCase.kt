@@ -30,25 +30,6 @@ class DeleteProjectUseCaseImpl @Inject constructor(
      * @return Result<Unit> 삭제 처리 결과
      */
     override suspend fun invoke(projectId: String): Result<Unit> {
-        // 현재 로그인된 사용자 ID 확인
-        val currentUserSessionResult = authRepository.getCurrentUserSession()
-        val currentUserSession = when (currentUserSessionResult) {
-            is CustomResult.Success -> currentUserSessionResult.data
-            is CustomResult.Failure -> return Result.failure(currentUserSessionResult.error)
-            else -> return Result.failure(Exception("Unknown error :: getUeserId"))
-        }
-
-        when(val dmWrapperResult = projWrapperRepository.removeProjectFromUser(currentUserSession.userId, projectId)) {
-            is CustomResult.Success -> Unit
-            is CustomResult.Failure -> return Result.failure(dmWrapperResult.error)
-            else -> return Result.failure(Exception("Unknown error :: deleteProjectWrapper"))
-        }
-
-        // 프로젝트 삭제 시도
-        return when (val repoResult = projectRepository.deleteProject(projectId, currentUserSession.userId)) {
-            is CustomResult.Success -> Result.success(Unit)
-            is CustomResult.Failure -> Result.failure(repoResult.error)
-            else -> Result.failure(Exception("Unknown error :: deleteProject"))
-        }
+        TODO("Not yet implemented [Firebase Function에서 구현]")
     }
 }

@@ -8,6 +8,7 @@ import com.example.data.model.remote.ScheduleDTO
 import com.example.data.model.remote.toDto
 import com.example.domain.event.AggregateRoot
 import com.example.domain.model.base.DMWrapper
+import com.example.domain.model.base.Permission
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.DefaultRepository
@@ -25,6 +26,7 @@ abstract class DefaultRepositoryImpl  (
         defaultDatasource.setCollection(collectionPath.value)
     }
 
+
     override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> {
         return defaultDatasource.delete(id)
     }
@@ -32,6 +34,18 @@ abstract class DefaultRepositoryImpl  (
     override suspend fun findById(id: DocumentId, source: Source): CustomResult<AggregateRoot, Exception> {
         return when (val result = defaultDatasource.findById(id)) {
             is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
+    }
+
+    override suspend fun findAll(
+        source: Source
+    ): CustomResult<List<AggregateRoot>, Exception> {
+        return when(val result = defaultDatasource.findAll(source)) {
+            is CustomResult.Success -> CustomResult.Success(result.data.map{ it.toDomain()})
             is CustomResult.Failure -> CustomResult.Failure(result.error)
             is CustomResult.Loading -> CustomResult.Loading
             is CustomResult.Initial -> CustomResult.Initial
@@ -49,5 +63,18 @@ abstract class DefaultRepositoryImpl  (
                 is CustomResult.Progress -> CustomResult.Progress(result.progress)
             }
         }
+    }
+
+    override fun observeAll(): Flow<CustomResult<List<AggregateRoot>, Exception>> {
+        return defaultDatasource.observeAll()
+            .map { dtoListResult ->
+                when (dtoListResult) {
+                    is CustomResult.Success -> CustomResult.Success(dtoListResult.data.map { it.toDomain()})
+                    is CustomResult.Failure -> CustomResult.Failure(dtoListResult.error)
+                    is CustomResult.Initial -> CustomResult.Initial
+                    is CustomResult.Loading -> CustomResult.Loading
+                    is CustomResult.Progress -> CustomResult.Progress(dtoListResult.progress)
+                }
+            }
     }
 }

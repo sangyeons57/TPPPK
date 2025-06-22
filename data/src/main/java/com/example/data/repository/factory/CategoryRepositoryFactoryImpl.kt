@@ -13,6 +13,7 @@ class CategoryRepositoryFactoryImpl @Inject constructor(
 
     override fun create(input: CategoryRepositoryFactoryContext): CategoryRepository {
         return CategoryRepositoryImpl(
+            factoryContext = input,
             categoryRemoteDataSource = categoryRemoteDataSource
         )
     }

@@ -72,7 +72,7 @@ class AcceptFriendsViewModel @Inject constructor(
             try {
                 val currentUserId = authUtil.getCurrentUserId()
                 Log.d("AcceptFriendsViewModel", "2")
-                getPendingFriendRequestsUseCase(currentUserId).collect { result ->
+                getPendingFriendRequestsUseCase().collect { result ->
                     Log.d("AcceptFriendsViewModel", "3")
                     when (result) {
                         is CustomResult.Success -> {

@@ -18,11 +18,8 @@ import com.example.feature_main.viewmodel.CalendarViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.unit.dp
 import com.example.core_navigation.core.AppNavigator
 // import com.example.core_navigation.destination.AppRoutes // No longer needed for REFRESH_SCHEDULE_LIST_KEY
-import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_navigation.extension.ObserveNavigationResult
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -31,7 +28,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.Instant
-import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model._new.enum.ScheduleStatus
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
@@ -183,7 +179,7 @@ private object PreviewUtils {
         val today = LocalDate.now()
         val now = Instant.now()
         return listOf(
-            Schedule.registerNewSchedule(
+            Schedule.create(
                 scheduleId = DocumentId("s1"),
                 projectId = ProjectId("p1"),
                 title = ScheduleTitle("팀 회의"),
@@ -195,7 +191,7 @@ private object PreviewUtils {
                 updatedAt = now,
                 status = ScheduleStatus.CONFIRMED
             ),
-            Schedule.registerNewSchedule(
+            Schedule.create(
                 scheduleId = DocumentId("s2"),
                 projectId = ProjectId("p2"),
                 title = ScheduleTitle("점심 약속"),
@@ -207,7 +203,7 @@ private object PreviewUtils {
                 updatedAt = now,
                 status = ScheduleStatus.UNKNOWN
             ),
-            Schedule.registerNewSchedule(
+            Schedule.create(
                 scheduleId = DocumentId("s3"),
                 projectId = ProjectId("p2"),
                 title = ScheduleTitle("프로젝트 회의"),
@@ -219,7 +215,7 @@ private object PreviewUtils {
                 updatedAt = now,
                 status = ScheduleStatus.CANCELLED
             ),
-             Schedule.registerNewSchedule(
+             Schedule.create(
                 scheduleId = DocumentId("s4"),
                 projectId = ProjectId("p1"),
                 title = ScheduleTitle("종일 이벤트"),

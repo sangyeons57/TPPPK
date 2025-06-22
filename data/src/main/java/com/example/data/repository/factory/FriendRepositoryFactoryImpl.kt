@@ -16,7 +16,7 @@ class FriendRepositoryFactoryImpl @Inject constructor(
     override fun create(input: FriendRepositoryFactoryContext): FriendRepository {
         return FriendRepositoryImpl(
             friendRemoteDataSource = friendRemoteDataSource,
-            userRemoteDataSource = userRemoteDataSource
+            factoryContext = input
         )
     }
 }

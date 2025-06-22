@@ -20,7 +20,7 @@ import java.time.Instant
  */
 data class CategoryDTO(
     @com.google.firebase.firestore.DocumentId
-    val id: String = "",
+    override val id: String = "",
     @get:PropertyName(NAME)
     val name: String = "",
     // 순서를 소수점으로 관리하면 정수보다 유연하게 아이템 사이에 삽입할 수 있습니다.

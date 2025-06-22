@@ -27,6 +27,6 @@ class ObserveProjectMembersUseCaseImpl @Inject constructor(
      * @return Flow<List<ProjectMember>> 멤버 목록 스트림
      */
     override fun invoke(projectId: String): Flow<CustomResult<List<Member>, Exception>> {
-        return projectMemberRepository.getProjectMembersStream(projectId)
+        return projectMemberRepository.getProjectMembersStream()
     }
 } 

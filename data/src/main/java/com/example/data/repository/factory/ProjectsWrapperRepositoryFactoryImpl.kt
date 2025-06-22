@@ -13,7 +13,8 @@ class ProjectsWrapperRepositoryFactoryImpl @Inject constructor(
 
     override fun create(input: ProjectsWrapperRepositoryFactoryContext): ProjectsWrapperRepository {
         return ProjectsWrapperRepositoryImpl(
-            projectsWrapperRemoteDataSource = projectsWrapperRemoteDataSource
+            projectsWrapperRemoteDataSource = projectsWrapperRemoteDataSource,
+            factoryContext = input,
         )
     }
 }

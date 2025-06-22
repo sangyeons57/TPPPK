@@ -32,7 +32,7 @@ class ConvertProjectWrappersToProjectsUseCase @Inject constructor(
         }
 
         val projectDetailFlows: List<Flow<CustomResult<Project, Exception>>> = projectWrappers.map { wrapper ->
-            projectRepository.getProjectDetailsStream(wrapper.projectId)
+            projectRepository.observe(wrapper.id) as Flow<CustomResult<Project, Exception>>
         }
 
         return combine(projectDetailFlows) { results ->

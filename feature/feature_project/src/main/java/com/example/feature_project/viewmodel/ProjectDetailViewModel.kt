@@ -4,9 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.usecase.projectstructure.CreateCategoryChannelUseCase
-import com.example.domain.usecase.projectstructure.CreateDirectChannelUseCase
-import com.example.domain.usecase.projectstructure.GetProjectChannelsUseCase
+import com.example.domain.usecase.project.channel.CreateProjectChannelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,9 +14,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
+
 // Import the new UI models - assuming they are in com.example.feature_project.model
-import com.example.feature_model.CategoryUiModel
-import com.example.feature_model.ChannelUiModel
 
 // Define ChannelMode enum and CreateChannelDialogData data class
 
@@ -48,9 +46,9 @@ data class ProjectDetailUiState(
 @HiltViewModel
 class ProjectDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val getProjectChannelsUseCase: GetProjectChannelsUseCase,
-    private val createCategoryChannelUseCase: CreateCategoryChannelUseCase,
-    private val createDirectChannelUseCase: CreateDirectChannelUseCase
+    private val getProjectChannelsUseCase: GetProjectChannelUseCase,
+    private val createProjectChannelUseCase: CreateProjectChannelUseCase,
+    private val createDirectChannelUseCase: CreateProjectChannelUseCase
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.get<String>(AppRoutes.Project.ARG_PROJECT_ID) ?: error("${AppRoutes.Project.ARG_PROJECT_ID} is required")
@@ -124,7 +122,7 @@ class ProjectDetailViewModel @Inject constructor(
                 createDirectChannelUseCase(projectId, dialogData.channelName, ProjectChannelType.MESSAGES, 0.0) // Use ChannelType.PROJECT, add order
             } else {
                 // Create Category Channel
-                createCategoryChannelUseCase(projectId, dialogData.categoryId, dialogData.channelName, ProjectChannelType.MESSAGES, 0.0) // Use ChannelType.CATEGORY
+                createProjectChannelUseCase(projectId, dialogData.categoryId, dialogData.channelName, ProjectChannelType.MESSAGES, 0.0) // Use ChannelType.CATEGORY
             }
 
             when (result) {

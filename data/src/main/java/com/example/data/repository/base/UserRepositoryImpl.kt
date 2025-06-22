@@ -34,7 +34,13 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun findByNameStream(name: String): Flow<CustomResult<User, Exception>> {
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is User)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
+        return userRemoteDataSource.create(entity.toDto())
+    }
+
+    override fun observeByName(name: String): Flow<CustomResult<User, Exception>> {
         return userRemoteDataSource.findByNameStream(name).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
@@ -46,7 +52,7 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun findByEmailStream(email: String): Flow<CustomResult<User, Exception>> {
+    override fun observeByEmail(email: String): Flow<CustomResult<User, Exception>> {
         return userRemoteDataSource.findByNameStream(email).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
@@ -58,7 +64,7 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun findAllByNameStream(name: String, limit: Int): Flow<CustomResult<List<User>, Exception>> {
+    override fun observeAllByName(name: String, limit: Int): Flow<CustomResult<List<User>, Exception>> {
         return userRemoteDataSource.findAllByNameStream(name, limit).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })

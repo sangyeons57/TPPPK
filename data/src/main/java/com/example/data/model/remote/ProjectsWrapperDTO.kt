@@ -9,11 +9,17 @@ import com.example.data.model.DTO
 import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.domain.model.vo.DocumentId as VODocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.project.ProjectName
 
 data class ProjectsWrapperDTO(
-    @DocumentId val projectId: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(ORDER)
     val order: Double = 0.0,
+    @get:PropertyName(PROJECT_NAME)
+    val projectName: String = "",
+    @get:PropertyName(PROJECT_IMAGE_URL)
+    val projectImageUrl: String? = null,
     @get:PropertyName(CREATED_AT)
     @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
@@ -23,13 +29,17 @@ data class ProjectsWrapperDTO(
     companion object {
         const val COLLECTION_NAME = ProjectsWrapper.COLLECTION_NAME
         const val ORDER = ProjectsWrapper.KEY_ORDER
+        const val PROJECT_NAME = ProjectsWrapper.KEY_PROJECT_NAME
+        const val PROJECT_IMAGE_URL = ProjectsWrapper.KEY_PROJECT_IMAGE_URL
         const val CREATED_AT = ProjectsWrapper.KEY_CREATED_AT
         const val UPDATED_AT = ProjectsWrapper.KEY_UPDATED_AT
 
         fun from (projectsWrapper: ProjectsWrapper): ProjectsWrapperDTO {
             return ProjectsWrapperDTO(
-                projectId = projectsWrapper.id.value,
+                id = projectsWrapper.id.value,
                 order = projectsWrapper.order.value,
+                projectName = projectsWrapper.projectName.value,
+                projectImageUrl = projectsWrapper.projectImageUrl?.value,
                 createdAt = DateTimeUtil.instantToFirebaseTimestamp(projectsWrapper.createdAt),
                 updatedAt = DateTimeUtil.instantToFirebaseTimestamp(projectsWrapper.updatedAt),
             )
@@ -41,8 +51,10 @@ data class ProjectsWrapperDTO(
      */
     override fun toDomain(): ProjectsWrapper {
         return ProjectsWrapper.fromDataSource(
-            id = VODocumentId(projectId),
+            id = VODocumentId(id),
             order = ProjectWrapperOrder(order),
+            projectName = ProjectName(projectName),
+            projectImageUrl = projectImageUrl?.let{ImageUrl(it)},
             createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
         )
@@ -55,8 +67,10 @@ data class ProjectsWrapperDTO(
  */
 fun ProjectsWrapper.toDto(): ProjectsWrapperDTO {
     return ProjectsWrapperDTO(
-        projectId = id.value,
+        id = id.value,
         order = order.value,
+        projectName = projectName.value,
+        projectImageUrl = projectImageUrl?.value,
         createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
     )

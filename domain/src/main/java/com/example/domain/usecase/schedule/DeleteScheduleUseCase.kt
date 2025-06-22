@@ -1,6 +1,7 @@
 package com.example.domain.usecase.schedule
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.ScheduleRepository
 import javax.inject.Inject
@@ -27,10 +28,12 @@ class DeleteScheduleUseCaseImpl @Inject constructor(
      * @return Result<Unit> 삭제 처리 결과
      */
     override suspend fun invoke(scheduleId: String): CustomResult<Unit, Exception> {
-        val session = authRepository.getCurrentUserSession()
-        return when (session) {
-            is CustomResult.Success -> scheduleRepository.delete(scheduleId)
-            else -> CustomResult.Failure(Exception("로그인이 필요합니다."))
+        return when (val result = scheduleRepository.delete(DocumentId(scheduleId))) {
+            is CustomResult.Success -> CustomResult.Success(Unit)
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
         }
     }
 } 

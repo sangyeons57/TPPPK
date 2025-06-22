@@ -13,7 +13,8 @@ class MessageAttachmentRepositoryFactoryImpl @Inject constructor(
 
     override fun create(input: MessageAttachmentRepositoryFactoryContext): MessageAttachmentRepository {
         return MessageAttachmentRepositoryImpl(
-            messageAttachmentRemoteDataSource = messageAttachmentRemoteDataSource
+            messageAttachmentRemoteDataSource = messageAttachmentRemoteDataSource,
+            factoryContext = input,
         )
     }
 }

@@ -2,6 +2,7 @@ package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.ProjectRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -18,7 +19,7 @@ class GetProjectDetailsStreamUseCase @Inject constructor(
      * @param projectId 가져올 프로젝트의 ID
      * @return 프로젝트 상세 정보를 포함하는 Flow
      */
-    operator fun invoke(projectId: String): Flow<CustomResult<Project, Exception>> {
-        return projectRepository.getProjectDetailsStream(projectId)
+    operator fun invoke(projectId: DocumentId): Flow<CustomResult<Project, Exception>> {
+        return projectRepository.observe(projectId) as Flow<CustomResult<Project, Exception>>
     }
 }

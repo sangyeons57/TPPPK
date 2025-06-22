@@ -1,11 +1,14 @@
 package com.example.domain.model.base
 
+import android.provider.CalendarContract.CalendarAlerts
+import com.example.core_common.constants.Constants
 import com.example.domain.event.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.event.category.CategoryCreatedEvent // These will be defined in the next step
 import com.example.domain.event.category.CategoryNameChangedEvent // These will be defined in the next step
 import com.example.domain.event.category.CategoryOrderChangedEvent // These will be defined in the next step
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
@@ -155,26 +158,39 @@ class Category private constructor(
          * @return A new [Category] instance, ready to be persisted.
          */
         fun create(
-            id: DocumentId,
             name: CategoryName,
             order: CategoryOrder,
             createdBy: OwnerId,
-            isCategory: IsCategoryFlag = IsCategoryFlag(true)
         ): Category {
             val now = Instant.now()
             val category = Category(
-                id = id,
+                id = DocumentId.EMPTY,
                 initialName = name,
                 initialOrder = order,
                 initialCreatedBy = createdBy,
                 initialCreatedAt = now,
                 initialUpdatedAt = now,
-                initialIsCategory = isCategory,
+                initialIsCategory = IsCategoryFlag.BASE,
                 isNew = true
             )
-            category.pushDomainEvent(CategoryCreatedEvent(id.value))
             return category
         }
+
+        fun createNoCategory(createdBy: OwnerId) : Category {
+            val now = Instant.now()
+            val category = Category(
+                id = DocumentId(Constants.NO_CATEGORY_ID),
+                initialName = CategoryName.NO_CATEGORY_NAME,
+                initialOrder = CategoryOrder(Constants.NO_CATEGORY_ORDER),
+                initialCreatedBy = createdBy,
+                initialCreatedAt = now,
+                initialUpdatedAt = now,
+                initialIsCategory = IsCategoryFlag.FALSE,
+                isNew = true
+            )
+            return category
+        }
+
 
         /**
          * Reconstructs a Category instance from a data source (e.g., when loading from a database).
@@ -209,7 +225,6 @@ class Category private constructor(
                 initialIsCategory = isCategory,
                 isNew = false
             )
-            category.pushDomainEvent(CategoryCreatedEvent(id.value))
             return category
         }
     }

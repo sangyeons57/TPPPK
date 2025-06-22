@@ -3,6 +3,7 @@ package com.example.domain.repository.base
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.repository.DefaultRepository
+import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -10,5 +11,7 @@ import kotlinx.coroutines.flow.Flow
  * 카테고리는 특정 프로젝트에 종속됩니다.
  */
 interface CategoryRepository : DefaultRepository {
+    override val factoryContext: CategoryRepositoryFactoryContext
+
     suspend fun getCategoriesStream(projectId: String): Flow<CustomResult<List<Category>, Exception>>
 }

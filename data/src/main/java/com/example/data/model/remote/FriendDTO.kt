@@ -16,7 +16,7 @@ import com.google.firebase.firestore.PropertyName
  * 친구 관계 정보를 나타내는 DTO 클래스
  */
 data class FriendDTO(
-    @DocumentId val id: String = "",
+    @DocumentId override val id: String = "",
     // "requested", "accepted", "pending", "blocked"
     @get:PropertyName(STATUS)
     val status: FriendStatus = FriendStatus.UNKNOWN,

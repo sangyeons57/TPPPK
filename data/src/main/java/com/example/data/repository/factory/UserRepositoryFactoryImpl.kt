@@ -15,7 +15,7 @@ class UserRepositoryFactoryImpl(
     override fun create(input: UserRepositoryFactoryContext): UserRepository {
         return UserRepositoryImpl(
             userRemoteDataSource = userRemoteDataSource,
-            collectionPath = input.collectionPath
+            factoryContext = input,
         )
     }
 }

@@ -6,10 +6,10 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
+import com.example.data.model.FirestorePaths
 import com.example.data.model.remote.FriendDTO
 import com.example.domain.model.enum.FriendStatus
 import com.google.firebase.Timestamp
-import com.example.core_common.constants.FirestorePaths
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -35,7 +35,7 @@ interface FriendRemoteDataSource : DefaultDatasource {
      * 특정 사용자에게 온 친구 요청("pending" 상태) 목록을 실시간으로 관찰합니다.
      * @param userId 조회할 사용자의 ID
      */
-    fun observeFriendRequests(userId: String): Flow<CustomResult<List<FriendDTO>, Exception>>
+    fun observeFriendRequests(): Flow<CustomResult<List<FriendDTO>, Exception>>
 }
 
 @Singleton
@@ -43,8 +43,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : DefaultDatasourceImpl<FriendDTO>(firestore, FriendDTO::class.java), FriendRemoteDataSource {
 
-        override fun observeFriendRequests(userId: String): Flow<CustomResult<List<FriendDTO>, Exception>> {
-        setCollection(FirestorePaths.userDoc(userId), FriendDTO.COLLECTION_NAME)
+    override fun observeFriendRequests(): Flow<CustomResult<List<FriendDTO>, Exception>> {
         return callbackFlow {
             val listener = collection
                 .whereEqualTo(FriendDTO.STATUS, FriendStatus.PENDING.name)

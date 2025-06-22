@@ -1,7 +1,15 @@
 package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.CustomResult.Loading.getOrDefault
+import com.example.core_common.result.CustomResult.Loading.getOrElse
+import com.example.domain.event.EventDispatcher
+import com.example.domain.model.base.DMChannel
+import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.User
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.DMChannelRepository
 import com.example.domain.repository.base.DMWrapperRepository
@@ -11,6 +19,7 @@ import kotlinx.coroutines.flow.catch // catch import
 import kotlinx.coroutines.flow.filter // filter import
 import kotlinx.coroutines.flow.first // first import
 import kotlinx.coroutines.flow.flow // flow builder import
+import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
 
 /**
@@ -33,7 +42,7 @@ class AddDmChannelUseCase @Inject constructor(
      *         실패 사유는 파트너 이름이 비어있거나, 인증되지 않았거나, 파트너 사용자를 찾을 수 없거나,
      *         자기 자신과의 DM을 시도했거나, DM 채널 생성 중 오류가 발생한 경우 등입니다.
      */
-    operator fun invoke(partnerName: String): Flow<CustomResult<String, Exception>> = flow {
+    operator fun invoke(partnerName: String): Flow<CustomResult<DocumentId, Exception>> = flow {
         emit(CustomResult.Loading)
 
         if (partnerName.isBlank()) {
@@ -41,60 +50,56 @@ class AddDmChannelUseCase @Inject constructor(
             return@flow
         }
 
-        val session = when (val currentUserSessionResult = authRepository.getCurrentUserSession()) {
-            is CustomResult.Success -> currentUserSessionResult.data
+        val session = authRepository.getCurrentUserSession().getOrDefault(null)
+        if (session == null) {
+            this.emit(CustomResult.Failure(Exception("User not logged in")))
+            return@flow
+        }
+
+
+        val partner = when (val result = userRepository.observeByName(partnerName).first()) {
+            is CustomResult.Success -> result.data as User
             is CustomResult.Failure -> {
-                emit(CustomResult.Failure(
-                    Exception("User not authenticated: ${currentUserSessionResult.error.message}", currentUserSessionResult.error)
-                ))
+                emit(CustomResult.Failure(result.error))
                 return@flow
             }
-            else -> { // Loading, Initial 등 기타 상태 처리
-                emit(CustomResult.Failure(Exception("User session status unknown or not yet loaded.")))
+            is CustomResult.Loading -> {
+                emit(CustomResult.Loading)
+                return@flow
+            }
+            is CustomResult.Initial -> {
+                emit(CustomResult.Initial)
+                return@flow
+            }
+            is CustomResult.Progress ->{
+                emit(CustomResult.Progress(result.progress))
                 return@flow
             }
         }
 
-        val partnerUserResult: CustomResult<User, Exception> = userRepository.findByNameStream(partnerName)
-            .filter { it !is CustomResult.Loading && it !is CustomResult.Initial } 
-            .first()
-
-        val partnerId = when (partnerUserResult) {
-            is CustomResult.Success -> partnerUserResult.data.uid
-            is CustomResult.Failure -> {
-                emit(CustomResult.Failure(partnerUserResult.error))
-                return@flow
-            }
-            is CustomResult.Loading, is CustomResult.Initial -> {
-                emit(CustomResult.Failure(Exception("Failed to get partner user information.")))
-                return@flow
-            }
-            else -> { // Loading, Initial 등 기타 상태 처리 (filter 후에는 Success/Failure만 남아야 함)
-                emit(CustomResult.Failure(Exception("Failed to get partner user information after filtering.")))
-                return@flow
-            }
-        }
-
-        if (session.userId == partnerId.value) {
+        if (session.userId == UserId.from(partner.id)) {
             emit(CustomResult.Failure(IllegalArgumentException("Cannot create DM channel with oneself.")))
             return@flow
         }
 
-        // 5. DM 채널 생성 또는 가져오기 (DMChannelRepository)
-        when (val dmChannelCreationResult = dmChannelRepository.createDmChannel(partnerId.value)) {
-            is CustomResult.Success -> {
-                val dmChannelId = dmChannelCreationResult.data
-                // DMWrapper 생성 요청
-                val dmWrapperCreationResult = dmWrapperRepository.createDMWrapper(
-                    userId = session.userId,
-                    dmChannelId = dmChannelId,
-                    otherUserId = partnerId.value
-                )
+        val dmChannel = DMChannel.create(
+            initialParticipants = listOf(session.userId, UserId.from(partner.id))
+        )
 
+        val dmChannelWrapper = DMWrapper.create(
+            otherUserId = UserId.from(partner.id),
+            otherUserName = partner.name,
+        )
+        // 5. DM 채널 생성 또는 가져오기 (DMChannelRepository)
+        when (val dmChannelCreationResult = dmChannelRepository.save(dmChannel)) {
+            is CustomResult.Success -> {
+                EventDispatcher.publish(dmChannel)
+                val dmChannelId = dmChannelCreationResult.data
                 // DMWrapper 생성 결과에 따라 최종 상태 emit
-                when (dmWrapperCreationResult) {
+                when (val dmWrapperCreationResult = dmWrapperRepository.save(dmChannelWrapper)) {
                     is CustomResult.Success -> {
                         // DMWrapper 생성 성공 시, DM 채널 ID를 성공 결과로 emit
+                        EventDispatcher.publish(dmChannelWrapper)
                         emit(CustomResult.Success(dmChannelId))
                     }
                     is CustomResult.Failure -> {
@@ -119,7 +124,6 @@ class AddDmChannelUseCase @Inject constructor(
                 emit(CustomResult.Failure(Exception("Unknown error type from createDmChannel.")))
             }
         }
-
     }.catch { e ->
         emit(CustomResult.Failure(Exception("An unexpected error occurred in AddDmChannelUseCase: ${e.message}", e)))
     }

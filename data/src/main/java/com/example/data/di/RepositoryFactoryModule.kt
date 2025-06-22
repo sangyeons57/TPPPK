@@ -15,7 +15,6 @@ import com.example.data.repository.factory.PermissionRepositoryFactoryImpl
 import com.example.data.repository.factory.ProjectChannelRepositoryFactoryImpl
 import com.example.data.repository.factory.ProjectRepositoryFactoryImpl
 import com.example.data.repository.factory.ProjectsWrapperRepositoryFactoryImpl
-import com.example.data.repository.factory.ReactionRepositoryFactoryImpl
 import com.example.data.repository.factory.RoleRepositoryFactoryImpl
 import com.example.data.repository.factory.ScheduleRepositoryFactoryImpl
 import com.example.data.repository.factory.SearchRepositoryFactoryImpl
@@ -34,7 +33,6 @@ import com.example.domain.repository.base.PermissionRepository
 import com.example.domain.repository.base.ProjectChannelRepository
 import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
-import com.example.domain.repository.base.ReactionRepository
 import com.example.domain.repository.base.RoleRepository
 import com.example.domain.repository.base.ScheduleRepository
 import com.example.domain.repository.base.SearchRepository
@@ -70,7 +68,7 @@ import jakarta.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-class RepositoryFactoryModule {
+abstract class RepositoryFactoryModule {
 
     @Binds
     @Singleton
@@ -136,9 +134,6 @@ class RepositoryFactoryModule {
     @Singleton
         abstract fun bindProjectsWrapperRepositoryFactory(impl: ProjectsWrapperRepositoryFactoryImpl): RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>
 
-    @Binds
-    @Singleton
-        abstract fun bindReactionRepositoryFactory(impl: ReactionRepositoryFactoryImpl): RepositoryFactory<ReactionRepositoryFactoryContext, ReactionRepository>
 
     @Binds
     @Singleton

@@ -1,6 +1,8 @@
 package com.example.domain.usecase.project.role
 
-import com.example.domain.model.project.RolePermission
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Permission
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain.repository.base.PermissionRepository
 import com.example.domain.repository.base.RoleRepository
 import javax.inject.Inject
@@ -24,7 +26,6 @@ interface GetRolePermissionsUseCase {
  * @param roleRepository The repository responsible for role and permission data operations.
  */
 class GetRolePermissionsUseCaseImpl @Inject constructor(
-    private val roleRepository: RoleRepository,
     private val permissionRepository: PermissionRepository
 ) : GetRolePermissionsUseCase {
     /**
@@ -40,6 +41,19 @@ class GetRolePermissionsUseCaseImpl @Inject constructor(
         if (roleId.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("Role ID cannot be blank."))
         }
-        return roleRepository.getRolePermissions(projectId, roleId)
+
+        return when (val result =permissionRepository.findAll()) {
+            is CustomResult.Success -> {
+                if (result.data.all { it is Permission }) {
+                    CustomResult.Success( result.data.map { (it as Permission).getPermissionRole() } )
+                } else {
+                    CustomResult.Failure(Exception("Type mismatch: Expected List<RolePermission>"))
+                }
+            }
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
 }

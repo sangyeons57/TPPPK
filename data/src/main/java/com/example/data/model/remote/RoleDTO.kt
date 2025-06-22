@@ -17,7 +17,7 @@ import java.time.Instant
  * 역할 정보를 나타내는 DTO 클래스
  */
 data class RoleDTO(
-    @DocumentId var id: String = "",
+    @DocumentId override var id: String = "",
     @get:PropertyName(NAME) var name: String = "",
     @get:PropertyName(IS_DEFAULT) var isDefault: Boolean = false,
     @ServerTimestamp @get:PropertyName(CREATED_AT) var createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),

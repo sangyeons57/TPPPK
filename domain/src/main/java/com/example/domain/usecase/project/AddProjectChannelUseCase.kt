@@ -6,6 +6,9 @@ import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.repository.collection.CategoryCollectionRepository
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.constants.Constants // Added
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.first // Added
 import java.text.DecimalFormat
 import javax.inject.Inject
@@ -43,7 +46,7 @@ interface AddProjectChannelUseCase {
  * 카테고리 내 채널 수 제한 확인, 새 채널 순서 계산, 새 채널 객체 생성 및 저장소 호출을 담당합니다.
  */
 class AddProjectChannelUseCaseImpl @Inject constructor(
-    private val categoryCollectionRepository: CategoryCollectionRepository
+    private val projectChannelRepository: ProjectChannelRepository
 ) : AddProjectChannelUseCase {
     
     /**
@@ -78,55 +81,34 @@ class AddProjectChannelUseCaseImpl @Inject constructor(
         }
 
         // 1. Fetch the category collection to get current channels in the target category
-        val categoryCollectionsResult = categoryCollectionRepository.getCategoryCollections(projectId).first()
-        val targetCategoryCollection = when (categoryCollectionsResult) {
-            is CustomResult.Success -> categoryCollectionsResult.data.find { it.category.id.value == categoryId }
-            is CustomResult.Failure -> return CustomResult.Failure(categoryCollectionsResult.error)
-            else -> return CustomResult.Failure(Exception("Failed to get category collections."))
+        val projectChannelsResult = projectChannelRepository.observeAll().first()
+        val projectChannels = when (projectChannelsResult) {
+            is CustomResult.Success -> projectChannelsResult.data
+            is CustomResult.Failure -> return CustomResult.Failure(projectChannelsResult.error)
+            else -> return CustomResult.Failure(Exception("Failed to fetch project channels."))
         }
 
-        if (targetCategoryCollection == null) {
-            return CustomResult.Failure(NoSuchElementException("Category with ID '$categoryId' not found in project '$projectId'."))
-        }
-
-        val existingChannelsInCat = targetCategoryCollection.channels
-
-        // 2. Validate channel count
-        if (existingChannelsInCat.size >= Constants.MAX_CHANNELS_PER_CATEGORY) {
+        if (projectChannels.size >= Constants.MAX_CHANNELS_PER_CATEGORY) {
             return CustomResult.Failure(IllegalStateException("Maximum channels per category (${Constants.MAX_CHANNELS_PER_CATEGORY}) reached for category '$categoryId'."))
         }
 
-        // 3. Calculate new channel order
-        val maxOrderInCat = existingChannelsInCat.maxOfOrNull { it.order } ?: 0.0
-        // Add a small increment. Ensure formatting to two decimal places.
-        // Adding 1.0 and then finding the next available slot like 1.01, 1.02 is also an option.
-        // For simplicity, using a direct increment of 0.01. This could lead to floating point inaccuracies over many additions.
-        // A more robust system might use integer parts and fractional parts separately or scaled integers.
-        val newOrderValue = maxOrderInCat + 0.01
-        // Format to ensure two decimal places, crucial for consistent ordering and comparison
-        val newOrder = DecimalFormat("0.00").format(newOrderValue).toDouble()
+        val newOrderValue = projectChannels.size + 0.01
+        val newOrder = ProjectChannelOrder.from(newOrderValue)
 
         // 4. Create new ProjectChannel object
-        val now = DateTimeUtil.nowInstant()
-        val newChannel = ProjectChannel(
-            channelName = trimmedChannelName,
+        val newChannel = ProjectChannel.create(
+            channelName = Name(trimmedChannelName),
             order = newOrder,
             channelType = channelType,
-            createdAt = now,
-            updatedAt = now
         )
 
         // 5. Add channel using repository
-        val addResult = categoryCollectionRepository.addChannelToCategory(
-            projectId = projectId,
-            categoryId = categoryId,
-            channel = newChannel
-        )
-
-        return when (addResult) {
+        return when(val addResult = projectChannelRepository.save(newChannel)) {
             is CustomResult.Success -> CustomResult.Success(newChannel) // Return the channel we attempted to add
             is CustomResult.Failure -> CustomResult.Failure(addResult.error)
-            else -> CustomResult.Failure(Exception("Failed to add channel."))
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(addResult.progress)
         }
     }
 }

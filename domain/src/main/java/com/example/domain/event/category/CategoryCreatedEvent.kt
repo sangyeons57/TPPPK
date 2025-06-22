@@ -10,6 +10,5 @@ import java.time.Instant
  * @param occurredOn The time when the category was created.
  */
 data class CategoryCreatedEvent(
-    val categoryId: String,
     override val occurredOn: Instant = Instant.now()
 ) : DomainEvent

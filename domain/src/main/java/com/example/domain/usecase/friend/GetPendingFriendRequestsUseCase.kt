@@ -24,8 +24,8 @@ class GetPendingFriendRequestsUseCase @Inject constructor(
      * @param currentUserId 현재 사용자 ID
      * @return Flow<CustomResult<List<Friend>, Exception>> 받은 친구 요청 목록 스트림.
      */
-    operator fun invoke(currentUserId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        return friendRepository.getFriendRequestsStream(currentUserId).map { result ->
+    operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> {
+        return friendRepository.getFriendRequestsStream().map { result ->
             when (result) {
                 is CustomResult.Success -> {
                     // PENDING 상태인 친구 요청만 필터링

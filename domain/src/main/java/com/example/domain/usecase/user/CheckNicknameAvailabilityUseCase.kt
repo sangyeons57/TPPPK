@@ -39,7 +39,7 @@ class CheckNicknameAvailabilityUseCaseImpl @Inject constructor(
         // findByNameStream returns a Flow. We are interested in the first emission
         // to determine if a user with that exact name already exists.
         return try {
-            val result = userRepository.findByNameStream(name = nickname).first() // Take the first emission
+            val result = userRepository.observeByName(name = nickname).first() // Take the first emission
             when (result) {
                 is CustomResult.Success -> {
                     // If a user is found, the nickname is NOT available.

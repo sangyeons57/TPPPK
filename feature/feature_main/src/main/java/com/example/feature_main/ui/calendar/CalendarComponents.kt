@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -36,9 +35,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,7 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +73,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
@@ -911,7 +906,7 @@ private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser
     val now = DateTimeUtil.nowInstant()
 
     return listOf(
-        Schedule.registerNewSchedule(
+        Schedule.create(
             scheduleId = DocumentId("1"),
             projectId = ProjectId("projA"),
             title = ScheduleTitle("팀 회의: 주간 보고"),
@@ -923,7 +918,7 @@ private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser
             status = TODO(),
             updatedAt = TODO()
         ),
-        Schedule.registerNewSchedule(
+        Schedule.create(
             scheduleId = TODO(),
             projectId = TODO(),
             creatorId = TODO(),
@@ -935,7 +930,7 @@ private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser
             status = TODO(),
             updatedAt = TODO()
         ),
-        Schedule.registerNewSchedule(
+        Schedule.create(
             scheduleId = DocumentId("3"),
             projectId = ProjectId("projA"),
             title = ScheduleTitle("클라이언트 미팅"),

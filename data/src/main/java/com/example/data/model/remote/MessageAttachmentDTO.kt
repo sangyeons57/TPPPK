@@ -18,7 +18,7 @@ import com.google.firebase.firestore.ServerTimestamp
  * 메시지 첨부파일 정보를 나타내는 DTO 클래스
  */
 data class MessageAttachmentDTO(
-    @DocumentId val id: String = "",
+    @DocumentId override val id: String = "",
     // "IMAGE", "FILE", "VIDEO" 등
     @get:PropertyName(ATTACHMENT_TYPE)
     val attachmentType: MessageAttachmentType = MessageAttachmentType.FILE,

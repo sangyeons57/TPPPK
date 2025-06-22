@@ -6,10 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
-import com.example.domain.usecase.projectchannel.GetProjectChannelDetailsUseCase
-import com.example.domain.usecase.projectchannel.UpdateProjectChannelUseCase
+import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
+import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -71,16 +69,16 @@ sealed class EditChannelEvent {
  *
  * Handles fetching channel details, validating inputs, and saving changes.
  * @property savedStateHandle Handle to access navigation arguments.
- * @property getProjectChannelDetailsUseCase Use case to fetch details of a specific channel.
+ * @property getProjectChannelUseCase Use case to fetch details of a specific channel.
  * @property getProjectAllCategoriesUseCase Use case to fetch all categories and their channels in a project (for validation context).
  * @property updateProjectChannelUseCase Use case to update a project channel.
  */
 @HiltViewModel
 class EditProjectChannelViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getProjectChannelDetailsUseCase: GetProjectChannelDetailsUseCase,
+    private val getProjectChannelUseCase: GetProjectChannelUseCase,
     private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    private val updateProjectChannelUseCase: UpdateProjectChannelUseCase
+    private val updateProjectChannelUseCase: UpdateProjectChannelUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditChannelUiState())
@@ -110,10 +108,10 @@ class EditProjectChannelViewModel @Inject constructor(
      * @param projId The ID of the project.
      * @param chanId The ID of the channel.
      */
-    private fun loadChannelDetails(projId: String, chanId: String) {
+    private fun loadChannelDetails(chanId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = getProjectChannelDetailsUseCase(projId, chanId).first()) {
+            when (val result = getProjectChannelUseCase( chanId).first()) {
                 is CustomResult.Success -> {
                     val channel = result.data
                     originalChannel = channel // Store the original channel

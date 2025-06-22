@@ -13,7 +13,8 @@ class ProjectChannelRepositoryFactoryImpl @Inject constructor(
 
     override fun create(input: ProjectChannelRepositoryFactoryContext): ProjectChannelRepository {
         return ProjectChannelRepositoryImpl(
-            projectChannelRemoteDataSource = projectChannelRemoteDataSource
+            projectChannelRemoteDataSource = projectChannelRemoteDataSource,
+            factoryContext = input,
         )
     }
 }

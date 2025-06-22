@@ -1,7 +1,14 @@
 package com.example.domain.usecase.user
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.CustomResult.Loading.getOrDefault
+import com.example.core_common.result.CustomResult.Loading.getOrElse
+import com.example.core_common.result.CustomResult.Loading.getOrThrow
+import com.example.core_common.result.resultTry
 import com.example.domain.event.DomainEventPublisher
+import com.example.domain.model.base.User
+import com.example.domain.model.data.UserSession
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
@@ -22,46 +29,24 @@ class SuspendAccountUseCaseImpl @Inject constructor(
     private val domainEventPublisher: DomainEventPublisher,
 ) : SuspendAccountUseCase {
 
-    override suspend operator fun invoke(): CustomResult<Unit, Exception> {
+    override suspend operator fun invoke(): CustomResult<Unit, Exception> = resultTry {
         // Step 1: Ensure there is a logged-in user and obtain their ID.
-        val sessionResult = authRepository.getCurrentUserSession()
-        return when (sessionResult) {
-            is CustomResult.Success -> {
-                val userId = sessionResult.data.userId
+        val session = authRepository.getCurrentUserSession().getOrThrow()
 
-                // Step 2: Fetch aggregate via new domain-port API.
-                val userResult = userRepository.findById(userId)
-                when (userResult) {
-                    is CustomResult.Success -> {
-                        val user = userResult.data
+        val user = when (val result =userRepository.findById(DocumentId.from(session.userId))){
+            is CustomResult.Success -> result.data as User
+            is CustomResult.Failure -> return CustomResult.Failure(result.error)
+            is CustomResult.Initial -> return CustomResult.Initial
+            is CustomResult.Loading -> return CustomResult.Loading
+            is CustomResult.Progress -> return CustomResult.Progress(result.progress)
+        }
+        user.suspendAccount()
 
-                        // Step 3: Apply business action inside the aggregate.
-                        user.suspendAccount()
-
-                        // Step 4: Persist via domain-port save().
-                        val updateResult = userRepository.save(user)
-                        when (updateResult) {
-                            is CustomResult.Success -> {
-                                // Step 5: Publish domain events.
-                                user.pullDomainEvents().forEach { domainEventPublisher.publish(it) }
-                                CustomResult.Success(Unit)
-                            }
-                            is CustomResult.Failure -> updateResult
-                            CustomResult.Initial -> TODO()
-                            CustomResult.Loading -> TODO()
-                            is CustomResult.Progress -> TODO()
-                        }
-                    }
-                    is CustomResult.Failure -> userResult
-                    CustomResult.Initial -> TODO()
-                    CustomResult.Loading -> TODO()
-                    is CustomResult.Progress -> TODO()
-                }
-            }
-            is CustomResult.Failure -> sessionResult
-            CustomResult.Initial -> TODO()
-            CustomResult.Loading -> TODO()
-            is CustomResult.Progress -> TODO()
+            // Step 4: Persist via domain-port save().
+        return userRepository.save(user).suspendSuccessProcess {
+            // Step 5: Publish domain events.
+            domainEventPublisher.publish(user)
+            CustomResult.Success(Unit)
         }
     }
 }

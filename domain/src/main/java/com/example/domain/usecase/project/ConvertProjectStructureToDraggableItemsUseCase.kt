@@ -60,8 +60,8 @@ sealed interface DraggableItemType {
         val channel: ProjectChannel,
         val currentParentCategoryId: String
     ) : DraggableItemType {
-        override val id: DocumentId get() = DocumentId(channel.id)
-        override val name: Name get() = Name(channel.channelName)
+        override val id: DocumentId get() = channel.id
+        override val name: Name get() = channel.channelName
     }
 }
 
@@ -97,10 +97,10 @@ class ConvertProjectStructureToDraggableItemsUseCaseImpl @Inject constructor() :
                 )
                 
                 // 카테고리에 속한 채널들 추가
-                categoryCollection.channels.sortedBy { it.order }.forEach { channel ->
+                categoryCollection.channels.sortedBy { it.order.value }.forEach { channel ->
                     draggableItems.add(
                         DraggableItem(
-                            id = channel.id,
+                            id = channel.id.value,
                             depth = 1,
                             parentId = category.id.value,
                             canAcceptChildren = false,

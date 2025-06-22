@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.event.AggregateRoot
 import com.example.domain.model._new.enum.ScheduleStatus
 import com.google.firebase.firestore.DocumentId as FirestoreDocumentId
@@ -9,7 +10,6 @@ import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.event.DomainEvent
 import com.example.domain.event.schedule.ScheduleCreatedEvent
 import com.example.domain.event.schedule.ScheduleDetailsUpdatedEvent
 import com.example.domain.event.schedule.ScheduleRescheduledEvent
@@ -114,32 +114,29 @@ class Schedule private constructor(
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_UPDATED_AT = "updatedAt"
 
-        fun registerNewSchedule(
-            scheduleId: DocumentId,
+        fun create(
             projectId: ProjectId?,
             creatorId: OwnerId,
-            createdAt: Instant,
             title: ScheduleTitle,
             content: ScheduleContent,
             startTime: Instant,
             endTime: Instant,
             status: ScheduleStatus,
-            updatedAt: Instant,
         ): Schedule {
+            val now = DateTimeUtil.nowInstant()
             val schedule = Schedule(
-                id = scheduleId,
+                id = DocumentId.EMPTY,
                 projectId = projectId,
                 creatorId = creatorId,
-                createdAt = createdAt,
                 title = title,
                 content = content,
                 startTime = startTime,
                 endTime = endTime,
                 status = status,
-                updatedAt = updatedAt,
+                createdAt = now,
+                updatedAt = now,
                 isNew = true,
             )
-            schedule.pushDomainEvent(ScheduleCreatedEvent(scheduleId.value))
             return schedule
         }
 

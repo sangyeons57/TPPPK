@@ -1,7 +1,6 @@
 
 package com.example.data.datasource.remote
 
-import com.example.core_common.constants.FirestoreConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.special.DefaultDatasource

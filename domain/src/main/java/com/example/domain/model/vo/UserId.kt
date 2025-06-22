@@ -13,5 +13,13 @@ value class UserId(val value: String) {
 
     companion object {
         const val MAX_LENGTH = 128
+
+        fun from (value: String): UserId {
+            return UserId(value)
+        }
+        fun from (value: DocumentId): UserId {
+            return UserId(value.value)
+        }
+
     }
 }

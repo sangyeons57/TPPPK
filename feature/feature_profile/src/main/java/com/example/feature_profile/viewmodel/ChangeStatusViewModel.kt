@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.enum.UserStatus
-import com.example.domain.usecase.user.GetCurrentStatusUseCase
+import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -35,7 +35,7 @@ sealed class ChangeStatusEvent {
 @HiltViewModel
 class ChangeStatusViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getCurrentStatusUseCase: GetCurrentStatusUseCase,
+    private val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     private val updateUserStatusUseCase: UpdateUserStatusUseCase
 ) : ViewModel() {
 
@@ -55,7 +55,7 @@ class ChangeStatusViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading current user status")
 
-            getCurrentStatusUseCase().collect { result ->
+            getCurrentUserStreamUseCase().collect { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val status = result.data

@@ -76,13 +76,12 @@ class Role private constructor(
          * This method encapsulates the creation logic and fires a domain event.
          */
         fun create(
-            id: DocumentId,
             name: Name,
             isDefault: RoleIsDefault
         ): Role {
             val now = Instant.now()
             val role = Role(
-                id = id,
+                id = DocumentId.EMPTY,
                 initialName = name,
                 initialIsDefault = isDefault,
                 initialCreatedAt = now,

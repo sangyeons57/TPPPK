@@ -65,4 +65,10 @@ class ProjectRepositoryImpl @Inject constructor(
             projectRemoteDataSource.create(entity.toDto())
         }
     }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Project)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Project"))
+        return projectRemoteDataSource.create(entity.toDto())
+    }
 }

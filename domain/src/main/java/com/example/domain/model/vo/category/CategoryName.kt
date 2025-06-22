@@ -20,6 +20,10 @@ value class CategoryName(val value: String) {
         return Name(value)
     }
 
+    fun isBlank(): Boolean {
+        return value.isBlank()
+    }
+
     companion object {
         val NO_CATEGORY_NAME = CategoryName("카테고리 없음")
 

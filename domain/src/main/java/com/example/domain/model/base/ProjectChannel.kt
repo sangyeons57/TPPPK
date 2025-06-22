@@ -87,14 +87,13 @@ class ProjectChannel private constructor(
          * Factory method for creating a new project channel.
          */
         fun create(
-            id: DocumentId,
             channelName: Name,
             channelType: ProjectChannelType,
             order: ProjectChannelOrder
         ): ProjectChannel {
             val now = Instant.now()
             val channel = ProjectChannel(
-                id = id,
+                id = DocumentId.EMPTY,
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,

@@ -7,6 +7,7 @@ import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.event.AggregateRoot
+import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
@@ -23,9 +24,6 @@ class CategoryRepositoryImpl @Inject constructor(
     override val factoryContext: CategoryRepositoryFactoryContext,
 ) : DefaultRepositoryImpl(categoryRemoteDataSource, factoryContext.collectionPath), CategoryRepository {
 
-    init {
-        categoryRemoteDataSource.setCollection(factoryContext.collectionPath.value)
-    }
     /**
      * 카테고리 목록을 스트림으로 가져옵니다.
      * Firebase의 자체 캐싱 시스템을 활용하여 실시간 업데이트를 처리합니다.
@@ -46,10 +44,16 @@ class CategoryRepositoryImpl @Inject constructor(
         if (entity !is Category)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Category"))
 
-        if (entity.id.isAssigned()) {
-            return categoryRemoteDataSource.update(entity.id, entity.getChangedFields())
+        return if (entity.id.isAssigned()) {
+            categoryRemoteDataSource.update(entity.id, entity.getChangedFields())
         } else {
-            return categoryRemoteDataSource.create(entity.toDto())
+            categoryRemoteDataSource.create(entity.toDto())
         }
+    }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Category)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Category"))
+        return categoryRemoteDataSource.create(entity.toDto())
     }
 }

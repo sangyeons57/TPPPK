@@ -26,6 +26,7 @@ class UpdateUserImageUseCaseImpl @Inject constructor(
      */
     override suspend fun invoke(imageUri: Uri): Result<String> {
         // TODO: UserRepository에 updateProfileImage(imageUri) 함수 구현 필요 (이미지 업로드 및 URL 반환)
+        // TODO: Firebaes Fuction 에서 구현 필요
         // return userRepository.updateProfileImage(imageUri)
         
         // 임시 구현 (성공 및 임시 URL 반환)

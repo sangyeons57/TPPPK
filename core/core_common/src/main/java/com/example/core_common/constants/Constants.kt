@@ -4,6 +4,7 @@ package com.example.core_common.constants
  * 프로젝트 전반에서 사용되는 상수 값들을 정의합니다.
  */
 object Constants {
+    const val DB_NAME = "default"
     const val NO_CATEGORY_ID = "NoCategory" // Changed to Double
     /**
      * "카테고리 없음"으로 표시될 기본 카테고리의 이름입니다.

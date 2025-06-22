@@ -1,7 +1,12 @@
 package com.example.domain.usecase.category
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Category
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.repository.base.CategoryRepository
 import javax.inject.Inject
 
@@ -20,10 +25,10 @@ interface UpdateCategoryUseCase {
      * @return A [CustomResult] indicating success (Unit) or failure (Exception).
      */
     suspend operator fun invoke(
-        projectId: String, // Added projectId
+        projectId: DocumentId, // Added projectId
         categoryToUpdate: Category,
-        newName: String,
-        newOrder: Double,
+        newName: CategoryName,
+        newOrder: CategoryOrder,
         totalCategories: Int
     ): CustomResult<Unit, Exception>
 }
@@ -37,10 +42,10 @@ class UpdateCategoryUseCaseImpl @Inject constructor(
     private val categoryRepository: CategoryRepository
 ) : UpdateCategoryUseCase {
     override suspend fun invoke(
-        projectId: String, // Added projectId
+        projectId: DocumentId,
         categoryToUpdate: Category,
-        newName: String,
-        newOrder: Double,
+        newName: CategoryName,
+        newOrder: CategoryOrder,
         totalCategories: Int
     ): CustomResult<Unit, Exception> {
         // Validate new name
@@ -48,19 +53,22 @@ class UpdateCategoryUseCaseImpl @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Category name cannot be blank."))
         }
 
-        // Validate new order
-        // Assuming order is 0-indexed if it directly maps to list indices, or 1-indexed if it's a position.
-        // The prompt stated "order의 최소값은 0 최대값은 카테고리 개수", so if 3 categories, max order is 3.0.
-        // This implies orders could be 0.0, 1.0, 2.0, 3.0 if totalCategories is 3 (allowing 4 positions including 0).
-        // Or, if totalCategories is the count, and orders are like 0, 1, ..., count-1, then max order is totalCategories - 1.
-        // Let's stick to the prompt: min 0, max totalCategories.
-        if (newOrder < 0.0 || newOrder > totalCategories) {
+        if ( newOrder.value > totalCategories) {
             return CustomResult.Failure(IllegalArgumentException("Invalid category order. Must be between 0.0 and $totalCategories."))
         }
 
         // Perform update within aggregate to keep invariants and raise events
         categoryToUpdate.update(newName, newOrder)
 
-        return categoryRepository.updateCategory(projectId, categoryToUpdate)
+        return when(val result = categoryRepository.save(categoryToUpdate)) {
+            is CustomResult.Success -> {
+                EventDispatcher.publish(categoryToUpdate)
+                CustomResult.Success(Unit)
+            }
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
 }

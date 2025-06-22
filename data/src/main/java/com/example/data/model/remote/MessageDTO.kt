@@ -17,7 +17,7 @@ import com.google.firebase.firestore.PropertyName
  * 메시지 정보를 나타내는 DTO 클래스
  */
 data class MessageDTO(
-    @DocumentId val id: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(SENDER_ID)
     val senderId: String = "",
     @get:PropertyName(SEND_MESSAGE)

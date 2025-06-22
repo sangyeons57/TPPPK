@@ -10,6 +10,7 @@ import com.example.data.model.DTO
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.PropertyName
 
@@ -17,7 +18,7 @@ import com.google.firebase.firestore.PropertyName
  * 프로젝트 정보를 나타내는 DTO 클래스
  */
 data class ProjectDTO(
-    @DocumentId val id: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(NAME)
     val name: String = "",
     @get:PropertyName(IMAGE_URL)
@@ -55,7 +56,7 @@ data class ProjectDTO(
     override fun toDomain(): Project {
         return Project.fromDataSource(
             id = VODocumentId(id),
-            name = Name(name),
+            name = ProjectName(name),
             imageUrl = imageUrl?.let{ImageUrl(it)},
             ownerId = OwnerId(ownerId),
             createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},

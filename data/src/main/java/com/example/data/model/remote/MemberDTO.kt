@@ -14,7 +14,7 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
  * 프로젝트 구성원 정보를 나타내는 DTO 클래스
  */
 data class MemberDTO(
-    @DocumentId val userId: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(JOINED_AT)
     @ServerTimestamp val joinedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
@@ -31,7 +31,7 @@ data class MemberDTO(
 
         fun from(member: Member): MemberDTO {
             return MemberDTO(
-                userId = member.id.value,
+                id = member.id.value,
                 joinedAt = DateTimeUtil.instantToFirebaseTimestamp(member.joinedAt),
                 roleIds = member.roleIds.map { it.value },
                 updatedAt = DateTimeUtil.instantToFirebaseTimestamp(member.updatedAt),
@@ -44,7 +44,7 @@ data class MemberDTO(
      */
     override fun toDomain(): Member {
         return Member.fromDataSource(
-            id = VODocumentId(userId),
+            id = VODocumentId(id),
             roleIds = roleIds.map { VODocumentId(it) },
             joinedAt = joinedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
@@ -58,7 +58,7 @@ data class MemberDTO(
  */
 fun Member.toDto(): MemberDTO {
     return MemberDTO(
-        userId = id.value,
+        id = id.value,
         joinedAt = joinedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         roleIds = roleIds.map { it.value },
         updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}

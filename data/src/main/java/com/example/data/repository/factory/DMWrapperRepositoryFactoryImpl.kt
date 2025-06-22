@@ -10,13 +10,12 @@ import javax.inject.Inject
 
 class DMWrapperRepositoryFactoryImpl @Inject constructor(
     private val dmWrapperRemoteDataSource: DMWrapperRemoteDataSource,
-    private val auth: FirebaseAuth
 ) : RepositoryFactory<DMWrapperRepositoryFactoryContext, DMWrapperRepository> {
 
     override fun create(input: DMWrapperRepositoryFactoryContext): DMWrapperRepository {
         return DMWrapperRepositoryImpl(
             dmWrapperRemoteDataSource = dmWrapperRemoteDataSource,
-            auth = auth
+            factoryContext = input,
         )
     }
 }

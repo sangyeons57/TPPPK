@@ -1,6 +1,5 @@
 package com.example.data.datasource.remote
 
-import com.example.core_common.constants.FirestoreConstants
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.ProjectChannelDTO

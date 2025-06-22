@@ -8,6 +8,7 @@ import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.event.AggregateRoot
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.repository.DefaultRepositoryFactoryContext
 import com.example.domain.repository.base.DMWrapperRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -18,17 +19,18 @@ import javax.inject.Inject
 
 class DMWrapperRepositoryImpl @Inject constructor(
     private val dmWrapperRemoteDataSource: DMWrapperRemoteDataSource,
-    private val auth: FirebaseAuth, override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: DefaultRepositoryFactoryContext
 ) : DefaultRepositoryImpl(dmWrapperRemoteDataSource, factoryContext.collectionPath), DMWrapperRepository {
 
-    override fun getDMWrappersStream(userId: String): Flow<CustomResult<List<DMWrapper>, Exception>> {
-        return dmWrapperRemoteDataSource.observeDmWrappers(userId)
-            .map { dtoList ->
-                try {
-                    val domainList = dtoList.map { it.toDomain() }
-                    CustomResult.Success(domainList)
-                } catch (e: Exception) {
-                    CustomResult.Failure(e)
+    override fun getDMWrappersStream(userId: UserId): Flow<CustomResult<List<DMWrapper>, Exception>> {
+        return dmWrapperRemoteDataSource.observeAll()
+            .map { dtoListResult ->
+                when (dtoListResult) {
+                    is CustomResult.Success -> CustomResult.Success(dtoListResult.data.map { (it as DMWrapperDTO).toDomain() })
+                    is CustomResult.Failure -> CustomResult.Failure(dtoListResult.error)
+                    is CustomResult.Loading -> CustomResult.Loading
+                    is CustomResult.Initial -> CustomResult.Initial
+                    is CustomResult.Progress -> CustomResult.Progress(dtoListResult.progress)
                 }
             }
     }
@@ -42,5 +44,11 @@ class DMWrapperRepositoryImpl @Inject constructor(
         } else {
             return dmWrapperRemoteDataSource.create(entity.toDto())
         }
+    }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is DMWrapper)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMWrapper"))
+        return dmWrapperRemoteDataSource.create(entity.toDto())
     }
 }

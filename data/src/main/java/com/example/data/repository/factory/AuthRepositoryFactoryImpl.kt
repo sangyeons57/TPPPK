@@ -17,7 +17,6 @@ class AuthRepositoryFactoryImpl @Inject constructor(
 
     override fun create(input: AuthRepositoryFactoryContext): AuthRepository {
         return AuthRepositoryImpl(
-            auth = auth,
             authWrapper = authWrapper,
             authRemoteDataSource = authRemoteDataSource
         )

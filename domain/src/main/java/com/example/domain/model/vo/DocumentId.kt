@@ -1,5 +1,6 @@
 package com.example.domain.model.vo
 
+import com.example.domain.model.data.project.RolePermission
 import com.google.firebase.firestore.Source
 
 /**
@@ -19,6 +20,19 @@ value class DocumentId(val value: String) {
         private const val EMPTY_VALUE = "" // 빈 문자열을 특수 값으로 사용
 
         val EMPTY = DocumentId(EMPTY_VALUE) // 빈 DocumentId 인스턴스
+
+        fun from(value: String): DocumentId {
+            return DocumentId(value)
+        }
+        fun from(value: Long): DocumentId {
+            return DocumentId(value.toString())
+        }
+        fun from(value: UserId): DocumentId {
+            return DocumentId(value.value)
+        }
+        fun from(value: RolePermission): DocumentId {
+            return DocumentId(value.name)
+        }
     }
 
     /**

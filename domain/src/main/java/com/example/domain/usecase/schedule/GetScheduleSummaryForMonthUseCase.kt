@@ -1,5 +1,6 @@
 package com.example.domain.usecase.schedule
 
+import android.os.PerformanceHintManager.Session
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.ScheduleRepository
@@ -24,10 +25,21 @@ class GetScheduleSummaryForMonthUseCase @Inject constructor(
      * @return Result 객체. 성공 시 일정이 있는 날짜들의 Set<LocalDate>를, 실패 시 예외를 포함합니다.
      */
     suspend operator fun invoke(yearMonth: YearMonth): CustomResult<Set<LocalDate>, Exception> {
-        val userSession =  authRepository.getCurrentUserSession()
-        return when (userSession) {
-            is CustomResult.Success -> scheduleRepository.findByDateSummaryForMonth(userSession.data.userId, yearMonth)
-            else -> CustomResult.Failure(Exception("로그인이 필요합니다."))
+        val userSession = when (val result = authRepository.getCurrentUserSession() ){
+            is CustomResult.Success -> result.data
+            is CustomResult.Failure -> return CustomResult.Failure(result.error)
+            is CustomResult.Initial -> return CustomResult.Initial
+            is CustomResult.Loading -> return CustomResult.Loading
+            is CustomResult.Progress -> return CustomResult.Progress(result.progress)
+        }
+
+
+        return when (val result =scheduleRepository.findByDateSummaryForMonth(userSession.userId, yearMonth)){
+            is CustomResult.Success -> CustomResult.Success(result.data)
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
         }
     }
 } 

@@ -1,53 +1,9 @@
 package com.example.data.di
 
-import com.example.domain.usecase.user.* // 생성한 UseCase 임포트
-import com.example.domain.usecase.user.GetCurrentStatusUseCaseImpl
-import com.example.domain.usecase.user.GetCurrentUserStreamUseCaseImpl
-import com.example.domain.usecase.user.GetUserInfoUseCaseImpl
-import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCaseImpl
-import com.example.domain.usecase.project.* // project 패키지 UseCase 임포트
-import com.example.domain.usecase.schedule.* // schedule 패키지 UseCase 임포트
-import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
-import com.example.domain.usecase.auth.GetAuthErrorMessageUseCaseImpl
-import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCase
-import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCaseImpl
-import com.example.domain.usecase.auth.WithdrawMembershipUseCase
-import com.example.domain.usecase.auth.WithdrawMembershipUseCaseImpl
-import com.example.domain.usecase.category.GetCategoryDetailsUseCase
-import com.example.domain.usecase.category.GetCategoryDetailsUseCaseImpl
-import com.example.domain.usecase.category.UpdateCategoryUseCase
-import com.example.domain.usecase.category.UpdateCategoryUseCaseImpl
-import com.example.domain.usecase.friend.*
-import com.example.domain.usecase.project.member.*
-import com.example.domain.usecase.project.role.*
-import com.example.domain.usecase.project.ConvertProjectStructureToDraggableItemsUseCase
-import com.example.domain.usecase.project.ConvertProjectStructureToDraggableItemsUseCaseImpl
-import com.example.domain.usecase.project.MoveChannelUseCase
-import com.example.domain.usecase.project.MoveChannelUseCaseImpl
-import com.example.domain.usecase.project.MoveCategoryUseCase
-import com.example.domain.usecase.project.MoveCategoryUseCaseImpl
-import com.example.domain.usecase.project.AddCategoryUseCase
-import com.example.domain.usecase.project.AddCategoryUseCaseImpl
-import com.example.domain.usecase.project.DeleteCategoryUseCase
-import com.example.domain.usecase.project.DeleteCategoryUseCaseImpl
-import com.example.domain.usecase.project.DeleteChannelUseCase
-import com.example.domain.usecase.project.DeleteChannelUseCaseImpl
-import com.example.domain.usecase.project.RenameCategoryUseCase
-import com.example.domain.usecase.project.RenameCategoryUseCaseImpl
-import com.example.domain.usecase.project.RenameChannelUseCase
-import com.example.domain.usecase.project.RenameChannelUseCaseImpl
-import com.example.domain.usecase.projectchannel.GetProjectChannelDetailsUseCase
-import com.example.domain.usecase.projectchannel.GetProjectChannelDetailsUseCaseImpl
-import com.example.domain.usecase.projectchannel.UpdateProjectChannelUseCase
-import com.example.domain.usecase.projectchannel.UpdateProjectChannelUseCaseImpl
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ViewModelComponent
-
 /**
  * UseCase 인터페이스와 구현체를 바인딩하는 Hilt 모듈
  */
+/**
 @Module
 @InstallIn(ViewModelComponent::class)
 abstract class UseCaseModule {
@@ -223,3 +179,4 @@ abstract class UseCaseModule {
     @Binds
     abstract fun bindUpdateProjectChannelUseCase(impl: UpdateProjectChannelUseCaseImpl): UpdateProjectChannelUseCase
 }
+ */

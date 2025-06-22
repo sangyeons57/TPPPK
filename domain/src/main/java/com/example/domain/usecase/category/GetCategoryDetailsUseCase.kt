@@ -2,6 +2,7 @@ package com.example.domain.usecase.category
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.CategoryRepository
 import javax.inject.Inject
 
@@ -42,6 +43,12 @@ class GetCategoryDetailsUseCaseImpl @Inject constructor(
         if (categoryId.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("Category ID cannot be blank."))
         }
-        return categoryRepository.getCategory(projectId, categoryId)
+        return when (val result = categoryRepository.findById(DocumentId(categoryId))) {
+            is CustomResult.Success -> CustomResult.Success(result.data as Category)
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> result
+            is CustomResult.Loading -> result
+            is CustomResult.Progress -> result
+        }
     }
 }

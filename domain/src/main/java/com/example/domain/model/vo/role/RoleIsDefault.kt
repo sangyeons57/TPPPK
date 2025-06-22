@@ -4,4 +4,8 @@ import kotlin.jvm.JvmInline
 
 @JvmInline
 value class RoleIsDefault(val value: Boolean)  {
+    companion object {
+
+    }
+    fun isDefault () : Boolean = value
 }

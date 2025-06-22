@@ -16,7 +16,7 @@ class RoleRepositoryFactoryImpl @Inject constructor(
     override fun create(input: RoleRepositoryFactoryContext): RoleRepository {
         return RoleRepositoryImpl(
             roleRemoteDataSource = roleRemoteDataSource,
-            permissionRemoteDataSource = permissionRemoteDataSource
+            factoryContext = input,
         )
     }
 }

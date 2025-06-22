@@ -4,6 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.collection.CategoryCollection
+import com.example.domain.model.vo.DocumentId
 import javax.inject.Inject
 
 /**
@@ -57,6 +58,8 @@ class MoveChannelUseCaseImpl @Inject constructor() : MoveChannelUseCase {
         toCategoryId: String,
         toIndex: Int
     ): CustomResult<List<CategoryCollection>, Exception> {
+        TODO("미완성된 기능 CategoryCollection쓰지말고  Collection기능 안쓰고 만들수있을듯")
+        /**
         try {
             // 변경 사항이 없는 경우 검증
             if (fromCategoryId == toCategoryId && fromIndex == toIndex) {
@@ -85,13 +88,13 @@ class MoveChannelUseCaseImpl @Inject constructor() : MoveChannelUseCase {
             val sourceCategory = currentCategories[sourceCategoryIndex]
             val mutableSourceChannels = sourceCategory.channels.toMutableList()
             
-            movedChannel = mutableSourceChannels.find { it.id == fromChannelId }
+            movedChannel = mutableSourceChannels.find { it.id == DocumentId.from(fromChannelId) }
                 ?: return CustomResult.Failure(Exception("Channel not found in source category"))
             
             mutableSourceChannels.remove(movedChannel)
             
             // 4. 원본 카테고리의 채널 순서 재정렬
-            val updatedSourceChannels = mutableSourceChannels.mapIndexed { idx, ch -> 
+            val updatedSourceChannels = mutableSourceChannels.mapIndexed { idx, ch ->
                 ch.copy(order = idx.toDouble(), updatedAt = now)
             }
             
@@ -135,5 +138,6 @@ class MoveChannelUseCaseImpl @Inject constructor() : MoveChannelUseCase {
         } catch (e: Exception) {
             return CustomResult.Failure(e)
         }
+        */
     }
 }

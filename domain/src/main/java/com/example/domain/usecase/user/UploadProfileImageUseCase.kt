@@ -33,35 +33,7 @@ class UploadProfileImageUseCase @Inject constructor(
     suspend operator fun invoke(imageUri: Uri): CustomResult<User, Exception> {
         // 1. 현재 사용자 세션 확인
         val session = authRepository.getCurrentUserSession()
+        TODO("not yet implemented [Firebase Function에서 구현 해야함]")
         
-        return when (session) {
-            is CustomResult.Success -> {
-                val userResult = userRepository.observe(session.data.userId).first()
-                if (userResult !is CustomResult.Success) {
-                    throw Exception("Failed to get user")
-                }
-                val user = userResult.data
-
-                // 4. 사용자 프로필 이미지 업데이트
-                user.changeProfileImage(ImageUrl.toImageUrl(imageUri))
-
-                return when (val result = userRepository.save(user) ){
-                    is CustomResult.Success -> {
-                        EventDispatcher.publish(UserProfileImageChangedEvent(user.uid.value))
-                        CustomResult.Success(user)
-                    }
-                    is CustomResult.Failure -> CustomResult.Failure(result.error)
-                    else -> CustomResult.Failure(Exception("Unknown error"))
-                }
-
-                // 6. 결과 반환
-            }
-            is CustomResult.Failure -> {
-                CustomResult.Failure(session.error)
-            }
-            else -> {
-                CustomResult.Failure(Exception("Unknown error"))
-            }
-        }
     }
 }

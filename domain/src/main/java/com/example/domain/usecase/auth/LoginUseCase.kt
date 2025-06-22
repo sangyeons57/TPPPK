@@ -2,13 +2,12 @@ package com.example.domain.usecase.auth
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
-import com.example.domain.usecase.user.GetUserUseCase
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -24,7 +23,6 @@ class WithdrawnAccountException(message: String) : Exception(message)
 
 class LoginUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val getUserUseCase: GetUserUseCase,
     private val userRepository: UserRepository
 ) {
     // Centralized TAG for consistent Logcat filtering during debugging
@@ -48,35 +46,15 @@ class LoginUseCase @Inject constructor(
                 Log.d(TAG, "Auth success. Session=$userSession")
                 // After successful authentication, fetch user details to check account status
                 Log.d(TAG, "Fetching user details (may hit cache) for userId=${userSession.userId}")
-                when (val userDetailsResult = getUserUseCase(userSession.userId).first()) {
+                when (val userResult = userRepository.findById(DocumentId.from(userSession.userId))) {
                     is CustomResult.Success -> {
-                        val user = userDetailsResult.data
                         // Firestore 에서 가져온 사용자 정보 (캐시 또는 서버)
-                        Log.d(TAG, "Fetched User (possibly from cache): $user")
-                        Log.d(TAG, "Account Status: ${user}")
+                        val user = userResult.data as User
+                        Log.d(TAG, "Fetched User (possibly from cache): ${user}")
                         if (user.accountStatus == UserAccountStatus.WITHDRAWN) {
                             Log.d(TAG, "Cached status=WITHDRAWN, verifying against server...")
-                            when (val userResult = userRepository.observe(DocumentId(userSession.userId)).first()) {
-                                is CustomResult.Success -> {
-                                    val remoteUser = userResult.data
-                                    Log.d(TAG, "Server status=${remoteUser.accountStatus}")
-                                    if (remoteUser.accountStatus == UserAccountStatus.WITHDRAWN) {
-                                        authRepository.logout()
-                                        CustomResult.Failure(WithdrawnAccountException("탈퇴한 계정입니다. (서버 확인)"))
-                                    } else {
-                                        // Remote says ACTIVE -> stale cache, continue login success
-                                        loginResult
-                                    }
-                                }
-                                is CustomResult.Failure -> {
-                                    authRepository.logout()
-                                    CustomResult.Failure(userResult.error)
-                                }
-                                else -> {
-                                    authRepository.logout()
-                                    CustomResult.Failure(Exception("알 수 없는 오류 (원격 사용자 확인)"))
-                                }
-                            }
+                            authRepository.logout()
+                            CustomResult.Failure(WithdrawnAccountException("탈퇴한 계정입니다. (서버 확인)"))
                         } else {
                             // Account is active, return the original success result with session
                             loginResult
@@ -85,10 +63,10 @@ class LoginUseCase @Inject constructor(
                     is CustomResult.Failure -> {
                         // Failed to fetch user details – sign out to avoid stale session and propagate failure
                         authRepository.logout()
-                        CustomResult.Failure(userDetailsResult.error ?: Exception("사용자 정보를 가져오는데 실패했습니다."))
+                        CustomResult.Failure(userResult.error)
                     }
                     else -> {
-                        Log.d(TAG, "Unexpected userDetailsResult state: $userDetailsResult")
+                        Log.d(TAG, "Unexpected userDetailsResult state: $userResult")
                         CustomResult.Failure(Exception("알 수 없는 오류가 발생했습니다."))
                     }
                 }

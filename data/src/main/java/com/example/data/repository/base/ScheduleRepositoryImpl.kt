@@ -10,6 +10,7 @@ import com.example.domain.model.base.Schedule
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.repository.RepositoryFactoryContext
 import com.example.domain.repository.base.ScheduleRepository
 import com.example.domain.repository.factory.context.ScheduleRepositoryFactoryContext
@@ -37,17 +38,23 @@ class ScheduleRepositoryImpl @Inject constructor(
             scheduleRemoteDataSource.create(entity.toDto())
         }
     }
+    
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is Schedule)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Schedule"))
+        return scheduleRemoteDataSource.create(entity.toDto())
+    }
 
 
     override suspend fun findByDateSummaryForMonth(
-        userId: String,
+        userId: UserId,
         yearMonth: YearMonth
     ): CustomResult<Set<LocalDate>, Exception> {
-        return scheduleRemoteDataSource.findDateSummaryForMonth(userId, yearMonth)
+        return scheduleRemoteDataSource.findDateSummaryForMonth(userId.value, yearMonth)
     }
 
-    override suspend fun findByMonth(userId: String, yearMonth: YearMonth): Flow<CustomResult<List<Schedule>, Exception>> {
-        return scheduleRemoteDataSource.findByMonth(userId, yearMonth).map { result ->
+    override suspend fun findByMonth(userId: UserId, yearMonth: YearMonth): Flow<CustomResult<List<Schedule>, Exception>> {
+        return scheduleRemoteDataSource.findByMonth(userId.value, yearMonth).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
@@ -58,8 +65,8 @@ class ScheduleRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun findByDate(userId: String, date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
-        return scheduleRemoteDataSource.findByDate(userId, date).map { result ->
+    override suspend fun findByDate(userId: UserId, date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
+        return scheduleRemoteDataSource.findByDate(userId.value, date).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
@@ -67,17 +74,6 @@ class ScheduleRepositoryImpl @Inject constructor(
                 is CustomResult.Initial -> CustomResult.Initial
                 is CustomResult.Progress -> CustomResult.Progress(result.progress)
             }
-        }
-    }
-
-    override suspend fun findByDate(userId: String, date: String): Flow<CustomResult<List<Schedule>, Exception>> {
-        return try {
-            val localDate = LocalDate.parse(date)
-            findByDate(userId, localDate)
-        } catch (e: DateTimeParseException) {
-            flowOf(CustomResult.Failure(IllegalArgumentException("Invalid date format: '$date'. Expected yyyy-MM-dd.", e)))
-        } catch (e: Exception) {
-            flowOf(CustomResult.Failure(e))
         }
     }
 }

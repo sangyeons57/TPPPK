@@ -5,29 +5,29 @@ package com.example.domain.model.ui.auth
  * It can indicate success (Valid) or various types of failures based on nickname rules.
  * 이 모델은 UI 계층에서 닉네임 검증 결과를 표시하는데 사용됩니다.
  */
-sealed class NicknameValidationResult {
+sealed class UserNameResult {
     /** Indicates the nickname is valid for sign-up. */
-    object Valid : NicknameValidationResult()
+    object Valid : UserNameResult()
 
     /** Indicates the nickname field was empty. */
-    object Empty : NicknameValidationResult()
+    object Empty : UserNameResult()
 
     /** Indicates the nickname is too short. */
-    data class TooShort(val minimumLength: Int) : NicknameValidationResult()
+    data class TooShort(val minimumLength: Int) : UserNameResult()
 
     /** Indicates the nickname is too long. */
-    data class TooLong(val maximumLength: Int) : NicknameValidationResult()
+    data class TooLong(val maximumLength: Int) : UserNameResult()
 
     /** Indicates the nickname contains invalid characters. */
-    object InvalidCharacters : NicknameValidationResult() // Could be more specific if needed
+    object InvalidCharacters : UserNameResult() // Could be more specific if needed
 
     /** Indicates the nickname is already taken. */
-    object NicknameAlreadyExists : NicknameValidationResult()
+    object NicknameAlreadyExists : UserNameResult()
 
     /**
      * Represents a generic failure during validation, potentially due to network issues
      * or other unexpected errors when checking for nickname existence or validity.
      * @param message A descriptive error message.
      */
-    data class Failure(val message: String?) : NicknameValidationResult()
+    data class Failure(val message: String?) : UserNameResult()
 }

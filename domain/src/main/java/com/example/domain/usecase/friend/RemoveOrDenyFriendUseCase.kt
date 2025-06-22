@@ -1,6 +1,7 @@
 package com.example.domain.usecase.friend
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.FriendRepository
 import javax.inject.Inject
@@ -25,7 +26,7 @@ class RemoveOrDenyFriendUseCase @Inject constructor(
         when (session) {
             is CustomResult.Success -> {
                 val currentUserId = session.data.userId
-                return friendRepository.removeFriend(currentUserId, friendId)
+                return friendRepository.delete(DocumentId.from(friendId))
             }
             else -> {
                 return CustomResult.Failure(Exception("User not logged in"))

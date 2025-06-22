@@ -2,9 +2,11 @@ package com.example.domain.usecase.user
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
 
@@ -31,14 +33,20 @@ class GetCurrentUserStreamUseCaseImpl @Inject constructor(
      * @return 사용자 정보 Flow
      */
     override suspend operator fun invoke(): Flow<CustomResult<User, Exception>> {
-        val session = authRepository.getCurrentUserSession()
-        return when (session) {
+        return when (val session = authRepository.getCurrentUserSession()) {
             is CustomResult.Success -> {
-                userRepository.observe(session.data.userId)
+                when (val result = userRepository.observe(DocumentId.from(session.data.userId)).first()) {
+                    is CustomResult.Success -> flowOf( CustomResult.Success((result.data as User)) )
+                    is CustomResult.Failure -> flowOf( CustomResult.Failure(Exception("로그인이 필요합니다.")) )
+                    is CustomResult.Initial -> flowOf( CustomResult.Initial )
+                    is CustomResult.Loading -> flowOf( CustomResult.Loading )
+                    is CustomResult.Progress -> flowOf( CustomResult.Progress(result.progress) )
+                }
             }
-            else -> {
-                flowOf( CustomResult.Failure(Exception("로그인이 필요합니다.")) )
-            }
+            is CustomResult.Failure -> flowOf( CustomResult.Failure(session.error))
+            is CustomResult.Initial -> flowOf( CustomResult.Initial )
+            is CustomResult.Loading -> flowOf( CustomResult.Loading )
+            is CustomResult.Progress -> flowOf( CustomResult.Progress(session.progress))
         }
     }
 } 

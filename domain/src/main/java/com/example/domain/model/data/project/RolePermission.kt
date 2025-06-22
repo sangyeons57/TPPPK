@@ -1,5 +1,7 @@
 package com.example.domain.model.data.project
 
+import com.example.domain.model.vo.DocumentId
+
 /**
  * Enum representing the available permissions that can be assigned to roles.
  * These permissions control what actions users with a specific role can perform.
@@ -57,6 +59,12 @@ enum class RolePermission {
     ADMINISTRATOR;
     
     companion object {
+        fun from (value: String): RolePermission {
+            return entries.find { it.name == value } ?: throw IllegalArgumentException("Invalid RolePermission value: $value")
+        }
+        fun from (value: DocumentId) : RolePermission {
+            return entries.find { it.name == value.value } ?: throw IllegalArgumentException("Invalid RolePermission value: $value")
+        }
         /**
          * Returns a map with all permissions set to the specified value.
          *
@@ -64,7 +72,7 @@ enum class RolePermission {
          * @return A map of all permissions to the specified value.
          */
         fun allPermissions(value: Boolean = true): Map<String, Boolean> {
-            return values().associate { it.name to value }
+            return entries.associate { it.name to value }
         }
         
         /**

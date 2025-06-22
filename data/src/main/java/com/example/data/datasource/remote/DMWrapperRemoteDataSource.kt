@@ -5,6 +5,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
+import com.example.data.model.FirestorePaths
 import com.example.data.model.remote.DMWrapperDTO
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.FirebaseFirestore
@@ -33,7 +34,7 @@ interface DMWrapperRemoteDataSource : DefaultDatasource {
      * @return DMWrapperDTO 또는 오류를 포함한 CustomResult. 찾지 못한 경우 성공 결과에 null 또는 특정 예외를 포함할 수 있습니다.
      * @throws IllegalStateException setCollection(userId)가 호출되지 않은 경우.
      */
-    suspend fun findByOtherUserId(userId: String, otherUserId: String): CustomResult<DMWrapperDTO, Exception>
+    suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMWrapperDTO, Exception>
 }
 
 @Singleton
@@ -41,8 +42,7 @@ class DMWrapperRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : DefaultDatasourceImpl<DMWrapperDTO>(firestore, DMWrapperDTO::class.java), DMWrapperRemoteDataSource {
 
-        override suspend fun findByOtherUserId(userId: String, otherUserId: String): CustomResult<DMWrapperDTO, Exception> {
-        setCollection(FirestorePaths.userDoc(userId), DMWrapperDTO.COLLECTION_NAME)
+    override suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMWrapperDTO, Exception> {
         return withContext(Dispatchers.IO) {
             resultTry {
                 val snap = collection

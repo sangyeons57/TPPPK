@@ -11,21 +11,28 @@ import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.DefaultRepositoryFactoryContext
 import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class MemberRepositoryImpl @Inject constructor(
     private val memberRemoteDataSource: MemberRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: MemberRepositoryFactoryContext
 ) : DefaultRepositoryImpl(memberRemoteDataSource, factoryContext.collectionPath), MemberRepository {
 
-    override fun getProjectMembersStream(projectId: String): Flow<CustomResult<List<Member>, Exception>> {
+    override fun getProjectMembersStream(): Flow<CustomResult<List<Member>, Exception>> {
         // Using observeMembers from the data source, which returns Flow<List<MemberDTO>>
         // Wrap it in CustomResult and map to domain models
-        return memberRemoteDataSource.observeMembers(projectId)
-            .map { dtoList -> 
-                CustomResult.Success(dtoList.map { it.toDomain() })
+        return memberRemoteDataSource.observeAll()
+            .map { dtoListResult ->
+                when (dtoListResult) {
+                    is CustomResult.Success -> CustomResult.Success(dtoListResult.data.map { it.toDomain() as Member })
+                    is CustomResult.Failure -> CustomResult.Failure(dtoListResult.error)
+                    is CustomResult.Initial -> CustomResult.Initial
+                    is CustomResult.Loading -> CustomResult.Loading
+                    is CustomResult.Progress -> CustomResult.Progress(dtoListResult.progress)
+                }
             }
     }
 
@@ -37,6 +44,16 @@ class MemberRepositoryImpl @Inject constructor(
         } else {
             memberRemoteDataSource.create(entity.toDto())
         }
+    }
+
+    override suspend fun create(
+        id: DocumentId,
+        entity: AggregateRoot
+    ): CustomResult<DocumentId, Exception> {
+        if (entity !is Member)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Member"))
+
+        return memberRemoteDataSource.create(id, entity.toDto())
     }
 
 }

@@ -1,6 +1,5 @@
 package com.example.data.util
 
-import com.example.data.datasource.remote.AuthRemoteDataSource
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -5,7 +5,6 @@ import com.example.domain.model.base.Schedule
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
-import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
 
@@ -19,7 +18,7 @@ import com.google.firebase.firestore.PropertyName
  * 일정 정보를 나타내는 DTO 클래스
  */
 data class ScheduleDTO(
-    @DocumentId val id: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(TITLE)
     val title: String = "",
     @get:PropertyName(CONTENT)
@@ -79,8 +78,7 @@ data class ScheduleDTO(
         requireNotNull(createdAt) { "createdAt is null in ScheduleDTO with id=$id" }
         requireNotNull(updatedAt) { "updatedAt is null in ScheduleDTO with id=$id" }
 
-        return Schedule.registerNewSchedule(
-            scheduleId = com.example.domain.model.vo.DocumentId(id),
+        return Schedule.create(
             title = ScheduleTitle(title),
             content = ScheduleContent(content),
             startTime = DateTimeUtil.firebaseTimestampToInstant(startTime),
@@ -88,8 +86,6 @@ data class ScheduleDTO(
             projectId = ProjectId(projectId?:""),
             creatorId = OwnerId(creatorId),
             status = status,
-            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt),
-            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt)
         )
     }
 }

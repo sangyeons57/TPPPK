@@ -15,7 +15,7 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
  * 메시지 리액션 정보를 나타내는 DTO 클래스
  */
 data class ReactionDTO(
-    @DocumentId val id: String = "",
+    @DocumentId override val id: String = "",
     @get:PropertyName(USER_ID)
     val userId: String = "", // 리액션을 남긴 사용자 ID
     @get:PropertyName(EMOJI)

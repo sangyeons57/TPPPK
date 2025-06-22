@@ -2,8 +2,11 @@ package com.example.domain.usecase.friend
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Friend
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.FriendRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
 /**
@@ -20,7 +23,22 @@ class GetFriendsListStreamUseCase @Inject constructor(
      * @param currentUserId 현재 사용자 ID
      * @return Flow<CustomResult<List<Friend>, Exception>> 친구 목록 정보 Flow
      */
-    operator fun invoke(currentUserId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        return friendRepository.getFriendsStream(currentUserId)
+    operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> = flow{
+        when (val result = friendRepository.observeAll().first()) {
+            is CustomResult.Success -> {
+                if( result.data.all { it is Friend } ) {
+                    emit(CustomResult.Success(result.data as List<Friend>))
+                } else {
+                    emit(CustomResult.Failure(Exception("친구 목록을 가져오는 데 실패했습니다.")))
+                }
+            }
+            is CustomResult.Failure ->{
+                emit(CustomResult.Failure(Exception("친구 목록을 가져오는 데 실패했습니다.")))
+                return@flow
+            }
+            is CustomResult.Loading -> emit(CustomResult.Loading)
+            is CustomResult.Initial -> emit(CustomResult.Initial)
+            is CustomResult.Progress -> emit(CustomResult.Progress(result.progress))
+        }
     }
 }

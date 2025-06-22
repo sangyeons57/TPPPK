@@ -2,6 +2,7 @@ package com.example.domain.usecase.schedule
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.ScheduleRepository
 import javax.inject.Inject
 
@@ -26,6 +27,12 @@ class GetScheduleDetailUseCaseImpl @Inject constructor(
      * @return Result<Schedule> 일정 상세 정보 로드 결과
      */
     override suspend fun invoke(scheduleId: String): CustomResult<Schedule, Exception> {
-        return scheduleRepository.findById(scheduleId)
+        return when (val result = scheduleRepository.findById(DocumentId(scheduleId))) {
+            is CustomResult.Success -> CustomResult.Success(result.data as Schedule)
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
 } 

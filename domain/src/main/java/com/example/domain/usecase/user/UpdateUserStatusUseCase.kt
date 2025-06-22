@@ -1,7 +1,11 @@
 package com.example.domain.usecase.user
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.CustomResult.Loading.getOrDefault
+import com.example.domain.event.EventDispatcher
+import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserStatus
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
@@ -31,23 +35,26 @@ class UpdateUserStatusUseCaseImpl @Inject constructor(
      * @return Result<Unit> 업데이트 처리 결과
      */
     override suspend fun invoke(status: UserStatus): CustomResult<Unit, Exception> {
-        val sessionRes = authRepository.getCurrentUserSession()
-        if (sessionRes !is CustomResult.Success) {
-            return CustomResult.Failure(Exception("User not logged in"))
-        }
-        val userRes = userRepository.findById(sessionRes.data.userId)
+        val session = authRepository.getCurrentUserSession().getOrDefault(null)
+            ?: return CustomResult.Failure(Exception("User not logged in"))
+        val userRes = userRepository.findById(DocumentId.from(session.userId))
         if (userRes is CustomResult.Failure) {
             return CustomResult.Failure(userRes.error)
         } else if (userRes !is CustomResult.Success) {
             return CustomResult.Failure(Exception("User not found"))
         }
-        val user = userRes.data
+
+        val user = userRes.data as User
         user.updateUserStatus(status)
-        val saveRes = userRepository.save(user)
-        return when (saveRes) {
-            is CustomResult.Success -> CustomResult.Success(Unit)
+        return when (val saveRes = userRepository.save(user)) {
+            is CustomResult.Success -> {
+                EventDispatcher.publish(user)
+                CustomResult.Success(Unit)
+            }
             is CustomResult.Failure -> CustomResult.Failure(saveRes.error)
-            else -> CustomResult.Failure(Exception("Unknown error"))
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(saveRes.progress)
         }
         // Remove temporary delay
         // kotlin.coroutines.delay(300)

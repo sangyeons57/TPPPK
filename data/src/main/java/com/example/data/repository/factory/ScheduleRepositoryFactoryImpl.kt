@@ -16,7 +16,7 @@ class ScheduleRepositoryFactoryImpl @Inject constructor(
     override fun create(input: ScheduleRepositoryFactoryContext): ScheduleRepository {
         return ScheduleRepositoryImpl(
             scheduleRemoteDataSource = scheduleRemoteDataSource,
-            firebaseAuth = firebaseAuth
+            factoryContext = input,
         )
     }
 }

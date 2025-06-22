@@ -6,6 +6,8 @@ import com.example.domain.model.base.Role
 import com.example.domain.model.ui.project.RoleSortOption
 import com.example.domain.repository.base.RoleRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -21,58 +23,43 @@ interface GetProjectRolesUseCase {
      * @param sortBy Optional sort option for the roles.
      * @return A [Flow] emitting a list of [Role] objects.
      */
-    operator fun invoke(
+    suspend operator fun invoke(
         projectId: String,
-        filterIsDefault: Boolean? = null,
         sortBy: RoleSortOption? = null
-    ): Flow<List<Role>>
+    ): Flow<CustomResult<List<Role>, Exception>>
 }
 class GetProjectRolesUseCaseImpl @Inject constructor(
     private val roleRepository: RoleRepository
 ) : GetProjectRolesUseCase {
 
-    /**
-     * Retrieves roles for a project with optional filtering and sorting.
-     *
-     * @param projectId The ID of the project.
-     * @param filterIsDefault Optional filter to only include default roles.
-     * @param sortBy Optional sort option for the roles.
-     * @return A [Flow] emitting a list of [Role] objects.
-     */
-    override fun invoke(
+    override suspend fun invoke(
         projectId: String,
-        filterIsDefault: Boolean?,
         sortBy: RoleSortOption?
-    ): Flow<List<Role>> {
-        return roleRepository.observeProjectRoles(projectId).map { customResult ->
-            val roles = when (customResult) {
-                is CustomResult.Success -> customResult.data
-                is CustomResult.Failure -> {
-                    // Optionally log customResult.error here
-                    emptyList<Role>() // Return empty list on failure
-                }
-                else -> {
-                    Log.e("GetProjectRolesUseCaseImpl", "Unexpected CustomResult type: $customResult")
-                    emptyList<Role>() // Return empty list on failure
-                }
-            }
-            var result = roles.toList()
+    ): Flow<CustomResult<List<Role>, Exception>> {
+        return when (val customResult = roleRepository.observeAll().first()){
+            is CustomResult.Success -> {
+                var roles = customResult.data.toList().filter{
+                    if (it !is Role) return@filter false
 
-            // Apply filter if specified
-            filterIsDefault?.let { isDefault ->
-                result = result.filter { it.isDefault == isDefault }
-            }
+                    it.isDefault.isDefault()
+                } as List<Role>
 
-            // Apply sorting if specified
-            sortBy?.let { option ->
-                result = when (option) {
-                    RoleSortOption.NAME_ASC -> result.sortedBy { it.name.lowercase() }
-                    RoleSortOption.NAME_DESC -> result.sortedByDescending { it.name.lowercase() }
-                    else -> result.sortedBy { it.name.lowercase() }
+
+                // Apply sorting if specified
+                sortBy?.let { option ->
+                    roles = when (option) {
+                        RoleSortOption.NAME_ASC -> roles.sortedBy { it.name.lowercase() }
+                        RoleSortOption.NAME_DESC -> roles.sortedByDescending { it.name.lowercase() }
+                        else -> roles
+                    }
                 }
-            }
 
-            result
+                flowOf(CustomResult.Success(roles))
+            }
+            is CustomResult.Failure -> flowOf(CustomResult.Failure(customResult.error))
+            is CustomResult.Initial -> flowOf(CustomResult.Initial)
+            is CustomResult.Loading -> flowOf(CustomResult.Loading)
+            is CustomResult.Progress -> flowOf(CustomResult.Progress(customResult.progress))
         }
     }
 }

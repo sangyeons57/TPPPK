@@ -8,6 +8,7 @@ import com.example.domain.event.AggregateRoot
 import com.example.domain.event.member.MemberJoinedEvent
 import com.example.domain.event.member.MemberRolesUpdatedEvent
 import com.example.domain.model.vo.DocumentId // For Role IDs and Member ID
+import com.example.domain.model.vo.UserId
 
 class Member private constructor(
     initialRoleIds: List<DocumentId>,
@@ -40,7 +41,13 @@ class Member private constructor(
     fun assignRole(roleId: DocumentId) {
         if (roleIds.contains(roleId)) return
 
-        this.roleIds = this.roleIds + roleId
+        this.roleIds += roleId
+        this.updatedAt = Instant.now()
+        pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, this.updatedAt))
+    }
+
+    fun updateRoles(roleIds: List<DocumentId>) {
+        this.roleIds = roleIds
         this.updatedAt = Instant.now()
         pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, this.updatedAt))
     }
@@ -64,16 +71,30 @@ class Member private constructor(
         /**
          * Factory method for a new member joining.
          */
-        fun create(id: DocumentId, initialRoleIds: List<DocumentId>): Member {
+        fun create(
+            memberId: UserId,
+            initialRoleIds: List<DocumentId>): Member {
             val now = Instant.now()
             val member = Member(
                 initialRoleIds = initialRoleIds,
                 initialJoinedAt = now,
                 initialUpdatedAt = now,
-                id = id,
+                id = DocumentId.from(memberId),
                 isNew = true
             )
-            member.pushDomainEvent(MemberJoinedEvent(member.id, member.roleIds, now))
+            return member
+        }
+
+        private val PROJECT_OWNER_MEMBER = DocumentId("OWNER")
+        fun createOwnerMember() : Member {
+            val now = Instant.now()
+            val member = Member(
+                initialRoleIds = emptyList(),
+                initialJoinedAt = now,
+                initialUpdatedAt = now,
+                id = PROJECT_OWNER_MEMBER,
+                isNew = true
+            )
             return member
         }
 

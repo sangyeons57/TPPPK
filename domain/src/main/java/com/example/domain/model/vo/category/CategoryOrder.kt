@@ -7,6 +7,19 @@ import kotlin.jvm.JvmInline
  */
 @JvmInline
 value class CategoryOrder(val value: Double) {
-    // No specific validation for Double mentioned in prompt, keeping it simple.
-    // init { require(value >= 0) { "CategoryOrder는 음수일 수 없습니다." } } // Example if needed
+    init {
+        require(value >= 0) { "CategoryOrder는 음수일 수 없습니다." }
+        require(isTwoDecimalPlace(value)) { "CategoryOrder must have at most two decimal places (00.00 format)." }
+    }
+
+    companion object {
+        private fun isTwoDecimalPlace(v: Double): Boolean {
+            return String.format("%.2f", v).toDouble() == v
+        }
+
+        fun of(raw: Double): CategoryOrder {
+            val rounded = String.format("%.2f", raw).toDouble()
+            return CategoryOrder(rounded)
+        }
+    }
 }

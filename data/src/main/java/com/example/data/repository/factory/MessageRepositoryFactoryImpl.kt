@@ -10,13 +10,12 @@ import javax.inject.Inject
 
 class MessageRepositoryFactoryImpl @Inject constructor(
     private val messageRemoteDataSource: MessageRemoteDataSource,
-    private val messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource
 ) : RepositoryFactory<MessageRepositoryFactoryContext, MessageRepository> {
 
     override fun create(input: MessageRepositoryFactoryContext): MessageRepository {
         return MessageRepositoryImpl(
             messageRemoteDataSource = messageRemoteDataSource,
-            messageAttachmentRemoteDataSource = messageAttachmentRemoteDataSource
+            factoryContext = input,
         )
     }
 }

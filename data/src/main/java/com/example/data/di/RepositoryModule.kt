@@ -1,7 +1,6 @@
 package com.example.data.di
 
 import com.example.data.repository.base.AuthRepositoryImpl
-import com.example.data.repository.collection.CategoryCollectionRepositoryImpl
 import com.example.data.repository.base.CategoryRepositoryImpl
 import com.example.data.repository.base.DMChannelRepositoryImpl
 import com.example.data.repository.base.DMWrapperRepositoryImpl
@@ -14,7 +13,6 @@ import com.example.data.repository.base.PermissionRepositoryImpl
 import com.example.data.repository.base.ProjectChannelRepositoryImpl
 import com.example.data.repository.base.ProjectRepositoryImpl
 import com.example.data.repository.base.ProjectsWrapperRepositoryImpl
-import com.example.data.repository.base.ReactionRepositoryImpl
 import com.example.data.repository.base.RoleRepositoryImpl
 import com.example.data.repository.base.ScheduleRepositoryImpl
 import com.example.data.repository.base.UserRepositoryImpl
@@ -33,7 +31,6 @@ import com.example.domain.repository.base.PermissionRepository
 import com.example.domain.repository.base.ProjectChannelRepository
 import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
-import com.example.domain.repository.base.ReactionRepository
 import com.example.domain.repository.base.MediaRepository
 import com.example.domain.repository.base.RoleRepository
 import com.example.domain.repository.base.ScheduleRepository

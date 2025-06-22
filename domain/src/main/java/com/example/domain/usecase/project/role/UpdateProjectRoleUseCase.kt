@@ -1,7 +1,12 @@
 package com.example.domain.usecase.project.role
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Permission
+import com.example.domain.model.base.Role
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.role.RoleIsDefault
 import com.example.domain.repository.base.RoleRepository
 import javax.inject.Inject
 import kotlin.Result
@@ -21,10 +26,8 @@ interface UpdateProjectRoleUseCase {
      * @return A [Result] indicating success or failure.
      */
     suspend operator fun invoke(
-        projectId: String,
         roleId: String,
         name: String? = null,
-        permissions: List<Permission>? = null,
         isDefault: Boolean? = null
     ): CustomResult<Unit, Exception>
 }
@@ -35,44 +38,31 @@ class UpdateProjectRoleUseCaseImpl @Inject constructor(
     private val projectRoleRepository: RoleRepository
 ) : UpdateProjectRoleUseCase {
 
-    /**
-     * Updates an existing role within a project.
-     *
-     * @param projectId The ID of the project.
-     * @param roleId The ID of the role to update.
-     * @param name Optional. The new name for the role. If null, the name is not changed.
-     * @param permissions Optional. The new permissions map for the role. If null, permissions are not changed.
-     * @param isDefault Optional. The new default status for the role. If null, the default status is not changed.
-     * @return A [Result] indicating success or failure.
-     */
     override suspend operator fun invoke(
-        projectId: String,
         roleId: String,
         name: String?,
-        permissions: List<Permission>?,
         isDefault: Boolean?
     ): CustomResult<Unit, Exception> {
         // Fetch the current role details to get existing values if not provided
-        val currentRoleResult = projectRoleRepository.getRoleDetails(projectId, roleId)
+        val currentRole = when (val result = projectRoleRepository.findById(DocumentId(roleId))) {
+            is CustomResult.Success -> result.data as Role
+            is CustomResult.Failure -> return CustomResult.Failure(result.error)
+            is CustomResult.Initial -> return CustomResult.Initial
+            is CustomResult.Loading -> return CustomResult.Loading
+            is CustomResult.Progress -> return CustomResult.Progress(result.progress)
+        }
+        name?.let {currentRole.changeName(Name(it))}
+        isDefault?.let {currentRole.setDefault(RoleIsDefault(it))}
 
-        return when (currentRoleResult) {
+        return when (val result = projectRoleRepository.save(currentRole)) {
             is CustomResult.Success -> {
-                val currentRole = currentRoleResult.data
-
-                // Use provided values or fallback to current role's values for name and permissions
-                val updatedName = name ?: currentRole.name
-
-                // The isDefault parameter can be passed directly to the repository as it handles nullable.
-                // If name or permissions were null, we use the currentRole's values.
-                projectRoleRepository.updateRole(
-                    projectId = projectId,
-                    roleId = roleId,
-                    name = updatedName,
-                    isDefault = isDefault // Pass isDefault as is, can be null for no change
-                )
+                EventDispatcher.publish(currentRole)
+                CustomResult.Success(Unit)
             }
-            is CustomResult.Failure -> return CustomResult.Failure(currentRoleResult.error)
-            else -> CustomResult.Failure(Exception("Role with ID $roleId not found in project $projectId."))
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
         }
     }
 }

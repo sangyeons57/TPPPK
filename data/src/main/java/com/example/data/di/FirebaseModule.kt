@@ -1,6 +1,6 @@
 package com.example.data.di
 
-import com.example.core_common.constants.FirestoreConstants
+import com.example.core_common.constants.Constants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -39,7 +39,7 @@ object FirebaseModule {
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore {
         // Firestore 인스턴스 가져오기
-        val firestore = FirebaseFirestore.getInstance(FirestoreConstants.DB_NAME) // "default"는 기본 FirebaseApp 인스턴스를 사용함을 의미
+        val firestore = FirebaseFirestore.getInstance(Constants.DB_NAME) // "default"는 기본 FirebaseApp 인스턴스를 사용함을 의미
 
         val persistentCacheSettings = PersistentCacheSettings.newBuilder()
             .setSizeBytes(100 * 1024 * 1024)

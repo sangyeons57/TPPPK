@@ -58,16 +58,16 @@ class GetUserDmChannelsUseCase @Inject constructor(
                             // Fetch all DMChannels concurrently
                             val dmChannelDetailedResults = coroutineScope {
                                 wrappers.map { wrapper ->
-                                    async { dmChannelRepository.getDmChannelById(wrapper.dmChannelId.value) }
+                                    async { dmChannelRepository.findById(wrapper.id) }
                                 }.awaitAll()
                             }
 
-                            val successfulChannels = mutableListOf<DMChannel>()
+                            val successfulChannels :MutableList<DMChannel> = mutableListOf<DMChannel>()
                             var firstError: Exception? = null
 
                             for (result in dmChannelDetailedResults) {
                                 when (result) {
-                                    is CustomResult.Success -> successfulChannels.add(result.data)
+                                    is CustomResult.Success -> successfulChannels.add((result.data)  as DMChannel)
                                     is CustomResult.Failure -> {
                                         firstError = result.error
                                         break // Stop processing if one channel fails, and report this firstError

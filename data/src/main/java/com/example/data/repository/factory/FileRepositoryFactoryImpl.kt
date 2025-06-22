@@ -1,6 +1,6 @@
 package com.example.data.repository.factory
 
-import com.example.data.datasource.remote.FileDataSource
+import com.example.data.datasource.remote.special.FileDataSource
 import com.example.data.repository.base.FileRepositoryImpl
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.FileRepository

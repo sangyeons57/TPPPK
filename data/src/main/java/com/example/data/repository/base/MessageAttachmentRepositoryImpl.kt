@@ -30,4 +30,10 @@ class MessageAttachmentRepositoryImpl @Inject constructor(
             messageAttachmentRemoteDataSource.create(entity.toDto())
         }
     }
+
+    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is MessageAttachment)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type MessageAttachment"))
+        return messageAttachmentRemoteDataSource.create(entity.toDto())
+    }
 }

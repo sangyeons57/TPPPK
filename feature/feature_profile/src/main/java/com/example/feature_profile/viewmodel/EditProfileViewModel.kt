@@ -8,8 +8,8 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
+import com.example.domain.usecase.user.UpdateUserImageUseCase
 import com.example.domain.usecase.user.UpdateUserProfileParams
-import com.example.domain.usecase.user.UpdateUserProfileUseCase
 import com.example.domain.usecase.user.UploadProfileImageUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -40,7 +40,7 @@ sealed interface EditProfileEvent {
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserStreamUseCase,
-    private val updateUserProfileUseCase: UpdateUserProfileUseCase,
+    private val updateUserImageUseCase: UpdateUserImageUseCase,
     private val uploadProfileImageUseCase: UploadProfileImageUseCase,
     private val dispatcherProvider: DispatcherProvider
 ) : ViewModel() {
@@ -168,7 +168,7 @@ class EditProfileViewModel @Inject constructor(
                     profileImageUrl = currentUser.profileImageUrl?.value
                 )
                 
-                val result = updateUserProfileUseCase(params)
+                val result = updateUserImageUseCase(params)
                 when (result) {
                     is CustomResult.Success -> {
                         val updatedUser = result.data

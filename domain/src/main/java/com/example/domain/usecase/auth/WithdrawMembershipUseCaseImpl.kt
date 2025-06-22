@@ -4,6 +4,8 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.event.user.UserAccountWithdrawnEvent
+import com.example.domain.model.base.User
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
@@ -52,18 +54,18 @@ class WithdrawMembershipUseCaseImpl @Inject constructor(
         Log.d("WithdrawMembershipUseCaseImpl", "Current user UID: $uid. Proceeding with data anonymization.")
 
         // 2. Process user data withdrawal (anonymize in Firestore)
-        when ( val userResult = userRepository.observe(uid).first()) {
+        when ( val userResult = userRepository.observe(DocumentId.from(uid)).first()) {
             is CustomResult.Success -> {
-                val user = userResult.data
+                val user = userResult.data as User
                 user.markAsWithdrawn()
                 val result = userRepository.save(user)
-                EventDispatcher.publish(UserAccountWithdrawnEvent(uid))
                 return when (result) {
                     is CustomResult.Success -> {
                         Log.d(
                             "WithdrawMembershipUseCaseImpl",
                             "User data withdrawal successful for UID: $uid."
                         )
+                        EventDispatcher.publish(user)
                         CustomResult.Success(Unit)
                     }
                     is CustomResult.Failure -> CustomResult.Failure(result.error)
