@@ -1,8 +1,9 @@
 package com.example.feature_auth.ui
 
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.example.feature_auth.viewmodel.FindPasswordUiState
+import com.example.feature_find_password.viewmodel.FindPasswordUiState
 import org.junit.Rule
 import org.junit.Test
 
@@ -23,7 +24,7 @@ class FindPasswordScreenTest {
     @Test
     fun findPasswordContent_renders_allBasicElements() {
         // Given: 기본 UI 상태
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "",
             authCode = "",
             newPassword = "",
@@ -35,7 +36,7 @@ class FindPasswordScreenTest {
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -68,7 +69,7 @@ class FindPasswordScreenTest {
     @Test
     fun findPasswordContent_whenEmailSent_shouldShowAuthCodeInput() {
         // Given: 이메일이 전송된 상태
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "test@example.com",
             authCode = "",
             isEmailSent = true,
@@ -77,7 +78,7 @@ class FindPasswordScreenTest {
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -107,7 +108,7 @@ class FindPasswordScreenTest {
     @Test
     fun findPasswordContent_whenEmailVerified_shouldShowPasswordInputs() {
         // Given: 이메일 인증이 완료된 상태
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "test@example.com",
             authCode = "123456",
             isEmailSent = true,
@@ -116,7 +117,7 @@ class FindPasswordScreenTest {
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -145,7 +146,7 @@ class FindPasswordScreenTest {
     fun findPasswordContent_whenPasswordVisible_shouldShowPasswordText() {
         // Given: 이메일 인증 완료 및 비밀번호 가시성이 켜진 상태
         val testPassword = "newpass123"
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "test@example.com",
             authCode = "123456",
             newPassword = testPassword,
@@ -157,7 +158,7 @@ class FindPasswordScreenTest {
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -180,7 +181,7 @@ class FindPasswordScreenTest {
     @Test
     fun findPasswordContent_whenLoading_shouldDisableInputs() {
         // Given: 로딩 중인 상태
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "test@example.com",
             authCode = "123456",
             isEmailSent = true,
@@ -190,7 +191,7 @@ class FindPasswordScreenTest {
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -228,13 +229,13 @@ class FindPasswordScreenTest {
         var passwordVisibilityToggled = false
         
         // 초기 상태: 이메일 입력된 상태
-        var uiState = FindPasswordUiState(
+        var uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "test@example.com"
         )
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -258,7 +259,7 @@ class FindPasswordScreenTest {
         
         // 화면 다시 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -287,7 +288,7 @@ class FindPasswordScreenTest {
         
         // 화면 다시 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -325,14 +326,14 @@ class FindPasswordScreenTest {
         var newPasswordConfirmChanged = false
         
         // 모든 상태가 활성화된 UI 상태
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             isEmailSent = true,
             isEmailVerified = true
         )
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = { emailChanged = true },
                 onAuthCodeChange = { authCodeChanged = true },
@@ -376,7 +377,7 @@ class FindPasswordScreenTest {
     @Test
     fun findPasswordContent_whenPasswordsDoNotMatch_shouldShowError() {
         // Given: 이메일 인증 완료 상태와 불일치하는 비밀번호
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "test@example.com",
             authCode = "123456",
             newPassword = "password123",
@@ -387,7 +388,7 @@ class FindPasswordScreenTest {
         
         // When: FindPasswordContent 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = {},
                 onAuthCodeChange = {},
@@ -422,11 +423,11 @@ class FindPasswordScreenTest {
         var resetPasswordClicked = false
         
         // 초기 상태
-        var uiState = FindPasswordUiState()
+        var uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState()
         
         // When: 초기 화면 렌더링
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = { emailChange = it },
                 onAuthCodeChange = { codeChange = it },
@@ -453,7 +454,7 @@ class FindPasswordScreenTest {
         )
         
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = { emailChange = it },
                 onAuthCodeChange = { codeChange = it },
@@ -480,7 +481,7 @@ class FindPasswordScreenTest {
         )
         
         composeTestRule.setContent {
-            FindPasswordContent(
+            com.example.feature_find_password.ui.FindPasswordContent(
                 uiState = uiState,
                 onEmailChange = { emailChange = it },
                 onAuthCodeChange = { codeChange = it },
@@ -513,7 +514,7 @@ class FindPasswordScreenTest {
     fun findPasswordContent_whenErrorPresent_shouldDisplayError() {
         // Given: 에러 메시지가 있는 UI 상태
         val errorMessage = "잘못된 인증번호입니다."
-        val uiState = FindPasswordUiState(
+        val uiState = com.example.feature_find_password.viewmodel.FindPasswordUiState(
             email = "test@example.com",
             authCode = "123456",
             isEmailSent = true,
@@ -535,8 +536,8 @@ class FindPasswordScreenTest {
                     )
                 }
             ) {
-                FindPasswordContent(
-                    modifier = androidx.compose.ui.Modifier.padding(it),
+                com.example.feature_find_password.ui.FindPasswordContent(
+                    modifier = Modifier.padding(it),
                     uiState = uiState,
                     onEmailChange = {},
                     onAuthCodeChange = {},

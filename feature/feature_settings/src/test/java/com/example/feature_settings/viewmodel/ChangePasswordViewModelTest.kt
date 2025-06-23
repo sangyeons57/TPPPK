@@ -26,7 +26,7 @@ class ChangePasswordViewModelTest {
     val coroutinesTestRule = CoroutinesTestRule()
 
     // 테스트 대상 (System Under Test)
-    private lateinit var viewModel: ChangePasswordViewModel
+    private lateinit var viewModel: com.example.feature_change_password.viewmodel.ChangePasswordViewModel
     
     // SavedStateHandle Mock
     private lateinit var savedStateHandle: SavedStateHandle
@@ -40,7 +40,8 @@ class ChangePasswordViewModelTest {
         savedStateHandle = mock(SavedStateHandle::class.java)
         
         // ViewModel 초기화
-        viewModel = ChangePasswordViewModel(savedStateHandle)
+        viewModel =
+            com.example.feature_change_password.viewmodel.ChangePasswordViewModel(savedStateHandle)
     }
 
     /**
@@ -125,7 +126,8 @@ class ChangePasswordViewModelTest {
         viewModel.onConfirmPasswordChange("new123")
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ChangePasswordEvent>()
+        val eventCollector =
+            EventCollector<com.example.feature_change_password.viewmodel.ChangePasswordEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 비밀번호 변경 시도
@@ -217,7 +219,8 @@ class ChangePasswordViewModelTest {
         viewModel.onConfirmPasswordChange("newpass123")
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ChangePasswordEvent>()
+        val eventCollector =
+            EventCollector<com.example.feature_change_password.viewmodel.ChangePasswordEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 비밀번호 변경 시도
@@ -231,9 +234,9 @@ class ChangePasswordViewModelTest {
         
         // 이벤트 확인
         assertTrue(eventCollector.events.size >= 2)
-        assertTrue(eventCollector.events.any { it is ChangePasswordEvent.ClearFocus })
-        assertTrue(eventCollector.events.any { 
-            it is ChangePasswordEvent.ShowSnackbar && 
+        assertTrue(eventCollector.events.any { it is com.example.feature_change_password.viewmodel.ChangePasswordEvent.ClearFocus })
+        assertTrue(eventCollector.events.any {
+            it is com.example.feature_change_password.viewmodel.ChangePasswordEvent.ShowSnackbar &&
             it.message.contains("비밀번호가 변경되었습니다") 
         })
     }
@@ -249,7 +252,8 @@ class ChangePasswordViewModelTest {
         viewModel.onConfirmPasswordChange("newpass123")
         
         // 이벤트 수집기 설정
-        val eventCollector = EventCollector<ChangePasswordEvent>()
+        val eventCollector =
+            EventCollector<com.example.feature_change_password.viewmodel.ChangePasswordEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
         
         // When: 비밀번호 변경 시도
@@ -265,9 +269,9 @@ class ChangePasswordViewModelTest {
         
         // 이벤트 확인
         assertTrue(eventCollector.events.size >= 2)
-        assertTrue(eventCollector.events.any { it is ChangePasswordEvent.ClearFocus })
-        assertTrue(eventCollector.events.any { 
-            it is ChangePasswordEvent.ShowSnackbar && 
+        assertTrue(eventCollector.events.any { it is com.example.feature_change_password.viewmodel.ChangePasswordEvent.ClearFocus })
+        assertTrue(eventCollector.events.any {
+            it is com.example.feature_change_password.viewmodel.ChangePasswordEvent.ShowSnackbar &&
             it.message.contains("현재 비밀번호가 일치하지 않습니다") 
         })
     }

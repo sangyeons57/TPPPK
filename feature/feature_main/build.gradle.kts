@@ -48,8 +48,8 @@ dependencies {
     //    ChatRepository 인터페이스를 직접 주입받으므로 :data 모듈 의존성이 필요합니다.
     //    (이상적으로는 ViewModel은 UseCase를 주입받고 UseCase가 Repository 인터페이스 사용)
     implementation(project(":data"))
+    implementation(project(":feature:feature_add_schedule"))
 
-    implementation(project(":feature:feature_schedule"))
     implementation(project(":feature:feature_friends"))
 
     // --- 라이브러리 의존성 ---

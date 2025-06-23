@@ -32,7 +32,7 @@ class FindPasswordViewModelTest {
     @get:Rule
     val coroutinesTestRule = CoroutinesTestRule()
 
-    private lateinit var viewModel: FindPasswordViewModel
+    private lateinit var viewModel: com.example.feature_find_password.viewmodel.FindPasswordViewModel
     private lateinit var requestPasswordResetUseCase: RequestPasswordResetUseCase
     private lateinit var getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
 
@@ -42,8 +42,8 @@ class FindPasswordViewModelTest {
     fun setup() {
         requestPasswordResetUseCase = mockk()
         getAuthErrorMessageUseCase = mockk()
-        
-        viewModel = FindPasswordViewModel(
+
+        viewModel = com.example.feature_find_password.viewmodel.FindPasswordViewModel(
             requestPasswordResetUseCase,
             getAuthErrorMessageUseCase
         )
@@ -108,7 +108,11 @@ class FindPasswordViewModelTest {
             assertFalse(state.isLoading)
             assertNull(state.errorMessage)
 
-            assertEquals(FindPasswordEvent.ShowSnackbar("이메일이 전송되었습니다."), awaitItem())
+            assertEquals(
+                com.example.feature_find_password.viewmodel.FindPasswordEvent.ShowSnackbar(
+                    "이메일이 전송되었습니다."
+                ), awaitItem()
+            )
             cancelAndIgnoreRemainingEvents()
         }
         coVerify { requestPasswordResetUseCase(testEmail) }
@@ -139,7 +143,10 @@ class FindPasswordViewModelTest {
     fun `onDoneClicked 시 NavigateBack 이벤트 발생`() = runTest {
         viewModel.eventFlow.test {
             viewModel.onDoneClicked()
-            assertEquals(FindPasswordEvent.NavigateBack, awaitItem())
+            assertEquals(
+                com.example.feature_find_password.viewmodel.FindPasswordEvent.NavigateBack,
+                awaitItem()
+            )
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -148,7 +155,10 @@ class FindPasswordViewModelTest {
     fun `onBackClick 시 NavigateBack 이벤트 발생`() = runTest {
          viewModel.eventFlow.test {
             viewModel.onBackClick()
-            assertEquals(FindPasswordEvent.NavigateBack, awaitItem())
+             assertEquals(
+                 com.example.feature_find_password.viewmodel.FindPasswordEvent.NavigateBack,
+                 awaitItem()
+             )
             cancelAndIgnoreRemainingEvents()
         }
     }

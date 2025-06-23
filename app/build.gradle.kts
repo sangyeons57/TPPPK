@@ -91,12 +91,13 @@ dependencies {
     implementation(project(":feature:feature_friends"))
     implementation(project(":feature:feature_settings"))
     implementation(project(":feature:feature_chat"))
-    implementation(project(":feature:feature_schedule"))
+    implementation(project(":feature:feature_add_schedule"))
     implementation(project(":feature:feature_search"))
     implementation(project(":feature:feature_profile"))
     implementation(project(":feature:feature_dev")) // DevMenuScreen 호출 시
     implementation(project(":feature:feature_category_edit"))
     implementation(project(":feature:feature_channel_edit"))
+    implementation(project(":feature:feature_find_password"))
 
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 

@@ -2,7 +2,7 @@ package com.example.feature_settings.ui
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.example.feature_settings.viewmodel.ChangePasswordUiState
+import com.example.feature_change_password.viewmodel.ChangePasswordUiState
 import org.junit.Rule
 import org.junit.Test
 
@@ -23,8 +23,8 @@ class ChangePasswordScreenTest {
     fun changePasswordContent_displaysAllFields() {
         // When: ChangePasswordContent 렌더링
         composeTestRule.setContent {
-            ChangePasswordContent(
-                uiState = ChangePasswordUiState(),
+            com.example.feature_change_password.ui.ChangePasswordContent(
+                uiState = com.example.feature_change_password.viewmodel.ChangePasswordUiState(),
                 onCurrentPasswordChange = {},
                 onNewPasswordChange = {},
                 onConfirmPasswordChange = {},
@@ -51,8 +51,8 @@ class ChangePasswordScreenTest {
         
         // When: ChangePasswordContent 렌더링 및 텍스트 입력
         composeTestRule.setContent {
-            ChangePasswordContent(
-                uiState = ChangePasswordUiState(),
+            com.example.feature_change_password.ui.ChangePasswordContent(
+                uiState = com.example.feature_change_password.viewmodel.ChangePasswordUiState(),
                 onCurrentPasswordChange = { currentPassword = it },
                 onNewPasswordChange = { newPassword = it },
                 onConfirmPasswordChange = { confirmPassword = it },
@@ -77,7 +77,7 @@ class ChangePasswordScreenTest {
     @Test
     fun changePasswordContent_displaysErrorMessages() {
         // Given: 에러 메시지가 포함된 UI 상태
-        val uiState = ChangePasswordUiState(
+        val uiState = com.example.feature_change_password.viewmodel.ChangePasswordUiState(
             currentPasswordError = "현재 비밀번호가 일치하지 않습니다.",
             newPasswordError = "비밀번호는 6자 이상이어야 합니다.",
             confirmPasswordError = "새 비밀번호가 일치하지 않습니다."
@@ -85,7 +85,7 @@ class ChangePasswordScreenTest {
         
         // When: ChangePasswordContent 렌더링
         composeTestRule.setContent {
-            ChangePasswordContent(
+            com.example.feature_change_password.ui.ChangePasswordContent(
                 uiState = uiState,
                 onCurrentPasswordChange = {},
                 onNewPasswordChange = {},
@@ -107,8 +107,8 @@ class ChangePasswordScreenTest {
     fun changePasswordContent_togglesPasswordVisibility() {
         // When: ChangePasswordContent 렌더링
         composeTestRule.setContent {
-            ChangePasswordContent(
-                uiState = ChangePasswordUiState(
+            com.example.feature_change_password.ui.ChangePasswordContent(
+                uiState = com.example.feature_change_password.viewmodel.ChangePasswordUiState(
                     currentPassword = "testpassword",
                     newPassword = "newpassword",
                     confirmPassword = "newpassword"
@@ -140,8 +140,8 @@ class ChangePasswordScreenTest {
         
         // When: ChangePasswordContent 렌더링 및 버튼 클릭
         composeTestRule.setContent {
-            ChangePasswordContent(
-                uiState = ChangePasswordUiState(),
+            com.example.feature_change_password.ui.ChangePasswordContent(
+                uiState = com.example.feature_change_password.viewmodel.ChangePasswordUiState(),
                 onCurrentPasswordChange = {},
                 onNewPasswordChange = {},
                 onConfirmPasswordChange = {},
@@ -162,11 +162,12 @@ class ChangePasswordScreenTest {
     @Test
     fun changePasswordContent_showsLoadingState() {
         // Given: 로딩 중 상태의 UI
-        val uiState = ChangePasswordUiState(isLoading = true)
+        val uiState =
+            com.example.feature_change_password.viewmodel.ChangePasswordUiState(isLoading = true)
         
         // When: ChangePasswordContent 렌더링
         composeTestRule.setContent {
-            ChangePasswordContent(
+            com.example.feature_change_password.ui.ChangePasswordContent(
                 uiState = uiState,
                 onCurrentPasswordChange = {},
                 onNewPasswordChange = {},
@@ -186,7 +187,7 @@ class ChangePasswordScreenTest {
     @Test
     fun changePasswordContent_displaysInitialValues() {
         // Given: 초기값이 설정된 UI 상태
-        val uiState = ChangePasswordUiState(
+        val uiState = com.example.feature_change_password.viewmodel.ChangePasswordUiState(
             currentPassword = "oldpassword",
             newPassword = "newpassword",
             confirmPassword = "newpassword"
@@ -194,7 +195,7 @@ class ChangePasswordScreenTest {
         
         // When: ChangePasswordContent 렌더링
         composeTestRule.setContent {
-            ChangePasswordContent(
+            com.example.feature_change_password.ui.ChangePasswordContent(
                 uiState = uiState,
                 onCurrentPasswordChange = {},
                 onNewPasswordChange = {},
