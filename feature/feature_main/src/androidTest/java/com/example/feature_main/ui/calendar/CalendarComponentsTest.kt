@@ -3,7 +3,6 @@ package com.example.feature_main.ui.calendar
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.feature_main.viewmodel.CalendarUiState
 import com.example.feature_main.viewmodel.ScheduleItem
 import org.junit.Rule
 import org.junit.Test
@@ -11,8 +10,6 @@ import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * CalendarComponents 테스트
@@ -45,7 +42,7 @@ class CalendarComponentsTest {
 
         // 컴포넌트 표시
         composeTestRule.setContent {
-            MonthHeader(
+            com.example.feature_calendar.MonthHeader(
                 yearMonthText = "2025년 4월",
                 onPreviousClick = { previousClicked = true },
                 onNextClick = { nextClicked = true }
@@ -71,7 +68,7 @@ class CalendarComponentsTest {
     fun dayOfWeekHeader_displaysCorrectDays() {
         // 컴포넌트 표시
         composeTestRule.setContent {
-            DayOfWeekHeader()
+            com.example.feature_calendar.DayOfWeekHeader()
         }
 
         // 요일 확인 (한국어 표기)
@@ -100,7 +97,7 @@ class CalendarComponentsTest {
         
         // 컴포넌트 표시
         composeTestRule.setContent {
-            ScheduleListItem(
+            com.example.feature_calendar.ScheduleListItem(
                 schedule = testSchedule,
                 onClick = { itemClicked = true }
             )

@@ -44,7 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_change_password.viewmodel.ChangePasswordEvent
 import com.example.feature_change_password.viewmodel.ChangePasswordUiState
@@ -57,7 +57,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: ChangePasswordViewModel = hiltViewModel()
 ) {
@@ -69,7 +69,7 @@ fun ChangePasswordScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ChangePasswordEvent.NavigateBack -> appNavigator.navigateBack()
+                is ChangePasswordEvent.NavigateBack -> navigationManger.navigateBack()
                 is ChangePasswordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChangePasswordEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -79,7 +79,7 @@ fun ChangePasswordScreen(
     // 변경 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.changeSuccess) {
         if (uiState.changeSuccess) {
-            appNavigator.navigateBack()
+            navigationManger.navigateBack()
         }
     }
 
@@ -90,7 +90,7 @@ fun ChangePasswordScreen(
             TopAppBar(
                 title = { Text("비밀번호 변경") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
+                    IconButton(onClick = { navigationManger.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

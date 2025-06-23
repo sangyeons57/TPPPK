@@ -1,5 +1,6 @@
 package com.example.feature_main.ui
 
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import org.junit.Rule
@@ -32,7 +33,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = profile,
                 onEditProfileImageClick = {},
@@ -67,7 +68,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링 (로딩 중 상태)
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = true,
                 profile = profile,
                 onEditProfileImageClick = {},
@@ -96,9 +97,9 @@ class ProfileScreenTest {
         
         // When: ProfileMenuItem 렌더링 및 클릭
         composeTestRule.setContent {
-            ProfileMenuItem(
+            com.example.feature_profile.ui.ProfileMenuItem(
                 text = "테스트 메뉴",
-                icon = androidx.compose.material.icons.Icons.Default.Settings,
+                icon = Icons.Default.Settings,
                 onClick = { clicked = true }
             )
         }
@@ -120,7 +121,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링 및 로그아웃 버튼 클릭
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = UserProfileData(
                     userId = "test123",
@@ -155,7 +156,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링 및 상태 메시지 편집 버튼 클릭
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = UserProfileData(
                     userId = "test123",
@@ -190,7 +191,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링 및 프로필 이미지 편집 버튼 클릭
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = UserProfileData(
                     userId = "test123",
@@ -225,7 +226,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링 및 설정 메뉴 클릭
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = UserProfileData(
                     userId = "test123",
@@ -260,7 +261,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링 및 친구 메뉴 클릭
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = UserProfileData(
                     userId = "test123",
@@ -295,7 +296,7 @@ class ProfileScreenTest {
         
         // When: ProfileContent 렌더링 및 상태 표시 메뉴 클릭
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = UserProfileData(
                     userId = "test123",
@@ -327,7 +328,7 @@ class ProfileScreenTest {
     fun profileContent_whenProfileIsNull_displaysDefaultValues() {
         // When: ProfileContent를 null 프로필로 렌더링
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = null, // null 프로필
                 onEditProfileImageClick = {},
@@ -354,9 +355,9 @@ class ProfileScreenTest {
         
         // When: 비활성화된 ProfileMenuItem 렌더링 및 클릭 시도
         composeTestRule.setContent {
-            ProfileMenuItem(
+            com.example.feature_profile.ui.ProfileMenuItem(
                 text = "비활성화 메뉴",
-                icon = androidx.compose.material.icons.Icons.Default.Settings,
+                icon = Icons.Default.Settings,
                 onClick = { clicked = true },
                 enabled = false // 비활성화 상태
             )
@@ -376,7 +377,7 @@ class ProfileScreenTest {
     fun profileContent_displaysAllMenuItems() {
         // When: ProfileContent 렌더링
         composeTestRule.setContent {
-            ProfileContent(
+            com.example.feature_profile.ui.ProfileContent(
                 isLoading = false,
                 profile = UserProfileData(
                     userId = "test123",

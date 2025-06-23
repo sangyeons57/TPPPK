@@ -7,8 +7,8 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model._new.enum.ScheduleStatus
-import com.example.domain.usecase.project.GetUserParticipatingProjectsUseCase
-import com.example.domain.usecase.schedule.AddScheduleUseCase
+import com.example.domain.provider.project.ProjectUseCaseProvider
+import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

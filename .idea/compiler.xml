@@ -2,6 +2,7 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel target="17">
+      <module name="TeamnovaPersonalProjectProjectingKotlin.feature.feature_auth" target="21" />
       <module name="TeamnovaPersonalProjectProjectingKotlin.feature.feature_category_edit2" target="21" />
     </bytecodeTargetLevel>
   </component>

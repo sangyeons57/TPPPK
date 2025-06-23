@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.usecase.auth.WithdrawMembershipUseCase
@@ -20,7 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val withdrawMembershipUseCase: WithdrawMembershipUseCase,
-    private val appNavigator: AppNavigator
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     private val _uiEvent = Channel<WithdrawalUiEvent>()
@@ -47,7 +47,7 @@ class SettingsViewModel @Inject constructor(
                     Log.d("SettingsViewModel", "Withdrawal successful. Navigating to auth screen.")
                     _uiEvent.send(WithdrawalUiEvent.Success("회원 탈퇴가 완료되었습니다."))
                     // Navigate to the auth screen, clearing the back stack
-                    appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.Splash.path))
+                    navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.Splash.path))
                 }
                 is CustomResult.Failure -> {
                     Log.e("SettingsViewModel", "Withdrawal failed.", result.error)

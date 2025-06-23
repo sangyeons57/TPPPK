@@ -8,9 +8,9 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.FriendStatus
-import com.example.domain.usecase.dm.GetDmChannelUseCase
-import com.example.domain.usecase.friend.GetFriendsListStreamUseCase
-import com.example.domain.usecase.user.GetUserStreamUseCase
+import com.example.domain.provider.dm.DMUseCaseProvider
+import com.example.domain.provider.friend.FriendUseCaseProvider
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

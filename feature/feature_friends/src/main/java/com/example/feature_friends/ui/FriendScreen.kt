@@ -13,27 +13,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 // Removed direct Coil imports
-import com.example.core_common.util.DateTimeUtil
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
-import com.example.core_ui.R
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
 import com.example.feature_friends.viewmodel.FriendsEvent
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch // Required for launching coroutines
-import java.util.Date
 
 /**
  * FriendsScreen: 친구 목록 표시 및 관리 화면 (Stateful)
@@ -41,7 +36,7 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendsScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: FriendViewModel = hiltViewModel()
 ) {
@@ -59,10 +54,10 @@ fun FriendsScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FriendsEvent.NavigateToAcceptFriends -> appNavigator.navigate(
+                is FriendsEvent.NavigateToAcceptFriends -> navigationManger.navigate(
                     NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Friends.ACCEPT_REQUESTS)
                 )
-                is FriendsEvent.NavigateToChat -> appNavigator.navigate(
+                is FriendsEvent.NavigateToChat -> navigationManger.navigate(
                     NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(event.channelId))
                 )
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
@@ -78,7 +73,7 @@ fun FriendsScreen(
                     TopAppBar(
                         title = { Text("친구") },
                         navigationIcon = {
-                            IconButton(onClick = { appNavigator.navigateBack() }) {
+                            IconButton(onClick = { navigationManger.navigateBack() }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                             }
                         },

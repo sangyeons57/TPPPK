@@ -12,9 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.feature_settings.viewmodel.SettingsViewModel // Import the ViewModel
-import com.example.feature_settings.ui.WithdrawalDialog // Import the dialog
 import com.example.feature_settings.viewmodel.SettingsViewModel.WithdrawalUiEvent
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -22,7 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val showWithdrawalDialog by viewModel.showWithdrawalDialog.collectAsState()
@@ -49,7 +48,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
+                    IconButton(onClick = { navigationManger.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -109,7 +108,7 @@ fun SettingsScreen(
 @Composable
 fun SettingsScreenPreview() {
     SettingsScreen(
-        appNavigator = TODO(),
+        navigationManger = TODO(),
         viewModel = TODO()
     )
 }

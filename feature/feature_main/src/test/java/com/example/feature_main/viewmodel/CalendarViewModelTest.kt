@@ -29,7 +29,7 @@ class CalendarViewModelTest {
     val coroutinesTestRule = CoroutinesTestRule()
 
     // 테스트 대상 (System Under Test)
-    private lateinit var viewModel: CalendarViewModel
+    private lateinit var viewModel: com.example.feature_calendar.CalendarViewModel
 
     // Fake Repository
     private lateinit var fakeScheduleRepository: FakeScheduleRepository
@@ -71,7 +71,7 @@ class CalendarViewModelTest {
         fakeScheduleRepository.addSchedule(testSchedule2)
 
         // ViewModel 초기화 (의존성 주입)
-        viewModel = CalendarViewModel(fakeScheduleRepository)
+        viewModel = com.example.feature_calendar.CalendarViewModel(fakeScheduleRepository)
     }
 
     /**
@@ -146,7 +146,7 @@ class CalendarViewModelTest {
     @Test
     fun `일정 클릭 시 NavigateToScheduleDetail 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
         // Given: 이벤트 수집기 설정
-        val eventCollector = EventCollector<CalendarEvent>()
+        val eventCollector = EventCollector<com.example.feature_calendar.CalendarEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
 
         // When: 일정 클릭
@@ -156,8 +156,8 @@ class CalendarViewModelTest {
         // Then: 이벤트 발생 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is CalendarEvent.NavigateToScheduleDetail)
-        assertEquals(scheduleId, (event as CalendarEvent.NavigateToScheduleDetail).scheduleId)
+        assertTrue(event is com.example.feature_calendar.CalendarEvent.NavigateToScheduleDetail)
+        assertEquals(scheduleId, (event as com.example.feature_calendar.CalendarEvent.NavigateToScheduleDetail).scheduleId)
     }
 
     /**
@@ -166,7 +166,7 @@ class CalendarViewModelTest {
     @Test
     fun `일정 추가 버튼 클릭 시 ShowAddScheduleDialog 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
         // Given: 이벤트 수집기 설정
-        val eventCollector = EventCollector<CalendarEvent>()
+        val eventCollector = EventCollector<com.example.feature_calendar.CalendarEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
 
         // When: 일정 추가 버튼 클릭
@@ -175,7 +175,7 @@ class CalendarViewModelTest {
         // Then: 이벤트 발생 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is CalendarEvent.ShowAddScheduleDialog)
+        assertTrue(event is com.example.feature_calendar.CalendarEvent.ShowAddScheduleDialog)
     }
 
     /**

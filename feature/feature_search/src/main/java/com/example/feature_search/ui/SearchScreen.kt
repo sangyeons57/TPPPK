@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear // 검색어 지우기
 import androidx.compose.material.icons.filled.Search // 검색 아이콘
 import androidx.compose.material3.*
@@ -19,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -31,13 +29,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
 // Removed direct Coil imports
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.core_ui.R
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.domain.model.ui.search.MessageResult
 import com.example.domain.model.ui.search.SearchResultItem
@@ -50,8 +47,6 @@ import com.example.feature_search.viewmodel.SearchUiState
 import com.example.feature_search.viewmodel.SearchViewModel
 // 네비게이션 관련 임포트 업데이트
 import kotlinx.coroutines.flow.collectLatest
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 /**
  * SearchScreen: 검색 화면 (Stateful)
@@ -59,7 +54,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -76,7 +71,7 @@ fun SearchScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is SearchEvent.NavigateToMessageDetail -> {
-                    appNavigator.navigate(NavigationCommand.NavigateToRoute(
+                    navigationManger.navigate(NavigationCommand.NavigateToRoute(
                         destination = NavDestination.fromRoute(AppRoutes.Project.MessageDetail.route),
                         args = mapOf(
                             AppRoutes.Project.ARG_CHANNEL_ID to event.channelId,
@@ -85,13 +80,13 @@ fun SearchScreen(
                     ))
                 }
                 is SearchEvent.NavigateToUserProfile -> {
-                    appNavigator.navigate(NavigationCommand.NavigateToRoute(
+                    navigationManger.navigate(NavigationCommand.NavigateToRoute(
                         destination = NavDestination.fromRoute(AppRoutes.Project.UserProfile.route),
                         args = mapOf(AppRoutes.Project.ARG_USER_ID to event.userId)
                     ))
                 }
                 is SearchEvent.NavigateToMessage -> {
-                    appNavigator.navigate(NavigationCommand.NavigateToRoute(
+                    navigationManger.navigate(NavigationCommand.NavigateToRoute(
                         destination = NavDestination.fromRoute(AppRoutes.Project.MessageDetail.route),
                         args = mapOf(
                             AppRoutes.Project.ARG_CHANNEL_ID to event.channelId,
@@ -115,7 +110,7 @@ fun SearchScreen(
             TopAppBar(
                 title = { Text("검색") },
                 navigationIcon = {
-                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
+                    DebouncedBackButton(onClick = { navigationManger.navigateBack() })
                 },
                 scrollBehavior = scrollBehavior
             )

@@ -74,7 +74,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.ObserveNavigationResult
@@ -101,7 +101,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Calendar24HourScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: Calendar24HourViewModel = hiltViewModel()
 ) {
@@ -109,7 +109,7 @@ fun Calendar24HourScreen(
     var currentUiState = uiState
     val snackbarHostState = remember { SnackbarHostState() }
     var showEditDialog by remember { mutableStateOf<String?>(null) } // 편집 다이얼로그 표시 상태
-    val navController = appNavigator.getNavController() // Get NavController
+    val navController = navigationManger.getNavController() // Get NavController
 
     // 애니메이션 상태
     var addButtonScale by remember { mutableStateOf(1f) }
@@ -152,7 +152,7 @@ fun Calendar24HourScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is Calendar24HourEvent.NavigateBack -> appNavigator.navigateBack()
+                is Calendar24HourEvent.NavigateBack -> navigationManger.navigateBack()
                 is Calendar24HourEvent.NavigateToAddSchedule -> {
                     // 일정 추가 버튼 애니메이션
                     addButtonScale = 0.8f
@@ -161,7 +161,7 @@ fun Calendar24HourScreen(
                     if (currentUiState is Calendar24HourUiState.Success) {
                         val date = currentUiState.selectedDate
                         if (date != null) {
-                            appNavigator.navigate(
+                            navigationManger.navigate(
                                 NavigationCommand.NavigateToRoute.fromRoute(
                                     AppRoutes.Main.Calendar.addSchedule(date.year, date.monthValue, date.dayOfMonth)
                                 )
@@ -172,7 +172,7 @@ fun Calendar24HourScreen(
                     delay(50)
                     addButtonScale = 1f
                 }
-                is Calendar24HourEvent.NavigateToScheduleDetail -> appNavigator.navigate(
+                is Calendar24HourEvent.NavigateToScheduleDetail -> navigationManger.navigate(
                     NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId))
                 )
                 is Calendar24HourEvent.ShowScheduleEditDialog -> showEditDialog = event.scheduleId
@@ -182,7 +182,7 @@ fun Calendar24HourScreen(
     }
 
     ObserveNavigationResult<Boolean>(
-        appNavigator = appNavigator,
+        appNavigator = navigationManger,
         resultKey = REFRESH_SCHEDULE_LIST_KEY
     ) { needsRefresh ->
         if (needsRefresh == true) { // Explicitly check for true

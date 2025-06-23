@@ -4,9 +4,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.feature_main.viewmodel.CalendarUiState
-import com.example.feature_main.viewmodel.CalendarViewModel
-import com.example.feature_main.viewmodel.ScheduleItem
+import com.example.feature_calendar.CalendarUiState
+import com.example.feature_calendar.CalendarViewModel
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -15,7 +14,6 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -38,12 +36,12 @@ class CalendarScreenTest {
     /**
      * 모의 ViewModel 객체
      */
-    private lateinit var mockViewModel: CalendarViewModel
+    private lateinit var mockViewModel: com.example.feature_calendar.CalendarViewModel
 
     /**
      * 테스트용 UI 상태 Flow
      */
-    private val mockUiStateFlow = MutableStateFlow(CalendarUiState())
+    private val mockUiStateFlow = MutableStateFlow(com.example.feature_calendar.CalendarUiState())
 
     /**
      * 테스트 설정
@@ -51,7 +49,7 @@ class CalendarScreenTest {
     @Before
     fun setup() {
         // 모의 ViewModel 설정
-        mockViewModel = mock(CalendarViewModel::class.java)
+        mockViewModel = mock(com.example.feature_calendar.CalendarViewModel::class.java)
         `when`(mockViewModel.uiState).thenReturn(mockUiStateFlow)
     }
 
@@ -67,7 +65,7 @@ class CalendarScreenTest {
         val currentMonthStr = currentMonth.format(monthYearFormatter)
 
         // 모의 UI 상태 설정
-        val testState = CalendarUiState(
+        val testState = com.example.feature_calendar.CalendarUiState(
             currentYearMonth = currentMonth,
             selectedDate = today,
             datesInMonth = generateMockDates(currentMonth)
@@ -76,7 +74,7 @@ class CalendarScreenTest {
 
         // CalendarScreen 표시
         composeTestRule.setContent {
-            CalendarScreen(
+            com.example.feature_calendar.CalendarScreen(
                 onClickFAB = {},
                 onNavigateToScheduleDetail = {},
                 onNavigateToCalendar24Hour = { _, _, _ -> },

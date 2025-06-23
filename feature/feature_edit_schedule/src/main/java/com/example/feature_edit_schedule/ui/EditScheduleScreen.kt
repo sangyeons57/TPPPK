@@ -45,7 +45,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
 import com.example.feature_edit_schedule.viewmodel.EditScheduleEvent
 import com.example.feature_edit_schedule.viewmodel.EditScheduleUiState
@@ -61,7 +61,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditScheduleScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: EditScheduleViewModel = hiltViewModel()
 ) {
@@ -72,11 +72,11 @@ fun EditScheduleScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is EditScheduleEvent.NavigateBack -> {
-                    appNavigator.navigateBack()
+                    navigationManger.navigateBack()
                 }
                 is EditScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
-                    appNavigator.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
-                    appNavigator.navigateBack()
+                    navigationManger.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
+                    navigationManger.navigateBack()
                 }
                 is EditScheduleEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)

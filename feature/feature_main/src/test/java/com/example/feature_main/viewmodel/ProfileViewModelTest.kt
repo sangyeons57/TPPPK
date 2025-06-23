@@ -38,7 +38,7 @@ class ProfileViewModelTest {
     @get:Rule
     val coroutinesTestRule = CoroutinesTestRule()
 
-    private lateinit var viewModel: ProfileViewModel
+    private lateinit var viewModel: com.example.feature_profile.viewmodel.ProfileViewModel
 
     // Mock UseCases
     private lateinit var getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase
@@ -69,7 +69,7 @@ class ProfileViewModelTest {
         // Default success scenario for user profile loading
         coEvery { getCurrentUserStreamUseCase() } returns flowOf(Result.success(testUser))
 
-        viewModel = ProfileViewModel(
+        viewModel = com.example.feature_profile.viewmodel.ProfileViewModel(
             getCurrentUserStreamUseCase,
             logoutUseCase,
             updateUserStatusUseCase,
@@ -97,7 +97,7 @@ class ProfileViewModelTest {
 
         // When: Re-initialize ViewModel or explicitly call loadUserProfile if it's public
         // For init block, re-initialize
-        viewModel = ProfileViewModel(
+        viewModel = com.example.feature_profile.viewmodel.ProfileViewModel(
             getCurrentUserStreamUseCase,
             logoutUseCase,
             updateUserStatusUseCase,
@@ -115,8 +115,8 @@ class ProfileViewModelTest {
 
             // Check for snackbar event
             val event = awaitItem()
-            assertTrue(event is ProfileEvent.ShowSnackbar)
-            assertEquals("프로필 정보를 불러오지 못했습니다: ${exception.message}", (event as ProfileEvent.ShowSnackbar).message)
+            assertTrue(event is com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar)
+            assertEquals("프로필 정보를 불러오지 못했습니다: ${exception.message}", (event as com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar).message)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -132,12 +132,13 @@ class ProfileViewModelTest {
         coEvery { getCurrentUserStreamUseCase() } returns flowOf(Result.success(testUser), Result.success(updatedUser))
 
 
-        viewModel = ProfileViewModel( // Re-init to ensure loadUserProfile is called after mock setup
-            getCurrentUserStreamUseCase,
-            logoutUseCase,
-            updateUserStatusUseCase,
-            updateUserProfileImageUseCase
-        )
+        viewModel =
+            com.example.feature_profile.viewmodel.ProfileViewModel( // Re-init to ensure loadUserProfile is called after mock setup
+                getCurrentUserStreamUseCase,
+                logoutUseCase,
+                updateUserStatusUseCase,
+                updateUserProfileImageUseCase
+            )
         runCurrent() // Initial load
 
         viewModel.eventFlow.test {
@@ -152,8 +153,8 @@ class ProfileViewModelTest {
             
             // Verify snackbar
             val event = awaitItem() // This should be the snackbar from changeStatusMessage
-            assertTrue(event is ProfileEvent.ShowSnackbar)
-            assertEquals("상태 메시지 변경됨", (event as ProfileEvent.ShowSnackbar).message)
+            assertTrue(event is com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar)
+            assertEquals("상태 메시지 변경됨", (event as com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar).message)
 
             // Verify loadUserProfile was called by checking if getCurrentUserStreamUseCase was called again
             // For simplicity, we'll assume the state reflects the *final* loaded profile
@@ -184,8 +185,8 @@ class ProfileViewModelTest {
             runCurrent()
 
             val event = awaitItem()
-            assertTrue(event is ProfileEvent.ShowSnackbar)
-            assertEquals("상태 메시지 변경 실패: ${exception.message}", (event as ProfileEvent.ShowSnackbar).message)
+            assertTrue(event is com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar)
+            assertEquals("상태 메시지 변경 실패: ${exception.message}", (event as com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar).message)
 
             val uiState = viewModel.uiState.value
             assertFalse(uiState.isLoading) // Should not be loading indefinitely
@@ -220,7 +221,7 @@ class ProfileViewModelTest {
          val initialFlow = MutableSharedFlow<Result<User>>()
          coEvery { getCurrentUserStreamUseCase() } returns initialFlow
 
-        viewModel = ProfileViewModel(
+        viewModel = com.example.feature_profile.viewmodel.ProfileViewModel(
             getCurrentUserStreamUseCase,
             logoutUseCase,
             updateUserStatusUseCase,
@@ -242,8 +243,8 @@ class ProfileViewModelTest {
             assertFalse(viewModel.uiState.value.showChangeStatusDialog)
 
             val event = awaitItem()
-            assertTrue(event is ProfileEvent.ShowSnackbar)
-            assertEquals("상태가 '$statusName'(으)로 변경되었습니다.", (event as ProfileEvent.ShowSnackbar).message)
+            assertTrue(event is com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar)
+            assertEquals("상태가 '$statusName'(으)로 변경되었습니다.", (event as com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar).message)
             
             // Verify loadUserProfile was called (which in turn calls getCurrentUserStreamUseCase)
             // This coVerify might be tricky if called multiple times in setup/init.
@@ -261,7 +262,7 @@ class ProfileViewModelTest {
             viewModel.onLogoutClick()
             runCurrent()
             val event = awaitItem()
-            assertTrue(event is ProfileEvent.LogoutCompleted)
+            assertTrue(event is com.example.feature_profile.viewmodel.ProfileEvent.LogoutCompleted)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -274,8 +275,8 @@ class ProfileViewModelTest {
             viewModel.onLogoutClick()
             runCurrent()
             val event = awaitItem()
-            assertTrue(event is ProfileEvent.ShowSnackbar)
-            assertEquals("로그아웃 실패", (event as ProfileEvent.ShowSnackbar).message)
+            assertTrue(event is com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar)
+            assertEquals("로그아웃 실패", (event as com.example.feature_profile.viewmodel.ProfileEvent.ShowSnackbar).message)
             cancelAndIgnoreRemainingEvents()
         }
     }

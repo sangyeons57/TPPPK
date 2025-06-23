@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check // 수락 아이콘
 import androidx.compose.material.icons.filled.Close // 거절 아이콘
 import androidx.compose.material3.*
@@ -13,22 +12,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 // Removed direct Coil imports, will use UserProfileImage
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.feature_friends.viewmodel.AcceptFriendsEvent
 import com.example.feature_friends.viewmodel.AcceptFriendsViewModel
 import com.example.feature_friends.viewmodel.FriendRequestItem
 // ViewModel 및 관련 상태/이벤트/UI 모델 Import
 import kotlinx.coroutines.flow.collectLatest
-import com.example.core_ui.R
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 
@@ -38,7 +34,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AcceptFriendsScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: AcceptFriendsViewModel = hiltViewModel()
 ) {
@@ -50,7 +46,7 @@ fun AcceptFriendsScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AcceptFriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is AcceptFriendsEvent.NavigateBack -> appNavigator.navigateBack()
+                is AcceptFriendsEvent.NavigateBack -> navigationManger.navigateBack()
                 // NavigateBack 이벤트는 Screen에서 처리하지 않고, 필요 시 ViewModel에서 직접 호출 가능
             }
         }
@@ -63,7 +59,7 @@ fun AcceptFriendsScreen(
             TopAppBar(
                 title = { Text("친구 요청") },
                 navigationIcon = {
-                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
+                    DebouncedBackButton(onClick = { navigationManger.navigateBack() })
                 }
             )
         }

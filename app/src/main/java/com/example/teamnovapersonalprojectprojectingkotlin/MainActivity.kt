@@ -1,7 +1,6 @@
 package com.example.teamnovapersonalprojectprojectingkotlin
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,7 +22,7 @@ import io.sentry.Sentry
 import io.sentry.SpanStatus
 import javax.inject.Inject
 import androidx.compose.runtime.LaunchedEffect
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 
 @AndroidEntryPoint // Hilt 사용 시 Activity에 추가
 class MainActivity : ComponentActivity() {
@@ -32,7 +31,7 @@ class MainActivity : ComponentActivity() {
     private var appStartTransaction: ITransaction? = null
     
     @Inject
-    lateinit var appNavigator: AppNavigator
+    lateinit var navigationManger: NavigationManger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 앱 시작 성능 측정 시작
@@ -61,7 +60,7 @@ class MainActivity : ComponentActivity() {
             
             // NavigationHandler에 최상위 NavController 설정 (한 번만 호출)
             LaunchedEffect(navController) {
-                appNavigator.setNavController(navController)
+                navigationManger.setNavController(navController)
                 setupNavigationTracking(navController)
             }
 
@@ -72,7 +71,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppNavigationGraph(
                         navController = navController,
-                        appNavigator = appNavigator,
+                        navigationManger = navigationManger,
                         startDestination = decideStartDestination()
                     )
                 }

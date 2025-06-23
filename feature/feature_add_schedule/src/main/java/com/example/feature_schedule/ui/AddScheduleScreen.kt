@@ -48,7 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_schedule.viewmodel.AddScheduleEvent
@@ -67,7 +67,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddScheduleScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: AddScheduleViewModel = hiltViewModel()
 ) {
@@ -78,11 +78,11 @@ fun AddScheduleScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AddScheduleEvent.NavigateBack -> {
-                    appNavigator.navigateBack()
+                    navigationManger.navigateBack()
                 }
                 is AddScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
-                    appNavigator.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
-                    appNavigator.navigateBack()
+                    navigationManger.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
+                    navigationManger.navigateBack()
                 }
                 is AddScheduleEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
@@ -121,7 +121,7 @@ fun AddScheduleScreen(
             TopAppBar(
                 title = { Text("일정 추가") },
                 navigationIcon = {
-                    IconButton(onClick = { appNavigator.navigateBack() }) {
+                    IconButton(onClick = { navigationManger.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 }

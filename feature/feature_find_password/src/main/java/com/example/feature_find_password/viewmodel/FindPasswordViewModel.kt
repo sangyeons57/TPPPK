@@ -3,8 +3,8 @@ package com.example.feature_find_password.viewmodel
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.usecase.auth.GetAuthErrorMessageUseCase
-import com.example.domain.usecase.auth.RequestPasswordResetUseCase
+import com.example.domain.provider.auth.AuthPasswordUseCaseProvider
+import com.example.domain.provider.auth.AuthValidationUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,10 +48,13 @@ sealed class FindPasswordEvent {
  */
 @HiltViewModel
 class FindPasswordViewModel @Inject constructor(
-    private val requestPasswordResetUseCase: RequestPasswordResetUseCase,
-    private val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
-    // Removed: verifyPasswordResetCodeUseCase, resetPasswordUseCase
+    private val authPasswordUseCaseProvider: AuthPasswordUseCaseProvider,
+    private val authValidationUseCaseProvider: AuthValidationUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹들
+    private val authPasswordUseCases = authPasswordUseCaseProvider.create()
+    private val authValidationUseCases = authValidationUseCaseProvider.create()
 
     private val _uiState = MutableStateFlow(FindPasswordUiState())
     val uiState: StateFlow<FindPasswordUiState> = _uiState.asStateFlow()
@@ -84,7 +87,7 @@ class FindPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             // RequestPasswordResetUseCase 호출
-            val result = requestPasswordResetUseCase(email)
+            val result = authPasswordUseCases.requestPasswordResetUseCase(email)
 
             result.onSuccess {
                 viewModelScope.launch {
@@ -94,7 +97,7 @@ class FindPasswordViewModel @Inject constructor(
             }.onFailure { exception ->
                 viewModelScope.launch {
                     // Exception을 AuthErrorType.RESET_PASSWORD_FAILURE로 처리하거나 구체적인 오류 메시지 생성
-                    _uiState.update { it.copy(isLoading = false, errorMessage = getAuthErrorMessageUseCase(exception)) }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = authValidationUseCases.getAuthErrorMessageUseCase(exception)) }
                 }
             }
         }

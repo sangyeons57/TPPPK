@@ -5,7 +5,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
@@ -42,8 +41,8 @@ class HomeScreenTest {
             )
         }
         
-        val uiState = HomeUiState(
-            selectedTopSection = TopSection.PROJECTS,
+        val uiState = com.example.feature_home.HomeUiState(
+            selectedTopSection = com.example.feature_home.TopSection.PROJECTS,
             projects = projects,
             isLoading = false
         )
@@ -51,11 +50,11 @@ class HomeScreenTest {
         // When: HomeContent 렌더링
         composeTestRule.setContent {
             // 간단한 fake ViewModel 생성
-            val fakeViewModel = object : HomeViewModel() {
+            val fakeViewModel = object : com.example.feature_home.HomeViewModel() {
                 // 필요한 메서드만 재정의
             }
-            
-            HomeContent(
+
+            com.example.feature_home.HomeContent(
                 uiState = uiState,
                 viewModel = fakeViewModel
             )
@@ -84,17 +83,17 @@ class HomeScreenTest {
             )
         }
         
-        val uiState = HomeUiState(
-            selectedTopSection = TopSection.DMS,
+        val uiState = com.example.feature_home.HomeUiState(
+            selectedTopSection = com.example.feature_home.TopSection.DMS,
             dms = dms,
             isLoading = false
         )
         
         // When: HomeContent 렌더링
         composeTestRule.setContent {
-            val fakeViewModel = object : HomeViewModel() {}
-            
-            HomeContent(
+            val fakeViewModel = object : com.example.feature_home.HomeViewModel() {}
+
+            com.example.feature_home.HomeContent(
                 uiState = uiState,
                 viewModel = fakeViewModel
             )
@@ -118,15 +117,15 @@ class HomeScreenTest {
     @Test
     fun homeScreen_whenLoading_showsLoadingIndicator() {
         // Given: 로딩 중인 UI 상태
-        val uiState = HomeUiState(
+        val uiState = com.example.feature_home.HomeUiState(
             isLoading = true
         )
         
         // When: HomeContent 렌더링
         composeTestRule.setContent {
-            val fakeViewModel = object : HomeViewModel() {}
-            
-            HomeContent(
+            val fakeViewModel = object : com.example.feature_home.HomeViewModel() {}
+
+            com.example.feature_home.HomeContent(
                 uiState = uiState,
                 viewModel = fakeViewModel
             )
@@ -143,17 +142,17 @@ class HomeScreenTest {
     @Test
     fun homeScreen_whenDmsEmpty_showsEmptyMessage() {
         // Given: 빈 DM 목록을 가진 UI 상태
-        val uiState = HomeUiState(
-            selectedTopSection = TopSection.DMS,
+        val uiState = com.example.feature_home.HomeUiState(
+            selectedTopSection = com.example.feature_home.TopSection.DMS,
             dms = emptyList(),
             isLoading = false
         )
         
         // When: HomeContent 렌더링
         composeTestRule.setContent {
-            val fakeViewModel = object : HomeViewModel() {}
-            
-            HomeContent(
+            val fakeViewModel = object : com.example.feature_home.HomeViewModel() {}
+
+            com.example.feature_home.HomeContent(
                 uiState = uiState,
                 viewModel = fakeViewModel
             )
@@ -173,7 +172,7 @@ class HomeScreenTest {
         
         // When: ProjectListItem 렌더링 및 클릭
         composeTestRule.setContent {
-            ProjectListItem(
+            com.example.feature_home.ProjectListItem(
                 projectName = "테스트 프로젝트",
                 onClick = { clicked = true }
             )
@@ -203,7 +202,7 @@ class HomeScreenTest {
         
         // When: DmListItem 렌더링 및 클릭
         composeTestRule.setContent {
-            DmListItem(
+            com.example.feature_home.DmListItem(
                 dm = testDm,
                 onClick = { clicked = true }
             )
@@ -222,8 +221,8 @@ class HomeScreenTest {
     @Test
     fun mainContentTopSection_projects_rendersCorrectly() {
         // Given: 프로젝트 모드 UI 상태
-        val uiState = HomeUiState(
-            selectedTopSection = TopSection.PROJECTS
+        val uiState = com.example.feature_home.HomeUiState(
+            selectedTopSection = com.example.feature_home.TopSection.PROJECTS
         )
         
         // When: MainContentTopSection 렌더링
@@ -243,8 +242,8 @@ class HomeScreenTest {
     @Test
     fun mainContentTopSection_dms_rendersCorrectly() {
         // Given: DM 모드 UI 상태
-        val uiState = HomeUiState(
-            selectedTopSection = TopSection.DMS
+        val uiState = com.example.feature_home.HomeUiState(
+            selectedTopSection = com.example.feature_home.TopSection.DMS
         )
         
         // When: MainContentTopSection 렌더링
@@ -299,24 +298,24 @@ class HomeScreenTest {
     @Test
     fun homeScreen_whenProfileAreaClicked_switchesToDmMode() {
         // Given: 모드 전환 추적 변수
-        var selectedMode: TopSection? = null
+        var selectedMode: com.example.feature_home.TopSection? = null
         
         // Given: 프로젝트 모드 UI 상태 및 테스트용 ViewModel
-        val uiState = HomeUiState(
-            selectedTopSection = TopSection.PROJECTS,
+        val uiState = com.example.feature_home.HomeUiState(
+            selectedTopSection = com.example.feature_home.TopSection.PROJECTS,
             isLoading = false
         )
         
         // 모드 변경을 추적하는 Fake ViewModel
-        val fakeViewModel = object : HomeViewModel() {
-            override fun onTopSectionSelect(section: TopSection) {
+        val fakeViewModel = object : com.example.feature_home.HomeViewModel() {
+            override fun onTopSectionSelect(section: com.example.feature_home.TopSection) {
                 selectedMode = section
             }
         }
         
         // When: HomeContent 렌더링
         composeTestRule.setContent {
-            HomeContent(
+            com.example.feature_home.HomeContent(
                 uiState = uiState,
                 viewModel = fakeViewModel
             )
@@ -326,7 +325,7 @@ class HomeScreenTest {
         composeTestRule.onNodeWithText("Me").performClick()
         
         // Then: 모드가 DMS로 변경되었는지 확인
-        assert(selectedMode == TopSection.DMS) { "프로필 영역 클릭 시 DMS 모드로 전환되지 않음" }
+        assert(selectedMode == com.example.feature_home.TopSection.DMS) { "프로필 영역 클릭 시 DMS 모드로 전환되지 않음" }
     }
     
     /**
@@ -367,17 +366,17 @@ class HomeScreenTest {
     @Test
     fun homeScreen_whenProjectsEmpty_showsEmptyProjectsList() {
         // Given: 빈 프로젝트 목록을 가진 UI 상태
-        val uiState = HomeUiState(
-            selectedTopSection = TopSection.PROJECTS,
+        val uiState = com.example.feature_home.HomeUiState(
+            selectedTopSection = com.example.feature_home.TopSection.PROJECTS,
             projects = emptyList(),
             isLoading = false
         )
         
         // When: HomeContent 렌더링
         composeTestRule.setContent {
-            val fakeViewModel = object : HomeViewModel() {}
-            
-            HomeContent(
+            val fakeViewModel = object : com.example.feature_home.HomeViewModel() {}
+
+            com.example.feature_home.HomeContent(
                 uiState = uiState,
                 viewModel = fakeViewModel
             )

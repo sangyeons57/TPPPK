@@ -59,8 +59,8 @@ and Firebase.
 
 - `core_common`: Shared utilities, error handling, dispatcher providers, custom Result wrapper
 - `core_ui`: Reusable UI components, Material 3 theme, common Compose utilities
-- `core_navigation`: Navigation architecture using custom `AppNavigator` interface and
-  `NavigationManager`
+- `core_navigation`: Modern type-safe navigation system with `NavigationManger` interface and
+  `TypeSafeRoute` architecture
 - `core_fcm`: Firebase Cloud Messaging implementation
 - `core_logging`: Sentry-based logging abstraction
 
@@ -69,6 +69,7 @@ and Firebase.
 - Pure business logic, models, repository interfaces, and use cases
 - Framework-independent with no external dependencies
 - Use cases implement single responsibility principle and cannot call other use cases
+- **UseCase Provider Pattern**: UseCases are organized into semantic groups via Provider classes for better maintainability and consistent DI integration
 
 **Data Layer (`:data`)**
 
@@ -91,11 +92,13 @@ and Firebase.
 
 **Data Flow**: UI → ViewModel → UseCase → Repository → DataSource → External APIs/Database
 
+**UseCase Provider Pattern**: UseCases are grouped semantically into Provider classes that handle repository creation and UseCase instantiation. ViewModels inject Providers instead of individual UseCases.
+
 **Result Handling**: Uses custom `CustomResult<S, E>` wrapper for explicit success/failure handling
 throughout all layers
 
-**Navigation**: Centralized navigation via `AppNavigator` interface with `NavigationManager`
-implementation, routes defined in `AppRoutes`
+**Navigation**: Modern type-safe navigation system via `NavigationManger` interface with direct
+navigation methods, `TypeSafeRoute` system, and dedicated `NavigationResultManager`
 
 **Time Management**: All server timestamps stored as UTC Instant, converted to user timezone for
 display
@@ -149,10 +152,11 @@ display
 
 **Architecture Rules:**
 
-- ViewModels MUST use Use Cases, never Repositories directly
+- ViewModels MUST use UseCase Providers, never individual UseCases or Repositories directly
 - Use Cases cannot call other Use Cases - delegate shared logic to Repositories
 - All network/database operations return `CustomResult<Success, Error>`
-- Navigation uses `AppNavigator` interface, never `NavController` directly
+- Navigation uses `NavigationManger` interface, never `NavController` directly
+- UseCases are organized into semantic groups (5-8 UseCases per Provider) for maintainability
 
 **Module Dependencies:**
 
@@ -166,22 +170,24 @@ display
 - Store all timestamps as UTC Instant on server
 - Convert to user timezone (`ZoneId.systemDefault()`) for display
 - Use `LocalDateTime`, `ZonedDateTime` appropriately per context
+- Use `DateTimeUtil.kt` for date and time formatting
 
 ## Common Development Workflows
 
 **Adding a New Feature:**
 
 1. Define routes in `AppRoutes`
-2. Create use cases in domain layer
-3. Implement repository if needed in data layer
-4. Create feature module with UI and ViewModel
-5. Add navigation integration in app module
-6. Write comprehensive tests
+2. Create use cases in appropriate semantic domain directory
+3. Add UseCases to relevant Provider or create new Provider if needed
+4. Implement repository if needed in data layer
+5. Create feature module with UI and ViewModel using Providers
+6. Add navigation integration in app module
+7. Write comprehensive tests for UseCases and ViewModels
 
 **Navigation Implementation:**
 
 1. Define route in `AppRoutes.kt`
-2. Use `AppNavigator.navigateTo()` in ViewModels
+2. Use `NavigationManger.navigateTo()` in ViewModels
 3. Handle parameters via `SavedStateHandle` extensions
 4. Register routes in appropriate `NavHost`
 
@@ -203,3 +209,203 @@ viewModelScope.launch {
     }
 }
 ```
+
+## UseCase Provider Pattern
+
+This project uses a Provider Pattern for organizing and managing UseCases, promoting better maintainability and consistent dependency injection.
+
+### Provider Organization
+
+**Auth Domain Providers:**
+- `AuthSessionUseCaseProvider`: Login, logout, session management (4 UseCases)
+- `AuthRegistrationUseCaseProvider`: Sign-up, email verification (4 UseCases)
+- `AuthPasswordUseCaseProvider`: Password reset, validation (5 UseCases)
+- `AuthAccountUseCaseProvider`: Account deletion, reactivation (3 UseCases)
+- `AuthValidationUseCaseProvider`: Email/nickname validation, error messages (5 UseCases)
+
+**Project Domain Providers:**
+- `CoreProjectUseCaseProvider`: Project CRUD operations (7 UseCases)
+- `ProjectStructureUseCaseProvider`: Category management, structure operations (10 UseCases)
+- `ProjectChannelUseCaseProvider`: Channel management (7 UseCases)
+- `ProjectMemberUseCaseProvider`: Member management (7 UseCases)
+- `ProjectRoleUseCaseProvider`: Role and permissions management (8 UseCases)
+- `ProjectAssetsUseCaseProvider`: File uploads, media management (1 UseCase)
+
+### UseCase Directory Structure
+
+```
+/domain/usecase/
+├── auth/
+│   ├── session/        # Login, logout, session checks
+│   ├── registration/   # Sign-up, email verification
+│   ├── password/       # Password reset, validation
+│   ├── account/        # Account deletion, reactivation
+│   └── validation/     # Email/nickname validation
+├── project/
+│   ├── core/           # Project CRUD operations
+│   ├── structure/      # Category and structure management
+│   ├── channel/        # Channel operations
+│   ├── member/         # Member management
+│   ├── role/           # Role and permissions
+│   ├── assets/         # File uploads and media
+│   └── category/       # Category domain operations
+├── user/               # User profile operations
+├── dm/                 # Direct messaging
+├── friend/             # Friend relationships
+├── schedule/           # Calendar and scheduling
+└── search/             # Search functionality
+```
+
+### Provider Usage Pattern
+
+**In ViewModels:**
+```kotlin
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
+) : ViewModel() {
+    
+    // Provider creates UseCase group with repositories
+    private val authUseCases = authSessionUseCaseProvider.create()
+    
+    fun login(email: String, password: String) {
+        authUseCases.loginUseCase(email, password)
+    }
+}
+```
+
+**Provider Implementation Pattern:**
+```kotlin
+@Singleton
+class AuthSessionUseCaseProvider @Inject constructor(
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+) {
+    fun create(): AuthSessionUseCases {
+        val authRepository = authRepositoryFactory.create(AuthRepositoryFactoryContext())
+        
+        return AuthSessionUseCases(
+            loginUseCase = LoginUseCase(authRepository),
+            logoutUseCase = LogoutUseCase(authRepository),
+            // ... other UseCases
+            authRepository = authRepository
+        )
+    }
+}
+```
+
+### Adding New UseCases
+
+1. Create UseCase in appropriate semantic directory
+2. Add to relevant Provider class
+3. Update Provider's UseCases data class
+4. Register Provider in `UseCaseProviderModule` if new
+5. Update ViewModel to use Provider
+
+## Navigation System
+
+This project uses a modern, type-safe navigation architecture built around three core components:
+
+### Navigation Components
+
+**NavigationManger Interface**
+- Primary navigation API for feature modules
+- Provides direct navigation methods instead of command patterns
+- Injected via Hilt into ViewModels and Composables
+
+```kotlin
+interface NavigationManger {
+    fun navigateBack(): Boolean
+    fun navigateTo(route: TypeSafeRoute, navOptions: NavOptions? = null)
+    fun navigateToProjectDetails(projectId: String, navOptions: NavOptions? = null)
+    fun navigateToChat(channelId: String, messageId: String? = null, navOptions: NavOptions? = null)
+    // Additional direct navigation methods...
+}
+```
+
+**TypeSafeRoute System**
+- Compile-time type safety for navigation arguments
+- Uses Kotlinx Serialization for route generation
+- Eliminates string-based navigation errors
+
+```kotlin
+@Serializable
+sealed interface TypeSafeRoute
+
+@Serializable
+data class ProjectDetailRoute(val projectId: String) : TypeSafeRoute
+
+@Serializable
+data class ChatRoute(val channelId: String, val messageId: String? = null) : TypeSafeRoute
+```
+
+**NavigationResultManager**
+- Dedicated lifecycle-aware result handling using SavedStateHandle
+- Type-safe result passing between screens
+- Automatic cleanup of consumed results
+
+```kotlin
+// Setting results
+navigationResultManager.setResult(navController, "project_created", project)
+
+// Observing results in Composables
+ObserveNavigationResult(navController, navigationResultManager, "project_created") { project ->
+    // Handle result
+}
+```
+
+### Navigation Usage Patterns
+
+**In ViewModels:**
+```kotlin
+@HiltViewModel
+class AddProjectViewModel @Inject constructor(
+    private val navigationManger: NavigationManger
+) : ViewModel() {
+    
+    fun onProjectCreated() {
+        navigationManger.navigateBack()
+    }
+    
+    fun navigateToProjectDetails(projectId: String) {
+        navigationManger.navigateToProjectDetails(projectId)
+    }
+}
+```
+
+**In Composables:**
+```kotlin
+@Composable
+fun AddProjectScreen(
+    navigationManger: NavigationManger,
+    viewModel: AddProjectViewModel = hiltViewModel()
+) {
+    // Direct usage in UI events
+    DebouncedBackButton(onClick = {
+        navigationManger.navigateBack()
+    })
+}
+```
+
+**Route Registration in AppNavigationGraph.kt:**
+```kotlin
+// Modern pattern with type-safe argument extraction
+safeComposable(
+    route = AppRoutes.Project.settingsRoute(),
+    arguments = projectArguments()
+) { backStackEntry ->
+    val args = backStackEntry.extractProjectArguments()
+    ProjectSettingScreen(
+        projectId = args.projectId,
+        navigationManger = navigationManger
+    )
+}
+```
+
+### Migration from Legacy Navigation
+
+The navigation system has been modernized from a command-based architecture. Key changes:
+
+- **Removed**: NavigationCommand pattern (was over-engineered)
+- **Added**: Direct navigation methods in NavigationManger interface
+- **Improved**: Type-safe routes with Kotlinx Serialization
+- **Enhanced**: Dedicated result handling with NavigationResultManager

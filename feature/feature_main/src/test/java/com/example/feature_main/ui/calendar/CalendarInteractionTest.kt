@@ -2,7 +2,7 @@ package com.example.feature_main.ui.calendar
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import com.example.feature_main.viewmodel.CalendarUiState
+import com.example.feature_calendar.CalendarUiState
 import com.example.feature_main.viewmodel.ScheduleItem
 import org.junit.Before
 import org.junit.Rule
@@ -69,7 +69,7 @@ class CalendarInteractionTest {
     fun `when date is clicked then callback is invoked correctly`() {
         // Given: 테스트할 날짜와 상태
         val clickableDate = testDate.plusDays(2)
-        val state = CalendarUiState(
+        val state = com.example.feature_calendar.CalendarUiState(
             currentYearMonth = testYearMonth,
             selectedDate = testDate,
             schedules = testSchedules
@@ -77,7 +77,7 @@ class CalendarInteractionTest {
         
         // When: CalendarGrid 컴포넌트를 렌더링하고 날짜 클릭
         composeTestRule.setContent {
-            CalendarGrid(
+            com.example.feature_calendar.CalendarGrid(
                 currentYearMonth = state.currentYearMonth,
                 selectedDate = state.selectedDate,
                 schedulesByDate = state.schedulesByDate,
@@ -103,7 +103,7 @@ class CalendarInteractionTest {
     @Test
     fun `when navigation buttons are clicked then callbacks are invoked correctly`() {
         // Given: 테스트할 상태
-        val state = CalendarUiState(
+        val state = com.example.feature_calendar.CalendarUiState(
             currentYearMonth = testYearMonth,
             selectedDate = testDate,
             schedules = testSchedules
@@ -111,7 +111,7 @@ class CalendarInteractionTest {
         
         // When: MonthHeader 컴포넌트를 렌더링
         composeTestRule.setContent {
-            MonthHeader(
+            com.example.feature_calendar.MonthHeader(
                 currentYearMonth = state.currentYearMonth,
                 onPreviousMonthClick = {
                     previousMonthClickedCount++
@@ -144,7 +144,7 @@ class CalendarInteractionTest {
     fun `when schedule item is clicked then callback is invoked correctly`() {
         // When: ScheduleSection 컴포넌트를 렌더링
         composeTestRule.setContent {
-            ScheduleSection(
+            com.example.feature_calendar.ScheduleSection(
                 schedules = testSchedules,
                 onScheduleClick = { scheduleId ->
                     scheduleClickedCount++
@@ -172,8 +172,8 @@ class CalendarInteractionTest {
         
         // When: 전체 CalendarScreen 컴포넌트를 렌더링
         composeTestRule.setContent {
-            CalendarContent(
-                uiState = CalendarUiState(
+            com.example.feature_calendar.CalendarContent(
+                uiState = com.example.feature_calendar.CalendarUiState(
                     currentYearMonth = testYearMonth,
                     selectedDate = testDate,
                     schedules = testSchedules

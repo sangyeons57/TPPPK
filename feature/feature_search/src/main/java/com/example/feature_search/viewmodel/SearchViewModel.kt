@@ -7,7 +7,7 @@ import com.example.domain.model.ui.search.MessageResult
 import com.example.domain.model.ui.search.SearchResultItem
 import com.example.domain.model.ui.search.SearchScope
 import com.example.domain.model.ui.search.UserResult
-import com.example.domain.usecase.search.SearchUseCase
+import com.example.domain.provider.search.SearchUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

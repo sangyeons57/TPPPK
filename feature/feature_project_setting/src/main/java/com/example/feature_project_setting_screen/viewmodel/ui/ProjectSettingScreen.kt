@@ -4,9 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
@@ -22,22 +20,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.base.Category // May become unused
-import com.example.domain.model.base.ProjectChannel // May become unused
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import com.example.feature_project_setting_screen.viewmodel.viewmodel.ProjectSettingEvent
 import com.example.feature_project_setting_screen.viewmodel.viewmodel.ProjectSettingUiState
 import com.example.feature_project_setting_screen.viewmodel.viewmodel.ProjectSettingViewModel
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
-import java.time.Instant
 
 /**
  * ProjectSettingScreen: 프로젝트 설정 화면 (Stateful)
@@ -46,7 +40,7 @@ import java.time.Instant
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectSettingScreen(
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: ProjectSettingViewModel = hiltViewModel()
 ) {
@@ -62,14 +56,14 @@ fun ProjectSettingScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProjectSettingEvent.NavigateBack -> appNavigator.navigateBack()
+                is ProjectSettingEvent.NavigateBack -> navigationManger.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is ProjectSettingEvent.NavigateToEditCategory -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToCreateCategory -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createCategory(event.projectId)))
-                is ProjectSettingEvent.NavigateToEditChannel -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
-                is ProjectSettingEvent.NavigateToCreateChannel -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToMemberList -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.memberList(event.projectId)))
-                is ProjectSettingEvent.NavigateToRoleList -> appNavigator.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.roleList(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditCategory -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToCreateCategory -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createCategory(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditChannel -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
+                is ProjectSettingEvent.NavigateToCreateChannel -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
+                is ProjectSettingEvent.NavigateToMemberList -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.memberList(event.projectId)))
+                is ProjectSettingEvent.NavigateToRoleList -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.roleList(event.projectId)))
                 is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
                 is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
             }
@@ -83,7 +77,7 @@ fun ProjectSettingScreen(
             TopAppBar(
                 title = { Text("프로젝트 설정") },
                 navigationIcon = {
-                    DebouncedBackButton(onClick = { appNavigator.navigateBack() })
+                    DebouncedBackButton(onClick = { navigationManger.navigateBack() })
                 }
                 // TODO: 프로젝트 이름 변경, 프로젝트 삭제 등 추가 작업 버튼 (선택적)
             )
@@ -420,7 +414,7 @@ private fun RenameProjectDialogPreview() {
 private fun ProjectSettingScreenPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectSettingScreen(
-            appNavigator = TODO(),
+            navigationManger = TODO(),
             modifier = TODO(),
             viewModel = TODO()
         )

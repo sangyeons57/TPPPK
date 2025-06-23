@@ -28,24 +28,28 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
-import com.example.core_navigation.core.AppNavigator
-import com.example.core_navigation.core.NavDestination
-import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.destination.AppRoutes
-import com.example.feature_auth.ui.LoginScreen
-import com.example.feature_auth.ui.PrivacyPolicyScreen
-import com.example.feature_auth.ui.SignUpScreen
+import com.example.core_navigation.extension.extractProjectArguments
+import com.example.core_navigation.extension.extractCalendarArguments
+import com.example.core_navigation.extension.safeComposable
+import com.example.core_navigation.extension.projectArguments
+import com.example.core_navigation.extension.calendarArguments
+import com.example.feature_login.LoginScreen
+import com.example.feature_privacy_policy.PrivacyPolicyScreen
+import com.example.feature_signup.SignUpScreen
 import com.example.feature_auth.ui.SplashScreen
-import com.example.feature_auth.ui.TermsOfServiceScreen
+import com.example.feature_terms_of_service.TermsOfServiceScreen
 import com.example.feature_friends.ui.AcceptFriendsScreen
 import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_main.MainContainerScreen
-import com.example.feature_main.viewmodel.HomeViewModel
+import com.example.feature_home.HomeViewModel
 import com.example.feature_profile.ui.EditProfileScreen
 import com.example.feature_project.ui.AddProjectScreen
-import com.example.feature_project.ui.JoinProjectScreen
+import com.example.feature_join_project.JoinProjectScreen
 import com.example.feature_project.viewmodel.AddProjectViewModel
-import com.example.feature_project.viewmodel.JoinProjectViewModel
+import com.example.feature_join_project.JoinProjectViewModel
 import com.example.feature_project_setting_screen.viewmodel.ui.ProjectSettingScreen
 import com.example.feature_settings.ui.SettingsScreen
 import kotlinx.coroutines.delay
@@ -56,12 +60,45 @@ import kotlinx.coroutines.launch
  * 
  * 앱의 모든 최상위 경로들을 정의하고, NavigationManager와 연결하여 탐색을 처리합니다.
  * 중첩 네비게이션 구조를 사용하여 기능별로 화면들을 그룹화합니다.
+ * 
+ * REFACTORING NOTES:
+ * This file has been partially modernized to demonstrate new type-safe navigation patterns.
+ * 
+ * NEW PATTERNS AVAILABLE:
+ * 1. Use extractProjectArguments(), extractCalendarArguments(), extractChatArguments()
+ *    instead of manual argument extraction
+ * 2. Use safeComposable() for automatic error handling of missing arguments
+ * 3. Use projectArguments(), calendarArguments() instead of manual argument lists
+ * 4. Use NavigationResultManager for result handling instead of deprecated methods
+ * 
+ * MIGRATION EXAMPLES:
+ * 
+ * BEFORE (Old Pattern):
+ * composable(
+ *     route = AppRoutes.Project.settingsRoute(),
+ *     arguments = AppRoutes.Project.settingsArguments
+ * ) { backStackEntry ->
+ *     val projectId = backStackEntry.arguments?.getString(AppRoutes.Project.ARG_PROJECT_ID) ?: ""
+ *     ProjectSettingScreen(appNavigator = appNavigator)
+ * }
+ * 
+ * AFTER (New Pattern):
+ * safeComposable(
+ *     route = AppRoutes.Project.settingsRoute(),
+ *     arguments = projectArguments()
+ * ) { backStackEntry ->
+ *     val args = backStackEntry.extractProjectArguments()
+ *     ProjectSettingScreen(
+ *         projectId = args.projectId,
+ *         appNavigator = appNavigator
+ *     )
+ * }
  */
 @SuppressLint("ContextCastToActivity")
 @Composable
 fun AppNavigationGraph(
     navController: NavHostController,
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     startDestination: String = AppRoutes.Auth.Graph.path
 ) {
 
@@ -94,25 +131,25 @@ fun AppNavigationGraph(
     ) {
 
         // 인증 관련 네비게이션 그래프 (로그인, 가입 등)
-        authGraph(appNavigator)
+        authGraph(navigationManger)
         
         // 메인 화면 (MainContainerScreen이 자체적으로 탭 네비게이션 처리)
-        mainGraph(appNavigator)
+        mainGraph(navigationManger)
         
         // 친구 화면 그래프 추가
-        friendsGraph(appNavigator)
+        friendsGraph(navigationManger)
         
         // 독립적인 화면들의 그래프 - 메인 탭 외부에서 접근하는 화면들
-        projectGraph(appNavigator)
-        chatGraph(appNavigator)
-        scheduleGraph(appNavigator)
+        projectGraph(navigationManger)
+        chatGraph(navigationManger)
+        scheduleGraph(navigationManger)
 
         // 프로필 수정 화면 (Settings Route)
         composable(AppRoutes.Settings.EDIT_MY_PROFILE) {
-            EditProfileScreen(appNavigator = appNavigator)
+            EditProfileScreen(appNavigator = navigationManger)
         }
         composable(AppRoutes.Settings.APP_SETTINGS) {
-            SettingsScreen(appNavigator = appNavigator)
+            SettingsScreen(navigationManger = navigationManger)
         }
     }
 }
@@ -120,7 +157,7 @@ fun AppNavigationGraph(
 /**
  * 인증 관련 화면들의 네비게이션 그래프
  */
-fun NavGraphBuilder.authGraph(appNavigator: AppNavigator) {
+fun NavGraphBuilder.authGraph(navigationManger: NavigationManger) {
     navigation(
         route = AppRoutes.Auth.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Auth.Splash.path
@@ -129,39 +166,39 @@ fun NavGraphBuilder.authGraph(appNavigator: AppNavigator) {
         composable(AppRoutes.Auth.Splash.path) {
             Log.d("Splash", "Splash Screen")
             // Register this NavController when this NavHost is active
-            SplashScreen(appNavigator = appNavigator)
+            SplashScreen(navigationManger = navigationManger)
         }
         
         composable(AppRoutes.Auth.Login.path) {
             Log.d("Login", "Login Screen")
-            LoginScreen(appNavigator = appNavigator)
+            com.example.feature_login.LoginScreen(appNavigator = navigationManger)
         }
         
         // 회원가입 화면 추가
         composable(AppRoutes.Auth.SignUp.path) {
             Log.d("SignUp", "SignUp Screen")
             // viewModel은 나중에 추가
-            SignUpScreen(
-                appNavigator = appNavigator
+            com.example.feature_signup.SignUpScreen(
+                appNavigator = navigationManger
             )
         }
         
         // 비밀번호 찾기 화면 추가
         composable(AppRoutes.Auth.FindPassword.path) {
             Log.d("FindPassword", "FindPassword Screen")
-            com.example.feature_find_password.ui.FindPasswordScreen(appNavigator = appNavigator)
+            com.example.feature_find_password.ui.FindPasswordScreen(navigationManger = navigationManger)
         }
 
         // 서비스 이용약관 화면 추가
         composable(AppRoutes.Auth.TermsOfService.path) {
             Log.d("TermsOfService", "TermsOfService Screen")
-            TermsOfServiceScreen(appNavigator = appNavigator)
+            com.example.feature_terms_of_service.TermsOfServiceScreen(appNavigator = navigationManger)
         }
 
         // 개인정보 처리방침 화면 추가
         composable(AppRoutes.Auth.PrivacyPolicy.path) {
             Log.d("PrivacyPolicy", "PrivacyPolicy Screen")
-            PrivacyPolicyScreen(appNavigator = appNavigator)
+            com.example.feature_privacy_policy.PrivacyPolicyScreen(appNavigator = navigationManger)
         }
     }
 }
@@ -170,16 +207,16 @@ fun NavGraphBuilder.authGraph(appNavigator: AppNavigator) {
 /**
  * 메인 화면 그래프 - MainContainerScreen이 자체적으로 탭 네비게이션 처리
  */
-fun NavGraphBuilder.mainGraph(appNavigator: AppNavigator) {
+fun NavGraphBuilder.mainGraph(navigationManger: NavigationManger) {
     composable(AppRoutes.Main.ROOT) {
-        MainContainerScreen(appNavigator = appNavigator)
+        MainContainerScreen(navigationManger = navigationManger)
     }
 }
 
 /**
  * 친구 관련 화면들의 네비게이션 그래프
  */
-fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
+fun NavGraphBuilder.friendsGraph(navigationManger: NavigationManger) {
     navigation(
       
         route = AppRoutes.Friends.ROOT, // Changed to use ROOT
@@ -187,10 +224,10 @@ fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
         startDestination = AppRoutes.Friends.LIST
     ) {
         composable(AppRoutes.Friends.LIST) {
-            FriendsScreen(appNavigator = appNavigator)
+            FriendsScreen(navigationManger = navigationManger)
         }
         composable(AppRoutes.Friends.ACCEPT_REQUESTS) {
-            AcceptFriendsScreen(appNavigator = appNavigator)
+            AcceptFriendsScreen(navigationManger = navigationManger)
         }
         // TODO: 친구 요청 수락 화면 등 추가 경로 정의
         // composable(AppRoutes.Friends.ACCEPT_REQUESTS) { ... }
@@ -200,7 +237,7 @@ fun NavGraphBuilder.friendsGraph(appNavigator: AppNavigator) {
 /**
  * 프로젝트 관련 화면들의 네비게이션 그래프
  */
-fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
+fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
     navigation(
         route = AppRoutes.Project.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Project.ADD
@@ -209,16 +246,18 @@ fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
         composable(AppRoutes.Project.ADD) {
             val viewModel = hiltViewModel<AddProjectViewModel>()
           // TODO: AddRoleScreen/EditRoleScreen for adding roles
-            AddProjectScreen(appNavigator)
+            AddProjectScreen(navigationManger)
         }
 
-        // Project Settings Screen
-        composable(
+        // Project Settings Screen - MODERNIZED EXAMPLE
+        safeComposable(
             route = AppRoutes.Project.settingsRoute(),
-            arguments = AppRoutes.Project.settingsArguments
-        ) {
+            arguments = projectArguments()
+        ) { backStackEntry ->
+            val args = backStackEntry.extractProjectArguments()
             ProjectSettingScreen(
-                appNavigator = appNavigator
+                projectId = args.projectId, // Now type-safe and explicit
+                navigationManger = navigationManger
             )
         }
         
@@ -233,8 +272,8 @@ fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
                 }
             )
         ) {
-            val viewModel = hiltViewModel<JoinProjectViewModel>()
-            JoinProjectScreen(appNavigator)
+            val viewModel = hiltViewModel<com.example.feature_join_project.JoinProjectViewModel>()
+            com.example.feature_join_project.JoinProjectScreen(navigationManger)
         }
         
         // 프로젝트 상세 화면 - 메인 탭 외부에서도 접근 가능
@@ -250,14 +289,13 @@ fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
             
             // HomeViewModel을 Composable 컨텍스트에서 가져옵니다.
             val homeViewModelStoreOwner = remember(backStackEntry) {
-                appNavigator.getNavController()!!.getBackStackEntry(AppRoutes.Main.ROOT)
+                navigationManger.getNavController()!!.getBackStackEntry(AppRoutes.Main.ROOT)
             }
-            val homeViewModel = hiltViewModel<HomeViewModel>(homeViewModelStoreOwner)
+            val homeViewModel = hiltViewModel<com.example.feature_home.HomeViewModel>(homeViewModelStoreOwner)
 
             LaunchedEffect(projectId, homeViewModel) {
                 // 먼저 메인 화면으로 이동 (Home 탭이 기본 선택됨)
-                appNavigator.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(
-                    NavDestination.fromRoute(AppRoutes.Main.ROOT)))
+                navigationManger.navigateToClearingBackStack(MainContainerRoute)
                 
                 // 지연을 주어 UI가 업데이트될 시간을 확보
                 delay(100)
@@ -280,7 +318,7 @@ fun NavGraphBuilder.projectGraph(appNavigator: AppNavigator) {
 /**
  * 채팅 관련 화면들의 네비게이션 그래프
  */
-fun NavGraphBuilder.chatGraph(appNavigator: AppNavigator) {
+fun NavGraphBuilder.chatGraph(navigationManger: NavigationManger) {
     navigation(
         route = AppRoutes.Chat.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Chat.route
@@ -301,22 +339,23 @@ fun NavGraphBuilder.chatGraph(appNavigator: AppNavigator) {
 /**
  * 일정 관련 화면들의 네비게이션 그래프
  */
-fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
+fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
     navigation(
         route = AppRoutes.Main.Calendar.ROOT, // Changed to use ROOT
         startDestination = AppRoutes.Main.Calendar.calendar24HourRoute()
     ) {
-        // 24시간 캘린더 화면
-        composable(
+        // 24시간 캘린더 화면 - MODERNIZED EXAMPLE
+        safeComposable(
             route = AppRoutes.Main.Calendar.calendar24HourRoute(),
-            arguments = AppRoutes.Main.Calendar.calendar24HourArguments
+            arguments = calendarArguments()
         ) { backStackEntry ->
-            val year = backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_YEAR) ?: 0
-            val month = backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_MONTH) ?: 0
-            val day = backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_DAY) ?: 0
+            val args = backStackEntry.extractCalendarArguments()
 
             com.example.feature_calendar_24hour.Calendar24HourScreen(
-                appNavigator = appNavigator,
+                year = args.year,   // Type-safe and explicit
+                month = args.month,
+                day = args.day,
+                appNavigator = navigationManger,
             )
         }
         
@@ -330,7 +369,7 @@ fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
             val day = backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_DAY) ?: 0
             
             com.example.feature_schedule.ui.AddScheduleScreen(
-                appNavigator = appNavigator
+                navigationManger = navigationManger
             )
         }
         
@@ -342,7 +381,7 @@ fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
             val scheduleId = backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
             
             com.example.feature_schedule.ui.ScheduleDetailScreen(
-                appNavigator = appNavigator,
+                appNavigator = navigationManger,
             )
         }
         
@@ -354,7 +393,7 @@ fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
             val scheduleId = backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
 
             com.example.feature_edit_schedule.EditScheduleScreen(
-                appNavigator = appNavigator,
+                appNavigator = navigationManger,
             )
         }
 
@@ -366,7 +405,7 @@ fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
             // EditCategoryScreen 에는 projectId 와 categoryId 가 필요하며,
             // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.
             com.example.feature_category_edit.ui.EditCategoryScreen(
-                onNavigateBack = { appNavigator.navigateBack() }
+                onNavigateBack = { navigationManger.navigateBack() }
             )
         }
 
@@ -378,7 +417,7 @@ fun NavGraphBuilder.scheduleGraph(appNavigator: AppNavigator) {
             // EditProjectChannelScreen 에는 projectId, categoryId, channelId 가 필요하며,
             // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.
             com.example.feature_channel_edit.ui.EditProjectChannelScreen(
-                onNavigateBack = { appNavigator.navigateBack() }
+                onNavigateBack = { navigationManger.navigateBack() }
             )
         }
     }

@@ -25,14 +25,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavControllerSaver
 import com.example.core_navigation.core.NavControllerState
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.destination.mainBottomNavItems
-import com.example.feature_main.ui.HomeScreen
-import com.example.feature_main.ui.ProfileScreen
-import com.example.feature_main.ui.calendar.CalendarScreen
+import com.example.feature_home.HomeScreen
+import com.example.feature_profile.ui.ProfileScreen
+import com.example.feature_calendar.CalendarScreen
 
 /**
  * 메인 컨테이너 화면: 하단 탭 네비게이션과 각 탭의 콘텐츠를 표시하는 컨트롤러
@@ -43,7 +43,7 @@ import com.example.feature_main.ui.calendar.CalendarScreen
  */
 @Composable
 fun MainContainerScreen(
-    appNavigator: AppNavigator
+    navigationManger: NavigationManger
 ) {
     val TAG = "MainContainerScreen"
     
@@ -80,7 +80,7 @@ fun MainContainerScreen(
     
     // NavigationManager에서 pending_tab_navigation 결과를 확인하여 탭 전환
     LaunchedEffect(Unit) {
-        appNavigator.getResult<String>("pending_tab_navigation")?.let { pendingTabRoute ->
+        navigationManger.getResult<String>("pending_tab_navigation")?.let { pendingTabRoute ->
             Log.d(TAG, "NavigationManager에서 보류중인 탭 이동 발견: $pendingTabRoute")
             
             // 유효한 탭 경로인지 확인하고 해당 탭으로 전환
@@ -117,7 +117,7 @@ fun MainContainerScreen(
     
     // NavigationHandler에 현재 TabNavController 등록
     DisposableEffect(currentNavController) {
-        appNavigator.setChildNavController(currentNavController)
+        navigationManger.setChildNavController(currentNavController)
         onDispose {
             // 현재 탭이 비활성화될 때 상태 저장
             val currentState = navControllerStates[selectedTab] ?: NavControllerState()
@@ -125,8 +125,8 @@ fun MainContainerScreen(
             navControllerStates[selectedTab] = currentState
             
             // NavigationHandler에서 현재 컨트롤러 제거(다른 화면으로 이동 시)
-            if (appNavigator.getChildNavController() == currentNavController) {
-                appNavigator.setChildNavController(null)
+            if (navigationManger.getChildNavController() == currentNavController) {
+                navigationManger.setChildNavController(null)
             }
         }
     }
@@ -169,21 +169,21 @@ fun MainContainerScreen(
                 AppRoutes.Main.Home.GRAPH_ROOT -> {
                     HomeTabNavHost(
                         navController = homeNavController,
-                        appNavigator = appNavigator,
+                        navigationManger = navigationManger,
                         savedState = navControllerStates[selectedTab]?.screenState
                     )
                 }
                 AppRoutes.Main.Calendar.GRAPH_ROOT -> {
                     CalendarTabNavHost(
                         navController = calendarNavController,
-                        appNavigator = appNavigator,
+                        navigationManger = navigationManger,
                         savedState = navControllerStates[selectedTab]?.screenState
                     )
                 }
                 AppRoutes.Main.Profile.GRAPH_ROOT -> {
                     ProfileTabNavHost(
                         navController = profileNavController,
-                        appNavigator = appNavigator,
+                        navigationManger = navigationManger,
                         savedState = navControllerStates[selectedTab]?.screenState
                     )
                 }
@@ -210,15 +210,15 @@ private fun getTabStartDestination(tabRoute: String): String {
 @Composable
 private fun HomeTabNavHost(
     navController: NavHostController,
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     savedState: android.os.Bundle? = null
 ) {
     // Register this NavController when this NavHost is active
-    DisposableEffect(navController, appNavigator) {
-        appNavigator.setChildNavController(navController)
+    DisposableEffect(navController, navigationManger) {
+        navigationManger.setChildNavController(navController)
         onDispose {
-            if (appNavigator.getChildNavController() == navController) {
-                appNavigator.setChildNavController(null)
+            if (navigationManger.getChildNavController() == navController) {
+                navigationManger.setChildNavController(null)
             }
         }
     }
@@ -228,8 +228,8 @@ private fun HomeTabNavHost(
         startDestination = AppRoutes.Main.Home.ROOT_CONTENT
     ) {
         composable(AppRoutes.Main.Home.ROOT_CONTENT) {
-            HomeScreen(
-                appNavigator = appNavigator,
+            com.example.feature_home.HomeScreen(
+                appNavigator = navigationManger,
                 savedState = savedState
             )
         }
@@ -242,15 +242,15 @@ private fun HomeTabNavHost(
 @Composable
 private fun CalendarTabNavHost(
     navController: NavHostController,
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     savedState: android.os.Bundle? = null
 ) {
     // Register this NavController when this NavHost is active
-    DisposableEffect(navController, appNavigator) {
-        appNavigator.setChildNavController(navController)
+    DisposableEffect(navController, navigationManger) {
+        navigationManger.setChildNavController(navController)
         onDispose {
-            if (appNavigator.getChildNavController() == navController) {
-                appNavigator.setChildNavController(null)
+            if (navigationManger.getChildNavController() == navController) {
+                navigationManger.setChildNavController(null)
             }
         }
     }
@@ -260,8 +260,8 @@ private fun CalendarTabNavHost(
         startDestination = AppRoutes.Main.Calendar.ROOT_CONTENT
     ) {
         composable(AppRoutes.Main.Calendar.ROOT_CONTENT) {
-            CalendarScreen(
-                appNavigator = appNavigator,
+            com.example.feature_calendar.CalendarScreen(
+                appNavigator = navigationManger,
             )
         }
     }
@@ -273,15 +273,15 @@ private fun CalendarTabNavHost(
 @Composable
 private fun ProfileTabNavHost(
     navController: NavHostController,
-    appNavigator: AppNavigator,
+    navigationManger: NavigationManger,
     savedState: android.os.Bundle? = null
 ) {
     // Register this NavController when this NavHost is active
-    DisposableEffect(navController, appNavigator) {
-        appNavigator.setChildNavController(navController)
+    DisposableEffect(navController, navigationManger) {
+        navigationManger.setChildNavController(navController)
         onDispose {
-            if (appNavigator.getChildNavController() == navController) {
-                appNavigator.setChildNavController(null)
+            if (navigationManger.getChildNavController() == navController) {
+                navigationManger.setChildNavController(null)
             }
         }
     }
@@ -291,8 +291,8 @@ private fun ProfileTabNavHost(
         startDestination = AppRoutes.Main.Profile.ROOT_CONTENT
     ) {
         composable(AppRoutes.Main.Profile.ROOT_CONTENT) {
-            ProfileScreen(
-                appNavigator = appNavigator,
+            com.example.feature_profile.ui.ProfileScreen(
+                appNavigator = navigationManger,
             )
         }
     }

@@ -4,51 +4,144 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.navigation.NavController
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.example.core_navigation.core.NavigationManager
+import androidx.navigation.NavHostController
+import androidx.navigation.NavOptions
+import androidx.lifecycle.SavedStateHandle
+import com.example.core_navigation.core.NavigationResultManager
+import com.example.core_navigation.core.TypeSafeRoute
+import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 네비게이션 관련 확장 함수들을 모아둔 파일
+ * Consolidated navigation extension functions providing clean APIs
+ * for common navigation operations and result handling.
  */
 
+// ===== Type-safe navigation extensions =====
+
 /**
- * 특정 경로의 인자를 가져오는 확장 함수
- * 
- * @param key 인자 키
- * @return 인자 값 또는 null
+ * Navigates to a type-safe route.
  */
-fun <T> NavController.getArgument(key: String): T? {
-    return previousBackStackEntry?.savedStateHandle?.get<T>(key)
+fun NavHostController.navigateTo(route: TypeSafeRoute, navOptions: NavOptions? = null) {
+    val routePath = route.toAppRoutePath()
+    navigate(routePath, navOptions)
 }
 
 /**
- * 특정 경로의 인자를 Flow로 관찰하는 확장 함수
- * 
- * @param key 인자 키
- * @return 인자 값 Flow
+ * Navigates to a route clearing the back stack.
  */
-fun <T> NavController.getArgumentFlow(key: String): Flow<T> {
-    return previousBackStackEntry?.savedStateHandle?.get(key)
-        ?: throw IllegalStateException("No previous backstack entry found")
+fun NavHostController.navigateToClearingBackStack(route: TypeSafeRoute) {
+    val routePath = route.toAppRoutePath()
+    navigate(routePath) {
+        popUpTo(graph.startDestinationId) { inclusive = true }
+    }
+}
+
+// ===== Result handling extensions (using NavigationResultManager) =====
+
+/**
+ * Sets a navigation result using NavigationResultManager.
+ * @deprecated Direct usage - inject NavigationResultManager instead
+ */
+fun <T> NavController.setNavigationResult(
+    resultManager: NavigationResultManager,
+    key: String,
+    value: T
+) {
+    if (this is NavHostController) {
+        resultManager.setResult(this, key, value)
+    }
 }
 
 /**
- * 인자를 설정하는 확장 함수
- * 
- * @param key 인자 키
- * @param value 인자 값
+ * Gets a navigation result using NavigationResultManager.
+ * @deprecated Direct usage - inject NavigationResultManager instead
+ */
+fun <T> NavController.getNavigationResult(
+    resultManager: NavigationResultManager,
+    key: String
+): T? {
+    return if (this is NavHostController) {
+        resultManager.getResult(this, key)
+    } else null
+}
+
+/**
+ * Observes navigation results using NavigationResultManager.
+ */
+@Composable
+fun <T> ObserveNavigationResult(
+    navController: NavHostController,
+    resultManager: NavigationResultManager,
+    key: String,
+    onResult: (T) -> Unit
+) {
+    val currentOnResult = remember(key, onResult) { onResult }
+    
+    LaunchedEffect(key) {
+        resultManager.observeResult<T>(navController, key).collect { value ->
+            value?.let(currentOnResult)
+        }
+    }
+}
+
+/**
+ * Sets result and navigates back in one operation.
+ */
+fun <T> NavHostController.setResultAndNavigateBack(
+    resultManager: NavigationResultManager,
+    key: String,
+    result: T
+): Boolean {
+    return resultManager.setResultAndNavigateBack(this, key, result)
+}
+
+// ===== SavedStateHandle extensions for ViewModels =====
+
+/**
+ * Observes results from SavedStateHandle.
+ */
+fun <T> SavedStateHandle.observeResult(key: String): Flow<T?> {
+    return getStateFlow<T?>(key, null)
+}
+
+/**
+ * Sets a result in SavedStateHandle.
+ */
+fun <T> SavedStateHandle.setResult(key: String, value: T) {
+    this[key] = value
+}
+
+/**
+ * Consumes a result from SavedStateHandle (removes after reading).
+ */
+fun <T> SavedStateHandle.consumeResult(key: String): T? {
+    val result = get<T>(key)
+    remove<T>(key)
+    return result
+}
+
+// ===== Legacy compatibility extensions =====
+
+/**
+ * Legacy method for backward compatibility.
+ * @deprecated Use NavigationResultManager directly
  */
 fun <T> NavController.setResult(key: String, value: T) {
     previousBackStackEntry?.savedStateHandle?.set(key, value)
 }
 
 /**
- * 네비게이션 결과를 관찰하는 컴포저블
- * 
- * @param key 결과 키
- * @param onResult 결과 처리 콜백
+ * Legacy method for backward compatibility.
+ * @deprecated Use NavigationResultManager directly
+ */
+fun <T> NavController.getArgument(key: String): T? {
+    return previousBackStackEntry?.savedStateHandle?.get<T>(key)
+}
+
+/**
+ * Legacy result observation.
+ * @deprecated Use ObserveNavigationResult with NavigationResultManager
  */
 @Composable
 fun <T> NavController.ObserveResult(key: String, onResult: (T) -> Unit) {
@@ -67,44 +160,16 @@ fun <T> NavController.ObserveResult(key: String, onResult: (T) -> Unit) {
     }
 }
 
-/**
- * 네비게이션 매니저의 결과를 관찰하는 컴포저블
- * 
- * @param navigationManager 네비게이션 매니저
- * @param key 결과 키
- * @param onResult 결과 처리 콜백
- */
-@Composable
-fun <T> ObserveNavigationResult(
-    navigationManager: NavigationManager,
-    key: String,
-    onResult: (T) -> Unit
-) {
-    val currentOnResult = remember(key, onResult) { onResult }
-    
-    LaunchedEffect(key) {
-        navigationManager.getResultFlow<T>(key).collect { value ->
-            currentOnResult(value)
-        }
-    }
-}
+// ===== Direct navigation helpers =====
 
 /**
- * NavType에 맞는 navArgument를 생성하는 함수
- * 
- * @param name 인자 이름
- * @param navType 네비게이션 타입
- * @param nullable null 허용 여부
- * @param defaultValue 기본값
- * @return NavArgument
+ * Gets the route path from a TypeSafeRoute for direct navigation.
  */
-fun createNavArgument(
-    name: String,
-    navType: NavType<*>,
-    nullable: Boolean = false,
-    defaultValue: Any? = null
-) = navArgument(name) {
-    type = navType
-    this.nullable = nullable
-    defaultValue?.let { this.defaultValue = it }
-} 
+fun TypeSafeRoute.getRoutePath(): String = this.toAppRoutePath()
+
+// ===== Convenience navigation methods for common routes =====
+
+/**
+ * Additional convenience methods can be added here if needed.
+ * The main navigation methods are now implemented directly in AppNavigator interface.
+ */ 

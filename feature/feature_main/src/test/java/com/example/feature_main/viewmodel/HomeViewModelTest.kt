@@ -33,7 +33,7 @@ class HomeViewModelTest {
     val coroutinesTestRule = CoroutinesTestRule()
 
     // 테스트 대상 (System Under Test)
-    private lateinit var viewModel: HomeViewModel
+    private lateinit var viewModel: com.example.feature_home.HomeViewModel
 
     // Fake Repositories
     private lateinit var fakeProjectRepository: FakeProjectRepository
@@ -92,7 +92,8 @@ class HomeViewModelTest {
         fakeChannelRepository.addDmChannel(testDm2)
 
         // ViewModel 초기화 (의존성 주입)
-        viewModel = HomeViewModel(fakeProjectRepository, fakeChannelRepository)
+        viewModel =
+            com.example.feature_home.HomeViewModel(fakeProjectRepository, fakeChannelRepository)
     }
 
     /**
@@ -106,7 +107,7 @@ class HomeViewModelTest {
         val initialState = viewModel.uiState.getValue()
 
         // Then: 초기 상태 확인
-        assertEquals(TopSection.PROJECTS, initialState.selectedTopSection)
+        assertEquals(com.example.feature_home.TopSection.PROJECTS, initialState.selectedTopSection)
         assertFalse(initialState.isLoading)
         assertTrue(initialState.projects.isNotEmpty())
         assertEquals("default", initialState.errorMessage)
@@ -120,11 +121,11 @@ class HomeViewModelTest {
         // Given: 초기 상태의 ViewModel
 
         // When: DM 탭으로 전환
-        viewModel.onTopSectionSelect(TopSection.DMS)
+        viewModel.onTopSectionSelect(com.example.feature_home.TopSection.DMS)
 
         // Then: 상태 업데이트 확인
         val state = viewModel.uiState.getValue()
-        assertEquals(TopSection.DMS, state.selectedTopSection)
+        assertEquals(com.example.feature_home.TopSection.DMS, state.selectedTopSection)
         assertTrue(state.dms.isNotEmpty())
         assertEquals(2, state.dms.size)
     }
@@ -135,7 +136,7 @@ class HomeViewModelTest {
     @Test
     fun `프로젝트 클릭 시 NavigateToProjectDetails 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
         // Given: 이벤트 수집기 설정
-        val eventCollector = EventCollector<HomeEvent>()
+        val eventCollector = EventCollector<com.example.feature_home.HomeEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
 
         // When: 프로젝트 클릭
@@ -145,8 +146,8 @@ class HomeViewModelTest {
         // Then: 이벤트 발생 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is HomeEvent.NavigateToProjectDetails)
-        assertEquals(projectId, (event as HomeEvent.NavigateToProjectDetails).projectId)
+        assertTrue(event is com.example.feature_home.HomeEvent.NavigateToProjectDetails)
+        assertEquals(projectId, (event as com.example.feature_home.HomeEvent.NavigateToProjectDetails).projectId)
     }
 
     /**
@@ -155,9 +156,9 @@ class HomeViewModelTest {
     @Test
     fun `프로젝트 탭에서 추가 버튼 클릭 시 ShowAddProjectDialog 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
         // Given: 이벤트 수집기 설정 및 프로젝트 탭 선택
-        val eventCollector = EventCollector<HomeEvent>()
+        val eventCollector = EventCollector<com.example.feature_home.HomeEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        viewModel.onTopSectionSelect(TopSection.PROJECTS)
+        viewModel.onTopSectionSelect(com.example.feature_home.TopSection.PROJECTS)
 
         // When: 추가 버튼 클릭
         viewModel.onAddButtonClick()
@@ -165,7 +166,7 @@ class HomeViewModelTest {
         // Then: 이벤트 발생 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is HomeEvent.ShowAddProjectDialog)
+        assertTrue(event is com.example.feature_home.HomeEvent.ShowAddProjectDialog)
     }
 
     /**
@@ -174,9 +175,9 @@ class HomeViewModelTest {
     @Test
     fun `DM 탭에서 추가 버튼 클릭 시 ShowAddFriendDialog 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
         // Given: 이벤트 수집기 설정 및 DM 탭 선택
-        val eventCollector = EventCollector<HomeEvent>()
+        val eventCollector = EventCollector<com.example.feature_home.HomeEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
-        viewModel.onTopSectionSelect(TopSection.DMS)
+        viewModel.onTopSectionSelect(com.example.feature_home.TopSection.DMS)
 
         // When: 추가 버튼 클릭
         viewModel.onAddButtonClick()
@@ -184,7 +185,7 @@ class HomeViewModelTest {
         // Then: 이벤트 발생 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is HomeEvent.ShowAddFriendDialog)
+        assertTrue(event is com.example.feature_home.HomeEvent.ShowAddFriendDialog)
     }
 
     /**
@@ -193,7 +194,7 @@ class HomeViewModelTest {
     @Test
     fun `프로젝트 추가 버튼 클릭 시 NavigateToAddProject 이벤트가 발생해야 함`() = coroutinesTestRule.runBlockingTest {
         // Given: 이벤트 수집기 설정
-        val eventCollector = EventCollector<HomeEvent>()
+        val eventCollector = EventCollector<com.example.feature_home.HomeEvent>()
         eventCollector.collectFrom(coroutinesTestRule.testCoroutineScope, viewModel.eventFlow)
 
         // When: 프로젝트 추가 버튼 클릭
@@ -202,7 +203,7 @@ class HomeViewModelTest {
         // Then: 이벤트 발생 확인
         assertTrue(eventCollector.events.isNotEmpty())
         val event = eventCollector.events.first()
-        assertTrue(event is HomeEvent.NavigateToAddProject)
+        assertTrue(event is com.example.feature_home.HomeEvent.NavigateToAddProject)
     }
 
     /**
@@ -214,7 +215,8 @@ class HomeViewModelTest {
         fakeProjectRepository.setShouldSimulateError(true)
 
         // When: ViewModel 초기화 (자동으로 프로젝트 로딩)
-        viewModel = HomeViewModel(fakeProjectRepository, fakeChannelRepository)
+        viewModel =
+            com.example.feature_home.HomeViewModel(fakeProjectRepository, fakeChannelRepository)
 
         // Then: 에러 메시지 확인
         val state = viewModel.uiState.getValue()
@@ -230,7 +232,7 @@ class HomeViewModelTest {
         fakeChannelRepository.setShouldSimulateError(true)
 
         // When: DM 탭으로 전환
-        viewModel.onTopSectionSelect(TopSection.DMS)
+        viewModel.onTopSectionSelect(com.example.feature_home.TopSection.DMS)
 
         // Then: 에러 메시지 확인
         val state = viewModel.uiState.getValue()

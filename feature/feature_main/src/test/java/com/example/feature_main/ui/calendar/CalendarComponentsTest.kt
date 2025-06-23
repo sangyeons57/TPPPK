@@ -10,8 +10,6 @@ import org.junit.runners.JUnit4
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * CalendarComponents 테스트
@@ -47,7 +45,7 @@ class CalendarComponentsTest {
         
         // When: MonthHeader 컴포넌트를 렌더링
         composeTestRule.setContent {
-            MonthHeader(
+            com.example.feature_calendar.MonthHeader(
                 currentYearMonth = testYearMonth,
                 onPreviousMonthClick = { },
                 onNextMonthClick = { }
@@ -69,7 +67,7 @@ class CalendarComponentsTest {
     fun `DayOfWeekHeader displays all days of week`() {
         // When: DayOfWeekHeader 컴포넌트를 렌더링
         composeTestRule.setContent {
-            DayOfWeekHeader()
+            com.example.feature_calendar.DayOfWeekHeader()
         }
         
         // Then: 모든 요일이 올바르게 표시되는지 확인
@@ -93,7 +91,7 @@ class CalendarComponentsTest {
         
         // When: DayCell 컴포넌트를 렌더링
         composeTestRule.setContent {
-            DayCell(
+            com.example.feature_calendar.DayCell(
                 date = testDate,
                 isSelected = isSelected,
                 isToday = true,
@@ -121,7 +119,7 @@ class CalendarComponentsTest {
         
         // When: 일정이 있는 DayCell 컴포넌트를 렌더링
         composeTestRule.setContent {
-            DayCell(
+            com.example.feature_calendar.DayCell(
                 date = testDate,
                 isSelected = false,
                 isToday = false,
@@ -167,7 +165,7 @@ class CalendarComponentsTest {
         
         // When: ScheduleSection 컴포넌트를 렌더링
         composeTestRule.setContent {
-            ScheduleSection(
+            com.example.feature_calendar.ScheduleSection(
                 schedules = schedules,
                 onScheduleClick = { }
             )

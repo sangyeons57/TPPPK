@@ -85,8 +85,8 @@ dependencies {
 
     // ★ 네비게이션 그래프에서 직접 호출하는 모든 Feature 모듈 의존성 추가
     implementation(project(":feature:feature_main"))
-    implementation(project(":feature:feature_auth"))
-    implementation(project(":feature:feature_project"))
+    implementation(project(":feature:feature_splash"))
+    implementation(project(":feature:feature_project_detail"))
     implementation(project(":feature:feature_project_setting"))
     implementation(project(":feature:feature_friends"))
     implementation(project(":feature:feature_settings"))
