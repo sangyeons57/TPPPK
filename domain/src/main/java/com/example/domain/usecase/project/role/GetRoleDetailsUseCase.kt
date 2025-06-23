@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.role
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import javax.inject.Inject
 
 interface GetRoleDetailsUseCase {
@@ -11,7 +11,7 @@ interface GetRoleDetailsUseCase {
 }
 
 class GetRoleDetailsUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: RoleRepository
+    private val projectRoleRepository: ProjectRoleRepository
 ) : GetRoleDetailsUseCase {
     override suspend operator fun invoke(projectId: String, roleId: String): CustomResult<Role, Exception> { // Return type changed to Role?
         return when (val result = projectRoleRepository.findById(DocumentId(roleId))) {

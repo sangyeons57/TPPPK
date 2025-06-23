@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.role
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import javax.inject.Inject
 
 /**
@@ -18,7 +18,7 @@ interface DeleteRoleUseCase {
  * @param projectRoleRepository 프로젝트 역할 데이터 접근을 위한 Repository
  */
 class DeleteRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: RoleRepository,
+    private val projectRoleRepository: ProjectRoleRepository,
     private val authRepository: AuthRepository
 ) : DeleteRoleUseCase {
 

@@ -2,7 +2,7 @@ package com.example.feature_change_password.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.example.domain.usecase.auth.RequestPasswordResetUseCase
+import com.example.domain.provider.auth.AuthPasswordUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,9 +35,11 @@ sealed class ChangePasswordEvent {
 @HiltViewModel
 class ChangePasswordViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    requestPasswordResetUseCase: RequestPasswordResetUseCase,
-    // 필요 시 사용
+    private val authPasswordUseCaseProvider: AuthPasswordUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val authPasswordUseCases = authPasswordUseCaseProvider.create()
     private val _uiState = MutableStateFlow(ChangePasswordUiState())
     val uiState: StateFlow<ChangePasswordUiState> = _uiState.asStateFlow()
 

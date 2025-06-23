@@ -4,10 +4,8 @@ import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.ProjectRoleRepository
-import com.example.domain.repository.base.RoleRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
-import com.example.domain.repository.factory.context.RoleRepositoryFactoryContext
 import com.example.domain.usecase.project.role.DeleteRoleUseCase
 import com.example.domain.usecase.project.role.CreateProjectRoleUseCase
 import com.example.domain.usecase.project.role.CreateRoleUseCase
@@ -26,8 +24,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectRoleUseCaseProvider @Inject constructor(
-    private val roleRepositoryFactory: RepositoryFactory<RoleRepositoryFactoryContext, RoleRepository>,
-    private val projectRoleRepositoryFactory: RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
+    private val projectProjectRoleRepositoryFactory: RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
     private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
@@ -38,13 +35,13 @@ class ProjectRoleUseCaseProvider @Inject constructor(
      * @return 프로젝트 역할 관리 UseCase 그룹
      */
     fun createForProject(projectId: String): ProjectRoleUseCases {
-        val roleRepository = roleRepositoryFactory.create(
-            RoleRepositoryFactoryContext(
+        val roleRepository = projectProjectRoleRepositoryFactory.create(
+            ProjectRoleRepositoryFactoryContext(
                 collectionPath = CollectionPath.projectRoles(projectId)
             )
         )
 
-        val projectRoleRepository = projectRoleRepositoryFactory.create(
+        val projectRoleRepository = projectProjectRoleRepositoryFactory.create(
             ProjectRoleRepositoryFactoryContext(
                 collectionPath = CollectionPath.projectRoles(projectId)
             )
@@ -142,6 +139,6 @@ data class ProjectRoleUseCases(
     
     // 공통 Repository
     val authRepository: AuthRepository,
-    val roleRepository: RoleRepository,
+    val roleRepository: ProjectRoleRepository,
     val projectRoleRepository: ProjectRoleRepository
 )

@@ -2,12 +2,11 @@ package com.example.domain.usecase.project.role
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
-import com.example.domain.model.base.Permission
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
-import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -35,7 +34,7 @@ interface UpdateProjectRoleUseCase {
  * Implementation of [UpdateProjectRoleUseCase].
  */
 class UpdateProjectRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: RoleRepository
+    private val projectRoleRepository: ProjectRoleRepository
 ) : UpdateProjectRoleUseCase {
 
     override suspend operator fun invoke(

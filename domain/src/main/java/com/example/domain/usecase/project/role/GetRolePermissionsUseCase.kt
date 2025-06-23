@@ -4,7 +4,6 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Permission
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.repository.base.PermissionRepository
-import com.example.domain.repository.base.RoleRepository
 import javax.inject.Inject
 
 /**

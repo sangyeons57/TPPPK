@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.PermissionRemoteDataSource
 import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.model.remote.RoleDTO
-import com.example.data.repository.base.RoleRepositoryImpl
+import com.example.data.repository.base.ProjectRoleRepositoryImpl
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.Timestamp
@@ -23,7 +23,7 @@ import org.mockito.MockitoAnnotations
 import java.time.Instant
 
 @ExperimentalCoroutinesApi
-class RoleRepositoryImplTest {
+class ProjectRoleRepositoryImplTest {
 
     @Mock
     private lateinit var roleRemoteDataSource: RoleRemoteDataSource
@@ -31,7 +31,7 @@ class RoleRepositoryImplTest {
     @Mock
     private lateinit var permissionRemoteDataSource: PermissionRemoteDataSource
 
-    private lateinit var roleRepository: RoleRepositoryImpl
+    private lateinit var roleRepository: ProjectRoleRepositoryImpl
 
     private val testProjectId = "testProject1"
     private val testRoleId = "testRole1"
@@ -44,7 +44,7 @@ class RoleRepositoryImplTest {
     @Before
     fun setUp() {
         MockitoAnnotations.openMocks(this)
-        roleRepository = RoleRepositoryImpl(roleRemoteDataSource, permissionRemoteDataSource)
+        roleRepository = ProjectRoleRepositoryImpl(roleRemoteDataSource, permissionRemoteDataSource)
 
         val now = Instant.now()
         testRole = Role.fromDataSource(

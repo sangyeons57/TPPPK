@@ -5,7 +5,7 @@ import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
-import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -30,7 +30,7 @@ interface CreateProjectRoleUseCase {
  * Implementation of [CreateProjectRoleUseCase].
  */
 class CreateProjectRoleUseCaseImpl @Inject constructor(
-    private val roleRepository: RoleRepository
+    private val projectRoleRepository: ProjectRoleRepository
 ) : CreateProjectRoleUseCase {
 
     override suspend operator fun invoke(
@@ -41,6 +41,6 @@ class CreateProjectRoleUseCaseImpl @Inject constructor(
             name = Name(name),
             isDefault = RoleIsDefault(isDefault)
         )
-        return roleRepository.save(role)
+        return projectRoleRepository.save(role)
     }
 }

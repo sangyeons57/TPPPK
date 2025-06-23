@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.role
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import javax.inject.Inject
 import kotlin.Result
 
@@ -25,7 +25,7 @@ interface GetProjectRoleUseCase {
  * Implementation of [GetProjectRoleUseCase].
  */
 class GetProjectRoleUseCaseImpl @Inject constructor(
-    private val projectRoleRepository: RoleRepository
+    private val projectRoleRepository: ProjectRoleRepository
 ) : GetProjectRoleUseCase {
 
     override suspend operator fun invoke(roleId: String): CustomResult<Role, Exception> {

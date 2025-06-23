@@ -1,14 +1,12 @@
 package com.example.domain.usecase.project.role
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.ui.project.RoleSortOption
-import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -29,14 +27,14 @@ interface GetProjectRolesUseCase {
     ): Flow<CustomResult<List<Role>, Exception>>
 }
 class GetProjectRolesUseCaseImpl @Inject constructor(
-    private val roleRepository: RoleRepository
+    private val projectRoleRepository: ProjectRoleRepository
 ) : GetProjectRolesUseCase {
 
     override suspend fun invoke(
         projectId: String,
         sortBy: RoleSortOption?
     ): Flow<CustomResult<List<Role>, Exception>> {
-        return when (val customResult = roleRepository.observeAll().first()){
+        return when (val customResult = projectRoleRepository.observeAll().first()){
             is CustomResult.Success -> {
                 var roles = customResult.data.toList().filter{
                     if (it !is Role) return@filter false

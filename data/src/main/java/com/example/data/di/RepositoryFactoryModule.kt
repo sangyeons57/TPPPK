@@ -33,7 +33,7 @@ import com.example.domain.repository.base.PermissionRepository
 import com.example.domain.repository.base.ProjectChannelRepository
 import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
-import com.example.domain.repository.base.RoleRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import com.example.domain.repository.base.ScheduleRepository
 import com.example.domain.repository.base.SearchRepository
 import com.example.domain.repository.base.UserRepository
@@ -52,12 +52,10 @@ import com.example.domain.repository.factory.context.PermissionRepositoryFactory
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ReactionRepositoryFactoryContext
-import com.example.domain.repository.factory.context.RoleRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ScheduleRepositoryFactoryContext
 import com.example.domain.repository.factory.context.SearchRepositoryFactoryContext
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
-import com.example.data.repository.base.AuthRepositoryImpl
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import dagger.Binds
@@ -137,7 +135,7 @@ abstract class RepositoryFactoryModule {
 
     @Binds
     @Singleton
-        abstract fun bindRoleRepositoryFactory(impl: RoleRepositoryFactoryImpl): RepositoryFactory<RoleRepositoryFactoryContext, RoleRepository>
+        abstract fun bindRoleRepositoryFactory(impl: RoleRepositoryFactoryImpl): RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>
 
     @Binds
     @Singleton
