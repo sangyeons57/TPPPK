@@ -7,6 +7,7 @@ import com.example.domain.repository.factory.context.AuthRepositoryFactoryContex
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import com.example.domain.usecase.auth.account.DeleteAuthUserUseCase
 import com.example.domain.usecase.auth.account.ReactivateAccountUseCase
+import com.example.domain.usecase.auth.account.WithdrawMembershipUseCase
 import com.example.domain.usecase.auth.account.WithdrawMembershipUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -66,7 +67,7 @@ data class AuthAccountUseCases(
     // 계정 관리
     val deleteAuthUserUseCase: DeleteAuthUserUseCase,
     val reactivateAccountUseCase: ReactivateAccountUseCase,
-    val withdrawMembershipUseCase: WithdrawMembershipUseCaseImpl,
+    val withdrawMembershipUseCase: WithdrawMembershipUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

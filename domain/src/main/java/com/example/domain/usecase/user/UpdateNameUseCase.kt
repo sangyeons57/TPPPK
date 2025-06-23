@@ -10,7 +10,7 @@ import com.example.domain.model.ui.auth.UserNameResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
-import com.example.domain.usecase.auth.ValidateNicknameForSignUpUseCase
+import com.example.domain.usecase.auth.validation.ValidateNicknameForSignUpUseCase
 
 
 import javax.inject.Inject

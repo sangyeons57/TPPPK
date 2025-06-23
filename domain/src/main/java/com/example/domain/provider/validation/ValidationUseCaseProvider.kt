@@ -4,14 +4,14 @@ import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
-import com.example.domain.usecase.auth.ValidateEmailFormatUseCase
-import com.example.domain.usecase.auth.ValidateEmailForSignUpUseCase
-import com.example.domain.usecase.auth.ValidateEmailUseCase
-import com.example.domain.usecase.auth.ValidateNewPasswordUseCase
-import com.example.domain.usecase.auth.ValidateNicknameForSignUpUseCase
-import com.example.domain.usecase.auth.ValidatePasswordFormatUseCase
-import com.example.domain.usecase.auth.ValidatePasswordForSignUpUseCase
-import com.example.domain.usecase.auth.ValidatePasswordResetCodeUseCase
+import com.example.domain.usecase.auth.validation.ValidateEmailFormatUseCase
+import com.example.domain.usecase.auth.validation.ValidateEmailForSignUpUseCase
+import com.example.domain.usecase.auth.validation.ValidateEmailUseCase
+import com.example.domain.usecase.auth.password.ValidateNewPasswordUseCase
+import com.example.domain.usecase.auth.validation.ValidateNicknameForSignUpUseCase
+import com.example.domain.usecase.auth.password.ValidatePasswordFormatUseCase
+import com.example.domain.usecase.auth.password.ValidatePasswordForSignUpUseCase
+import com.example.domain.usecase.auth.password.ValidatePasswordResetCodeUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 

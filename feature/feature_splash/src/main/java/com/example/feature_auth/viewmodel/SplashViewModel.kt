@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCase
+import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -39,8 +39,11 @@ sealed class SplashEvent {
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val checkAuthenticationStatusUseCase: CheckAuthenticationStatusUseCase
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val authUseCases = authSessionUseCaseProvider.create()
 
     private val _uiState = MutableStateFlow(SplashUiState())
     val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
@@ -62,7 +65,7 @@ class SplashViewModel @Inject constructor(
 
             try {
                 // Use UseCase to check status
-                val result = checkAuthenticationStatusUseCase()
+                val result = authUseCases.checkAuthenticationStatusUseCase()
                 Log.d("SplashViewModel", "Auth check result: $result")
 
                 result.onSuccess { isSuccess ->

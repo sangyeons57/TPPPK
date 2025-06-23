@@ -7,7 +7,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.usecase.auth.WithdrawMembershipUseCase
+import com.example.domain.provider.auth.AuthAccountUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,9 +19,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val withdrawMembershipUseCase: WithdrawMembershipUseCase,
+    private val authAccountUseCaseProvider: AuthAccountUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val authAccountUseCases = authAccountUseCaseProvider.create()
 
     private val _uiEvent = Channel<WithdrawalUiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
@@ -42,7 +45,7 @@ class SettingsViewModel @Inject constructor(
             // Immediately hide the dialog when confirmation starts
             _showWithdrawalDialog.value = false
 
-            when (val result = withdrawMembershipUseCase()) {
+            when (val result = authAccountUseCases.withdrawMembershipUseCase()) {
                 is CustomResult.Success -> {
                     Log.d("SettingsViewModel", "Withdrawal successful. Navigating to auth screen.")
                     _uiEvent.send(WithdrawalUiEvent.Success("회원 탈퇴가 완료되었습니다."))
