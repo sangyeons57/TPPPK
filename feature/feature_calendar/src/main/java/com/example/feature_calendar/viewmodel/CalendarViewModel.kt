@@ -4,8 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavDestination
-import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Schedule
 import com.example.domain.usecase.schedule.GetScheduleSummaryForMonthUseCase

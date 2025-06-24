@@ -2,7 +2,10 @@ package com.example.domain.provider.auth
 
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
+import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.model.vo.CollectionPath
 import com.example.domain.usecase.auth.session.CheckAuthenticationStatusUseCase
 import com.example.domain.usecase.auth.session.CheckSessionUseCase
 import com.example.domain.usecase.auth.session.LoginUseCase
@@ -17,7 +20,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class AuthSessionUseCaseProvider @Inject constructor(
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
 ) {
 
     /**
@@ -29,11 +33,16 @@ class AuthSessionUseCaseProvider @Inject constructor(
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
+        
+        val userRepository = userRepositoryFactory.create(
+            UserRepositoryFactoryContext(CollectionPath.users)
+        )
 
         return AuthSessionUseCases(
             // 로그인/로그아웃
             loginUseCase = LoginUseCase(
-                authRepository = authRepository
+                authRepository = authRepository,
+                userRepository = userRepository
             ),
             
             logoutUseCase = LogoutUseCase(
@@ -50,7 +59,8 @@ class AuthSessionUseCaseProvider @Inject constructor(
             ),
             
             // 공통 Repository
-            authRepository = authRepository
+            authRepository = authRepository,
+            userRepository = userRepository
         )
     }
 }
@@ -68,5 +78,6 @@ data class AuthSessionUseCases(
     val checkSessionUseCase: CheckSessionUseCase,
     
     // 공통 Repository
-    val authRepository: AuthRepository
+    val authRepository: AuthRepository,
+    val userRepository: UserRepository
 )

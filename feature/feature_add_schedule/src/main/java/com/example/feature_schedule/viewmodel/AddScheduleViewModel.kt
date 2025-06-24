@@ -7,7 +7,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model._new.enum.ScheduleStatus
-import com.example.domain.provider.project.ProjectUseCaseProvider
+import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -58,8 +58,8 @@ sealed class AddScheduleEvent {
 @HiltViewModel
 class AddScheduleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val addScheduleUseCase: AddScheduleUseCase,
-    private val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCase
+    private val scheduleUseCaseProvider: ScheduleUseCaseProvider,
+    private val projectUseCaseProvider: CoreProjectUseCaseProvider,
 ) : ViewModel() {
 
     private val year: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR)
@@ -71,6 +71,10 @@ class AddScheduleViewModel @Inject constructor(
 
     private val _eventFlow = MutableSharedFlow<AddScheduleEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
+    val scheduleUseCases = scheduleUseCaseProvider.createForCurrentUser()
+    val projectUseCases = projectUseCaseProvider.createForCurrentUser()
+    private val addScheduleUseCase = scheduleUseCases.addScheduleUseCase
+    private val getUserParticipatingProjectsUseCase = projectUseCases.getUserParticipatingProjectsUseCase
 
     init {
         val initialDate = if (year != null && month != null && day != null) {

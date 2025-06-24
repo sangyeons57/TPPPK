@@ -37,11 +37,13 @@ class ValidationUseCaseProvider @Inject constructor(
             )
         )
 
+        val validateEmailFormatUseCase = ValidateEmailFormatUseCase()
+        
         return ValidationUseCases(
             // 이메일 유효성 검사
-            validateEmailFormatUseCase = ValidateEmailFormatUseCase(),
+            validateEmailFormatUseCase = validateEmailFormatUseCase,
             validateEmailForSignUpUseCase = ValidateEmailForSignUpUseCase(
-                userRepository = userRepository
+                validateEmailFormatUseCase = validateEmailFormatUseCase
             ),
             validateEmailUseCase = ValidateEmailUseCase(),
             

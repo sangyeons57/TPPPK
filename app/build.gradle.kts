@@ -42,7 +42,7 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
+        //jvmTarget = libs.versions.jvmTarget.get()
     }
     buildFeatures {
         compose = true
@@ -78,7 +78,6 @@ dependencies {
 
     implementation(project(":core:core_ui"))
     implementation(project(":core:core_common"))
-    implementation(project(":core:core_logging"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_fcm"))
 

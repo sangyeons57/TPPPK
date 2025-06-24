@@ -33,7 +33,7 @@ android {
         compose = true // Compose 사용
     }
     kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
+        //jvmTarget = libs.versions.jvmTarget.get()
     }}
 
 dependencies {

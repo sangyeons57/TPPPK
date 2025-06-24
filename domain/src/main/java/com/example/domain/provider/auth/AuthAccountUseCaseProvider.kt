@@ -5,10 +5,11 @@ import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
-import com.example.domain.usecase.auth.account.DeleteAuthUserUseCase
+import com.example.domain.usecase.auth.DeleteAuthUserUseCase
 import com.example.domain.usecase.auth.account.ReactivateAccountUseCase
 import com.example.domain.usecase.auth.account.WithdrawMembershipUseCase
 import com.example.domain.usecase.auth.account.WithdrawMembershipUseCaseImpl
+import com.example.domain.model.vo.CollectionPath
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,7 +35,7 @@ class AuthAccountUseCaseProvider @Inject constructor(
         )
         
         val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext()
+            UserRepositoryFactoryContext(CollectionPath.users)
         )
 
         return AuthAccountUseCases(

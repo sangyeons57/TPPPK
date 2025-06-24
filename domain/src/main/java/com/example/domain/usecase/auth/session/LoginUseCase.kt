@@ -1,6 +1,5 @@
 package com.example.domain.usecase.auth.session
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
@@ -38,21 +37,21 @@ class LoginUseCase @Inject constructor(
      */
     suspend operator fun invoke(email : String, password : String): CustomResult<UserSession, Exception> {
         // 시작 로그 – 입력된 이메일 기준으로 로그인 시도
-        Log.d(TAG, "Attempting login for email=$email")
+        //(TAG, "Attempting login for email=$email")
         return when (val loginResult = authRepository.login(email, password)) {
             is CustomResult.Success -> {
                 val userSession = loginResult.data
                 // AuthRepository 에서 세션 획득 성공
-                Log.d(TAG, "Auth success. Session=$userSession")
+                //(TAG, "Auth success. Session=$userSession")
                 // After successful authentication, fetch user details to check account status
-                Log.d(TAG, "Fetching user details (may hit cache) for userId=${userSession.userId}")
+                //(TAG, "Fetching user details (may hit cache) for userId=${userSession.userId}")
                 when (val userResult = userRepository.findById(DocumentId.from(userSession.userId))) {
                     is CustomResult.Success -> {
                         // Firestore 에서 가져온 사용자 정보 (캐시 또는 서버)
                         val user = userResult.data as User
-                        Log.d(TAG, "Fetched User (possibly from cache): ${user}")
+                        //(TAG, "Fetched User (possibly from cache): ${user}")
                         if (user.accountStatus == UserAccountStatus.WITHDRAWN) {
-                            Log.d(TAG, "Cached status=WITHDRAWN, verifying against server...")
+                            //(TAG, "Cached status=WITHDRAWN, verifying against server...")
                             authRepository.logout()
                             CustomResult.Failure(WithdrawnAccountException("탈퇴한 계정입니다. (서버 확인)"))
                         } else {
@@ -66,14 +65,14 @@ class LoginUseCase @Inject constructor(
                         CustomResult.Failure(userResult.error)
                     }
                     else -> {
-                        Log.d(TAG, "Unexpected userDetailsResult state: $userResult")
+                        //(TAG, "Unexpected userDetailsResult state: $userResult")
                         CustomResult.Failure(Exception("알 수 없는 오류가 발생했습니다."))
                     }
                 }
             }
             is CustomResult.Failure -> {
                 // Login authentication failed, log failure reason
-                Log.d(TAG, "Authentication failed: ${loginResult.error}")
+                //(TAG, "Authentication failed: ${loginResult.error}")
                 // Login authentication failed, return the original failure
                 loginResult
             }

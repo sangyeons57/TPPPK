@@ -1,6 +1,5 @@
 package com.example.domain.usecase.auth.account
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.event.user.UserAccountWithdrawnEvent
@@ -41,17 +40,17 @@ class WithdrawMembershipUseCaseImpl @Inject constructor(
         val session = when (currentUserResult) {
             is CustomResult.Success -> currentUserResult.data
             is CustomResult.Failure -> {
-                Log.e("WithdrawMembershipUseCaseImpl", "Failed to get current user", currentUserResult.error)
+                // Failed to get current user: ${currentUserResult.error}
                 return CustomResult.Failure(currentUserResult.error ?: Exception("Failed to get current user information."))
             }
             else -> {
-                Log.e("WithdrawMembershipUseCaseImpl", "Unknown error while fetching current user")
+                // Unknown error while fetching current user
                 return CustomResult.Failure(Exception("Unknown error fetching user information."))
             }
         }
 
         val uid = session.userId
-        Log.d("WithdrawMembershipUseCaseImpl", "Current user UID: $uid. Proceeding with data anonymization.")
+        // Current user UID: $uid. Proceeding with data anonymization.
 
         // 2. Process user data withdrawal (anonymize in Firestore)
         when ( val userResult = userRepository.observe(DocumentId.from(uid)).first()) {

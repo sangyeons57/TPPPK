@@ -34,7 +34,7 @@ android {
         compose = true
     }
     kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
+        //jvmTarget = libs.versions.jvmTarget.get()
     }
 }
 
@@ -43,7 +43,6 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui"))
-    implementation(project(":core:core_logging"))
     implementation(project(":domain"))
     implementation(project(":data"))
 

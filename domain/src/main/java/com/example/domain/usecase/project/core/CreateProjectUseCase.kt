@@ -7,7 +7,6 @@ import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.domain.model.base.Category // Added
 import com.example.core_common.constants.Constants // Added
-import android.util.Log // Added for logging failure of default category creation
 import com.example.core_common.result.resultTry
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Project
@@ -93,7 +92,7 @@ class CreateProjectUseCase @Inject constructor(
                 val owner : Member = Member.createOwnerMember()
                 when (val memberResult = memberRepository.save(owner)) {
                     is CustomResult.Success -> {
-                        Log.d("ProjectRepositoryImpl", "Member created successfully: $memberResult")
+                        // Member created successfully: $memberResult
                     }
                     is CustomResult.Failure -> return CustomResult.Failure(memberResult.error)
                     is CustomResult.Initial -> return CustomResult.Initial
@@ -107,7 +106,7 @@ class CreateProjectUseCase @Inject constructor(
                 )
                 when (val wrapperResult = projectsWrapperRepository.create(createdProjectId, wrapper)){
                     is CustomResult.Success -> {
-                        Log.d("ProjectRepositoryImpl", "ProjectsWrapper created successfully: $wrapperResult")
+                        // ProjectsWrapper created successfully: $wrapperResult
                     }
                     is CustomResult.Failure -> return CustomResult.Failure(wrapperResult.error)
                     is CustomResult.Initial -> return CustomResult.Initial

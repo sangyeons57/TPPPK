@@ -1,6 +1,6 @@
 package com.example.domain.usecase.project.structure
 
-import android.util.Log
+
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.repository.collection.CategoryCollectionRepository
@@ -33,7 +33,7 @@ class GetProjectAllCategoriesUseCaseImpl @Inject constructor(
     override suspend fun invoke(projectId: String): Flow<CustomResult<List<CategoryCollection>, Exception>> {
         // CategoryCollectionRepository에 데이터 가져오기 위임
         val c = categoryCollectionRepository.getCategoryCollections(projectId)
-        Log.d("GetProjectAllCategoriesUseCaseImpl", "invoke: $c")
+        //("GetProjectAllCategoriesUseCaseImpl", "invoke: $c")
         return c
     }
 }

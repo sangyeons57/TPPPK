@@ -1,6 +1,5 @@
 package com.example.domain.usecase.auth.registration
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.User
@@ -71,7 +70,7 @@ class SignUpUseCase @Inject constructor(
                         }
 
                         is CustomResult.Failure -> {
-                            Log.d(TAG, "Failed to persist user aggregate: ${saveResult.error}")
+                            // Failed to persist user aggregate: ${saveResult.error}
                             saveResult
                         }
                         else -> CustomResult.Failure(Exception("Unknown error creating user profile"))
@@ -83,19 +82,19 @@ class SignUpUseCase @Inject constructor(
                 val isEmailInUse = err is FirebaseAuthUserCollisionException || err.message?.contains("already in use", true) == true
 
                 if (!isEmailInUse) {
-                    Log.d(TAG, "Sign-up failed for a reason other than email collision: ${err.message}")
+                    // Sign-up failed for a reason other than email collision: ${err.message}
                     return CustomResult.Failure(err)
                 }
 
-                Log.d(TAG, "Email collision detected. Checking for withdrawn account...")
+                // Email collision detected. Checking for withdrawn account...
                 try {
                     return when (val userRes = userRepository.observeByEmail(email).first()) {
                         is CustomResult.Success -> {
                             val existingUser = userRes.data
-                            Log.d(TAG, "Existing user found with status: ${existingUser.accountStatus}")
+                            // Existing user found with status: ${existingUser.accountStatus}
                             if (existingUser.accountStatus == UserAccountStatus.WITHDRAWN) {
                                 // Reactivate withdrawn account using user repository
-                                Log.d(TAG, "Reactivating withdrawn account for email: $email")
+                                // Reactivating withdrawn account for email: $email
                                 existingUser.activateAccount()
                                 existingUser.changeName(UserName(nickname))
                                 

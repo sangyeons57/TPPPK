@@ -10,7 +10,9 @@ import com.example.domain.repository.factory.context.SearchRepositoryFactoryCont
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import com.example.domain.usecase.search.SearchUseCase
 import com.example.domain.usecase.user.SearchUserByNameUseCase
+import com.example.domain.usecase.user.SearchUserByNameUseCaseImpl
 import com.example.domain.usecase.user.SearchUsersByNameUseCase
+import com.example.domain.usecase.user.SearchUsersByNameUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,11 +56,11 @@ class SearchUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
             
-            searchUserByNameUseCase = SearchUserByNameUseCase(
+            searchUserByNameUseCase = SearchUserByNameUseCaseImpl(
                 userRepository = userRepository
             ),
             
-            searchUsersByNameUseCase = SearchUsersByNameUseCase(
+            searchUsersByNameUseCase = SearchUsersByNameUseCaseImpl(
                 userRepository = userRepository
             ),
             
@@ -98,11 +100,11 @@ class SearchUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
             
-            searchUserByNameUseCase = SearchUserByNameUseCase(
+            searchUserByNameUseCase = SearchUserByNameUseCaseImpl(
                 userRepository = userRepository
             ),
             
-            searchUsersByNameUseCase = SearchUsersByNameUseCase(
+            searchUsersByNameUseCase = SearchUsersByNameUseCaseImpl(
                 userRepository = userRepository
             ),
             

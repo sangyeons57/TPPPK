@@ -16,7 +16,8 @@
       "Bash(export DOCKER_HOST=\"tcp://localhost:2375\")",
       "Bash(docker:*)",
       "Bash(/mnt/c/Program\\ Files/Docker/Docker/resources/bin/docker --version)",
-      "Bash(/mnt/c/Program\\ Files/Docker/Docker/resources/bin/docker run --rm -v \"$(pwd):/workspace\" android-kotlin-app ./gradlew :domain:compileDebugKotlin --no-daemon)"
+      "Bash(/mnt/c/Program\\ Files/Docker/Docker/resources/bin/docker run --rm -v \"$(pwd):/workspace\" android-kotlin-app ./gradlew :domain:compileDebugKotlin --no-daemon)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

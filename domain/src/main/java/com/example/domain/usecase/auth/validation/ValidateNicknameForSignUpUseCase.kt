@@ -1,7 +1,7 @@
 package com.example.domain.usecase.auth.validation
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.ui.auth.UserNameResult
+import com.example.domain.model.ui.sealed_class.UserNameResult
 import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
 import java.util.NoSuchElementException

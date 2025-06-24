@@ -29,14 +29,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
+        //jvmTarget = libs.versions.jvmTarget.get()
     }
 }
 
 dependencies {
     implementation(project(":domain"))
     implementation(project(":core:core_common"))
-    implementation(project(":core:core_logging"))
 
     // Sentry 의존성 추가
     implementation(libs.sentry.android)

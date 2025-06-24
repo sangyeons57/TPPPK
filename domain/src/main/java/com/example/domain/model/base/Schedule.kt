@@ -2,7 +2,7 @@ package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.event.AggregateRoot
-import com.example.domain.model._new.enum.ScheduleStatus
+import com.example.domain.model.enum.ScheduleStatus
 import com.google.firebase.firestore.DocumentId as FirestoreDocumentId
 import java.time.Instant
 import com.example.domain.model.vo.DocumentId

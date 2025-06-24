@@ -1,6 +1,6 @@
 package com.example.domain.usecase.project.core
 
-import android.util.Log
+
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.domain.event.AggregateRoot

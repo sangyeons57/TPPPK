@@ -1,6 +1,6 @@
 package com.example.domain.usecase.project.core
 
-import android.util.Log
+
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
@@ -50,7 +50,7 @@ class ConvertProjectWrappersToProjectsUseCase @Inject constructor(
                         // Handled by onStart or if all are loading
                     }
                     else -> {
-                        Log.e("ConvertProjectWrappersToProjectsUseCase", "Unexpected result type: $result")
+                        //("ConvertProjectWrappersToProjectsUseCase", "Unexpected result type: $result")
                     }
                 }
             }

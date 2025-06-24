@@ -2,7 +2,7 @@ package com.example.domain.usecase.schedule
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Schedule
-import com.example.domain.model._new.enum.ScheduleStatus
+import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId

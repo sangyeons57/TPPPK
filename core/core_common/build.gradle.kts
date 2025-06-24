@@ -30,11 +30,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
+        //jvmTarget = libs.versions.jvmTarget.get()
     }
     buildFeatures {
         compose = true
     }
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }
 
 dependencies {
@@ -55,9 +58,7 @@ dependencies {
     implementation(libs.material.icons.extended)
     
     // Sentry 및 Core_Logging 의존성
-    implementation(project(":core:core_logging"))
-    implementation(libs.sentry.android)
-    
+
     // Firebase - 최소 필요한 의존성만 추가
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore.ktx)

@@ -6,9 +6,7 @@ import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.usecase.auth.registration.CheckEmailVerificationUseCase
 import com.example.domain.usecase.auth.registration.RequestEmailVerificationAfterSignUpUseCase
-import com.example.domain.usecase.auth.registration.SendEmailVerificationUseCase
 import com.example.domain.usecase.auth.registration.SignUpUseCase
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -1,6 +1,5 @@
 package com.example.domain.model.base
 
-import android.provider.CalendarContract.CalendarAlerts
 import com.example.core_common.constants.Constants
 import com.example.domain.event.AggregateRoot
 import com.example.domain.event.DomainEvent

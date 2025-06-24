@@ -33,7 +33,7 @@ android {
         compose = true // Compose 사용
     }
     kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
+        //jvmTarget = libs.versions.jvmTarget.get()
     }
 }
 
@@ -42,7 +42,6 @@ dependencies {
     implementation(project(":core:core_common")) // 공통 유틸리티 사용
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui")) // 공통 유틸리티 사용
-    implementation(project(":core:core_logging")) // Sentry 유틸리티 사용
     implementation(project(":domain")) // Domain 모델, Repository 인터페이스 사용
     // ★ 중요: 현재 ChatViewModel이 Repository 구현체(ChatRepositoryImpl)가 제공하는
     //    ChatRepository 인터페이스를 직접 주입받으므로 :data 모듈 의존성이 필요합니다.

@@ -1,4 +1,4 @@
-package com.example.domain.model._new.enum
+package com.example.domain.model.enum
 
 /**
  * 일정의 상태를 나타내는 열거형입니다.

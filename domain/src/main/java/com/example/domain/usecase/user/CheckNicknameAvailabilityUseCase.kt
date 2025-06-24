@@ -1,6 +1,6 @@
 package com.example.domain.usecase.user
 
-import android.util.Log
+
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
@@ -35,7 +35,7 @@ class CheckNicknameAvailabilityUseCaseImpl @Inject constructor(
      * @return 성공 시 사용 가능 여부(Boolean)가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
     override suspend operator fun invoke(nickname: String): CustomResult<Boolean, Exception> {
-        Log.d("CheckNicknameAvailabilityUseCase", "Checking availability for nickname: $nickname")
+        //("CheckNicknameAvailabilityUseCase", "Checking availability for nickname: $nickname")
         // findByNameStream returns a Flow. We are interested in the first emission
         // to determine if a user with that exact name already exists.
         return try {
@@ -43,13 +43,13 @@ class CheckNicknameAvailabilityUseCaseImpl @Inject constructor(
             when (result) {
                 is CustomResult.Success -> {
                     // If a user is found, the nickname is NOT available.
-                    Log.d("CheckNicknameAvailabilityUseCase", "Nickname '$nickname' is already taken.")
+                    //("CheckNicknameAvailabilityUseCase", "Nickname '$nickname' is already taken.")
                     CustomResult.Success(false)
                 }
                 is CustomResult.Failure -> {
                     // If the specific error is 'NoSuchElementException', it means no user was found, so nickname IS available.
                     if (result.error is NoSuchElementException) {
-                        Log.d("CheckNicknameAvailabilityUseCase", "Nickname '$nickname' is available.")
+                        //("CheckNicknameAvailabilityUseCase", "Nickname '$nickname' is available.")
                         CustomResult.Success(true)
                     } else {
                         // Other errors are propagated.
@@ -60,21 +60,21 @@ class CheckNicknameAvailabilityUseCaseImpl @Inject constructor(
                 is CustomResult.Loading -> {
                     // This should ideally not happen if we take .first() and the underlying source emits quickly or is not a long-running stream for this specific check.
                     // However, to be exhaustive:
-                    Log.d("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is still loading. This is unexpected for a first() call.")
+                    //("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is still loading. This is unexpected for a first() call.")
                     CustomResult.Failure(Exception("Nickname check timed out or remained in loading state."))
                 }
                 is CustomResult.Initial -> {
-                     Log.d("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is in initial state. This is unexpected for a first() call.")
+                     //("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is in initial state. This is unexpected for a first() call.")
                     CustomResult.Failure(Exception("Nickname check remained in initial state."))
                 }
                  is CustomResult.Progress -> {
-                    Log.d("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is in progress state. This is unexpected for a first() call.")
+                    //("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is in progress state. This is unexpected for a first() call.")
                     CustomResult.Failure(Exception("Nickname check remained in progress state."))
                 }
             }
         } catch (e: Exception) {
             // Catch any exceptions from the Flow collection itself (e.g., if the Flow is empty and .first() is called, though findByNameStream should emit NoSuchElementException)
-            Log.e("CheckNicknameAvailabilityUseCase", "Exception during nickname check for '$nickname': ${e.localizedMessage}", e)
+            //("CheckNicknameAvailabilityUseCase", "Exception during nickname check for '$nickname': ${e.localizedMessage}", e)
             CustomResult.Failure(e)
         }
     }

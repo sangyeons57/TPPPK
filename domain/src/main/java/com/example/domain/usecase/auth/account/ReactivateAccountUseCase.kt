@@ -1,6 +1,5 @@
 package com.example.domain.usecase.auth.account
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.User
@@ -26,7 +25,7 @@ class ReactivateAccountUseCase @Inject constructor(
         nickname: String,
         consentTimeStamp: Instant
     ): CustomResult<User, Exception> {
-        Log.d(TAG, "Attempting to reactivate account for email: $email")
+        //(TAG, "Attempting to reactivate account for email: $email")
 
         return when (val userResult = userRepository.observeByEmail(email).first()) {
             is CustomResult.Success -> {
@@ -41,7 +40,7 @@ class ReactivateAccountUseCase @Inject constructor(
 
                 when (val saveResult = userRepository.save(userToReactivate)) {
                     is CustomResult.Success -> {
-                        Log.d(TAG, "Account reactivated and user data saved for email: $email")
+                        //(TAG, "Account reactivated and user data saved for email: $email")
                         EventDispatcher.publish(userToReactivate)
                         CustomResult.Success(userToReactivate)
                     }
