@@ -53,7 +53,7 @@ class CheckNicknameAvailabilityUseCaseImpl @Inject constructor(
                         CustomResult.Success(true)
                     } else {
                         // Other errors are propagated.
-                        Log.w("CheckNicknameAvailabilityUseCase", "Error checking nickname '$nickname': ${result.error.localizedMessage}")
+                        // "Error checking nickname '$nickname': ${result.error.localizedMessage}")
                         CustomResult.Failure(result.error)
                     }
                 }

@@ -34,7 +34,7 @@ class WithdrawMembershipUseCaseImpl @Inject constructor(
 ) : WithdrawMembershipUseCase {
 
     override suspend operator fun invoke(): CustomResult<Unit, Exception> {
-        Log.d("WithdrawMembershipUseCaseImpl", "Attempting user withdrawal process.")
+        // "Attempting user withdrawal process.")
         // 1. Get current user's UID
         val currentUserResult = authRepository.getCurrentUserSession()
         val session = when (currentUserResult) {
@@ -60,10 +60,7 @@ class WithdrawMembershipUseCaseImpl @Inject constructor(
                 val result = userRepository.save(user)
                 return when (result) {
                     is CustomResult.Success -> {
-                        Log.d(
-                            "WithdrawMembershipUseCaseImpl",
-                            "User data withdrawal successful for UID: $uid."
-                        )
+                        // User data withdrawal successful for UID: $uid.
                         EventDispatcher.publish(user)
                         CustomResult.Success(Unit)
                     }
@@ -72,11 +69,11 @@ class WithdrawMembershipUseCaseImpl @Inject constructor(
                 }
             }
             is CustomResult.Failure -> {
-                Log.e("WithdrawMembershipUseCaseImpl", "Failed to process user data withdrawal for UID: $uid.", userResult.error)
+                // "Failed to process user data withdrawal for UID: $uid.", userResult.error)
                 return CustomResult.Failure(userResult.error)
             }
             else -> {
-                 Log.e("WithdrawMembershipUseCaseImpl", "Unknown error during data processing for UID: $uid.")
+                 // "Unknown error during data processing for UID: $uid.")
                 return CustomResult.Failure(Exception("Unknown error during data processing."))
             }
         }

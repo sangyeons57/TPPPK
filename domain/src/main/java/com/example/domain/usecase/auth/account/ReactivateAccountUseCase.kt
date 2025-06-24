@@ -18,8 +18,6 @@ class ReactivateAccountUseCase @Inject constructor(
     private val userRepository: UserRepository
 ) {
 
-    private val TAG = "ReactivateAccountUseCaseImpl"
-
     suspend operator fun invoke(
         email: String,
         nickname: String,
@@ -45,14 +43,14 @@ class ReactivateAccountUseCase @Inject constructor(
                         CustomResult.Success(userToReactivate)
                     }
                     is CustomResult.Failure -> {
-                        Log.e(TAG, "Failed to save reactivated user data for email: $email", saveResult.error)
+                        // Failed to save reactivated user data for email: $email
                         saveResult
                     }
                     else -> CustomResult.Failure(Exception("Unknown error during saving reactivated user."))
                 }
             }
             is CustomResult.Failure -> {
-                Log.e(TAG, "Failed to find user for reactivation with email: $email", userResult.error)
+                // Failed to find user for reactivation with email: $email
                 userResult
             }
             else -> CustomResult.Failure(Exception("Unknown error during user lookup for reactivation."))

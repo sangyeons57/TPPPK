@@ -3,18 +3,22 @@ package com.example.domain.provider.project
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.base.MemberRepository
 import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
+import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
+import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
+import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
+import com.example.domain.usecase.project.JoinProjectWithTokenUseCase
+import com.example.domain.usecase.project.RenameProjectUseCaseImpl
 import com.example.domain.usecase.project.core.CreateProjectUseCase
-import com.example.domain.usecase.project.core.DeleteProjectUseCase
+import com.example.domain.usecase.project.core.DeleteProjectUseCaseImpl
 import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
-import com.example.domain.usecase.project.core.GetUserParticipatingProjectsUseCase
-import com.example.domain.usecase.project.core.JoinProjectWithCodeUseCase
-import com.example.domain.usecase.project.core.JoinProjectWithTokenUseCase
-import com.example.domain.usecase.project.core.RenameProjectUseCase
+import com.example.domain.usecase.project.core.GetUserParticipatingProjectsUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,7 +31,9 @@ import javax.inject.Singleton
 class CoreProjectUseCaseProvider @Inject constructor(
     private val projectRepositoryFactory: RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
     private val projectsWrapperRepositoryFactory: RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val categoryRepositoryFactory: RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
+    private val memberRepositoryFactory: RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>
 ) {
 
     /**
@@ -56,23 +62,40 @@ class CoreProjectUseCaseProvider @Inject constructor(
             )
         } else null
 
+        val categoryRepository = if (projectId != null) {
+            categoryRepositoryFactory.create(
+                CategoryRepositoryFactoryContext(
+                    collectionPath = CollectionPath.projectCategories(projectId)
+                )
+            )
+        } else null
+
+        val memberRepository = if (projectId != null) {
+            memberRepositoryFactory.create(
+                MemberRepositoryFactoryContext(
+                    collectionPath = CollectionPath.projectMembers(projectId)
+                )
+            )
+        } else null
+
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
                 projectRepository = projectRepository,
                 projectsWrapperRepository = projectsWrapperRepository 
                     ?: error("프로젝트 생성에는 사용자 ID가 필요합니다"),
                 authRepository = authRepository,
-                categoryRepository = null, // CategoryRepository는 별도 Provider에서 관리
-                memberRepository = null    // MemberRepository는 별도 Provider에서 관리
+                categoryRepository = categoryRepository ?: error("프로젝트 생성에는 프로젝트 ID가 필요합니다"),
+                memberRepository = memberRepository ?: error("프로젝트 생성에는 프로젝트 ID가 필요합니다")
             ),
             
-            deleteProjectUseCase = DeleteProjectUseCase(
+            deleteProjectUseCase = DeleteProjectUseCaseImpl(
                 projectRepository = projectRepository,
-                projectsWrapperRepository = projectsWrapperRepository
+                authRepository = authRepository,
+                projWrapperRepository = projectsWrapperRepository
                     ?: error("프로젝트 삭제에는 사용자 ID가 필요합니다")
             ),
             
-            renameProjectUseCase = RenameProjectUseCase(
+            renameProjectUseCase = RenameProjectUseCaseImpl(
                 projectRepository = projectRepository
             ),
             
@@ -80,9 +103,8 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository
             ),
             
-            getUserParticipatingProjectsUseCase = GetUserParticipatingProjectsUseCase(
-                projectsWrapperRepository = projectsWrapperRepository
-                    ?: error("사용자 프로젝트 조회에는 사용자 ID가 필요합니다"),
+            getUserParticipatingProjectsUseCase = GetUserParticipatingProjectsUseCaseImpl(
+                projectsWrapperRepository = projectsWrapperRepository,
                 projectRepository = projectRepository
             ),
             
@@ -124,21 +146,35 @@ class CoreProjectUseCaseProvider @Inject constructor(
             )
         )
 
+        // 임시로 "temp-project" ID 사용
+        val categoryRepository = categoryRepositoryFactory.create(
+            CategoryRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectCategories("temp-project")
+            )
+        )
+
+        val memberRepository = memberRepositoryFactory.create(
+            MemberRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectMembers("temp-project")
+            )
+        )
+
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
                 projectRepository = projectRepository,
                 projectsWrapperRepository = projectsWrapperRepository,
                 authRepository = authRepository,
-                categoryRepository = null,
-                memberRepository = null
+                categoryRepository = categoryRepository,
+                memberRepository = memberRepository
             ),
             
-            deleteProjectUseCase = DeleteProjectUseCase(
+            deleteProjectUseCase = DeleteProjectUseCaseImpl(
                 projectRepository = projectRepository,
-                projectsWrapperRepository = projectsWrapperRepository
+                authRepository = authRepository,
+                projWrapperRepository = projectsWrapperRepository
             ),
             
-            renameProjectUseCase = RenameProjectUseCase(
+            renameProjectUseCase = RenameProjectUseCaseImpl(
                 projectRepository = projectRepository
             ),
             
@@ -146,7 +182,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository
             ),
             
-            getUserParticipatingProjectsUseCase = GetUserParticipatingProjectsUseCase(
+            getUserParticipatingProjectsUseCase = GetUserParticipatingProjectsUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository,
                 projectRepository = projectRepository
             ),
@@ -171,10 +207,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
  */
 data class CoreProjectUseCases(
     val createProjectUseCase: CreateProjectUseCase,
-    val deleteProjectUseCase: DeleteProjectUseCase,
-    val renameProjectUseCase: RenameProjectUseCase,
+    val deleteProjectUseCase: DeleteProjectUseCaseImpl,
+    val renameProjectUseCase: RenameProjectUseCaseImpl,
     val getProjectDetailsStreamUseCase: GetProjectDetailsStreamUseCase,
-    val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCase,
+    val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCaseImpl,
     val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase,
     val joinProjectWithTokenUseCase: JoinProjectWithTokenUseCase,
     

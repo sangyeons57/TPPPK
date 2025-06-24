@@ -6,7 +6,7 @@ import com.example.core_common.result.CustomResult.Loading.getOrThrow
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.model.ui.auth.UserNameResult
+import com.example.domain.model.ui.sealed_class.UserNameResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository

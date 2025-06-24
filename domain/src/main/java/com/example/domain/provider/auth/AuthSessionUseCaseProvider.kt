@@ -6,7 +6,7 @@ import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.usecase.auth.session.CheckAuthenticationStatusUseCase
+import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCaseImpl
 import com.example.domain.usecase.auth.session.CheckSessionUseCase
 import com.example.domain.usecase.auth.session.LoginUseCase
 import com.example.domain.usecase.auth.session.LogoutUseCase
@@ -50,7 +50,7 @@ class AuthSessionUseCaseProvider @Inject constructor(
             ),
             
             // 세션 확인
-            checkAuthenticationStatusUseCase = CheckAuthenticationStatusUseCase(
+            checkAuthenticationStatusUseCase = CheckAuthenticationStatusUseCaseImpl(
                 authRepository = authRepository
             ),
             
@@ -74,7 +74,7 @@ data class AuthSessionUseCases(
     val logoutUseCase: LogoutUseCase,
     
     // 세션 확인
-    val checkAuthenticationStatusUseCase: CheckAuthenticationStatusUseCase,
+    val checkAuthenticationStatusUseCase: CheckAuthenticationStatusUseCaseImpl,
     val checkSessionUseCase: CheckSessionUseCase,
     
     // 공통 Repository

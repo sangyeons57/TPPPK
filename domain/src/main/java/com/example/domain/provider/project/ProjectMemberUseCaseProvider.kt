@@ -6,9 +6,9 @@ import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.MemberRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
-import com.example.domain.usecase.project.member.DeleteProjectMemberUseCase
-import com.example.domain.usecase.project.member.GetProjectMemberDetailsUseCase
-import com.example.domain.usecase.project.member.ObserveProjectMembersUseCase
+import com.example.domain.usecase.project.DeleteProjectMemberUseCase
+import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
+import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import com.example.domain.usecase.project.member.UpdateMemberRolesUseCase
 import com.example.domain.usecase.project.member.AddProjectMemberUseCase
 import com.example.domain.usecase.project.member.GetProjectMemberUseCase

@@ -1,4 +1,4 @@
-package com.example.domain.model.ui.auth
+package com.example.domain.model.ui.sealed_class
 
 /**
  * Represents the result of a nickname validation attempt, specifically for sign-up.
@@ -22,12 +22,9 @@ sealed class UserNameResult {
     object InvalidCharacters : UserNameResult() // Could be more specific if needed
 
     /** Indicates the nickname is already taken. */
-    object NicknameAlreadyExists : UserNameResult()
+        object NicknameAlreadyExists : UserNameResult()
 
-    /**
-     * Represents a generic failure during validation, potentially due to network issues
-     * or other unexpected errors when checking for nickname existence or validity.
-     * @param message A descriptive error message.
-     */
-    data class Failure(val message: String?) : UserNameResult()
+    /** Indicates a failure during validation, e.g., a network error. */
+    data class Failure(val message: String) : UserNameResult()
+
 }

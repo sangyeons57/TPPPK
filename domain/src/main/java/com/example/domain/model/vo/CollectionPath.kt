@@ -34,6 +34,9 @@ value class CollectionPath(val value: String) {
             CollectionPath("${user(userId).value}/${ProjectsWrapper.COLLECTION_NAME}")
         fun userProjectWrapper(userId: String, projectId: String): CollectionPath = 
             CollectionPath("${userProjectWrappers(userId).value}/$projectId")
+
+        fun userSchedules(userId: String): CollectionPath =
+            CollectionPath("${user(userId).value}/${Schedule.COLLECTION_NAME}")
         
         /* -------------------- DM Channel Paths -------------------- */
         fun dmChannel(dmChannelId: String): CollectionPath = 

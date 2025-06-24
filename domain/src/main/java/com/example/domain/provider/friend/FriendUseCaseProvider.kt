@@ -12,7 +12,7 @@ import com.example.domain.usecase.friend.AcceptFriendRequestUseCase
 import com.example.domain.usecase.friend.GetFriendsListStreamUseCase
 import com.example.domain.usecase.friend.GetPendingFriendRequestsUseCase
 import com.example.domain.usecase.friend.RemoveOrDenyFriendUseCase
-import com.example.domain.usecase.friend.SendFriendRequestUseCase
+import com.example.domain.usecase.friend.SendFriendRequestUseCaseImpl
 import com.example.domain.usecase.friend.ValidateSearchQueryUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,15 +53,12 @@ class FriendUseCaseProvider @Inject constructor(
         )
 
         return FriendUseCases(
-            sendFriendRequestUseCase = SendFriendRequestUseCase(
-                friendRepository = friendRepository,
-                userRepository = userRepository,
-                authRepository = authRepository
+            sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
+                friendRepository = friendRepository
             ),
             
             acceptFriendRequestUseCase = AcceptFriendRequestUseCase(
-                friendRepository = friendRepository,
-                authRepository = authRepository
+                friendRepository = friendRepository
             ),
             
             removeOrDenyFriendUseCase = RemoveOrDenyFriendUseCase(
@@ -70,15 +67,11 @@ class FriendUseCaseProvider @Inject constructor(
             ),
             
             getFriendsListStreamUseCase = GetFriendsListStreamUseCase(
-                friendRepository = friendRepository,
-                userRepository = userRepository,
-                authRepository = authRepository
+                friendRepository = friendRepository
             ),
             
             getPendingFriendRequestsUseCase = GetPendingFriendRequestsUseCase(
-                friendRepository = friendRepository,
-                userRepository = userRepository,
-                authRepository = authRepository
+                friendRepository = friendRepository
             ),
             
             validateSearchQueryUseCase = ValidateSearchQueryUseCase(),
@@ -107,22 +100,20 @@ class FriendUseCaseProvider @Inject constructor(
         )
 
         // 현재 사용자 ID를 기반으로 FriendRepository 생성 (AuthRepository에서 가져오도록 구성)
+        // TODO: 실제로는 현재 사용자 ID를 얻어서 userFriends를 사용해야 함
         val friendRepository = friendRepositoryFactory.create(
             FriendRepositoryFactoryContext(
-                collectionPath = CollectionPath.friends // 전역 친구 컬렉션 사용
+                collectionPath = CollectionPath.userFriends("current-user") // 임시 처리
             )
         )
 
         return FriendUseCases(
-            sendFriendRequestUseCase = SendFriendRequestUseCase(
-                friendRepository = friendRepository,
-                userRepository = userRepository,
-                authRepository = authRepository
+            sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
+                friendRepository = friendRepository
             ),
             
             acceptFriendRequestUseCase = AcceptFriendRequestUseCase(
-                friendRepository = friendRepository,
-                authRepository = authRepository
+                friendRepository = friendRepository
             ),
             
             removeOrDenyFriendUseCase = RemoveOrDenyFriendUseCase(
@@ -131,15 +122,11 @@ class FriendUseCaseProvider @Inject constructor(
             ),
             
             getFriendsListStreamUseCase = GetFriendsListStreamUseCase(
-                friendRepository = friendRepository,
-                userRepository = userRepository,
-                authRepository = authRepository
+                friendRepository = friendRepository
             ),
             
             getPendingFriendRequestsUseCase = GetPendingFriendRequestsUseCase(
-                friendRepository = friendRepository,
-                userRepository = userRepository,
-                authRepository = authRepository
+                friendRepository = friendRepository
             ),
             
             validateSearchQueryUseCase = ValidateSearchQueryUseCase(),
@@ -156,7 +143,7 @@ class FriendUseCaseProvider @Inject constructor(
  * 친구 관련 UseCase 그룹
  */
 data class FriendUseCases(
-    val sendFriendRequestUseCase: SendFriendRequestUseCase,
+    val sendFriendRequestUseCase: SendFriendRequestUseCaseImpl,
     val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
     val removeOrDenyFriendUseCase: RemoveOrDenyFriendUseCase,
     val getFriendsListStreamUseCase: GetFriendsListStreamUseCase,

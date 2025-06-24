@@ -43,39 +43,39 @@ class ValidateNicknameForSignUpUseCase @Inject constructor(
             return UserNameResult.InvalidCharacters
         }
 
-        try {
+        return try {
             when (val result = userRepository.observeByName(name = nickname).first()) {
                 is CustomResult.Success -> {
                     // If a user is found, the nickname is already taken.
-                    return UserNameResult.NicknameAlreadyExists
+                    UserNameResult.NicknameAlreadyExists
                 }
                 is CustomResult.Failure -> {
                     // If the specific error is 'NoSuchElementException', it means no user was found, so nickname IS available.
                     if (result.error is NoSuchElementException) {
-                        return UserNameResult.Valid
+                        UserNameResult.Valid
                     } else {
                         // Other errors from the repository call.
-                        return UserNameResult.Failure("Failed to check nickname availability: ${result.error.localizedMessage}")
+                        UserNameResult.Failure("Failed to check nickname availability: ${result.error.localizedMessage}")
                     }
                 }
                 is CustomResult.Loading -> {
                     // This state should ideally not be hit if .first() is used and the stream emits quickly.
-                    return UserNameResult.Failure("Nickname availability check timed out or remained in loading state.")
+                    UserNameResult.Failure("Nickname availability check timed out or remained in loading state.")
                 }
                 is CustomResult.Initial -> {
-                    return UserNameResult.Failure("Nickname availability check remained in initial state.")
+                    UserNameResult.Failure("Nickname availability check remained in initial state.")
                 }
                 is CustomResult.Progress -> {
-                    return UserNameResult.Failure("Nickname availability check remained in progress state.")
+                    UserNameResult.Failure("Nickname availability check remained in progress state.")
                 }
             }
         } catch (e: Exception) {
             // Catch exceptions from Flow collection (e.g., .first() on an empty flow if not handled by NoSuchElementException from source)
             // or other unexpected issues.
             if (e is NoSuchElementException) { // This might occur if the flow completes without emitting, though findByNameStream should emit Failure(NoSuchElementException)
-                 return UserNameResult.Valid
+                 UserNameResult.Valid
             } else {
-                 return UserNameResult.Failure("An unexpected error occurred during nickname validation: ${e.localizedMessage}")
+                 UserNameResult.Failure("An unexpected error occurred during nickname validation: ${e.localizedMessage}")
             }
         }
     }

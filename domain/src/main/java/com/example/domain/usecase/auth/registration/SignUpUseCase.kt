@@ -49,12 +49,12 @@ class SignUpUseCase @Inject constructor(
         nickname: String,
         consentTimeStamp: Instant
     ): CustomResult<User, Exception> {
-        Log.d(TAG, "Starting sign-up | email=$email, nickname=$nickname")
+        // "Starting sign-up | email=$email, nickname=$nickname")
 
         when (val signUpRes = authRepository.signup(email, password)) {
             is CustomResult.Success -> {
                 val uid = signUpRes.data
-                Log.d(TAG, "Auth signup success. uid=$uid")
+                // "Auth signup success. uid=$uid")
                 val newUser = User.registerNewUser(
                     id = DocumentId.from(uid),
                     email = UserEmail(email),
@@ -64,7 +64,7 @@ class SignUpUseCase @Inject constructor(
                 return userRepository.save(newUser).let { saveResult ->
                     when (saveResult) {
                         is CustomResult.Success -> {
-                            Log.d(TAG, "User aggregate persisted successfully for uid=$uid")
+                            // "User aggregate persisted successfully for uid=$uid")
                             EventDispatcher.publish(newUser)
                             CustomResult.Success(newUser)
                         }
@@ -100,12 +100,12 @@ class SignUpUseCase @Inject constructor(
                                 
                                 when (val saveResult = userRepository.save(existingUser)) {
                                     is CustomResult.Success -> {
-                                        Log.d(TAG, "Account reactivated and saved for email: $email")
+                                        // "Account reactivated and saved for email: $email")
                                         EventDispatcher.publish(existingUser)
                                         CustomResult.Success(existingUser)
                                     }
                                     is CustomResult.Failure -> {
-                                        Log.e(TAG, "Failed to save reactivated user data for email: $email", saveResult.error)
+                                        // "Failed to save reactivated user data for email: $email", saveResult.error)
                                         saveResult
                                     }
                                     else -> CustomResult.Failure(Exception("Unknown error during saving reactivated user."))
@@ -115,21 +115,21 @@ class SignUpUseCase @Inject constructor(
                             }
                         }
                         is CustomResult.Failure -> {
-                            Log.e(TAG, "Error fetching user by email after collision", userRes.error)
+                            // "Error fetching user by email after collision", userRes.error)
                             CustomResult.Failure(userRes.error)
                         }
                         else -> CustomResult.Failure(Exception("Unknown state while fetching user by email."))
                     }
                 } catch (e: NoSuchElementException) {
-                    Log.e(TAG, "Auth reported email collision, but findByEmailStream was empty for $email", e)
+                    // "Auth reported email collision, but findByEmailStream was empty for $email", e)
                     return CustomResult.Failure(Exception("Inconsistent state: Email is reported as in use, but no user profile was found."))
                 } catch (e: Exception) {
-                    Log.e(TAG, "An unexpected error occurred while checking for an existing user.", e)
+                    // "An unexpected error occurred while checking for an existing user.", e)
                     return CustomResult.Failure(e)
                 }
             }
             else -> {
-                Log.w(TAG, "Sign-up process in an intermediate state (Loading/Initial)")
+                // "Sign-up process in an intermediate state (Loading/Initial)")
                 return CustomResult.Failure(Exception("Sign-up process is currently in progress."))
             }
         }

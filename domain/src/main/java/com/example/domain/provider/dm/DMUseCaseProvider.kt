@@ -5,9 +5,11 @@ import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.DMChannelRepository
 import com.example.domain.repository.base.DMWrapperRepository
+import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.DMChannelRepositoryFactoryContext
 import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryContext
+import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import com.example.domain.usecase.dm.AddDmChannelUseCase
 import com.example.domain.usecase.dm.GetCurrentUserDmChannelsUseCase
 import com.example.domain.usecase.dm.GetDmChannelUseCase
@@ -24,7 +26,8 @@ import javax.inject.Singleton
 class DMUseCaseProvider @Inject constructor(
     private val dmChannelRepositoryFactory: RepositoryFactory<DMChannelRepositoryFactoryContext, DMChannelRepository>,
     private val dmWrapperRepositoryFactory: RepositoryFactory<DMWrapperRepositoryFactoryContext, DMWrapperRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
 ) {
 
     /**
@@ -50,6 +53,10 @@ class DMUseCaseProvider @Inject constructor(
             AuthRepositoryFactoryContext()
         )
 
+        val userRepository = userRepositoryFactory.create(
+            UserRepositoryFactoryContext(CollectionPath.users)
+        )
+
         return DMUseCases(
             getUserDmChannelsUseCase = GetUserDmChannelsUseCase(
                 dmChannelRepository = dmChannelRepository,
@@ -58,19 +65,18 @@ class DMUseCaseProvider @Inject constructor(
             ),
             
             getCurrentUserDmChannelsUseCase = GetCurrentUserDmChannelsUseCase(
-                dmChannelRepository = dmChannelRepository,
-                authRepository = authRepository,
-                dmWrapperRepository = dmWrapperRepository
+                dmRepository = dmChannelRepository
             ),
             
             addDmChannelUseCase = AddDmChannelUseCase(
                 dmChannelRepository = dmChannelRepository,
                 dmWrapperRepository = dmWrapperRepository,
-                authRepository = authRepository
+                authRepository = authRepository,
+                userRepository = userRepository
             ),
             
             getDmChannelUseCase = GetDmChannelUseCase(
-                dmChannelRepository = dmChannelRepository
+                dmRepository = dmChannelRepository
             ),
             
             // 공통 Repository
@@ -99,7 +105,7 @@ class DMUseCaseProvider @Inject constructor(
 
         return DMChannelUseCases(
             getDmChannelUseCase = GetDmChannelUseCase(
-                dmChannelRepository = dmChannelRepository
+                dmRepository = dmChannelRepository
             ),
             
             // 향후 DM 메시지 관련 UseCase들 추가 예정

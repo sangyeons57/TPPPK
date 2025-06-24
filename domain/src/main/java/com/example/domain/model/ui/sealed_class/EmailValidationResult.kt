@@ -1,4 +1,4 @@
-package com.example.domain.model.ui.auth
+package com.example.domain.model.ui.sealed_class
 
 /**
  * Represents the result of an email validation attempt, specifically for sign-up.
