@@ -11,7 +11,6 @@ import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.exception.AccountAlreadyExistsException
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.usecase.auth.account.ReactivateAccountUseCase
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -23,12 +22,10 @@ import javax.inject.Inject
  * 
  * @property authRepository 인증 관련 기능을 제공하는 Repository
  * @property userRepository 사용자 관련 기능을 제공하는 Repository
- * @property reactivateAccountUseCase 계정 재활성화 기능을 제공하는 UseCase
  */
 class SignUpUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository,
-    private val reactivateAccountUseCase: ReactivateAccountUseCase
+    private val userRepository: UserRepository
 ) {
     // Centralized TAG for Logcat filtering
     companion object {
@@ -97,7 +94,23 @@ class SignUpUseCase @Inject constructor(
                             val existingUser = userRes.data
                             Log.d(TAG, "Existing user found with status: ${existingUser.accountStatus}")
                             if (existingUser.accountStatus == UserAccountStatus.WITHDRAWN) {
-                                reactivateAccountUseCase(email, nickname, consentTimeStamp)
+                                // Reactivate withdrawn account instead of calling separate UseCase
+                                Log.d(TAG, "Reactivating withdrawn account for email: $email")
+                                existingUser.activateAccount()
+                                existingUser.changeName(UserName(nickname))
+                                
+                                when (val saveResult = userRepository.save(existingUser)) {
+                                    is CustomResult.Success -> {
+                                        Log.d(TAG, "Account reactivated and saved for email: $email")
+                                        EventDispatcher.publish(existingUser)
+                                        CustomResult.Success(existingUser)
+                                    }
+                                    is CustomResult.Failure -> {
+                                        Log.e(TAG, "Failed to save reactivated user data for email: $email", saveResult.error)
+                                        saveResult
+                                    }
+                                    else -> CustomResult.Failure(Exception("Unknown error during saving reactivated user."))
+                                }
                             } else {
                                 CustomResult.Failure(AccountAlreadyExistsException("An account with this email already exists."))
                             }
