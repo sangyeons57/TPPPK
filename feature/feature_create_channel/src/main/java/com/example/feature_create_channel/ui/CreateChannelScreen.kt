@@ -21,9 +21,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.feature_edit_channel.CreateChannelEvent
-import com.example.feature_edit_channel.CreateChannelUiState
-import com.example.feature_edit_channel.CreateChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

@@ -104,3 +104,7 @@ dependencies {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+}

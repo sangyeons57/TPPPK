@@ -37,7 +37,9 @@ android {
         compose = true
     }
 }
-
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+}
 dependencies {
 
     implementation(project(":core:core_common"))

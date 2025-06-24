@@ -46,7 +46,9 @@ android {
         }
     }
 }
-
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+}
 dependencies {
     // Project modules
     implementation(project(":core:core_common"))

@@ -5,9 +5,10 @@ import com.example.core_ui.components.draggablelist.DraggableListItemData
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.collection.CategoryCollection
-import com.example.domain.usecase.project.ConvertProjectStructureToDraggableItemsUseCase
-import com.example.domain.usecase.project.DraggableItem
-import com.example.domain.usecase.project.DraggableItemType
+import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCase
+import com.example.domain.usecase.project.structure.DraggableItem
+import com.example.domain.usecase.project.structure.DraggableItemType
+
 import javax.inject.Inject
 
 /**

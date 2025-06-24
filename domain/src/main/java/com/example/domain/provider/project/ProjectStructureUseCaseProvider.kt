@@ -4,8 +4,11 @@ import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.base.ProjectChannelRepository
+import com.example.domain.repository.collection.CategoryCollectionRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.usecase.project.structure.AddCategoryUseCase
 import com.example.domain.usecase.project.structure.AddCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCase
@@ -36,7 +39,9 @@ import javax.inject.Singleton
 @Singleton
 class ProjectStructureUseCaseProvider @Inject constructor(
     private val categoryRepositoryFactory: RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val projectChannelRepositoryFactory: RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val categoryCollectionRepository: CategoryCollectionRepository
 ) {
 
     /**
@@ -48,6 +53,12 @@ class ProjectStructureUseCaseProvider @Inject constructor(
     fun createForProject(projectId: String): ProjectStructureUseCases {
         val categoryRepository = categoryRepositoryFactory.create(
             CategoryRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectCategories(projectId)
+            )
+        )
+
+        val projectChannelRepository = projectChannelRepositoryFactory.create(
+            ProjectChannelRepositoryFactoryContext(
                 collectionPath = CollectionPath.projectCategories(projectId)
             )
         )
@@ -64,34 +75,31 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             ),
             
             deleteCategoryUseCase = DeleteCategoryUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
+                categoryCollectionRepository = categoryCollectionRepository
             ),
             
             renameCategoryUseCase = RenameCategoryUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
+                categoryCollectionRepository = categoryCollectionRepository
             ),
             
-            moveCategoryUseCase = MoveCategoryUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
-            ),
+            moveCategoryUseCase = MoveCategoryUseCaseImpl(),
             
             // 프로젝트 구조 조회 및 변환
             getProjectAllCategoriesUseCase = GetProjectAllCategoriesUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
+                categoryCollectionRepository = categoryCollectionRepository
             ),
             
-            convertProjectStructureToDraggableItemsUseCase = ConvertProjectStructureToDraggableItemsUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
-            ),
+            convertProjectStructureToDraggableItemsUseCase = ConvertProjectStructureToDraggableItemsUseCaseImpl(),
             
             // 구조 업데이트
             updateProjectStructureUseCase = UpdateProjectStructureUseCase(
-                categoryRepository = categoryRepository
+                categoryRepository = categoryRepository,
+                projectChannelRepository = projectChannelRepository
             ),
             
             // 채널-카테고리 간 이동
             moveChannelBetweenCategoriesUseCase = MoveChannelBetweenCategoriesUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
+                categoryCollectionRepository = categoryCollectionRepository
             ),
             
             // 카테고리 도메인 UseCases

@@ -5,6 +5,9 @@ plugins {
     alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.kotlin.compose)
 }
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+}
 
 android {
     namespace = "com.example.feature_profile"
@@ -87,4 +90,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }

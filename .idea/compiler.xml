@@ -5,6 +5,8 @@
       <module name="TeamnovaPersonalProjectProjectingKotlin.core.core_logging" target="21" />
       <module name="TeamnovaPersonalProjectProjectingKotlin.feature.feature_auth" target="21" />
       <module name="TeamnovaPersonalProjectProjectingKotlin.feature.feature_category_edit2" target="21" />
+      <module name="TeamnovaPersonalProjectProjectingKotlin.feature.feature_project" target="21" />
+      <module name="TeamnovaPersonalProjectProjectingKotlin.feature.feature_schedule" target="21" />
     </bytecodeTargetLevel>
   </component>
 </project>

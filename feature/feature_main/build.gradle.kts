@@ -5,6 +5,9 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
 }
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+}
 
 android {
     namespace = "com.example.feature_main"
@@ -35,6 +38,9 @@ android {
     kotlinOptions {
         //jvmTarget = libs.versions.jvmTarget.get()
     }
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }
 
 dependencies {
@@ -91,4 +97,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }

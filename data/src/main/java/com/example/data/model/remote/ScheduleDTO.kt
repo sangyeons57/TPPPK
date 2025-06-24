@@ -1,6 +1,6 @@
 package com.example.data.model.remote
 
-import com.example.domain.model._new.enum.ScheduleStatus
+import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.base.Schedule
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId

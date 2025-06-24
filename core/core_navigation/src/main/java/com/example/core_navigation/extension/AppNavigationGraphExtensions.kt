@@ -268,15 +268,8 @@ inline fun NavGraphBuilder.safeComposable(
     crossinline content: @Composable (NavBackStackEntry) -> Unit
 ) {
     composable(route = route, arguments = arguments) { backStackEntry ->
-        try {
-            content(backStackEntry)
-        } catch (e: IllegalArgumentException) {
-            // Handle missing arguments gracefully
-            androidx.compose.material3.Text(
-                text = "Navigation Error: ${e.message}",
-                color = androidx.compose.material3.MaterialTheme.colorScheme.error
-            )
-        }
+        content(backStackEntry)
+
     }
 }
 

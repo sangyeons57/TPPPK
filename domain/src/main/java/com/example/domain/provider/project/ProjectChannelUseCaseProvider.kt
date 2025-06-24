@@ -5,6 +5,7 @@ import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.ProjectChannelRepository
+import com.example.domain.repository.collection.CategoryCollectionRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
@@ -31,7 +32,8 @@ import javax.inject.Singleton
 class ProjectChannelUseCaseProvider @Inject constructor(
     private val categoryRepositoryFactory: RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
     private val projectChannelRepositoryFactory: RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val categoryCollectionRepository: CategoryCollectionRepository
 ) {
 
     /**
@@ -74,7 +76,7 @@ class ProjectChannelUseCaseProvider @Inject constructor(
             ),
             
             deleteChannelUseCase = DeleteChannelUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
+                categoryCollectionRepository = categoryCollectionRepository
             ),
             
             // 채널 고급 관리
@@ -83,12 +85,10 @@ class ProjectChannelUseCaseProvider @Inject constructor(
             ),
             
             renameChannelUseCase = RenameChannelUseCaseImpl(
-                categoryCollectionRepository = categoryRepository
+                categoryCollectionRepository = categoryCollectionRepository
             ),
             
-            moveChannelUseCase = MoveChannelUseCaseImpl(
-                categories = emptyList()
-            ),
+            moveChannelUseCase = MoveChannelUseCaseImpl(),
             
             // 공통 Repository
             authRepository = authRepository,

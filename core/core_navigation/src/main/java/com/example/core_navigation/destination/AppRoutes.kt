@@ -2,7 +2,6 @@ package com.example.core_navigation.destination
 
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import com.example.core_navigation.core.NavDestination
 
 object AppRoutes {
 

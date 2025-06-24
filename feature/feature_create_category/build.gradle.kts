@@ -40,6 +40,9 @@ android {
         kotlinCompilerExtensionVersion = libs.versions.kotlin.get()
     }   
 }
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+}
 
 dependencies {
     // --- 모듈 의존성 ---

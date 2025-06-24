@@ -6,7 +6,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.android.scopes.ViewModelScoped
-import com.example.domain.usecase.project.ConvertProjectStructureToDraggableItemsUseCase
+import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCase
 
 /**
  * 다이얼로그 관련 의존성을 제공하는 Hilt 모듈

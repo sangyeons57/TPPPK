@@ -1,9 +1,12 @@
-plugins {
+ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.org.jetbrains.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.kotlin.compose)
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }
 
 android {
@@ -39,6 +42,9 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.kotlin.get()
     }
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }
 
 dependencies {
@@ -81,4 +87,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }

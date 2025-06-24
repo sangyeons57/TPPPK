@@ -17,9 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 // Removed direct Coil imports, will use UserProfileImage
-import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationCommand
-// Import R class for drawables - already handled by UserProfileImage if needed
+import com.example.core_navigation.core.NavigationManger // Import R class for drawables - already handled by UserProfileImage if needed
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
