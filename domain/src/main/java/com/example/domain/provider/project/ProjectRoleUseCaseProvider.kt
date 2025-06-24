@@ -3,17 +3,27 @@ package com.example.domain.provider.project
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.PermissionRepository
 import com.example.domain.repository.base.ProjectRoleRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
+import com.example.domain.repository.factory.context.PermissionRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
 import com.example.domain.usecase.project.role.DeleteRoleUseCase
+import com.example.domain.usecase.project.role.DeleteRoleUseCaseImpl
 import com.example.domain.usecase.project.role.CreateProjectRoleUseCase
+import com.example.domain.usecase.project.role.CreateProjectRoleUseCaseImpl
 import com.example.domain.usecase.project.role.CreateRoleUseCase
+import com.example.domain.usecase.project.role.CreateRoleUseCaseImpl
 import com.example.domain.usecase.project.role.GetProjectRoleUseCase
+import com.example.domain.usecase.project.role.GetProjectRoleUseCaseImpl
 import com.example.domain.usecase.project.role.GetProjectRolesUseCase
+import com.example.domain.usecase.project.role.GetProjectRolesUseCaseImpl
 import com.example.domain.usecase.project.role.GetRoleDetailsUseCase
+import com.example.domain.usecase.project.role.GetRoleDetailsUseCaseImpl
 import com.example.domain.usecase.project.role.GetRolePermissionsUseCase
+import com.example.domain.usecase.project.role.GetRolePermissionsUseCaseImpl
 import com.example.domain.usecase.project.role.UpdateProjectRoleUseCase
+import com.example.domain.usecase.project.role.UpdateProjectRoleUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +34,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectRoleUseCaseProvider @Inject constructor(
-    private val projectProjectRoleRepositoryFactory: RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
+    private val projectRoleRepositoryFactory: RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
+    private val permissionRepositoryFactory: RepositoryFactory<PermissionRepositoryFactoryContext, PermissionRepository>,
     private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
@@ -35,15 +46,15 @@ class ProjectRoleUseCaseProvider @Inject constructor(
      * @return 프로젝트 역할 관리 UseCase 그룹
      */
     fun createForProject(projectId: String): ProjectRoleUseCases {
-        val roleRepository = projectProjectRoleRepositoryFactory.create(
+        val projectRoleRepository = projectRoleRepositoryFactory.create(
             ProjectRoleRepositoryFactoryContext(
                 collectionPath = CollectionPath.projectRoles(projectId)
             )
         )
 
-        val projectRoleRepository = projectProjectRoleRepositoryFactory.create(
-            ProjectRoleRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectRoles(projectId)
+        val permissionRepository = permissionRepositoryFactory.create(
+            PermissionRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectRolePermissions(projectId, "")
             )
         )
 
@@ -53,46 +64,43 @@ class ProjectRoleUseCaseProvider @Inject constructor(
 
         return ProjectRoleUseCases(
             // 역할 기본 CRUD
-            createRoleUseCase = CreateRoleUseCase(
-                roleRepository = roleRepository,
-                authRepository = authRepository
+            createRoleUseCase = CreateRoleUseCaseImpl(
+                projectRoleRepository = projectRoleRepository
             ),
             
-            createProjectRoleUseCase = CreateProjectRoleUseCase(
+            createProjectRoleUseCase = CreateProjectRoleUseCaseImpl(
+                projectRoleRepository = projectRoleRepository
+            ),
+            
+            updateProjectRoleUseCase = UpdateProjectRoleUseCaseImpl(
+                projectRoleRepository = projectRoleRepository
+            ),
+            
+            deleteRoleUseCase = DeleteRoleUseCaseImpl(
                 projectRoleRepository = projectRoleRepository,
                 authRepository = authRepository
-            ),
-            
-            updateProjectRoleUseCase = UpdateProjectRoleUseCase(
-                projectRoleRepository = projectRoleRepository,
-                authRepository = authRepository
-            ),
-            
-            deleteRoleUseCase = DeleteRoleUseCase(
-                roleRepository = roleRepository
             ),
             
             // 역할 조회
-            getProjectRoleUseCase = GetProjectRoleUseCase(
+            getProjectRoleUseCase = GetProjectRoleUseCaseImpl(
                 projectRoleRepository = projectRoleRepository
             ),
             
-            getProjectRolesUseCase = GetProjectRolesUseCase(
+            getProjectRolesUseCase = GetProjectRolesUseCaseImpl(
                 projectRoleRepository = projectRoleRepository
             ),
             
-            getRoleDetailsUseCase = GetRoleDetailsUseCase(
-                roleRepository = roleRepository
+            getRoleDetailsUseCase = GetRoleDetailsUseCaseImpl(
+                projectRoleRepository = projectRoleRepository
             ),
             
             // 권한 관리
-            getRolePermissionsUseCase = GetRolePermissionsUseCase(
-                roleRepository = roleRepository
+            getRolePermissionsUseCase = GetRolePermissionsUseCaseImpl(
+                permissionRepository = permissionRepository
             ),
             
             // 공통 Repository
             authRepository = authRepository,
-            roleRepository = roleRepository,
             projectRoleRepository = projectRoleRepository
         )
     }
@@ -139,6 +147,5 @@ data class ProjectRoleUseCases(
     
     // 공통 Repository
     val authRepository: AuthRepository,
-    val roleRepository: ProjectRoleRepository,
     val projectRoleRepository: ProjectRoleRepository
 )

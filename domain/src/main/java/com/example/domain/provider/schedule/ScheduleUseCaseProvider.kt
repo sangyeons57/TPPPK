@@ -7,11 +7,16 @@ import com.example.domain.repository.base.ScheduleRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ScheduleRepositoryFactoryContext
 import com.example.domain.usecase.schedule.AddScheduleUseCase
+import com.example.domain.usecase.schedule.AddScheduleUseCaseImpl
 import com.example.domain.usecase.schedule.DeleteScheduleUseCase
+import com.example.domain.usecase.schedule.DeleteScheduleUseCaseImpl
 import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
+import com.example.domain.usecase.schedule.GetScheduleDetailUseCaseImpl
 import com.example.domain.usecase.schedule.GetScheduleSummaryForMonthUseCase
 import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
+import com.example.domain.usecase.schedule.GetSchedulesForDateUseCaseImpl
 import com.example.domain.usecase.schedule.UpdateScheduleUseCase
+import com.example.domain.usecase.schedule.UpdateScheduleUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,17 +49,17 @@ class ScheduleUseCaseProvider @Inject constructor(
         )
 
         return ScheduleUseCases(
-            addScheduleUseCase = AddScheduleUseCase(
+            addScheduleUseCase = AddScheduleUseCaseImpl(
                 scheduleRepository = scheduleRepository,
                 authRepository = authRepository
             ),
             
-            deleteScheduleUseCase = DeleteScheduleUseCase(
+            deleteScheduleUseCase = DeleteScheduleUseCaseImpl(
                 scheduleRepository = scheduleRepository,
                 authRepository = authRepository
             ),
             
-            getScheduleDetailUseCase = GetScheduleDetailUseCase(
+            getScheduleDetailUseCase = GetScheduleDetailUseCaseImpl(
                 scheduleRepository = scheduleRepository
             ),
             
@@ -63,14 +68,13 @@ class ScheduleUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
             
-            getSchedulesForDateUseCase = GetSchedulesForDateUseCase(
+            getSchedulesForDateUseCase = GetSchedulesForDateUseCaseImpl(
                 scheduleRepository = scheduleRepository,
                 authRepository = authRepository
             ),
             
-            updateScheduleUseCase = UpdateScheduleUseCase(
-                scheduleRepository = scheduleRepository,
-                authRepository = authRepository
+            updateScheduleUseCase = UpdateScheduleUseCaseImpl(
+                scheduleRepository = scheduleRepository
             ),
             
             // 공통 Repository
@@ -97,17 +101,17 @@ class ScheduleUseCaseProvider @Inject constructor(
         )
 
         return ScheduleUseCases(
-            addScheduleUseCase = AddScheduleUseCase(
+            addScheduleUseCase = AddScheduleUseCaseImpl(
                 scheduleRepository = scheduleRepository,
                 authRepository = authRepository
             ),
             
-            deleteScheduleUseCase = DeleteScheduleUseCase(
+            deleteScheduleUseCase = DeleteScheduleUseCaseImpl(
                 scheduleRepository = scheduleRepository,
                 authRepository = authRepository
             ),
             
-            getScheduleDetailUseCase = GetScheduleDetailUseCase(
+            getScheduleDetailUseCase = GetScheduleDetailUseCaseImpl(
                 scheduleRepository = scheduleRepository
             ),
             
@@ -116,14 +120,13 @@ class ScheduleUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
             
-            getSchedulesForDateUseCase = GetSchedulesForDateUseCase(
+            getSchedulesForDateUseCase = GetSchedulesForDateUseCaseImpl(
                 scheduleRepository = scheduleRepository,
                 authRepository = authRepository
             ),
             
-            updateScheduleUseCase = UpdateScheduleUseCase(
-                scheduleRepository = scheduleRepository,
-                authRepository = authRepository
+            updateScheduleUseCase = UpdateScheduleUseCaseImpl(
+                scheduleRepository = scheduleRepository
             ),
             
             // 공통 Repository

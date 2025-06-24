@@ -3,15 +3,21 @@ package com.example.domain.provider.project
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.ProjectChannelRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
+import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.usecase.project.channel.AddProjectChannelUseCase
+import com.example.domain.usecase.project.channel.AddProjectChannelUseCaseImpl
 import com.example.domain.usecase.project.channel.DeleteChannelUseCase
 import com.example.domain.usecase.project.channel.MoveChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCase
 import com.example.domain.usecase.project.channel.CreateProjectChannelUseCase
+import com.example.domain.usecase.project.channel.DeleteChannelUseCaseImpl
 import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
+import com.example.domain.usecase.project.channel.MoveChannelUseCaseImpl
+import com.example.domain.usecase.project.channel.RenameChannelUseCaseImpl
 import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,6 +29,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectChannelUseCaseProvider @Inject constructor(
+    private val categoryRepositoryFactory: RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
     private val projectChannelRepositoryFactory: RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
     private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
@@ -34,9 +41,15 @@ class ProjectChannelUseCaseProvider @Inject constructor(
      * @return 프로젝트 채널 관리 UseCase 그룹
      */
     fun createForProject(projectId: String): ProjectChannelUseCases {
+        val categoryRepository = categoryRepositoryFactory.create(
+            CategoryRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectCategories(projectId)
+            )
+        )
+        
         val projectChannelRepository = projectChannelRepositoryFactory.create(
             ProjectChannelRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectChannels(projectId)
+                collectionPath = CollectionPath.projectCategories(projectId)
             )
         )
 
@@ -47,7 +60,8 @@ class ProjectChannelUseCaseProvider @Inject constructor(
         return ProjectChannelUseCases(
             // 채널 기본 CRUD
             createProjectChannelUseCase = CreateProjectChannelUseCase(
-                projectChannelRepository = projectChannelRepository
+                categoryRepository = categoryRepository,
+                authRepository = authRepository
             ),
             
             getProjectChannelUseCase = GetProjectChannelUseCase(
@@ -55,25 +69,25 @@ class ProjectChannelUseCaseProvider @Inject constructor(
             ),
             
             updateProjectChannelUseCase = UpdateProjectChannelUseCase(
-                projectChannelRepository = projectChannelRepository
-            ),
-            
-            deleteChannelUseCase = DeleteChannelUseCase(
-                projectChannelRepository = projectChannelRepository
-            ),
-            
-            // 채널 고급 관리
-            addProjectChannelUseCase = AddProjectChannelUseCase(
-                projectChannelRepository = projectChannelRepository,
+                categoryRepository = categoryRepository,
                 authRepository = authRepository
             ),
             
-            renameChannelUseCase = RenameChannelUseCase(
+            deleteChannelUseCase = DeleteChannelUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
+            ),
+            
+            // 채널 고급 관리
+            addProjectChannelUseCase = AddProjectChannelUseCaseImpl(
                 projectChannelRepository = projectChannelRepository
             ),
             
-            moveChannelUseCase = MoveChannelUseCase(
-                projectChannelRepository = projectChannelRepository
+            renameChannelUseCase = RenameChannelUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
+            ),
+            
+            moveChannelUseCase = MoveChannelUseCaseImpl(
+                categories = emptyList()
             ),
             
             // 공통 Repository

@@ -7,12 +7,19 @@ import com.example.domain.repository.base.MemberRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
+import com.example.domain.usecase.project.DeleteProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
+import com.example.domain.usecase.project.GetProjectMemberDetailsUseCaseImpl
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
+import com.example.domain.usecase.project.ObserveProjectMembersUseCaseImpl
 import com.example.domain.usecase.project.member.UpdateMemberRolesUseCase
+import com.example.domain.usecase.project.member.UpdateMemberRolesUseCaseImpl
 import com.example.domain.usecase.project.member.AddProjectMemberUseCase
+import com.example.domain.usecase.project.member.AddProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.member.GetProjectMemberUseCase
+import com.example.domain.usecase.project.member.GetProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.member.RemoveProjectMemberUseCase
+import com.example.domain.usecase.project.member.RemoveProjectMemberUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,37 +53,34 @@ class ProjectMemberUseCaseProvider @Inject constructor(
 
         return ProjectMemberUseCases(
             // 멤버 기본 CRUD
-            addProjectMemberUseCase = AddProjectMemberUseCase(
-                memberRepository = memberRepository,
-                authRepository = authRepository
+            addProjectMemberUseCase = AddProjectMemberUseCaseImpl(
+                projectMemberRepository = memberRepository
             ),
             
-            getProjectMemberUseCase = GetProjectMemberUseCase(
-                memberRepository = memberRepository
+            getProjectMemberUseCase = GetProjectMemberUseCaseImpl(
+                projectMemberRepository = memberRepository
             ),
             
-            removeProjectMemberUseCase = RemoveProjectMemberUseCase(
-                memberRepository = memberRepository,
-                authRepository = authRepository
+            removeProjectMemberUseCase = RemoveProjectMemberUseCaseImpl(
+                projectMemberRepository = memberRepository
             ),
             
             // 멤버 고급 관리
-            getProjectMemberDetailsUseCase = GetProjectMemberDetailsUseCase(
-                memberRepository = memberRepository
+            getProjectMemberDetailsUseCase = GetProjectMemberDetailsUseCaseImpl(
+                projectMemberRepository = memberRepository
             ),
             
-            deleteProjectMemberUseCase = DeleteProjectMemberUseCase(
-                memberRepository = memberRepository
+            deleteProjectMemberUseCase = DeleteProjectMemberUseCaseImpl(
+                projectMemberRepository = memberRepository
             ),
             
-            observeProjectMembersUseCase = ObserveProjectMembersUseCase(
-                memberRepository = memberRepository
+            observeProjectMembersUseCase = ObserveProjectMembersUseCaseImpl(
+                projectMemberRepository = memberRepository
             ),
             
             // 멤버 역할 관리
-            updateMemberRolesUseCase = UpdateMemberRolesUseCase(
-                memberRepository = memberRepository,
-                authRepository = authRepository
+            updateMemberRolesUseCase = UpdateMemberRolesUseCaseImpl(
+                memberRepository = memberRepository
             ),
             
             // 공통 Repository

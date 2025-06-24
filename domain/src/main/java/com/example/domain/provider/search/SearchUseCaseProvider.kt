@@ -35,9 +35,7 @@ class SearchUseCaseProvider @Inject constructor(
      */
     fun create(): SearchUseCases {
         val searchRepository = searchRepositoryFactory.create(
-            SearchRepositoryFactoryContext(
-                collectionPath = CollectionPath.search
-            )
+            SearchRepositoryFactoryContext()
         )
 
         val userRepository = userRepositoryFactory.create(
@@ -52,8 +50,7 @@ class SearchUseCaseProvider @Inject constructor(
 
         return SearchUseCases(
             searchUseCase = SearchUseCase(
-                searchRepository = searchRepository,
-                authRepository = authRepository
+                searchRepository = searchRepository
             ),
             
             searchUserByNameUseCase = SearchUserByNameUseCaseImpl(
@@ -79,9 +76,7 @@ class SearchUseCaseProvider @Inject constructor(
      */
     fun createForContext(searchContext: String): SearchUseCases {
         val searchRepository = searchRepositoryFactory.create(
-            SearchRepositoryFactoryContext(
-                collectionPath = CollectionPath.search // 컨텍스트별로 다른 경로 사용 가능
-            )
+            SearchRepositoryFactoryContext()
         )
 
         val userRepository = userRepositoryFactory.create(
@@ -96,8 +91,7 @@ class SearchUseCaseProvider @Inject constructor(
 
         return SearchUseCases(
             searchUseCase = SearchUseCase(
-                searchRepository = searchRepository,
-                authRepository = authRepository
+                searchRepository = searchRepository
             ),
             
             searchUserByNameUseCase = SearchUserByNameUseCaseImpl(

@@ -7,12 +7,19 @@ import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import com.example.domain.usecase.project.structure.AddCategoryUseCase
+import com.example.domain.usecase.project.structure.AddCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCase
+import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCaseImpl
 import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
+import com.example.domain.usecase.project.structure.DeleteCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
+import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCaseImpl
 import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCase
+import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCaseImpl
 import com.example.domain.usecase.project.structure.MoveCategoryUseCase
+import com.example.domain.usecase.project.structure.MoveCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.RenameCategoryUseCase
+import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.UpdateProjectStructureUseCase
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCase
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCaseImpl
@@ -51,30 +58,30 @@ class ProjectStructureUseCaseProvider @Inject constructor(
 
         return ProjectStructureUseCases(
             // 카테고리 관리
-            addCategoryUseCase = AddCategoryUseCase(
+            addCategoryUseCase = AddCategoryUseCaseImpl(
                 categoryRepository = categoryRepository,
                 authRepository = authRepository
             ),
             
-            deleteCategoryUseCase = DeleteCategoryUseCase(
-                categoryRepository = categoryRepository
+            deleteCategoryUseCase = DeleteCategoryUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
             ),
             
-            renameCategoryUseCase = RenameCategoryUseCase(
-                categoryRepository = categoryRepository
+            renameCategoryUseCase = RenameCategoryUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
             ),
             
-            moveCategoryUseCase = MoveCategoryUseCase(
-                categoryRepository = categoryRepository
+            moveCategoryUseCase = MoveCategoryUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
             ),
             
             // 프로젝트 구조 조회 및 변환
-            getProjectAllCategoriesUseCase = GetProjectAllCategoriesUseCase(
-                categoryRepository = categoryRepository
+            getProjectAllCategoriesUseCase = GetProjectAllCategoriesUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
             ),
             
-            convertProjectStructureToDraggableItemsUseCase = ConvertProjectStructureToDraggableItemsUseCase(
-                categoryRepository = categoryRepository
+            convertProjectStructureToDraggableItemsUseCase = ConvertProjectStructureToDraggableItemsUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
             ),
             
             // 구조 업데이트
@@ -83,8 +90,8 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             ),
             
             // 채널-카테고리 간 이동
-            moveChannelBetweenCategoriesUseCase = MoveChannelBetweenCategoriesUseCase(
-                categoryRepository = categoryRepository
+            moveChannelBetweenCategoriesUseCase = MoveChannelBetweenCategoriesUseCaseImpl(
+                categoryCollectionRepository = categoryRepository
             ),
             
             // 카테고리 도메인 UseCases
