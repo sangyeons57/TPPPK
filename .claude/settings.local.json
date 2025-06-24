@@ -10,7 +10,8 @@
       "Bash(rm:*)",
       "Bash(ls:*)",
       "Bash(git mv:*)",
-      "Bash(java:*)"
+      "Bash(java:*)",
+      "Bash(ANDROID_HOME=\"/mnt/c/Users/sangy/AppData/Local/Android/Sdk\" ./gradlew compileDebugKotlin --stacktrace)"
     ],
     "deny": []
   }
