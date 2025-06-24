@@ -1,6 +1,6 @@
 [versions]
-kotlin = "1.9.22"
-ksp = "1.9.22-1.0.17"
+kotlin = "2.1.0"
+ksp = "2.1.0-1.0.29"
 jvmTarget = "17"
 mockitoCore = "5.18.0"
 mockitoJunitJupiter = "5.18.0"
