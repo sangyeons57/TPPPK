@@ -1,12 +1,11 @@
 [versions]
-kotlin = "2.1.21"
+kotlin = "2.2.0"
 jvmTarget = "17"
 mockitoCore = "5.18.0"
 mockitoJunitJupiter = "5.18.0"
 mockitoKotlin = "5.4.0"
-pluginGoogle = "2.1.21-2.0.2"
 pluginAgp = "8.11.0-rc02"
-pluginSentry = "5.7.0"
+pluginSentry = "5.8.0"
 pluginGms = "4.4.2"
 hilt = "2.56.2"
 coil = "2.7.0"
@@ -24,25 +23,25 @@ kotlinxCoroutinesPlayServices = "1.10.2"
 kotlinxCoroutinesTest = "1.10.2"
 lifecycleRuntimeKtx = "2.9.1"
 activityCompose = "1.10.1"
-composeBom = "2025.06.00"
+composeBom = "2025.06.01"
 lifecycleViewmodelCompose = "2.9.1"
 navigationCompose = "2.9.0"
 androidxHiltNavigationCompose = "1.2.0"
 okhttp = "4.12.0"
 retrofit = "3.0.0"
-room = "2.7.1"
-sentryAndroid = "8.13.3"
+room = "2.7.2"
+sentryAndroid = "8.14.0"
 desugarJdkLibs = "2.1.5"
 appcompat = "1.7.1"
 material = "1.12.0"
 archCoreTesting = "2.2.0"
-mockk = "1.14.2"
+mockk = "1.14.4"
 firebaseAuthKtx = "23.2.1"
 gmsPlayServicesBase = "18.7.0"
-workRuntime = "2.10.1"
+workRuntime = "2.10.2"
 firebaseFirestoreKtx = "25.1.4"
 accompanistPermissions = "0.37.3"
-foundationAndroid = "1.8.2"
+foundationAndroid = "1.8.3"
 
 [libraries]
 androidx-animation = { module = "androidx.compose.animation:animation" }
@@ -136,7 +135,7 @@ androidx-foundation-android = { group = "androidx.compose.foundation", name = "f
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "pluginGoogle" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "kotlin" }
 
 android-application = { id = "com.android.application", version.ref = "pluginAgp" }
 google-gms = { id = "com.google.gms.google-services", version.ref = "pluginGms" }
