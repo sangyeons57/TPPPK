@@ -117,9 +117,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
         )
 
         // 현재 사용자 기반으로 ProjectsWrapperRepository 생성
+        // Note: 현재 사용자 ID가 필요하므로 실제로는 createForProject를 사용해야 함
         val projectsWrapperRepository = projectsWrapperRepositoryFactory.create(
             ProjectsWrapperRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectWrappers // 전역 경로 사용
+                collectionPath = CollectionPath.projects // 임시 경로, 실제 사용 시 userId 필요
             )
         )
 

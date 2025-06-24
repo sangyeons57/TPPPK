@@ -2,7 +2,10 @@ package com.example.domain.provider.auth
 
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
+import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.model.vo.CollectionPath
 import com.example.domain.usecase.auth.registration.CheckEmailVerificationUseCase
 import com.example.domain.usecase.auth.registration.RequestEmailVerificationAfterSignUpUseCase
 import com.example.domain.usecase.auth.registration.SendEmailVerificationUseCase
@@ -17,7 +20,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class AuthRegistrationUseCaseProvider @Inject constructor(
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
 ) {
 
     /**
@@ -29,11 +33,16 @@ class AuthRegistrationUseCaseProvider @Inject constructor(
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
+        
+        val userRepository = userRepositoryFactory.create(
+            UserRepositoryFactoryContext(CollectionPath.users)
+        )
 
         return AuthRegistrationUseCases(
             // 회원가입
             signUpUseCase = SignUpUseCase(
-                authRepository = authRepository
+                authRepository = authRepository,
+                userRepository = userRepository
             ),
             
             // 이메일 인증
@@ -50,7 +59,8 @@ class AuthRegistrationUseCaseProvider @Inject constructor(
             ),
             
             // 공통 Repository
-            authRepository = authRepository
+            authRepository = authRepository,
+            userRepository = userRepository
         )
     }
 }
@@ -68,5 +78,6 @@ data class AuthRegistrationUseCases(
     val requestEmailVerificationAfterSignUpUseCase: RequestEmailVerificationAfterSignUpUseCase,
     
     // 공통 Repository
-    val authRepository: AuthRepository
+    val authRepository: AuthRepository,
+    val userRepository: UserRepository
 )

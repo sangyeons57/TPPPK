@@ -94,7 +94,7 @@ class SignUpUseCase @Inject constructor(
                             val existingUser = userRes.data
                             Log.d(TAG, "Existing user found with status: ${existingUser.accountStatus}")
                             if (existingUser.accountStatus == UserAccountStatus.WITHDRAWN) {
-                                // Reactivate withdrawn account instead of calling separate UseCase
+                                // Reactivate withdrawn account using user repository
                                 Log.d(TAG, "Reactivating withdrawn account for email: $email")
                                 existingUser.activateAccount()
                                 existingUser.changeName(UserName(nickname))
