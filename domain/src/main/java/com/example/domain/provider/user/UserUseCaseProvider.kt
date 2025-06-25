@@ -24,6 +24,7 @@ import com.example.domain.usecase.user.UpdateUserMemoUseCaseImpl
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCaseImpl
 import com.example.domain.usecase.user.UploadProfileImageUseCase
+import com.example.domain.provider.context.ContextDependentUseCaseProvider
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,7 +37,7 @@ import javax.inject.Singleton
 class UserUseCaseProvider @Inject constructor(
     private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val uploadProfileImageUseCase: UploadProfileImageUseCase // Context가 필요한 UseCase는 직접 주입
+    private val contextDependentUseCaseProvider: ContextDependentUseCaseProvider // Context가 필요한 UseCase들의 Provider
 ) {
 
     /**
@@ -55,6 +56,9 @@ class UserUseCaseProvider @Inject constructor(
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
+
+        // Get context-dependent UseCases
+        val contextDependentUseCases = contextDependentUseCaseProvider.create()
 
         return UserUseCases(
             getUserStreamUseCase = GetUserStreamUseCaseImpl(
@@ -91,7 +95,7 @@ class UserUseCaseProvider @Inject constructor(
                 userRepository = userRepository
             ),
 
-            uploadProfileImageUseCase = uploadProfileImageUseCase, // 직접 주입된 UseCase 사용
+            uploadProfileImageUseCase = contextDependentUseCases.uploadProfileImageUseCase, // Provider를 통해 생성된 UseCase 사용
 
             removeProfileImageUseCase = RemoveProfileImageUseCaseImpl(
                 userRepository = userRepository,
