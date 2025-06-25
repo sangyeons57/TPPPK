@@ -12,12 +12,9 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.project.ProjectName
-import com.example.domain.usecase.project.channel.DeleteChannelUseCase
-import com.example.domain.usecase.project.core.DeleteProjectUseCase
-import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
-import com.example.domain.usecase.project.core.RenameProjectUseCase
-import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
-import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
+import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.domain.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,17 +65,18 @@ sealed class ProjectSettingEvent {
 @HiltViewModel
 class ProjectSettingViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    // private val repository: ProjectSettingRepository // Remove Repo injection
-    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    private val deleteCategoryUseCase: DeleteCategoryUseCase,
-    private val deleteChannelUseCase: DeleteChannelUseCase,
-    private val renameProjectUseCase: RenameProjectUseCase,
-    private val deleteProjectUseCase: DeleteProjectUseCase,
-    private val getProjectStream: GetProjectDetailsStreamUseCase,
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
+    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
 ) : ViewModel() {
 
     val projectId: DocumentId = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
         .let { DocumentId.from((it)) }
+
+    // Create UseCase groups via providers
+    private val coreProjectUseCases = coreProjectUseCaseProvider.createForProject(projectId)
+    private val projectStructureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
+    private val projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
 
     private val _uiState = MutableStateFlow(ProjectSettingUiState(projectId = projectId, isLoading = true))
     val uiState: StateFlow<ProjectSettingUiState> = _uiState.asStateFlow()
@@ -96,7 +94,7 @@ class ProjectSettingViewModel @Inject constructor(
             println("ViewModel: Loading structure for project $projectId (UseCase)")
 
 
-            when (val result = getProjectAllCategoriesUseCase(projectId).first()) {
+            when (val result = projectStructureUseCases.getProjectAllCategoriesUseCase(projectId).first()) {
                 is CustomResult.Success -> {
                     val domainCategories = result.data // This is List<com.example.domain.model.base.Category>
                     val uiCategories = domainCategories.map { domainCategory ->
@@ -155,7 +153,7 @@ class ProjectSettingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteCategoryUseCase 호출
             println("Deleting Category: ${category.id} (UseCase)") // Used category.id
-            val result = deleteCategoryUseCase(projectId, category.id) // Used category.id
+            val result = projectStructureUseCases.deleteCategoryUseCase(projectId, category.id) // Used category.id
             // delay(500) // Remove delay
             when (result) {
                 is CustomResult.Success -> {
@@ -200,7 +198,7 @@ class ProjectSettingViewModel @Inject constructor(
              _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteChannelUseCase 호출
             println("Deleting Channel: ${channel.id} (UseCase)") // Used channel.id
-             val result = deleteChannelUseCase(projectId, channel.categoryId, channel.id) // Used channel.id
+             val result = projectChannelUseCases.deleteChannelUseCase(projectId, channel.categoryId, channel.id) // Used channel.id
             // delay(500) // Remove delay
             when (result) {
                 is CustomResult.Success -> {
@@ -238,7 +236,7 @@ class ProjectSettingViewModel @Inject constructor(
     // --- 프로젝트 이름 변경 ---
     fun requestRenameProject() {
         viewModelScope.launch {
-            when (val result = getProjectStream(projectId).first()){
+            when (val result = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()){
                 is CustomResult.Success -> {
                     _uiState.update { it.copy(projectName = result.data.name, showRenameProjectDialog = true) }
                 }
@@ -271,7 +269,7 @@ class ProjectSettingViewModel @Inject constructor(
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true) } // Show loading
             println("Renaming Project $projectId to '$trimmedNewName' (UseCase)")
-            val result = renameProjectUseCase(projectId, trimmedNewName)
+            val result = coreProjectUseCases.renameProjectUseCase(projectId, trimmedNewName)
             if (result.isSuccess) {
                  // Update UI state directly for immediate feedback, structure reload might not be needed
                  _uiState.update { it.copy(projectName = trimmedNewName, isLoading = false) }
@@ -292,7 +290,7 @@ class ProjectSettingViewModel @Inject constructor(
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true) } // Show loading
             println("Deleting Project $projectId (UseCase)")
-            val result = deleteProjectUseCase(projectId)
+            val result = coreProjectUseCases.deleteProjectUseCase(projectId)
             if (result.isSuccess) {
                  _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
                  _eventFlow.emit(ProjectSettingEvent.NavigateBack) // Navigate back on success

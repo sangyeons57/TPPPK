@@ -22,7 +22,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ValidationUseCaseProvider @Inject constructor(
-    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
+    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
 ) {
 
     /**

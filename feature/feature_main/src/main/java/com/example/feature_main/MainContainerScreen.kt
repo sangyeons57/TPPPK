@@ -64,12 +64,12 @@ fun MainContainerScreen(
         )
     }
 
-    // 각 탭의 NavController 상태를 저장하는 맵
-    val navControllerStates = rememberSaveable(saver = NavControllerSaver) {
+    // 각 탭의 마지막 방문 경로를 저장하는 맵
+    val tabLastRoutes = rememberSaveable {
         mutableStateMapOf(
-            AppRoutes.Main.Home.GRAPH_ROOT to NavControllerState(),
-            AppRoutes.Main.Calendar.GRAPH_ROOT to NavControllerState(),
-            AppRoutes.Main.Profile.GRAPH_ROOT to NavControllerState(),
+            AppRoutes.Main.Home.GRAPH_ROOT to AppRoutes.Main.Home.ROOT_CONTENT,
+            AppRoutes.Main.Calendar.GRAPH_ROOT to AppRoutes.Main.Calendar.ROOT_CONTENT,
+            AppRoutes.Main.Profile.GRAPH_ROOT to AppRoutes.Main.Profile.ROOT_CONTENT,
         )
     }
 
@@ -97,9 +97,7 @@ fun MainContainerScreen(
         val controller = navControllers[selectedTab]
         val startDestination = getTabStartDestination(selectedTab)
         
-        // 현재 탭의 상태 복원
-        val currentState = navControllerStates[selectedTab]
-        Log.d(TAG, "탭 전환: $selectedTab, 복원할 상태: ${currentState?.backStackState}")
+        Log.d(TAG, "탭 전환: $selectedTab, 시작 목적지: $startDestination")
         
         // NavController가 올바른 화면으로 이동
         if (controller?.currentDestination?.route != startDestination) {
@@ -117,10 +115,11 @@ fun MainContainerScreen(
     DisposableEffect(currentNavController) {
         navigationManger.setChildNavController(currentNavController)
         onDispose {
-            // 현재 탭이 비활성화될 때 상태 저장
-            val currentState = navControllerStates[selectedTab] ?: NavControllerState()
-            currentState.backStackState = currentNavController.currentDestination?.route
-            navControllerStates[selectedTab] = currentState
+            // 현재 탭의 마지막 경로 저장
+            currentNavController.currentDestination?.route?.let { route ->
+                tabLastRoutes[selectedTab] = route
+                Log.d(TAG, "탭($selectedTab) 마지막 경로 저장: $route")
+            }
             
             // NavigationHandler에서 현재 컨트롤러 제거(다른 화면으로 이동 시)
             if (navigationManger.getChildNavController() == currentNavController) {
@@ -144,11 +143,11 @@ fun MainContainerScreen(
                         selected = selected,
                         onClick = { 
                             if (selectedTab != screen.route) {
-                                // 현재 탭의 상태 저장
-                                val currentState = navControllerStates[selectedTab] ?: NavControllerState()
-                                currentState.backStackState = currentNavController.currentDestination?.route
-                                navControllerStates[selectedTab] = currentState
-                                Log.d(TAG, "현재 탭($selectedTab) 상태 저장: ${currentState.backStackState}")
+                                // 현재 탭의 마지막 경로 저장
+                                currentNavController.currentDestination?.route?.let { route ->
+                                    tabLastRoutes[selectedTab] = route
+                                    Log.d(TAG, "현재 탭($selectedTab) 마지막 경로 저장: $route")
+                                }
                                 
                                 // 새 탭으로 전환
                                 selectedTab = screen.route
@@ -167,22 +166,19 @@ fun MainContainerScreen(
                 AppRoutes.Main.Home.GRAPH_ROOT -> {
                     HomeTabNavHost(
                         navController = homeNavController,
-                        navigationManger = navigationManger,
-                        savedState = navControllerStates[selectedTab]?.screenState
+                        navigationManger = navigationManger
                     )
                 }
                 AppRoutes.Main.Calendar.GRAPH_ROOT -> {
                     CalendarTabNavHost(
                         navController = calendarNavController,
-                        navigationManger = navigationManger,
-                        savedState = navControllerStates[selectedTab]?.screenState
+                        navigationManger = navigationManger
                     )
                 }
                 AppRoutes.Main.Profile.GRAPH_ROOT -> {
                     ProfileTabNavHost(
                         navController = profileNavController,
-                        navigationManger = navigationManger,
-                        savedState = navControllerStates[selectedTab]?.screenState
+                        navigationManger = navigationManger
                     )
                 }
             }
@@ -208,8 +204,7 @@ private fun getTabStartDestination(tabRoute: String): String {
 @Composable
 private fun HomeTabNavHost(
     navController: NavHostController,
-    navigationManger: NavigationManger,
-    savedState: android.os.Bundle? = null
+    navigationManger: NavigationManger
 ) {
     // Register this NavController when this NavHost is active
     DisposableEffect(navController, navigationManger) {
@@ -227,8 +222,7 @@ private fun HomeTabNavHost(
     ) {
         composable(AppRoutes.Main.Home.ROOT_CONTENT) {
             HomeScreen(
-                navigationManger = navigationManger,
-                savedState = savedState
+                navigationManger = navigationManger
             )
         }
     }
@@ -240,8 +234,7 @@ private fun HomeTabNavHost(
 @Composable
 private fun CalendarTabNavHost(
     navController: NavHostController,
-    navigationManger: NavigationManger,
-    savedState: android.os.Bundle? = null
+    navigationManger: NavigationManger
 ) {
     // Register this NavController when this NavHost is active
     DisposableEffect(navController, navigationManger) {
@@ -271,8 +264,7 @@ private fun CalendarTabNavHost(
 @Composable
 private fun ProfileTabNavHost(
     navController: NavHostController,
-    navigationManger: NavigationManger,
-    savedState: android.os.Bundle? = null
+    navigationManger: NavigationManger
 ) {
     // Register this NavController when this NavHost is active
     DisposableEffect(navController, navigationManger) {

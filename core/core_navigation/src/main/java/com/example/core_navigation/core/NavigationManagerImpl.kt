@@ -244,4 +244,18 @@ class NavigationManagerImpl @Inject constructor(
         }
     }
 
+    override fun <T> getResult(key: String): T? {
+        return try {
+            val currentController = activeChildNavController ?: parentNavController
+            currentController?.let { controller ->
+                val result = resultManager.getResult<T>(controller, key)
+                Log.d("NavigationManager", "Retrieved result for key: $key, value: $result")
+                result
+            }
+        } catch (e: Exception) {
+            Log.e("NavigationManager", "Failed to get result for key $key: ${e.message}")
+            null
+        }
+    }
+
 }

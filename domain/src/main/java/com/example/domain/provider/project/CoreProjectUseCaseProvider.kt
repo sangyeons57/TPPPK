@@ -31,11 +31,11 @@ import javax.inject.Singleton
  */
 @Singleton
 class CoreProjectUseCaseProvider @Inject constructor(
-    private val projectRepositoryFactory: RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
-    private val projectsWrapperRepositoryFactory: RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val categoryRepositoryFactory: RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
-    private val memberRepositoryFactory: RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>
+    private val projectRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
+    private val projectsWrapperRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
+    private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>
 ) {
 
     /**

@@ -194,4 +194,10 @@ interface NavigationManger {
      * Used for passing data back in navigation flow.
      */
     fun <T> setResult(key: String, result: T)
+    
+    /**
+     * Gets a result that was set by a previous screen.
+     * Used for retrieving data passed through navigation flow.
+     */
+    fun <T> getResult(key: String): T?
 } 

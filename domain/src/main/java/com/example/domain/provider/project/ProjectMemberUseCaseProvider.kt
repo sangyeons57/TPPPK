@@ -31,8 +31,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectMemberUseCaseProvider @Inject constructor(
-    private val memberRepositoryFactory: RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
     /**

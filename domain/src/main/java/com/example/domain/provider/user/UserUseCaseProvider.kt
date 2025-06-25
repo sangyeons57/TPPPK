@@ -34,8 +34,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class UserUseCaseProvider @Inject constructor(
-    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
     private val uploadProfileImageUseCase: UploadProfileImageUseCase // Context가 필요한 UseCase는 직접 주입
 ) {
 

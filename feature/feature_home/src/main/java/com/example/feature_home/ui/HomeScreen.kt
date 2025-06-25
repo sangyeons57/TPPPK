@@ -720,6 +720,11 @@ fun HomeScreenInScaffoldPreview() {
                             Log.d("Preview", "SetResult: $key")
                         }
 
+                        override fun <T> getResult(key: String): T? {
+                            Log.d("Preview", "GetResult: $key")
+                            return null
+                        }
+
                         override fun navigateToSplash(navOptions: NavOptions?) {
                             Log.d("Preview", "NavigateToSplash")
                         }

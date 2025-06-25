@@ -28,8 +28,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class FileManagementUseCaseProvider @Inject constructor(
-    private val fileRepositoryFactory: RepositoryFactory<FileRepositoryFactoryContext, FileRepository>,
-    private val mediaRepositoryFactory: RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
+    private val fileRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<FileRepositoryFactoryContext, FileRepository>,
+    private val mediaRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
 ) {
 
     /**

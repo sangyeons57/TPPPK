@@ -12,7 +12,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.core_logging.SentryUtil
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigationGraph
 import com.example.core_navigation.destination.AppRoutes
@@ -48,9 +47,6 @@ class MainActivity : ComponentActivity() {
              println(">>> Sent Sentry test exception") // Logcat 확인용
         }
         
-        // 앱 시작 이벤트 기록
-        SentryUtil.addBreadcrumb("lifecycle", "MainActivity onCreate")
-
         setContent {
             // UI 렌더링 성능 측정
             val uiRenderSpan = appStartTransaction?.startChild("ui.render", "Initial UI Rendering")
@@ -98,33 +94,24 @@ class MainActivity : ComponentActivity() {
     private fun setupNavigationTracking(navController: NavController) {
         // 네비게이션 변경 추적
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            // Sentry에 화면 전환 기록
-            SentryUtil.addBreadcrumb(
-                "navigation", 
-                "Screen changed to: ${destination.toString()}"
-            )
+
         }
         
         // 세션 추적 시작
-        SentryUtil.startSessionReplay()
     }
     
     override fun onResume() {
         super.onResume()
         // 앱이 다시 활성화될 때 세션 추적 시작
-        SentryUtil.addBreadcrumb("lifecycle", "MainActivity onResume")
     }
     
     override fun onPause() {
         // 앱이 백그라운드로 갈 때 이벤트 기록
-        SentryUtil.addBreadcrumb("lifecycle", "MainActivity onPause")
         super.onPause()
     }
     
     override fun onDestroy() {
         // 앱 종료 시 마지막 트랜잭션 정리
-        SentryUtil.addBreadcrumb("lifecycle", "MainActivity onDestroy")
-        SentryUtil.stopSessionReplay()
         super.onDestroy()
     }
 

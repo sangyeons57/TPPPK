@@ -23,8 +23,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ChatUseCaseProvider @Inject constructor(
-    private val messageRepositoryFactory: RepositoryFactory<MessageRepositoryFactoryContext, MessageRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val messageRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MessageRepositoryFactoryContext, MessageRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
     /**

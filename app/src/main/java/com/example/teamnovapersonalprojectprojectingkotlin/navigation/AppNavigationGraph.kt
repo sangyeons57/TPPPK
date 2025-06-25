@@ -30,6 +30,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
+import com.example.domain.model.vo.DocumentId
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.calendarArguments
 import com.example.core_navigation.extension.extractProjectArguments
@@ -40,8 +41,9 @@ import com.example.feature_auth.ui.SplashScreen
 import com.example.feature_calendar_24hour.ui.Calendar24HourScreen
 import com.example.feature_edit_schedule.ui.EditScheduleScreen
 import com.example.feature_find_password.ui.FindPasswordScreen
-import com.example.feature_friends.ui.AcceptFriendsScreen
+import com.example.feature_accept_friend.ui.AcceptFriendsScreen
 import com.example.feature_friends.ui.FriendsScreen
+import com.example.feature_home.viewmodel.HomeViewModel
 import com.example.feature_join_project.ui.JoinProjectScreen
 import com.example.feature_login.ui.LoginScreen
 import com.example.feature_main.MainContainerScreen
@@ -255,7 +257,6 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
         ) { backStackEntry ->
             val args = backStackEntry.extractProjectArguments()
             ProjectSettingScreen(
-                projectId = args.projectId, // Now type-safe and explicit
                 navigationManger = navigationManger
             )
         }
@@ -289,7 +290,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
             val homeViewModelStoreOwner = remember(backStackEntry) {
                 navigationManger.getNavController()!!.getBackStackEntry(AppRoutes.Main.ROOT)
             }
-            val homeViewModel = hiltViewModel<com.example.feature_home.HomeViewModel>(homeViewModelStoreOwner)
+            val homeViewModel = hiltViewModel<HomeViewModel>(homeViewModelStoreOwner)
 
             LaunchedEffect(projectId, homeViewModel) {
                 // 먼저 메인 화면으로 이동 (Home 탭이 기본 선택됨)
@@ -299,7 +300,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
                 delay(100)
                 
                 // Home 화면에서 프로젝트 선택
-                homeViewModel.onProjectClick(projectId)
+                homeViewModel.onProjectClick(DocumentId.from(projectId))
             }
             
             // 리다이렉트 중 로딩 표시

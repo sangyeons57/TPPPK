@@ -62,7 +62,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import jakarta.inject.Singleton
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -70,80 +70,80 @@ abstract class RepositoryFactoryModule {
 
     @Binds
     @Singleton
-        abstract fun bindUserRepositoryFactory(impl: UserRepositoryFactoryImpl): RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
+        abstract fun bindUserRepositoryFactory(impl: UserRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
 
     @Binds
     @Singleton
-        abstract fun bindAuthRepositoryFactory(impl: AuthRepositoryFactoryImpl): RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+        abstract fun bindAuthRepositoryFactory(impl: AuthRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 
     @Binds
     @Singleton
-        abstract fun bindCategoryRepositoryFactory(impl: CategoryRepositoryFactoryImpl): RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>
+        abstract fun bindCategoryRepositoryFactory(impl: CategoryRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>
 
     @Binds
     @Singleton
-        abstract fun bindDMChannelRepositoryFactory(impl: DMChannelRepositoryFactoryImpl): RepositoryFactory<DMChannelRepositoryFactoryContext, DMChannelRepository>
+        abstract fun bindDMChannelRepositoryFactory(impl: DMChannelRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<DMChannelRepositoryFactoryContext, DMChannelRepository>
 
     @Binds
     @Singleton
-        abstract fun bindDMWrapperRepositoryFactory(impl: DMWrapperRepositoryFactoryImpl): RepositoryFactory<DMWrapperRepositoryFactoryContext, DMWrapperRepository>
+        abstract fun bindDMWrapperRepositoryFactory(impl: DMWrapperRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<DMWrapperRepositoryFactoryContext, DMWrapperRepository>
 
     @Binds
     @Singleton
-        abstract fun bindFileRepositoryFactory(impl: FileRepositoryFactoryImpl): RepositoryFactory<FileRepositoryFactoryContext, FileRepository>
+        abstract fun bindFileRepositoryFactory(impl: FileRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<FileRepositoryFactoryContext, FileRepository>
 
     @Binds
     @Singleton
-        abstract fun bindFriendRepositoryFactory(impl: FriendRepositoryFactoryImpl): RepositoryFactory<FriendRepositoryFactoryContext, FriendRepository>
+        abstract fun bindFriendRepositoryFactory(impl: FriendRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<FriendRepositoryFactoryContext, FriendRepository>
 
     @Binds
     @Singleton
-        abstract fun bindInviteRepositoryFactory(impl: InviteRepositoryFactoryImpl): RepositoryFactory<InviteRepositoryFactoryContext, InviteRepository>
+        abstract fun bindInviteRepositoryFactory(impl: InviteRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<InviteRepositoryFactoryContext, InviteRepository>
 
     @Binds
     @Singleton
-        abstract fun bindMediaRepositoryFactory(impl: MediaRepositoryFactoryImpl): RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
+        abstract fun bindMediaRepositoryFactory(impl: MediaRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
 
     @Binds
     @Singleton
-        abstract fun bindMemberRepositoryFactory(impl: MemberRepositoryFactoryImpl): RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>
+        abstract fun bindMemberRepositoryFactory(impl: MemberRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>
 
     @Binds
     @Singleton
-        abstract fun bindMessageAttachmentRepositoryFactory(impl: MessageAttachmentRepositoryFactoryImpl): RepositoryFactory<MessageAttachmentRepositoryFactoryContext, MessageAttachmentRepository>
+        abstract fun bindMessageAttachmentRepositoryFactory(impl: MessageAttachmentRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<MessageAttachmentRepositoryFactoryContext, MessageAttachmentRepository>
 
     @Binds
     @Singleton
-        abstract fun bindMessageRepositoryFactory(impl: MessageRepositoryFactoryImpl): RepositoryFactory<MessageRepositoryFactoryContext, MessageRepository>
+        abstract fun bindMessageRepositoryFactory(impl: MessageRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<MessageRepositoryFactoryContext, MessageRepository>
 
     @Binds
     @Singleton
-        abstract fun bindPermissionRepositoryFactory(impl: PermissionRepositoryFactoryImpl): RepositoryFactory<PermissionRepositoryFactoryContext, PermissionRepository>
+        abstract fun bindPermissionRepositoryFactory(impl: PermissionRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<PermissionRepositoryFactoryContext, PermissionRepository>
 
     @Binds
     @Singleton
-        abstract fun bindProjectChannelRepositoryFactory(impl: ProjectChannelRepositoryFactoryImpl): RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>
+        abstract fun bindProjectChannelRepositoryFactory(impl: ProjectChannelRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>
 
     @Binds
     @Singleton
-        abstract fun bindProjectRepositoryFactory(impl: ProjectRepositoryFactoryImpl): RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>
+        abstract fun bindProjectRepositoryFactory(impl: ProjectRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>
 
     @Binds
     @Singleton
-        abstract fun bindProjectsWrapperRepositoryFactory(impl: ProjectsWrapperRepositoryFactoryImpl): RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>
+        abstract fun bindProjectsWrapperRepositoryFactory(impl: ProjectsWrapperRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>
 
 
     @Binds
     @Singleton
-        abstract fun bindRoleRepositoryFactory(impl: RoleRepositoryFactoryImpl): RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>
+        abstract fun bindRoleRepositoryFactory(impl: RoleRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>
 
     @Binds
     @Singleton
-        abstract fun bindScheduleRepositoryFactory(impl: ScheduleRepositoryFactoryImpl): RepositoryFactory<ScheduleRepositoryFactoryContext, ScheduleRepository>
+        abstract fun bindScheduleRepositoryFactory(impl: ScheduleRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ScheduleRepositoryFactoryContext, ScheduleRepository>
 
     @Binds
     @Singleton
-    abstract fun bindSearchRepositoryFactory(impl: SearchRepositoryFactoryImpl): RepositoryFactory<SearchRepositoryFactoryContext, SearchRepository>
+    abstract fun bindSearchRepositoryFactory(impl: SearchRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<SearchRepositoryFactoryContext, SearchRepository>
 
 
 }

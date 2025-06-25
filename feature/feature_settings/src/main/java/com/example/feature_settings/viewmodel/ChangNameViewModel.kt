@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.usecase.user.UpdateNameUseCase
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,8 +39,10 @@ sealed class ChangeNameEvent {
 @HiltViewModel
 class ChangeNameViewModel @Inject constructor( // ★ 클래스 이름 오타 수정
     private val savedStateHandle: SavedStateHandle,
-    private val updateNameUseCase: UpdateNameUseCase // ★ UseCase 주입
+    private val userUseCaseProvider: UserUseCaseProvider // ★ UseCase Provider 주입
 ) : ViewModel() {
+
+    private val userUseCases = userUseCaseProvider.createForUser()
 
     // 이전 화면이나 SavedStateHandle에서 현재 이름 받아오기 (선택적)
     // private val initialName: String = savedStateHandle["currentName"] ?: ""
@@ -75,7 +77,7 @@ class ChangeNameViewModel @Inject constructor( // ★ 클래스 이름 오타 �
             _uiState.update { it.copy(isLoading = true, error = null) }
             _eventFlow.emit(ChangeNameEvent.ShowSnackbar("이름 변경 중...")) // 즉각적인 피드백
 
-            val result = updateNameUseCase(nameToUpdate) // ★ UseCase 호출
+            val result = userUseCases.updateNameUseCase(nameToUpdate) // ★ UseCase 호출
 
             when (result) {
                 is CustomResult.Success -> {

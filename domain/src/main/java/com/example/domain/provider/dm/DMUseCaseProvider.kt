@@ -25,10 +25,10 @@ import javax.inject.Singleton
  */
 @Singleton
 class DMUseCaseProvider @Inject constructor(
-    private val dmChannelRepositoryFactory: RepositoryFactory<DMChannelRepositoryFactoryContext, DMChannelRepository>,
-    private val dmWrapperRepositoryFactory: RepositoryFactory<DMWrapperRepositoryFactoryContext, DMWrapperRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
+    private val dmChannelRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<DMChannelRepositoryFactoryContext, DMChannelRepository>,
+    private val dmWrapperRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<DMWrapperRepositoryFactoryContext, DMWrapperRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
 ) {
 
     /**

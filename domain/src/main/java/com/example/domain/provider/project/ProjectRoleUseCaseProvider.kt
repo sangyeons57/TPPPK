@@ -35,9 +35,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectRoleUseCaseProvider @Inject constructor(
-    private val projectRoleRepositoryFactory: RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
-    private val permissionRepositoryFactory: RepositoryFactory<PermissionRepositoryFactoryContext, PermissionRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val projectRoleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
+    private val permissionRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<PermissionRepositoryFactoryContext, PermissionRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
     /**

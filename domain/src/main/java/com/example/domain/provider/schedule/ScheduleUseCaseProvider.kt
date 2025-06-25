@@ -27,8 +27,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ScheduleUseCaseProvider @Inject constructor(
-    private val scheduleRepositoryFactory: RepositoryFactory<ScheduleRepositoryFactoryContext, ScheduleRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val scheduleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ScheduleRepositoryFactoryContext, ScheduleRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
     /**

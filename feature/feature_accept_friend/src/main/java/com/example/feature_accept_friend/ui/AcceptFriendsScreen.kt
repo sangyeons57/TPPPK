@@ -105,8 +105,8 @@ fun AcceptFriendsScreen(
 fun AcceptFriendsListContent(
     modifier: Modifier = Modifier,
     requests: List<FriendRequestItem>,
-    onAcceptClick: (String) -> Unit,
-    onDenyClick: (String) -> Unit
+    onAcceptClick: (com.example.domain.model.vo.UserId) -> Unit,
+    onDenyClick: (com.example.domain.model.vo.UserId) -> Unit
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -114,7 +114,7 @@ fun AcceptFriendsListContent(
     ) {
         items(
             items = requests,
-            key = { it.userId }
+            key = { it.userId.value }
         ) { request ->
             FriendRequestItemComposable(
                 request = request,
@@ -143,8 +143,8 @@ fun FriendRequestItemComposable(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = request.profileImageUrl,
-            contentDescription = "${request.userName} 프로필",
+            profileImageUrl = request.profileImageUrl?.value,
+            contentDescription = "${request.userName.value} 프로필",
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
@@ -152,7 +152,7 @@ fun FriendRequestItemComposable(
         )
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = request.userName,
+            text = request.userName.value,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f) // 남은 공간 차지
@@ -183,8 +183,16 @@ fun FriendRequestItemComposable(
 private fun AcceptFriendsScreenPreview() {
     // 미리보기용 가짜 데이터 생성
     val sampleRequests = listOf(
-        FriendRequestItem("user1", "사용자1", null),
-        FriendRequestItem("user2", "사용자2", null)
+        FriendRequestItem(
+            com.example.domain.model.vo.UserId.from("user1"), 
+            com.example.domain.model.vo.user.UserName.from("사용자1"), 
+            null
+        ),
+        FriendRequestItem(
+            com.example.domain.model.vo.UserId.from("user2"), 
+            com.example.domain.model.vo.user.UserName.from("사용자2"), 
+            null
+        )
     )
     
     TeamnovaPersonalProjectProjectingKotlinTheme {

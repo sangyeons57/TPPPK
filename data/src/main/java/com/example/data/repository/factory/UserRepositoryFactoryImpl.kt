@@ -7,8 +7,9 @@ import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.MediaRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import javax.inject.Inject
 
-class UserRepositoryFactoryImpl(
+class UserRepositoryFactoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
 ): RepositoryFactory<UserRepositoryFactoryContext, UserRepository>{
 

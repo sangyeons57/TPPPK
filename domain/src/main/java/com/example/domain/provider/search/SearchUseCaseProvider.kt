@@ -23,9 +23,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class SearchUseCaseProvider @Inject constructor(
-    private val searchRepositoryFactory: RepositoryFactory<SearchRepositoryFactoryContext, SearchRepository>,
-    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val searchRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<SearchRepositoryFactoryContext, SearchRepository>,
+    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
     /**

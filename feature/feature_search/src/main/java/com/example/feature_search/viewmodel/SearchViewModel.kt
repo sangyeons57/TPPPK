@@ -7,7 +7,7 @@ import com.example.domain.model.ui.search.MessageResult
 import com.example.domain.model.ui.search.SearchResultItem
 import com.example.domain.model.ui.search.SearchScope
 import com.example.domain.model.ui.search.UserResult
-import com.example.domain.usecase.search.SearchUseCase
+import com.example.domain.provider.search.SearchUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -42,8 +42,11 @@ sealed class SearchEvent {
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val searchUseCase: SearchUseCase
+    private val searchUseCaseProvider: SearchUseCaseProvider
 ) : ViewModel() {
+
+    // Create UseCase groups via provider
+    private val searchUseCases = searchUseCaseProvider.create()
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
@@ -97,7 +100,7 @@ class SearchViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null, searchPerformed = true) }
             println("ViewModel: Performing search for '$query' in scope '$scope'")
 
-            val result = searchUseCase(query, scope) // UseCase 호출
+            val result = searchUseCases.searchUseCase(query, scope) // UseCase 호출
 
             if (result.isSuccess) {
                 _uiState.update { it.copy(isLoading = false, searchResults = result.getOrThrow()) }

@@ -17,8 +17,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectAssetsUseCaseProvider @Inject constructor(
-    private val projectRepositoryFactory: RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
-    private val mediaRepositoryFactory: RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
+    private val projectRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
+    private val mediaRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
 ) {
 
     /**

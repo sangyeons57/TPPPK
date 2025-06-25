@@ -24,9 +24,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class FriendUseCaseProvider @Inject constructor(
-    private val friendRepositoryFactory: RepositoryFactory<FriendRepositoryFactoryContext, FriendRepository>,
-    private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val friendRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<FriendRepositoryFactoryContext, FriendRepository>,
+    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
     /**

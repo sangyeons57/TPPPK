@@ -8,7 +8,7 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
-import com.example.domain.usecase.project.role.GetProjectRolesUseCase
+import com.example.domain.provider.project.ProjectRoleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,10 +47,13 @@ sealed class RoleListEvent {
 @HiltViewModel
 class RoleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val getProjectRolesUseCase: GetProjectRolesUseCase, // Added
+    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider, // Added
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+
+    // Create UseCase groups via provider
+    private val projectRoleUseCases = projectRoleUseCaseProvider.createForProject(DocumentId.from(projectId))
 
     private val _uiState = MutableStateFlow(RoleListUiState(projectId = projectId, isLoading = true))
     val uiState: StateFlow<RoleListUiState> = _uiState.asStateFlow()
@@ -62,7 +65,7 @@ class RoleListViewModel @Inject constructor(
         _uiState.update { it.copy(projectId = projectId) } // Ensure projectId is set
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            getProjectRolesUseCase(DocumentId.from(projectId))
+            projectRoleUseCases.getProjectRolesUseCase(DocumentId.from(projectId))
                 .catch { e ->
                     _uiState.update {
                         it.copy(isLoading = false, error = "역할 로드 실패: ${e.localizedMessage}")

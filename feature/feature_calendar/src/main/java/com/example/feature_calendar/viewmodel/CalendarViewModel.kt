@@ -7,7 +7,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.Schedule
 import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import jakarta.inject.Inject
+import javax.inject.Inject
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate

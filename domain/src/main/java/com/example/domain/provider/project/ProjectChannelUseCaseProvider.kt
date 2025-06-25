@@ -31,9 +31,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectChannelUseCaseProvider @Inject constructor(
-    private val categoryRepositoryFactory: RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
-    private val projectChannelRepositoryFactory: RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
+    private val projectChannelRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
     private val categoryCollectionRepository: CategoryCollectionRepository
 ) {
 

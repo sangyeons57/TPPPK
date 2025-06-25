@@ -120,6 +120,7 @@ dependencies {
     implementation(project(":feature:feature_privacy_policy"))
     implementation(project(":feature:feature_terms_of_service"))
     implementation(project(":feature:feature_change_password"))
+    implementation(project(":feature:feature_accept_friend"))
 
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
