@@ -4,7 +4,8 @@ import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import com.example.domain.model.vo.CollectionPath
-// import com.example.domain.usecase.auth.validation.GetAuthErrorMessageUseCase // interface이므로 제외
+import com.example.domain.usecase.auth.validation.GetAuthErrorMessageUseCase
+import com.example.domain.usecase.auth.validation.GetAuthErrorMessageUseCaseImpl
 import com.example.domain.usecase.auth.validation.ValidateEmailFormatUseCase
 import com.example.domain.usecase.auth.validation.ValidateEmailForSignUpUseCase
 import com.example.domain.usecase.auth.validation.ValidateEmailUseCase
@@ -48,8 +49,9 @@ class AuthValidationUseCaseProvider @Inject constructor(
             validateNicknameForSignUpUseCase = ValidateNicknameForSignUpUseCase(
                 userRepository = userRepository
             ),
-            
-            // 오류 메시지 처리는 별도로 처리 (interface이므로 Provider에서 제외)
+
+            // 오류 메시지 처리
+            getAuthErrorMessageUseCase = GetAuthErrorMessageUseCaseImpl(),
             
             // 공통 Repository
             userRepository = userRepository
@@ -68,6 +70,9 @@ data class AuthValidationUseCases(
     
     // 닉네임 유효성 검사
     val validateNicknameForSignUpUseCase: ValidateNicknameForSignUpUseCase,
+
+    // 오류 메시지 처리
+    val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase,
     
     // 공통 Repository
     val userRepository: UserRepository

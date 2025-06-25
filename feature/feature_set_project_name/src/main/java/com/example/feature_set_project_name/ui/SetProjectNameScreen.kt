@@ -18,8 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.*
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_project.viewmodel.SetProjectNameEvent
 import com.example.feature_project.viewmodel.SetProjectNameNavigationEvent
@@ -32,7 +31,7 @@ import kotlinx.coroutines.flow.collectLatest
  */
 fun NavigationManger.navigateToSelectProjectType() {
     // 프로젝트 타입 선택 화면 경로로 이동
-    this.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.SELECT_TYPE))
+    this.navigateTo(SelectProjectTypeRoute)
 }
 
 /**

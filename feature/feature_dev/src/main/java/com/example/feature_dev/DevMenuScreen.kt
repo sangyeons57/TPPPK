@@ -13,10 +13,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import java.time.LocalDate // Calendar24Hour, AddSchedule 임시 인자용
-import com.example.core_logging.SentryUtil
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.*
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import kotlinx.coroutines.launch
 
@@ -59,115 +57,125 @@ fun DevMenuScreen(
 
             // --- 각 버튼의 onClick에서 NavigationManager의 해당 메서드 호출 ---
             Text("--- 인증 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "스플래시 (Splash)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.Splash.path)) }
-            DevMenuButton(text = "로그인 (Login)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.Login.path)) }
-            DevMenuButton(text = "회원가입 (SignUp)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.SignUp.path)) }
-            DevMenuButton(text = "비밀번호 찾기 (FindPassword)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.FindPassword.path)) }
+            DevMenuButton(text = "스플래시 (Splash)") { navigationManger.navigateTo(SplashRoute) }
+            DevMenuButton(text = "로그인 (Login)") { navigationManger.navigateTo(LoginRoute) }
+            DevMenuButton(text = "회원가입 (SignUp)") { navigationManger.navigateTo(SignUpRoute) }
+            DevMenuButton(text = "비밀번호 찾기 (FindPassword)") {
+                navigationManger.navigateTo(
+                    FindPasswordRoute
+                )
+            }
 
             Text("--- 메인 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "메인 (Main - 하단탭)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.ROOT)) }
+            DevMenuButton(text = "메인 (Main - 하단탭)") { navigationManger.navigateToMain() }
 
             Text("--- 프로젝트 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "프로젝트 생성 (AddProject)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.ADD)) }
-            DevMenuButton(text = "프로젝트 이름 설정 (SetProjectName)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.SET_NAME)) }
-            DevMenuButton(text = "프로젝트 참여 (JoinProject)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.JOIN)) }
-            DevMenuButton(text = "프로젝트 설정 (ProjectSetting - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.settings("temp_project_1"))) }
-            DevMenuButton(text = "카테고리 생성 (CreateCategory - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createCategory("temp_project_1"))) }
-            DevMenuButton(text = "채널 생성 (CreateChannel - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createChannel("temp_project_1", "temp_category_1"))) }
-            DevMenuButton(text = "카테고리 편집 (EditCategory - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editCategory("temp_project_1", "temp_category_1"))) }
-            DevMenuButton(text = "채널 편집 (EditChannel - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editChannel("temp_project_1", "temp_category_1", "temp_channel_1"))) }
+            DevMenuButton(text = "프로젝트 생성 (AddProject)") { navigationManger.navigateToAddProject() }
+            DevMenuButton(text = "프로젝트 이름 설정 (SetProjectName)") {
+                navigationManger.navigateTo(
+                    SetProjectNameRoute
+                )
+            }
+            DevMenuButton(text = "프로젝트 참여 (JoinProject)") { navigationManger.navigateToJoinProject() }
+            DevMenuButton(text = "프로젝트 설정 (ProjectSetting - 임시ID)") {
+                navigationManger.navigateToProjectSettings(
+                    "temp_project_1"
+                )
+            }
+            DevMenuButton(text = "카테고리 생성 (CreateCategory - 임시ID)") {
+                navigationManger.navigateTo(
+                    CreateCategoryRoute("temp_project_1")
+                )
+            }
+            DevMenuButton(text = "채널 생성 (CreateChannel - 임시ID)") {
+                navigationManger.navigateTo(
+                    CreateChannelRoute("temp_project_1", "temp_category_1")
+                )
+            }
+            DevMenuButton(text = "카테고리 편집 (EditCategory - 임시ID)") {
+                navigationManger.navigateTo(
+                    EditCategoryRoute("temp_project_1", "temp_category_1")
+                )
+            }
+            DevMenuButton(text = "채널 편집 (EditChannel - 임시ID)") {
+                navigationManger.navigateTo(
+                    EditChannelRoute("temp_project_1", "temp_category_1", "temp_channel_1")
+                )
+            }
 
             Text("--- 멤버/역할 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "멤버 목록 (MemberList - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.memberList("temp_project_1"))) }
-            DevMenuButton(text = "멤버 편집 (EditMember - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editMember("temp_project_1", "temp_user_1"))) }
-            DevMenuButton(text = "역할 목록 (RoleList - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.roleList("temp_project_1"))) }
-            DevMenuButton(text = "역할 추가 (EditRole - 임시ID, 생성모드)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.addRole("temp_project_1"))) }
-            DevMenuButton(text = "역할 편집 (EditRole - 임시ID, 수정모드)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editRole("temp_project_1", "temp_role_1"))) }
+            DevMenuButton(text = "멤버 목록 (MemberList - 임시ID)") {
+                navigationManger.navigateTo(
+                    MemberListRoute("temp_project_1")
+                )
+            }
+            DevMenuButton(text = "멤버 편집 (EditMember - 임시ID)") {
+                navigationManger.navigateTo(
+                    EditMemberRoute("temp_project_1", "temp_user_1")
+                )
+            }
+            DevMenuButton(text = "역할 목록 (RoleList - 임시ID)") {
+                navigationManger.navigateTo(
+                    RoleListRoute("temp_project_1")
+                )
+            }
+            DevMenuButton(text = "역할 추가 (EditRole - 임시ID, 생성모드)") {
+                navigationManger.navigateTo(
+                    AddRoleRoute("temp_project_1")
+                )
+            }
+            DevMenuButton(text = "역할 편집 (EditRole - 임시ID, 수정모드)") {
+                navigationManger.navigateTo(
+                    EditRoleRoute("temp_project_1", "temp_role_1")
+                )
+            }
 
             Text("--- 친구 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "친구 목록 (Friends)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Friends.LIST)) }
-            DevMenuButton(text = "친구 요청 수락 (AcceptFriends)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Friends.ACCEPT_REQUESTS)) }
+            DevMenuButton(text = "친구 목록 (Friends)") { navigationManger.navigateToFriends() }
+            DevMenuButton(text = "친구 요청 수락 (AcceptFriends)") {
+                navigationManger.navigateTo(
+                    AcceptFriendsRoute
+                )
+            }
 
             Text("--- 설정 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "프로필 편집 (EditProfile)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)) }
-            DevMenuButton(text = "비밀번호 변경 (ChangePassword)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Settings.CHANGE_MY_PASSWORD)) }
+            DevMenuButton(text = "프로필 편집 (EditProfile)") { navigationManger.navigateToEditProfile() }
+            DevMenuButton(text = "비밀번호 변경 (ChangePassword)") {
+                navigationManger.navigateTo(
+                    ChangePasswordRoute
+                )
+            }
 
             Text("--- 채팅 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "채팅 (DM - 임시 ID: temp_dm_channel_123)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channelId = "temp_dm_channel_123"))) }
-            DevMenuButton(text = "채팅 (프로젝트 직속 - 임시 IDs)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channelId = "dev_direct_channel_id"))) }
-            DevMenuButton(text = "채팅 (프로젝트 카테고리 - 임시 IDs)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(channelId = "dev_category_channel_id"))) }
+            DevMenuButton(text = "채팅 (DM - 임시 ID: temp_dm_channel_123)") {
+                navigationManger.navigateToChat(
+                    "temp_dm_channel_123"
+                )
+            }
+            DevMenuButton(text = "채팅 (프로젝트 직속 - 임시 IDs)") { navigationManger.navigateToChat("dev_direct_channel_id") }
+            DevMenuButton(text = "채팅 (프로젝트 카테고리 - 임시 IDs)") { navigationManger.navigateToChat("dev_category_channel_id") }
 
             Text("--- 캘린더/스케줄 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
             DevMenuButton(text = "24시간 캘린더 (Calendar24Hour - 오늘)") {
                 val today = LocalDate.now()
-                navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.calendar24Hour(today.year, today.monthValue, today.dayOfMonth)))
+                navigationManger.navigateToCalendar(today.year, today.monthValue, today.dayOfMonth)
             }
             DevMenuButton(text = "일정 추가 (AddSchedule - 오늘)") {
                 val today = LocalDate.now()
-                navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.addSchedule(today.year, today.monthValue, today.dayOfMonth)))
+                navigationManger.navigateToAddSchedule(
+                    today.year,
+                    today.monthValue,
+                    today.dayOfMonth
+                )
             }
-            DevMenuButton(text = "일정 상세 (ScheduleDetail - 임시ID)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.scheduleDetail("temp_schedule_456"))) }
+            DevMenuButton(text = "일정 상세 (ScheduleDetail - 임시ID)") {
+                navigationManger.navigateToScheduleDetail(
+                    "temp_schedule_456"
+                )
+            }
 
             Text("--- 검색 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "검색 (Search)") { navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Search.GLOBAL)) }
-
-            // Sentry 테스트 섹션 추가
-            Text("--- Sentry 테스트 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            
-            // 에러 로깅 테스트
-            DevMenuButton(text = "에러 로깅 테스트") {
-                try {
-                    throw RuntimeException("테스트 예외")
-                } catch (e: Exception) {
-                    SentryUtil.captureError(e, "의도적인 테스트 예외")
-                }
-            }
-            
-            // 성능 트랜잭션 테스트
-            DevMenuButton(text = "성능 트랜잭션 테스트") {
-                val transaction = SentryUtil.startTransaction(
-                    name = "test.transaction",
-                    operation = "test.operation"
-                )
-                
-                coroutineScope.launch {
-                    // 성능 스팬 테스트
-                    SentryUtil.withSpan(transaction, "test.child", "테스트 스팬") {
-                        // 작업 시뮬레이션
-                        Thread.sleep(500)
-                    }
-                    
-                    // 비동기 스팬 테스트
-                    SentryUtil.withAsyncSpan(transaction, "test.async", "비동기 테스트 스팬") {
-                        // 비동기 작업 시뮬레이션
-                        Thread.sleep(1000)
-                    }
-                    
-                    // 트랜잭션 완료
-                    transaction.finish()
-                }
-            }
-            
-            // 복합 로깅 테스트 (여러 이벤트 전송)
-            DevMenuButton(text = "복합 로깅 테스트") {
-                // 사용자 정보 설정
-                SentryUtil.setUserInfo(
-                    userId = "test_user_${System.currentTimeMillis()}",
-                    email = "test@example.com",
-                    username = "테스트 사용자"
-                )
-                
-                // 태그 설정
-                SentryUtil.setCustomTag("test_scenario", "complex_test")
-                
-                // 다양한 레벨의 로그 기록
-                SentryUtil.logInfo("복합 테스트 시작")
-                SentryUtil.logWarning("테스트 경고 메시지")
-                SentryUtil.logError("테스트 오류 메시지")
-                
-                // 사용자 액션 기록
-                SentryUtil.trackUserAction("button_click", "복합 테스트 버튼", "DevMenu")
-            }
+            DevMenuButton(text = "검색 (Search)") { navigationManger.navigateTo(GlobalSearchRoute) }
 
             Spacer(modifier = Modifier.height(30.dp)) // 하단 여백
         }

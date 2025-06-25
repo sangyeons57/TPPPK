@@ -69,7 +69,7 @@ fun EditProfileScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is EditProfileEvent.NavigateBack -> {
-                    navigationManger.navigate(NavigationCommand.NavigateBack)
+                    navigationManger.navigateBack()
                 }
                 is EditProfileEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(
@@ -124,7 +124,9 @@ fun EditProfileScreen(
         content = { paddingValues ->
             if (uiState.isLoading && uiState.user == null) {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()

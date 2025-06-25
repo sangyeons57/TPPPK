@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
+import com.example.domain.model.vo.UserId
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -49,7 +50,7 @@ class AddProjectViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     // 사용자 인증 확인 및 UseCases 초기화
-    private var currentUserId: String? = null
+    private var currentUserId: UserId? = null
     
     init {
         // 사용자 인증 상태 확인

@@ -9,6 +9,7 @@ import com.example.domain.event.projectchannel.ProjectChannelNameUpdatedEvent
 import com.example.domain.event.projectchannel.ProjectChannelOrderChangedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 
 class ProjectChannel private constructor(

@@ -40,9 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
+import com.example.core_navigation.core.*
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.vo.DocumentId
@@ -53,6 +51,8 @@ import com.example.feature_schedule.viewmodel.ScheduleDetailItem
 import com.example.feature_schedule.viewmodel.ScheduleDetailUiState
 import com.example.feature_schedule.viewmodel.ScheduleDetailViewModel
 import kotlinx.coroutines.flow.collectLatest
+
+const val REFRESH_SCHEDULE_LIST_KEY = "refresh_schedule_list"
 
 /**
  * ScheduleDetailScreen: 일정 상세 정보 표시 화면 (Stateful)
@@ -78,8 +78,8 @@ fun ScheduleDetailScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is ScheduleDetailEvent.NavigateBack -> navigationManger.navigateBack()
-                is ScheduleDetailEvent.NavigateToEditSchedule -> navigationManger.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.editSchedule(event.scheduleId))
+                is ScheduleDetailEvent.NavigateToEditSchedule -> navigationManger.navigateTo(
+                    EditScheduleRoute(event.scheduleId)
                 )
                 is ScheduleDetailEvent.ShowDeleteConfirmDialog -> showDeleteDialog = true
                 is ScheduleDetailEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
@@ -90,8 +90,10 @@ fun ScheduleDetailScreen(
     // 삭제 성공 시 뒤로 가기
     LaunchedEffect(uiState.deleteSuccess) {
         if (uiState.deleteSuccess) {
-            navigationManger.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
-            navigationManger.navigateBack()
+            navigationManger.navigateBackWithResult(
+                REFRESH_SCHEDULE_LIST_KEY,
+                true
+            ) // Modified this line
         }
     }
 
@@ -166,7 +168,9 @@ fun ScheduleDetailContent(
             uiState.error != null -> {
                 Text(
                     text = "오류: ${uiState.error}",
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -235,7 +239,9 @@ fun ScheduleDetailContent(
                 // 스케줄 정보가 없는 경우 (오류는 아니지만 데이터가 null)
                 Text(
                     text = "일정 정보를 불러올 수 없습니다.",
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
                     color = MaterialTheme.colorScheme.outline
                 )
             }

@@ -20,18 +20,18 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationCommand
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
 import androidx.navigation.NavHostController
+import androidx.navigation.NavOptions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import com.example.core_navigation.core.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import com.example.core_navigation.core.NavDestination
 import com.example.domain.model.enum.ProjectChannelType
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialog
@@ -165,7 +165,7 @@ fun HomeScreen(
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
                 is HomeEvent.NavigateToProjectSettings -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Project.settings(event.projectId))))
+                    navigationManger.navigateToProjectSettings(event.projectId)
                 }
                 is HomeEvent.ShowAddProjectDialog -> {
                     snackbarHostState.showSnackbar("프로젝트 추가 다이얼로그 (미구현)")
@@ -175,14 +175,14 @@ fun HomeScreen(
                     showAddDmDialog = true
                 }
                 is HomeEvent.NavigateToAddProject -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Project.ADD)))
+                    navigationManger.navigateToAddProject()
                 }
                 is HomeEvent.NavigateToDmChat -> {
                     Log.d("HomeScreen", "Navigating to DM Chat with ID: ${event.dmId}")
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Chat.screen(event.dmId))))
+                    navigationManger.navigateToChat(event.dmId)
                 }
                 is HomeEvent.NavigateToChannel -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Chat.screen(event.channelId))))
+                    navigationManger.navigateToChat(event.channelId)
                 }
                 is HomeEvent.ShowAddProjectElementDialog -> {
                     currentProjectIdForDialog = event.projectId
@@ -300,7 +300,7 @@ fun HomeScreen(
                     AddDmUserDialogWrapper(
                         onDismiss = { showAddDmDialog = false },
                         onNavigateToDm = { dmChannelId ->
-                            navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Chat.screen(dmChannelId))))
+                            navigationManger.navigateToChat(dmChannelId)
                         },
                         onShowSnackbar = { message ->
                             // 스코프 없이 suspend 함수를 직접 호출할 수 없음
@@ -410,7 +410,8 @@ fun HomeMiddleSectionHeader(
     uiState: HomeUiState
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .clickable(onClick = onClickTopSection),
         color = MaterialTheme.colorScheme.surfaceVariant,
         shadowElevation = 2.dp,
@@ -443,7 +444,9 @@ fun HomeMiddleSectionHeader(
 @Composable
 fun EmptyStateMessage(message: String, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -666,8 +669,8 @@ fun HomeScreenInScaffoldPreview() {
                 modifier = Modifier.padding(top = innerPadding.calculateTopPadding()), // HomeScreen이 Scaffold 없이 바로 Content를 그린다고 가정
                 navigationManger = remember { // Preview용 더미 AppNavigator
                     object : NavigationManger {
-                        override fun navigate(command: NavigationCommand) {
-                            Log.d("Preview", "Navigate: $command")
+                        override fun navigateTo(route: TypeSafeRoute, navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateTo: $route")
                         }
                         
                         override fun navigateBack(): Boolean {
@@ -689,8 +692,99 @@ fun HomeScreenInScaffoldPreview() {
                             return emptyFlow()
                         }
 
-                        override fun navigateClearingBackStack(command: NavigationCommand.NavigateClearingBackStack) {
-                            Log.d("Preview", "NavigateClearingBackStack: ${command.route}")
+                        override fun navigateToSplash(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToSplash")
+                        }
+
+                        override fun navigateToLogin(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToLogin")
+                        }
+
+                        override fun navigateToSignUp(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToSignUp")
+                        }
+
+                        override fun navigateToMain(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToMain")
+                        }
+
+                        override fun navigateToProjectDetails(
+                            projectId: String,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToProjectDetails: $projectId")
+                        }
+
+                        override fun navigateToProjectSettings(
+                            projectId: String,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToProjectSettings: $projectId")
+                        }
+
+                        override fun navigateToChat(
+                            channelId: String,
+                            messageId: String?,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToChat: $channelId")
+                        }
+
+                        override fun navigateToAddProject(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToAddProject")
+                        }
+
+                        override fun navigateToJoinProject(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToJoinProject")
+                        }
+
+                        override fun navigateToCalendar(
+                            year: Int,
+                            month: Int,
+                            day: Int,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToCalendar: $year-$month-$day")
+                        }
+
+                        override fun navigateToAddSchedule(
+                            year: Int,
+                            month: Int,
+                            day: Int,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToAddSchedule: $year-$month-$day")
+                        }
+
+                        override fun navigateToScheduleDetail(
+                            scheduleId: String,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToScheduleDetail: $scheduleId")
+                        }
+
+                        override fun navigateToUserProfile(
+                            userId: String,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToUserProfile: $userId")
+                        }
+
+                        override fun navigateToEditProfile(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToEditProfile")
+                        }
+
+                        override fun navigateToFriends(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToFriends")
+                        }
+
+                        override fun <T> navigateBackWithResult(key: String, result: T): Boolean {
+                            Log.d("Preview", "NavigateBackWithResult: $key")
+                            return true
+                        }
+
+                        override fun navigateToClearingBackStack(route: TypeSafeRoute) {
+                            Log.d("Preview", "NavigateToClearingBackStack: $route")
                         }
 
 
@@ -700,7 +794,7 @@ fun HomeScreenInScaffoldPreview() {
 
                         override fun getNavController(): NavHostController? {
                             Log.d("Preview", "GetNavController")
-                            return null;
+                            return null
                         }
 
                         override fun setChildNavController(navController: NavHostController?) {
@@ -708,23 +802,6 @@ fun HomeScreenInScaffoldPreview() {
                         }
                         
                         override fun getChildNavController(): NavHostController? = null
-                        
-                        override fun saveScreenState(screenRoute: String, state: Bundle) {
-                            Log.d("Preview", "SaveScreenState for $screenRoute")
-                        }
-
-                        override fun getScreenState(screenRoute: String): Bundle? {
-                            Log.d("Preview", "GetScreenState for $screenRoute")
-                            return null
-                        }
-
-                        override fun navigateToProjectDetailsNested(projectId: String, command: NavigationCommand.NavigateToRoute) {
-                            Log.d("Preview", "NavigateToProjectDetailsNested: $projectId, route: ${command.route}")
-                        }
-                        
-                        override fun isValidRoute(route: String): Boolean {
-                            return true
-                        }
                     }
                 }
                 // viewModel은 hiltViewModel()로 주입되므로 Preview에서는 기본 생성자 사용 또는 Mock 필요

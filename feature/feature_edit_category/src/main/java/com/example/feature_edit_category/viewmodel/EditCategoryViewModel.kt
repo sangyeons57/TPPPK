@@ -1,4 +1,4 @@
-package com.example.feature_project.structure.viewmodel
+package com.example.feature_edit_category.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

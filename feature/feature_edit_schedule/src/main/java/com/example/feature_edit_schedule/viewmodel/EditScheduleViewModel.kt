@@ -9,8 +9,7 @@ import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.schedule.ScheduleContent
 import com.example.domain.model.vo.schedule.ScheduleTitle
-import com.example.domain.usecase.schedule.GetScheduleDetailUseCase
-import com.example.domain.usecase.schedule.UpdateScheduleUseCase
+import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,9 +55,11 @@ sealed class EditScheduleEvent {
 @HiltViewModel
 class EditScheduleViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getScheduleDetailUseCase: GetScheduleDetailUseCase, // Added
-    private val updateScheduleUseCase: UpdateScheduleUseCase   // Added
+    private val scheduleUseCaseProvider: ScheduleUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val scheduleUseCases = scheduleUseCaseProvider.createForCurrentUser()
 
     private val _uiState = MutableStateFlow(EditScheduleUiState())
     val uiState: StateFlow<EditScheduleUiState> = _uiState.asStateFlow()
@@ -84,7 +85,7 @@ class EditScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(scheduleId = DocumentId(scheduleId), isLoading = true, error = null) }
             try {
-                val result = getScheduleDetailUseCase(scheduleId)
+                val result = scheduleUseCases.getScheduleDetailUseCase(scheduleId)
                 result.onSuccess { schedule ->
                     _uiState.update {
                         it.copy(
@@ -201,7 +202,7 @@ class EditScheduleViewModel @Inject constructor(
             currentState.schedule.reschedule(startInstant, endInstant)
 
 
-            val result = updateScheduleUseCase(currentState.schedule)
+            val result = scheduleUseCases.updateScheduleUseCase(currentState.schedule)
             result.onSuccess {
                 viewModelScope.launch {
                     _uiState.update { it.copy(isSaving = false) }

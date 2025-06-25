@@ -31,11 +31,14 @@ class UpdateMemberRolesUseCaseImpl @Inject constructor(
      * @param roleIds 업데이트할 역할 ID 목록
      * @return Result<Unit> 업데이트 처리 결과
      */
-    override suspend fun invoke(userId: DocumentId, rolesIds: List<String>): CustomResult<Unit, Exception> {
+    override suspend fun invoke(
+        userId: DocumentId,
+        roleIds: List<String>
+    ): CustomResult<Unit, Exception> {
         when (val memberResult : CustomResult<AggregateRoot, Exception> = memberRepository.observe(userId).first()) {
             is CustomResult.Success -> {
                 val member : Member = memberResult.data as Member
-                member.updateRoles(rolesIds.map { DocumentId(it) })
+                member.updateRoles(roleIds.map { DocumentId(it) })
                 return when (val saveResult = memberRepository.save(member)) {
                     is CustomResult.Success -> {
                         EventDispatcher.publish(member)

@@ -75,10 +75,8 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.*
 import com.example.core_navigation.extension.ObserveNavigationResult
-import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.ScheduleColor1
@@ -94,6 +92,8 @@ import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+
+const val REFRESH_SCHEDULE_LIST_KEY = "refresh_schedule_list"
 
 /**
  * Calendar24HourScreen: 특정 날짜의 24시간 스케줄 표시 (Stateful)
@@ -161,10 +161,10 @@ fun Calendar24HourScreen(
                     if (currentUiState is Calendar24HourUiState.Success) {
                         val date = currentUiState.selectedDate
                         if (date != null) {
-                            navigationManger.navigate(
-                                NavigationCommand.NavigateToRoute.fromRoute(
-                                    AppRoutes.Main.Calendar.addSchedule(date.year, date.monthValue, date.dayOfMonth)
-                                )
+                            navigationManger.navigateToAddSchedule(
+                                date.year,
+                                date.monthValue,
+                                date.dayOfMonth
                             )
                         }
                     }
@@ -172,8 +172,9 @@ fun Calendar24HourScreen(
                     delay(50)
                     addButtonScale = 1f
                 }
-                is Calendar24HourEvent.NavigateToScheduleDetail -> navigationManger.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Main.Calendar.scheduleDetail(event.scheduleId))
+
+                is Calendar24HourEvent.NavigateToScheduleDetail -> navigationManger.navigateToScheduleDetail(
+                    event.scheduleId
                 )
                 is Calendar24HourEvent.ShowScheduleEditDialog -> showEditDialog = event.scheduleId
                 is Calendar24HourEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)

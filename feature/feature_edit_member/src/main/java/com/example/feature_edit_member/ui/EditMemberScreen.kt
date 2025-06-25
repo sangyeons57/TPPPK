@@ -78,17 +78,23 @@ fun EditMemberScreen(
         // 로딩 및 에러 상태 처리
         when {
             uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
             uiState.error != null -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
             uiState.memberInfo == null -> { // 멤버 정보 로드 실패 (이론상 error에서 걸러짐)
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("멤버 정보를 불러올 수 없습니다.")
                 }
             }
@@ -131,11 +137,13 @@ fun EditMemberContent(
             UserProfileImage(
                 profileImageUrl = null, // Placeholder
                 contentDescription = "프로필 이미지", // Placeholder
-                modifier = Modifier.size(64.dp).clip(CircleShape)
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = "User ID: ${memberInfo.userId}", // Display userId as placeholder
+                text = "User ID: ${memberInfo.id}", // Display userId as placeholder
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )

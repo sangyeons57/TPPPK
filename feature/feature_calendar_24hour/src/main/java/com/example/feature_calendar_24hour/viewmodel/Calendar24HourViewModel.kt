@@ -22,8 +22,7 @@ import com.example.core_ui.theme.ScheduleHighContrastColor5
 import com.example.core_ui.theme.ScheduleHighContrastColor6
 import com.example.core_ui.theme.ScheduleHighContrastColor7
 import com.example.domain.model.base.Schedule
-import com.example.domain.usecase.schedule.DeleteScheduleUseCase
-import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
+import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,9 +76,11 @@ sealed class Calendar24HourEvent {
 @HiltViewModel
 class Calendar24HourViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val getSchedulesForDateUseCase: GetSchedulesForDateUseCase,
-    private val deleteScheduleUseCase: DeleteScheduleUseCase
+    private val scheduleUseCaseProvider: ScheduleUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val scheduleUseCases = scheduleUseCaseProvider.createForCurrentUser()
 
     // --- 날짜 파라미터 ---
     private val year: Int = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR) ?: LocalDate.now().year
@@ -114,8 +115,8 @@ class Calendar24HourViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = Calendar24HourUiState.Loading
             Log.d("CalendarVM", "loadSchedules($date) 호출됨. UI 상태: Loading")
-            
-            getSchedulesForDateUseCase(date).collect { result ->
+
+            scheduleUseCases.getSchedulesForDateUseCase(date).collect { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val schedulesDomain = result.data
@@ -204,7 +205,7 @@ class Calendar24HourViewModel @Inject constructor(
                     Calendar24HourUiState.Success(currentState.selectedDate, updatedSchedules)
                 
                 // 서버에서 삭제
-                when (val result = deleteScheduleUseCase(scheduleId)) {
+                when (val result = scheduleUseCases.deleteScheduleUseCase(scheduleId)) {
                     is CustomResult.Success -> {
                         _eventFlow.emit(Calendar24HourEvent.ShowSnackbar("일정이 삭제되었습니다."))
                     }

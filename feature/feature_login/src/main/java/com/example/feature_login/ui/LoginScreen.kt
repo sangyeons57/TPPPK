@@ -27,9 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
 import com.example.feature_login.viewmodel.LoginEvent
@@ -61,12 +59,13 @@ fun LoginScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is LoginEvent.NavigateToSignUp -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.SignUp.path))
+                    navigationManger.navigateToSignUp()
                 }
                 is LoginEvent.NavigateToFindPassword -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.FindPassword.path))
+                    navigationManger.navigateToFindPassword()
                 }
-                is LoginEvent.LoginSuccess -> navigationManger.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Main.ROOT)))
+
+                is LoginEvent.LoginSuccess -> navigationManger.navigateToHome()
                 is LoginEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
                     event.message,
                     duration = SnackbarDuration.Short

@@ -1,21 +1,25 @@
 package com.example.feature_home.model // Adjusted package
 
 import com.example.domain.model.base.Project // Import Project domain model
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.project.ProjectName
 
 /**
  * UI data model for a Project item in a list.
  */
 data class ProjectUiModel(
-    val id: String,
-    val name: String,
-    val imageUrl: String?, // For project cover image
+    val id: DocumentId,
+    val name: ProjectName,
+    val imageUrl: ImageUrl?, // For project cover image
 ) {
     // Companion object for creating preview instances easily
     companion object {
         fun preview(): ProjectUiModel {
             return ProjectUiModel(
-                id = "project_preview_id_abc",
-                name = "Projecting Kotlin 앱 개발",
+                id = DocumentId("project_preview_id_abc"),
+                name = ProjectName("Projecting Kotlin 앱 개발"),
                 imageUrl = null, // Or a placeholder image URL
             )
         }

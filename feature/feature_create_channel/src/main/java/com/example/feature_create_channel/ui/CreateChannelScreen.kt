@@ -21,6 +21,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.feature_create_channel.viewmodel.CreateChannelEvent
+import com.example.feature_create_channel.viewmodel.CreateChannelUiState
+import com.example.feature_create_channel.viewmodel.CreateChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -31,7 +34,7 @@ import kotlinx.coroutines.flow.collectLatest
 fun CreateChannelScreen(
     navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
-    viewModel: com.example.feature_edit_channel.CreateChannelViewModel = hiltViewModel()
+    viewModel: CreateChannelViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -41,9 +44,9 @@ fun CreateChannelScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is com.example.feature_edit_channel.CreateChannelEvent.NavigateBack -> navigationManger.navigateBack()
-                is com.example.feature_edit_channel.CreateChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is com.example.feature_edit_channel.CreateChannelEvent.ClearFocus -> focusManager.clearFocus()
+                is CreateChannelEvent.NavigateBack -> navigationManger.navigateBack()
+                is CreateChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is CreateChannelEvent.ClearFocus -> focusManager.clearFocus()
             }
         }
     }
@@ -85,7 +88,7 @@ fun CreateChannelScreen(
 @Composable
 fun CreateChannelContent(
     modifier: Modifier = Modifier,
-    uiState: com.example.feature_edit_channel.CreateChannelUiState,
+    uiState: CreateChannelUiState,
     onChannelNameChange: (String) -> Unit,
     onChannelTypeSelected: (ProjectChannelType) -> Unit,
     onCreateClick: () -> Unit
@@ -197,7 +200,7 @@ fun CreateChannelContent(
 private fun CreateChannelContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
-            uiState = com.example.feature_edit_channel.CreateChannelUiState(
+            uiState = CreateChannelUiState(
                 channelName = "새로운-채팅방",
                 selectedChannelMode = ProjectChannelType.MESSAGES
             ),
@@ -213,7 +216,7 @@ private fun CreateChannelContentPreview() {
 private fun CreateChannelContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
-            uiState = com.example.feature_edit_channel.CreateChannelUiState(
+            uiState = CreateChannelUiState(
                 channelName = "만드는 중",
                 isLoading = true
             ),
@@ -229,7 +232,7 @@ private fun CreateChannelContentLoadingPreview() {
 private fun CreateChannelContentErrorPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
-            uiState = com.example.feature_edit_channel.CreateChannelUiState(
+            uiState = CreateChannelUiState(
                 channelName = "",
                 error = "채널 이름은 필수입니다."
             ),

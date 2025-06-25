@@ -3,6 +3,9 @@ package com.example.feature_home.model
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.category.CategoryName
 
 
 /**
@@ -25,8 +28,8 @@ data class ProjectStructureUiState(
  * @param isExpanded 카테고리 펼침 상태
  */
 data class CategoryUiModel(
-    val id: String,
-    val name: String,
+    val id: DocumentId,
+    val name: CategoryName,
     val channels: List<ChannelUiModel> = emptyList(),
     val isExpanded: Boolean = true
 ) {
@@ -49,8 +52,8 @@ data class CategoryUiModel(
  * @param isSelected 채널 선택 상태
  */
 data class ChannelUiModel(
-    val id: String,
-    val name: String,
+    val id: DocumentId,
+    val name: Name,
     val mode: ProjectChannelType,
     val isSelected: Boolean = false
 ) {

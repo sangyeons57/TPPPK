@@ -46,11 +46,25 @@ sealed class FriendsEvent {
 @HiltViewModel
 class FriendViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    private val getUserUseCase: GetUserStreamUseCase,
-    private val getDmChannelUseCase: GetDmChannelUseCase,
-    private val getFriendsListStreamUseCase: GetFriendsListStreamUseCase,
+    private val friendUseCaseProvider: FriendUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider,
+    private val dmUseCaseProvider: DMUseCaseProvider,
     private val authUtil: AuthUtil
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹들
+    private val friendUseCases = friendUseCaseProvider.createForCurrentUser()
+    private val userUseCases = userUseCaseProvider.createForUser()
+    private lateinit var dmUseCases: com.example.domain.provider.dm.DMUseCases
+
+    // 현재 사용자 ID
+    private var currentUserId: String = ""
+        set(value) {
+            field = value
+            if (value.isNotBlank()) {
+                dmUseCases = dmUseCaseProvider.createForUser(value)
+            }
+        }
 
     private val _uiState = MutableStateFlow(FriendsListUiState(isLoading = true))
     val uiState: StateFlow<FriendsListUiState> = _uiState.asStateFlow()
@@ -59,6 +73,8 @@ class FriendViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
+        // Initialize with current user ID
+        currentUserId = authUtil.getCurrentUserId()
         observeFriendRelationships()
     }
 
@@ -69,8 +85,7 @@ class FriendViewModel @Inject constructor(
         Log.d("FriendViewModel", "1")
         viewModelScope.launch {
             Log.d("FriendViewModel", "2")
-            val currentUserId = authUtil.getCurrentUserId()
-            getFriendsListStreamUseCase(currentUserId)
+            friendUseCases.getFriendsListStreamUseCase(currentUserId)
                 .onStart {
                     Log.d("FriendViewModel", "3")
                     _uiState.update { it.copy(isLoading = true, error = null) }
@@ -98,7 +113,8 @@ class FriendViewModel @Inject constructor(
                             // 각 친구에 대해 사용자 정보 조회
                             for (friend in friends) {
                                 Log.d("FriendViewModel", "6.5")
-                                val userResult = getUserUseCase(friend.friendUid).first()
+                                val userResult =
+                                    userUseCases.getUserStreamUseCase(friend.id).first()
                                 val user = when (userResult) {
                                     is CustomResult.Success -> userResult.data
                                     else -> null
@@ -107,9 +123,10 @@ class FriendViewModel @Inject constructor(
                                 if (user != null) {
                                     friendItems.add(FriendItem(
                                         user = user,
-                                        friendId = friend.friendUid,
+                                        friendId = friend.id,
                                         status = friend.status,
-                                        profileImageUrl = friend.friendProfileImageUrl ?: user.profileImageUrl?.value,
+                                        profileImageUrl = friend.profileImageUrl
+                                            ?: user.profileImageUrl?.value,
                                         requestedAt = friend.requestedAt,
                                         acceptedAt = friend.acceptedAt,
                                         displayName = user.name.value
@@ -155,7 +172,7 @@ class FriendViewModel @Inject constructor(
      */
     fun onFriendClick(friendId: String) {
         viewModelScope.launch {
-            val result = getDmChannelUseCase(friendId)
+            val result = dmUseCases.getDmChannelUseCase(friendId)
             when (result) {
                 is CustomResult.Success -> {
                     val channelId = result.data

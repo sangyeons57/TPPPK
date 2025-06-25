@@ -21,8 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 // Removed direct Coil imports
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
-import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.*
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
@@ -54,12 +53,11 @@ fun FriendsScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FriendsEvent.NavigateToAcceptFriends -> navigationManger.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Friends.ACCEPT_REQUESTS)
+                is FriendsEvent.NavigateToAcceptFriends -> navigationManger.navigateTo(
+                    AcceptFriendsRoute
                 )
-                is FriendsEvent.NavigateToChat -> navigationManger.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Chat.screen(event.channelId))
-                )
+
+                is FriendsEvent.NavigateToChat -> navigationManger.navigateToChat(event.channelId)
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -101,17 +99,23 @@ fun FriendsScreen(
                 // 로딩 및 에러 상태 처리
                 when {
                     uiState.isLoading -> {
-                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
                     uiState.error != null -> {
-                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues), contentAlignment = Alignment.Center) {
                             Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                         }
                     }
                     uiState.friends.isEmpty() && !uiState.isLoading -> { // 로딩 중 아닐 때만 빈 상태 표시
-                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues), contentAlignment = Alignment.Center) {
                             Text("친구가 없습니다. 친구를 추가해보세요!")
                         }
                     }
@@ -208,7 +212,9 @@ fun FriendListItem(
         UserProfileImage(
             profileImageUrl = friend.profileImageUrl, // Use the actual profile image URL
             contentDescription = "${friend.displayName} 프로필",
-            modifier = Modifier.size(48.dp).clip(CircleShape)
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -241,9 +247,13 @@ private fun FriendsListEmptyPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Scaffold (
             topBar = { TopAppBar(title = { Text("친구") }) },
-            bottomBar = { Button(onClick = {}, modifier = Modifier.fillMaxWidth().padding(16.dp)) { Text("친구 요청 수락하기") } }
+            bottomBar = { Button(onClick = {}, modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)) { Text("친구 요청 수락하기") } }
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(padding), contentAlignment = Alignment.Center) {
                 Text("친구가 없습니다. 친구를 추가해보세요!")
             }
         }

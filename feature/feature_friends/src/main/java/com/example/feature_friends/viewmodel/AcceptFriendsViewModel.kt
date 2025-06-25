@@ -7,9 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
 import com.example.domain.model.base.Friend
-import com.example.domain.usecase.friend.AcceptFriendRequestUseCase
-import com.example.domain.usecase.friend.GetPendingFriendRequestsUseCase
-import com.example.domain.usecase.friend.RemoveOrDenyFriendUseCase
+import com.example.domain.provider.friend.FriendUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -42,12 +40,13 @@ sealed class AcceptFriendsEvent {
  */
 @HiltViewModel
 class AcceptFriendsViewModel @Inject constructor(
-    private val getPendingFriendRequestsUseCase: GetPendingFriendRequestsUseCase,
-    private val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
-    private val denyFriendRequestUseCase: RemoveOrDenyFriendUseCase,
+    private val friendUseCaseProvider: FriendUseCaseProvider,
     private val authUtil: AuthUtil,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val friendUseCases = friendUseCaseProvider.createForCurrentUser()
 
     // UI 상태 (MutableStateFlow -> StateFlow로 외부 노출)
     private val _uiState = MutableStateFlow(AcceptFriendsUiState())
@@ -72,7 +71,7 @@ class AcceptFriendsViewModel @Inject constructor(
             try {
                 val currentUserId = authUtil.getCurrentUserId()
                 Log.d("AcceptFriendsViewModel", "2")
-                getPendingFriendRequestsUseCase().collect { result ->
+                friendUseCases.getPendingFriendRequestsUseCase().collect { result ->
                     Log.d("AcceptFriendsViewModel", "3")
                     when (result) {
                         is CustomResult.Success -> {
@@ -82,9 +81,9 @@ class AcceptFriendsViewModel @Inject constructor(
                             val requests = friends.map { friend ->
                                 Log.d("AcceptFriendsViewModel", "5")
                                 FriendRequestItem(
-                                    userId = friend.friendUid,
-                                    userName = friend.friendName.ifEmpty { "사용자 ${friend.friendUid.takeLast(4)}" },
-                                    profileImageUrl = friend.friendProfileImageUrl,
+                                    userId = friend.id,
+                                    userName = friend.name.ifEmpty { "사용자 ${friend.id.takeLast(4)}" },
+                                    profileImageUrl = friend.profileImageUrl,
                                     requestDate = friend.requestedAt
                                 )
                             }
@@ -136,7 +135,7 @@ class AcceptFriendsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val currentUserId = authUtil.getCurrentUserId()
-                val result = acceptFriendRequestUseCase(userId, currentUserId)
+                val result = friendUseCases.acceptFriendRequestUseCase(userId, currentUserId)
                 when (result) {
                     is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)
@@ -169,7 +168,7 @@ class AcceptFriendsViewModel @Inject constructor(
     fun denyFriendRequest(userId: String) {
         viewModelScope.launch {
             try {
-                val result = denyFriendRequestUseCase(userId)
+                val result = friendUseCases.removeOrDenyFriendUseCase(userId)
                 when (result) {
                     is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)

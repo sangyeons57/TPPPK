@@ -3,8 +3,8 @@ package com.example.feature_member.dialog.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.domain.usecase.project.member.AddProjectMemberUseCase
-import com.example.domain.usecase.user.SearchUsersByNameUseCase
+import com.example.domain.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.feature_member.dialog.ui.UserSearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -30,9 +30,14 @@ sealed class AddMemberDialogEvent {
 
 @HiltViewModel
 class AddMemberViewModel @Inject constructor(
-    private val searchUsersByNameUseCase: SearchUsersByNameUseCase, // Or SearchUsersUseCase
-    private val addProjectMemberUseCase: AddProjectMemberUseCase
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val userUseCases = userUseCaseProvider.createForUser()
+    private var projectMemberUseCases: com.example.domain.provider.project.ProjectMemberUseCases? =
+        null
 
     private val _uiState = MutableStateFlow(AddMemberDialogUiState())
     val uiState: StateFlow<AddMemberDialogUiState> = _uiState.asStateFlow()
@@ -52,7 +57,7 @@ class AddMemberViewModel @Inject constructor(
         searchJob = viewModelScope.launch {
             delay(300) // Debounce
             _uiState.update { it.copy(isLoading = true) }
-            searchUsersByNameUseCase(query, 10).collect{ userResult ->
+            userUseCases.searchUserByNameUseCase(query, 10).collect { userResult ->
                 when(userResult) {
                     is CustomResult.Success -> {
                         val users = userResult.data
@@ -97,13 +102,19 @@ class AddMemberViewModel @Inject constructor(
             return
         }
 
+        // 프로젝트별 UseCase 그룹 생성
+        if (projectMemberUseCases == null) {
+            projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+        }
+        val useCases = projectMemberUseCases ?: return
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             var allSuccess = true
             var successCount = 0
             // Attempt to add all selected users
             for (userId in selectedUserIds) {
-                val result = addProjectMemberUseCase(projectId, userId, defaultRoleIds)
+                val result = useCases.addProjectMemberUseCase(projectId, userId, defaultRoleIds)
                 if (result.isSuccess) {
                     successCount++
                 } else if (result.isFailure){

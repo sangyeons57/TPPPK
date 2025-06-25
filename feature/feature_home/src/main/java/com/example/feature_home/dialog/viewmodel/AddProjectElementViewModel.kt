@@ -6,9 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.usecase.project.AddCategoryUseCase
-import com.example.domain.usecase.project.AddProjectChannelUseCase
-import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
+import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,12 +51,12 @@ sealed class AddProjectElementEvent {
  */
 @HiltViewModel
 class AddProjectElementViewModel @Inject constructor(
-    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    private val addCategoryUseCase: AddCategoryUseCase,
-    private val addProjectChannelUseCase: AddProjectChannelUseCase
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider
 ) : ViewModel() {
 
     private var projectId: String? = null
+    private var projectStructureUseCases: com.example.domain.provider.project.ProjectStructureUseCases? =
+        null
 
     private val _uiState = MutableStateFlow(AddProjectElementUiState())
     val uiState = _uiState.asStateFlow()
@@ -69,6 +67,9 @@ class AddProjectElementViewModel @Inject constructor(
     fun initialize(projectId: String) {
         if (this.projectId == null) { // 한 번만 초기화
             this.projectId = projectId
+            // Provider를 통해 UseCase 그룹 생성
+            this.projectStructureUseCases =
+                projectStructureUseCaseProvider.createForProject(projectId)
             loadCategoriesForDropdown()
         }
     }
@@ -78,9 +79,10 @@ class AddProjectElementViewModel @Inject constructor(
      */
     private fun loadCategoriesForDropdown() {
         val currentProjectId = projectId ?: return
+        val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = getProjectAllCategoriesUseCase(currentProjectId).first()) {
+            when (val result = useCases.getProjectAllCategoriesUseCase(currentProjectId).first()) {
                 is CustomResult.Success -> {
                     val categories = result.data.map { it.category }.sortedBy { it.order }
                     _uiState.update {
@@ -109,13 +111,14 @@ class AddProjectElementViewModel @Inject constructor(
      */
     fun onAddCategory(categoryName: String) {
         val currentProjectId = projectId ?: return
+        val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
             if (categoryName.isBlank()) {
                 _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Category name cannot be empty."))
                 return@launch
             }
             _uiState.update { it.copy(isLoading = true) }
-            val result = addCategoryUseCase(
+            val result = useCases.addCategoryUseCase(
                 projectId = currentProjectId,
                 categoryName = categoryName
             )
@@ -145,6 +148,7 @@ class AddProjectElementViewModel @Inject constructor(
      */
     fun onAddChannel(channelName: String, channelType: ProjectChannelType, selectedCategory: Category?) {
         val currentProjectId = projectId ?: return
+        val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
             if (channelName.isBlank()) {
                 _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Channel name cannot be empty."))
@@ -157,7 +161,7 @@ class AddProjectElementViewModel @Inject constructor(
             
             _uiState.update { it.copy(isLoading = true) }
 
-            val result = addProjectChannelUseCase(
+            val result = useCases.addProjectChannelUseCase(
                 projectId = currentProjectId,
                 channelName = channelName,
                 channelType = channelType,

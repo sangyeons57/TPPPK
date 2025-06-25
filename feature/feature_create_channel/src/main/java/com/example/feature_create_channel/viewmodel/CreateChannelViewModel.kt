@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.core_common.result.CustomResult
-import com.example.domain.usecase.project.AddProjectChannelUseCase
+import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -36,12 +36,15 @@ sealed class CreateChannelEvent {
 @HiltViewModel
 class CreateChannelViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val addProjectChannelUseCase: AddProjectChannelUseCase
+    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider
 ) : ViewModel() {
 
     // SavedStateHandle 확장 함수와 AppDestination 상수를 사용하여 ID들 가져오기
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
     private val categoryId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_CATEGORY_ID)
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
 
     private val _uiState = MutableStateFlow(CreateChannelUiState())
     val uiState: StateFlow<CreateChannelUiState> = _uiState.asStateFlow()
@@ -86,9 +89,12 @@ class CreateChannelViewModel @Inject constructor(
             _eventFlow.emit(CreateChannelEvent.ClearFocus)
             println("ViewModel: Creating ${currentType} channel '$currentName' in project $projectId / category $categoryId")
 
-            when (val result = addProjectChannelUseCase(projectId = projectId, categoryId = categoryId, channelName = currentName, channelType = currentType)) {
+            when (val result = projectChannelUseCases.createProjectChannelUseCase(
+                name = currentName,
+                order = 0.0
+            )) {
                 is CustomResult.Success -> {
-                    _eventFlow.emit(CreateChannelEvent.ShowSnackbar("채널이 생성되었습니다: ${result.data.channelName}"))
+                    _eventFlow.emit(CreateChannelEvent.ShowSnackbar("채널이 생성되었습니다: $currentName"))
                     _uiState.update { it.copy(isLoading = false, createSuccess = true) }
                 }
                 is CustomResult.Failure -> {

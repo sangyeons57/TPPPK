@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.core_navigation.core.NavigationManger
 // import com.example.core_navigation.destination.AppRoutes // No longer needed for REFRESH_SCHEDULE_LIST_KEY
-import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_navigation.extension.ObserveNavigationResult
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import java.time.LocalDate
@@ -25,8 +24,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.Instant
-import com.example.domain.model._new.enum.ScheduleStatus
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.schedule.ScheduleContent
@@ -139,7 +138,9 @@ fun CalendarScreen(
             }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)) {
             // 캘린더 컨텐츠 (상단)
             CalendarContent(
                 modifier = Modifier
@@ -245,7 +246,9 @@ fun CalendarScreenPreview() {
                 }
             }
         ) { paddingValues ->
-            Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)) {
                 // 상단 캘린더
                 CalendarContent(
                     modifier = Modifier.weight(1f),

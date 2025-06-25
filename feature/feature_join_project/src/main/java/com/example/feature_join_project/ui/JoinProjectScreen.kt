@@ -19,8 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.*
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_join_project.viewmodel.JoinProjectEvent
 import com.example.feature_join_project.viewmodel.JoinProjectUiState
@@ -47,7 +46,7 @@ fun JoinProjectScreen(
             when (event) {
                 is JoinProjectEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is JoinProjectEvent.JoinSuccess -> {
-                    navigationManger.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack.fromRoute(AppRoutes.Main.ROOT))
+                    navigationManger.navigateToClearingBackStack(MainContainerRoute)
                 }
                 is JoinProjectEvent.ClearFocus -> focusManager.clearFocus()
             }
@@ -107,7 +106,9 @@ fun JoinProjectContent(
                 "프로젝트 초대 링크 혹은 코드를 입력해주세요.",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Start, // 왼쪽 정렬
-                modifier = Modifier.fillMaxWidth().padding(start = 4.dp) // 약간의 들여쓰기
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp) // 약간의 들여쓰기
             )
 
             OutlinedTextField(
@@ -135,7 +136,9 @@ fun JoinProjectContent(
         // 버튼을 하단에 배치
         Button(
             onClick = onJoinClick,
-            modifier = Modifier.fillMaxWidth().padding(top = 24.dp), // 상단 여백 추가
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp), // 상단 여백 추가
             enabled = uiState.inviteCodeOrLink.isNotBlank() && !uiState.isLoading
         ) {
             if (uiState.isLoading) {

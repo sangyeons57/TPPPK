@@ -7,11 +7,11 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Member
+import com.example.domain.model.vo.DocumentId
 // import com.example.domain.repository.ProjectMemberRepository // Remove Repo import
 // import com.example.domain.repository.ProjectRoleRepository // Remove Repo import
-import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase // Import UseCase
-import com.example.domain.usecase.project.UpdateMemberRolesUseCase // Import UseCase
-import com.example.domain.usecase.project.role.GetProjectRolesUseCase
+import com.example.domain.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain.provider.project.ProjectRoleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -45,13 +45,16 @@ sealed class EditMemberEvent {
 @HiltViewModel
 class EditMemberViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getProjectMemberDetailsUseCase: GetProjectMemberDetailsUseCase, // Inject UseCase
-    private val getProjectRolesUseCase: GetProjectRolesUseCase, // Inject UseCase
-    private val updateMemberRolesUseCase: UpdateMemberRolesUseCase // Inject UseCase
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
     private val userId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_USER_ID)
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+    private val projectRoleUseCases = projectRoleUseCaseProvider.createForProject(projectId)
 
     // 예시: 만약 멤버 편집 화면에서 특정 역할 ID를 옵션으로 받는다면?
     // private val optionalRoleId: String? = savedStateHandle.getOptionalString("optionalRoleId")
@@ -75,14 +78,16 @@ class EditMemberViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             // 1. 멤버 정보 가져오기 (UseCase 사용)
-            val memberResult = getProjectMemberDetailsUseCase(projectId, userId).first()
+            val memberResult =
+                projectMemberUseCases.getProjectMemberDetailsUseCase(DocumentId(userId)).first()
 
             when (memberResult) {
                 is CustomResult.Success -> {
                     val member = memberResult.data
 
                     // 현재 멤버가 가진 역할 ID Set 생성 (Member의 roleIds 필드 사용)
-                    originalSelectedRoleIds = member.roleIds.toSet() // Changed to use member.roleIds
+                    originalSelectedRoleIds =
+                        member.roleIds.map { it.value }.toSet() // Convert DocumentId to String
 
                     _uiState.update { it.copy(memberInfo = member, isLoading = false) }
                 }
@@ -112,28 +117,42 @@ class EditMemberViewModel @Inject constructor(
      */
     private fun observeProjectRoles() {
         viewModelScope.launch {
-            getProjectRolesUseCase(projectId)
+            projectRoleUseCases.getProjectRolesUseCase(projectId, null)
                 .catch { e ->
                     // Handle errors in the Flow
                     _uiState.update { it.copy(error = "역할 목록 로딩 실패: ${e.message}") }
                     _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할 목록을 불러오는 데 실패했습니다."))
                 }
-                .collect { roles ->
-                    // Convert List<Role> to List<RoleSelectionItem>
-                    val roleSelectionItems = roles.map { role ->
-                         RoleSelectionItem(
-                             id = role.id, // Null-safe
-                             name = role.name,
-                             isSelected = originalSelectedRoleIds.contains(role.id) // Check against original selected IDs
-                         )
-                     }
+                .collect { result ->
+                    when (result) {
+                        is CustomResult.Success -> {
+                            val roles = result.data
+                            // Convert List<Role> to List<RoleSelectionItem>
+                            val roleSelectionItems = roles.map { role ->
+                                RoleSelectionItem(
+                                    id = role.id.value, // Convert DocumentId to String
+                                    name = role.name.value, // Convert Name to String
+                                    isSelected = originalSelectedRoleIds.contains(role.id.value) // Check against original selected IDs
+                                )
+                            }
 
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            availableRoles = roleSelectionItems,
-                            // Keep memberInfo, isLoading, etc. as updated by loadInitialData()
-                            error = null // Clear previous role loading errors on success
-                        )
+                            _uiState.update { currentState ->
+                                currentState.copy(
+                                    availableRoles = roleSelectionItems,
+                                    // Keep memberInfo, isLoading, etc. as updated by loadInitialData()
+                                    error = null // Clear previous role loading errors on success
+                                )
+                            }
+                        }
+
+                        is CustomResult.Failure -> {
+                            _uiState.update { it.copy(error = "역할 목록 로딩 실패: ${result.error.message}") }
+                            _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할 목록을 불러오는 데 실패했습니다."))
+                        }
+
+                        else -> {
+                            // Handle other states (Loading, Initial, Progress)
+                        }
                     }
                 }
         }
@@ -169,7 +188,10 @@ class EditMemberViewModel @Inject constructor(
             // _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할을 저장하는 중...")) // 스낵바 중복 표시 방지 위해 일단 주석 처리 (성공/실패 시 표시)
 
             // UseCase 호출
-            val result = updateMemberRolesUseCase(projectId, userId, currentSelectedRoleIds.toList())
+            val result = projectMemberUseCases.updateMemberRolesUseCase(
+                DocumentId(userId),
+                currentSelectedRoleIds.toList()
+            )
 
             when (result) {
                 is CustomResult.Success -> {

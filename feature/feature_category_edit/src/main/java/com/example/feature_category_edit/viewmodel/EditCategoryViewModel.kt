@@ -9,9 +9,10 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Category
 import com.example.domain.model.collection.CategoryCollection
-import com.example.domain.usecase.category.GetCategoryDetailsUseCase
-import com.example.domain.usecase.category.UpdateCategoryUseCase
-import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.model.vo.category.CategoryOrder
+import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,9 +81,7 @@ sealed class EditCategoryEvent {
 @HiltViewModel
 class EditCategoryViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getCategoryDetailsUseCase: GetCategoryDetailsUseCase,
-    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    private val updateCategoryUseCase: UpdateCategoryUseCase
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditCategoryUiState())
@@ -95,8 +94,13 @@ class EditCategoryViewModel @Inject constructor(
     private val categoryId: String? = savedStateHandle[AppRoutes.Project.ARG_CATEGORY_ID]
     private var originalCategory: Category? = null
 
+    // Provider를 통해 생성된 UseCase 그룹
+    private val projectStructureUseCases = projectId?.let {
+        projectStructureUseCaseProvider.createForProject(it)
+    }
+
     init {
-        if (projectId != null && categoryId != null) {
+        if (projectId != null && categoryId != null && projectStructureUseCases != null) {
             loadCategoryDetails(projectId, categoryId)
             loadAllCategoriesInProject(projectId)
         } else {
@@ -110,8 +114,9 @@ class EditCategoryViewModel @Inject constructor(
      * @param catId The ID of the category.
      */
     private fun loadCategoryDetails(projId: String, catId: String) {
+        val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
-            val result = getCategoryDetailsUseCase(projId, catId);
+            val result = useCases.getCategoryDetailsUseCase(projId, catId);
             _uiState.update { it.copy(isLoading = true) }
             when (result) {
                 is CustomResult.Success -> {
@@ -119,10 +124,10 @@ class EditCategoryViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            initialCategoryName = result.data.name,
-                            initialCategoryOrder = result.data.order,
-                            categoryNameInput = result.data.name,
-                            categoryOrderInput = result.data.order.toString(),
+                            initialCategoryName = result.data.name.value,
+                            initialCategoryOrder = result.data.order.value,
+                            categoryNameInput = result.data.name.value,
+                            categoryOrderInput = result.data.order.value.toString(),
                             generalError = null
                         )
                     }
@@ -142,8 +147,9 @@ class EditCategoryViewModel @Inject constructor(
      * @param projId The ID of the project.
      */
     private fun loadAllCategoriesInProject(projId: String) {
+        val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
-            getProjectAllCategoriesUseCase(projId).map { result ->
+            useCases.getProjectAllCategoriesUseCase(projId).map { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val categories = result.data
@@ -193,12 +199,14 @@ class EditCategoryViewModel @Inject constructor(
 
         _uiState.update { it.copy(isLoading = true, isSaveAttempted = true, generalError = null, nameError = null, orderError = null) }
 
+        val useCases = projectStructureUseCases ?: return
+        
         viewModelScope.launch {
-            when (val result = updateCategoryUseCase(
-                projectId = currentProjectId,
+            when (val result = useCases.updateCategoryUseCase(
+                projectId = DocumentId(currentProjectId),
                 categoryToUpdate = currentOriginalCategory,
-                newName = nameInput,
-                newOrder = orderInputDouble,
+                newName = CategoryName(nameInput),
+                newOrder = CategoryOrder(orderInputDouble),
                 totalCategories = _uiState.value.allCategoriesInProject.count(),
             )) {
                 is CustomResult.Success -> {

@@ -88,6 +88,3 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.espresso.core)
 }
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
-}

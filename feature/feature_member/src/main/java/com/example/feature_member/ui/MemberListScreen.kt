@@ -24,8 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 // Removed direct Coil imports
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.user.UserProfileImage // Import the new composable
-import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.*
 import com.example.domain.model.ui.data.MemberUiModel // Added import
 import com.example.feature_member.viewmodel.MemberListEvent
 import com.example.feature_member.viewmodel.MemberListUiState
@@ -52,10 +51,8 @@ fun MemberListScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is MemberListEvent.NavigateToEditMember -> {
-                    navigationManger.navigate(
-                        NavigationCommand.NavigateToRoute.fromRoute(
-                            AppRoutes.Project.editMember(event.projectId, event.userId)
-                        )
+                    navigationManger.navigateTo(
+                        EditMemberRoute(event.projectId, event.userId)
                     )
                 }
                 is MemberListEvent.ShowDeleteConfirm -> {
@@ -157,7 +154,9 @@ fun MemberListContent(
             OutlinedTextField(
                 value = uiState.searchQuery,
                 onValueChange = onSearchQueryChanged,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
                 label = { Text("멤버 검색") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true
@@ -166,7 +165,9 @@ fun MemberListContent(
 
         if (uiState.isLoading) {
             item {
-                Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }

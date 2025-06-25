@@ -6,9 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.usecase.project.GetProjectAllCategoriesUseCase
-import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
-import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCase
+import com.example.domain.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,9 +75,8 @@ sealed class EditChannelEvent {
 @HiltViewModel
 class EditProjectChannelViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getProjectChannelUseCase: GetProjectChannelUseCase,
-    private val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    private val updateProjectChannelUseCase: UpdateProjectChannelUseCase,
+    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditChannelUiState())
@@ -95,9 +93,16 @@ class EditProjectChannelViewModel @Inject constructor(
     // Store the parent category's order for validation
     private var parentCategoryOrder: Double? = null
 
+    // Provider를 통해 생성된 UseCase 그룹
+    private val projectChannelUseCases =
+        projectChannelUseCaseProvider.createForProject(projectId ?: "")
+    private val projectStructureUseCases = projectId?.let {
+        projectStructureUseCaseProvider.createForProject(it)
+    }
+
     init {
         if (projectId != null && channelId != null) {
-            loadChannelDetails(projectId, channelId)
+            loadChannelDetails(channelId)
         } else {
             _uiState.update { it.copy(isLoading = false, generalError = "Project or Channel ID is missing.") }
         }
@@ -111,17 +116,17 @@ class EditProjectChannelViewModel @Inject constructor(
     private fun loadChannelDetails(chanId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = getProjectChannelUseCase( chanId).first()) {
+            when (val result = projectChannelUseCases.getProjectChannelUseCase(chanId).first()) {
                 is CustomResult.Success -> {
                     val channel = result.data
                     originalChannel = channel // Store the original channel
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            initialChannelName = channel.channelName,
-                            initialChannelOrder = channel.order,
-                            channelNameInput = channel.channelName,
-                            channelOrderInput = channel.order.toString(),
+                            initialChannelName = channel.channelName.value,
+                            initialChannelOrder = channel.order.value,
+                            channelNameInput = channel.channelName.value,
+                            channelOrderInput = channel.order.value.toString(),
                             generalError = null
                         )
                     }
@@ -153,14 +158,16 @@ class EditProjectChannelViewModel @Inject constructor(
      */
     private fun loadCategoryAndChannelContext(projId: String, catId: String) {
         viewModelScope.launch {
-            getProjectAllCategoriesUseCase(projId).onEach { result ->
+            projectStructureUseCases?.getProjectAllCategoriesUseCase?.invoke(projId)
+                ?.onEach { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val categoryCollection = result.data
-                        val parentCategory = categoryCollection.find{ it.category.id == catId}
+                        val parentCategory =
+                            categoryCollection.find { it.category.id.value == catId }
                         val channels = parentCategory?.channels ?: emptyList()
 
-                        parentCategoryOrder = parentCategory?.category?.order
+                        parentCategoryOrder = parentCategory?.category?.order?.value
                         _uiState.update {
                             it.copy(channelsInSameCategory = channels)
                         }
@@ -231,13 +238,9 @@ class EditProjectChannelViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, isSaveAttempted = true, generalError = null, nameError = null, orderError = null) }
 
         viewModelScope.launch {
-            when (val result = updateProjectChannelUseCase(
-                projectId = currentProjectId,
-                channelToUpdate = currentOriginalChannel,
-                newName = nameInput,
-                newOrder = orderInputDouble,
-                parentCategoryOrder = currentParentCategoryOrder,
-                channelsInSameCategory = _uiState.value.channelsInSameCategory
+            when (val result = projectChannelUseCases.updateProjectChannelUseCase(
+                name = nameInput,
+                order = orderInputDouble
             )) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(EditChannelEvent.SaveSuccess)

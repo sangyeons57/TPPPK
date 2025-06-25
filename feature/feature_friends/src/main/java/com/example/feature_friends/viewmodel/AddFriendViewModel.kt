@@ -6,9 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
 import com.example.domain.model.base.User
-import com.example.domain.usecase.friend.SendFriendRequestUseCase
-import com.example.domain.usecase.friend.ValidateSearchQueryUseCase
-import com.example.domain.usecase.user.SearchUserByNameUseCase
+import com.example.domain.provider.friend.FriendUseCaseProvider
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -36,11 +35,14 @@ sealed class AddFriendEvent {
 @HiltViewModel
 class AddFriendViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    private val sendFriendRequestUseCase: SendFriendRequestUseCase,
-    private val searchUserByNameUseCase: SearchUserByNameUseCase,
-    private val validateSearchQueryUseCase: ValidateSearchQueryUseCase,
+    private val friendUseCaseProvider: FriendUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider,
     private val authUtil: AuthUtil
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹들
+    private val friendUseCases = friendUseCaseProvider.createForCurrentUser()
+    private val userUseCases = userUseCaseProvider.createForUser()
 
     private val _uiState = MutableStateFlow(AddFriendUiState())
     val uiState: StateFlow<AddFriendUiState> = _uiState.asStateFlow()
@@ -62,7 +64,7 @@ class AddFriendViewModel @Inject constructor(
         val usernameToSearch = _uiState.value.username.trim()
         
         // 검색어 유효성 검사
-        if (!validateSearchQueryUseCase(usernameToSearch)) {
+        if (!friendUseCases.validateSearchQueryUseCase(usernameToSearch)) {
             _uiState.update { it.copy(error = "유효한 사용자 이름을 입력해주세요 (2글자 이상).") }
             return
         }
@@ -76,7 +78,7 @@ class AddFriendViewModel @Inject constructor(
             try {
                 // 사용자 검색 - 이름으로 검색
                 val currentUserId = authUtil.getCurrentUserId()
-                searchUserByNameUseCase(usernameToSearch).collect{ userResult ->
+                userUseCases.searchUserByNameUseCase(usernameToSearch).collect { userResult ->
                     when(userResult) {
                         is CustomResult.Success -> {
                             val user = userResult.data
@@ -85,7 +87,7 @@ class AddFriendViewModel @Inject constructor(
                                 // 첫 번째 사용자 결과 사용
 
                                 // 자기 자신에게는 친구 요청을 보낼 수 없음
-                                if (user.uid.value == currentUserId) {
+                            if (user.id.value == currentUserId) {
                                     _uiState.update { it.copy(
                                         isLoading = false,
                                         error = "자기 자신에게는 친구 요청을 보낼 수 없습니다."
@@ -93,7 +95,8 @@ class AddFriendViewModel @Inject constructor(
                                 }
 
                                 // 친구 요청 보내기
-                                val requestResult = sendFriendRequestUseCase(user.uid.value)
+                            val requestResult =
+                                friendUseCases.sendFriendRequestUseCase(user.id.value)
                                 when (requestResult) {
                                     is CustomResult.Success -> {
                                         _uiState.update { it.copy(

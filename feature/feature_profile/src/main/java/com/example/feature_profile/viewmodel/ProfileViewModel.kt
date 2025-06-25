@@ -29,7 +29,7 @@ data class UserProfileData(
 
 fun User.toUserProfileData(): UserProfileData {
     return UserProfileData(
-        uid = this.uid.value,
+        uid = this.id.value,
         name = this.name.value,
         email = this.email.value.ifEmpty { null },
         profileImageUrl = this.profileImageUrl?.value,

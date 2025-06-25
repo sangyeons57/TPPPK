@@ -53,6 +53,9 @@ data object JoinProjectRoute : TypeSafeRoute
 data object SetProjectNameRoute : TypeSafeRoute
 
 @Serializable
+data object SelectProjectTypeRoute : TypeSafeRoute
+
+@Serializable
 data class ProjectDetailRoute(
     val projectId: String
 ) : TypeSafeRoute
@@ -210,6 +213,7 @@ object TypeSafeRouteCompat {
         is AddProjectRoute -> "project/add"
         is JoinProjectRoute -> "project/join"
         is SetProjectNameRoute -> "project/set_name"
+        is SelectProjectTypeRoute -> "project/select_type"
         is ProjectDetailRoute -> "project/$projectId"
         is ProjectSettingsRoute -> "project/$projectId/settings"
         

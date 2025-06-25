@@ -36,9 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavDestination
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.*
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.UserStatus
 import com.example.feature_profile.dialog.ChangeStatusDialog
@@ -80,11 +78,13 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProfileEvent.NavigateToSettings -> navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.APP_SETTINGS)))
-                is ProfileEvent.NavigateToEditProfile -> navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Settings.EDIT_MY_PROFILE)))
-                is ProfileEvent.NavigateToFriends -> navigationManger.navigate(NavigationCommand.NavigateToRoute(NavDestination.fromRoute(AppRoutes.Friends.LIST)))
+                is ProfileEvent.NavigateToSettings -> navigationManger.navigateTo(AppSettingsRoute)
+                is ProfileEvent.NavigateToEditProfile -> navigationManger.navigateToEditProfile()
+                is ProfileEvent.NavigateToFriends -> navigationManger.navigateToFriends()
                 is ProfileEvent.PickProfileImage -> imagePickerLauncher.launch("image/*")
-                is ProfileEvent.LogoutCompleted -> navigationManger.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Auth.Login.path)))
+                is ProfileEvent.LogoutCompleted -> navigationManger.navigateToClearingBackStack(
+                    LoginRoute
+                )
                 is ProfileEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -144,7 +144,9 @@ fun ProfileScreen(
         }
         if (uiState.isLoading && uiState.userProfile != null) {
             CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center).size(40.dp)
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(40.dp)
             )
         }
     }

@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.model._new.enum.ScheduleStatus
+import com.example.domain.model.enum.ScheduleStatus
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,8 +26,8 @@ import javax.inject.Inject
 
 // --- 데이터 모델 ---
 data class ProjectSelectionItem(
-    val id: String,
-    val name: String
+    val id: DocumentId,
+    val name: Name
 )
 const val PERSONAL_SCHEDULE_PROJECT_ID = "-1" // 개인 일정을 나타내는 상수 ID
 

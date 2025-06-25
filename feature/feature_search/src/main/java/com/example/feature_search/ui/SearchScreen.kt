@@ -71,28 +71,13 @@ fun SearchScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is SearchEvent.NavigateToMessageDetail -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute(
-                        destination = NavDestination.fromRoute(AppRoutes.Project.MessageDetail.route),
-                        args = mapOf(
-                            AppRoutes.Project.ARG_CHANNEL_ID to event.channelId,
-                            AppRoutes.Project.ARG_MESSAGE_ID to event.messageId
-                        )
-                    ))
+                    navigationManger.navigateToMessageDetail(event.channelId, event.messageId)
                 }
                 is SearchEvent.NavigateToUserProfile -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute(
-                        destination = NavDestination.fromRoute(AppRoutes.Project.UserProfile.route),
-                        args = mapOf(AppRoutes.Project.ARG_USER_ID to event.userId)
-                    ))
+                    navigationManger.navigateToUserProfile(event.userId)
                 }
                 is SearchEvent.NavigateToMessage -> {
-                    navigationManger.navigate(NavigationCommand.NavigateToRoute(
-                        destination = NavDestination.fromRoute(AppRoutes.Project.MessageDetail.route),
-                        args = mapOf(
-                            AppRoutes.Project.ARG_CHANNEL_ID to event.channelId,
-                            AppRoutes.Project.ARG_MESSAGE_ID to event.messageId
-                        )
-                    ))
+                    navigationManger.navigateToMessageDetail(event.channelId, event.messageId)
                 }
                 // 다른 이벤트 추가 가능
                 is SearchEvent.ShowSnackbar -> {
@@ -116,7 +101,9 @@ fun SearchScreen(
             )
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+        Column(modifier = Modifier
+            .padding(paddingValues)
+            .fillMaxSize()) {
             // 검색 입력 필드
             OutlinedTextField(
                 value = uiState.query,
@@ -164,19 +151,25 @@ fun SearchScreen(
                     }
                     // 에러 발생
                     uiState.error != null -> {
-                        Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp), contentAlignment = Alignment.Center) {
                             Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                         }
                     }
                     // 검색 결과 없음
                     uiState.searchPerformed && uiState.searchResults.isEmpty() -> {
-                        Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp), contentAlignment = Alignment.Center) {
                             Text("'${uiState.query}'에 대한 검색 결과가 없습니다.")
                         }
                     }
                     // 초기 상태 (검색 전)
                     !uiState.searchPerformed -> {
-                        Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp), contentAlignment = Alignment.Center) {
                             Text("검색어를 입력하여 검색을 시작하세요.")
                         }
                     }
@@ -253,7 +246,9 @@ fun MessageResultItem(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp) // 공간 확보
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .padding(end = 8.dp) // 공간 확보
             )
             Text( // 시간
                 text = DateTimeUtil.formatDateTime2(DateTimeUtil.toLocalDateTime(messageResult.timestamp)),
@@ -290,7 +285,9 @@ fun UserResultItem(
         UserProfileImage(
             profileImageUrl = userResult.profileImageUrl,
             contentDescription = "${userResult.userName} 프로필",
-            modifier = Modifier.size(40.dp).clip(CircleShape)
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -375,7 +372,9 @@ private fun SearchScreenPreview_Results() {
             topBar = { TopAppBar(title = { Text("검색") }) }
         ) { padding ->
             Column(Modifier.padding(padding)) {
-                OutlinedTextField(value = "검색", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(16.dp))
+                OutlinedTextField(value = "검색", onValueChange = {}, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp))
                 PrimaryTabRow(selectedTabIndex = 0) {
                     SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.name) }) }
                 }
@@ -396,11 +395,15 @@ private fun SearchScreenPreview_Empty() {
             topBar = { TopAppBar(title = { Text("검색") }) }
         ) { padding ->
             Column(Modifier.padding(padding)) {
-                OutlinedTextField(value = "없는단어", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(16.dp))
+                OutlinedTextField(value = "없는단어", onValueChange = {}, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp))
                 PrimaryTabRow(selectedTabIndex = 0) {
                     SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.name) }) }
                 }
-                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp), contentAlignment = Alignment.Center) {
                     Text("'${previewUiState.query}'에 대한 검색 결과가 없습니다.")
                 }
             }
@@ -419,11 +422,15 @@ private fun SearchScreenPreview_Loading() {
             topBar = { TopAppBar(title = { Text("검색") }) }
         ) { padding ->
             Column(Modifier.padding(padding)) {
-                OutlinedTextField(value = "검색중", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(16.dp))
+                OutlinedTextField(value = "검색중", onValueChange = {}, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp))
                 PrimaryTabRow(selectedTabIndex = 0) {
                     SearchScope.values().forEach { Tab(selected = it == SearchScope.ALL, onClick = {}, text = { Text(it.name) }) }
                 }
-                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }

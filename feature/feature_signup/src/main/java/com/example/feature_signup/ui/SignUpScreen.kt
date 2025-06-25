@@ -33,9 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavDestination
 import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.core.NavigationCommand
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.enum.SignUpFormFocusTarget
 import com.example.feature_signup.viewmodel.SignUpEvent
@@ -62,9 +60,9 @@ fun SignUpScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SignUpEvent.NavigateToLogin -> navigationManger.navigateClearingBackStack(NavigationCommand.NavigateClearingBackStack(destination = NavDestination.fromRoute(AppRoutes.Auth.Login.path)))
-                is SignUpEvent.NavigateToTermsOfService -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.TermsOfService.path))
-                is SignUpEvent.NavigateToPrivacyPolicy -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Auth.PrivacyPolicy.path))
+                is SignUpEvent.NavigateToLogin -> navigationManger.navigateToLogin()
+                is SignUpEvent.NavigateToTermsOfService -> navigationManger.navigateToTermsOfService()
+                is SignUpEvent.NavigateToPrivacyPolicy -> navigationManger.navigateToPrivacyPolicy()
                 is SignUpEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }

@@ -1,4 +1,4 @@
-package com.example.feature_project.structure.ui
+package com.example.feature_edit_category.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,9 +19,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_project.structure.viewmodel.EditCategoryEvent
-import com.example.feature_project.structure.viewmodel.EditCategoryUiState
-import com.example.feature_project.structure.viewmodel.EditCategoryViewModel
+import com.example.feature_edit_category.viewmodel.EditCategoryEvent
+import com.example.feature_edit_category.viewmodel.EditCategoryUiState
+import com.example.feature_edit_category.viewmodel.EditCategoryViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -86,7 +86,9 @@ fun EditCategoryScreen(
     ) { paddingValues ->
         // 초기 로딩 처리
         if (uiState.isLoading && uiState.currentCategoryName.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {

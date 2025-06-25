@@ -5,7 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
+import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -30,8 +30,11 @@ sealed class JoinProjectEvent {
 @HiltViewModel
 class JoinProjectViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    private val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
 
     private val _uiState = MutableStateFlow(JoinProjectUiState())
     val uiState: StateFlow<JoinProjectUiState> = _uiState.asStateFlow()
@@ -71,7 +74,7 @@ class JoinProjectViewModel @Inject constructor(
             println("ViewModel: Attempting to join project with code/link: $codeOrLink")
 
             // 프로젝트 참여 로직
-            val result = joinProjectWithCodeUseCase(codeOrLink)
+            val result = coreProjectUseCases.joinProjectWithCodeUseCase(codeOrLink)
 
             when (result){
                 is CustomResult.Success -> {

@@ -6,11 +6,14 @@ import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
-// import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCase // interface
+import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCase
+import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCaseImpl
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCaseImpl
-// import com.example.domain.usecase.user.GetUserInfoUseCase // 파일이 존재하지 않음
-// import com.example.domain.usecase.user.SearchUserByNameUseCase // interface
+import com.example.domain.usecase.user.GetUserStreamUseCase
+import com.example.domain.usecase.user.GetUserStreamUseCaseImpl
+import com.example.domain.usecase.user.SearchUserByNameUseCase
+import com.example.domain.usecase.user.SearchUserByNameUseCaseImpl
 import com.example.domain.usecase.user.UpdateNameUseCase
 // import com.example.domain.usecase.user.UpdateUserImageUseCase // interface
 // import com.example.domain.usecase.user.UpdateUserStatusUseCase // interface
@@ -46,20 +49,26 @@ class UserUseCaseProvider @Inject constructor(
         )
 
         return UserUseCases(
-            // getUserInfoUseCase는 파일이 존재하지 않아 제거
+            getUserStreamUseCase = GetUserStreamUseCaseImpl(
+                userRepository = userRepository
+            ),
             
             getCurrentUserStreamUseCase = GetCurrentUserStreamUseCaseImpl(
                 userRepository = userRepository,
                 authRepository = authRepository
             ),
-            
-            // Interface UseCase들은 Provider에서 제외
-            // updateUserImageUseCase, updateUserStatusUseCase, 
-            // searchUserByNameUseCase, checkNicknameAvailabilityUseCase
+
+            searchUserByNameUseCase = SearchUserByNameUseCaseImpl(
+                userRepository = userRepository
+            ),
             
             updateNameUseCase = UpdateNameUseCase(
                 userRepository = userRepository,
                 authRepository = authRepository
+            ),
+
+            checkNicknameAvailabilityUseCase = CheckNicknameAvailabilityUseCaseImpl(
+                userRepository = userRepository
             ),
             
             // 공통 Repository
@@ -74,14 +83,13 @@ class UserUseCaseProvider @Inject constructor(
  */
 data class UserUseCases(
     // 사용자 정보 조회
+    val getUserStreamUseCase: GetUserStreamUseCase,
     val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
+    val searchUserByNameUseCase: SearchUserByNameUseCase,
     
     // 프로필 관리 (구현체만)
     val updateNameUseCase: UpdateNameUseCase,
-    
-    // Interface UseCase들은 제외
-    // updateUserImageUseCase, updateUserStatusUseCase, 
-    // searchUserByNameUseCase, checkNicknameAvailabilityUseCase
+    val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

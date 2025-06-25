@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.core_common.result.CustomResult
-import com.example.domain.usecase.project.AddCategoryUseCase
+import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -38,11 +38,15 @@ interface ProjectStructureRepository { // 프로젝트 구조 관련 Repository
 @HiltViewModel
 class CreateCategoryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val addCategoryUseCase: AddCategoryUseCase
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider
 ) : ViewModel() {
 
     // SavedStateHandle 확장 함수와 AppDestination 상수를 사용하여 projectId 가져오기
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val projectStructureUseCases =
+        projectStructureUseCaseProvider.createForProject(projectId)
 
     private val _uiState = MutableStateFlow(CreateCategoryUiState())
     val uiState: StateFlow<CreateCategoryUiState> = _uiState.asStateFlow()
@@ -80,7 +84,10 @@ class CreateCategoryViewModel @Inject constructor(
             _eventFlow.emit(CreateCategoryEvent.ClearFocus) // 키보드 숨기기 요청
             println("ViewModel: Creating category '$currentName' for project $projectId")
 
-            when (val result = addCategoryUseCase(projectId = projectId, categoryName = currentName)) {
+            when (val result = projectStructureUseCases.addCategoryUseCase(
+                projectId = projectId,
+                categoryName = currentName
+            )) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(CreateCategoryEvent.ShowSnackbar("카테고리가 생성되었습니다: ${result.data.name}"))
                     _uiState.update { it.copy(isLoading = false, createSuccess = true) }

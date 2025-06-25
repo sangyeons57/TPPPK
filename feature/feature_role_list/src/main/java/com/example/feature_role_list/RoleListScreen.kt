@@ -18,8 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.*
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import kotlinx.coroutines.flow.collectLatest
 
@@ -41,15 +40,12 @@ fun RoleListScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is RoleListEvent.NavigateToAddRole -> navigationManger.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(
-                        AppRoutes.Project.addRole(uiState.projectId)
-                    )
+                is RoleListEvent.NavigateToAddRole -> navigationManger.navigateTo(
+                    AddRoleRoute(uiState.projectId)
                 )
-                is RoleListEvent.NavigateToEditRole -> navigationManger.navigate(
-                    NavigationCommand.NavigateToRoute.fromRoute(
-                        AppRoutes.Project.editRole(uiState.projectId, event.roleId)
-                    )
+
+                is RoleListEvent.NavigateToEditRole -> navigationManger.navigateTo(
+                    EditRoleRoute(uiState.projectId, event.roleId)
                 )
                 is RoleListEvent.ShowDeleteRoleConfirmDialog -> { // Added
                     showDeleteRoleDialog = event.roleItem
@@ -81,17 +77,23 @@ fun RoleListScreen(
         // 로딩 및 에러 상태 처리
         when {
             uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
             uiState.error != null -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
             uiState.roles.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text("생성된 역할이 없습니다.")
                 }
             }

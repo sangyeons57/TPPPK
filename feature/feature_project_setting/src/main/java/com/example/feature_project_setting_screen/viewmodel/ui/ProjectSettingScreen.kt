@@ -21,8 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.core.NavigationCommand
+import com.example.core_navigation.core.*
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
@@ -58,12 +57,29 @@ fun ProjectSettingScreen(
             when (event) {
                 is ProjectSettingEvent.NavigateBack -> navigationManger.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is ProjectSettingEvent.NavigateToEditCategory -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editCategory(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToCreateCategory -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createCategory(event.projectId)))
-                is ProjectSettingEvent.NavigateToEditChannel -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.editChannel(event.projectId, event.categoryId, event.channelId)))
-                is ProjectSettingEvent.NavigateToCreateChannel -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.createChannel(event.projectId, event.categoryId)))
-                is ProjectSettingEvent.NavigateToMemberList -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.memberList(event.projectId)))
-                is ProjectSettingEvent.NavigateToRoleList -> navigationManger.navigate(NavigationCommand.NavigateToRoute.fromRoute(AppRoutes.Project.roleList(event.projectId)))
+                is ProjectSettingEvent.NavigateToEditCategory -> navigationManger.navigateTo(
+                    EditCategoryRoute(event.projectId, event.categoryId)
+                )
+
+                is ProjectSettingEvent.NavigateToCreateCategory -> navigationManger.navigateTo(
+                    CreateCategoryRoute(event.projectId)
+                )
+
+                is ProjectSettingEvent.NavigateToEditChannel -> navigationManger.navigateTo(
+                    EditChannelRoute(event.projectId, event.categoryId, event.channelId)
+                )
+
+                is ProjectSettingEvent.NavigateToCreateChannel -> navigationManger.navigateTo(
+                    CreateChannelRoute(event.projectId, event.categoryId)
+                )
+
+                is ProjectSettingEvent.NavigateToMemberList -> navigationManger.navigateTo(
+                    MemberListRoute(event.projectId)
+                )
+
+                is ProjectSettingEvent.NavigateToRoleList -> navigationManger.navigateTo(
+                    RoleListRoute(event.projectId)
+                )
                 is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
                 is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
             }
@@ -85,11 +101,15 @@ fun ProjectSettingScreen(
     ) { paddingValues ->
         // 로딩 상태 처리
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else if (uiState.error != null) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), contentAlignment = Alignment.Center) {
                 Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
             }
         } else {

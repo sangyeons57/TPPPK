@@ -4,10 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Schedule
-import com.example.domain.usecase.schedule.GetScheduleSummaryForMonthUseCase
-import com.example.domain.usecase.schedule.GetSchedulesForDateUseCase
+import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.*
@@ -48,16 +46,17 @@ sealed class CalendarEvent {
  * 캘린더 화면의 ViewModel.
  * 캘린더 UI 상태 관리, 사용자 입력 처리, 일정 데이터 로딩 등을 담당합니다.
  *
- * @property getSchedulesForDateUseCase 특정 날짜의 일정을 가져오는 유스케이스
- * @property getScheduleSummaryForMonthUseCase 특정 월의 일정 요약 정보를 가져오는 유스케이스
+ * @property scheduleUseCaseProvider 일정 관련 UseCase들을 제공하는 Provider
  * @property navigationManger 네비게이션을 처리하는 핸들러
  */
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    private val getSchedulesForDateUseCase: GetSchedulesForDateUseCase,
-    private val getScheduleSummaryForMonthUseCase: GetScheduleSummaryForMonthUseCase,
+    private val scheduleUseCaseProvider: ScheduleUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val scheduleUseCases = scheduleUseCaseProvider.createForCurrentUser()
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
@@ -141,7 +140,7 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) } // Set loading, clear error
             try {
-                val result = getSchedulesForDateUseCase(date).first()
+                val result = scheduleUseCases.getSchedulesForDateUseCase(date).first()
                 Log.d("loadScheduleForDate",result.toString())
                 result.onSuccess { schedules ->
                     _uiState.update { state ->
@@ -185,7 +184,7 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSummaryLoading = true) } // Optional: Separate loading state for summary
             try {
-                val result = getScheduleSummaryForMonthUseCase(yearMonth)
+                val result = scheduleUseCases.getScheduleSummaryForMonthUseCase(yearMonth)
                 result.onSuccess { datesSet -> // datesSet is now directly Set<LocalDate>
                     _uiState.update { state ->
                         state.copy(
@@ -224,11 +223,7 @@ class CalendarViewModel @Inject constructor(
      * @param scheduleId 선택된 일정의 ID
      */
     fun onScheduleClick(scheduleId: String) {
-        navigationManger.navigate(
-            NavigationCommand.NavigateToRoute(
-                NavDestination.fromRoute(AppRoutes.Main.Calendar.scheduleDetail(scheduleId))
-            )
-        )
+        navigationManger.navigateToScheduleDetail(scheduleId)
     }
 
     /**
@@ -248,15 +243,7 @@ class CalendarViewModel @Inject constructor(
      * @param date 표시할 날짜
      */
     fun onDate24HourClick(date: LocalDate) {
-        navigationManger.navigate(
-            NavigationCommand.NavigateToRoute(
-                NavDestination.fromRoute(AppRoutes.Main.Calendar.calendar24Hour(
-                    date.year,
-                    date.monthValue,
-                    date.dayOfMonth
-                ))
-            )
-        )
+        navigationManger.navigateToCalendar(date.year, date.monthValue, date.dayOfMonth)
     }
 
     /**
@@ -281,14 +268,11 @@ class CalendarViewModel @Inject constructor(
      * 선택된 날짜를 기준으로 일정 추가 화면으로 네비게이션합니다.
      */
     fun onAddSchedule() {
-        navigationManger.navigate(
-            NavigationCommand.NavigateToRoute(
-                NavDestination.fromRoute(AppRoutes.Main.Calendar.addSchedule(
-                    uiState.value.selectedDate.year,
-                    uiState.value.selectedDate.monthValue,
-                    uiState.value.selectedDate.dayOfMonth
-                ))
-            )
+        val selectedDate = uiState.value.selectedDate
+        navigationManger.navigateToAddSchedule(
+            selectedDate.year,
+            selectedDate.monthValue,
+            selectedDate.dayOfMonth
         )
     }
 }
