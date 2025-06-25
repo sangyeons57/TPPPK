@@ -1,9 +1,8 @@
 package com.example.feature_home.model // Adjusted package
 
-import com.example.domain.model.base.Project // Import Project domain model
+import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.project.ProjectName
 
 /**
@@ -26,13 +25,13 @@ data class ProjectUiModel(
 
         fun emptyPreviewList(): List<ProjectUiModel> = listOf(
             ProjectUiModel(
-                id = "proj_1",
-                name = "알고리즘 스터디",
+                id = DocumentId("proj_1"),
+                name = ProjectName("알고리즘 스터디"),
                 imageUrl = null,
             ),
             ProjectUiModel(
-                id = "proj_2",
-                name = "사이드 프로젝트: 맛집 앱",
+                id = DocumentId("proj_2"),
+                name = ProjectName("사이드 프로젝트: 맛집 앱"),
                 imageUrl = null,
             )
         )

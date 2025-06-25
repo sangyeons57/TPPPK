@@ -20,6 +20,7 @@
             <option value="$PROJECT_DIR$/data" />
             <option value="$PROJECT_DIR$/domain" />
             <option value="$PROJECT_DIR$/feature" />
+            <option value="$PROJECT_DIR$/feature/feature_accept_friend" />
             <option value="$PROJECT_DIR$/feature/feature_add_project" />
             <option value="$PROJECT_DIR$/feature/feature_add_schedule" />
             <option value="$PROJECT_DIR$/feature/feature_calendar" />

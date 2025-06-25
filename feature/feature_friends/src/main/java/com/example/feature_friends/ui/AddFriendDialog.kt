@@ -1,10 +1,29 @@
 package com.example.feature_friends.ui
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -17,6 +36,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_friends.viewmodel.AddFriendEvent
 import com.example.feature_friends.viewmodel.AddFriendUiState
 import com.example.feature_friends.viewmodel.AddFriendViewModel
@@ -89,9 +109,11 @@ fun AddFriendDialogContent(
         Text("친구 추가", style = MaterialTheme.typography.headlineSmall)
 
         OutlinedTextField(
-            value = uiState.username,
+            value = uiState.username.value,
             onValueChange = onUsernameChange,
-            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
             label = { Text("사용자 이름") },
             placeholder = { Text("친구 요청 보낼 사용자 이름") },
             singleLine = true,
@@ -104,7 +126,9 @@ fun AddFriendDialogContent(
         )
 
         // 정보/에러 메시지 표시 영역
-        Box(modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp)) { // 최소 높이 확보
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 24.dp)) { // 최소 높이 확보
             Text(
                 text = uiState.infoMessage ?: uiState.error ?: "", // 정보 메시지 또는 에러 메시지
                 color = if (uiState.error != null) MaterialTheme.colorScheme.error else LocalContentColor.current,
@@ -168,7 +192,7 @@ private fun AddFriendDialogContentPreview_Success() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface(modifier = Modifier.padding(16.dp)) {
             AddFriendDialogContent(
-                uiState = AddFriendUiState(username = "친구이름", infoMessage = "'친구이름'님에게 요청을 보냈습니다."),
+                uiState = AddFriendUiState(username = UserName("친구이름"), infoMessage = "'친구이름'님에게 요청을 보냈습니다."),
                 onUsernameChange = {},
                 onSendRequestClick = {},
                 onDismiss = {}
@@ -177,13 +201,18 @@ private fun AddFriendDialogContentPreview_Success() {
     }
 }
 
+@Composable
+fun UsserName(x0: String) {
+    TODO("Not yet implemented")
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun AddFriendDialogContentPreview_Error() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface(modifier = Modifier.padding(16.dp)) {
             AddFriendDialogContent(
-                uiState = AddFriendUiState(username = "없는이름", error = "'없는이름' 사용자를 찾을 수 없습니다."),
+                uiState = AddFriendUiState(username = UserName("없는이름"), error = "'없는이름' 사용자를 찾을 수 없습니다."),
                 onUsernameChange = {},
                 onSendRequestClick = {},
                 onDismiss = {}
@@ -198,7 +227,7 @@ private fun AddFriendDialogContentPreview_Loading() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface(modifier = Modifier.padding(16.dp)) {
             AddFriendDialogContent(
-                uiState = AddFriendUiState(username = "요청중", isLoading = true),
+                uiState = AddFriendUiState(username = UserName("요청중"), isLoading = true),
                 onUsernameChange = {},
                 onSendRequestClick = {},
                 onDismiss = {}

@@ -2,9 +2,9 @@ package com.example.domain.model.data
 
 import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 
 /**
  * 사용자 세션 정보를 담는 데이터 클래스.
@@ -19,7 +19,7 @@ data class UserSession(
     val userId: UserId,
     val token: Token?,
     val email: Email? = null,
-    val displayName: Name? = null,
+    val displayName: UserName? = null,
     val photoUrl: ImageUrl? = null
     // Add other relevant session/user data as needed
 )

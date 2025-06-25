@@ -1,15 +1,47 @@
 package com.example.feature_friends.ui
 
+// Removed direct Coil imports
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward // Icon for DM button
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,16 +50,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-// Removed direct Coil imports
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_ui.components.user.UserProfileImage // Import the new composable
-import com.example.core_navigation.core.*
+import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.UserId
 import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
 import com.example.feature_friends.viewmodel.FriendsEvent
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch // Required for launching coroutines
+import kotlinx.coroutines.launch
 
 /**
  * FriendsScreen: 친구 목록 표시 및 관리 화면 (Stateful)
@@ -53,11 +84,6 @@ fun FriendsScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FriendsEvent.NavigateToAcceptFriends -> navigationManger.navigateTo(
-                    AcceptFriendsRoute
-                )
-
-                is FriendsEvent.NavigateToChat -> navigationManger.navigateToChat(event.channelId)
                 is FriendsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -169,8 +195,8 @@ fun FriendsScreen(
 fun FriendsListContent(
     modifier: Modifier = Modifier,
     friends: List<FriendItem>,
-    onItemClick: (String) -> Unit,    // For item click (show bottom sheet)
-    onDmChannelClick: (String) -> Unit // For DM button
+    onItemClick: (UserId) -> Unit,    // For item click (show bottom sheet)
+    onDmChannelClick: (UserId) -> Unit // For DM button
 ) {
     LazyColumn(
         modifier = modifier
@@ -210,7 +236,7 @@ fun FriendListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = friend.profileImageUrl, // Use the actual profile image URL
+            profileImageUrl = friend.profileImageUrl?.value, // Use the actual profile image URL
             contentDescription = "${friend.displayName} 프로필",
             modifier = Modifier
                 .size(48.dp)
@@ -219,7 +245,7 @@ fun FriendListItem(
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = friend.displayName, // 변경
+                text = friend.displayName.value, // 변경
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )

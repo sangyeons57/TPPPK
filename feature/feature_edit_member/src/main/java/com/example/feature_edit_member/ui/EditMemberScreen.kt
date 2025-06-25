@@ -1,14 +1,41 @@
 package com.example.feature_edit_member.ui
 
+// Removed direct Coil imports
+// ViewModel 및 관련 요소 Import
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,17 +44,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-// Removed direct Coil imports
-import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_ui.components.user.UserProfileImage // Import the new composable
+import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Role
-// ViewModel 및 관련 요소 Import
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.role.RoleIsDefault
 import com.example.feature_edit_member.viewmodel.EditMemberEvent
 import com.example.feature_edit_member.viewmodel.EditMemberViewModel
-import com.example.feature_edit_member.viewmodel.RoleSelectionItem // ★ UI 모델 Import
+import com.example.feature_edit_member.viewmodel.RoleSelectionItem
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -226,12 +253,13 @@ fun RoleCheckboxRow(
 @Composable
 private fun EditMemberContentPreview() {
     // Preview용 Role 객체 생성
-    val previewRole1 = Role(name = "관리자", isDefault = false)
-    val previewRole2 = Role(name = "팀원", isDefault = true)
+    val previewRole1 = Role.create(name = Name("관리자"), isDefault = RoleIsDefault.NON_DEFAULT)
+    val previewRole2 = Role.create(name = Name("팀원"), isDefault = RoleIsDefault.DEFAULT)
     // Note: Member constructor and EditMemberContent's usage of memberInfo.userName/profileImageUrl is problematic
     // as per current Member domain model. This is expected to be fixed in a later step.
     // For now, constructing Member according to its domain model using role IDs.
-    val previewMember = Member(userId = "u1", joinedAt = DateTimeUtil.nowInstant(), roleIds = listOf(previewRole1.id, previewRole2.id))
+    val previewMember =
+        Member.create(memberId = UserId("u1"), roleIds = listOf(previewRole1.id, previewRole2.id))
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
@@ -255,11 +283,12 @@ private fun EditMemberContentPreview() {
 @Composable
 private fun EditMemberContentSavingPreview() {
     // Preview용 Role 객체 생성
-    val previewRole1Saving = Role(name = "관리자", isDefault = false)
-    val previewRole2Saving = Role(name = "팀원", isDefault = true)
+    val previewRole1 = Role.create(name = Name("관리자"), isDefault = RoleIsDefault.NON_DEFAULT)
+    val previewRole2 = Role.create(name = Name("팀원"), isDefault = RoleIsDefault.DEFAULT)
     // Note: Member constructor and EditMemberContent's usage of memberInfo.userName/profileImageUrl is problematic.
     // Constructing Member according to its domain model using role IDs.
-    val previewMember = Member(userId = "u1", joinedAt = DateTimeUtil.nowInstant(), roleIds = listOf(previewRole1Saving.id, previewRole2Saving.id))
+    val previewMember =
+        Member.create(memberId = UserId("u1"), roleIds = listOf(previewRole1.id, previewRole2.id))
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),

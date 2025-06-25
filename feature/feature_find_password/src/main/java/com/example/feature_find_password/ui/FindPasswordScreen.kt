@@ -60,7 +60,6 @@ fun FindPasswordScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is FindPasswordEvent.NavigateBack -> navigationManger.navigateBack()
                 is FindPasswordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
                     message = event.message,
                     duration = SnackbarDuration.Short

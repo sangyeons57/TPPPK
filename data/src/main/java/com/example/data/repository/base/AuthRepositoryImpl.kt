@@ -1,20 +1,20 @@
 package com.example.data.repository.base
 
 import android.util.Log
-import com.example.domain.repository.base.AuthRepository
-import com.example.data.util.FirebaseAuthWrapper
-import kotlinx.coroutines.tasks.await // await() 사용 위해 임포트
-import javax.inject.Inject
-import kotlinx.coroutines.flow.Flow
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
+import com.example.data.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
+import com.example.domain.repository.base.AuthRepository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
 /**
  * Firebase Authentication을 사용하여 AuthRepository 인터페이스를 구현한 클래스
@@ -89,7 +89,7 @@ class AuthRepositoryImpl @Inject constructor(
         email: String,
         password: String,
     ): CustomResult<String, Exception> {
-        return authRemoteDataSource.signUp(email, password);
+        return authRemoteDataSource.signUp(email, password)
     }
 
     /**
@@ -224,7 +224,7 @@ class AuthRepositoryImpl @Inject constructor(
                     userId = UserId(firebaseUser.uid),
                     token = tokenResult?.token?.let { value -> Token(value) },
                     email = firebaseUser.email?.let { value -> Email(value) },
-                    displayName = firebaseUser.displayName?.let { value -> Name(value) },
+                    displayName = firebaseUser.displayName?.let { value -> UserName.from(value) },
                     photoUrl = firebaseUser.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                 )
 
@@ -266,7 +266,11 @@ class AuthRepositoryImpl @Inject constructor(
                         userId = UserId(firebaseUser.data.uid),
                         token = tokenResult?.token?.let { value -> Token(value) },
                         email = firebaseUser.data.email?.let { value -> Email(value) },
-                        displayName = firebaseUser.data.displayName?.let { value -> Name(value) },
+                        displayName = firebaseUser.data.displayName?.let { value ->
+                            UserName.from(
+                                value
+                            )
+                        },
                         photoUrl = firebaseUser.data.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                     )
 

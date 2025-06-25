@@ -49,6 +49,16 @@ interface NavigationManger {
      * Gets the currently active child NavController.
      */
     fun getChildNavController(): NavHostController?
+
+    /**
+     * Gets the NavigationResultManager instance.
+     */
+    fun getResultManager(): NavigationResultManager
+
+    /**
+     * Saves screen state for restoration.
+     */
+    fun saveScreenState(screenKey: String, state: android.os.Bundle)
     
     // ===== Convenience Navigation Methods =====
     
@@ -126,6 +136,50 @@ interface NavigationManger {
      * Navigates to friends list screen.
      */
     fun navigateToFriends(navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to find password screen.
+     */
+    fun navigateToFindPassword(navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to home screen (main container).
+     */
+    fun navigateToHome(navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to message detail screen.
+     */
+    fun navigateToMessageDetail(
+        channelId: String,
+        messageId: String? = null,
+        navOptions: NavOptions? = null
+    )
+
+    /**
+     * Navigates to terms of service screen.
+     */
+    fun navigateToTermsOfService(navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to privacy policy screen.
+     */
+    fun navigateToPrivacyPolicy(navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to edit member screen.
+     */
+    fun navigateToEditMember(projectId: String, userId: String, navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to edit schedule screen.
+     */
+    fun navigateToEditSchedule(scheduleId: String, navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to accept friends screen.
+     */
+    fun navigateToAcceptFriends(navOptions: NavOptions? = null)
     
     // ===== Result Handling Convenience =====
     

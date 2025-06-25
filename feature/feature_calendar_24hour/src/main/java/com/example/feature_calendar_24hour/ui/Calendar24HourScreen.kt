@@ -74,8 +74,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.*
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.ObserveNavigationResult
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.Dimens
@@ -182,12 +182,15 @@ fun Calendar24HourScreen(
         }
     }
 
-    ObserveNavigationResult<Boolean>(
-        appNavigator = navigationManger,
-        resultKey = REFRESH_SCHEDULE_LIST_KEY
-    ) { needsRefresh ->
-        if (needsRefresh == true) { // Explicitly check for true
-            viewModel.refreshSchedules()
+    navigationManger.getNavController()?.let { navController ->
+        ObserveNavigationResult<Boolean>(
+            resultManager = navigationManger.getResultManager(),
+            navController = navController,
+            key = AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
+        ) { needsRefresh ->
+            if (needsRefresh == true) { // Explicitly check for true
+                viewModel.refreshSchedules()
+            }
         }
     }
 
@@ -418,7 +421,7 @@ fun Calendar24HourContent(
                     .height(totalHeight)
             ) {
                 // DrawScope에서는 with(density)를 사용할 수 없으므로 밖에서 필요한 값을 계산
-                val spToPx = with(density) { 14.sp.toPx() }
+                with(density) { 14.sp.toPx() }
                 
                 drawTimeline(hourHeight, textMeasurer, density)
                 
@@ -521,7 +524,7 @@ fun DrawScope.drawSchedules(
         val isSelected = schedule.id == selectedId
         val scale = if (isSelected && selectionActive) 1.02f else 1f
         val alpha = if (isSelected && selectionActive) selectionAlpha else 1f
-        val shadowElevation = if (isSelected && selectionActive) 
+        if (isSelected && selectionActive)
                               with(density) { Dimens.elevationLarge.toPx() } 
                               else with(density) { Dimens.elevationSmall.toPx() }
         

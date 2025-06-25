@@ -1,5 +1,7 @@
 package com.example.feature_edit_member.viewmodel // 경로 확인!
 
+// import com.example.domain.repository.ProjectMemberRepository // Remove Repo import
+// import com.example.domain.repository.ProjectRoleRepository // Remove Repo import
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,12 +10,18 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
-// import com.example.domain.repository.ProjectMemberRepository // Remove Repo import
-// import com.example.domain.repository.ProjectRoleRepository // Remove Repo import
+import com.example.domain.model.vo.UserId
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain.provider.project.ProjectRoleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -49,8 +57,10 @@ class EditMemberViewModel @Inject constructor(
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider
 ) : ViewModel() {
 
-    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
-    private val userId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_USER_ID)
+    private val projectId: DocumentId =
+        savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID).let(::DocumentId)
+    private val userId: UserId =
+        savedStateHandle.getRequiredString(AppRoutes.Project.ARG_USER_ID).let(::UserId)
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
@@ -79,7 +89,7 @@ class EditMemberViewModel @Inject constructor(
 
             // 1. 멤버 정보 가져오기 (UseCase 사용)
             val memberResult =
-                projectMemberUseCases.getProjectMemberDetailsUseCase(DocumentId(userId)).first()
+                projectMemberUseCases.getProjectMemberDetailsUseCase(userId).first()
 
             when (memberResult) {
                 is CustomResult.Success -> {
@@ -189,7 +199,7 @@ class EditMemberViewModel @Inject constructor(
 
             // UseCase 호출
             val result = projectMemberUseCases.updateMemberRolesUseCase(
-                DocumentId(userId),
+                userId,
                 currentSelectedRoleIds.toList()
             )
 

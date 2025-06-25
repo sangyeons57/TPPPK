@@ -3,22 +3,30 @@ package com.example.feature_create_channel.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
-import com.example.core_common.result.CustomResult
+import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.domain.model.enum.ProjectChannelType
 
 // 채널 유형 정의 -> domain/model/ChannelType 으로 이동했으므로 제거
 // enum class ChannelType { TEXT, VOICE }
 
 // --- UI 상태 ---
 data class CreateChannelUiState(
-    val channelName: String = "",
+    val channelName: Name = Name.EMPTY,
     val selectedChannelMode: ProjectChannelType = ProjectChannelType.MESSAGES, // Changed to String, default TEXT mode
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -44,7 +52,8 @@ class CreateChannelViewModel @Inject constructor(
     private val categoryId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_CATEGORY_ID)
 
     // Provider를 통해 생성된 UseCase 그룹
-    private val projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
+    private val projectChannelUseCases =
+        projectChannelUseCaseProvider.createForProject(DocumentId(projectId))
 
     private val _uiState = MutableStateFlow(CreateChannelUiState())
     val uiState: StateFlow<CreateChannelUiState> = _uiState.asStateFlow()
@@ -55,7 +64,7 @@ class CreateChannelViewModel @Inject constructor(
     /**
      * 채널 이름 입력 변경 시 호출
      */
-    fun onChannelNameChange(name: String) {
+    fun onChannelNameChange(name: Name) {
         _uiState.update {
             it.copy(channelName = name, error = null) // 에러 초기화
         }
@@ -91,7 +100,9 @@ class CreateChannelViewModel @Inject constructor(
 
             when (val result = projectChannelUseCases.createProjectChannelUseCase(
                 name = currentName,
-                order = 0.0
+                order = ProjectChannelOrder.DEFAULT,
+                channelType = currentType
+
             )) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(CreateChannelEvent.ShowSnackbar("채널이 생성되었습니다: $currentName"))

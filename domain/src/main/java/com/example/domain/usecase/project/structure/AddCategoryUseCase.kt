@@ -1,17 +1,15 @@
 package com.example.domain.usecase.project.structure
 
+import com.example.core_common.constants.Constants
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
-import com.example.domain.repository.base.AuthRepository // Added
-import com.example.domain.repository.base.CategoryRepository // Added
-import com.example.core_common.constants.Constants // Added
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
-import com.example.domain.model.vo.category.IsCategoryFlag
-import kotlinx.coroutines.flow.first // Added
+import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.CategoryRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -30,8 +28,8 @@ interface AddCategoryUseCase {
      *         실패 시 예외 정보를 포함하는 [CustomResult.Failure]를 반환합니다.
      */
     suspend operator fun invoke(
-        projectId: String,
-        categoryName: String
+        projectId: DocumentId,
+        categoryName: CategoryName
     ): CustomResult<Category, Exception>
 }
 
@@ -63,8 +61,8 @@ class AddCategoryUseCaseImpl @Inject constructor(
      *         실패(예: 사용자 인증 실패, 데이터베이스 오류 등) 시 예외 정보를 포함하는 [CustomResult.Failure]를 반환합니다.
      */
     override suspend operator fun invoke(
-        projectId: String,
-        categoryName: String
+        projectId: DocumentId,
+        categoryName: CategoryName
     ): CustomResult<Category, Exception> {
         // 1. Get current user ID
         val currentUserSession = when (val currentUserSessionResult = authRepository.getCurrentUserSession()) {
@@ -74,7 +72,8 @@ class AddCategoryUseCaseImpl @Inject constructor(
         }
 
         // 2. Fetch existing categories for the project to determine the next order
-        val existingCategoriesResult = categoryRepository.getCategoriesStream(projectId).first() // Get the first emission
+        val existingCategoriesResult = categoryRepository.getCategoriesStream(projectId.value)
+            .first() // Get the first emission
         val nextOrder = when (existingCategoriesResult) {
             is CustomResult.Success -> {
                 val categories = existingCategoriesResult.data
@@ -99,7 +98,7 @@ class AddCategoryUseCaseImpl @Inject constructor(
 
         // 3. Create new Category object
         val newCategory = Category.create(
-            name = CategoryName(categoryName.trim()),
+            name = categoryName.trim(),
             order = CategoryOrder(nextOrder),
             createdBy = OwnerId.from(currentUserSession.userId),
         )

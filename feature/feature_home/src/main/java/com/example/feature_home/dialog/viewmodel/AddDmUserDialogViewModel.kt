@@ -3,8 +3,11 @@ package com.example.feature_home.dialog.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.domain.usecase.dm.AddDmChannelUseCase
-// import com.example.domain.usecase.user.SearchUserByNameUseCase // 현재 직접 사용 안함
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
+import com.example.domain.provider.dm.DMUseCaseProvider
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,14 +22,14 @@ import java.util.NoSuchElementException // Import for exception handling
 // UiState와 Event 정의가 별도 파일에 있다면 해당 파일을 참고해야 합니다.
 // 여기서는 ViewModel 내에서 추론 가능한 구조로 가정합니다.
 data class AddDmUserUiState(
-    val username: String = "",
+    val username: UserName = UserName.EMPTY,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     // val searchResults: List<User> = emptyList() // 검색 기능 구현 시 필요
 )
 
 sealed interface AddDmUserEvent {
-    data class NavigateToDmChat(val channelId: String) : AddDmUserEvent
+    data class NavigateToDmChat(val channelId: DocumentId) : AddDmUserEvent
     data class ShowSnackbar(val message: String) : AddDmUserEvent
     object DismissDialog : AddDmUserEvent
 }
@@ -37,9 +40,13 @@ sealed interface AddDmUserEvent {
  */
 @HiltViewModel
 class AddDmUserDialogViewModel @Inject constructor(
-    // private val searchUserUseCase: SearchUserByNameUseCase, // TODO: 실제 검색 로직 구현 시 주석 해제 및 사용
-    private val addDmChannelUseCase: AddDmChannelUseCase
+    private val dmUseCaseProvider: DMUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹들
+    private val userUseCases = userUseCaseProvider.createForUser()
+    private var dmUseCases: com.example.domain.provider.dm.DMUseCases? = null
 
     private val _uiState = MutableStateFlow(AddDmUserUiState())
     val uiState = _uiState.asStateFlow()
@@ -47,7 +54,24 @@ class AddDmUserDialogViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<AddDmUserEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    fun onUsernameChange(username: String) {
+    init {
+        // Initialize DM UseCases when current user is available
+        viewModelScope.launch {
+            userUseCases.getCurrentUserStreamUseCase().collect { result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        dmUseCases = dmUseCaseProvider.createForUser(UserId.from(result.data.id))
+                    }
+
+                    else -> {
+                        // Handle user loading or error states if needed
+                    }
+                }
+            }
+        }
+    }
+
+    fun onUsernameChange(username: UserName) {
         _uiState.update { it.copy(username = username, errorMessage = null) }
     }
 
@@ -66,11 +90,22 @@ class AddDmUserDialogViewModel @Inject constructor(
         }
     }
 
-    private fun createDmChannelWithUser(username: String) {
+    private fun createDmChannelWithUser(username: UserName) {
         viewModelScope.launch {
+            val currentDmUseCases = dmUseCases
+            if (currentDmUseCases == null) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "User not initialized"
+                    )
+                }
+                return@launch
+            }
+            
             // Use .first to take only the first terminal result (Success or Failure)
             val result = try {
-                addDmChannelUseCase(username)
+                currentDmUseCases.addDmChannelUseCase(username)
                     .first { it is CustomResult.Success || it is CustomResult.Failure }
             } catch (e: NoSuchElementException) {
                 // This catch block handles the case where the Flow completes without emitting
@@ -87,7 +122,7 @@ class AddDmUserDialogViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            username = "" // Clear username on success
+                            username = UserName.EMPTY // Clear username on success
                         )
                     }
                     _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(result.data))

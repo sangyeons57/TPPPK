@@ -1,10 +1,11 @@
-package com.example.feature_schedule.viewmodel
+package com.example.feature_schedule_detail.viewmodel
 
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
@@ -42,8 +43,6 @@ data class ScheduleDetailUiState(
 
 // --- 이벤트 ---
 sealed class ScheduleDetailEvent {
-    object NavigateBack : ScheduleDetailEvent()
-    data class NavigateToEditSchedule(val scheduleId: String) : ScheduleDetailEvent()
     object ShowDeleteConfirmDialog : ScheduleDetailEvent()
     data class ShowSnackbar(val message: String) : ScheduleDetailEvent()
 }
@@ -51,7 +50,8 @@ sealed class ScheduleDetailEvent {
 @HiltViewModel
 class ScheduleDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val scheduleUseCaseProvider: ScheduleUseCaseProvider
+    private val scheduleUseCaseProvider: ScheduleUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
@@ -125,7 +125,7 @@ class ScheduleDetailViewModel @Inject constructor(
 
     // Helper function to map domain Schedule to ScheduleDetailItem
     private fun Schedule.toDetailItem(): ScheduleDetailItem {
-        val datePattern = "yyyy년 M월 d일 (E)" // Define pattern locally or in DateTimeUtil if widely used
+        "yyyy년 M월 d일 (E)" // Define pattern locally or in DateTimeUtil if widely used
 
         // null 체크 추가 및 DateTimeUtil 메서드 수정
         val dateString = this.startTime.let { DateTimeUtil.formatDate(DateTimeUtil.toLocalDateTime(it)) }
@@ -148,10 +148,8 @@ class ScheduleDetailViewModel @Inject constructor(
     }
 
     fun onEditClick() {
-        viewModelScope.launch {
-            // 수정 화면으로 이동하는 이벤트 발생 (scheduleId 전달)
-            _eventFlow.emit(ScheduleDetailEvent.NavigateToEditSchedule(uiState.value.scheduleId ?: ""))
-        }
+        val scheduleId = uiState.value.scheduleId ?: return
+        navigationManger.navigateToEditSchedule(scheduleId)
     }
 
     fun onDeleteClick() {
@@ -169,7 +167,8 @@ class ScheduleDetailViewModel @Inject constructor(
                 result.onSuccess {
                     viewModelScope.launch {
                         _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정이 삭제되었습니다."))
-                        _uiState.update { it.copy(isLoading = false, deleteSuccess = true) } // 삭제 성공 및 네비게이션 트리거
+                        _uiState.update { it.copy(isLoading = false, deleteSuccess = true) }
+                        navigationManger.navigateBack() // 삭제 성공 후 뒤로가기
                     }
                 }.onFailure { exception ->
                     viewModelScope.launch {
@@ -187,6 +186,13 @@ class ScheduleDetailViewModel @Inject constructor(
     // Add function to clear error message if needed by UI
     fun errorMessageShown() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    /**
+     * 뒤로가기 네비게이션 처리
+     */
+    fun navigateBack() {
+        navigationManger.navigateBack()
     }
 
 }

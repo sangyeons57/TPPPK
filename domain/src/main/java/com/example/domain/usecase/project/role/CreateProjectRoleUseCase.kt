@@ -7,7 +7,6 @@ import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
 import com.example.domain.repository.base.ProjectRoleRepository
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * UseCase for creating a new project role.
@@ -21,8 +20,8 @@ interface CreateProjectRoleUseCase {
      * @return A [Result] containing the ID of the newly created role, or an error.
      */
     suspend operator fun invoke(
-        name: String,
-        isDefault: Boolean = false
+        name: Name,
+        isDefault: RoleIsDefault = RoleIsDefault.NON_DEFAULT
     ): CustomResult<DocumentId, Exception>
 }
 
@@ -34,12 +33,12 @@ class CreateProjectRoleUseCaseImpl @Inject constructor(
 ) : CreateProjectRoleUseCase {
 
     override suspend operator fun invoke(
-        name: String,
-        isDefault: Boolean
+        name: Name,
+        isDefault: RoleIsDefault
     ): CustomResult<DocumentId, Exception> {
         val role = Role.create(
-            name = Name(name),
-            isDefault = RoleIsDefault(isDefault)
+            name = name,
+            isDefault = isDefault
         )
         return projectRoleRepository.save(role)
     }

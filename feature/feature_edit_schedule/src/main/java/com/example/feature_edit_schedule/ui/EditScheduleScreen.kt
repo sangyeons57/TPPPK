@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.extension.REFRESH_SCHEDULE_LIST_KEY
 import com.example.feature_edit_schedule.viewmodel.EditScheduleEvent
 import com.example.feature_edit_schedule.viewmodel.EditScheduleUiState
 import com.example.feature_edit_schedule.viewmodel.EditScheduleViewModel
@@ -71,13 +70,6 @@ fun EditScheduleScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditScheduleEvent.NavigateBack -> {
-                    navigationManger.navigateBack()
-                }
-                is EditScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
-                    navigationManger.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
-                    navigationManger.navigateBack()
-                }
                 is EditScheduleEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
                 }

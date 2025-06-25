@@ -2,6 +2,7 @@ package com.example.domain.usecase.project.channel
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.collection.CategoryCollection
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.collection.CategoryCollectionRepository
 import javax.inject.Inject
 
@@ -21,9 +22,9 @@ interface DeleteChannelUseCase {
      * @return 채널이 삭제된 카테고리 컬렉션을 포함한 CustomResult
      */
     suspend operator fun invoke(
-        projectId: String,
-        categoryId: String,
-        channelId: String
+        projectId: DocumentId,
+        categoryId: DocumentId,
+        channelId: DocumentId
     ): CustomResult<CategoryCollection, Exception>
 }
 
@@ -43,15 +44,15 @@ class DeleteChannelUseCaseImpl @Inject constructor(
      * @return 채널이 삭제된 카테고리 컬렉션을 포함한 CustomResult
      */
     override suspend operator fun invoke(
-        projectId: String,
-        categoryId: String,
-        channelId: String
+        projectId: DocumentId,
+        categoryId: DocumentId,
+        channelId: DocumentId
     ): CustomResult<CategoryCollection, Exception> {
         // 저장소를 통해 채널 삭제
         return categoryCollectionRepository.removeChannelFromCategory(
-            projectId = projectId,
-            categoryId = categoryId,
-            channelId = channelId
+            projectId = projectId.value,
+            categoryId = categoryId.value,
+            channelId = channelId.value
         )
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,10 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.project.ProjectName
 import com.example.feature_schedule.viewmodel.AddScheduleEvent
 import com.example.feature_schedule.viewmodel.AddScheduleUiState
 import com.example.feature_schedule.viewmodel.AddScheduleViewModel
@@ -79,13 +79,6 @@ fun AddScheduleScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is AddScheduleEvent.NavigateBack -> {
-                    navigationManger.navigateBack()
-                }
-                is AddScheduleEvent.SaveSuccessAndRequestBackNavigation -> {
-                    navigationManger.setResult(REFRESH_SCHEDULE_LIST_KEY, true) // Modified this line
-                    navigationManger.navigateBack()
-                }
                 is AddScheduleEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
                 }
@@ -171,11 +164,11 @@ fun AddScheduleContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = uiState.selectedProject?.name ?: "개인 일정",
+                value = uiState.selectedProject?.name?.value ?: "개인 일정",
                 onValueChange = {}, // 읽기 전용
                 readOnly = true,
                 label = { Text("프로젝트") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectDropdownExpanded) },
+                trailingIcon = { TrailingIcon(expanded = projectDropdownExpanded) },
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true) // 메뉴가 TextField 아래에 열리도록 함
                     .fillMaxWidth(),
@@ -194,7 +187,7 @@ fun AddScheduleContent(
                 } else {
                     uiState.availableProjects.forEach { project ->
                         DropdownMenuItem(
-                            text = { Text(project.name) },
+                            text = { Text(project.name.value) },
                             onClick = {
                                 onProjectSelected(project)
                                 projectDropdownExpanded = false
@@ -249,7 +242,9 @@ fun AddScheduleContent(
         OutlinedTextField(
             value = uiState.scheduleContent,
             onValueChange = onContentChange,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp), // 여러 줄 입력 가능하도록 높이 조절
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 150.dp), // 여러 줄 입력 가능하도록 높이 조절
             label = { Text("일정 내용 (선택 사항)") },
             maxLines = 5 // 예시: 최대 5줄
         )
@@ -333,8 +328,8 @@ private fun AddScheduleContentPreview() {
             uiState = AddScheduleUiState(
                 selectedDate = LocalDate.now(),
                 availableProjects = listOf(
-                    ProjectSelectionItem(DocumentId("p1"), Name("프로젝트 1")),
-                    ProjectSelectionItem(DocumentId("p2"), Name("프로젝트 2"))
+                    ProjectSelectionItem(DocumentId("p1"), ProjectName("프로젝트 1")),
+                    ProjectSelectionItem(DocumentId("p2"), ProjectName("프로젝트 2"))
                 ),
                 scheduleTitle = "미팅"
             ),

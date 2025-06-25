@@ -2,11 +2,22 @@ package com.example.feature_home.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,8 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_home.model.DmUiModel
 
 /**
@@ -48,7 +60,7 @@ fun DmListComponent(
     }
 
     LazyColumn(modifier = modifier.fillMaxSize()) {
-        items(dms, key = { it.channelId }) { dmItem ->
+        items(dms, key = { it.channelId.value }) { dmItem ->
             DmListItem(dmItem = dmItem, onClick = { onDmItemClick(dmItem) })
             HorizontalDivider()
         }
@@ -76,7 +88,7 @@ fun DmListItem(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = dmItem.partnerName?.firstOrNull()?.toString() ?: "?",
+                text = dmItem.partnerName?.value?.firstOrNull()?.toString() ?: "?",
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
@@ -85,16 +97,9 @@ fun DmListItem(
         
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = dmItem.partnerName!!,
+                text = dmItem.partnerName?.value ?: "Unknown User",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = dmItem.lastMessage ?: "메시지가 없습니다.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -102,13 +107,6 @@ fun DmListItem(
         
         Spacer(Modifier.width(16.dp))
         
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = DateTimeUtil.formatDateTime(dmItem.lastMessageTimestamp!!),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 
@@ -120,11 +118,10 @@ fun DmListItemPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         DmListItem(
             dmItem = DmUiModel(
-                channelId = "dm1",
-                partnerName = "김철수",
+                channelId = DocumentId("dm1"),
+                partnerName = UserName("김철수"),
                 partnerProfileImageUrl = null,
-                lastMessage = "내일 회의 시간에 맞춰서 와주세요. 장소는 동일합니다.",
-                lastMessageTimestamp = DateTimeUtil.nowInstant(),
+                unreadCount = 1
             ),
             onClick = {}
         )
@@ -137,27 +134,21 @@ fun DmListScreenPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         val sampleDms = listOf(
             DmUiModel(
-                channelId = "1", 
-                partnerName = "User One", 
+                channelId = DocumentId("1"),
+                partnerName = UserName("User One"), 
                 partnerProfileImageUrl = null, 
-                lastMessage = "안녕하세요!", 
-                lastMessageTimestamp = DateTimeUtil.nowInstant(), 
                 unreadCount = 1
             ),
             DmUiModel(
-                channelId = "2", 
-                partnerName = "User Two With A Very Long Name", 
+                channelId = DocumentId("2"),
+                partnerName = UserName("User Two With A Very Long Name"), 
                 partnerProfileImageUrl = null, 
-                lastMessage = "긴 메시지 테스트입니다.", 
-                lastMessageTimestamp = DateTimeUtil.nowInstant(), 
                 unreadCount = 0
             ),
             DmUiModel(
-                channelId = "3", 
-                partnerName = "User Three", 
+                channelId = DocumentId("3"),
+                partnerName = UserName("User Three"), 
                 partnerProfileImageUrl = null, 
-                lastMessage = null, 
-                lastMessageTimestamp = DateTimeUtil.nowInstant(), 
                 unreadCount = 2
             )
         )

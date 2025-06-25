@@ -1,8 +1,8 @@
 package com.example.domain.usecase.project.core
 
-import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
 import javax.inject.Inject
 
@@ -10,7 +10,7 @@ import javax.inject.Inject
  * 프로젝트를 삭제하는 유스케이스 인터페이스
  */
 interface DeleteProjectUseCase {
-    suspend operator fun invoke(projectId: String): Result<Unit>
+    suspend operator fun invoke(projectId: DocumentId): Result<Unit>
 }
 
 /**
@@ -29,7 +29,7 @@ class DeleteProjectUseCaseImpl @Inject constructor(
      * @param projectId 삭제할 프로젝트의 ID
      * @return Result<Unit> 삭제 처리 결과
      */
-    override suspend fun invoke(projectId: String): Result<Unit> {
+    override suspend fun invoke(projectId: DocumentId): Result<Unit> {
         TODO("Not yet implemented [Firebase Function에서 구현]")
     }
 }

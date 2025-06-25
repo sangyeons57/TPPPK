@@ -4,11 +4,9 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Category
-import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
@@ -19,9 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -96,13 +92,13 @@ class EditCategoryViewModel @Inject constructor(
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectStructureUseCases = projectId?.let {
-        projectStructureUseCaseProvider.createForProject(it)
+        projectStructureUseCaseProvider.createForProject(DocumentId(it))
     }
 
     init {
         if (projectId != null && categoryId != null && projectStructureUseCases != null) {
             loadCategoryDetails(projectId, categoryId)
-            loadAllCategoriesInProject(projectId)
+            loadAllCategoriesInProject(DocumentId.from(projectId))
         } else {
             _uiState.update { it.copy(generalError = "Project or Category ID is missing.", isLoading = false) }
         }
@@ -116,7 +112,7 @@ class EditCategoryViewModel @Inject constructor(
     private fun loadCategoryDetails(projId: String, catId: String) {
         val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
-            val result = useCases.getCategoryDetailsUseCase(projId, catId);
+            val result = useCases.getCategoryDetailsUseCase(projId, catId)
             _uiState.update { it.copy(isLoading = true) }
             when (result) {
                 is CustomResult.Success -> {
@@ -146,7 +142,7 @@ class EditCategoryViewModel @Inject constructor(
      * Loads all categories in the current project to be used for validation context.
      * @param projId The ID of the project.
      */
-    private fun loadAllCategoriesInProject(projId: String) {
+    private fun loadAllCategoriesInProject(projId: DocumentId) {
         val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
             useCases.getProjectAllCategoriesUseCase(projId).map { result ->

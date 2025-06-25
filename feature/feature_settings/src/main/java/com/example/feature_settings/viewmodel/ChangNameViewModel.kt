@@ -1,13 +1,19 @@
 package com.example.feature_settings.viewmodel
 
+// Domain UseCase Import
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.usecase.user.UpdateNameUseCase
-// Domain UseCase Import
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -16,7 +22,7 @@ import javax.inject.Inject
 // --- UI 상태 ---
 data class ChangeNameUiState(
     val currentName: String = "", // 현재 이름 (로드 필요 시 추가)
-    val newName: String = "", // 사용자가 입력한 새 이름
+    val newName: UserName = UserName.EMPTY, // 사용자가 입력한 새 이름
     val isLoading: Boolean = false,
     val error: String? = null,
     val updateSuccess: Boolean = false
@@ -46,7 +52,7 @@ class ChangeNameViewModel @Inject constructor( // ★ 클래스 이름 오타 �
     val eventFlow = _eventFlow.asSharedFlow()
 
     /** 새 이름 입력 변경 시 호출 */
-    fun onNameChange(name: String) {
+    fun onNameChange(name: UserName) {
         _uiState.update { it.copy(newName = name, error = null) } // 에러 초기화
     }
 

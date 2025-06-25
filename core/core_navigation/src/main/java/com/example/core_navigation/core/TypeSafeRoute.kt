@@ -178,6 +178,12 @@ data object AcceptFriendsRoute : TypeSafeRoute
 @Serializable
 data object GlobalSearchRoute : TypeSafeRoute
 
+@Serializable
+data class MessageDetailRoute(
+    val channelId: String,
+    val messageId: String
+) : TypeSafeRoute
+
 // ===== Development Routes =====
 @Serializable
 data object DevMenuRoute : TypeSafeRoute
@@ -255,6 +261,7 @@ object TypeSafeRouteCompat {
         
         // Search routes
         is GlobalSearchRoute -> "search/global"
+        is MessageDetailRoute -> "project/channel/$channelId/message/$messageId"
         
         // Development routes
         is DevMenuRoute -> "dev/menu"

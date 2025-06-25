@@ -1,7 +1,6 @@
 package com.example.domain.model.vo
 
 import com.example.domain.model.data.project.RolePermission
-import com.google.firebase.firestore.Source
 
 /**
  * Generic Firestore document identifier.
@@ -17,7 +16,10 @@ value class DocumentId(val value: String) {
 
     companion object {
         const val MAX_LENGTH = 128
+
         private const val EMPTY_VALUE = "" // 빈 문자열을 특수 값으로 사용
+
+        val PERSONAL_SCHEDULE_PROJECT_ID = DocumentId("-1") // 개인 일정을 나타내는 상수 ID
 
         val EMPTY = DocumentId(EMPTY_VALUE) // 빈 DocumentId 인스턴스
 

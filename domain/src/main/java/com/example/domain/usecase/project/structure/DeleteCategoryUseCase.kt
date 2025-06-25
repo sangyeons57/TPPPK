@@ -1,6 +1,7 @@
 package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.collection.CategoryCollectionRepository
 import javax.inject.Inject
 
@@ -18,8 +19,8 @@ interface DeleteCategoryUseCase {
      * @return 삭제 성공 여부를 포함한 CustomResult
      */
     suspend operator fun invoke(
-        projectId: String,
-        categoryId: String
+        projectId: DocumentId,
+        categoryId: DocumentId
     ): CustomResult<Unit, Exception>
 }
 
@@ -38,13 +39,13 @@ class DeleteCategoryUseCaseImpl @Inject constructor(
      * @return 삭제 성공 여부를 포함한 CustomResult
      */
     override suspend operator fun invoke(
-        projectId: String,
-        categoryId: String
+        projectId: DocumentId,
+        categoryId: DocumentId
     ): CustomResult<Unit, Exception> {
         // 저장소를 통해 카테고리 삭제
         return categoryCollectionRepository.removeCategory(
-            projectId = projectId,
-            categoryId = categoryId
+            projectId = projectId.value,
+            categoryId = categoryId.value
         )
     }
 }

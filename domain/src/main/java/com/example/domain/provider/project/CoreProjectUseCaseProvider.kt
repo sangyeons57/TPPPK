@@ -1,6 +1,8 @@
 package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
@@ -14,11 +16,11 @@ import com.example.domain.repository.factory.context.ProjectRepositoryFactoryCon
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
 import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import com.example.domain.usecase.project.JoinProjectWithTokenUseCase
-import com.example.domain.usecase.project.RenameProjectUseCaseImpl
 import com.example.domain.usecase.project.core.CreateProjectUseCase
 import com.example.domain.usecase.project.core.DeleteProjectUseCaseImpl
 import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
 import com.example.domain.usecase.project.core.GetUserParticipatingProjectsUseCaseImpl
+import com.example.domain.usecase.project.core.RenameProjectUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,7 +45,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
      * @param userId 사용자 ID (선택적)
      * @return 핵심 프로젝트 관리 UseCase 그룹
      */
-    fun createForProject(projectId: String? = null, userId: String? = null): CoreProjectUseCases {
+    fun createForProject(
+        projectId: DocumentId? = null,
+        userId: UserId? = null
+    ): CoreProjectUseCases {
         val projectRepository = projectRepositoryFactory.create(
             ProjectRepositoryFactoryContext(
                 collectionPath = CollectionPath.projects
@@ -57,7 +62,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
         val projectsWrapperRepository = if (userId != null) {
             projectsWrapperRepositoryFactory.create(
                 ProjectsWrapperRepositoryFactoryContext(
-                    collectionPath = CollectionPath.userProjectWrappers(userId)
+                    collectionPath = CollectionPath.userProjectWrappers(userId.value)
                 )
             )
         } else null
@@ -65,7 +70,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
         val categoryRepository = if (projectId != null) {
             categoryRepositoryFactory.create(
                 CategoryRepositoryFactoryContext(
-                    collectionPath = CollectionPath.projectCategories(projectId)
+                    collectionPath = CollectionPath.projectCategories(projectId.value)
                 )
             )
         } else null
@@ -73,7 +78,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
         val memberRepository = if (projectId != null) {
             memberRepositoryFactory.create(
                 MemberRepositoryFactoryContext(
-                    collectionPath = CollectionPath.projectMembers(projectId)
+                    collectionPath = CollectionPath.projectMembers(projectId.value)
                 )
             )
         } else null

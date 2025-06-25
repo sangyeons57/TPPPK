@@ -3,27 +3,20 @@ package com.example.feature_calendar.ui
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_ui.theme.Dimens
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.core_navigation.core.NavigationManger
-// import com.example.core_navigation.destination.AppRoutes // No longer needed for REFRESH_SCHEDULE_LIST_KEY
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.ObserveNavigationResult
+import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.Instant
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.OwnerId
@@ -33,6 +26,13 @@ import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.example.feature_calendar.viewmodel.CalendarEvent
 import com.example.feature_calendar.viewmodel.CalendarUiState
 import com.example.feature_calendar.viewmodel.CalendarViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 
 /**
  * 캘린더 모듈
@@ -86,12 +86,15 @@ fun CalendarScreen(
         label = "FAB Scale Animation"
     )
 
-    ObserveNavigationResult<Boolean>(
-        appNavigator = navigationManger,
-        resultKey = REFRESH_SCHEDULE_LIST_KEY
-    ) { needsRefresh ->
-        if (needsRefresh == true) { // Explicitly check for true
-            viewModel.refreshSchedules() // Call the existing refresh method
+    navigationManger.getNavController()?.let { navController ->
+        ObserveNavigationResult<Boolean>(
+            resultManager = navigationManger.getResultManager(),
+            navController = navController,
+            key = AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
+        ) { needsRefresh ->
+            if (needsRefresh == true) { // Explicitly check for true
+                viewModel.refreshSchedules() // Call the existing refresh method
+            }
         }
     }
 
@@ -177,7 +180,7 @@ private object PreviewUtils {
      */
     fun getSampleSchedules(): List<Schedule> {
         val today = LocalDate.now()
-        val now = Instant.now()
+        Instant.now()
         return listOf(
             Schedule.create(
                 projectId = ProjectId("p1"),

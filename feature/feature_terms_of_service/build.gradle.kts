@@ -5,9 +5,6 @@ plugins {
     alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.kotlin.compose)
 }
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
-}
 
 android {
     namespace = "com.example.feature_terms_of_service"
@@ -30,8 +27,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
         //jvmTarget = libs.versions.jvmTarget.get()
@@ -39,12 +36,6 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.kotlin.get()
-    }
-}
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }
 
 dependencies {
@@ -87,4 +78,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }

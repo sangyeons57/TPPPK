@@ -1,13 +1,44 @@
 package com.example.feature_project.roles.ui
 
-import androidx.compose.foundation.layout.*
+// Domain 모델 및 ViewModel 관련 요소 Import
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete // 역할 삭제 아이콘
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -17,11 +48,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.data.project.RolePermission // Corrected import
-// Domain 모델 및 ViewModel 관련 요소 Import
-import com.example.feature_project.roles.viewmodel.EditRoleEvent
-import com.example.feature_project.roles.viewmodel.EditRoleUiState
-import com.example.feature_project.roles.viewmodel.EditRoleViewModel
+import com.example.domain.model.data.project.RolePermission
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.feature_edit_role.viewmodel.EditRoleEvent
+import com.example.feature_edit_role.viewmodel.EditRoleUiState
+import com.example.feature_edit_role.viewmodel.EditRoleViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -46,7 +78,6 @@ fun EditRoleScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditRoleEvent.NavigateBack -> navigationManger.navigateBack()
                 is EditRoleEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditRoleEvent.ClearFocus -> focusManager.clearFocus()
                 is EditRoleEvent.ShowDeleteConfirmation -> showDeleteConfirmationDialog = true // ★ 삭제 확인 요청
@@ -92,11 +123,15 @@ fun EditRoleScreen(
     ) { paddingValues ->
         // 초기 로딩 처리 (수정 모드 시)
         if (uiState.isLoading && !isCreating) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        } else if (uiState.error != null && !isCreating && uiState.originalRoleName.isEmpty()) { // 로딩 에러 처리
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+        } else if (uiState.error != null && !isCreating && uiState.originalRoleName.value.isEmpty()) { // 로딩 에러 처리
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), contentAlignment = Alignment.Center) {
                 Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
             }
         } else {
@@ -104,7 +139,7 @@ fun EditRoleScreen(
             EditRoleContent(
                 modifier = Modifier.padding(paddingValues),
                 uiState = uiState,
-                onRoleNameChange = viewModel::onRoleNameChange,
+                onRoleNameChange = { name -> viewModel.onRoleNameChange(Name(name)) },
                 onPermissionCheckedChange = viewModel::onPermissionCheckedChange,
                 onSaveClick = viewModel::saveRole // 저장/생성 함수 호출
             )
@@ -158,7 +193,7 @@ fun EditRoleContent(
     ) {
         // 역할 이름 입력
         OutlinedTextField(
-            value = uiState.roleName, // ViewModel 상태 바인딩
+            value = uiState.roleName.value, // ViewModel 상태 바인딩
             onValueChange = onRoleNameChange, // ViewModel 콜백 연결
             modifier = Modifier.fillMaxWidth(),
             label = { Text("역할 이름") },
@@ -170,7 +205,9 @@ fun EditRoleContent(
         Text(
             "권한 설정",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
         )
 
         // 각 권한에 대한 스위치 행 표시
@@ -240,7 +277,9 @@ fun PermissionSwitchRow(
         Text(
             text = permission.name, // Enum의 설명 사용
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f).padding(end = 16.dp), // 스위치와 간격 확보
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 16.dp), // 스위치와 간격 확보
             color = if (enabled) LocalContentColor.current else MaterialTheme.colorScheme.outline
         )
         Switch(
@@ -271,7 +310,11 @@ private fun EditRoleContent_CreateModePreview() {
 private fun EditRoleContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditRoleContent(
-            uiState = EditRoleUiState(roleId = "r1", roleName="운영진", isLoading = true),
+            uiState = EditRoleUiState(
+                roleId = DocumentId("r1"),
+                roleName = Name("운영진"),
+                isLoading = true
+            ),
             onRoleNameChange = {},
             onPermissionCheckedChange = { _, _ -> },
             onSaveClick = {}

@@ -1,7 +1,19 @@
 package com.example.feature_member.dialog.ui
 
+// Removed direct Coil imports
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -10,8 +22,20 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,14 +46,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.hilt.navigation.compose.hiltViewModel // Added
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Added
-// Removed direct Coil imports
-import com.example.core_ui.components.user.UserProfileImage // Import the new composable
-import kotlinx.coroutines.flow.collectLatest // Added
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_member.dialog.viewmodel.AddMemberDialogEvent
 import com.example.feature_member.dialog.viewmodel.AddMemberViewModel
+import kotlinx.coroutines.flow.collectLatest
 
 // R import might be removed if UserProfileImage handles it all.
 
@@ -42,8 +68,8 @@ import com.example.feature_member.dialog.viewmodel.AddMemberViewModel
  * @param profileImageUrl 프로필 이미지 URL (nullable)
  */
 data class UserSearchResult(
-    val userId: String,
-    val userName: String,
+    val userId: UserId,
+    val userName: UserName,
     val userEmail: String?,
     val profileImageUrl: String?
 )
@@ -53,7 +79,7 @@ data class UserSearchResult(
  *
  * @param onDismissRequest 다이얼로그 닫기 요청 콜백
  * @param onAddMembers 선택된 사용자 목록(ID)으로 멤버 추가 요청 콜백
- * @param searchQuery 현재 검색어 상태
+ * @param username 현재 검색어 상태
  * @param onSearchQueryChange 검색어 변경 콜백
  * @param searchResults 사용자 검색 결과 목록 상태
  * @param selectedUsers 현재 선택된 사용자 ID Set 상태
@@ -65,12 +91,12 @@ data class UserSearchResult(
 @Composable
 fun AddMemberDialogContent(
     onDismissRequest: () -> Unit,
-    onAddMembers: (Set<String>) -> Unit, // This will be called by the ViewModel-driven AddMemberDialog
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
+    onAddMembers: (Set<UserId>) -> Unit, // This will be called by the ViewModel-driven AddMemberDialog
+    username: UserName,
+    onSearchQueryChange: (UserName) -> Unit,
     searchResults: List<UserSearchResult>,
-    selectedUsers: Set<String>,
-    onUserSelectionChange: (String, Boolean) -> Unit,
+    selectedUsers: Set<UserId>,
+    onUserSelectionChange: (UserId, Boolean) -> Unit,
     isLoading: Boolean,
     error: String?
 ) {
@@ -90,16 +116,16 @@ fun AddMemberDialogContent(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchQueryChange,
+                    value = username.value,
+                    onValueChange = { value -> onSearchQueryChange(UserName(value)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     label = { Text("이름 또는 이메일로 검색") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { onSearchQueryChange("") }) {
+                        if (username.isNotBlank()) {
+                            IconButton(onClick = { onSearchQueryChange(UserName.EMPTY) }) {
                                 Icon(Icons.Filled.Clear, contentDescription = "지우기")
                             }
                         }
@@ -125,7 +151,7 @@ fun AddMemberDialogContent(
                                 Text("오류: $error", color = MaterialTheme.colorScheme.error)
                             }
                         }
-                        searchQuery.isNotBlank() && searchResults.isEmpty() && !isLoading -> {
+                        username.isNotBlank() && searchResults.isEmpty() && !isLoading -> {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Text("검색 결과가 없습니다.", color = MaterialTheme.colorScheme.outline)
                             }
@@ -212,7 +238,7 @@ fun UserSearchResultItem(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = user.userName,
+                text = user.userName.value,
                 style = MaterialTheme.typography.bodyLarge
             )
             user.userEmail?.let {
@@ -242,23 +268,23 @@ fun AddMemberDialogPreview() {
         AddMemberDialogContent(
             onDismissRequest = {},
             onAddMembers = {},
-            searchQuery = "김",
+            username = UserName.EMPTY,
             onSearchQueryChange = {},
             searchResults = listOf(
                 UserSearchResult(
-                    userId = "user1",
-                    userName = "김영희",
+                    userId = UserId("user1"),
+                    userName = UserName("김영희"),
                     userEmail = "kim@example.com",
                     profileImageUrl = null
                 ),
                 UserSearchResult(
-                    userId = "user2",
-                    userName = "김철수",
+                    userId = UserId("user2"),
+                    userName = UserName("김철수"),
                     userEmail = "kim2@example.com",
                     profileImageUrl = null
                 )
             ),
-            selectedUsers = setOf("user1"),
+            selectedUsers = setOf(UserId("user1")),
             onUserSelectionChange = { _, _ -> },
             isLoading = false,
             error = null
@@ -277,7 +303,7 @@ fun AddMemberDialogPreview() {
 // This is the new AddMemberDialog that uses the ViewModel
 @Composable
 fun AddMemberDialog( // This is the one called by MemberListScreen
-    projectId: String,
+    projectId: DocumentId,
     onDismissRequest: () -> Unit,
     onMemberAdded: () -> Unit, // Callback when members are successfully added
     viewModel: AddMemberViewModel = hiltViewModel() // Inject ViewModel
@@ -307,9 +333,9 @@ fun AddMemberDialog( // This is the one called by MemberListScreen
         onAddMembers = { _ -> // selectedUserIds Set<String> - ViewModel handles selected users
             viewModel.addSelectedMembers(projectId) // Pass default roles if any, e.g., emptyList()
         },
-        searchQuery = uiState.searchQuery,
+        username = uiState.username,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
-        searchResults = uiState.searchResults,
+        searchResults = listOf(uiState.searchResults!!),
         selectedUsers = uiState.selectedUsers,
         onUserSelectionChange = viewModel::onUserSelectionChanged,
         isLoading = uiState.isLoading,

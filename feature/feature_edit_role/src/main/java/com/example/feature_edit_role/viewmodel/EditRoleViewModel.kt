@@ -1,18 +1,25 @@
-package com.example.feature_project.roles.viewmodel
+package com.example.feature_edit_role.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.data.project.RolePermission
-import com.example.domain.usecase.project.role.DeleteRoleUseCase
-import com.example.domain.usecase.project.role.CreateRoleUseCase
-import com.example.domain.usecase.project.role.GetRoleDetailsUseCase
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.role.RoleIsDefault
+import com.example.domain.provider.project.ProjectRoleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,13 +27,13 @@ import javax.inject.Inject
 
 // --- UI 상태 (기존 정의 사용, hasChanges 추가) ---
 data class EditRoleUiState(
-    val roleId: String? = null,
-    val roleName: String = "",
+    val roleId: DocumentId? = null,
+    val roleName: Name = Name(""),
     val permissions: Map<RolePermission, Boolean> = RolePermission.entries.associateWith { false },
-    val isDefault: Boolean = false,
-    val originalRoleName: String = "",
+    val isDefault: RoleIsDefault = RoleIsDefault.NON_DEFAULT,
+    val originalRoleName: Name = Name.EMPTY,
     val originalPermissions: Map<RolePermission, Boolean> = emptyMap(),
-    val originalIsDefault: Boolean = false,
+    val originalIsDefault: RoleIsDefault = RoleIsDefault.NON_DEFAULT,
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveSuccess: Boolean = false,
@@ -36,7 +43,6 @@ data class EditRoleUiState(
 
 // --- 이벤트 (기존 정의 사용, ShowDeleteConfirmation 추가) ---
 sealed class EditRoleEvent {
-    object NavigateBack : EditRoleEvent()
     data class ShowSnackbar(val message: String) : EditRoleEvent()
     object ClearFocus : EditRoleEvent()
     object ShowDeleteConfirmation : EditRoleEvent()
@@ -45,9 +51,8 @@ sealed class EditRoleEvent {
 @HiltViewModel
 class EditRoleViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val getRoleDetailsUseCase: GetRoleDetailsUseCase,
-    private val createRoleUseCase: CreateRoleUseCase,
-    private val deleteRoleUseCase: DeleteRoleUseCase,
+    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
@@ -56,7 +61,16 @@ class EditRoleViewModel @Inject constructor(
     
     val isEditMode = roleId != null
 
-    private val _uiState = MutableStateFlow(EditRoleUiState(roleId = roleId, isLoading = roleId != null))
+    // Provider를 통해 생성된 UseCase 그룹
+    private val projectRoleUseCases =
+        projectRoleUseCaseProvider.createForProject(DocumentId.from(projectId))
+
+    private val _uiState = MutableStateFlow(
+        EditRoleUiState(
+            roleId = roleId?.let { DocumentId.from(roleId) },
+            isLoading = roleId != null
+        )
+    )
     val uiState: StateFlow<EditRoleUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<EditRoleEvent>()
@@ -77,7 +91,10 @@ class EditRoleViewModel @Inject constructor(
             println("ViewModel: Loading details for role $roleId (UseCase)")
 
             // --- UseCase 호출 ---
-            val result = getRoleDetailsUseCase(projectId, roleId) // UseCase returns Result<Role?>
+            val result = projectRoleUseCases.getRoleDetailsUseCase(
+                projectId,
+                roleId
+            ) // UseCase returns Result<Role?>
 
             when (result) {
                 is CustomResult.Success -> {
@@ -120,13 +137,13 @@ class EditRoleViewModel @Inject constructor(
                         it.copy(isLoading = false, error = "역할 정보를 불러오지 못했습니다: ${result.error}")
                     }
                     _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 정보를 불러오지 못했습니다."))
-                    _eventFlow.emit(EditRoleEvent.NavigateBack)
+                    navigateBack()
                 }
                 else -> {
                     // Role not found
                     _uiState.update { it.copy(isLoading = false, error = "역할 정보를 찾을 수 없습니다.") }
                     _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 정보를 찾을 수 없습니다."))
-                    _eventFlow.emit(EditRoleEvent.NavigateBack)
+                    navigateBack()
                 }
             }
         }
@@ -135,7 +152,7 @@ class EditRoleViewModel @Inject constructor(
     /**
      * 역할 이름 변경 시 호출
      */
-    fun onRoleNameChange(name: String) {
+    fun onRoleNameChange(name: Name) {
         _uiState.update {
             it.copy(
                 roleName = name,
@@ -165,7 +182,7 @@ class EditRoleViewModel @Inject constructor(
     /**
      * 기본 역할 여부 스위치 변경 시 호출
      */
-    fun onIsDefaultChange(isDefault: Boolean) {
+    fun onIsDefaultChange(isDefault: RoleIsDefault) {
         _uiState.update {
             it.copy(
                 isDefault = isDefault,
@@ -191,7 +208,7 @@ class EditRoleViewModel @Inject constructor(
         if (currentState.roleId != null && !currentState.hasChanges) {
             viewModelScope.launch {
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("변경된 내용이 없습니다."))
-                _eventFlow.emit(EditRoleEvent.NavigateBack)
+                navigateBack()
             }
             return
         }
@@ -203,18 +220,22 @@ class EditRoleViewModel @Inject constructor(
             _eventFlow.emit(EditRoleEvent.ClearFocus)
 
             val nameToSave = currentName
-            val permissionsListToSave = currentState.permissions.filterValues { it }.keys.toList()
+            currentState.permissions.filterValues { it }.keys.toList()
             val isDefaultToSave = currentState.isDefault
 
             val result = if (currentState.roleId == null) {
                 println("ViewModel: Creating role '$nameToSave' in project $projectId (UseCase)")
                 // Permissions are saved separately after role creation
-                createRoleUseCase(projectId, nameToSave, isDefaultToSave)
+                projectRoleUseCases.createProjectRoleUseCase(nameToSave, isDefaultToSave)
                 // TODO: After successful role creation, get the new roleId from the result
                 // TODO: Then call a new SetRolePermissionsUseCase(projectId, newRoleId, permissionsListToSave)
             } else {
                 println("ViewModel: Updating role ${currentState.roleId} to '$nameToSave' (UseCase)")
-                updateRoleUseCase(projectId, currentState.roleId, nameToSave, isDefaultToSave)
+                projectRoleUseCases.updateProjectRoleUseCase(
+                    currentState.roleId,
+                    nameToSave,
+                    isDefaultToSave
+                )
             }
 
             if (result.isSuccess) {
@@ -257,7 +278,8 @@ class EditRoleViewModel @Inject constructor(
             println("ViewModel: Deleting role $roleIdToDelete (UseCase)")
 
             // --- UseCase 호출 ---
-            val result = deleteRoleUseCase(projectId, roleIdToDelete) // Pass projectId
+            val result =
+                projectRoleUseCases.deleteRoleUseCase(roleIdToDelete) // Pass only roleId as DocumentId
 
             if (result.isSuccess) {
                 _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할이 삭제되었습니다."))
@@ -268,5 +290,12 @@ class EditRoleViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
+    }
+
+    /**
+     * 뒤로가기 네비게이션 처리
+     */
+    fun navigateBack() {
+        navigationManger.navigateBack()
     }
 }

@@ -1,17 +1,42 @@
 package com.example.feature_signup.ui
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack // AutoMirrored 아이콘 사용 권장
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -33,9 +58,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.enum.SignUpFormFocusTarget
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_signup.viewmodel.SignUpEvent
 import com.example.feature_signup.viewmodel.SignUpUiState
 import com.example.feature_signup.viewmodel.SignUpViewModel
@@ -47,7 +72,7 @@ fun SignUpScreen(
     modifier: Modifier = Modifier,
     viewModel: SignUpViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle();
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // FocusRequester 생성
@@ -56,13 +81,10 @@ fun SignUpScreen(
     val passwordConfirmFocusRequester = remember { FocusRequester() }
     val nameFocusRequester = remember { FocusRequester() }
 
-    // 이벤트 처리 (스낵바, 네비게이션)
+    // 이벤트 처리 (스낵바, 포커스)
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is SignUpEvent.NavigateToLogin -> navigationManger.navigateToLogin()
-                is SignUpEvent.NavigateToTermsOfService -> navigationManger.navigateToTermsOfService()
-                is SignUpEvent.NavigateToPrivacyPolicy -> navigationManger.navigateToPrivacyPolicy()
                 is SignUpEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
@@ -96,7 +118,7 @@ fun SignUpScreen(
             onEmailChange = viewModel::onEmailChange,
             onPasswordChange = viewModel::onPasswordChange,
             onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
-            onNameChange = viewModel::onNameChange,
+            onNameChange = { name -> viewModel.onNameChange(UserName.from(name)) },
             onPasswordVisibilityToggle = viewModel::onPasswordVisibilityToggle,
             onUnder14CheckedChange = viewModel::onUnder14CheckedChange,
             onAgreeWithTermsChange = viewModel::onAgreeWithTermsChange,
@@ -271,7 +293,7 @@ fun SignUpContent(
 
             // 사용자 이름 입력
             OutlinedTextField(
-                value = uiState.name,
+                value = uiState.name.value,
                 onValueChange = onNameChange,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -390,7 +412,7 @@ fun SignUpContentWithOptionsPreview() {
         SignUpContent(
             uiState = SignUpUiState(
                 email = "test@example.com",
-                name = "테스트"
+                name = UserName.from("테스트")
             ),
             emailFocusRequester = remember { FocusRequester() },
             passwordFocusRequester = remember { FocusRequester() },
@@ -415,7 +437,7 @@ fun SignUpContentWithErrorAndOptionsPreview() {
                 email = "invalid-email",
                 password = "short",
                 passwordConfirm = "mismatch",
-                name = "",
+                name = UserName.from(""),
                 isNotUnder14 = true,
                 agreeWithTerms = false,
                 emailError = "올바른 이메일을 입력해주세요.",

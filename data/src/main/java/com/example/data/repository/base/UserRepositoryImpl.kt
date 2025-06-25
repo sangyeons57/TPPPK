@@ -2,17 +2,14 @@ package com.example.data.repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.UserRemoteDataSource
-import com.example.data.model.remote.UserDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.event.AggregateRoot
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.RepositoryFactoryContext
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
-import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -40,8 +37,8 @@ class UserRepositoryImpl @Inject constructor(
         return userRemoteDataSource.create(entity.toDto())
     }
 
-    override fun observeByName(name: String): Flow<CustomResult<User, Exception>> {
-        return userRemoteDataSource.findByNameStream(name).map { result ->
+    override fun observeByName(name: UserName): Flow<CustomResult<User, Exception>> {
+        return userRemoteDataSource.findByNameStream(name.value).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
                 is CustomResult.Failure -> CustomResult.Failure(result.error)

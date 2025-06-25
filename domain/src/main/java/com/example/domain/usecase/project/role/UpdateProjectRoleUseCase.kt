@@ -8,7 +8,6 @@ import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
 import com.example.domain.repository.base.ProjectRoleRepository
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * UseCase for updating a project role.
@@ -25,9 +24,9 @@ interface UpdateProjectRoleUseCase {
      * @return A [Result] indicating success or failure.
      */
     suspend operator fun invoke(
-        roleId: String,
-        name: String? = null,
-        isDefault: Boolean? = null
+        roleId: DocumentId,
+        name: Name? = null,
+        isDefault: RoleIsDefault? = null
     ): CustomResult<Unit, Exception>
 }
 /**
@@ -38,20 +37,20 @@ class UpdateProjectRoleUseCaseImpl @Inject constructor(
 ) : UpdateProjectRoleUseCase {
 
     override suspend operator fun invoke(
-        roleId: String,
-        name: String?,
-        isDefault: Boolean?
+        roleId: DocumentId,
+        name: Name?,
+        isDefault: RoleIsDefault?
     ): CustomResult<Unit, Exception> {
         // Fetch the current role details to get existing values if not provided
-        val currentRole = when (val result = projectRoleRepository.findById(DocumentId(roleId))) {
+        val currentRole = when (val result = projectRoleRepository.findById(roleId)) {
             is CustomResult.Success -> result.data as Role
             is CustomResult.Failure -> return CustomResult.Failure(result.error)
             is CustomResult.Initial -> return CustomResult.Initial
             is CustomResult.Loading -> return CustomResult.Loading
             is CustomResult.Progress -> return CustomResult.Progress(result.progress)
         }
-        name?.let {currentRole.changeName(Name(it))}
-        isDefault?.let {currentRole.setDefault(RoleIsDefault(it))}
+        name?.let { currentRole.changeName(it) }
+        isDefault?.let { currentRole.setDefault(it) }
 
         return when (val result = projectRoleRepository.save(currentRole)) {
             is CustomResult.Success -> {

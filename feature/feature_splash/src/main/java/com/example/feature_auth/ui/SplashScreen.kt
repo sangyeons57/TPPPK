@@ -7,21 +7,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavOptions // Added import
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.R
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_auth.viewmodel.SplashEvent
 import com.example.feature_auth.viewmodel.SplashViewModel
-import kotlinx.coroutines.flow.collectLatest
 
 /**
  * SplashScreen: 앱 시작 시 표시되는 스플래시 화면 (Stateful)
@@ -33,18 +28,7 @@ fun SplashScreen(
     viewModel: SplashViewModel = hiltViewModel()
 ) {
 
-    // 이벤트 처리 (네비게이션)
-    LaunchedEffect(Unit) {
-        viewModel.eventFlow.collectLatest { event ->
-            when (event) {
-                SplashEvent.NavigateToLogin -> {
-                    navigationManger.navigateToLogin()
-                }
-
-                SplashEvent.NavigateToMain -> navigationManger.navigateToHome()
-            }
-        }
-    }
+    // ViewModel에서 직접 navigation을 처리하므로 이벤트 처리 불필요
 
     SplashScreenContent(modifier = modifier)
 }

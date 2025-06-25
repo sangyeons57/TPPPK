@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.domain.model.vo.user.UserName
 import kotlinx.coroutines.delay
 
 /**
@@ -33,12 +34,12 @@ import kotlinx.coroutines.delay
 fun AddDmUserDialog(
     onDismiss: () -> Unit,
     onSearch: () -> Unit,
-    username: String,
+    username: UserName,
     onUsernameChange: (String) -> Unit,
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     
     // 키보드 자동 포커스
@@ -97,7 +98,7 @@ fun AddDmUserDialog(
             
             // 입력 필드
             OutlinedTextField(
-                value = username,
+                value = username.value,
                 onValueChange = onUsernameChange,
                 label = { Text("사용자 이름") },
                 singleLine = true,
@@ -155,7 +156,7 @@ fun AddDmUserDialog(
 @Preview(showBackground = true)
 @Composable
 fun AddDmUserDialogPreview() {
-    var username by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf(UserName.EMPTY) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -163,7 +164,7 @@ fun AddDmUserDialogPreview() {
         onDismiss = { /*TODO*/ },
         onSearch = { /*TODO*/ },
         username = username,
-        onUsernameChange = { username = it },
+        onUsernameChange = { username = UserName(it) },
         isLoading = isLoading,
         errorMessage = errorMessage
     )

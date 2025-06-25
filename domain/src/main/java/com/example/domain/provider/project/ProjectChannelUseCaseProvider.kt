@@ -1,6 +1,7 @@
 package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
@@ -11,13 +12,13 @@ import com.example.domain.repository.factory.context.CategoryRepositoryFactoryCo
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.usecase.project.channel.AddProjectChannelUseCase
 import com.example.domain.usecase.project.channel.AddProjectChannelUseCaseImpl
-import com.example.domain.usecase.project.channel.DeleteChannelUseCase
-import com.example.domain.usecase.project.channel.MoveChannelUseCase
-import com.example.domain.usecase.project.channel.RenameChannelUseCase
 import com.example.domain.usecase.project.channel.CreateProjectChannelUseCase
+import com.example.domain.usecase.project.channel.DeleteChannelUseCase
 import com.example.domain.usecase.project.channel.DeleteChannelUseCaseImpl
 import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
+import com.example.domain.usecase.project.channel.MoveChannelUseCase
 import com.example.domain.usecase.project.channel.MoveChannelUseCaseImpl
+import com.example.domain.usecase.project.channel.RenameChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCaseImpl
 import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCase
 import javax.inject.Inject
@@ -42,16 +43,16 @@ class ProjectChannelUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 채널 관리 UseCase 그룹
      */
-    fun createForProject(projectId: String): ProjectChannelUseCases {
+    fun createForProject(projectId: DocumentId): ProjectChannelUseCases {
         val categoryRepository = categoryRepositoryFactory.create(
             CategoryRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories(projectId)
+                collectionPath = CollectionPath.projectCategories(projectId.value)
             )
         )
         
         val projectChannelRepository = projectChannelRepositoryFactory.create(
             ProjectChannelRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories(projectId)
+                collectionPath = CollectionPath.projectCategories(projectId.value)
             )
         )
 
@@ -62,7 +63,7 @@ class ProjectChannelUseCaseProvider @Inject constructor(
         return ProjectChannelUseCases(
             // 채널 기본 CRUD
             createProjectChannelUseCase = CreateProjectChannelUseCase(
-                categoryRepository = categoryRepository,
+                projectChannelRepository = projectChannelRepository,
                 authRepository = authRepository
             ),
             
@@ -102,7 +103,7 @@ class ProjectChannelUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 채널 관리 UseCase 그룹
      */
-    fun createForCurrentUser(projectId: String): ProjectChannelUseCases {
+    fun createForCurrentUser(projectId: DocumentId): ProjectChannelUseCases {
         return createForProject(projectId)
     }
 
@@ -113,7 +114,7 @@ class ProjectChannelUseCaseProvider @Inject constructor(
      * @param channelId 채널 ID
      * @return 채널별 UseCase 그룹
      */
-    fun createForChannel(projectId: String, channelId: String): ProjectChannelUseCases {
+    fun createForChannel(projectId: DocumentId, channelId: String): ProjectChannelUseCases {
         return createForProject(projectId)
     }
 }

@@ -2,13 +2,45 @@ package com.example.feature_home.ui
 
 import android.os.Bundle
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.surfaceColorAtElevation
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,39 +50,37 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_common.util.DateTimeUtil
-import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
-import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import kotlinx.coroutines.flow.collectLatest
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
-import com.example.core_navigation.core.*
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import com.example.domain.model.enum.ProjectChannelType
-import androidx.compose.runtime.rememberCoroutineScope
+import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.NavigationResultManager
+import com.example.core_navigation.core.TypeSafeRoute
+import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialog
-import com.example.feature_home.model.CategoryUiModel
-import com.example.feature_home.model.ChannelUiModel
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_home.component.DmListComponent
-import com.example.feature_home.model.DmUiModel
 import com.example.feature_home.component.ExtendableFloatingActionMenu
-import com.example.feature_home.viewmodel.HomeEvent
-import com.example.feature_home.viewmodel.HomeUiState
-import com.example.feature_home.viewmodel.HomeViewModel
 import com.example.feature_home.component.MainHomeFloatingButton
 import com.example.feature_home.component.ProjectChannelList
 import com.example.feature_home.component.ProjectListScreen
-import com.example.feature_home.model.ProjectStructureUiState
-import com.example.feature_home.model.ProjectUiModel
-import com.example.feature_home.viewmodel.TopSection
 import com.example.feature_home.dialog.ui.AddDmUserDialogWrapper
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
+import com.example.feature_home.model.CategoryUiModel
+import com.example.feature_home.model.ChannelUiModel
+import com.example.feature_home.model.DmUiModel
+import com.example.feature_home.model.ProjectStructureUiState
+import com.example.feature_home.model.ProjectUiModel
+import com.example.feature_home.viewmodel.HomeEvent
+import com.example.feature_home.viewmodel.HomeUiState
+import com.example.feature_home.viewmodel.HomeViewModel
+import com.example.feature_home.viewmodel.TopSection
+import kotlinx.coroutines.flow.collectLatest
 
 // 오버레이 투명도 상수
 private const val OVERLAY_ALPHA = 0.7f
@@ -85,13 +115,13 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
+    rememberCoroutineScope()
     
     // 다이얼로그 상태 추가
     var showAddDmDialog by remember { mutableStateOf(false) }
     var showAddProjectElementDialog by remember { mutableStateOf(false) }
     var showFloatingMenu by remember { mutableStateOf(false) }
-    var currentProjectIdForDialog by remember { mutableStateOf<String?>(null) }
+    var currentProjectIdForDialog by remember { mutableStateOf<DocumentId?>(null) }
 
     // 상태 복원 (탭 전환 시)
     LaunchedEffect(savedState) {
@@ -111,7 +141,7 @@ fun HomeScreen(
             // 선택된 프로젝트 ID 복원
             bundle.getString(HomeScreenStateKeys.SELECTED_PROJECT_ID)?.let { projectId ->
                 if (projectId.isNotEmpty()) {
-                    viewModel.onProjectClick(projectId)
+                    viewModel.onProjectClick(DocumentId(projectId))
                 }
             }
             
@@ -137,7 +167,10 @@ fun HomeScreen(
             // 화면이 비활성화될 때 상태 저장
             val screenState = Bundle().apply {
                 putString(HomeScreenStateKeys.SELECTED_TOP_SECTION, uiState.selectedTopSection.name)
-                putString(HomeScreenStateKeys.SELECTED_PROJECT_ID, uiState.selectedProjectId ?: "")
+                putString(
+                    HomeScreenStateKeys.SELECTED_PROJECT_ID,
+                    uiState.selectedProjectId?.value ?: ""
+                )
                 putBoolean(HomeScreenStateKeys.SHOW_ADD_DM_DIALOG, showAddDmDialog)
                 putBoolean(HomeScreenStateKeys.SHOW_FLOATING_MENU, showFloatingMenu)
             }
@@ -165,7 +198,11 @@ fun HomeScreen(
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
                 is HomeEvent.NavigateToProjectSettings -> {
-                    navigationManger.navigateToProjectSettings(event.projectId)
+                    if (event.projectId == null) {
+                        Log.d("HomeScreen", "Project ID is null")
+                        return@collectLatest
+                    }
+                    navigationManger.navigateToProjectSettings(event.projectId.value)
                 }
                 is HomeEvent.ShowAddProjectDialog -> {
                     snackbarHostState.showSnackbar("프로젝트 추가 다이얼로그 (미구현)")
@@ -179,7 +216,7 @@ fun HomeScreen(
                 }
                 is HomeEvent.NavigateToDmChat -> {
                     Log.d("HomeScreen", "Navigating to DM Chat with ID: ${event.dmId}")
-                    navigationManger.navigateToChat(event.dmId)
+                    navigationManger.navigateToChat(event.dmId.value)
                 }
                 is HomeEvent.NavigateToChannel -> {
                     navigationManger.navigateToChat(event.channelId)
@@ -300,7 +337,7 @@ fun HomeScreen(
                     AddDmUserDialogWrapper(
                         onDismiss = { showAddDmDialog = false },
                         onNavigateToDm = { dmChannelId ->
-                            navigationManger.navigateToChat(dmChannelId)
+                            navigationManger.navigateToChat(dmChannelId.value)
                         },
                         onShowSnackbar = { message ->
                             // 스코프 없이 suspend 함수를 직접 호출할 수 없음
@@ -322,7 +359,7 @@ fun HomeScreen(
 fun HomeContent(
     modifier: Modifier = Modifier,
     uiState: HomeUiState,
-    onProjectSelect: (projectId: String) -> Unit,
+    onProjectSelect: (projectId: DocumentId) -> Unit,
     onProfileClick: () -> Unit,
     onClickTopSection: () -> Unit,
     onCategoryClick: (category: CategoryUiModel) -> Unit,
@@ -478,7 +515,7 @@ fun HomeContentProjectsPreview() {
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
             modifier = TODO(),
             onClickTopSection = TODO()
-        );
+        )
     }
 }
 
@@ -487,7 +524,12 @@ fun HomeContentProjectsPreview() {
 fun HomeContentDmsPreview() {
     val previewState = HomeUiState(
         selectedTopSection = TopSection.DMS,
-        dms = List(3) { i -> DmUiModel("dm$i", "친구 ${i + 1}", "미리보기 메시지 ${i + 1}", "TimeStamp", DateTimeUtil.nowInstant()) },
+        dms = List(3) { i ->
+            DmUiModel(
+                DocumentId("dm$i"), UserName("친구 ${i + 1}"),
+                ImageUrl("url$i")
+            )
+        },
         userInitial = "U", // 사용자 이니셜 추가
         userProfileImageUrl = null, // 프로필 이미지 URL 추가
         isLoading = false
@@ -504,7 +546,7 @@ fun HomeContentDmsPreview() {
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
             modifier = TODO(),
             onClickTopSection = TODO()
-        );
+        )
     }
 }
 
@@ -527,7 +569,7 @@ fun HomeContentLoadingPreview() {
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
             modifier = TODO(),
             onClickTopSection = TODO()
-        );
+        )
     }
 }
 
@@ -548,42 +590,38 @@ fun HomeScreenPreview_WithData() {
     val sampleUiState = HomeUiState(
         dms = listOf(
             DmUiModel(
-                channelId = "dm1",
-                partnerName = "Alice",
+                channelId = DocumentId("dm1"),
+                partnerName = UserName("Alice"),
                 partnerProfileImageUrl = null,
-                lastMessage = "Hey there!",
-                lastMessageTimestamp = DateTimeUtil.nowInstant().minusSeconds(3600)
             ),
             DmUiModel(
-                channelId = "dm2",
-                partnerName = "Bob",
+                channelId = DocumentId("dm2"),
+                partnerName = UserName("Bob"),
                 partnerProfileImageUrl = null,
-                lastMessage = "See you soon!",
-                lastMessageTimestamp = DateTimeUtil.nowInstant().minusSeconds(7200)
             )
         ),
         selectedTopSection = TopSection.PROJECTS,
-        selectedProjectId = "proj1",
+        selectedProjectId = DocumentId("proj1"),
         projectName = "Project Alpha",
         userInitial = "U", // 사용자 이니셜 추가
         userProfileImageUrl = null, // 프로필 이미지 URL 추가
         projectStructure = ProjectStructureUiState(
             directChannel = listOf(
                 ChannelUiModel(
-                    id = "ch1",
-                    name = "general",
+                    id = DocumentId("ch1"),
+                    name = Name("general"),
                     mode = ProjectChannelType.MESSAGES,
                     isSelected = false
                 )
             ),
             categories = listOf(
                 CategoryUiModel(
-                    id = "cat1",
-                    name = "Text Channels",
+                    id = DocumentId("cat1"),
+                    name = CategoryName("Text Channels"),
                     channels = listOf(
                         ChannelUiModel(
-                            id = "ch2",
-                            name = "announcements",
+                            id = DocumentId("ch2"),
+                            name = Name("announcements"),
                             mode = ProjectChannelType.MESSAGES,
                             isSelected = true
                         )
@@ -680,16 +718,6 @@ fun HomeScreenInScaffoldPreview() {
 
                         override fun <T> setResult(key: String, result: T) {
                             Log.d("Preview", "SetResult: $key")
-                        }
-
-                        override fun <T> getResult(key: String): T? {
-                            Log.d("Preview", "GetResult: $key")
-                            return null
-                        }
-
-                        override fun <T> getResultFlow(key: String): Flow<T> {
-                            Log.d("Preview", "GetResultFlow: $key")
-                            return emptyFlow()
                         }
 
                         override fun navigateToSplash(navOptions: NavOptions?) {
@@ -802,6 +830,59 @@ fun HomeScreenInScaffoldPreview() {
                         }
                         
                         override fun getChildNavController(): NavHostController? = null
+
+                        override fun getResultManager(): NavigationResultManager {
+                            // Return a mock NavigationResultManager for preview
+                            // Since NavigationResultManager is a class, we create a real instance
+                            return NavigationResultManager()
+                        }
+
+                        override fun saveScreenState(screenKey: String, state: Bundle) {
+                            Log.d("Preview", "SaveScreenState: $screenKey")
+                        }
+
+                        override fun navigateToFindPassword(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToFindPassword")
+                        }
+
+                        override fun navigateToHome(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToHome")
+                        }
+
+                        override fun navigateToMessageDetail(
+                            channelId: String,
+                            messageId: String?,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToMessageDetail: $channelId")
+                        }
+
+                        override fun navigateToTermsOfService(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToTermsOfService")
+                        }
+
+                        override fun navigateToPrivacyPolicy(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToPrivacyPolicy")
+                        }
+
+                        override fun navigateToEditMember(
+                            projectId: String,
+                            userId: String,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToEditMember: $projectId, $userId")
+                        }
+
+                        override fun navigateToEditSchedule(
+                            scheduleId: String,
+                            navOptions: NavOptions?
+                        ) {
+                            Log.d("Preview", "NavigateToEditSchedule: $scheduleId")
+                        }
+
+                        override fun navigateToAcceptFriends(navOptions: NavOptions?) {
+                            Log.d("Preview", "NavigateToAcceptFriends")
+                        }
                     }
                 }
                 // viewModel은 hiltViewModel()로 주입되므로 Preview에서는 기본 생성자 사용 또는 Mock 필요

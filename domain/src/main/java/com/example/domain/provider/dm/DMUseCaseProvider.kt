@@ -1,6 +1,7 @@
 package com.example.domain.provider.dm
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.model.vo.UserId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.DMChannelRepository
@@ -36,7 +37,7 @@ class DMUseCaseProvider @Inject constructor(
      * @param userId 사용자 ID
      * @return DM 관련 UseCase 그룹
      */
-    fun createForUser(userId: String): DMUseCases {
+    fun createForUser(userId: UserId): DMUseCases {
         val dmChannelRepository = dmChannelRepositoryFactory.create(
             DMChannelRepositoryFactoryContext(
                 collectionPath = CollectionPath.dmChannels
@@ -45,7 +46,7 @@ class DMUseCaseProvider @Inject constructor(
 
         val dmWrapperRepository = dmWrapperRepositoryFactory.create(
             DMWrapperRepositoryFactoryContext(
-                collectionPath = CollectionPath.userDmWrappers(userId)
+                collectionPath = CollectionPath.userDmWrappers(userId.value)
             )
         )
 

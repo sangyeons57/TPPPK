@@ -1,14 +1,40 @@
 package com.example.feature_profile.ui
 
+// Removed direct Coil imports, will use UserProfileImage
+// AppRoutes and other navigation imports are fine if AppNavigator handles them
+import android.Manifest
 import android.net.Uri
+import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,27 +42,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-// Removed direct Coil imports, will use UserProfileImage
-import com.example.core_navigation.core.NavigationManger // Import R class for drawables - already handled by UserProfileImage if needed
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
-import com.example.core_ui.components.user.UserProfileImage // Import the new composable
+import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_profile.viewmodel.EditProfileEvent
 import com.example.feature_profile.viewmodel.EditProfileUiState
 import com.example.feature_profile.viewmodel.EditProfileViewModel
-// AppRoutes and other navigation imports are fine if AppNavigator handles them
-import kotlinx.coroutines.flow.collectLatest
-import android.Manifest // 권한 import
-import android.os.Build // Build version 확인
-import android.util.Log
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.google.accompanist.permissions.ExperimentalPermissionsApi // Accompanist
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * EditProfileScreen: 프로필 편집 화면 (Stateful)
@@ -68,9 +85,6 @@ fun EditProfileScreen(
     LaunchedEffect(key1 = viewModel.eventFlow) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditProfileEvent.NavigateBack -> {
-                    navigationManger.navigateBack()
-                }
                 is EditProfileEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,
@@ -117,7 +131,7 @@ fun EditProfileScreen(
             TopAppBar(
                 title = { Text("프로필 수정") },
                 navigationIcon = {
-                    DebouncedBackButton(onClick = { navigationManger.navigate(NavigationCommand.NavigateBack) })
+                    DebouncedBackButton(onClick = { navigationManger.navigateBack() })
                 }
             )
         },

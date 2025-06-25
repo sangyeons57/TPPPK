@@ -1,4 +1,4 @@
-package com.example.feature_schedule.ui
+package com.example.feature_schedule_detail.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,16 +40,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.*
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.schedule.ScheduleContent
 import com.example.domain.model.vo.schedule.ScheduleTitle
-import com.example.feature_schedule.viewmodel.ScheduleDetailEvent
-import com.example.feature_schedule.viewmodel.ScheduleDetailItem
-import com.example.feature_schedule.viewmodel.ScheduleDetailUiState
-import com.example.feature_schedule.viewmodel.ScheduleDetailViewModel
+import com.example.feature_schedule_detail.viewmodel.ScheduleDetailEvent
+import com.example.feature_schedule_detail.viewmodel.ScheduleDetailItem
+import com.example.feature_schedule_detail.viewmodel.ScheduleDetailUiState
+import com.example.feature_schedule_detail.viewmodel.ScheduleDetailViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 const val REFRESH_SCHEDULE_LIST_KEY = "refresh_schedule_list"
@@ -77,10 +76,6 @@ fun ScheduleDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ScheduleDetailEvent.NavigateBack -> navigationManger.navigateBack()
-                is ScheduleDetailEvent.NavigateToEditSchedule -> navigationManger.navigateTo(
-                    EditScheduleRoute(event.scheduleId)
-                )
                 is ScheduleDetailEvent.ShowDeleteConfirmDialog -> showDeleteDialog = true
                 is ScheduleDetailEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }

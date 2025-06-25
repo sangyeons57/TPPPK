@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.category.CategoryName
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureUiState
@@ -137,7 +140,7 @@ fun CategoryItem(
  */
 @Composable
 fun CategoryHeader(
-    name: String,
+    name: CategoryName,
     isExpanded: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -170,7 +173,7 @@ fun CategoryHeader(
         Spacer(modifier = Modifier.width(6.dp))
         
         Text(
-            text = name.uppercase(),
+            text = name.value.uppercase(),
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.5.sp
@@ -209,7 +212,7 @@ fun ChannelItem(
         modifier = modifier
             .clip(RoundedCornerShape(4.dp))
             .background(
-                color = if (channel.isSelected) 
+                color = if (channel.isSelected)
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) // 선택 시 배경 (연한 강조색)
                 else
                     Color.Transparent
@@ -237,7 +240,7 @@ fun ChannelItem(
         Spacer(modifier = Modifier.width(8.dp)) // 간격 조정
         
         Text(
-            text = channel.name,
+            text = channel.name.value,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = fontWeight),
             color = textColor,
             maxLines = 1,
@@ -256,7 +259,12 @@ fun ChannelItem(
 fun ChannelItemPreview_TextSelected() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ChannelItem(
-            channel = ChannelUiModel(id = "ch1", name = "일반 대화", mode = ProjectChannelType.MESSAGES, isSelected = true),
+            channel = ChannelUiModel(
+                id = DocumentId("ch1"),
+                name = Name("일반 대화"),
+                mode = ProjectChannelType.MESSAGES,
+                isSelected = true
+            ),
             onClick = {},
             onLongPress = {}
         )
@@ -271,7 +279,11 @@ fun ChannelItemPreview_TextSelected() {
 @Composable
 fun CategoryHeaderPreview_Expanded() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        CategoryHeader(name = "개발팀", isExpanded = true, onClick = {}, onLongClick = {})
+        CategoryHeader(
+            name = CategoryName("개발팀"),
+            isExpanded = true,
+            onClick = {},
+            onLongClick = {})
     }
 }
 
@@ -282,7 +294,11 @@ fun CategoryHeaderPreview_Expanded() {
 @Composable
 fun CategoryHeaderPreview_Collapsed() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        CategoryHeader(name = "디자인팀", isExpanded = false, onClick = {}, onLongClick = {})
+        CategoryHeader(
+            name = CategoryName("디자인팀"),
+            isExpanded = false,
+            onClick = {},
+            onLongClick = {})
     }
 }
 
@@ -293,12 +309,27 @@ fun CategoryHeaderPreview_Collapsed() {
 @Composable
 fun CategoryItemPreview_Expanded() {
     val sampleChannels = listOf(
-        ChannelUiModel(id = "ch3", name = "프론트엔드 논의", mode = ProjectChannelType.MESSAGES, isSelected = false),
-        ChannelUiModel(id = "ch4", name = "백엔드 작업", mode = ProjectChannelType.MESSAGES, isSelected = true)
+        ChannelUiModel(
+            id = DocumentId("ch3"),
+            name = Name("프론트엔드 논의"),
+            mode = ProjectChannelType.MESSAGES,
+            isSelected = false
+        ),
+        ChannelUiModel(
+            id = DocumentId("ch4"),
+            name = Name("백엔드 작업"),
+            mode = ProjectChannelType.MESSAGES,
+            isSelected = true
+        )
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CategoryItem(
-            category = CategoryUiModel(id = "cat1", name = "엔지니어링", channels = sampleChannels, isExpanded = true),
+            category = CategoryUiModel(
+                id = DocumentId("ch1"),
+                name = CategoryName("엔지니어링"),
+                channels = sampleChannels,
+                isExpanded = true
+            ),
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
@@ -315,7 +346,12 @@ fun CategoryItemPreview_Expanded() {
 fun CategoryItemPreview_Collapsed() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CategoryItem(
-            category = CategoryUiModel(id = "cat2", name = "마케팅", channels = emptyList(), isExpanded = false),
+            category = CategoryUiModel(
+                id = DocumentId("cat2"),
+                name = CategoryName("마케팅"),
+                channels = emptyList(),
+                isExpanded = false
+            ),
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
@@ -331,23 +367,58 @@ fun CategoryItemPreview_Collapsed() {
 @Composable
 fun ProjectChannelListPreview_Default() {
     val generalChannels = listOf(
-        ChannelUiModel(id = "gen1", name = "공지사항", mode = ProjectChannelType.MESSAGES, isSelected = false),
-        ChannelUiModel(id = "gen2", name = "자유 게시판", mode = ProjectChannelType.MESSAGES, isSelected = false)
+        ChannelUiModel(
+            id = DocumentId("gen1"),
+            name = Name("공지사항"),
+            mode = ProjectChannelType.MESSAGES,
+            isSelected = false
+        ),
+        ChannelUiModel(
+            id = DocumentId("gen2"),
+            name = Name("자유 게시판"),
+            mode = ProjectChannelType.MESSAGES,
+            isSelected = false
+        )
     )
     val categories = listOf(
         CategoryUiModel(
-            id = "cat_dev", name = "개발팀", isExpanded = true,
+            id = DocumentId("cat_dev"), name = CategoryName("개발팀"), isExpanded = true,
             channels = listOf(
-                ChannelUiModel(id = "dev_ch1", name = "프론트엔드", mode = ProjectChannelType.MESSAGES, isSelected = true),
-                ChannelUiModel(id = "dev_ch2", name = "백엔드", mode = ProjectChannelType.MESSAGES, isSelected = false),
-                ChannelUiModel(id = "dev_voice", name = "개발팀 음성", mode = ProjectChannelType.MESSAGES, isSelected = false)
+                ChannelUiModel(
+                    id = DocumentId("dev_ch1"),
+                    name = Name("프론트엔드"),
+                    mode = ProjectChannelType.MESSAGES,
+                    isSelected = true
+                ),
+                ChannelUiModel(
+                    id = DocumentId("dev_ch2"),
+                    name = Name("백엔드"),
+                    mode = ProjectChannelType.MESSAGES,
+                    isSelected = false
+                ),
+                ChannelUiModel(
+                    id = DocumentId("dev_voice"),
+                    name = Name("개발팀 음성"),
+                    mode = ProjectChannelType.MESSAGES,
+                    isSelected = false
+                )
             )
         ),
-        CategoryUiModel(id = "cat_design", name = "디자인팀", isExpanded = false, channels = emptyList()),
         CategoryUiModel(
-            id = "cat_plan", name = "기획팀", isExpanded = true,
+            id = DocumentId("cat_design"),
+            name = CategoryName("디자인팀"),
+            isExpanded = false,
+            channels = emptyList()
+        ),
+        CategoryUiModel(
+            id = DocumentId("cat_plan"), name = CategoryName("기획팀"), isExpanded = true,
             channels = listOf(
-                ChannelUiModel(id = "plan_ch1", name = "아이디어 공유", mode = ProjectChannelType.MESSAGES, isSelected = false)
+                ChannelUiModel(
+                    id = DocumentId("plan_ch1"),
+                    name = Name("아이디어 공유"),
+                    mode = ProjectChannelType.MESSAGES,
+                    isSelected = false
+                )
             )
         )
     )

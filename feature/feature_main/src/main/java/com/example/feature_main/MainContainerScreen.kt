@@ -26,13 +26,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavControllerSaver
-import com.example.core_navigation.core.NavControllerState
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.destination.mainBottomNavItems
-import com.example.feature_home.HomeScreen
+import com.example.feature_calendar.ui.CalendarScreen
+import com.example.feature_home.ui.HomeScreen
 import com.example.feature_profile.ui.ProfileScreen
-import com.example.feature_calendar.CalendarScreen
 
 /**
  * 메인 컨테이너 화면: 하단 탭 네비게이션과 각 탭의 콘텐츠를 표시하는 컨트롤러
@@ -228,8 +226,8 @@ private fun HomeTabNavHost(
         startDestination = AppRoutes.Main.Home.ROOT_CONTENT
     ) {
         composable(AppRoutes.Main.Home.ROOT_CONTENT) {
-            com.example.feature_home.HomeScreen(
-                appNavigator = navigationManger,
+            HomeScreen(
+                navigationManger = navigationManger,
                 savedState = savedState
             )
         }
@@ -260,8 +258,8 @@ private fun CalendarTabNavHost(
         startDestination = AppRoutes.Main.Calendar.ROOT_CONTENT
     ) {
         composable(AppRoutes.Main.Calendar.ROOT_CONTENT) {
-            com.example.feature_calendar.CalendarScreen(
-                appNavigator = navigationManger,
+            CalendarScreen(
+                navigationManger = navigationManger,
             )
         }
     }
@@ -291,8 +289,8 @@ private fun ProfileTabNavHost(
         startDestination = AppRoutes.Main.Profile.ROOT_CONTENT
     ) {
         composable(AppRoutes.Main.Profile.ROOT_CONTENT) {
-            com.example.feature_profile.ui.ProfileScreen(
-                appNavigator = navigationManger,
+            ProfileScreen(
+                navigationManger = navigationManger,
             )
         }
     }

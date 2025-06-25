@@ -2,6 +2,7 @@ package com.example.domain.repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.DefaultRepository
 import kotlinx.coroutines.flow.Flow
 
@@ -13,7 +14,7 @@ interface UserRepository : DefaultRepository {
     /**
      * 주어진 이름(닉네임)과 정확히 일치하는 사용자 1명을 스트림으로 반환합니다.
      */
-    fun observeByName(name: String): Flow<CustomResult<User, Exception>>
+    fun observeByName(name: UserName): Flow<CustomResult<User, Exception>>
 
     /**
      * 주어진 이름(닉네임)을 포함하는 사용자 목록을 스트림으로 반환합니다.

@@ -10,7 +10,7 @@ import javax.inject.Inject
  * 프로젝트 멤버를 삭제(추방)하는 유스케이스 인터페이스
  */
 interface DeleteProjectMemberUseCase {
-    suspend operator fun invoke(projectId: String, userId: String): CustomResult<Unit, Exception>
+    suspend operator fun invoke(userId: UserId): CustomResult<Unit, Exception>
 }
 
 /**
@@ -27,7 +27,7 @@ class DeleteProjectMemberUseCaseImpl @Inject constructor(
      * @param userId 삭제할 사용자의 ID
      * @return Result<Unit> 삭제 처리 결과
      */
-    override suspend fun invoke(projectId: String, userId: String): CustomResult<Unit, Exception> {
-        return projectMemberRepository.delete(DocumentId(userId))
+    override suspend fun invoke(userId: UserId): CustomResult<Unit, Exception> {
+        return projectMemberRepository.delete(DocumentId(userId.value))
     }
 } 

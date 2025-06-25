@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,11 +55,14 @@ sealed class AddProjectElementEvent {
  */
 @HiltViewModel
 class AddProjectElementViewModel @Inject constructor(
-    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
+    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider
 ) : ViewModel() {
 
-    private var projectId: String? = null
+    private var projectId: DocumentId? = null
     private var projectStructureUseCases: com.example.domain.provider.project.ProjectStructureUseCases? =
+        null
+    private var projectChannelUseCases: com.example.domain.provider.project.ProjectChannelUseCases? =
         null
 
     private val _uiState = MutableStateFlow(AddProjectElementUiState())
@@ -64,12 +71,13 @@ class AddProjectElementViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<AddProjectElementEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    fun initialize(projectId: String) {
+    fun initialize(projectId: DocumentId) {
         if (this.projectId == null) { // 한 번만 초기화
             this.projectId = projectId
             // Provider를 통해 UseCase 그룹 생성
             this.projectStructureUseCases =
-                projectStructureUseCaseProvider.createForProject(projectId)
+                projectStructureUseCaseProvider.createForCurrentUser(projectId)
+            this.projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
             loadCategoriesForDropdown()
         }
     }
@@ -84,7 +92,7 @@ class AddProjectElementViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             when (val result = useCases.getProjectAllCategoriesUseCase(currentProjectId).first()) {
                 is CustomResult.Success -> {
-                    val categories = result.data.map { it.category }.sortedBy { it.order }
+                    val categories = result.data.map { it.category }.sortedBy { it.order.value }
                     _uiState.update {
                         it.copy(isLoading = false, availableCategories = categories)
                     }
@@ -109,7 +117,7 @@ class AddProjectElementViewModel @Inject constructor(
      * Handles the logic to add a new category.
      * @param categoryName The name for the new category.
      */
-    fun onAddCategory(categoryName: String) {
+    fun onAddCategory(categoryName: CategoryName) {
         val currentProjectId = projectId ?: return
         val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
@@ -146,9 +154,13 @@ class AddProjectElementViewModel @Inject constructor(
      * @param channelType The type of the new channel.
      * @param selectedCategory The category to which the channel will be added.
      */
-    fun onAddChannel(channelName: String, channelType: ProjectChannelType, selectedCategory: Category?) {
+    fun onAddChannel(
+        channelName: Name,
+        channelType: ProjectChannelType,
+        selectedCategory: Category?
+    ) {
         val currentProjectId = projectId ?: return
-        val useCases = projectStructureUseCases ?: return
+        val channelUseCases = projectChannelUseCases ?: return
         viewModelScope.launch {
             if (channelName.isBlank()) {
                 _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Channel name cannot be empty."))
@@ -161,7 +173,7 @@ class AddProjectElementViewModel @Inject constructor(
             
             _uiState.update { it.copy(isLoading = true) }
 
-            val result = useCases.addProjectChannelUseCase(
+            val result = channelUseCases.addProjectChannelUseCase(
                 projectId = currentProjectId,
                 channelName = channelName,
                 channelType = channelType,
@@ -170,7 +182,7 @@ class AddProjectElementViewModel @Inject constructor(
 
             when (result) {
                 is CustomResult.Success -> {
-                    _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Channel '${result.data.channelName}' created successfully."))
+                    _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Channel '${result.data}' created successfully."))
                     _eventFlow.emit(AddProjectElementEvent.DismissDialog)
                     _uiState.update { it.copy(isLoading = false) }
                 }

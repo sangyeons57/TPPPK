@@ -1,14 +1,25 @@
 package com.example.feature_settings.ui
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel // Hilt ViewModel 주입
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // 상태 구독
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_settings.viewmodel.ChangeNameEvent
 import com.example.feature_settings.viewmodel.ChangeNameViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -45,8 +56,8 @@ fun ChangeNameDialog(
         text = {
             Column {
                 OutlinedTextField(
-                    value = uiState.newName, // ★ 상태 바인딩
-                    onValueChange = viewModel::onNameChange, // ★ 콜백 연결
+                    value = uiState.newName.value, // ★ 상태 바인딩
+                    onValueChange = { value -> viewModel.onNameChange(UserName.from(value)) }, // ★ 콜백 연결
                     label = { Text("새 이름") },
                     singleLine = true,
                     isError = uiState.error != null // ★ 에러 상태 반영

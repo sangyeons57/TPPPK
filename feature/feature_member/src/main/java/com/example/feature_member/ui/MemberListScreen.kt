@@ -1,17 +1,46 @@
 package com.example.feature_member.ui
 
+// Removed direct Coil imports
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PersonAdd // 멤버 추가 아이콘
-import androidx.compose.material.icons.filled.Search // ★ 검색 아이콘 import 추가
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,15 +50,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-// Removed direct Coil imports
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_ui.components.user.UserProfileImage // Import the new composable
-import com.example.core_navigation.core.*
-import com.example.domain.model.ui.data.MemberUiModel // Added import
+import com.example.core_ui.components.user.UserProfileImage
+import com.example.domain.model.ui.data.MemberUiModel
+import com.example.feature_member.dialog.ui.AddMemberDialog
 import com.example.feature_member.viewmodel.MemberListEvent
 import com.example.feature_member.viewmodel.MemberListUiState
 import com.example.feature_member.viewmodel.MemberListViewModel
-import com.example.feature_member.dialog.ui.AddMemberDialog
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -50,11 +77,6 @@ fun MemberListScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is MemberListEvent.NavigateToEditMember -> {
-                    navigationManger.navigateTo(
-                        EditMemberRoute(event.projectId, event.userId)
-                    )
-                }
                 is MemberListEvent.ShowDeleteConfirm -> {
                     showDeleteConfirmationDialog = event.member
                 }
@@ -217,7 +239,7 @@ fun ProjectMemberListItemComposable(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = member.profileImageUrl, // Use MemberUiModel.profileImageUrl
+            profileImageUrl = member.profileImageUrl?.value, // Use MemberUiModel.profileImageUrl
             contentDescription = "${member.userName}님의 프로필 사진", // Use MemberUiModel.userName
             modifier = Modifier
                 .size(40.dp)
@@ -226,7 +248,7 @@ fun ProjectMemberListItemComposable(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = member.userName, // Use MemberUiModel.userName
+                text = member.userName.value, // Use MemberUiModel.userName
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,

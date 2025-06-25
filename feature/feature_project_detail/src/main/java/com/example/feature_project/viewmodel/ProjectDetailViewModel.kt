@@ -3,9 +3,18 @@ package com.example.feature_project.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.AppRoutes
-import com.example.domain.provider.project.ProjectUseCaseProvider
+import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.domain.provider.project.ProjectChannelUseCaseProvider
+import com.example.feature_model.CategoryUiModel
+import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,16 +22,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.core_common.result.CustomResult
-import com.example.domain.model.enum.ProjectChannelType
 
 // Import the new UI models - assuming they are in com.example.feature_project.model
 
 // Define ChannelMode enum and CreateChannelDialogData data class
 
 data class CreateChannelDialogData(
-    val channelName: String = "",
-    val categoryId: String? = null, // For which category to add, null for direct
+    val channelName: Name = Name.EMPTY,
+    val categoryId: DocumentId? = null, // For which category to add, null for direct
     val channelMode: ProjectChannelType = ProjectChannelType.MESSAGES // Default to TEXT
 )
 
@@ -31,10 +38,10 @@ data class CreateChannelDialogData(
  * 프로젝트 상세 화면 (채널 목록 포함)에서 사용됩니다.
  */
 data class ProjectDetailUiState(
-    val projectId: String,
-    val projectName: String = "", // TODO: 프로젝트 이름도 가져오도록 수정
-    val categories: List<com.example.feature_model.CategoryUiModel> = emptyList(),
-    val directChannels: List<com.example.feature_model.ChannelUiModel> = emptyList(),
+    val projectId: DocumentId,
+    val projectName: ProjectName = ProjectName.EMPTY,
+    val categories: List<CategoryUiModel> = emptyList(),
+    val directChannels: List<ChannelUiModel> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
     // 채널 생성 관련 상태
@@ -46,16 +53,19 @@ data class ProjectDetailUiState(
 @HiltViewModel
 class ProjectDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val projectUseCaseProvider: ProjectUseCaseProvider,
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // 매개변수 추출 - 안전한 방식으로 projectId 획득
-    private val projectId: String = savedStateHandle.get<String>(AppRoutes.Project.ARG_PROJECT_ID) 
+    private val projectId: DocumentId =
+        savedStateHandle.get<String>(AppRoutes.Project.ARG_PROJECT_ID)?.let { DocumentId(it) }
         ?: error("${AppRoutes.Project.ARG_PROJECT_ID} is required - 프로젝트 ID가 전달되지 않았습니다")
 
     // ProjectUseCaseProvider를 통해 해당 프로젝트의 UseCases 생성
-    private val projectUseCases = projectUseCaseProvider.createForProject(projectId)
+    private val projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+    private val channelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
 
     private val _uiState = MutableStateFlow(ProjectDetailUiState(projectId = projectId))
     val uiState: StateFlow<ProjectDetailUiState> = _uiState.asStateFlow()
@@ -101,20 +111,20 @@ class ProjectDetailViewModel @Inject constructor(
                 showCreateChannelDialog = true,
                 createChannelDialogData = CreateChannelDialogData(
                     categoryId = null,
-                    channelName = "",
+                    channelName = Name.EMPTY,
                     channelMode = ProjectChannelType.MESSAGES
                 )
             )
         }
     }
 
-    fun showCreateCategoryChannelDialog(categoryId: String) {
+    fun showCreateCategoryChannelDialog(categoryId: DocumentId) {
         _uiState.update {
             it.copy(
                 showCreateChannelDialog = true,
                 createChannelDialogData = CreateChannelDialogData(
                     categoryId = categoryId,
-                    channelName = "",
+                    channelName = Name.EMPTY,
                     channelMode = ProjectChannelType.MESSAGES
                 )
             )
@@ -128,7 +138,7 @@ class ProjectDetailViewModel @Inject constructor(
     fun updateCreateChannelDialogName(name: String) {
         _uiState.update { state ->
             state.createChannelDialogData?.let {
-                state.copy(createChannelDialogData = it.copy(channelName = name))
+                state.copy(createChannelDialogData = it.copy(channelName = Name(name)))
             } ?: state
         }
     }
@@ -158,21 +168,30 @@ class ProjectDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val result = if (dialogData.categoryId == null) {
                 // Create Direct Channel - Provider의 UseCase 사용
-                projectUseCases.createProjectChannelUseCase(projectId, dialogData.channelName, ProjectChannelType.MESSAGES, 0.0)
+                channelUseCases.createProjectChannelUseCase(
+                    dialogData.channelName,
+                    ProjectChannelOrder.DEFAULT,
+                    ProjectChannelType.MESSAGES
+                )
             } else {
                 // Create Category Channel - Provider의 UseCase 사용
-                projectUseCases.createProjectChannelUseCase(projectId, dialogData.categoryId, dialogData.channelName, ProjectChannelType.MESSAGES, 0.0)
+                //  TODO:체널 생성 Provider가 아니라 Category관련 사용
+                channelUseCases.createProjectChannelUseCase(
+                    dialogData.channelName,
+                    ProjectChannelOrder.DEFAULT,
+                    ProjectChannelType.MESSAGES
+                )
             }
 
             when (result) {
                 is CustomResult.Success -> {
                     _uiState.update { it.copy(showCreateChannelDialog = false, createChannelDialogData = null, error = null) }
                     // 채널 생성 성공 시 자동으로 해당 채널로 이동
-                    val channelId = result.data.value // DocumentId에서 실제 ID 값 추출
+                    val channelId = result.data.toString() // Convert data to string for navigation
                     navigateToChannel(channelId)
                 }
                 is CustomResult.Failure -> {
-                    _uiState.update { it.copy(error = "채널 생성 실패: ${result.error.message}") }
+                    _uiState.update { it.copy(error = "채널 생성 실패: ${result.error}") }
                 }
                 else -> {
                     _uiState.update { it.copy(error = "채널 생성 실패: Unknown error") }
@@ -188,7 +207,7 @@ class ProjectDetailViewModel @Inject constructor(
     }
     
     fun navigateToProjectSettings() {
-        navigationManger.navigateToProjectSettings(projectId)
+        navigationManger.navigateToProjectSettings(projectId.value)
     }
     
     fun navigateBack() {

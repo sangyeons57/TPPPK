@@ -1,16 +1,15 @@
 package com.example.domain.usecase.project.channel
 
+import com.example.core_common.constants.Constants
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.repository.collection.CategoryCollectionRepository
-import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.constants.Constants // Added
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.repository.base.ProjectChannelRepository
-import kotlinx.coroutines.flow.first // Added
-import java.text.DecimalFormat
+import com.example.domain.repository.collection.CategoryCollectionRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -32,10 +31,10 @@ interface AddProjectChannelUseCase {
      *         실패 시 (예: 채널 이름 부재, 카테고리 미존재, 최대 채널 수 초과 등) 예외 정보를 포함하는 [CustomResult.Failure]를 반환합니다.
      */
     suspend operator fun invoke(
-        projectId: String,
-        channelName: String,
+        projectId: DocumentId,
+        channelName: Name,
         channelType: ProjectChannelType,
-        categoryId: String
+        categoryId: DocumentId
     ): CustomResult<ProjectChannel, Exception> // Changed return type
 }
 
@@ -70,10 +69,10 @@ class AddProjectChannelUseCaseImpl @Inject constructor(
      *         실패 시 예외 정보를 포함하는 [CustomResult.Failure]를 반환합니다.
      */
     override suspend operator fun invoke(
-        projectId: String,
-        channelName: String,
+        projectId: DocumentId,
+        channelName: Name,
         channelType: ProjectChannelType,
-        categoryId: String
+        categoryId: DocumentId
     ): CustomResult<ProjectChannel, Exception> {
         val trimmedChannelName = channelName.trim()
         if (trimmedChannelName.isBlank()) {
@@ -97,7 +96,7 @@ class AddProjectChannelUseCaseImpl @Inject constructor(
 
         // 4. Create new ProjectChannel object
         val newChannel = ProjectChannel.create(
-            channelName = Name(trimmedChannelName),
+            channelName = trimmedChannelName,
             order = newOrder,
             channelType = channelType,
         )

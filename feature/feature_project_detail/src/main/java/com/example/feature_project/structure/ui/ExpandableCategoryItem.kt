@@ -3,12 +3,26 @@ package com.example.feature_project.structure.ui // 또는 공통 ui 패키지
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.* // 카테고리 아이콘 등
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import java.time.Instant
 
 // 카테고리 및 채널 정보를 담는 데이터 클래스 (호출하는 쪽에서 사용)
@@ -141,7 +158,14 @@ fun ExpandableCategoryItem(
 private fun ExpandableCategoryItemCollapsedPreview() {
     val category = ExpandableCategoryData(
         id = "c1", name = "일반", channels = listOf(
-            ProjectChannel(createdAt = Instant.now(), updatedAt = Instant.now())
+            ProjectChannel.fromDataSource(
+                id = DocumentId.from("ch1"),
+                channelName = Name("일반"),
+                order = ProjectChannelOrder.from(1),
+                channelType = ProjectChannelType.MESSAGES,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            )
         ), isExpanded = false
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -156,9 +180,30 @@ private fun ExpandableCategoryItemCollapsedPreview() {
 private fun ExpandableCategoryItemExpandedPreview() {
     val category = ExpandableCategoryData(
         id = "c2", name = "개발", channels = listOf(
-            ProjectChannel(),
-            ProjectChannel(),
-            ProjectChannel()
+            ProjectChannel.fromDataSource(
+                id = DocumentId.from("ch2"),
+                channelName = Name.from("개발"),
+                order = ProjectChannelOrder.from(1),
+                channelType = ProjectChannelType.MESSAGES,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            ),
+            ProjectChannel.fromDataSource(
+                id = DocumentId.from("ch3"),
+                channelName = Name.from("코드리뷰"),
+                order = ProjectChannelOrder.from(2),
+                channelType = ProjectChannelType.MESSAGES,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            ),
+            ProjectChannel.fromDataSource(
+                id = DocumentId.from("ch4"),
+                channelName = Name.from("회의"),
+                order = ProjectChannelOrder.from(3),
+                channelType = ProjectChannelType.TASKS,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            )
         ), isExpanded = true // 확장된 상태
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -173,8 +218,22 @@ private fun ExpandableCategoryItemExpandedPreview() {
 private fun ExpandableCategoryItemExpandedActionsPreview() {
     val category = ExpandableCategoryData(
         id = "c2", name = "개발", channels = listOf(
-            ProjectChannel(),
-            ProjectChannel()
+            ProjectChannel.fromDataSource(
+                id = DocumentId.from("ch5"),
+                channelName = Name.from("테스트"),
+                order = ProjectChannelOrder.from(1),
+                channelType = ProjectChannelType.MESSAGES,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            ),
+            ProjectChannel.fromDataSource(
+                id = DocumentId.from("ch6"),
+                channelName = Name.from("배포"),
+                order = ProjectChannelOrder.from(2),
+                channelType = ProjectChannelType.MESSAGES,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            )
         ), isExpanded = true // 확장된 상태
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {

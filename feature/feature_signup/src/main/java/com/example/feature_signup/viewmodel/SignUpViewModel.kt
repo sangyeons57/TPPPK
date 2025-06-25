@@ -6,16 +6,25 @@ import androidx.compose.ui.focus.FocusState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.PrivacyPolicyRoute
+import com.example.core_navigation.core.TermsOfServiceRoute
 import com.example.domain.model.ui.enum.SignUpFormFocusTarget
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.auth.AuthRegistrationUseCaseProvider
 import com.example.domain.provider.auth.AuthValidationUseCaseProvider
 import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.domain.provider.validation.ValidationUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import java.time.Instant
+import javax.inject.Inject
 
 /**
  * 회원가입 화면의 UI 상태를 정의하는 데이터 클래스
@@ -24,7 +33,7 @@ data class SignUpUiState(
     val email: String = "",
     val password: String = "",
     val passwordConfirm: String = "",
-    val name: String = "",
+    val name: UserName = UserName.EMPTY,
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val signUpSuccess: Boolean = false,
@@ -55,26 +64,11 @@ data class SignUpUiState(
  */
 sealed class SignUpEvent {
     /**
-     * 로그인 화면으로 이동 이벤트
-     */
-    object NavigateToLogin : SignUpEvent()
-
-    /**
-     * 서비스 이용약관 화면으로 이동 이벤트
-     */
-    object NavigateToTermsOfService : SignUpEvent()
-
-    /**
-     * 개인정보 처리방침 화면으로 이동 이벤트
-     */
-    object NavigateToPrivacyPolicy : SignUpEvent()
-
-    /**
      * 스낵바 메시지 표시 이벤트
      * @param message 표시할 메시지
      */
     data class ShowSnackbar(val message: String) : SignUpEvent()
-    
+
     /**
      * 특정 입력 필드로 포커스 요청 이벤트
      * @param target 포커스 대상 필드
@@ -90,7 +84,8 @@ class SignUpViewModel @Inject constructor(
     private val authRegistrationUseCaseProvider: AuthRegistrationUseCaseProvider,
     private val authValidationUseCaseProvider: AuthValidationUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
-    private val validationUseCaseProvider: ValidationUseCaseProvider
+    private val validationUseCaseProvider: ValidationUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹들
@@ -134,7 +129,7 @@ class SignUpViewModel @Inject constructor(
      * 이름(닉네임) 입력값 변경 처리
      * @param name 변경된 이름 값
      */
-    fun onNameChange(name: String) {
+    fun onNameChange(name: UserName) {
         _uiState.update { it.copy(name = name.trim(), nameError = null) }
     }
 
@@ -165,18 +160,14 @@ class SignUpViewModel @Inject constructor(
      * 서비스 이용약관 클릭 처리
      */
     fun onTermsOfServiceClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(SignUpEvent.NavigateToTermsOfService)
-        }
+        navigationManger.navigateTo(TermsOfServiceRoute)
     }
 
     /**
      * 개인정보 처리방침 클릭 처리
      */
     fun onPrivacyPolicyClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(SignUpEvent.NavigateToPrivacyPolicy)
-        }
+        navigationManger.navigateTo(PrivacyPolicyRoute)
     }
 
     /**
@@ -218,7 +209,7 @@ class SignUpViewModel @Inject constructor(
         // 유효성 검사 (순서 중요: 첫 번째 오류에서 멈추고 포커스 이동)
         var focusTarget: SignUpFormFocusTarget? = null
 
-        if (checkEmail(state) && focusTarget == null)
+        if (checkEmail(state))
             focusTarget = SignUpFormFocusTarget.EMAIL
 
         if (checkPassword(state) && focusTarget == null)
@@ -307,7 +298,7 @@ class SignUpViewModel @Inject constructor(
                         }
                     }
                     _eventFlow.emit(SignUpEvent.ShowSnackbar("회원가입 성공! 로그인해주세요."))
-                    _eventFlow.emit(SignUpEvent.NavigateToLogin)
+                    navigationManger.navigateToLogin()
                     Log.d("SignUpViewModel", "회원가입 성공: ${newUser.email}")
                 }
                 is CustomResult.Failure -> {

@@ -3,6 +3,7 @@ package com.example.feature_find_password.viewmodel
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.auth.AuthPasswordUseCaseProvider
 import com.example.domain.provider.auth.AuthValidationUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,11 +33,6 @@ data class FindPasswordUiState(
  */
 sealed class FindPasswordEvent {
     /**
-     * 이전 화면으로 돌아가기 이벤트
-     */
-    object NavigateBack : FindPasswordEvent()
-    
-    /**
      * 스낵바 메시지 표시 이벤트
      * @param message 표시할 메시지
      */
@@ -49,7 +45,8 @@ sealed class FindPasswordEvent {
 @HiltViewModel
 class FindPasswordViewModel @Inject constructor(
     private val authPasswordUseCaseProvider: AuthPasswordUseCaseProvider,
-    private val authValidationUseCaseProvider: AuthValidationUseCaseProvider
+    private val authValidationUseCaseProvider: AuthValidationUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹들
@@ -109,18 +106,14 @@ class FindPasswordViewModel @Inject constructor(
      * "완료" 버튼 클릭 처리 (이메일 전송 후)
      */
     fun onDoneClicked() {
-        viewModelScope.launch {
-            _eventFlow.emit(FindPasswordEvent.NavigateBack)
-        }
+        navigationManger.navigateBack()
     }
 
     /**
      * 돌아가기 버튼 클릭 처리
      */
     fun onBackClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(FindPasswordEvent.NavigateBack)
-        }
+        navigationManger.navigateBack()
     }
 
     fun errorMessageShown() {

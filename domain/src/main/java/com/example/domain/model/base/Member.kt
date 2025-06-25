@@ -1,14 +1,10 @@
 package com.example.domain.model.base
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.ServerTimestamp
-import java.time.Instant
-
 import com.example.domain.event.AggregateRoot
-import com.example.domain.event.member.MemberJoinedEvent
 import com.example.domain.event.member.MemberRolesUpdatedEvent
-import com.example.domain.model.vo.DocumentId // For Role IDs and Member ID
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import java.time.Instant
 
 class Member private constructor(
     initialRoleIds: List<DocumentId>,
@@ -73,10 +69,12 @@ class Member private constructor(
          */
         fun create(
             memberId: UserId,
-            initialRoleIds: List<DocumentId>): Member {
+            roleIds: List<DocumentId>
+        ): Member {
+
             val now = Instant.now()
             val member = Member(
-                initialRoleIds = initialRoleIds,
+                initialRoleIds = roleIds,
                 initialJoinedAt = now,
                 initialUpdatedAt = now,
                 id = DocumentId.from(memberId),

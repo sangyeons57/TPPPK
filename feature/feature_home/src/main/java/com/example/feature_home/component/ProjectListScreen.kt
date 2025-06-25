@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.project.ProjectName
 import com.example.feature_home.model.ProjectUiModel
 
 /**
@@ -94,7 +96,7 @@ fun UserProfileItem(
 fun ProjectListItem(
     project: ProjectUiModel,
     isSelected: Boolean, // 선택 상태를 위한 파라미터 추가
-    onProjectClick: (String) -> Unit,
+    onProjectClick: (DocumentId) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val size = 48.dp // Discord 서버 아이콘 크기와 유사
@@ -135,7 +137,7 @@ fun ProjectListItem(
                 // TODO: project.imageUrl을 사용하여 Coil 등으로 이미지 로드 구현
                 // 현재는 이름 첫 글자만 표시
                 Text(
-                    text = project.name.firstOrNull()?.uppercase() ?: "P",
+                    text = project.name.value.firstOrNull()?.uppercase() ?: "P",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -159,10 +161,10 @@ fun ProjectListItem(
 fun ProjectListScreen(
     modifier: Modifier = Modifier,
     projects: List<ProjectUiModel>,
-    selectedProjectId: String?, // 현재 선택된 프로젝트 ID
+    selectedProjectId: DocumentId?, // 현재 선택된 프로젝트 ID
     isDmSelected: Boolean = false, // DM 섹션이 선택되었는지 여부
     onProfileClick: () -> Unit, // 프로필 클릭 핸들러 추가
-    onProjectClick: (projectId: String) -> Unit,
+    onProjectClick: (projectId: DocumentId) -> Unit,
     userInitial: String = "U", // 사용자 이니셜
     profileImageUrl: String? = null // 프로필 이미지 URL
 ) {
@@ -242,7 +244,11 @@ fun ProjectListItemPreview_Default() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Row(modifier=Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))) {
              ProjectListItem(
-                project = ProjectUiModel(id = "1", name = "Alpha", imageUrl = null),
+                 project = ProjectUiModel(
+                     id = DocumentId("1"),
+                     name = ProjectName("Alpha"),
+                     imageUrl = null
+                 ),
                 isSelected = false,
                 onProjectClick = {}
             )
@@ -256,7 +262,11 @@ fun ProjectListItemPreview_Selected() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Row(modifier=Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))) {
             ProjectListItem(
-                project = ProjectUiModel(id = "2", name = "Bravo", imageUrl = null),
+                project = ProjectUiModel(
+                    id = DocumentId("2"),
+                    name = ProjectName("Bravo"),
+                    imageUrl = null
+                ),
                 isSelected = true,
                 onProjectClick = {}
             )
@@ -282,16 +292,16 @@ fun ProjectListScreenPreview_Empty() {
 @Composable
 fun ProjectListScreenPreview_WithItems() {
     val sampleProjects = listOf(
-        ProjectUiModel(id = "1", name = "녹색 프로젝트", imageUrl = null),
-        ProjectUiModel(id = "2", name = "Alpha App", imageUrl = null),
-        ProjectUiModel(id = "3", name = "커뮤니티 정원", imageUrl = null),
-        ProjectUiModel(id = "4", name = "스터디 그룹", imageUrl = null),
-        ProjectUiModel(id = "5", name = "개인 작업실", imageUrl = null)
+        ProjectUiModel(id = DocumentId("1"), name = ProjectName("녹색 프로젝트"), imageUrl = null),
+        ProjectUiModel(id = DocumentId("2"), name = ProjectName("Alpha App"), imageUrl = null),
+        ProjectUiModel(id = DocumentId("3"), name = ProjectName("커뮤니티 정원"), imageUrl = null),
+        ProjectUiModel(id = DocumentId("4"), name = ProjectName("스터디 그룹"), imageUrl = null),
+        ProjectUiModel(id = DocumentId("5"), name = ProjectName("개인 작업실"), imageUrl = null)
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectListScreen(
             projects = sampleProjects,
-            selectedProjectId = "2", // "Alpha App" 선택된 상태로
+            selectedProjectId = DocumentId("2"), // "Alpha App" 선택된 상태로
             isDmSelected = false,
             onProfileClick = {},
             onProjectClick = {}
@@ -303,14 +313,14 @@ fun ProjectListScreenPreview_WithItems() {
 @Composable
 fun ProjectListScreenPreview_DmSelected() {
     val sampleProjects = listOf(
-        ProjectUiModel(id = "1", name = "녹색 프로젝트", imageUrl = null),
-        ProjectUiModel(id = "2", name = "Alpha App", imageUrl = null),
-        ProjectUiModel(id = "3", name = "커뮤니티 정원", imageUrl = null)
+        ProjectUiModel(id = DocumentId("1"), name = ProjectName("녹색 프로젝트"), imageUrl = null),
+        ProjectUiModel(id = DocumentId("2"), name = ProjectName("Alpha App"), imageUrl = null),
+        ProjectUiModel(id = DocumentId("3"), name = ProjectName("커뮤니티 정원"), imageUrl = null)
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectListScreen(
             projects = sampleProjects,
-            selectedProjectId = "2",
+            selectedProjectId = DocumentId("2"),
             isDmSelected = true, // DM이 선택된 상태
             onProfileClick = {},
             onProjectClick = {}

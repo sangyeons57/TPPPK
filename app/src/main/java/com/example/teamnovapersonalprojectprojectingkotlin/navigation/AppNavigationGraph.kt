@@ -28,30 +28,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
-import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.MainContainerRoute
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.AppRoutes
-import com.example.core_navigation.extension.extractProjectArguments
-import com.example.core_navigation.extension.extractCalendarArguments
-import com.example.core_navigation.extension.safeComposable
-import com.example.core_navigation.extension.projectArguments
 import com.example.core_navigation.extension.calendarArguments
-import com.example.feature_login.LoginScreen
-import com.example.feature_privacy_policy.PrivacyPolicyScreen
-import com.example.feature_signup.SignUpScreen
+import com.example.core_navigation.extension.extractProjectArguments
+import com.example.core_navigation.extension.projectArguments
+import com.example.core_navigation.extension.safeComposable
+import com.example.feature_add_project.ui.AddProjectScreen
 import com.example.feature_auth.ui.SplashScreen
-import com.example.feature_terms_of_service.TermsOfServiceScreen
+import com.example.feature_calendar_24hour.ui.Calendar24HourScreen
+import com.example.feature_edit_schedule.ui.EditScheduleScreen
+import com.example.feature_find_password.ui.FindPasswordScreen
 import com.example.feature_friends.ui.AcceptFriendsScreen
 import com.example.feature_friends.ui.FriendsScreen
+import com.example.feature_join_project.ui.JoinProjectScreen
+import com.example.feature_login.ui.LoginScreen
 import com.example.feature_main.MainContainerScreen
-import com.example.feature_home.HomeViewModel
+import com.example.feature_privacy_policy.ui.PrivacyPolicyScreen
 import com.example.feature_profile.ui.EditProfileScreen
-import com.example.feature_project.ui.AddProjectScreen
-import com.example.feature_join_project.JoinProjectScreen
-import com.example.feature_project.viewmodel.AddProjectViewModel
-import com.example.feature_join_project.JoinProjectViewModel
 import com.example.feature_project_setting_screen.viewmodel.ui.ProjectSettingScreen
+import com.example.feature_schedule_detail.ui.ScheduleDetailScreen
 import com.example.feature_settings.ui.SettingsScreen
+import com.example.feature_signup.ui.SignUpScreen
+import com.example.feature_terms_of_service.ui.TermsOfServiceScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -106,7 +106,7 @@ fun AppNavigationGraph(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() } // 스낵바 사용 시
     var backPressedTime by remember { mutableStateOf(0L) }
-    val context = LocalContext.current // Toast 사용 시
+    LocalContext.current // Toast 사용 시
 
     BackHandler(enabled = navController.previousBackStackEntry == null) {
         if ((System.currentTimeMillis() - backPressedTime) < 2000L) { // 2초 안에 다시 누르면
@@ -146,7 +146,7 @@ fun AppNavigationGraph(
 
         // 프로필 수정 화면 (Settings Route)
         composable(AppRoutes.Settings.EDIT_MY_PROFILE) {
-            EditProfileScreen(appNavigator = navigationManger)
+            EditProfileScreen(navigationManger = navigationManger)
         }
         composable(AppRoutes.Settings.APP_SETTINGS) {
             SettingsScreen(navigationManger = navigationManger)
@@ -171,34 +171,34 @@ fun NavGraphBuilder.authGraph(navigationManger: NavigationManger) {
         
         composable(AppRoutes.Auth.Login.path) {
             Log.d("Login", "Login Screen")
-            com.example.feature_login.LoginScreen(appNavigator = navigationManger)
+            LoginScreen(navigationManger = navigationManger)
         }
         
         // 회원가입 화면 추가
         composable(AppRoutes.Auth.SignUp.path) {
             Log.d("SignUp", "SignUp Screen")
             // viewModel은 나중에 추가
-            com.example.feature_signup.SignUpScreen(
-                appNavigator = navigationManger
+            SignUpScreen(
+                navigationManger = navigationManger
             )
         }
         
         // 비밀번호 찾기 화면 추가
         composable(AppRoutes.Auth.FindPassword.path) {
             Log.d("FindPassword", "FindPassword Screen")
-            com.example.feature_find_password.ui.FindPasswordScreen(navigationManger = navigationManger)
+            FindPasswordScreen(navigationManger = navigationManger)
         }
 
         // 서비스 이용약관 화면 추가
         composable(AppRoutes.Auth.TermsOfService.path) {
             Log.d("TermsOfService", "TermsOfService Screen")
-            com.example.feature_terms_of_service.TermsOfServiceScreen(appNavigator = navigationManger)
+            TermsOfServiceScreen(navigationManger = navigationManger)
         }
 
         // 개인정보 처리방침 화면 추가
         composable(AppRoutes.Auth.PrivacyPolicy.path) {
             Log.d("PrivacyPolicy", "PrivacyPolicy Screen")
-            com.example.feature_privacy_policy.PrivacyPolicyScreen(appNavigator = navigationManger)
+            PrivacyPolicyScreen(navigationManger = navigationManger)
         }
     }
 }
@@ -244,7 +244,6 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
     ) {
         // 프로젝트 생성 화면
         composable(AppRoutes.Project.ADD) {
-            val viewModel = hiltViewModel<AddProjectViewModel>()
           // TODO: AddRoleScreen/EditRoleScreen for adding roles
             AddProjectScreen(navigationManger)
         }
@@ -272,8 +271,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
                 }
             )
         ) {
-            val viewModel = hiltViewModel<com.example.feature_join_project.JoinProjectViewModel>()
-            com.example.feature_join_project.JoinProjectScreen(navigationManger)
+            JoinProjectScreen(navigationManger)
         }
         
         // 프로젝트 상세 화면 - 메인 탭 외부에서도 접근 가능
@@ -349,13 +347,9 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
             route = AppRoutes.Main.Calendar.calendar24HourRoute(),
             arguments = calendarArguments()
         ) { backStackEntry ->
-            val args = backStackEntry.extractCalendarArguments()
 
-            com.example.feature_calendar_24hour.Calendar24HourScreen(
-                year = args.year,   // Type-safe and explicit
-                month = args.month,
-                day = args.day,
-                appNavigator = navigationManger,
+            Calendar24HourScreen(
+                navigationManger = navigationManger,
             )
         }
         
@@ -364,9 +358,9 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
             route = AppRoutes.Main.Calendar.addScheduleRoute(),
             arguments = AppRoutes.Main.Calendar.addScheduleArguments
         ) { backStackEntry ->
-            val year = backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_YEAR) ?: 0
-            val month = backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_MONTH) ?: 0
-            val day = backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_DAY) ?: 0
+            backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_YEAR) ?: 0
+            backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_MONTH) ?: 0
+            backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_DAY) ?: 0
             
             com.example.feature_schedule.ui.AddScheduleScreen(
                 navigationManger = navigationManger
@@ -378,10 +372,10 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
             route = AppRoutes.Main.Calendar.scheduleDetailRoute(),
             arguments = AppRoutes.Main.Calendar.scheduleDetailArguments
         ) { backStackEntry ->
-            val scheduleId = backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
-            
-            com.example.feature_schedule.ui.ScheduleDetailScreen(
-                appNavigator = navigationManger,
+            backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
+
+            ScheduleDetailScreen(
+                navigationManger = navigationManger,
             )
         }
         
@@ -390,10 +384,10 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
             route = AppRoutes.Main.Calendar.editScheduleRoute(),
             arguments = AppRoutes.Main.Calendar.editScheduleArguments
         ) { backStackEntry ->
-            val scheduleId = backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
+            backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
 
-            com.example.feature_edit_schedule.EditScheduleScreen(
-                appNavigator = navigationManger,
+            EditScheduleScreen(
+                navigationManger = navigationManger,
             )
         }
 

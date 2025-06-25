@@ -14,6 +14,9 @@ value class UserId(val value: String) {
     companion object {
         const val MAX_LENGTH = 128
 
+        val UNKNOWN_USER = UserId("UNKNOWN_USER")
+        val EMPTY = UserId("")
+
         fun from (value: String): UserId {
             return UserId(value)
         }
@@ -21,5 +24,13 @@ value class UserId(val value: String) {
             return UserId(value.value)
         }
 
+    }
+
+    fun isBlank(): Boolean {
+        return value.isBlank()
+    }
+
+    fun isNotBlank(): Boolean {
+        return value.isNotBlank()
     }
 }

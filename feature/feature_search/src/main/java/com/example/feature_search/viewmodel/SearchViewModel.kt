@@ -7,11 +7,16 @@ import com.example.domain.model.ui.search.MessageResult
 import com.example.domain.model.ui.search.SearchResultItem
 import com.example.domain.model.ui.search.SearchScope
 import com.example.domain.model.ui.search.UserResult
-import com.example.domain.provider.search.SearchUseCaseProvider
+import com.example.domain.usecase.search.SearchUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 

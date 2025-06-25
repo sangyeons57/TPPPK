@@ -33,7 +33,16 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,22 +69,20 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Schedule
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.schedule.ScheduleContent
 import com.example.domain.model.vo.schedule.ScheduleTitle
 import com.example.feature_calendar.viewmodel.CalendarUiState
-import com.example.feature_calendar.R
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -158,9 +165,9 @@ fun CalendarContent(
             .fillMaxWidth()
             .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
             .alpha(contentAlpha) // 드래그 진행에 따른 알파값 적용
-            .semantics { 
+            .semantics {
                 // 접근성 설명 추가
-                contentDescription = R.string.calendar_swipe_hint.toString()
+                contentDescription = "calendar swipe hint"
             }
             .pointerInput(Unit) {
                 detectDragGestures(
@@ -284,7 +291,9 @@ fun DayOfWeekHeader(modifier: Modifier = Modifier) {
         DayOfWeek.SATURDAY
     )
     
-    Row(modifier = modifier.fillMaxWidth().padding(vertical = Dimens.paddingMedium)) {
+    Row(modifier = modifier
+        .fillMaxWidth()
+        .padding(vertical = Dimens.paddingMedium)) {
         // 각 요일 표시
         daysOfWeekOrder.forEach { dayOfWeek ->
             Text(
@@ -901,9 +910,9 @@ private fun getSampleSchedulesForPreview(creatorId: String = "defaultPreviewUser
     val today = LocalDate.now()
     val time1 = LocalTime.of(10, 0)
     val time2 = LocalTime.of(11, 30)
-    val time3 = LocalTime.of(14, 0)
-    val time4 = LocalTime.of(15, 0)
-    val now = DateTimeUtil.nowInstant()
+    LocalTime.of(14, 0)
+    LocalTime.of(15, 0)
+    DateTimeUtil.nowInstant()
 
     return listOf(
         Schedule.create(

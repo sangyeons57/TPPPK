@@ -2,7 +2,17 @@ package com.example.feature_project_setting_screen.viewmodel.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -11,8 +21,28 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -20,11 +50,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core_navigation.core.CreateCategoryRoute
+import com.example.core_navigation.core.CreateChannelRoute
+import com.example.core_navigation.core.EditCategoryRoute
+import com.example.core_navigation.core.EditChannelRoute
+import com.example.core_navigation.core.MemberListRoute
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.*
+import com.example.core_navigation.core.RoleListRoute
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.project.ProjectName
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import com.example.feature_project_setting_screen.viewmodel.viewmodel.ProjectSettingEvent
@@ -58,27 +94,27 @@ fun ProjectSettingScreen(
                 is ProjectSettingEvent.NavigateBack -> navigationManger.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ProjectSettingEvent.NavigateToEditCategory -> navigationManger.navigateTo(
-                    EditCategoryRoute(event.projectId, event.categoryId)
+                    EditCategoryRoute(event.projectId.value, event.categoryId)
                 )
 
                 is ProjectSettingEvent.NavigateToCreateCategory -> navigationManger.navigateTo(
-                    CreateCategoryRoute(event.projectId)
+                    CreateCategoryRoute(event.projectId.value)
                 )
 
                 is ProjectSettingEvent.NavigateToEditChannel -> navigationManger.navigateTo(
-                    EditChannelRoute(event.projectId, event.categoryId, event.channelId)
+                    EditChannelRoute(event.projectId.value, event.categoryId, event.channelId)
                 )
 
                 is ProjectSettingEvent.NavigateToCreateChannel -> navigationManger.navigateTo(
-                    CreateChannelRoute(event.projectId, event.categoryId)
+                    CreateChannelRoute(event.projectId.value, event.categoryId)
                 )
 
                 is ProjectSettingEvent.NavigateToMemberList -> navigationManger.navigateTo(
-                    MemberListRoute(event.projectId)
+                    MemberListRoute(event.projectId.value)
                 )
 
                 is ProjectSettingEvent.NavigateToRoleList -> navigationManger.navigateTo(
-                    RoleListRoute(event.projectId)
+                    RoleListRoute(event.projectId.value)
                 )
                 is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
                 is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
@@ -316,7 +352,7 @@ fun CategoryHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = category.name,
+            text = category.name.value,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
@@ -349,7 +385,8 @@ fun ChannelItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 아이콘 (텍스트/음성 구분)
-        val icon = if (channel.channelType == ProjectChannelType.MESSAGES.name) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp // Compare with Enum.name
+        val icon =
+            if (channel.channelType == ProjectChannelType.MESSAGES) Icons.Default.ChatBubbleOutline else Icons.AutoMirrored.Filled.VolumeUp // Compare with Enum.name
         Icon(
             imageVector = icon,
             contentDescription = "${channel.channelType} 채널", // channelType is String
@@ -358,7 +395,7 @@ fun ChannelItem(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = channel.name, // Use ChannelUiModel.name
+            text = channel.name.value, // Use ChannelUiModel.name
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
@@ -374,9 +411,9 @@ fun ChannelItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RenameProjectDialog(
-    currentName: String,
+    currentName: ProjectName,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (ProjectName) -> Unit
 ) {
     var newName by remember { mutableStateOf(currentName) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -387,9 +424,9 @@ fun RenameProjectDialog(
         text = {
             Column {
                 OutlinedTextField(
-                    value = newName,
+                    value = newName.value,
                     onValueChange = {
-                        newName = it
+                        newName = ProjectName(it)
                         error = null // 이름 변경 시 에러 초기화
                     },
                     label = { Text("새 프로젝트 이름") },
@@ -425,7 +462,7 @@ fun RenameProjectDialog(
 @Composable
 private fun RenameProjectDialogPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        RenameProjectDialog(currentName = "기존 프로젝트", onDismiss = { }) {}
+        RenameProjectDialog(currentName = ProjectName("기존 프로젝트"), onDismiss = { }) {}
     }
 }
 
@@ -446,7 +483,15 @@ private fun ProjectSettingScreenPreview() {
 private fun ProjectSettingContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectSettingContent(
-            uiState = ProjectSettingUiState(isLoading = true),
+            uiState = ProjectSettingUiState(
+                isLoading = true,
+                projectId = TODO(),
+                projectName = TODO(),
+                categories = TODO(),
+                error = TODO(),
+                showRenameProjectDialog = TODO(),
+                showDeleteProjectDialog = TODO()
+            ),
             onCategoryEditClick = {},
             onCategoryDeleteClick = {},
             onChannelEditClick = { _, _ -> },
@@ -466,7 +511,15 @@ private fun ProjectSettingContentLoadingPreview() {
 private fun ProjectSettingContentErrorPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectSettingContent(
-            uiState = ProjectSettingUiState(error = "미리보기 에러 메시지입니다."),
+            uiState = ProjectSettingUiState(
+                error = "미리보기 에러 메시지입니다.",
+                projectId = TODO(),
+                projectName = TODO(),
+                categories = TODO(),
+                isLoading = TODO(),
+                showRenameProjectDialog = TODO(),
+                showDeleteProjectDialog = TODO()
+            ),
             onCategoryEditClick = {},
             onCategoryDeleteClick = {},
             onChannelEditClick = { _, _ -> },

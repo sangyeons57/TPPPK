@@ -3,6 +3,7 @@ package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.collection.CategoryCollection
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.collection.CategoryCollectionRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -12,7 +13,7 @@ import javax.inject.Inject
  */
 interface GetProjectAllCategoriesUseCase {
     // 프로젝트 구조를 반환
-    suspend operator fun invoke(projectId: String): Flow<CustomResult<List<CategoryCollection>, Exception>>
+    suspend operator fun invoke(projectId: DocumentId): Flow<CustomResult<List<CategoryCollection>, Exception>>
 }
 
 /**
@@ -30,9 +31,9 @@ class GetProjectAllCategoriesUseCaseImpl @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return Flow<CustomResult<List<CategoryCollection>, Exception>> 카테고리 목록과 각 카테고리에 속한 채널 목록을 포함한 결과
      */
-    override suspend fun invoke(projectId: String): Flow<CustomResult<List<CategoryCollection>, Exception>> {
+    override suspend fun invoke(projectId: DocumentId): Flow<CustomResult<List<CategoryCollection>, Exception>> {
         // CategoryCollectionRepository에 데이터 가져오기 위임
-        val c = categoryCollectionRepository.getCategoryCollections(projectId)
+        val c = categoryCollectionRepository.getCategoryCollections(projectId.value)
         //("GetProjectAllCategoriesUseCaseImpl", "invoke: $c")
         return c
     }

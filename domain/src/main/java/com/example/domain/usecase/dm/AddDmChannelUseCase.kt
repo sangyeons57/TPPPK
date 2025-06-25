@@ -42,7 +42,7 @@ class AddDmChannelUseCase @Inject constructor(
      *         실패 사유는 파트너 이름이 비어있거나, 인증되지 않았거나, 파트너 사용자를 찾을 수 없거나,
      *         자기 자신과의 DM을 시도했거나, DM 채널 생성 중 오류가 발생한 경우 등입니다.
      */
-    operator fun invoke(partnerName: String): Flow<CustomResult<DocumentId, Exception>> = flow {
+    operator fun invoke(partnerName: UserName): Flow<CustomResult<DocumentId, Exception>> = flow {
         emit(CustomResult.Loading)
 
         if (partnerName.isBlank()) {
@@ -58,7 +58,7 @@ class AddDmChannelUseCase @Inject constructor(
 
 
         val partner = when (val result = userRepository.observeByName(partnerName).first()) {
-            is CustomResult.Success -> result.data as User
+            is CustomResult.Success -> result.data
             is CustomResult.Failure -> {
                 emit(CustomResult.Failure(result.error))
                 return@flow

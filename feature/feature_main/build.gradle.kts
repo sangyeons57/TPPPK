@@ -57,6 +57,9 @@ dependencies {
     implementation(project(":feature:feature_add_schedule"))
 
     implementation(project(":feature:feature_friends"))
+    implementation(project(":feature:feature_home"))
+    implementation(project(":feature:feature_calendar"))
+    implementation(project(":feature:feature_profile"))
 
     // --- 라이브러리 의존성 ---
     // Jetpack Compose UI

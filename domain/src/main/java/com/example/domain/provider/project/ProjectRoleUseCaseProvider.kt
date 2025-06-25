@@ -1,6 +1,7 @@
 package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.PermissionRepository
@@ -8,12 +9,12 @@ import com.example.domain.repository.base.ProjectRoleRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.PermissionRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
-import com.example.domain.usecase.project.role.DeleteRoleUseCase
-import com.example.domain.usecase.project.role.DeleteRoleUseCaseImpl
 import com.example.domain.usecase.project.role.CreateProjectRoleUseCase
 import com.example.domain.usecase.project.role.CreateProjectRoleUseCaseImpl
 import com.example.domain.usecase.project.role.CreateRoleUseCase
 import com.example.domain.usecase.project.role.CreateRoleUseCaseImpl
+import com.example.domain.usecase.project.role.DeleteRoleUseCase
+import com.example.domain.usecase.project.role.DeleteRoleUseCaseImpl
 import com.example.domain.usecase.project.role.GetProjectRoleUseCase
 import com.example.domain.usecase.project.role.GetProjectRoleUseCaseImpl
 import com.example.domain.usecase.project.role.GetProjectRolesUseCase
@@ -45,16 +46,16 @@ class ProjectRoleUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 역할 관리 UseCase 그룹
      */
-    fun createForProject(projectId: String): ProjectRoleUseCases {
+    fun createForProject(projectId: DocumentId): ProjectRoleUseCases {
         val projectRoleRepository = projectRoleRepositoryFactory.create(
             ProjectRoleRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectRoles(projectId)
+                collectionPath = CollectionPath.projectRoles(projectId.value)
             )
         )
 
         val permissionRepository = permissionRepositoryFactory.create(
             PermissionRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectRolePermissions(projectId, "")
+                collectionPath = CollectionPath.projectRolePermissions(projectId.value, "")
             )
         )
 
@@ -111,7 +112,7 @@ class ProjectRoleUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 역할 관리 UseCase 그룹
      */
-    fun createForCurrentUser(projectId: String): ProjectRoleUseCases {
+    fun createForCurrentUser(projectId: DocumentId): ProjectRoleUseCases {
         return createForProject(projectId)
     }
 
@@ -122,7 +123,7 @@ class ProjectRoleUseCaseProvider @Inject constructor(
      * @param roleId 역할 ID
      * @return 역할별 UseCase 그룹
      */
-    fun createForRole(projectId: String, roleId: String): ProjectRoleUseCases {
+    fun createForRole(projectId: DocumentId, roleId: DocumentId): ProjectRoleUseCases {
         return createForProject(projectId)
     }
 }

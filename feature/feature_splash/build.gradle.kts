@@ -39,10 +39,6 @@ android {
         //jvmTarget = libs.versions.jvmTarget.get()
     }
 }
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
-}
-
 dependencies {
     // --- 모듈 의존성 ---
     implementation(project(":core:core_common")) // 공통 유틸리티 사용

@@ -1,6 +1,7 @@
 package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
@@ -9,6 +10,10 @@ import com.example.domain.repository.collection.CategoryCollectionRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
+import com.example.domain.usecase.project.category.GetCategoryDetailsUseCase
+import com.example.domain.usecase.project.category.GetCategoryDetailsUseCaseImpl
+import com.example.domain.usecase.project.category.UpdateCategoryUseCase
+import com.example.domain.usecase.project.category.UpdateCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.AddCategoryUseCase
 import com.example.domain.usecase.project.structure.AddCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCase
@@ -17,17 +22,13 @@ import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
 import com.example.domain.usecase.project.structure.DeleteCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCaseImpl
-import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCase
-import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCaseImpl
 import com.example.domain.usecase.project.structure.MoveCategoryUseCase
 import com.example.domain.usecase.project.structure.MoveCategoryUseCaseImpl
+import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCase
+import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCaseImpl
 import com.example.domain.usecase.project.structure.RenameCategoryUseCase
 import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.UpdateProjectStructureUseCase
-import com.example.domain.usecase.project.category.GetCategoryDetailsUseCase
-import com.example.domain.usecase.project.category.GetCategoryDetailsUseCaseImpl
-import com.example.domain.usecase.project.category.UpdateCategoryUseCase
-import com.example.domain.usecase.project.category.UpdateCategoryUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -50,16 +51,16 @@ class ProjectStructureUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 구조 관리 UseCase 그룹
      */
-    fun createForProject(projectId: String): ProjectStructureUseCases {
+    fun createForProject(projectId: DocumentId): ProjectStructureUseCases {
         val categoryRepository = categoryRepositoryFactory.create(
             CategoryRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories(projectId)
+                collectionPath = CollectionPath.projectCategories(projectId.value)
             )
         )
 
         val projectChannelRepository = projectChannelRepositoryFactory.create(
             ProjectChannelRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories(projectId)
+                collectionPath = CollectionPath.projectCategories(projectId.value)
             )
         )
 
@@ -123,7 +124,7 @@ class ProjectStructureUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 구조 관리 UseCase 그룹
      */
-    fun createForCurrentUser(projectId: String): ProjectStructureUseCases {
+    fun createForCurrentUser(projectId: DocumentId): ProjectStructureUseCases {
         return createForProject(projectId)
     }
 }

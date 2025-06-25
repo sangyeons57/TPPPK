@@ -1,14 +1,37 @@
 package com.example.feature_create_channel.ui
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -21,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.Name
 import com.example.feature_create_channel.viewmodel.CreateChannelEvent
 import com.example.feature_create_channel.viewmodel.CreateChannelUiState
 import com.example.feature_create_channel.viewmodel.CreateChannelViewModel
@@ -103,7 +127,7 @@ fun CreateChannelContent(
     ) {
         // 채널 이름 입력 필드
         OutlinedTextField(
-            value = uiState.channelName,
+            value = uiState.channelName.value,
             onValueChange = onChannelNameChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("채널 이름") },
@@ -201,7 +225,7 @@ private fun CreateChannelContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
             uiState = CreateChannelUiState(
-                channelName = "새로운-채팅방",
+                channelName = Name("새로운-채팅방"),
                 selectedChannelMode = ProjectChannelType.MESSAGES
             ),
             onChannelNameChange = {},
@@ -217,7 +241,7 @@ private fun CreateChannelContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
             uiState = CreateChannelUiState(
-                channelName = "만드는 중",
+                channelName = Name("만드는 중"),
                 isLoading = true
             ),
             onChannelNameChange = {},
@@ -233,7 +257,7 @@ private fun CreateChannelContentErrorPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         CreateChannelContent(
             uiState = CreateChannelUiState(
-                channelName = "",
+                channelName = Name.EMPTY,
                 error = "채널 이름은 필수입니다."
             ),
             onChannelNameChange = {},

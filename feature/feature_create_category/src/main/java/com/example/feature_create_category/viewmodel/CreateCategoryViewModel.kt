@@ -3,12 +3,19 @@ package com.example.feature_create_category.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
-import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -46,7 +53,7 @@ class CreateCategoryViewModel @Inject constructor(
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectStructureUseCases =
-        projectStructureUseCaseProvider.createForProject(projectId)
+        projectStructureUseCaseProvider.createForProject(DocumentId(projectId))
 
     private val _uiState = MutableStateFlow(CreateCategoryUiState())
     val uiState: StateFlow<CreateCategoryUiState> = _uiState.asStateFlow()
@@ -85,8 +92,8 @@ class CreateCategoryViewModel @Inject constructor(
             println("ViewModel: Creating category '$currentName' for project $projectId")
 
             when (val result = projectStructureUseCases.addCategoryUseCase(
-                projectId = projectId,
-                categoryName = currentName
+                projectId = DocumentId(projectId),
+                categoryName = CategoryName(currentName)
             )) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(CreateCategoryEvent.ShowSnackbar("카테고리가 생성되었습니다: ${result.data.name}"))

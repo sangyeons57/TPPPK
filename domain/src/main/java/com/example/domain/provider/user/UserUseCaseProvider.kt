@@ -12,11 +12,18 @@ import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCaseImpl
 import com.example.domain.usecase.user.GetUserStreamUseCase
 import com.example.domain.usecase.user.GetUserStreamUseCaseImpl
+import com.example.domain.usecase.user.RemoveProfileImageUseCase
+import com.example.domain.usecase.user.RemoveProfileImageUseCaseImpl
 import com.example.domain.usecase.user.SearchUserByNameUseCase
 import com.example.domain.usecase.user.SearchUserByNameUseCaseImpl
 import com.example.domain.usecase.user.UpdateNameUseCase
-// import com.example.domain.usecase.user.UpdateUserImageUseCase // interface
-// import com.example.domain.usecase.user.UpdateUserStatusUseCase // interface
+import com.example.domain.usecase.user.UpdateUserImageUseCase
+import com.example.domain.usecase.user.UpdateUserImageUseCaseImpl
+import com.example.domain.usecase.user.UpdateUserMemoUseCase
+import com.example.domain.usecase.user.UpdateUserMemoUseCaseImpl
+import com.example.domain.usecase.user.UpdateUserStatusUseCase
+import com.example.domain.usecase.user.UpdateUserStatusUseCaseImpl
+import com.example.domain.usecase.user.UploadProfileImageUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,7 +35,8 @@ import javax.inject.Singleton
 @Singleton
 class UserUseCaseProvider @Inject constructor(
     private val userRepositoryFactory: RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
-    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepositoryFactory: RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val uploadProfileImageUseCase: UploadProfileImageUseCase // Context가 필요한 UseCase는 직접 주입
 ) {
 
     /**
@@ -67,13 +75,32 @@ class UserUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
 
+            updateUserStatusUseCase = UpdateUserStatusUseCaseImpl(
+                userRepository = userRepository,
+                authRepository = authRepository,
+            ),
+            updateUserMemoUseCase = UpdateUserMemoUseCaseImpl(
+                userRepository = userRepository,
+                authRepository = authRepository
+            ),
+            updateUserImageUseCase = UpdateUserImageUseCaseImpl(
+                userRepository = userRepository,
+            ),
+
             checkNicknameAvailabilityUseCase = CheckNicknameAvailabilityUseCaseImpl(
                 userRepository = userRepository
+            ),
+
+            uploadProfileImageUseCase = uploadProfileImageUseCase, // 직접 주입된 UseCase 사용
+
+            removeProfileImageUseCase = RemoveProfileImageUseCaseImpl(
+                userRepository = userRepository,
+                authRepository = authRepository
             ),
             
             // 공통 Repository
             authRepository = authRepository,
-            userRepository = userRepository
+            userRepository = userRepository,
         )
     }
 }
@@ -89,7 +116,12 @@ data class UserUseCases(
     
     // 프로필 관리 (구현체만)
     val updateNameUseCase: UpdateNameUseCase,
+    val updateUserStatusUseCase: UpdateUserStatusUseCase,
+    val updateUserMemoUseCase: UpdateUserMemoUseCase,
+    val updateUserImageUseCase: UpdateUserImageUseCase,
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
+    val uploadProfileImageUseCase: UploadProfileImageUseCase,
+    val removeProfileImageUseCase: RemoveProfileImageUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

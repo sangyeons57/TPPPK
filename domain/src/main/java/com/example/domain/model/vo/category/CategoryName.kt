@@ -1,10 +1,6 @@
 package com.example.domain.model.vo.category
 
-import com.example.domain.model.base.Category
 import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.UserId
-import kotlin.jvm.JvmInline
 
 /**
  * Represents the name of a Category.
@@ -24,11 +20,19 @@ value class CategoryName(val value: String) {
         return value.isBlank()
     }
 
+    fun trim(): CategoryName {
+        return CategoryName(value.trim())
+    }
+
     companion object {
         val NO_CATEGORY_NAME = CategoryName("카테고리 없음")
 
         fun from(name: Name): CategoryName {
             return CategoryName(name.value)
+        }
+
+        fun from(name: String): CategoryName {
+            return CategoryName(name)
         }
     }
 }

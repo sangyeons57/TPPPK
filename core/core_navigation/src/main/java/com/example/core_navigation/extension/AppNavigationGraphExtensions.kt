@@ -1,11 +1,13 @@
 package com.example.core_navigation.extension
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.navigation.NavType
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationResultManager
 import com.example.core_navigation.destination.AppRoutes
@@ -166,7 +168,7 @@ fun booleanArg(name: String, defaultValue: Boolean = false) = navArgument(name) 
 @Composable
 fun SetNavigationResult(
     resultManager: NavigationResultManager,
-    navController: androidx.navigation.NavHostController,
+    navController: NavHostController,
     key: String,
     value: Any?
 ) {
@@ -179,11 +181,11 @@ fun SetNavigationResult(
 @Composable
 fun <T> ObserveNavigationResult(
     resultManager: NavigationResultManager,
-    navController: androidx.navigation.NavHostController,
+    navController: NavHostController,
     key: String,
     onResult: (T) -> Unit
 ) {
-    androidx.compose.runtime.LaunchedEffect(key) {
+    LaunchedEffect(key) {
         resultManager.observeResult<T>(navController, key).collect { result ->
             result?.let(onResult)
         }

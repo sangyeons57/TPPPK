@@ -5,10 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,9 +28,8 @@ import javax.inject.Inject
 // --- 데이터 모델 ---
 data class ProjectSelectionItem(
     val id: DocumentId,
-    val name: Name
+    val name: ProjectName
 )
-const val PERSONAL_SCHEDULE_PROJECT_ID = "-1" // 개인 일정을 나타내는 상수 ID
 
 // --- UI 상태 ---
 data class AddScheduleUiState(
@@ -52,8 +52,6 @@ data class AddScheduleUiState(
 
 // --- 이벤트 ---
 sealed class AddScheduleEvent {
-    object NavigateBack : AddScheduleEvent()
-    object SaveSuccessAndRequestBackNavigation : AddScheduleEvent()
     data class ShowSnackbar(val message: String) : AddScheduleEvent()
 }
 
@@ -62,6 +60,7 @@ class AddScheduleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val scheduleUseCaseProvider: ScheduleUseCaseProvider,
     private val projectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     private val year: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR)
@@ -96,7 +95,10 @@ class AddScheduleViewModel @Inject constructor(
     private fun loadAvailableProjects() {
         viewModelScope.launch {
             // 개인 일정 옵션 기본 추가
-            val personalScheduleOption = ProjectSelectionItem(id = PERSONAL_SCHEDULE_PROJECT_ID, name = "개인 일정")
+            val personalScheduleOption = ProjectSelectionItem(
+                id = DocumentId.PERSONAL_SCHEDULE_PROJECT_ID,
+                name = ProjectName("개인 일정")
+            )
             _uiState.update { it.copy(isLoading = true, availableProjects = listOf(personalScheduleOption), selectedProject = personalScheduleOption) }
 
             getUserParticipatingProjectsUseCase().collect { result ->
@@ -135,7 +137,7 @@ class AddScheduleViewModel @Inject constructor(
     }
 
     fun onProjectSelected(project: ProjectSelectionItem) {
-        if (project.id == PERSONAL_SCHEDULE_PROJECT_ID) {
+        if (project.id == DocumentId.PERSONAL_SCHEDULE_PROJECT_ID) {
             // "개인 일정" 선택 시 selectedProject를 null로 설정
             _uiState.update { it.copy(selectedProject = null) }
         } else {
@@ -224,14 +226,14 @@ class AddScheduleViewModel @Inject constructor(
                 endTime = instantEndTime,
                 status = ScheduleStatus.CONFIRMED, // Default for new schedules
                 color = null, // Color selection UI not implemented yet
-                projectId = project?.id.takeIf { it != PERSONAL_SCHEDULE_PROJECT_ID }
+                projectId = project?.id.takeIf { it != DocumentId.PERSONAL_SCHEDULE_PROJECT_ID }?.value
             )
 
             when (result) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(AddScheduleEvent.ShowSnackbar("일정이 추가되었습니다."))
                     _uiState.update { it.copy(isLoading = false) }
-                    _eventFlow.emit(AddScheduleEvent.SaveSuccessAndRequestBackNavigation)
+                    navigationManger.navigateBack()
                 }
                 is CustomResult.Failure -> {
                     _uiState.update {
@@ -258,8 +260,6 @@ class AddScheduleViewModel @Inject constructor(
     }
     
     fun navigateBack() {
-        viewModelScope.launch {
-            _eventFlow.emit(AddScheduleEvent.NavigateBack)
-        }
+        navigationManger.navigateBack()
     }
 }

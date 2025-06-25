@@ -3,20 +3,28 @@ package com.example.feature_member.dialog.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.feature_member.dialog.ui.UserSearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class AddMemberDialogUiState(
-    val searchQuery: String = "",
-    val searchResults: List<UserSearchResult> = emptyList(),
-    val selectedUsers: Set<String> = emptySet(), // Set of user IDs
+    val username: UserName = UserName.EMPTY,
+    val searchResults: UserSearchResult? = null,
+    val selectedUsers: Set<UserId> = emptySet(), // Set of user IDs
     val isLoading: Boolean = false,
     val error: String? = null,
     val addSuccess: Boolean = false
@@ -47,24 +55,24 @@ class AddMemberViewModel @Inject constructor(
 
     private var searchJob: Job? = null
 
-    fun onSearchQueryChanged(query: String) {
-        _uiState.update { it.copy(searchQuery = query, error = null) }
+    fun onSearchQueryChanged(name: UserName) {
+        _uiState.update { it.copy(username = name, error = null) }
         searchJob?.cancel() // Cancel previous search
-        if (query.length < 2) { // Minimum query length
-            _uiState.update { it.copy(searchResults = emptyList(), isLoading = false) }
+        if (name.length < 2) { // Minimum query length
+            _uiState.update { it.copy(searchResults = null, isLoading = false) }
             return
         }
         searchJob = viewModelScope.launch {
             delay(300) // Debounce
             _uiState.update { it.copy(isLoading = true) }
-            userUseCases.searchUserByNameUseCase(query, 10).collect { userResult ->
+            userUseCases.searchUserByNameUseCase(name).collect { userResult ->
                 when(userResult) {
                     is CustomResult.Success -> {
                         val users = userResult.data
-                        val uiResults = users.map { user -> // Map Domain User to UserSearchResult
+                        val uiResults = users.let { user -> // Map Domain User to UserSearchResult
                             UserSearchResult(
-                                userId = user.uid.value, // Adjust field names based on actual User model
-                                userName = user.name.value,
+                                userId = UserId.from(user.id), // Adjust field names based on actual User model
+                                userName = user.name,
                                 userEmail = user.email.value,
                                 profileImageUrl = user.profileImageUrl?.value
                             )
@@ -83,7 +91,7 @@ class AddMemberViewModel @Inject constructor(
         }
     }
 
-    fun onUserSelectionChanged(userId: String, isSelected: Boolean) {
+    fun onUserSelectionChanged(userId: UserId, isSelected: Boolean) {
         _uiState.update { currentState ->
             val newSelectedUsers = currentState.selectedUsers.toMutableSet()
             if (isSelected) {
@@ -95,7 +103,7 @@ class AddMemberViewModel @Inject constructor(
         }
     }
 
-    fun addSelectedMembers(projectId: String, defaultRoleIds: List<String> = emptyList()) {
+    fun addSelectedMembers(projectId: DocumentId, defaultRoleIds: List<DocumentId> = emptyList()) {
         val selectedUserIds = _uiState.value.selectedUsers
         if (selectedUserIds.isEmpty()) {
             viewModelScope.launch { _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("추가할 멤버를 선택해주세요.")) }
@@ -114,17 +122,27 @@ class AddMemberViewModel @Inject constructor(
             var successCount = 0
             // Attempt to add all selected users
             for (userId in selectedUserIds) {
-                val result = useCases.addProjectMemberUseCase(projectId, userId, defaultRoleIds)
+                val result = useCases.addProjectMemberUseCase(
+                    userId = userId,
+                    initialRoleIds = defaultRoleIds
+                )
                 if (result.isSuccess) {
                     successCount++
                 } else if (result.isFailure){
                     allSuccess = false
                     // Optionally collect individual errors or stop on first error
-                    _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${_uiState.value.searchResults.find { it.userId == userId }?.userName ?: userId}님 추가 실패"))
+                    _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${_uiState.value.searchResults?.userName}님 추가 실패"))
                     // break // Uncomment to stop on first error
                 }
             }
-            _uiState.update { it.copy(isLoading = false, addSuccess = allSuccess, selectedUsers = emptySet(), searchQuery = "") }
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    addSuccess = allSuccess,
+                    selectedUsers = emptySet(),
+                    username = UserName.EMPTY
+                )
+            }
 
             if (successCount > 0) {
                 _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("$successCount 명의 멤버를 추가했습니다."))

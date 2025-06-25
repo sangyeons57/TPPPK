@@ -1,13 +1,21 @@
 package com.example.feature_project.structure.ui // 또는 공통 ui 패키지
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp // AutoMirrored 버전 사용
-import androidx.compose.material.icons.filled.ChatBubbleOutline // 텍스트 채널 아이콘
-import androidx.compose.material.icons.filled.Delete // 삭제 아이콘 (옵션)
-import androidx.compose.material.icons.filled.Edit // 편집 아이콘 (옵션)
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import java.time.Instant
 
 /**
@@ -67,7 +78,7 @@ fun ChannelListItem(
 
         // 채널 이름
         Text(
-            text = channel.channelName,
+            text = channel.channelName.value,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f) // 남은 공간 차지
         )
@@ -94,11 +105,13 @@ fun ChannelListItem(
 @Preview(showBackground = true, name = "Text Channel Item")
 @Composable
 private fun ChannelListItemTextPreview() {
-    val textChannel = ProjectChannel(
-        id = "ch1",
-        channelName = "일반 대화",
+    val textChannel = ProjectChannel.fromDataSource(
+        id = DocumentId.from("ch1"),
+        channelName = Name("일반 대화"),
+        order = ProjectChannelOrder.from(1),
+        channelType = ProjectChannelType.MESSAGES,
         createdAt = Instant.now(),
-        updatedAt = Instant.now(),
+        updatedAt = Instant.now()
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Surface {

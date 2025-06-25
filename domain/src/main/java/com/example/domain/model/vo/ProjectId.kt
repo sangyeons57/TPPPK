@@ -13,5 +13,9 @@ value class ProjectId(val value: String) {
 
     companion object {
         const val MAX_LENGTH = 128
+
+        fun from(value: DocumentId): ProjectId {
+            return ProjectId(value.value)
+        }
     }
 }

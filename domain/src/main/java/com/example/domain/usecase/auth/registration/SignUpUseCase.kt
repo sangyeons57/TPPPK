@@ -2,18 +2,17 @@ package com.example.domain.usecase.auth.registration
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
+import com.example.domain.exception.AccountAlreadyExistsException
 import com.example.domain.model.base.User
+import com.example.domain.model.enum.UserAccountStatus
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
-import com.example.domain.exception.AccountAlreadyExistsException
-import com.example.domain.model.vo.DocumentId
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.flow.first
 import java.time.Instant
-import java.util.NoSuchElementException
 import javax.inject.Inject
 
 /**
@@ -46,7 +45,7 @@ class SignUpUseCase @Inject constructor(
     suspend operator fun invoke(
         email: String,
         password: String,
-        nickname: String,
+        nickname: UserName,
         consentTimeStamp: Instant
     ): CustomResult<User, Exception> {
         // "Starting sign-up | email=$email, nickname=$nickname")
@@ -58,7 +57,7 @@ class SignUpUseCase @Inject constructor(
                 val newUser = User.registerNewUser(
                     id = DocumentId.from(uid),
                     email = UserEmail(email),
-                    name = UserName(nickname),
+                    name = nickname,
                     consentTimeStamp = consentTimeStamp
                 )
                 return userRepository.save(newUser).let { saveResult ->
@@ -96,7 +95,7 @@ class SignUpUseCase @Inject constructor(
                                 // Reactivate withdrawn account using user repository
                                 // Reactivating withdrawn account for email: $email
                                 existingUser.activateAccount()
-                                existingUser.changeName(UserName(nickname))
+                                existingUser.changeName(nickname)
                                 
                                 when (val saveResult = userRepository.save(existingUser)) {
                                     is CustomResult.Success -> {

@@ -5,6 +5,7 @@ import com.example.domain.event.AggregateRoot
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.repository.base.MemberRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -13,7 +14,10 @@ import javax.inject.Inject
  * 프로젝트 멤버의 역할을 업데이트하는 유스케이스 인터페이스
  */
 interface UpdateMemberRolesUseCase {
-    suspend operator fun invoke(userId: DocumentId, roleIds: List<String>): CustomResult<Unit, Exception>
+    suspend operator fun invoke(
+        userId: UserId,
+        roleIds: List<String>
+    ): CustomResult<Unit, Exception>
 }
 
 /**
@@ -32,10 +36,12 @@ class UpdateMemberRolesUseCaseImpl @Inject constructor(
      * @return Result<Unit> 업데이트 처리 결과
      */
     override suspend fun invoke(
-        userId: DocumentId,
+        userId: UserId,
         roleIds: List<String>
     ): CustomResult<Unit, Exception> {
-        when (val memberResult : CustomResult<AggregateRoot, Exception> = memberRepository.observe(userId).first()) {
+        when (val memberResult: CustomResult<AggregateRoot, Exception> = memberRepository.observe(
+            DocumentId.from(userId)
+        ).first()) {
             is CustomResult.Success -> {
                 val member : Member = memberResult.data as Member
                 member.updateRoles(roleIds.map { DocumentId(it) })

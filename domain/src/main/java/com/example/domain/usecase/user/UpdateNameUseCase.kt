@@ -1,19 +1,15 @@
 package com.example.domain.usecase.user
 
+
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Loading.getOrDefault
-import com.example.core_common.result.CustomResult.Loading.getOrThrow
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.user.UserName
-import com.example.domain.model.ui.sealed_class.UserNameResult
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
-import java.util.NoSuchElementException
-
-
 import javax.inject.Inject
 
 
@@ -36,11 +32,11 @@ class UpdateNameUseCase @Inject constructor(
      * 사용자의 닉네임을 업데이트합니다.
      * 닉네임은 공백을 제거하고, 길이 및 특수문자 등 유효성을 검사합니다.
      *
-     * @param newNickname 변경할 새 닉네임
+     * @param username 변경할 새 닉네임
      * @return 성공 시 성공 결과가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(newNickname: String): CustomResult<com.example.domain.model.base.User, Exception> {
-        val trimmedNickname = newNickname.trim()
+    suspend operator fun invoke(username: UserName): CustomResult<User, Exception> {
+        val trimmedNickname = username.trim()
 
         // 1. Validate nickname format
         if (trimmedNickname.isBlank()) {
@@ -95,7 +91,7 @@ class UpdateNameUseCase @Inject constructor(
             is CustomResult.Progress -> return CustomResult.Progress(userResult.progress)
         }
 
-        user.changeName(UserName(trimmedNickname))
+        user.changeName(trimmedNickname)
         return when ( val userResult = userRepository.save(user)){
             is CustomResult.Success -> {
                 EventDispatcher.publish(user)

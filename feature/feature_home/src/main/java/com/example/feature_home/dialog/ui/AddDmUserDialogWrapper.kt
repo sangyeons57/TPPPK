@@ -5,6 +5,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_home.dialog.viewmodel.AddDmUserDialogViewModel
 import com.example.feature_home.dialog.viewmodel.AddDmUserEvent
 import kotlinx.coroutines.flow.collectLatest
@@ -19,7 +21,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun AddDmUserDialogWrapper(
     onDismiss: () -> Unit,
-    onNavigateToDm: (String) -> Unit,
+    onNavigateToDm: (DocumentId) -> Unit,
     onShowSnackbar: (String) -> Unit,
     viewModel: AddDmUserDialogViewModel = hiltViewModel()
 ) {
@@ -47,7 +49,7 @@ fun AddDmUserDialogWrapper(
         onDismiss = viewModel::dismiss,
         onSearch = viewModel::searchUser,
         username = uiState.username,
-        onUsernameChange = { viewModel.onUsernameChange(it) },
+        onUsernameChange = { viewModel.onUsernameChange(UserName(it)) },
         isLoading = uiState.isLoading,
         errorMessage = uiState.errorMessage
     )

@@ -1,6 +1,7 @@
 package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.MemberRepository
@@ -12,14 +13,14 @@ import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCaseImpl
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import com.example.domain.usecase.project.ObserveProjectMembersUseCaseImpl
-import com.example.domain.usecase.project.member.UpdateMemberRolesUseCase
-import com.example.domain.usecase.project.member.UpdateMemberRolesUseCaseImpl
 import com.example.domain.usecase.project.member.AddProjectMemberUseCase
 import com.example.domain.usecase.project.member.AddProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.member.GetProjectMemberUseCase
 import com.example.domain.usecase.project.member.GetProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.member.RemoveProjectMemberUseCase
 import com.example.domain.usecase.project.member.RemoveProjectMemberUseCaseImpl
+import com.example.domain.usecase.project.member.UpdateMemberRolesUseCase
+import com.example.domain.usecase.project.member.UpdateMemberRolesUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,10 +41,10 @@ class ProjectMemberUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 멤버 관리 UseCase 그룹
      */
-    fun createForProject(projectId: String): ProjectMemberUseCases {
+    fun createForProject(projectId: DocumentId): ProjectMemberUseCases {
         val memberRepository = memberRepositoryFactory.create(
             MemberRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectMembers(projectId)
+                collectionPath = CollectionPath.projectMembers(projectId.value)
             )
         )
 
@@ -95,7 +96,7 @@ class ProjectMemberUseCaseProvider @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return 프로젝트 멤버 관리 UseCase 그룹
      */
-    fun createForCurrentUser(projectId: String): ProjectMemberUseCases {
+    fun createForCurrentUser(projectId: DocumentId): ProjectMemberUseCases {
         return createForProject(projectId)
     }
 
@@ -106,7 +107,7 @@ class ProjectMemberUseCaseProvider @Inject constructor(
      * @param memberId 멤버 ID
      * @return 멤버별 UseCase 그룹
      */
-    fun createForMember(projectId: String, memberId: String): ProjectMemberUseCases {
+    fun createForMember(projectId: DocumentId, memberId: String): ProjectMemberUseCases {
         return createForProject(projectId)
     }
 }

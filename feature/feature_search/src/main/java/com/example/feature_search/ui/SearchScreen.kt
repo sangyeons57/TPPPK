@@ -1,17 +1,50 @@
 package com.example.feature_search.ui
 
+// Removed direct Coil imports
+// Domain 모델 및 ViewModel 관련 요소 Import
+// 네비게이션 관련 임포트 업데이트
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear // 검색어 지우기
-import androidx.compose.material.icons.filled.Search // 검색 아이콘
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,25 +61,19 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
-// Removed direct Coil imports
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavDestination
-import com.example.core_navigation.destination.AppRoutes
-import com.example.core_ui.components.user.UserProfileImage // Import the new composable
-import com.example.core_navigation.core.NavigationCommand
-import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.core_ui.components.buttons.DebouncedBackButton
+import com.example.core_ui.components.user.UserProfileImage
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.search.MessageResult
 import com.example.domain.model.ui.search.SearchResultItem
 import com.example.domain.model.ui.search.SearchScope
 import com.example.domain.model.ui.search.UserResult
-import java.time.Instant
-// Domain 모델 및 ViewModel 관련 요소 Import
 import com.example.feature_search.viewmodel.SearchEvent
 import com.example.feature_search.viewmodel.SearchUiState
 import com.example.feature_search.viewmodel.SearchViewModel
-// 네비게이션 관련 임포트 업데이트
 import kotlinx.coroutines.flow.collectLatest
+import java.time.Instant
 
 /**
  * SearchScreen: 검색 화면 (Stateful)
@@ -60,7 +87,7 @@ fun SearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val keyboardController = LocalSoftwareKeyboardController.current
-    val context = LocalContext.current
+    LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val focusRequester = remember { FocusRequester() }
     
@@ -415,7 +442,7 @@ private fun SearchScreenPreview_Empty() {
 @Preview(showBackground = true, name = "Search Screen Loading")
 @Composable
 private fun SearchScreenPreview_Loading() {
-    val previewUiState = SearchUiState(query = "검색중", isLoading = true)
+    SearchUiState(query = "검색중", isLoading = true)
     // ... (Scaffold 구조는 위와 유사하게) ...
     TeamnovaPersonalProjectProjectingKotlinTheme {
         Scaffold(

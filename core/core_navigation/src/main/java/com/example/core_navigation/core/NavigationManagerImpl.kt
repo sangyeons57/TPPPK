@@ -50,6 +50,14 @@ class NavigationManagerImpl @Inject constructor(
 
     override fun getChildNavController(): NavHostController? = activeChildNavController
 
+    override fun getResultManager(): NavigationResultManager = resultManager
+
+    override fun saveScreenState(screenKey: String, state: android.os.Bundle) {
+        Log.d("NavigationManager", "Saving screen state for key: $screenKey")
+        // TODO: Implement screen state persistence if needed
+        // For now, this is a no-op implementation
+    }
+
     // ===== Core Navigation =====
     
     override fun navigateBack(): Boolean {
@@ -182,6 +190,46 @@ class NavigationManagerImpl @Inject constructor(
 
     override fun navigateToFriends(navOptions: NavOptions?) {
         navigateTo(FriendsListRoute, navOptions)
+    }
+
+    override fun navigateToFindPassword(navOptions: NavOptions?) {
+        navigateTo(FindPasswordRoute, navOptions)
+    }
+
+    override fun navigateToHome(navOptions: NavOptions?) {
+        navigateToMain(navOptions)
+    }
+
+    override fun navigateToMessageDetail(
+        channelId: String,
+        messageId: String?,
+        navOptions: NavOptions?
+    ) {
+        if (messageId != null) {
+            navigateTo(MessageDetailRoute(channelId, messageId), navOptions)
+        } else {
+            navigateTo(ChatRoute(channelId), navOptions)
+        }
+    }
+
+    override fun navigateToTermsOfService(navOptions: NavOptions?) {
+        navigateTo(TermsOfServiceRoute, navOptions)
+    }
+
+    override fun navigateToPrivacyPolicy(navOptions: NavOptions?) {
+        navigateTo(PrivacyPolicyRoute, navOptions)
+    }
+
+    override fun navigateToEditMember(projectId: String, userId: String, navOptions: NavOptions?) {
+        navigateTo(EditMemberRoute(projectId, userId), navOptions)
+    }
+
+    override fun navigateToEditSchedule(scheduleId: String, navOptions: NavOptions?) {
+        navigateTo(EditScheduleRoute(scheduleId), navOptions)
+    }
+
+    override fun navigateToAcceptFriends(navOptions: NavOptions?) {
+        navigateTo(AcceptFriendsRoute, navOptions)
     }
 
     override fun <T> setResult(key: String, result: T) {

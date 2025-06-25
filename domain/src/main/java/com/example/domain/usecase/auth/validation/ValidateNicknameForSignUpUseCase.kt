@@ -2,9 +2,9 @@ package com.example.domain.usecase.auth.validation
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.ui.sealed_class.UserNameResult
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
-import java.util.NoSuchElementException
 import javax.inject.Inject
 
 /**
@@ -26,25 +26,25 @@ class ValidateNicknameForSignUpUseCase @Inject constructor(
     /**
      * Validates the given nickname string for sign-up.
      *
-     * @param nickname The nickname string to validate.
+     * @param username The nickname string to validate.
      * @return A [UserNameResult] indicating the outcome of the validation.
      */
-    suspend operator fun invoke(nickname: String): UserNameResult {
-        if (nickname.isBlank()) {
+    suspend operator fun invoke(username: UserName): UserNameResult {
+        if (username.isBlank()) {
             return UserNameResult.Empty
         }
-        if (nickname.length < MIN_NICKNAME_LENGTH) {
+        if (username.length < MIN_NICKNAME_LENGTH) {
             return UserNameResult.TooShort(MIN_NICKNAME_LENGTH)
         }
-        if (nickname.length > MAX_NICKNAME_LENGTH) {
+        if (username.length > MAX_NICKNAME_LENGTH) {
             return UserNameResult.TooLong(MAX_NICKNAME_LENGTH)
         }
-        if (!nickname.matches(ALLOWED_NICKNAME_REGEX)) {
+        if (!username.matches(ALLOWED_NICKNAME_REGEX)) {
             return UserNameResult.InvalidCharacters
         }
 
         return try {
-            when (val result = userRepository.observeByName(name = nickname).first()) {
+            when (val result = userRepository.observeByName(name = username).first()) {
                 is CustomResult.Success -> {
                     // If a user is found, the nickname is already taken.
                     UserNameResult.NicknameAlreadyExists

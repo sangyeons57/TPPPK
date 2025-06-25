@@ -5,6 +5,9 @@ import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.FindPasswordRoute
+import com.example.core_navigation.core.MainContainerRoute
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain.provider.auth.AuthValidationUseCaseProvider
@@ -37,27 +40,11 @@ data class LoginUiState(
  */
 sealed class LoginEvent {
     /**
-     * 비밀번호 찾기 화면으로 이동 이벤트
-     */
-    object NavigateToFindPassword : LoginEvent()
-    
-    /**
-     * 회원가입 화면으로 이동 이벤트
-     */
-    object NavigateToSignUp : LoginEvent()
-    
-    /**
-     * 로그인 성공 시 발생하는 이벤트
-     * @param userId 로그인한 사용자의 ID
-     */
-    data class LoginSuccess(val userId: String) : LoginEvent()
-    
-    /**
      * 스낵바 메시지 표시 이벤트
      * @param message 표시할 메시지
      */
     data class ShowSnackbar(val message: String) : LoginEvent()
-    
+
     /**
      * 특정 입력 필드로 포커스 요청 이벤트
      * @param target 포커스 대상 필드
@@ -71,7 +58,8 @@ sealed class LoginEvent {
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
-    private val authValidationUseCaseProvider: AuthValidationUseCaseProvider
+    private val authValidationUseCaseProvider: AuthValidationUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
@@ -161,9 +149,8 @@ class LoginViewModel @Inject constructor(
 
             when (result) {
                 is CustomResult.Success -> {
-                    // 로그인 성공 (LoginUseCase에서 이미 계정 상태 확인 완료)
-                    val userSession = result.data
-                    _eventFlow.emit(LoginEvent.LoginSuccess(userSession.userId))
+                    // 로그인 성공 -> 메인 화면으로 이동 (백스택 클리어)
+                    navigationManger.navigateToClearingBackStack(MainContainerRoute)
                 }
                 is CustomResult.Failure -> {
                     val exception = result.error
@@ -188,17 +175,13 @@ class LoginViewModel @Inject constructor(
      * 비밀번호 찾기 버튼 클릭 처리
      */
     fun onFindPasswordClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(LoginEvent.NavigateToFindPassword)
-        }
+        navigationManger.navigateTo(FindPasswordRoute)
     }
 
     /**
      * 회원가입 버튼 클릭 처리
      */
     fun onSignUpClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(LoginEvent.NavigateToSignUp)
-        }
+        navigationManger.navigateToSignUp()
     }
 }

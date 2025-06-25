@@ -5,14 +5,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
-import com.example.domain.usecase.user.UpdateUserImageUseCase
-import com.example.domain.usecase.user.UpdateUserProfileParams
-import com.example.domain.usecase.user.UploadProfileImageUseCase
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,7 +33,6 @@ data class EditProfileUiState(
  * 프로필 편집 화면의 이벤트
  */
 sealed interface EditProfileEvent {
-    object NavigateBack : EditProfileEvent
     object RequestImagePick : EditProfileEvent
     data class ShowSnackbar(val message: String) : EditProfileEvent
 }
@@ -39,11 +42,13 @@ sealed interface EditProfileEvent {
  */
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
-    private val getCurrentUserUseCase: GetCurrentUserStreamUseCase,
-    private val updateUserImageUseCase: UpdateUserImageUseCase,
-    private val uploadProfileImageUseCase: UploadProfileImageUseCase,
-    private val dispatcherProvider: DispatcherProvider
+    private val userUseCaseProvider: UserUseCaseProvider,
+    private val dispatcherProvider: DispatcherProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
+
+    // Provider를 통해 생성된 UseCase 그룹
+    private val userUseCases = userUseCaseProvider.createForUser()
 
     private val _uiState = MutableStateFlow(EditProfileUiState(isLoading = true))
     val uiState: StateFlow<EditProfileUiState> = _uiState.asStateFlow()
@@ -60,7 +65,7 @@ class EditProfileViewModel @Inject constructor(
      */
     private fun loadUserProfile() {
         viewModelScope.launch(dispatcherProvider.io) {
-            getCurrentUserUseCase().collect { result ->
+            userUseCases.getCurrentUserStreamUseCase().collect { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val loadedUser = result.data
@@ -120,7 +125,7 @@ class EditProfileViewModel @Inject constructor(
 
         viewModelScope.launch(dispatcherProvider.io) {
             _uiState.update { it.copy(isLoading = true) }
-            val result = uploadProfileImageUseCase(uri)
+            val result = userUseCases.uploadProfileImageUseCase(uri)
             
             when (result) {
                 is CustomResult.Success -> {
@@ -163,13 +168,8 @@ class EditProfileViewModel @Inject constructor(
                 }
 
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-                val params = UpdateUserProfileParams(
-                    name = currentUser.name.value,
-                    profileImageUrl = currentUser.profileImageUrl?.value
-                )
-                
-                val result = updateUserImageUseCase(params)
-                when (result) {
+                // Update user name first
+                when (val result = userUseCases.updateNameUseCase(currentUser.name)) {
                     is CustomResult.Success -> {
                         val updatedUser = result.data
                         _uiState.update { it.copy(
@@ -177,7 +177,7 @@ class EditProfileViewModel @Inject constructor(
                             isLoading = false
                         )}
                         _eventFlow.emit(EditProfileEvent.ShowSnackbar("Profile updated successfully"))
-                        _eventFlow.emit(EditProfileEvent.NavigateBack)
+                        navigateBack()
                     }
                     is CustomResult.Failure -> {
                         val exception = result.error
@@ -205,5 +205,12 @@ class EditProfileViewModel @Inject constructor(
      */
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    /**
+     * 뒤로가기 네비게이션 처리
+     */
+    fun navigateBack() {
+        navigationManger.navigateBack()
     }
 }

@@ -2,9 +2,9 @@ package com.example.domain.usecase.user
 
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.UserRepository
 import kotlinx.coroutines.flow.first
-import java.util.NoSuchElementException
 import javax.inject.Inject
 
 /**
@@ -17,7 +17,7 @@ interface CheckNicknameAvailabilityUseCase {
      * @param nickname 확인할 닉네임
      * @return 성공 시 사용 가능 여부(Boolean)가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(nickname: String): CustomResult<Boolean, Exception>
+    suspend operator fun invoke(nickname: UserName): CustomResult<Boolean, Exception>
 }
 
 /**
@@ -31,15 +31,16 @@ class CheckNicknameAvailabilityUseCaseImpl @Inject constructor(
     /**
      * 지정된 닉네임의 사용 가능 여부를 확인합니다.
      *
-     * @param nickname 확인할 닉네임
+     * @param username 확인할 닉네임
      * @return 성공 시 사용 가능 여부(Boolean)가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    override suspend operator fun invoke(nickname: String): CustomResult<Boolean, Exception> {
+    override suspend operator fun invoke(username: UserName): CustomResult<Boolean, Exception> {
         //("CheckNicknameAvailabilityUseCase", "Checking availability for nickname: $nickname")
         // findByNameStream returns a Flow. We are interested in the first emission
         // to determine if a user with that exact name already exists.
         return try {
-            val result = userRepository.observeByName(name = nickname).first() // Take the first emission
+            val result =
+                userRepository.observeByName(name = username).first() // Take the first emission
             when (result) {
                 is CustomResult.Success -> {
                     // If a user is found, the nickname is NOT available.

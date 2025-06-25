@@ -10,7 +10,7 @@ import javax.inject.Inject
  * 특정 프로젝트의 멤버 목록 변경 사항을 실시간으로 관찰하는 유스케이스 인터페이스
  */
 interface ObserveProjectMembersUseCase {
-    operator fun invoke(projectId: String): Flow<CustomResult<List<Member>, Exception>>
+    operator fun invoke(): Flow<CustomResult<List<Member>, Exception>>
 }
 
 /**
@@ -26,7 +26,7 @@ class ObserveProjectMembersUseCaseImpl @Inject constructor(
      * @param projectId 프로젝트 ID
      * @return Flow<List<ProjectMember>> 멤버 목록 스트림
      */
-    override fun invoke(projectId: String): Flow<CustomResult<List<Member>, Exception>> {
+    override fun invoke(): Flow<CustomResult<List<Member>, Exception>> {
         return projectMemberRepository.getProjectMembersStream()
     }
 } 

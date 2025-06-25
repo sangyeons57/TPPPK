@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.AppRoutes
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
@@ -44,8 +45,6 @@ data class EditScheduleUiState(
 
 // 일정 수정 화면 이벤트
 sealed class EditScheduleEvent {
-    object NavigateBack : EditScheduleEvent()
-    object SaveSuccessAndRequestBackNavigation : EditScheduleEvent() // ADDED
     data class ShowSnackbar(val message: String) : EditScheduleEvent()
 }
 
@@ -55,7 +54,8 @@ sealed class EditScheduleEvent {
 @HiltViewModel
 class EditScheduleViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val scheduleUseCaseProvider: ScheduleUseCaseProvider
+    private val scheduleUseCaseProvider: ScheduleUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
@@ -207,7 +207,7 @@ class EditScheduleViewModel @Inject constructor(
                 viewModelScope.launch {
                     _uiState.update { it.copy(isSaving = false) }
                     _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정이 저장되었습니다."))
-                    _eventFlow.emit(EditScheduleEvent.SaveSuccessAndRequestBackNavigation)
+                    navigationManger.navigateBack()
                 }
             }.onFailure { exception ->
                 viewModelScope.launch {
@@ -224,8 +224,6 @@ class EditScheduleViewModel @Inject constructor(
     }
 
     fun onNavigateBack() {
-        viewModelScope.launch {
-            _eventFlow.emit(EditScheduleEvent.NavigateBack)
-        }
+        navigationManger.navigateBack()
     }
 } 

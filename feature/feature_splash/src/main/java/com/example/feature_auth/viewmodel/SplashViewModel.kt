@@ -4,10 +4,16 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -39,7 +45,8 @@ sealed class SplashEvent {
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
@@ -69,28 +76,23 @@ class SplashViewModel @Inject constructor(
                 Log.d("SplashViewModel", "Auth check result: $result")
 
                 result.onSuccess { isSuccess ->
-                    viewModelScope.launch {
-                        if (isSuccess) {
-                            _eventFlow.emit(SplashEvent.NavigateToMain)
-                        } else {
-                            _eventFlow.emit(SplashEvent.NavigateToLogin)
-                        }
+                    if (isSuccess) {
+                        navigationManger.navigateToHome()
+                    } else {
+                        navigationManger.navigateToLogin()
                     }
                 }.onFailure { exception ->
-                    viewModelScope.launch {
-                        // Handle failure (e.g., network error during check)
-                        _uiState.update { it.copy(isLoading = false) }
-                        // Optionally show an error message or allow retry
-                         _eventFlow.emit(SplashEvent.NavigateToLogin) // Or show error state
-                        Log.e("SplashViewModel", "Auth check failed: $exception")
-                         // Log error: Log.e("SplashViewModel", "Auth check failed", exception)
-                    }
+                    // Handle failure (e.g., network error during check)
+                    _uiState.update { it.copy(isLoading = false) }
+                    // Optionally show an error message or allow retry
+                    navigationManger.navigateToLogin() // Or show error state
+                    Log.e("SplashViewModel", "Auth check failed: $exception")
                 }
 
             } catch (e: Exception) { // Catch potential unexpected errors
                 _uiState.update { it.copy(isLoading = false) }
-                 _eventFlow.emit(SplashEvent.NavigateToLogin) // Fallback to Login
-                  Log.e("SplashViewModel", "Unexpected error", e)
+                navigationManger.navigateToLogin() // Fallback to Login
+                Log.e("SplashViewModel", "Unexpected error", e)
             }
         }
     }

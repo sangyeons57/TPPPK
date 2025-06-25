@@ -3,6 +3,7 @@ package com.example.domain.usecase.project.role
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.ui.project.RoleSortOption
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.ProjectRoleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -22,7 +23,7 @@ interface GetProjectRolesUseCase {
      * @return A [Flow] emitting a list of [Role] objects.
      */
     suspend operator fun invoke(
-        projectId: String,
+        projectId: DocumentId,
         sortBy: RoleSortOption? = null
     ): Flow<CustomResult<List<Role>, Exception>>
 }
@@ -31,7 +32,7 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
 ) : GetProjectRolesUseCase {
 
     override suspend fun invoke(
-        projectId: String,
+        projectId: DocumentId,
         sortBy: RoleSortOption?
     ): Flow<CustomResult<List<Role>, Exception>> {
         return when (val customResult = projectRoleRepository.observeAll().first()){

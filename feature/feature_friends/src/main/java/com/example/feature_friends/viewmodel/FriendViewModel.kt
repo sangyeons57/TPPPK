@@ -6,13 +6,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.FriendStatus
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.dm.DMUseCaseProvider
 import com.example.domain.provider.friend.FriendUseCaseProvider
 import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
@@ -20,12 +32,12 @@ import javax.inject.Inject
 // --- 데이터 모델 ---
 data class FriendItem(
     val user: User?,
-    val friendId: String,
+    val friendId: UserId,
     val status: FriendStatus,
-    val profileImageUrl: String?,
+    val profileImageUrl: ImageUrl?,
     val requestedAt: Instant?,
     val acceptedAt: Instant?,
-    val displayName: String // UI에 표시될 이름 (실제로는 User 정보와 조합 필요)
+    val displayName: UserName // UI에 표시될 이름 (실제로는 User 정보와 조합 필요)
 )
 
 // --- UI 상태 ---
@@ -38,8 +50,6 @@ data class FriendsListUiState(
 
 // --- 이벤트 ---
 sealed class FriendsEvent {
-    object NavigateToAcceptFriends : FriendsEvent() // 친구 수락 화면으로 이동
-    data class NavigateToChat(val channelId: String) : FriendsEvent() // 친구와의 DM 채팅방으로 이동
     data class ShowSnackbar(val message: String) : FriendsEvent()
 }
 
@@ -49,7 +59,8 @@ class FriendViewModel @Inject constructor(
     private val friendUseCaseProvider: FriendUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val dmUseCaseProvider: DMUseCaseProvider,
-    private val authUtil: AuthUtil
+    private val authUtil: AuthUtil,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹들
@@ -62,7 +73,7 @@ class FriendViewModel @Inject constructor(
         set(value) {
             field = value
             if (value.isNotBlank()) {
-                dmUseCases = dmUseCaseProvider.createForUser(value)
+                dmUseCases = dmUseCaseProvider.createForUser(UserId(value))
             }
         }
 
@@ -85,7 +96,7 @@ class FriendViewModel @Inject constructor(
         Log.d("FriendViewModel", "1")
         viewModelScope.launch {
             Log.d("FriendViewModel", "2")
-            friendUseCases.getFriendsListStreamUseCase(currentUserId)
+            friendUseCases.getFriendsListStreamUseCase()
                 .onStart {
                     Log.d("FriendViewModel", "3")
                     _uiState.update { it.copy(isLoading = true, error = null) }
@@ -123,14 +134,14 @@ class FriendViewModel @Inject constructor(
                                 if (user != null) {
                                     friendItems.add(FriendItem(
                                         user = user,
-                                        friendId = friend.id,
+                                        friendId = UserId.from(friend.id),
                                         status = friend.status,
-                                        profileImageUrl = friend.profileImageUrl
-                                            ?: user.profileImageUrl?.value,
+                                        profileImageUrl = friend.profileImageUrl,
                                         requestedAt = friend.requestedAt,
                                         acceptedAt = friend.acceptedAt,
-                                        displayName = user.name.value
-                                    ))
+                                        displayName = user.name
+                                    )
+                                    )
                                 }
                             }
                             
@@ -170,13 +181,13 @@ class FriendViewModel @Inject constructor(
     /**
      * 친구 아이템 클릭 시 호출 (DM 채팅방으로 이동)
      */
-    fun onFriendClick(friendId: String) {
+    fun onFriendClick(friendId: UserId) {
         viewModelScope.launch {
-            val result = dmUseCases.getDmChannelUseCase(friendId)
+            val result = dmUseCases.getDmChannelUseCase(friendId.value)
             when (result) {
                 is CustomResult.Success -> {
-                    val channelId = result.data
-                    _eventFlow.emit(FriendsEvent.NavigateToChat(channelId))
+                    val dmChannel = result.data
+                    navigationManger.navigateToChat(dmChannel.id.value)
                 }
                 is CustomResult.Failure -> {
                     val error = result.error
@@ -193,9 +204,7 @@ class FriendViewModel @Inject constructor(
      * '친구 요청 수락하기' 버튼 클릭 시 호출
      */
     fun onAcceptFriendClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(FriendsEvent.NavigateToAcceptFriends)
-        }
+        navigationManger.navigateToAcceptFriends()
     }
 
     /**

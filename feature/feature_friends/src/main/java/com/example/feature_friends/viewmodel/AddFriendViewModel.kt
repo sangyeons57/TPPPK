@@ -5,17 +5,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
-import com.example.domain.model.base.User
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.friend.FriendUseCaseProvider
 import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // --- UI 상태 ---
 data class AddFriendUiState(
-    val username: String = "", // 친구 요청 보낼 사용자 이름
+    val username: UserName = UserName.EMPTY, // 친구 요청 보낼 사용자 이름
     val isLoading: Boolean = false,
     val error: String? = null, // 서버 응답 에러 메시지
     val infoMessage: String? = null, // 성공 또는 정보 메시지
@@ -54,7 +59,14 @@ class AddFriendViewModel @Inject constructor(
      * 사용자 이름 입력 변경 시 호출
      */
     fun onUsernameChange(name: String) {
-        _uiState.update { it.copy(username = name, error = null, infoMessage = null, addFriendSuccess = false) }
+        _uiState.update {
+            it.copy(
+                username = UserName(name),
+                error = null,
+                infoMessage = null,
+                addFriendSuccess = false
+            )
+        }
     }
 
     /**
@@ -64,7 +76,7 @@ class AddFriendViewModel @Inject constructor(
         val usernameToSearch = _uiState.value.username.trim()
         
         // 검색어 유효성 검사
-        if (!friendUseCases.validateSearchQueryUseCase(usernameToSearch)) {
+        if (!friendUseCases.validateSearchQueryUseCase(usernameToSearch.value)) {
             _uiState.update { it.copy(error = "유효한 사용자 이름을 입력해주세요 (2글자 이상).") }
             return
         }

@@ -30,9 +30,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        //jvmTarget = libs.versions.jvmTarget.get()
-    }
     buildFeatures {
         compose = true
     }

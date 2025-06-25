@@ -1,29 +1,40 @@
 package com.example.feature_project_setting_screen.viewmodel.viewmodel
 
+// Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
+// import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.exceptionOrNull
 import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getRequiredString
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-// Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
-import com.example.domain.model.base.Category
-import com.example.domain.model.base.ProjectChannel
-// import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
-import com.example.domain.usecase.project.* // Import project use cases
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.usecase.project.channel.DeleteChannelUseCase
+import com.example.domain.usecase.project.core.DeleteProjectUseCase
+import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
+import com.example.domain.usecase.project.core.RenameProjectUseCase
+import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
+import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 // --- UI 상태 ---
 data class ProjectSettingUiState(
-    val projectId: String = "",
-    val projectName: String = "",
+    val projectId: DocumentId,
+    val projectName: ProjectName = ProjectName.EMPTY,
     val categories: List<CategoryUiModel> = emptyList(), // Changed to CategoryUiModel
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -35,12 +46,21 @@ data class ProjectSettingUiState(
 sealed class ProjectSettingEvent {
     object NavigateBack : ProjectSettingEvent()
     data class ShowSnackbar(val message: String) : ProjectSettingEvent()
-    data class NavigateToEditCategory(val projectId: String, val categoryId: String) : ProjectSettingEvent()
-    data class NavigateToCreateCategory(val projectId: String) : ProjectSettingEvent()
-    data class NavigateToEditChannel(val projectId: String, val categoryId: String, val channelId: String) : ProjectSettingEvent()
-    data class NavigateToCreateChannel(val projectId: String, val categoryId: String) : ProjectSettingEvent()
-    data class NavigateToMemberList(val projectId: String) : ProjectSettingEvent()
-    data class NavigateToRoleList(val projectId: String) : ProjectSettingEvent()
+    data class NavigateToEditCategory(val projectId: DocumentId, val categoryId: String) :
+        ProjectSettingEvent()
+
+    data class NavigateToCreateCategory(val projectId: DocumentId) : ProjectSettingEvent()
+    data class NavigateToEditChannel(
+        val projectId: DocumentId,
+        val categoryId: String,
+        val channelId: String
+    ) : ProjectSettingEvent()
+
+    data class NavigateToCreateChannel(val projectId: DocumentId, val categoryId: String) :
+        ProjectSettingEvent()
+
+    data class NavigateToMemberList(val projectId: DocumentId) : ProjectSettingEvent()
+    data class NavigateToRoleList(val projectId: DocumentId) : ProjectSettingEvent()
     data class ShowDeleteCategoryConfirm(val category: CategoryUiModel) : ProjectSettingEvent() // Changed
     data class ShowDeleteChannelConfirm(val channel: ChannelUiModel) : ProjectSettingEvent() // Changed
 }
@@ -57,7 +77,8 @@ class ProjectSettingViewModel @Inject constructor(
     private val getProjectStream: GetProjectDetailsStreamUseCase,
 ) : ViewModel() {
 
-    val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    val projectId: DocumentId = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+        .let { DocumentId.from((it)) }
 
     private val _uiState = MutableStateFlow(ProjectSettingUiState(projectId = projectId, isLoading = true))
     val uiState: StateFlow<ProjectSettingUiState> = _uiState.asStateFlow()
@@ -222,14 +243,20 @@ class ProjectSettingViewModel @Inject constructor(
                     _uiState.update { it.copy(projectName = result.data.name, showRenameProjectDialog = true) }
                 }
                 else -> {
-                    _uiState.update { it.copy(projectName = "", showRenameProjectDialog = false) }
+                    _uiState.update {
+                        it.copy(
+                            projectName = ProjectName.EMPTY,
+                            showRenameProjectDialog = false
+                        )
+                    }
                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 정보를 가지고 오는데 실패했습니다."))
                 }
 
             }
         }
     }
-    fun confirmRenameProject(newName: String) {
+
+    fun confirmRenameProject(newName: ProjectName) {
         dismiss()
         val trimmedNewName = newName.trim()
         if (trimmedNewName.isBlank()) {
