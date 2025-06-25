@@ -49,7 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.destination.AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
 import com.example.feature_schedule.viewmodel.AddScheduleEvent
 import com.example.feature_schedule.viewmodel.AddScheduleUiState
 import com.example.feature_schedule.viewmodel.AddScheduleViewModel
@@ -330,8 +333,8 @@ private fun AddScheduleContentPreview() {
             uiState = AddScheduleUiState(
                 selectedDate = LocalDate.now(),
                 availableProjects = listOf(
-                    ProjectSelectionItem("p1", "프로젝트 1"),
-                    ProjectSelectionItem("p2", "프로젝트 2")
+                    ProjectSelectionItem(DocumentId("p1"), Name("프로젝트 1")),
+                    ProjectSelectionItem(DocumentId("p2"), Name("프로젝트 2"))
                 ),
                 scheduleTitle = "미팅"
             ),

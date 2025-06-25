@@ -134,4 +134,10 @@ interface NavigationManger {
      * Convenience method that sets result and navigates back in one call.
      */
     fun <T> navigateBackWithResult(key: String, result: T): Boolean
+    
+    /**
+     * Sets a result that can be observed by the previous screen.
+     * Used for passing data back in navigation flow.
+     */
+    fun <T> setResult(key: String, result: T)
 } 

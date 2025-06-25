@@ -184,4 +184,16 @@ class NavigationManagerImpl @Inject constructor(
         navigateTo(FriendsListRoute, navOptions)
     }
 
+    override fun <T> setResult(key: String, result: T) {
+        try {
+            val currentController = activeChildNavController ?: parentNavController
+            currentController?.let { controller ->
+                resultManager.setResult(controller, key, result)
+                Log.d("NavigationManager", "Set result for key: $key")
+            } ?: Log.e("NavigationManager", "No NavController available to set result")
+        } catch (e: Exception) {
+            Log.e("NavigationManager", "Failed to set result for key $key: ${e.message}")
+        }
+    }
+
 }

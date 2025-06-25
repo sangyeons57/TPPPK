@@ -8,7 +8,7 @@ import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.data.project.RolePermission
-import com.example.domain.usecase.project.DeleteRoleUseCase
+import com.example.domain.usecase.project.role.DeleteRoleUseCase
 import com.example.domain.usecase.project.role.CreateRoleUseCase
 import com.example.domain.usecase.project.role.GetRoleDetailsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel

@@ -321,4 +321,11 @@ object AppRoutes {
         // FCM 테스트 화면
         const val TEST = "fcm/test"
     }
+
+    /**
+     * Navigation result keys for passing data between screens
+     */
+    object NavigationKeys {
+        const val REFRESH_SCHEDULE_LIST_KEY = "refresh_schedule_list"
+    }
 }
