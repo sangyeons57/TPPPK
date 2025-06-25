@@ -64,9 +64,9 @@ class CreateChannelViewModel @Inject constructor(
     /**
      * 채널 이름 입력 변경 시 호출
      */
-    fun onChannelNameChange(name: Name) {
+    fun onChannelNameChange(name: String) {
         _uiState.update {
-            it.copy(channelName = name, error = null) // 에러 초기화
+            it.copy(channelName = Name.from(name), error = null) // 에러 초기화
         }
     }
 

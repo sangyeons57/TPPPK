@@ -117,19 +117,28 @@ class EditProjectChannelViewModel @Inject constructor(
     private fun loadChannelDetails(chanId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = projectChannelUseCases.getProjectChannelUseCase(chanId).first()) {
-                is CustomResult.Success -> {
-                    val channel = result.data
-                    originalChannel = channel // Store the original channel
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            initialChannelName = channel.channelName.value,
-                            initialChannelOrder = channel.order.value,
-                            channelNameInput = channel.channelName.value,
-                            channelOrderInput = channel.order.value.toString(),
-                            generalError = null
-                        )
+            when (val result = projectChannelUseCases?.getProjectChannelUseCase?.invoke(chanId)?.first()) {
+                is CustomResult.Success<*> -> {
+                    val channel = result.data as? ProjectChannel
+                    if (channel != null) {
+                        originalChannel = channel // Store the original channel
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                initialChannelName = channel.channelName.value,
+                                initialChannelOrder = channel.order.value,
+                                channelNameInput = channel.channelName.value,
+                                channelOrderInput = channel.order.value.toString(),
+                                generalError = null
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                generalError = "Invalid channel data received."
+                            )
+                        }
                     }
                     // After loading channel details, load the category context for validation
                     /**
@@ -138,15 +147,23 @@ class EditProjectChannelViewModel @Inject constructor(
                     }
                     **/
                 }
-                is CustomResult.Failure -> {
+                is CustomResult.Failure<*> -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            generalError = result.error.message ?: "Failed to load channel details."
+                            generalError = (result.error as? Exception)?.message ?: "Failed to load channel details."
                         )
                     }
                 }
                 is CustomResult.Loading, is CustomResult.Initial, is CustomResult.Progress -> Unit // Do nothing
+                null -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            generalError = "Failed to load channel details."
+                        )
+                    }
+                }
             }
         }
     }
@@ -239,15 +256,15 @@ class EditProjectChannelViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, isSaveAttempted = true, generalError = null, nameError = null, orderError = null) }
 
         viewModelScope.launch {
-            when (val result = projectChannelUseCases.updateProjectChannelUseCase(
+            when (val result = projectChannelUseCases?.updateProjectChannelUseCase?.invoke(
                 name = nameInput,
                 order = orderInputDouble
             )) {
-                is CustomResult.Success -> {
+                is CustomResult.Success<*> -> {
                     _eventFlow.emit(EditChannelEvent.SaveSuccess)
                 }
-                is CustomResult.Failure -> {
-                    val errorMessage = result.error.message ?: "Failed to update channel."
+                is CustomResult.Failure<*> -> {
+                    val errorMessage = (result.error as? Exception)?.message ?: "Failed to update channel."
                     if (errorMessage.contains("name", ignoreCase = true)) {
                         _uiState.update { it.copy(nameError = errorMessage) }
                     } else if (errorMessage.contains("order", ignoreCase = true)) {
@@ -258,6 +275,11 @@ class EditProjectChannelViewModel @Inject constructor(
                     _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
                 }
                 is CustomResult.Loading, is CustomResult.Initial, is CustomResult.Progress -> Unit // Do nothing
+                null -> {
+                    val errorMessage = "Failed to update channel."
+                    _uiState.update { it.copy(generalError = errorMessage) }
+                    _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
+                }
             }
             _uiState.update { it.copy(isLoading = false) }
         }

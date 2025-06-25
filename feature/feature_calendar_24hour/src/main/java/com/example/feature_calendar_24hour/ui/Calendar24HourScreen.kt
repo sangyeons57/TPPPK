@@ -183,10 +183,10 @@ fun Calendar24HourScreen(
     }
 
     navigationManger.getNavController()?.let { navController ->
-        ObserveNavigationResult<Boolean>(
-            resultManager = navigationManger.getResultManager(),
-            navController = navController,
-            key = AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
+        com.example.core_navigation.extension.ObserveNavigationResult<Boolean>(
+            navController,
+            navigationManger.getResultManager(),
+            AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
         ) { needsRefresh ->
             if (needsRefresh == true) { // Explicitly check for true
                 viewModel.refreshSchedules()
