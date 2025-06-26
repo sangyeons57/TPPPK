@@ -54,10 +54,6 @@ interface GetAuthErrorMessageUseCase {
  * Firebase 인증 오류 코드를 사용자 친화적인 메시지로 변환합니다.
  */
 class GetAuthErrorMessageUseCaseImpl @Inject constructor() : GetAuthErrorMessageUseCase {
-
-    companion object {
-        private val ERROR_CODE_REGEX = "ERROR_[A-Z_]+".toRegex()
-    }
     
     /**
      * 인증 오류 코드에 해당하는 메시지를 반환합니다.
@@ -116,7 +112,8 @@ class GetAuthErrorMessageUseCaseImpl @Inject constructor() : GetAuthErrorMessage
         val errorMessage = exception.message ?: return invoke(AuthErrorType.UNKNOWN_ERROR)
         
         // Firebase 오류 코드 패턴 추출: [ERROR_CODE]
-        val matchResult = ERROR_CODE_REGEX.find(errorMessage)
+        val errorCodeRegex = "ERROR_[A-Z_]+".toRegex()
+        val matchResult = errorCodeRegex.find(errorMessage)
         
         return if (matchResult != null) {
             invoke(matchResult.value)

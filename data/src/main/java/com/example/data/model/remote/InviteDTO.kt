@@ -20,20 +20,12 @@ import com.google.firebase.firestore.PropertyName
 data class InviteDTO(
     @DocumentId override val id: String = "",
     @get:PropertyName(INVITE_LINK) val inviteCode: String = "", // 고유한 초대 코드, 상수명은 INVITE_LINK
-    private val statusParam: InviteStatus = InviteStatus.ACTIVE, // "ACTIVE", "INACTIVE", "EXPIRED"
+    @get:PropertyName(STATUS) val status: InviteStatus = InviteStatus.ACTIVE, // "ACTIVE", "INACTIVE", "EXPIRED"
     @get:PropertyName(CREATED_BY) val createdBy: String = "", // 초대를 생성한 사용자의 ID
     @get:PropertyName(EXPIRES_AT) val expiresAt: Timestamp? = null, // 만료 시간 (null이면 무제한)
     @get:PropertyName(CREATED_AT) @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT) @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
 ) : DTO {
-    
-    @get:PropertyName(STATUS)
-    @set:PropertyName(STATUS)
-    var _statusString: String = statusParam.value
-        private set
-    
-    val status: InviteStatus
-        get() = InviteStatus.fromString(_statusString)
 
     companion object {
         const val COLLECTION_NAME = Invite.COLLECTION_NAME
@@ -48,7 +40,7 @@ data class InviteDTO(
             return InviteDTO(
                 id = invite.id.value,
                 inviteCode = invite.inviteCode.value,
-                statusParam = invite.status,
+                status = invite.status,
                 createdBy = invite.createdBy.value,
                 createdAt = DateTimeUtil.instantToFirebaseTimestamp(invite.createdAt),
                 expiresAt = invite.expiresAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
@@ -81,7 +73,7 @@ fun Invite.toDto(): InviteDTO {
     return InviteDTO(
         id = id.value,
         inviteCode = inviteCode.value,
-        statusParam = status,
+        status = status,
         createdBy = createdBy.value,
         createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         expiresAt = expiresAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},

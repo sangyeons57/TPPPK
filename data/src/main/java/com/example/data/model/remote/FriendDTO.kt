@@ -18,7 +18,8 @@ import com.google.firebase.firestore.PropertyName
 data class FriendDTO(
     @DocumentId override val id: String = "",
     // "requested", "accepted", "pending", "blocked"
-    private val statusParam: FriendStatus = FriendStatus.UNKNOWN,
+    @get:PropertyName(STATUS)
+    val status: FriendStatus = FriendStatus.UNKNOWN,
     @get:PropertyName(REQUESTED_AT)
     val requestedAt: Timestamp? = null,
     @get:PropertyName(ACCEPTED_AT)
@@ -32,14 +33,6 @@ data class FriendDTO(
     @get:PropertyName(UPDATED_AT)
     val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
-    
-    @get:PropertyName(STATUS)
-    @set:PropertyName(STATUS)
-    var _statusString: String = statusParam.value
-        private set
-    
-    val status: FriendStatus
-        get() = FriendStatus.fromString(_statusString)
 
     companion object {
         const val COLLECTION_NAME = Friend.COLLECTION_NAME
@@ -54,7 +47,7 @@ data class FriendDTO(
         fun from (friend: Friend): FriendDTO {
             return FriendDTO(
                 id = friend.id.value,
-                statusParam = friend.status,
+                status = friend.status,
                 requestedAt = friend.requestedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
                 acceptedAt = friend.acceptedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
                 name = friend.name.value,
@@ -89,7 +82,7 @@ data class FriendDTO(
 fun Friend.toDto(): FriendDTO {
     return FriendDTO(
         id = id.value,
-        statusParam = status,
+        status = status,
         requestedAt = requestedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         acceptedAt = acceptedAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         name = name.value,
