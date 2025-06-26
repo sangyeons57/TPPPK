@@ -9,7 +9,7 @@ This is an Android application built with Kotlin and Jetpack Compose, following 
 *   **Dependency Injection:** Hilt
 *   **Asynchronous Programming:** Kotlin Coroutines & Flow
 *   **Backend:** Firebase (Firestore, Authentication, Storage)
-*   **Navigation:** Jetpack Navigation for Compose
+*   **Navigation:** Jetpack Navigation for Compose, managed by `NavigationManager`
 *   **Image Loading:** Coil
 
 ## Project Structure
@@ -19,7 +19,7 @@ The project is divided into several module types:
 *   `app`: The main application module, responsible for tying all the other modules together, including navigation graphs and dependency injection setup.
 *   `core`: Contains shared functionality used across multiple feature modules.
     *   `core_common`: Common utilities, constants, and helper classes.
-    *   `core_navigation`: Navigation logic, routes, and the `NavigationManger`.
+    *   `core_navigation`: Navigation logic, routes, and the `NavigationManager`. The `NavigationManager` is a central component responsible for handling all navigation events within the application. It provides a consistent way to navigate between different screens and modules, ensuring proper back stack management and navigation state.
     *   `core_ui`: Reusable Jetpack Compose components, theme, and UI-related utilities.
     *   `core_fcm`: Firebase Cloud Messaging setup and handling.
 *   `data`: Handles data sources, repositories, and data mapping (DTOs). It interacts directly with Firebase.
@@ -52,6 +52,6 @@ The project is divided into several module types:
 3.  If not authenticated, the user is directed to the `feature_login` or `feature_signup` screens.
 4.  Once authenticated, the user is taken to the `feature_main` module, which likely hosts the `feature_home` screen as the main content area.
 5.  The `feature_home` screen acts as the central hub, allowing navigation to projects, DMs, and other features.
-6.  The `NavigationManger` in `core_navigation` handles all navigation between feature modules.
+6.  The `NavigationManager` in `core_navigation` handles all navigation between feature modules.
 7.  ViewModels in each feature module use UseCases from the `domain` module to interact with data.
 8.  UseCases get data from Repositories, which are implemented in the `data` module and communicate with Firebase.

@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
  * This sealed interface hierarchy provides compile-time safety for navigation arguments
  * while maintaining backward compatibility with the existing AppRoutes system.
  */
-@Serializable(with = TypeSafeRouteSerializer::class)
+@Serializable
 sealed interface TypeSafeRoute
 
 // ===== Authentication Routes =====

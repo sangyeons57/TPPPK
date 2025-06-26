@@ -161,43 +161,43 @@ class NavigationManagerImpl @Inject constructor(
     }
 
     override fun navigateToProjectDetails(projectId: String, navOptions: NavOptions?) {
-        navigateTo(ProjectDetailRoute(projectId), navOptions)
+        executeNavigationOnParent(ProjectDetailRoute(projectId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToProjectSettings(projectId: String, navOptions: NavOptions?) {
-        navigateTo(ProjectSettingsRoute(projectId), navOptions)
+        executeNavigationOnParent(ProjectSettingsRoute(projectId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToChat(channelId: String, messageId: String?, navOptions: NavOptions?) {
-        navigateTo(ChatRoute(channelId, messageId), navOptions)
+        executeNavigationOnParent(ChatRoute(channelId, messageId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToAddProject(navOptions: NavOptions?) {
-        navigateTo(AddProjectRoute, navOptions)
+        executeNavigationOnParent(AddProjectRoute.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToJoinProject(navOptions: NavOptions?) {
-        navigateTo(JoinProjectRoute, navOptions)
+        executeNavigationOnParent(JoinProjectRoute.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToCalendar(year: Int, month: Int, day: Int, navOptions: NavOptions?) {
-        navigateTo(Calendar24HourRoute(year, month, day), navOptions)
+        executeNavigationOnParent(Calendar24HourRoute(year, month, day).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToAddSchedule(year: Int, month: Int, day: Int, navOptions: NavOptions?) {
-        navigateTo(AddScheduleRoute(year, month, day), navOptions)
+        executeNavigationOnParent(AddScheduleRoute(year, month, day).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToScheduleDetail(scheduleId: String, navOptions: NavOptions?) {
-        navigateTo(ScheduleDetailRoute(scheduleId), navOptions)
+        executeNavigationOnParent(ScheduleDetailRoute(scheduleId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToUserProfile(userId: String, navOptions: NavOptions?) {
-        navigateTo(UserProfileRoute(userId), navOptions)
+        executeNavigationOnParent(UserProfileRoute(userId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToEditProfile(navOptions: NavOptions?) {
-        navigateTo(EditMyProfileRoute, navOptions)
+        executeNavigationOnParent(EditMyProfileRoute.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToFriends(navOptions: NavOptions?) {
@@ -205,7 +205,7 @@ class NavigationManagerImpl @Inject constructor(
     }
 
     override fun navigateToFindPassword(navOptions: NavOptions?) {
-        navigateTo(FindPasswordRoute, navOptions)
+        executeNavigationOnParent(FindPasswordRoute.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToHome(navOptions: NavOptions?) {
@@ -217,31 +217,32 @@ class NavigationManagerImpl @Inject constructor(
         messageId: String?,
         navOptions: NavOptions?
     ) {
-        if (messageId != null) {
-            navigateTo(MessageDetailRoute(channelId, messageId), navOptions)
+        val route = if (messageId != null) {
+            MessageDetailRoute(channelId, messageId)
         } else {
-            navigateTo(ChatRoute(channelId), navOptions)
+            ChatRoute(channelId)
         }
+        executeNavigationOnParent(route.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToTermsOfService(navOptions: NavOptions?) {
-        navigateTo(TermsOfServiceRoute, navOptions)
+        executeNavigationOnParent(TermsOfServiceRoute.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToPrivacyPolicy(navOptions: NavOptions?) {
-        navigateTo(PrivacyPolicyRoute, navOptions)
+        executeNavigationOnParent(PrivacyPolicyRoute.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToEditMember(projectId: String, userId: String, navOptions: NavOptions?) {
-        navigateTo(EditMemberRoute(projectId, userId), navOptions)
+        executeNavigationOnParent(EditMemberRoute(projectId, userId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToEditSchedule(scheduleId: String, navOptions: NavOptions?) {
-        navigateTo(EditScheduleRoute(scheduleId), navOptions)
+        executeNavigationOnParent(EditScheduleRoute(scheduleId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToAcceptFriends(navOptions: NavOptions?) {
-        navigateTo(AcceptFriendsRoute, navOptions)
+        executeNavigationOnParent(AcceptFriendsRoute.toAppRoutePath(), navOptions)
     }
 
     override fun <T> setResult(key: String, result: T) {

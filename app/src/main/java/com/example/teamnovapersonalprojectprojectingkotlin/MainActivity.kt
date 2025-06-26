@@ -1,17 +1,24 @@
 package com.example.teamnovapersonalprojectprojectingkotlin
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.core_navigation.core.MainContainerRoute
+import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.SplashRoute
+import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigationGraph
 import dagger.hilt.android.AndroidEntryPoint
@@ -19,8 +26,6 @@ import io.sentry.ITransaction
 import io.sentry.Sentry
 import io.sentry.SpanStatus
 import javax.inject.Inject
-import androidx.compose.runtime.LaunchedEffect
-import com.example.core_navigation.core.NavigationManger
 
 @AndroidEntryPoint // Hilt 사용 시 Activity에 추가
 class MainActivity : ComponentActivity() {
@@ -31,12 +36,17 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var navigationManger: NavigationManger
 
+    private var backPressedTime: Long = 0
+    private var backToast: Toast? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // 앱 시작 성능 측정 시작
         appStartTransaction = Sentry.startTransaction("app.startup", "startup")
         
         super.onCreate(savedInstanceState)
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
+
+        setupBackPressHandler()
         
         // Sentry 초기화 확인 (테스트 예외 제거됨 - 프로덕션 안정성을 위해)
         
@@ -79,6 +89,40 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun setupBackPressHandler() {
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val currentRoute = navigationManger.getNavController()?.currentDestination?.route
+                val isMainScreen = currentRoute?.startsWith(MainContainerRoute.toAppRoutePath()) ?: false
+
+                if (isMainScreen) {
+                    if (System.currentTimeMillis() > backPressedTime + 2000) {
+                        backPressedTime = System.currentTimeMillis()
+                        backToast?.cancel() // 이전 토스트가 있다면 취소
+                        backToast = Toast.makeText(this@MainActivity, "한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT)
+                        backToast?.show()
+                        return
+                    }
+                    if (System.currentTimeMillis() <= backPressedTime + 2000) {
+                        backToast?.cancel()
+                        finish()
+                    }
+                } else {
+                    if (!navigationManger.navigateBack()) {
+                        // 더 이상 뒤로 갈 곳이 없을 때의 예외 처리
+                        if (currentRoute != "auth" && currentRoute != "splash") {
+                            navigationManger.navigateToClearingBackStack(SplashRoute)
+                        } else {
+                            // Auth 또는 Splash 화면에서는 종료
+                            finish()
+                        }
+                    }
+                }
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, callback)
     }
     
     /**

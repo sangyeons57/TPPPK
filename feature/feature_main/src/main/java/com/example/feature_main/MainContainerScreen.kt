@@ -47,7 +47,7 @@ fun MainContainerScreen(
     
     // 현재 선택된 탭
     var selectedTab by rememberSaveable(stateSaver = TypeSafeRouteSaver) {
-        mutableStateOf<TypeSafeRoute>(HomeRoute)
+        mutableStateOf<TypeSafeRoute?>(HomeRoute)
     }
 
     // 각 탭마다 별도의 NavController를 생성하여 탭별 백스택 유지
@@ -74,7 +74,7 @@ fun MainContainerScreen(
     }
 
     // 현재 선택된 탭의 NavController
-    val currentNavController = navControllers[selectedTab] ?: homeNavController
+    val currentNavController = navControllers[selectedTab ?: HomeRoute] ?: homeNavController
     
     // NavigationManager에서 pending_tab_navigation 결과를 확인하여 탭 전환
     LaunchedEffect(Unit) {
@@ -93,10 +93,11 @@ fun MainContainerScreen(
 
     // 탭 선택 시 해당 탭의 시작 목적지로 이동하는 로직
     LaunchedEffect(selectedTab) {
-        val controller = navControllers[selectedTab]
-        val startDestination = getTabStartDestination(selectedTab)
+        val tab = selectedTab ?: return@LaunchedEffect // null이면 아무것도 하지 않음
+        val controller = navControllers[tab]
+        val startDestination = getTabStartDestination(tab)
         
-        Log.d(TAG, "Tab switched: $selectedTab, start destination: $startDestination")
+        Log.d(TAG, "Tab switched: $tab, start destination: $startDestination")
         
         // NavController가 올바른 화면으로 이동
         if (controller?.currentDestination?.route != startDestination) {
@@ -116,8 +117,10 @@ fun MainContainerScreen(
         onDispose {
             // 현재 탭의 마지막 경로 저장
             currentNavController.currentDestination?.route?.let { route ->
-                tabLastRoutes[selectedTab] = route
-                Log.d(TAG, "Saved last route for tab($selectedTab): $route")
+                selectedTab?.let { tab ->
+                    tabLastRoutes[tab] = route
+                    Log.d(TAG, "Saved last route for tab($tab): $route")
+                }
             }
             
             // NavigationHandler에서 현재 컨트롤러 제거(다른 화면으로 이동 시)
@@ -135,17 +138,19 @@ fun MainContainerScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 mainBottomNavItems.forEach { screen ->
-                    val selected = selectedTab == screen.route
+                    val isSelected = selectedTab == screen.route
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = screen.title) },
                         label = { Text(screen.title) },
-                        selected = selected,
+                        selected = isSelected,
                         onClick = { 
                             if (selectedTab != screen.route) {
                                 // 현재 탭의 마지막 경로 저장
                                 currentNavController.currentDestination?.route?.let { route ->
-                                    tabLastRoutes[selectedTab] = route
-                                    Log.d(TAG, "Saved current tab($selectedTab) last route: $route")
+                                    selectedTab?.let { tab ->
+                                        tabLastRoutes[tab] = route
+                                        Log.d(TAG, "Saved current tab($tab) last route: $route")
+                                    }
                                 }
                                 
                                 // 새 탭으로 전환
@@ -177,6 +182,13 @@ fun MainContainerScreen(
                 is ProfileRoute -> {
                     ProfileTabNavHost(
                         navController = profileNavController,
+                        navigationManger = navigationManger
+                    )
+                }
+                null -> {
+                    // selectedTab이 null일 때의 처리 (예: 기본 홈 탭 표시)
+                    HomeTabNavHost(
+                        navController = homeNavController,
                         navigationManger = navigationManger
                     )
                 }

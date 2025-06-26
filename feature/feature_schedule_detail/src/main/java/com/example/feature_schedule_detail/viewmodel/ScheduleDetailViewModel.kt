@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
+import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.schedule.ScheduleContent
