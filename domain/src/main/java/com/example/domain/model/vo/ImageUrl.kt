@@ -1,7 +1,6 @@
 package com.example.domain.model.vo
 
-import android.net.Uri
-import android.util.Patterns
+import java.net.URI
 
 /**
  * Generic URL value object for images stored in Firebase Storage, web, etc.
@@ -12,14 +11,15 @@ value class ImageUrl(val value: String) {
     init {
         require(value.isNotBlank()) { "ImageUrl must not be blank." }
         require(value.length <= MAX_LENGTH) { "ImageUrl cannot exceed $MAX_LENGTH characters." }
-        require(Patterns.WEB_URL.matcher(value).matches()) { "Invalid image URL format." }
+        require(value.matches(URL_REGEX)) { "Invalid image URL format." }
     }
 
 
     companion object {
         const val MAX_LENGTH = 500
+        private val URL_REGEX = Regex("^(https?|ftp)://[^\\s/$.?#].[^\\s]*$")
 
-        fun toImageUrl(uri: Uri): ImageUrl {
+        fun toImageUrl(uri: URI): ImageUrl {
             return ImageUrl(uri.toString())
         }
     }

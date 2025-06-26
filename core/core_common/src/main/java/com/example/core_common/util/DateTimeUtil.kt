@@ -1,19 +1,16 @@
 package com.example.core_common.util
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+import com.google.firebase.Timestamp
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import com.google.firebase.Timestamp
-import java.time.Duration
-import java.time.LocalTime
-import java.time.YearMonth
-import javax.inject.Singleton
 
 /**
  * 날짜 및 시간 변환을 위한 유틸리티 클래스
@@ -556,7 +553,6 @@ object DateTimeUtil {
     /**
      * 현재 시간을 기준으로 "방금 전", "n분 전", "n시간 전", "어제", "날짜" 형식으로 표시합니다.
      */
-    @RequiresApi(Build.VERSION_CODES.S)
     fun formatRelativeTime(dateTime: LocalDateTime): String {
         val now = LocalDateTime.now()
         val diff = Duration.between(dateTime, now)

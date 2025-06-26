@@ -1,6 +1,6 @@
 package com.example.domain.model.vo.messageattachment
 
-import android.net.Uri
+import java.net.URI
 
 @JvmInline
 value class MessageAttachmentUrl(val value: String) {
@@ -12,7 +12,7 @@ value class MessageAttachmentUrl(val value: String) {
         fun fromString(value: String): MessageAttachmentUrl {
             return MessageAttachmentUrl(value)
         }
-        fun fromUri(uri: Uri): MessageAttachmentUrl {
+        fun fromUri(uri: URI): MessageAttachmentUrl {
             return MessageAttachmentUrl(uri.toString())
         }
     }
