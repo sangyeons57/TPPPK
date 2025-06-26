@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -158,8 +159,14 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         return try {
             val currentUser = auth.currentUser
             if (currentUser != null) {
-                currentUser.sendEmailVerification().await()
-                CustomResult.Success(Unit)
+                val result = withTimeoutOrNull(10000) {
+                    currentUser.sendEmailVerification().await()
+                }
+                if (result != null) {
+                    CustomResult.Success(Unit)
+                } else {
+                    CustomResult.Failure(Exception("Email verification request timed out"))
+                }
             } else {
                 CustomResult.Failure(Exception("No user is currently signed in"))
             }
@@ -172,9 +179,15 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         return try {
             val currentUser = auth.currentUser
             if (currentUser != null) {
-                // Reload the user to get the latest email verification status
-                currentUser.reload().await()
-                CustomResult.Success(currentUser.isEmailVerified)
+                // Reload the user to get the latest email verification status (10초 타임아웃)
+                val reloadResult = withTimeoutOrNull(10000) {
+                    currentUser.reload().await()
+                }
+                if (reloadResult != null) {
+                    CustomResult.Success(currentUser.isEmailVerified)
+                } else {
+                    CustomResult.Failure(Exception("Email verification check timed out"))
+                }
             } else {
                 CustomResult.Failure(Exception("No user is currently signed in"))
             }
@@ -190,8 +203,14 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         return try {
             val currentUser = auth.currentUser
             if (currentUser != null) {
-                currentUser.updatePassword(newPassword).await()
-                CustomResult.Success(Unit)
+                val result = withTimeoutOrNull(10000) {
+                    currentUser.updatePassword(newPassword).await()
+                }
+                if (result != null) {
+                    CustomResult.Success(Unit)
+                } else {
+                    CustomResult.Failure(Exception("Password update timed out"))
+                }
             } else {
                 CustomResult.Failure(Exception("No user is currently signed in"))
             }

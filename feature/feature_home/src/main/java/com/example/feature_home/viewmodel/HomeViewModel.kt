@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -148,6 +149,13 @@ class HomeViewModel @Inject constructor(
     // 선택된 채널 ID
     private var selectedChannelId: DocumentId? = null
     
+    // Job management for Flow collectors to prevent memory leaks
+    private var userStreamJob: Job? = null
+    private var projectsStreamJob: Job? = null
+    private var dmsStreamJob: Job? = null
+    private var projectDetailsJob: Job? = null
+    private var projectStructureJob: Job? = null
+    
     // Provider를 통해 생성된 UseCase 그룹들
     private val userUseCases = userUseCaseProvider.createForUser()
     private lateinit var dmUseCases: DMUseCases
@@ -174,7 +182,12 @@ class HomeViewModel @Inject constructor(
 
     init {
         Log.d("HomeViewModel", "HomeViewModel initialized")
-        viewModelScope.launch {
+        startUserStream()
+    }
+    
+    private fun startUserStream() {
+        userStreamJob?.cancel()
+        userStreamJob = viewModelScope.launch {
             Log.d("HomeViewModel", "Starting to collect from getCurrentUserStreamUseCase")
             // Provider를 통한 UseCase 사용
             userUseCases.getCurrentUserStreamUseCase()
@@ -267,7 +280,8 @@ class HomeViewModel @Inject constructor(
     // 프로젝트 데이터 로드
     private fun loadProjects() {
         Log.d("HomeViewModel", "loadProjects called")
-        viewModelScope.launch {
+        projectsStreamJob?.cancel()
+        projectsStreamJob = viewModelScope.launch {
             if (::coreProjectUseCases.isInitialized) {
                 coreProjectUseCases.getUserParticipatingProjectsUseCase()
                 .collectLatest { result ->
@@ -318,7 +332,8 @@ class HomeViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadDms() {
-        viewModelScope.launch {
+        dmsStreamJob?.cancel()
+        dmsStreamJob = viewModelScope.launch {
             val currentUserResult = userUseCases.getCurrentUserStreamUseCase().first()
             when (currentUserResult) {
                 is CustomResult.Failure -> {
@@ -1012,5 +1027,16 @@ class HomeViewModel @Inject constructor(
     
     fun navigateToCalendar(year: Int, month: Int, day: Int) {
         navigationManger.navigateToCalendar(year, month, day)
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        // Cancel all Flow collection jobs to prevent memory leaks
+        userStreamJob?.cancel()
+        projectsStreamJob?.cancel()
+        dmsStreamJob?.cancel()
+        projectDetailsJob?.cancel()
+        projectStructureJob?.cancel()
+        Log.d("HomeViewModel", "All Flow collection jobs cancelled")
     }
 }

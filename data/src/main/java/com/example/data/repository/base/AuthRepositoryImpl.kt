@@ -14,6 +14,8 @@ import com.example.domain.repository.base.AuthRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.TimeoutCancellationException
 import javax.inject.Inject
 
 /**
@@ -211,9 +213,11 @@ class AuthRepositoryImpl @Inject constructor(
         return when (val result = authRemoteDataSource.getCurrentUser()) {
             is CustomResult.Success -> {
                 val firebaseUser = result.data
-                // 로그인된 상태 - 토큰 가져오기
+                // 로그인된 상태 - 토큰 가져오기 (5초 타임아웃 적용)
                 val tokenResult = try {
-                    firebaseUser.getIdToken(false).await()
+                    withTimeoutOrNull(5000) {
+                        firebaseUser.getIdToken(false).await()
+                    }
                 } catch (e: Exception) {
                     // 토큰 가져오기 실패 시 빈 토큰으로 처리
                     Log.w("AuthRepositoryImpl", "Failed to get token: ${e.message}")
@@ -250,9 +254,11 @@ class AuthRepositoryImpl @Inject constructor(
         return authRemoteDataSource.observeAuthState().map { firebaseUser ->
             when (firebaseUser) {
                 is CustomResult.Success -> {
-                    // 로그인 상태 - 토큰 가져오기
+                    // 로그인 상태 - 토큰 가져오기 (5초 타임아웃 적용)
                     val tokenResult = try {
-                        firebaseUser.data.getIdToken(false).await()
+                        withTimeoutOrNull(5000) {
+                            firebaseUser.data.getIdToken(false).await()
+                        }
                     } catch (e: Exception) {
                         // 토큰 가져오기 실패 시 빈 토큰으로 처리
                         Log.w(

@@ -39,13 +39,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
         
-        // Sentry 기본 테스트 예외 전송
-        try {
-             throw Exception("Sentry Basic Test Exception from MainActivity onCreate")
-        } catch (e: Exception) {
-             Sentry.captureException(e)
-             println(">>> Sent Sentry test exception") // Logcat 확인용
-        }
+        // Sentry 초기화 확인 (테스트 예외 제거됨 - 프로덕션 안정성을 위해)
         
         setContent {
             // UI 렌더링 성능 측정
