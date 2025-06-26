@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
+import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
 import dagger.Module
 import dagger.Provides
@@ -53,5 +54,16 @@ object FirebaseModule {
         firestore.firestoreSettings = settings
         
         return firestore
+    }
+
+    /**
+     * Firebase Functions 서비스를 제공합니다.
+     *
+     * @return FirebaseFunctions 인스턴스
+     */
+    @Provides
+    @Singleton
+    fun provideFirebaseFunctions(): FirebaseFunctions {
+        return FirebaseFunctions.getInstance()
     }
 } 

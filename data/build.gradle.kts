@@ -74,6 +74,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.functions.ktx)
     implementation(libs.firebase.storage.ktx)
     // Task.await() 사용을 위한 의존성 추가
     implementation(libs.kotlinx.coroutines.play.services) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
