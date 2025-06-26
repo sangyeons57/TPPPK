@@ -36,7 +36,7 @@ class LoginUseCaseTest {
         val userId = "test_user_id"
         val userEmail = "test@example.com"
         val userPassword = "password"
-        val userSession = UserSession(UserId(userId), Token("test_token"), Email(userEmail))
+        val userSession = UserSession(UserId(userId), Token("test_token"), UserEmail(userEmail))
         val user = User.create(
             id = DocumentId(userId),
             email = UserEmail(userEmail),
@@ -48,7 +48,7 @@ class LoginUseCaseTest {
         fakeUserRepository.addUser(user)
 
         // When
-        val result = loginUseCase(userEmail, userPassword)
+        val result = loginUseCase(UserEmail(userEmail), userPassword)
 
         // Then
         assertTrue(result is CustomResult.Success)
@@ -61,7 +61,7 @@ class LoginUseCaseTest {
         val userId = "test_user_id"
         val userEmail = "test@example.com"
         val userPassword = "password"
-        val userSession = UserSession(UserId(userId), Token("test_token"), Email(userEmail))
+        val userSession = UserSession(UserId(userId), Token("test_token"), UserEmail(userEmail))
         val user = User.create(
             id = DocumentId(userId),
             email = UserEmail(userEmail),
@@ -73,7 +73,7 @@ class LoginUseCaseTest {
         fakeUserRepository.addUser(user)
 
         // When
-        val result = loginUseCase(userEmail, userPassword)
+        val result = loginUseCase(UserEmail(userEmail), userPassword)
 
         // Then
         assertTrue(result is CustomResult.Failure)
@@ -88,7 +88,7 @@ class LoginUseCaseTest {
         fakeAuthRepository.setShouldThrowError(true)
 
         // When
-        val result = loginUseCase(userEmail, userPassword)
+        val result = loginUseCase(UserEmail(userEmail), userPassword)
 
         // Then
         assertTrue(result is CustomResult.Failure)
@@ -100,13 +100,13 @@ class LoginUseCaseTest {
         val userId = "test_user_id"
         val userEmail = "test@example.com"
         val userPassword = "password"
-        val userSession = UserSession(UserId(userId), Token("test_token"), Email(userEmail))
+        val userSession = UserSession(UserId(userId), Token("test_token"), UserEmail(userEmail))
 
         fakeAuthRepository.setUserSession(userSession)
         // User is not added to the fakeUserRepository
 
         // When
-        val result = loginUseCase(userEmail, userPassword)
+        val result = loginUseCase(UserEmail(userEmail), userPassword)
 
         // Then
         assertTrue(result is CustomResult.Failure)

@@ -42,6 +42,7 @@ import com.example.feature_calendar_24hour.ui.Calendar24HourScreen
 import com.example.feature_edit_schedule.ui.EditScheduleScreen
 import com.example.feature_find_password.ui.FindPasswordScreen
 import com.example.feature_accept_friend.ui.AcceptFriendsScreen
+import com.example.feature_dev.DevMenuScreen
 import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_home.viewmodel.HomeViewModel
 import com.example.feature_join_project.ui.JoinProjectScreen
@@ -152,6 +153,9 @@ fun AppNavigationGraph(
         }
         composable(AppSettingsRoute.toAppRoutePath()) {
             SettingsScreen(navigationManger = navigationManger)
+        }
+        composable(DevMenuRoute.toAppRoutePath()) {
+            DevMenuScreen(navigationManger = navigationManger)
         }
     }
 }

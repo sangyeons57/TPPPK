@@ -4,10 +4,8 @@ import com.example.data.util.CurrentUserProvider
 import com.example.data.util.CurrentUserProviderImpl
 import com.example.data.util.NetworkConnectivityMonitorImpl
 import com.example.domain.util.NetworkConnectivityMonitor
-import com.google.firebase.storage.FirebaseStorage
 import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
@@ -44,13 +42,5 @@ abstract class DataModule {
     
     // 기타 바인딩...
 
-    // FirebaseStorage는 구체적인 인스턴스를 직접 생성하여 제공해야 하므로 @Provides 사용
-    // abstract class 내의 @Provides 메소드는 companion object 안에 위치해야 함
-    companion object {
-        @Provides
-        @Singleton
-        fun provideFirebaseStorage(): FirebaseStorage {
-            return FirebaseStorage.getInstance()
-        }
-    }
+    // FirebaseStorage는 FirebaseModule에서 제공되므로 여기서는 제거함
 }

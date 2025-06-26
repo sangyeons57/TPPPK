@@ -1,23 +1,57 @@
 package com.example.feature_dev
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import java.time.LocalDate // Calendar24Hour, AddSchedule 임시 인자용
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.core_navigation.core.AcceptFriendsRoute
+import com.example.core_navigation.core.AddRoleRoute
+import com.example.core_navigation.core.ChangePasswordRoute
+import com.example.core_navigation.core.CreateCategoryRoute
+import com.example.core_navigation.core.CreateChannelRoute
+import com.example.core_navigation.core.EditCategoryRoute
+import com.example.core_navigation.core.EditChannelRoute
+import com.example.core_navigation.core.EditMemberRoute
+import com.example.core_navigation.core.EditRoleRoute
+import com.example.core_navigation.core.FindPasswordRoute
+import com.example.core_navigation.core.GlobalSearchRoute
+import com.example.core_navigation.core.LoginRoute
+import com.example.core_navigation.core.MemberListRoute
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.*
+import com.example.core_navigation.core.RoleListRoute
+import com.example.core_navigation.core.SetProjectNameRoute
+import com.example.core_navigation.core.SignUpRoute
+import com.example.core_navigation.core.SplashRoute
 import com.example.core_ui.components.buttons.DebouncedBackButton
-import com.example.domain.model.vo.DocumentId
-import kotlinx.coroutines.launch
+import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import java.time.LocalDate
 
 /**
  * DevMenuScreen: 개발 및 테스트 목적으로 각 화면으로 이동하는 버튼 제공
@@ -27,9 +61,12 @@ import kotlinx.coroutines.launch
 fun DevMenuScreen(
     navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
-    showBackButton: Boolean = true
+    showBackButton: Boolean = true,
+    viewModel: DevMenuViewModel = hiltViewModel()
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    rememberCoroutineScope()
+    val helloWorldResult by viewModel.helloWorldResult.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     
     Scaffold(
         modifier = modifier,
@@ -177,6 +214,64 @@ fun DevMenuScreen(
 
             Text("--- 검색 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
             DevMenuButton(text = "검색 (Search)") { navigationManger.navigateTo(GlobalSearchRoute) }
+
+            Text(
+                "--- Firebase Functions 테스트 ---",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            // Hello World 테스트 버튼
+            if (isLoading) {
+                Button(
+                    onClick = { },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("호출 중...")
+                }
+            } else {
+                DevMenuButton(text = "Hello World 호출") {
+                    viewModel.callHelloWorld()
+                }
+            }
+
+            // 결과 표시
+            if (helloWorldResult.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (helloWorldResult.startsWith("성공"))
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "결과:",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = helloWorldResult,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.clearResult() },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("지우기")
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(30.dp)) // 하단 여백
         }

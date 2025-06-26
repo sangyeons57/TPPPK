@@ -100,7 +100,12 @@ class EditProfileViewModel @Inject constructor(
      * 사용자가 이름을 변경할 때 호출됩니다.
      */
     fun onNameChanged(newName: String) {
-        uiState.value.user?.changeName(UserName(newName))
+        _uiState.update { currentState ->
+            currentState.user?.let { user ->
+                user.changeName(UserName(newName))
+                currentState.copy(user = user)
+            } ?: currentState
+        }
     }
 
     /**
@@ -129,15 +134,15 @@ class EditProfileViewModel @Inject constructor(
             
             when (result) {
                 is CustomResult.Success -> {
-                    val user = result.data
+                    // Firebase Functions가 자동으로 Firestore를 업데이트하므로
+                    // getCurrentUserStreamUseCase의 실시간 리스너가 자동으로 UI를 업데이트함
                     _uiState.update { currentState ->
-                        currentState.user?.changeProfileImage(user.profileImageUrl)
                         currentState.copy(
                             isLoading = false,
                             errorMessage = null
                         )
                     }
-                    _eventFlow.emit(EditProfileEvent.ShowSnackbar("Image uploaded successfully."))
+                    _eventFlow.emit(EditProfileEvent.ShowSnackbar("Image uploaded successfully. Processing..."))
                 }
                 is CustomResult.Failure -> {
                     val exception = result.error
@@ -168,14 +173,12 @@ class EditProfileViewModel @Inject constructor(
                 }
 
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-                // Update user name first
-                when (val result = userUseCases.updateNameUseCase(currentUser.name)) {
+                // Update user profile via Firebase Functions
+                when (val result = userUseCases.updateUserProfileUseCase(
+                    name = currentUser.name.value
+                )) {
                     is CustomResult.Success -> {
-                        val updatedUser = result.data
-                        _uiState.update { it.copy(
-                            user = updatedUser,
-                            isLoading = false
-                        )}
+                        _uiState.update { it.copy(isLoading = false) }
                         _eventFlow.emit(EditProfileEvent.ShowSnackbar("Profile updated successfully"))
                         navigateBack()
                     }

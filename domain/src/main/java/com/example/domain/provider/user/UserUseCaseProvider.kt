@@ -1,6 +1,8 @@
 package com.example.domain.provider.user
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.provider.context.ContextDependentUseCaseProvider
+import com.example.domain.repository.FunctionsRepository
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
@@ -24,7 +26,7 @@ import com.example.domain.usecase.user.UpdateUserMemoUseCaseImpl
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCaseImpl
 import com.example.domain.usecase.user.UploadProfileImageUseCase
-import com.example.domain.provider.context.ContextDependentUseCaseProvider
+import com.example.domain.usecase.user.UpdateUserProfileUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,6 +39,7 @@ import javax.inject.Singleton
 class UserUseCaseProvider @Inject constructor(
     private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val functionsRepository: FunctionsRepository,
     private val contextDependentUseCaseProvider: ContextDependentUseCaseProvider // Context가 필요한 UseCase들의 Provider
 ) {
 
@@ -58,7 +61,7 @@ class UserUseCaseProvider @Inject constructor(
         )
 
         // Get context-dependent UseCases
-        val contextDependentUseCases = contextDependentUseCaseProvider.create()
+        contextDependentUseCaseProvider.create()
 
         return UserUseCases(
             getUserStreamUseCase = GetUserStreamUseCaseImpl(
@@ -74,16 +77,15 @@ class UserUseCaseProvider @Inject constructor(
                 userRepository = userRepository
             ),
             
-            updateNameUseCase = UpdateNameUseCase(
-                userRepository = userRepository,
-                authRepository = authRepository
-            ),
-
             updateUserStatusUseCase = UpdateUserStatusUseCaseImpl(
                 userRepository = userRepository,
                 authRepository = authRepository,
             ),
             updateUserMemoUseCase = UpdateUserMemoUseCaseImpl(
+                userRepository = userRepository,
+                authRepository = authRepository
+            ),
+            updateNameUseCase = UpdateNameUseCase(
                 userRepository = userRepository,
                 authRepository = authRepository
             ),
@@ -95,11 +97,18 @@ class UserUseCaseProvider @Inject constructor(
                 userRepository = userRepository
             ),
 
-            uploadProfileImageUseCase = contextDependentUseCases.uploadProfileImageUseCase, // Provider를 통해 생성된 UseCase 사용
 
             removeProfileImageUseCase = RemoveProfileImageUseCaseImpl(
                 userRepository = userRepository,
                 authRepository = authRepository
+            ),
+
+            uploadProfileImageUseCase = UploadProfileImageUseCase(
+                functionsRepository = functionsRepository
+            ),
+
+            updateUserProfileUseCase = UpdateUserProfileUseCase(
+                functionsRepository = functionsRepository
             ),
             
             // 공통 Repository
@@ -119,13 +128,14 @@ data class UserUseCases(
     val searchUserByNameUseCase: SearchUserByNameUseCase,
     
     // 프로필 관리 (구현체만)
-    val updateNameUseCase: UpdateNameUseCase,
     val updateUserStatusUseCase: UpdateUserStatusUseCase,
     val updateUserMemoUseCase: UpdateUserMemoUseCase,
+    val updateNameUseCase: UpdateNameUseCase,
     val updateUserImageUseCase: UpdateUserImageUseCase,
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
-    val uploadProfileImageUseCase: UploadProfileImageUseCase,
     val removeProfileImageUseCase: RemoveProfileImageUseCase,
+    val uploadProfileImageUseCase: UploadProfileImageUseCase,
+    val updateUserProfileUseCase: UpdateUserProfileUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

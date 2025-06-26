@@ -3,13 +3,15 @@ package com.example.domain.repository
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.AggregateRoot
 import com.example.domain.model.base.Friend
-import com.example.domain.model.enum.FriendshipStatus
+import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
 import com.example.domain.repository.base.FriendRepository
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import java.time.Instant
 
 class FakeFriendRepository : FriendRepository {
 
@@ -101,7 +103,7 @@ class FakeFriendRepository : FriendRepository {
         }
         val userFriends = friends.values.filter { friend ->
             (friend.requesterId == userId || friend.recipientId == userId) &&
-            friend.status == FriendshipStatus.ACCEPTED
+                    friend.status == FriendStatus.ACCEPTED
         }
         return CustomResult.Success(userFriends)
     }
@@ -112,7 +114,7 @@ class FakeFriendRepository : FriendRepository {
         }
         val userFriends = friends.values.filter { friend ->
             (friend.requesterId == userId || friend.recipientId == userId) &&
-            friend.status == FriendshipStatus.ACCEPTED
+                    friend.status == FriendStatus.ACCEPTED
         }
         return flowOf(CustomResult.Success(userFriends))
     }
@@ -122,7 +124,7 @@ class FakeFriendRepository : FriendRepository {
             return CustomResult.Failure(Exception("Get pending requests failed"))
         }
         val pendingRequests = friends.values.filter { friend ->
-            friend.recipientId == userId && friend.status == FriendshipStatus.PENDING
+            friend.recipientId == userId && friend.status == FriendStatus.PENDING
         }
         return CustomResult.Success(pendingRequests)
     }
@@ -132,7 +134,7 @@ class FakeFriendRepository : FriendRepository {
             return flowOf(CustomResult.Failure(Exception("Get pending requests stream failed")))
         }
         val pendingRequests = friends.values.filter { friend ->
-            friend.recipientId == userId && friend.status == FriendshipStatus.PENDING
+            friend.recipientId == userId && friend.status == FriendStatus.PENDING
         }
         return flowOf(CustomResult.Success(pendingRequests))
     }
@@ -156,10 +158,11 @@ class FakeFriendRepository : FriendRepository {
         }
 
         val friendId = DocumentId("friend_${requesterId.value}_${recipientId.value}")
-        val friend = Friend.createPendingRequest(
+        val friend = Friend.newRequest(
             id = friendId,
-            requesterId = requesterId,
-            recipientId = recipientId
+            name = Name(""),
+            profileImageUrl = null,
+            requestedAt = Instant.now()
         )
         friends[friendId.value] = friend
         return CustomResult.Success(friendId)
@@ -170,8 +173,8 @@ class FakeFriendRepository : FriendRepository {
             return CustomResult.Failure(Exception("Accept friend request failed"))
         }
         val friend = friends[friendshipId.value]
-        return if (friend != null && friend.status == FriendshipStatus.PENDING) {
-            val acceptedFriend = friend.copy(status = FriendshipStatus.ACCEPTED)
+        return if (friend != null && friend.status == FriendStatus.PENDING) {
+            val acceptedFriend = friend.copy(status = FriendStatus.ACCEPTED)
             friends[friendshipId.value] = acceptedFriend
             CustomResult.Success(Unit)
         } else {
@@ -184,7 +187,7 @@ class FakeFriendRepository : FriendRepository {
             return CustomResult.Failure(Exception("Decline friend request failed"))
         }
         val friend = friends[friendshipId.value]
-        return if (friend != null && friend.status == FriendshipStatus.PENDING) {
+        return if (friend != null && friend.status == FriendStatus.PENDING) {
             friends.remove(friendshipId.value)
             CustomResult.Success(Unit)
         } else {

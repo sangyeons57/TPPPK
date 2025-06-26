@@ -28,8 +28,8 @@ class ReactivateAccountUseCase @Inject constructor(
         return when (val userResult = userRepository.observeByEmail(email).first()) {
             is CustomResult.Success -> {
                 val userToReactivate = userResult.data
-                // 1. Activate the account
-                userToReactivate.activateAccount()
+                // 1. Reactivate the withdrawn account
+                userToReactivate.reactivateAccount()
                 // 2. Update the nickname
                 userToReactivate.changeName(UserName(nickname))
                 // Note: consentTimeStamp is typically an initial agreement. 

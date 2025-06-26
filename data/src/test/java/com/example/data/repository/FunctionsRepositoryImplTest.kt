@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
+import com.example.data.repository.base.FunctionsRepositoryImpl
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

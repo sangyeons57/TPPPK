@@ -29,4 +29,6 @@ object Constants {
      */
     const val OWNER = "OWNER"
 
+    const val REGION = "asia-northeast3"
+
 }

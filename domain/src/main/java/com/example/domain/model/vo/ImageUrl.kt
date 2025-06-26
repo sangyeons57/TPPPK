@@ -20,11 +20,10 @@ value class ImageUrl(val value: String) {
         const val MAX_LENGTH = 500
         private val URL_REGEX = Regex("^(https?|ftp)://[^\\s/$.?#].[^\\s]*$")
 
-        fun toImageUrl(uri: URI): ImageUrl {
-            return ImageUrl(uri.toString())
-        }
-        fun toImageUrl(uri: Uri): ImageUrl {
-            return ImageUrl(uri.toString())
-        }
+        fun toImageUrl(uri: URI): ImageUrl = ImageUrl(uri.toString())
+        fun toImageUrl(uri: Uri): ImageUrl = ImageUrl(uri.toString())
+
+        // Convenience for tests or simple string literals
+        fun toImageUrl(url: String): ImageUrl = ImageUrl(url)
     }
 }

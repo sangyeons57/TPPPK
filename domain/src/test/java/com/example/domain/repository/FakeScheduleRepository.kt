@@ -95,61 +95,25 @@ class FakeScheduleRepository : ScheduleRepository {
         return flowOf(CustomResult.Success(schedules.values.toList()))
     }
 
-    override suspend fun getUserSchedulesForDate(
+    // New repository API stubs
+    override suspend fun findByDateSummaryForMonth(
         userId: UserId,
-        date: LocalDate
-    ): CustomResult<List<Schedule>, Exception> {
-        if (shouldThrowError) {
-            return CustomResult.Failure(Exception("Get user schedules failed"))
-        }
-        val userSchedules = schedules.values.filter { schedule ->
-            schedule.authorId == userId && schedule.scheduleDate.toLocalDate() == date
-        }
-        return CustomResult.Success(userSchedules)
+        yearMonth: java.time.YearMonth
+    ): CustomResult<Set<LocalDate>, Exception> {
+        return CustomResult.Success(emptySet())
     }
 
-    override fun getUserSchedulesForDateStream(
+    override suspend fun findByMonth(
+        userId: UserId,
+        yearMonth: java.time.YearMonth
+    ): Flow<CustomResult<List<Schedule>, Exception>> {
+        return flowOf(CustomResult.Success(emptyList()))
+    }
+
+    override suspend fun findByDate(
         userId: UserId,
         date: LocalDate
     ): Flow<CustomResult<List<Schedule>, Exception>> {
-        if (shouldThrowError) {
-            return flowOf(CustomResult.Failure(Exception("Get user schedules stream failed")))
-        }
-        val userSchedules = schedules.values.filter { schedule ->
-            schedule.authorId == userId && schedule.scheduleDate.toLocalDate() == date
-        }
-        return flowOf(CustomResult.Success(userSchedules))
-    }
-
-    override suspend fun getUserSchedulesForMonth(
-        userId: UserId,
-        year: Int,
-        month: Int
-    ): CustomResult<List<Schedule>, Exception> {
-        if (shouldThrowError) {
-            return CustomResult.Failure(Exception("Get user schedules for month failed"))
-        }
-        val userSchedules = schedules.values.filter { schedule ->
-            schedule.authorId == userId && 
-            schedule.scheduleDate.toLocalDate().year == year &&
-            schedule.scheduleDate.toLocalDate().monthValue == month
-        }
-        return CustomResult.Success(userSchedules)
-    }
-
-    override fun getUserSchedulesForMonthStream(
-        userId: UserId,
-        year: Int,
-        month: Int
-    ): Flow<CustomResult<List<Schedule>, Exception>> {
-        if (shouldThrowError) {
-            return flowOf(CustomResult.Failure(Exception("Get user schedules for month stream failed")))
-        }
-        val userSchedules = schedules.values.filter { schedule ->
-            schedule.authorId == userId && 
-            schedule.scheduleDate.toLocalDate().year == year &&
-            schedule.scheduleDate.toLocalDate().monthValue == month
-        }
-        return flowOf(CustomResult.Success(userSchedules))
+        return flowOf(CustomResult.Success(emptyList()))
     }
 }

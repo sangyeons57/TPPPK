@@ -58,12 +58,29 @@ object FirebaseModule {
 
     /**
      * Firebase Functions 서비스를 제공합니다.
+     * 프로젝트에서 정의된 REGION을 사용하여 설정합니다.
      *
      * @return FirebaseFunctions 인스턴스
      */
     @Provides
     @Singleton
     fun provideFirebaseFunctions(): FirebaseFunctions {
-        return FirebaseFunctions.getInstance()
+        val functions = FirebaseFunctions.getInstance(Constants.REGION)
+
+        // 개발 환경에서는 에뮬레이터 사용 (필요시 주석 처리)
+        // functions.useFunctionsEmulator("localhost", 5001)
+
+        return functions
+    }
+
+    /**
+     * Firebase Storage 서비스를 제공합니다.
+     *
+     * @return FirebaseStorage 인스턴스
+     */
+    @Provides
+    @Singleton
+    fun provideFirebaseStorage(): FirebaseStorage {
+        return FirebaseStorage.getInstance()
     }
 } 

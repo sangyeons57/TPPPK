@@ -4,6 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.repository.base.AuthRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -22,7 +23,7 @@ class FakeAuthRepository : AuthRepository {
     }
 
     override suspend fun login(
-        email: String,
+        email: UserEmail,
         password: String
     ): CustomResult<UserSession, Exception> {
         if (shouldThrowError) {
@@ -47,7 +48,11 @@ class FakeAuthRepository : AuthRepository {
             return CustomResult.Failure(Exception("Signup failed"))
         }
         val newUserId = "new_user_id"
-        userSession = UserSession(UserId(newUserId), Token("new_token"), Email(email))
+        userSession = UserSession(
+            userId = UserId(newUserId),
+            token = Token("new_token"),
+            email = UserEmail(email)
+        )
         return CustomResult.Success(newUserId)
     }
 

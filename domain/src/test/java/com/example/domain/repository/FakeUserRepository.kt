@@ -96,7 +96,15 @@ class FakeUserRepository : UserRepository {
     }
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        TODO("Not yet implemented")
+        if (shouldThrowError) {
+            return CustomResult.Failure(Exception("Save failed"))
+        }
+        val user = entity as? User ?: return CustomResult.Failure(Exception("Entity is not User"))
+        if (!user.id.isAssigned()) {
+            return CustomResult.Failure(Exception("User ID not assigned"))
+        }
+        users[user.id.value] = user
+        return CustomResult.Success(user.id)
     }
 
     override suspend fun findAll(source: Source): CustomResult<List<AggregateRoot>, Exception> {

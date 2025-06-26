@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.auth.AuthAccountUseCaseProvider
+import com.example.domain.repository.FunctionsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authAccountUseCaseProvider: AuthAccountUseCaseProvider,
+    private val functionsRepository: FunctionsRepository,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -62,8 +64,36 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun testFirebaseFunctions() {
+        viewModelScope.launch {
+            Log.d("SettingsViewModel", "Testing Firebase Functions HelloWorld...")
+
+            when (val result = functionsRepository.getHelloWorld()) {
+                is CustomResult.Success -> {
+                    val message = "✅ Firebase Functions 연결 성공!\n결과: ${result.data}"
+                    Log.d("SettingsViewModel", "HelloWorld success: ${result.data}")
+                    _uiEvent.send(WithdrawalUiEvent.FunctionsTestSuccess(message))
+                }
+
+                is CustomResult.Failure -> {
+                    val message = "❌ Firebase Functions 연결 실패\n오류: ${result.error.message}"
+                    Log.e("SettingsViewModel", "HelloWorld failed", result.error)
+                    _uiEvent.send(WithdrawalUiEvent.FunctionsTestError(message))
+                }
+
+                else -> {
+                    val message = "🔄 예상치 못한 상태: $result"
+                    Log.w("SettingsViewModel", "HelloWorld unexpected result: $result")
+                    _uiEvent.send(WithdrawalUiEvent.FunctionsTestError(message))
+                }
+            }
+        }
+    }
+
     sealed class WithdrawalUiEvent {
         data class Success(val message: String) : WithdrawalUiEvent()
         data class Error(val message: String) : WithdrawalUiEvent()
+        data class FunctionsTestSuccess(val message: String) : WithdrawalUiEvent()
+        data class FunctionsTestError(val message: String) : WithdrawalUiEvent()
     }
 }

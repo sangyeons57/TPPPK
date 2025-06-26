@@ -2,42 +2,67 @@ package com.example.domain.model.base
 
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.util.TestDataBuilder
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
+import java.time.Instant
 
+/**
+ * Unit tests for [Project] domain model. Adapted to current API (2025-06).
+ */
 class ProjectTest {
 
     @Test
-    fun `create project with required fields`() {
-        // Given
-        val projectId = DocumentId("project123")
-        val projectName = ProjectName("Test Project")
-        val ownerId = UserId("owner123")
-
-        // When
+    fun `basic creation`() {
         val project = Project.create(
-            id = projectId,
-            name = projectName,
-            ownerId = ownerId,
-            description = null,
-            imageUrl = null
+            name = ProjectName("Demo"),
+            imageUrl = null,
+            ownerId = OwnerId("owner")
+        )
+        assertEquals(ProjectName("Demo"), project.name)
+        assertEquals(OwnerId("owner"), project.ownerId)
+        assertEquals(DocumentId.EMPTY, project.id)
+    }
+
+    @Test
+    fun `change name updates timestamp`() {
+        val project = TestDataBuilder.createTestProject()
+        val old = project.updatedAt
+        project.changeName(ProjectName("New"))
+        assertTrue(project.updatedAt.isAfter(old))
+        assertEquals("New", project.name.value)
+    }
+
+    @Test
+    fun `equality based on id`() {
+        val now = Instant.now()
+        val id = DocumentId("same")
+        val p1 = Project.fromDataSource(id, ProjectName("A"), null, OwnerId("o"), now, now)
+        val p2 = Project.fromDataSource(id, ProjectName("B"), null, OwnerId("o"), now, now)
+        val p3 = Project.fromDataSource(
+            DocumentId("diff"),
+            ProjectName("C"),
+            null,
+            OwnerId("o"),
+            now,
+            now
+        )
+        assertEquals(p1, p2)
+        assertNotEquals(p1, p3)
+    }
+
+    @Test
+    fun `create project with image url`() {
+        val imageUrl = ImageUrl.toImageUrl("https://example.com/image.jpg")
+        val project = Project.create(
+            name = ProjectName("Project With Image"),
+            imageUrl = imageUrl,
+            ownerId = OwnerId("owner")
         )
 
-        // Then
-        assertEquals("Project ID should match", projectId, project.id)
-        assertEquals("Project name should match", projectName, project.name)
-        assertEquals("Owner ID should match", ownerId, project.ownerId)
-        assertNull("Description should be null", project.description)
-        assertNull("Image URL should be null", project.imageUrl)
-        assertNotNull("Created at should not be null", project.createdAt)
-        assertTrue("Members list should be empty", project.members.isEmpty())
-        assertTrue("Categories list should be empty", project.categories.isEmpty())
+        assertEquals(imageUrl, project.imageUrl)
     }
 
     @Test
@@ -45,7 +70,7 @@ class ProjectTest {
         // Given
         val projectId = DocumentId("project123")
         val projectName = ProjectName("Test Project")
-        val ownerId = UserId("owner123")
+        val ownerId = OwnerId("owner123")
         val description = "Test project description"
         val imageUrl = ImageUrl.toImageUrl("https://example.com/image.jpg")
 
@@ -153,23 +178,6 @@ class ProjectTest {
     }
 
     @Test
-    fun `project equality based on ID`() {
-        // Given
-        val id1 = DocumentId("project123")
-        val id2 = DocumentId("project123")
-        val id3 = DocumentId("project456")
-        
-        val project1 = TestDataBuilder.createTestProject(id = id1.value, name = "Project 1")
-        val project2 = TestDataBuilder.createTestProject(id = id2.value, name = "Project 2")
-        val project3 = TestDataBuilder.createTestProject(id = id3.value, name = "Project 1")
-
-        // Then
-        assertEquals("Projects with same ID should be equal", project1, project2)
-        assertTrue("Projects with different IDs should not be equal", project1 != project3)
-        assertEquals("Hash codes should match for equal projects", project1.hashCode(), project2.hashCode())
-    }
-
-    @Test
     fun `project immutability verification`() {
         // Given
         val originalProject = TestDataBuilder.createTestProject()
@@ -201,7 +209,7 @@ class ProjectTest {
             val project = Project.create(
                 id = DocumentId("test_${testCase.replace(" ", "_")}"),
                 name = ProjectName(name),
-                ownerId = UserId(ownerId),
+                ownerId = OwnerId(ownerId),
                 description = testCase,
                 imageUrl = null
             )

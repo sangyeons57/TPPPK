@@ -7,7 +7,6 @@ import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
-import com.example.domain.usecase.user.UploadProfileImageUseCase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,12 +38,7 @@ class ContextDependentUseCaseProvider @Inject constructor(
         )
         
         return ContextDependentUseCases(
-            uploadProfileImageUseCase = UploadProfileImageUseCase(
-                userRepository = userRepository,
-                authRepository = authRepository,
-                context = context
-            ),
-            
+
             // Repository references for potential future use
             userRepository = userRepository,
             authRepository = authRepository
@@ -56,8 +50,7 @@ class ContextDependentUseCaseProvider @Inject constructor(
  * Context-dependent UseCase group
  */
 data class ContextDependentUseCases(
-    val uploadProfileImageUseCase: UploadProfileImageUseCase,
-    
+
     // Repository references
     val userRepository: UserRepository,
     val authRepository: AuthRepository

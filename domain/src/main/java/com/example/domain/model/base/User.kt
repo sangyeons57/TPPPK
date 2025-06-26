@@ -1,28 +1,26 @@
 package com.example.domain.model.base
 
 
-import com.example.domain.model.enum.UserAccountStatus
-import com.example.domain.model.enum.UserStatus
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserMemo
-import com.example.domain.model.vo.user.UserName
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.user.UserFcmToken
-import com.example.domain.event.user.UserAccountSuspendedEvent
-import com.example.domain.event.user.UserAccountActivatedEvent
-import com.example.domain.event.user.UserAccountWithdrawnEvent
-import com.example.domain.event.user.UserStatusChangedEvent
-import com.example.domain.event.user.UserProfileUpdatedEvent
-import com.example.domain.event.user.UserMemoChangedEvent
-import com.example.domain.event.user.UserFcmTokenUpdatedEvent
-import com.example.domain.event.user.UserNameChangedEvent
-import com.example.domain.event.user.UserProfileImageChangedEvent
-import com.example.domain.event.user.UserCreatedEvent
-
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.event.AggregateRoot
-
+import com.example.domain.event.user.UserAccountActivatedEvent
+import com.example.domain.event.user.UserAccountSuspendedEvent
+import com.example.domain.event.user.UserAccountWithdrawnEvent
+import com.example.domain.event.user.UserCreatedEvent
+import com.example.domain.event.user.UserFcmTokenUpdatedEvent
+import com.example.domain.event.user.UserMemoChangedEvent
+import com.example.domain.event.user.UserNameChangedEvent
+import com.example.domain.event.user.UserProfileImageChangedEvent
+import com.example.domain.event.user.UserProfileUpdatedEvent
+import com.example.domain.event.user.UserStatusChangedEvent
+import com.example.domain.model.enum.UserAccountStatus
+import com.example.domain.model.enum.UserStatus
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.model.vo.user.UserFcmToken
+import com.example.domain.model.vo.user.UserMemo
+import com.example.domain.model.vo.user.UserName
 import java.time.Instant
 
 /**
@@ -222,6 +220,19 @@ class User private constructor(
     }
 
     /**
+     * Reactivates a withdrawn user account.
+     * This is specifically intended for accounts whose current state is [UserAccountStatus.WITHDRAWN].
+     * If the account is not withdrawn, the operation is ignored.
+     */
+    fun reactivateAccount() {
+        if (!isWithdrawn()) return // Only proceed when the account is WITHDRAWN
+
+        this.accountStatus = UserAccountStatus.ACTIVE
+        this.updatedAt = Instant.now()
+        pushDomainEvent(UserAccountActivatedEvent(id.value))
+    }
+
+    /**
      * Marks the user's account as withdrawn.
      * This is a final state and cannot be undone through this method.
      * The operation is ignored if the account is already withdrawn.
@@ -277,6 +288,7 @@ class User private constructor(
          * @return A new User instance.
          */
         fun create(
+            id: DocumentId,
             email: UserEmail,
             name: UserName,
             consentTimeStamp: Instant,
@@ -299,6 +311,7 @@ class User private constructor(
                 initialAccountStatus = UserAccountStatus.ACTIVE,
                 isNew = true // Default to active
             )
+            user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
         }
 

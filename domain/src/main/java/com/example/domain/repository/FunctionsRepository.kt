@@ -1,12 +1,13 @@
 package com.example.domain.repository
 
+import android.net.Uri
 import com.example.core_common.result.CustomResult
 
 /**
  * Firebase Functions와 관련된 작업을 처리하는 Repository 인터페이스
  * Clean Architecture 원칙에 따라 domain layer에서 정의되며, data layer에서 구현됩니다.
  */
-interface FunctionsRepository {
+interface FunctionsRepository : Repository {
 
     /**
      * Firebase Functions의 callable function을 호출합니다.
@@ -40,4 +41,26 @@ interface FunctionsRepository {
         userId: String,
         customData: Map<String, Any?>? = null
     ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 사용자 프로필 이미지를 업로드합니다.
+     * Firebase Storage에 업로드 후 자동으로 Firebase Functions가 처리합니다.
+     *
+     * @param uri 업로드할 이미지의 URI
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception>
+
+    /**
+     * 사용자 프로필을 업데이트합니다.
+     * Firebase Functions를 통해 이름, 메모 등의 프로필 정보를 업데이트합니다.
+     *
+     * @param name 새로운 사용자 이름 (nullable)
+     * @param memo 새로운 사용자 메모 (nullable)
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun updateUserProfile(
+        name: String? = null,
+        memo: String? = null
+    ): CustomResult<Unit, Exception>
 }

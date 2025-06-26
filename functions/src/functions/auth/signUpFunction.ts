@@ -3,11 +3,11 @@
  * Handles user registration with the new architecture
  */
 
-import { onCall, CallableRequest } from 'firebase-functions/v2/https';
-import * as logger from 'firebase-functions/logger';
-import { container } from '../../infrastructure/di/Container';
-import { FunctionError, FunctionErrorCode, ErrorResponse } from '../../shared/types/common';
-import { SignUpRequest } from '../../domain/usecases/auth/registration/SignUpUseCase';
+import {onCall, CallableRequest} from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
+import {container} from "../../infrastructure/di/Container";
+import {FunctionError, FunctionErrorCode, ErrorResponse} from "../../shared/types/common";
+import {SignUpRequest} from "../../domain/usecases/auth/registration/SignUpUseCase";
 
 interface SignUpResponse {
   userId: string;
@@ -17,15 +17,15 @@ interface SignUpResponse {
 
 export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
   {
-    region: 'asia-northeast3',
+    region: "asia-northeast3",
     timeoutSeconds: 60,
-    memory: '512MiB',
+    memory: "512MiB",
   },
   async (request: CallableRequest<SignUpRequest>) => {
     const requestId = `signup-${Date.now()}`;
     const startTime = new Date();
 
-    logger.info('SignUp function called', {
+    logger.info("SignUp function called", {
       requestId,
       email: request.data?.email,
       name: request.data?.name,
@@ -40,12 +40,12 @@ export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
           timestamp: new Date(),
           error: {
             code: FunctionErrorCode.VALIDATION_ERROR,
-            message: 'Email, password, and name are required',
+            message: "Email, password, and name are required",
             details: {
               missingFields: [
-                !request.data?.email && 'email',
-                !request.data?.password && 'password',
-                !request.data?.name && 'name',
+                !request.data?.email && "email",
+                !request.data?.password && "password",
+                !request.data?.name && "name",
               ].filter(Boolean),
             },
           },
@@ -60,7 +60,7 @@ export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
         {
           requestId,
           metadata: {
-            userAgent: request.rawRequest.get('user-agent'),
+            userAgent: request.rawRequest.get("user-agent"),
             ipAddress: request.rawRequest.ip,
           },
         }
@@ -68,7 +68,7 @@ export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
 
       if (!result.isSuccess) {
         const error = result.getOrNull();
-        logger.error('SignUp function error', {
+        logger.error("SignUp function error", {
           requestId,
           email: request.data.email,
           error: error?.message,
@@ -84,7 +84,7 @@ export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
           timestamp: new Date(),
           error: {
             code: FunctionErrorCode.INTERNAL_ERROR,
-            message: 'Registration failed',
+            message: "Registration failed",
           },
         } as ErrorResponse;
       }
@@ -93,7 +93,7 @@ export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
       const endTime = new Date();
       const duration = endTime.getTime() - startTime.getTime();
 
-      logger.info('SignUp function completed', {
+      logger.info("SignUp function completed", {
         requestId,
         userId,
         email: request.data.email,
@@ -103,11 +103,10 @@ export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
       return {
         userId,
         success: true,
-        message: 'Registration successful. Please check your email for verification.',
+        message: "Registration successful. Please check your email for verification.",
       } as SignUpResponse;
-
     } catch (error) {
-      logger.error('SignUp function unexpected error', {
+      logger.error("SignUp function unexpected error", {
         requestId,
         email: request.data?.email,
         error: error instanceof Error ? error.message : String(error),
@@ -119,7 +118,7 @@ export const signUp = onCall<SignUpRequest, SignUpResponse | ErrorResponse>(
         timestamp: new Date(),
         error: {
           code: FunctionErrorCode.INTERNAL_ERROR,
-          message: 'An unexpected error occurred during registration',
+          message: "An unexpected error occurred during registration",
         },
       } as ErrorResponse;
     }

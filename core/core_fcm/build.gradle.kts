@@ -74,3 +74,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
+
+kotlin {
+    jvmToolchain(libs.versions.jvmTarget.get().toInt())
+}

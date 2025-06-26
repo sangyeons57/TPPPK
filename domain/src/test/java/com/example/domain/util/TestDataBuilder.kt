@@ -5,10 +5,13 @@ import com.example.domain.model.base.Project
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.enum.FriendshipStatus
+import com.example.domain.model.enum.FriendStatus
+import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.project.ProjectName
@@ -45,7 +48,7 @@ object TestDataBuilder {
             if (accountStatus != UserAccountStatus.ACTIVE) {
                 when (accountStatus) {
                     UserAccountStatus.WITHDRAWN -> user.apply { markAsWithdrawn() }
-                    UserAccountStatus.SUSPENDED -> user.apply { markAsSuspended() }
+                    UserAccountStatus.SUSPENDED -> user.apply { suspendAccount() }
                     else -> user
                 }
             } else {
@@ -69,7 +72,7 @@ object TestDataBuilder {
         return UserSession(
             userId = UserId(userId),
             token = Token(token),
-            email = Email(email)
+            email = UserEmail(email)
         )
     }
 
@@ -80,15 +83,16 @@ object TestDataBuilder {
         id: String = "test_project_id",
         name: String = "Test Project",
         ownerId: String = "test_owner_id",
-        description: String? = "Test project description",
         imageUrl: String? = null
     ): Project {
-        return Project.create(
+        val now = Instant.now()
+        return Project.fromDataSource(
             id = DocumentId(id),
             name = ProjectName(name),
-            ownerId = UserId(ownerId),
-            description = description,
-            imageUrl = imageUrl?.let { ImageUrl.toImageUrl(it) }
+            imageUrl = imageUrl?.let { ImageUrl.toImageUrl(it) },
+            ownerId = OwnerId(ownerId),
+            createdAt = now,
+            updatedAt = now
         )
     }
 
@@ -97,19 +101,23 @@ object TestDataBuilder {
      */
     fun createTestSchedule(
         id: String = "test_schedule_id",
-        authorId: String = "test_author_id",
+        creatorId: String = "creator_id",
         title: String = "Test Schedule",
         content: String = "Test schedule content",
-        scheduleDateTime: LocalDateTime = LocalDateTime.now().plusDays(1),
+        startDateTime: LocalDateTime = LocalDateTime.now().plusDays(1),
+        durationHours: Long = 1,
         projectId: String? = null
     ): Schedule {
+        val start = startDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        val end = start.plusSeconds(durationHours * 3600)
         return Schedule.create(
-            id = DocumentId(id),
-            authorId = UserId(authorId),
+            projectId = projectId?.let { ProjectId(it) },
+            creatorId = OwnerId(creatorId),
             title = ScheduleTitle(title),
             content = ScheduleContent(content),
-            scheduleDate = scheduleDateTime.atZone(ZoneId.systemDefault()).toInstant(),
-            projectId = projectId?.let { DocumentId(it) }
+            startTime = start,
+            endTime = end,
+            status = ScheduleStatus.CONFIRMED
         )
     }
 
@@ -120,7 +128,7 @@ object TestDataBuilder {
         id: String = "test_friend_id",
         requesterId: String = "test_requester_id",
         recipientId: String = "test_recipient_id",
-        status: FriendshipStatus = FriendshipStatus.PENDING
+        status: FriendStatus = FriendStatus.PENDING
     ): Friend {
         return Friend.createPendingRequest(
             id = DocumentId(id),
@@ -128,8 +136,8 @@ object TestDataBuilder {
             recipientId = UserId(recipientId)
         ).let { friend ->
             when (status) {
-                FriendshipStatus.ACCEPTED -> friend.copy(status = FriendshipStatus.ACCEPTED)
-                FriendshipStatus.DECLINED -> friend.copy(status = FriendshipStatus.DECLINED)
+                FriendStatus.ACCEPTED -> friend.copy(status = FriendStatus.ACCEPTED)
+                FriendStatus.DECLINED -> friend.copy(status = FriendStatus.DECLINED)
                 else -> friend
             }
         }
@@ -157,7 +165,7 @@ object TestDataBuilder {
                 id = "test_project_$index",
                 name = "Test Project $index",
                 ownerId = ownerId,
-                description = "Test project $index description"
+                imageUrl = "https://example.com/image_$index.jpg"
             )
         }
     }
@@ -193,10 +201,10 @@ fun User.shouldBeSuspended() = assert(this.accountStatus == UserAccountStatus.SU
     "Expected user to be SUSPENDED but was ${this.accountStatus}"
 }
 
-fun Friend.shouldBePending() = assert(this.status == FriendshipStatus.PENDING) {
+fun Friend.shouldBePending() = assert(this.status == FriendStatus.PENDING) {
     "Expected friendship to be PENDING but was ${this.status}"
 }
 
-fun Friend.shouldBeAccepted() = assert(this.status == FriendshipStatus.ACCEPTED) {
+fun Friend.shouldBeAccepted() = assert(this.status == FriendStatus.ACCEPTED) {
     "Expected friendship to be ACCEPTED but was ${this.status}"
 }

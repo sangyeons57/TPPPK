@@ -1,7 +1,11 @@
 package com.example.data.datasource.remote.special
 
+import android.net.Uri
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -43,11 +47,35 @@ interface FunctionsRemoteDataSource {
         userId: String,
         customData: Map<String, Any?>? = null
     ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 사용자 프로필 이미지를 업로드합니다.
+     * Firebase Storage에 업로드 후 자동으로 Firebase Functions가 처리합니다.
+     *
+     * @param uri 업로드할 이미지의 URI
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception>
+
+    /**
+     * 사용자 프로필을 업데이트합니다.
+     * Firebase Functions를 통해 이름, 메모 등의 프로필 정보를 업데이트합니다.
+     *
+     * @param name 새로운 사용자 이름 (nullable)
+     * @param memo 새로운 사용자 메모 (nullable)
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun updateUserProfile(
+        name: String? = null,
+        memo: String? = null
+    ): CustomResult<Unit, Exception>
 }
 
 @Singleton
 class FunctionsRemoteDataSourceImpl @Inject constructor(
-    private val functions: FirebaseFunctions
+    private val functions: FirebaseFunctions,
+    private val auth: FirebaseAuth,
+    private val storage: FirebaseStorage
 ) : FunctionsRemoteDataSource {
 
     companion object {
@@ -127,6 +155,64 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 CustomResult.Success(resultData)
             } else {
                 CustomResult.Failure(Exception("Function call with user data timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception> = resultTry {
+        // 현재 인증된 사용자 ID 가져오기
+        val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+        val userId = currentUser.uid
+
+        // Firebase Storage에 이미지 업로드
+        val storageRef = storage.reference
+        val profileImageRef =
+            storageRef.child("user_profile_uploads/$userId/${System.currentTimeMillis()}_profile.jpg")
+
+        // 이미지 업로드
+        profileImageRef.putFile(uri).await()
+
+        // 업로드가 성공하면 Firebase Functions onUserProfileImageUpload가 자동으로 처리됨
+        // 별도의 URL 처리나 Firestore 업데이트 불필요
+    }
+
+    override suspend fun updateUserProfile(
+        name: String?,
+        memo: String?
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        try {
+            // 업데이트할 데이터가 없으면 에러
+            if (name == null && memo == null) {
+                return@withContext CustomResult.Failure(Exception("No data to update"))
+            }
+
+            // 요청 데이터 구성
+            val requestData = mutableMapOf<String, Any?>()
+            name?.let { requestData["name"] = it }
+            memo?.let { requestData["memo"] = it }
+
+            val callable = functions.getHttpsCallable("updateUserProfile")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val responseData = result.data as? Map<String, Any?>
+                val success = responseData?.get("success") as? Boolean ?: false
+                
+                if (success) {
+                    CustomResult.Success(Unit)
+                } else {
+                    val message = responseData?.get("message") as? String ?: "Profile update failed"
+                    CustomResult.Failure(Exception(message))
+                }
+            } else {
+                CustomResult.Failure(Exception("Update user profile function call timed out"))
             }
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e

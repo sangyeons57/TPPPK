@@ -119,7 +119,7 @@ class UserNameTest {
             "User Name!", // With exclamation
             "User@Name", // With at symbol
             "User#Name", // With hash
-            "$pecial", // Starting with special character
+            "\$pecial", // Starting with special character
             "Name with multiple    spaces", // Multiple spaces
             "\tTabbed\tName", // With tabs
             "Name\nWith\nNewlines" // With newlines (if allowed)
@@ -178,11 +178,5 @@ class UserNameTest {
         assertEquals(nameWithSpaces, userName.value)
     }
 
-    @Test
-    fun `UserName with null value throws exception`() {
-        // When & Then
-        assertThrows(IllegalArgumentException::class.java) {
-            UserName(null as String?)
-        }
-    }
+    // The domain object does not accept null; nullability is enforced by type system.
 }

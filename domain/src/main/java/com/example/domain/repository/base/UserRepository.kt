@@ -32,4 +32,5 @@ interface UserRepository : DefaultRepository {
      * @param userId 사용자 ID
      * @return ProjectsWrapper 목록을 담은 Flow
      */
+
 }

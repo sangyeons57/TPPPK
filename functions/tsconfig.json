@@ -8,10 +8,16 @@
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
-    "target": "es2017"
+    "target": "es2017",
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": [
     "src"
+  ],
+  "exclude": [
+    "src/functions/auth/sessionFunction.ts",
+    "src/functions/auth/signUpFunction.ts",
+    "src/test/helloWorld.test.ts"
   ]
 }

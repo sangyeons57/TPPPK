@@ -94,7 +94,7 @@ class SignUpUseCase @Inject constructor(
                             if (existingUser.accountStatus == UserAccountStatus.WITHDRAWN) {
                                 // Reactivate withdrawn account using user repository
                                 // Reactivating withdrawn account for email: $email
-                                existingUser.activateAccount()
+                                existingUser.reactivateAccount()
                                 existingUser.changeName(nickname)
                                 
                                 when (val saveResult = userRepository.save(existingUser)) {

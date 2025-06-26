@@ -15,6 +15,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.core_navigation.core.DevMenuRoute
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.SplashRoute
@@ -159,6 +160,7 @@ class MainActivity : ComponentActivity() {
     private fun decideStartDestination(): String {
         // val isLoggedIn = false // 예시: 사용자 로그인 상태 확인 로직
         // return if (isLoggedIn) "main" else "auth"
-        return "auth" // Auth 네비게이션 그래프 자체를 시작점으로 지정
+        ///return DevMenuRoute.toAppRoutePath()
+         return "auth" // Auth 네비게이션 그래프 자체를 시작점으로 지정
     }
 }
