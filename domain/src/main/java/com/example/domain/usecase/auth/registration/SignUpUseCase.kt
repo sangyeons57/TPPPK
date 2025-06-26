@@ -54,7 +54,7 @@ class SignUpUseCase @Inject constructor(
             is CustomResult.Success -> {
                 val uid = signUpRes.data
                 // "Auth signup success. uid=$uid")
-                val newUser = User.registerNewUser(
+                val newUser = User.create(
                     id = DocumentId.from(uid),
                     email = UserEmail(email),
                     name = nickname,

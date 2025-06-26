@@ -9,7 +9,6 @@ import com.example.domain.model.vo.user.UserName
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.user.UserFcmToken
-import com.example.domain.event.DomainEvent
 import com.example.domain.event.user.UserAccountSuspendedEvent
 import com.example.domain.event.user.UserAccountActivatedEvent
 import com.example.domain.event.user.UserAccountWithdrawnEvent
@@ -277,8 +276,7 @@ class User private constructor(
          * @param initialFcmToken Optional initial FCM token.
          * @return A new User instance.
          */
-        fun registerNewUser(
-            id: DocumentId,
+        fun create(
             email: UserEmail,
             name: UserName,
             consentTimeStamp: Instant,
@@ -288,7 +286,7 @@ class User private constructor(
         ): User {
             val now = DateTimeUtil.nowInstant()
             val user = User(
-                initialId = id,
+                initialId = DocumentId.EMPTY,
                 initialEmail = email,
                 initialName = name,
                 initialConsentTimeStamp = consentTimeStamp,
@@ -301,7 +299,6 @@ class User private constructor(
                 initialAccountStatus = UserAccountStatus.ACTIVE,
                 isNew = true // Default to active
             )
-            user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
         }
 

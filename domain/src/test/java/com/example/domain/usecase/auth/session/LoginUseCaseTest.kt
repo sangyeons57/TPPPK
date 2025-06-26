@@ -37,7 +37,7 @@ class LoginUseCaseTest {
         val userEmail = "test@example.com"
         val userPassword = "password"
         val userSession = UserSession(UserId(userId), Token("test_token"), Email(userEmail))
-        val user = User.registerNewUser(
+        val user = User.create(
             id = DocumentId(userId),
             email = UserEmail(userEmail),
             name = UserName("Test User"),
@@ -62,7 +62,7 @@ class LoginUseCaseTest {
         val userEmail = "test@example.com"
         val userPassword = "password"
         val userSession = UserSession(UserId(userId), Token("test_token"), Email(userEmail))
-        val user = User.registerNewUser(
+        val user = User.create(
             id = DocumentId(userId),
             email = UserEmail(userEmail),
             name = UserName("Test User"),

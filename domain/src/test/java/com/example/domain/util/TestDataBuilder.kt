@@ -36,7 +36,7 @@ object TestDataBuilder {
         accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE,
         profileImageUrl: String? = null
     ): User {
-        return User.registerNewUser(
+        return User.create(
             id = DocumentId(id),
             email = UserEmail(email),
             name = UserName(name),

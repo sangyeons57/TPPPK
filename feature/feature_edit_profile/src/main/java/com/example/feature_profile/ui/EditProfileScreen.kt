@@ -3,6 +3,7 @@ package com.example.feature_profile.ui
 // Removed direct Coil imports, will use UserProfileImage
 // AppRoutes and other navigation imports are fine if AppNavigator handles them
 import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -24,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -35,30 +37,38 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.model.base.User
+import com.example.domain.model.enum.UserAccountStatus
+import com.example.domain.model.enum.UserStatus
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ImageUrl
+import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.model.vo.user.UserName
 import com.example.feature_profile.viewmodel.EditProfileEvent
 import com.example.feature_profile.viewmodel.EditProfileUiState
 import com.example.feature_profile.viewmodel.EditProfileViewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import java.time.Instant
 
 /**
  * EditProfileScreen: 프로필 편집 화면 (Stateful)
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class) // ExperimentalPermissionsApi 추가
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     navigationManger: NavigationManger,
@@ -66,6 +76,8 @@ fun EditProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // 이미지 읽기 권한 설정 (Android 버전에 따라 분기)
     val readImagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -73,7 +85,6 @@ fun EditProfileScreen(
     } else {
         Manifest.permission.READ_EXTERNAL_STORAGE
     }
-    val permissionState = rememberPermissionState(permission = readImagePermission)
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -81,6 +92,23 @@ fun EditProfileScreen(
             viewModel.handleImageSelection(uri)
         }
     )
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                imagePickerLauncher.launch("image/*")
+            } else {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        "사진 접근 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+        }
+    )
+
 
     LaunchedEffect(key1 = viewModel.eventFlow) {
         viewModel.eventFlow.collectLatest { event ->
@@ -92,36 +120,17 @@ fun EditProfileScreen(
                     )
                 }
                 is EditProfileEvent.RequestImagePick -> {
-                    // 권한 상태에 따라 이미지 선택기 실행 또는 권한 요청
-                    Log.d("EditProfileScreen", "Requesting image pick permission...")
-                    if (permissionState.status.isGranted) {
-                        imagePickerLauncher.launch("image/*")
-                    } else {
-                        // 권한이 없다면 요청
-                        // shouldShowRationale은 사용자가 이전에 권한 요청을 거부한 경우 true를 반환
-                        // 이 경우 사용자에게 왜 권한이 필요한지 설명하는 것이 좋음
-                        permissionState.launchPermissionRequest()
+                    Log.d("EditProfileScreen", "Requesting image pick...")
+                    when (PackageManager.PERMISSION_GRANTED) {
+                        ContextCompat.checkSelfPermission(context, readImagePermission) -> {
+                            imagePickerLauncher.launch("image/*")
+                        }
+                        else -> {
+                            permissionLauncher.launch(readImagePermission)
+                        }
                     }
                 }
             }
-        }
-    }
-
-    // 권한 상태 변경 시 스낵바 알림 (선택 사항)
-    LaunchedEffect(permissionState.status) {
-        if (!permissionState.status.isGranted && permissionState.status.shouldShowRationale) {
-            // 사용자가 권한을 거부했지만, 설명을 다시 보여줄 수 있는 경우
-            snackbarHostState.showSnackbar(
-                message = "프로필 이미지 변경을 위해 사진 접근 권한이 필요합니다.",
-                duration = SnackbarDuration.Long
-            )
-        } else if (!permissionState.status.isGranted && !permissionState.status.shouldShowRationale) {
-            // 사용자가 권한을 영구적으로 거부한 경우 (다시 묻지 않음 선택)
-            // 이 경우 설정 앱으로 이동하여 권한을 직접 변경하도록 안내할 수 있음
-            snackbarHostState.showSnackbar(
-                message = "사진 접근 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.",
-                duration = SnackbarDuration.Long
-            )
         }
     }
 
@@ -192,15 +201,13 @@ fun EditProfileContent(
         Spacer(modifier = Modifier.height(8.dp))
 
 
-        /**
         OutlinedTextField(
-            value = uiState.user?.name ?: "", // Use uiState.user directly
+            value = uiState.user?.name?.value ?: "", // Use uiState.user directly
             onValueChange = onNameChanged,
             label = { Text("이름") },
             modifier = Modifier.fillMaxWidth(),
             enabled = uiState.user != null // Disable if user data is not loaded
         )
-        */
 
         Spacer(modifier = Modifier.weight(1F)) // Pushes save button to bottom
 
@@ -231,7 +238,21 @@ fun EditProfileContent(
 fun EditProfileContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditProfileContent(
-            uiState = TODO(),
+            uiState = EditProfileUiState(
+                user = User.fromDataSource(
+                    id = DocumentId("preview-user"),
+                    email = UserEmail("preview@test.com"),
+                    name = UserName("Preview User"),
+                    consentTimeStamp = Instant.now(),
+                    profileImageUrl = ImageUrl(""),
+                    memo = null,
+                    userStatus = UserStatus.ONLINE,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now(),
+                    fcmToken = null,
+                    accountStatus = UserAccountStatus.ACTIVE
+                )
+            ),
             onNameChanged = {},
             onProfileImageClicked = {},
             onSaveProfileClicked = {}

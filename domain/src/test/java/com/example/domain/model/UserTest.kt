@@ -20,7 +20,7 @@ class UserTest {
         val userName = "Test User"
 
         // When
-        val user = User.registerNewUser(
+        val user = User.create(
             id = DocumentId(userId),
             email = UserEmail(userEmail),
             name = UserName(userName),

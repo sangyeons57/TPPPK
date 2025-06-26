@@ -47,7 +47,7 @@ fun MainContainerScreen(
     
     // 현재 선택된 탭
     var selectedTab by rememberSaveable(stateSaver = TypeSafeRouteSaver) {
-        mutableStateOf<TypeSafeRoute?>(HomeRoute)
+        mutableStateOf<TypeSafeRoute>(HomeRoute)
     }
 
     // 각 탭마다 별도의 NavController를 생성하여 탭별 백스택 유지
