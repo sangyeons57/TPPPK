@@ -91,7 +91,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             }
 
             if (result != null) {
-                val message = result.data as? String ?: result.data.toString()
+                @Suppress("UNCHECKED_CAST")
+                val responseData = result.data as? Map<String, Any?>
+                val message = responseData?.get("message") as? String 
+                    ?: result.data as? String 
+                    ?: result.data.toString()
                 CustomResult.Success(message)
             } else {
                 CustomResult.Failure(Exception("Hello World function call timed out"))
