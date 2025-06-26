@@ -51,6 +51,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
+import com.example.domain.model.vo.Email
+import com.example.domain.model.vo.IsLoading
 import com.example.feature_login.viewmodel.LoginEvent
 import com.example.feature_login.viewmodel.LoginUiState
 import com.example.feature_login.viewmodel.LoginViewModel
@@ -124,7 +126,7 @@ fun LoginContent(
     uiState: LoginUiState, // 표시할 UI 상태
     emailFocusRequester: FocusRequester,
     passwordFocusRequester: FocusRequester,
-    onEmailChange: (String) -> Unit, // 이벤트 콜백 함수들
+    onEmailChange: (Email) -> Unit, // 이벤트 콜백 함수들
     onPasswordChange: (String) -> Unit,
     onPasswordVisibilityToggle: () -> Unit,
     onLoginClick: () -> Unit,
@@ -152,8 +154,8 @@ fun LoginContent(
 
         // 이메일 입력 필드
         OutlinedTextField(
-            value = uiState.email,
-            onValueChange = onEmailChange,
+            value = uiState.email.value,
+            onValueChange = { onEmailChange(Email(it)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(emailFocusRequester),
@@ -167,7 +169,7 @@ fun LoginContent(
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
             ),
-            enabled = !uiState.isLoading,
+            enabled = uiState.isLoading.isEnable(),
             isError = uiState.emailError != null,
             supportingText = {
                 if (uiState.emailError != null) {
@@ -210,7 +212,7 @@ fun LoginContent(
                     Icon(imageVector = image, contentDescription = description)
                 }
             },
-            enabled = !uiState.isLoading,
+            enabled = uiState.isLoading.isEnable(),
             isError = uiState.passwordError != null,
             supportingText = {
                 if (uiState.passwordError != null) {
@@ -234,16 +236,16 @@ fun LoginContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            enabled = !uiState.isLoading && uiState.isLoginEnabled // 로딩중 아닐 때 + 입력값 있을 때 활성화
+            enabled = uiState.isLoading.isEnable() && uiState.isLoginEnabled // 로딩중 아닐 때 + 입력값 있을 때 활성화
         ) {
-            if (uiState.isLoading) {
+            if (uiState.isLoading.isEnable()) {
+                Text("로그인", fontSize = 16.sp)
+            } else {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
                     strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.onPrimary
                 )
-            } else {
-                Text("로그인", fontSize = 16.sp)
             }
         }
 
@@ -257,7 +259,7 @@ fun LoginContent(
             // 비밀번호 찾기 버튼
             TextButton(
                 onClick = onFindPasswordClick,
-                enabled = !uiState.isLoading,
+                enabled = uiState.isLoading.isEnable(),
                 modifier = Modifier.padding(vertical = 8.dp)
             ) {
                 Text("비밀번호를 잊으셨나요?")
@@ -265,7 +267,7 @@ fun LoginContent(
             // *** 회원가입 버튼 ***
             TextButton(
                 onClick = onSignUpClick,
-                enabled = !uiState.isLoading,
+                enabled = uiState.isLoading.isEnable(),
                 modifier = Modifier.padding(vertical = 8.dp)
             ) {
                 Text("회원가입")
@@ -321,7 +323,11 @@ fun LoginContentPreview() {
 fun LoginContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         LoginContent(
-            uiState = LoginUiState(isLoading = true, email = "test", password = "pwd"), // 로딩 상태
+            uiState = LoginUiState(
+                isLoading = IsLoading.True,
+                email = Email("test"),
+                password = "pwd"
+            ), // 로딩 상태
             onEmailChange = {},
             onPasswordChange = {},
             onPasswordVisibilityToggle = {},

@@ -1,7 +1,6 @@
 package com.example.feature_login.viewmodel
 
 import android.util.Log
-import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
@@ -9,6 +8,8 @@ import com.example.core_navigation.core.FindPasswordRoute
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
+import com.example.domain.model.vo.Email
+import com.example.domain.model.vo.IsLoading
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain.provider.auth.AuthValidationUseCaseProvider
 import com.example.domain.usecase.auth.session.WithdrawnAccountException
@@ -26,11 +27,11 @@ import javax.inject.Inject
  * 로그인 화면의 UI 상태를 정의하는 데이터 클래스
  */
 data class LoginUiState(
-    val email: String = "",
+    val email: Email = Email.EMPTY,
     val password: String = "",
     val isPasswordVisible: Boolean = false,
     val isLoginEnabled: Boolean = false,
-    val isLoading: Boolean = false,
+    val isLoading: IsLoading = IsLoading.False,
     val emailError: String? = null,
     val passwordError: String? = null,
 )
@@ -77,7 +78,7 @@ class LoginViewModel @Inject constructor(
      * 입력값 변경 시 해당 필드 에러 초기화 및 로그인 버튼 활성화 조건 업데이트
      * @param email 변경된 이메일 값
      */
-    fun onEmailChange(email: String) {
+    fun onEmailChange(email: Email) {
         _uiState.update {
             it.copy(
                 email = email.trim(),
@@ -115,15 +116,15 @@ class LoginViewModel @Inject constructor(
      */
     fun onLoginClick() {
         val currentState = _uiState.value
-        if (currentState.isLoading) return
+        if (currentState.isLoading.value) return
 
         // 유효성 검사
         var isValid = true
         var focusTarget: LoginFormFocusTarget? = null
 
-        if (currentState.email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(currentState.email).matches()) {
+        if (currentState.email.isBlank() || !currentState.email.isEmailPatternAvailable()) {
             _uiState.update { it.copy(emailError = "올바른 이메일 형식이 아닙니다.") }
-            if (focusTarget == null) focusTarget = LoginFormFocusTarget.EMAIL
+            focusTarget = LoginFormFocusTarget.EMAIL
             isValid = false
         }
         if (currentState.password.isBlank()) {
@@ -142,7 +143,13 @@ class LoginViewModel @Inject constructor(
 
         // 유효성 검사 통과 시 로그인 UseCase 실행
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, emailError = null, passwordError = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = IsLoading.True,
+                    emailError = null,
+                    passwordError = null
+                )
+            }
 
             // LoginUseCase 호출
             val result = authUseCases.loginUseCase(currentState.email, currentState.password)
@@ -160,11 +167,11 @@ class LoginViewModel @Inject constructor(
                     } else {
                         authValidationUseCases.getAuthErrorMessageUseCase(exception)
                     }
-                    _uiState.update { it.copy(isLoading = false) }
+                    _uiState.update { it.copy(isLoading = IsLoading.False) }
                     _eventFlow.emit(LoginEvent.ShowSnackbar(errorMessage))
                 }
                 else -> {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _uiState.update { it.copy(isLoading = IsLoading.False) }
                     _eventFlow.emit(LoginEvent.ShowSnackbar("로그인 처리 중 오류가 발생했습니다."))
                 }
             }
