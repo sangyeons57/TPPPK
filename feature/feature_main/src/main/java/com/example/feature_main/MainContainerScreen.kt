@@ -25,8 +25,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.*
+import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.core_navigation.destination.mainBottomNavItems
 import com.example.feature_calendar.ui.CalendarScreen
 import com.example.feature_home.ui.HomeScreen
@@ -46,8 +46,8 @@ fun MainContainerScreen(
     val TAG = "MainContainerScreen"
     
     // 현재 선택된 탭
-    var selectedTab by rememberSaveable { 
-        mutableStateOf(AppRoutes.Main.Home.GRAPH_ROOT) 
+    var selectedTab by rememberSaveable(stateSaver = TypeSafeRouteSaver) {
+        mutableStateOf<TypeSafeRoute>(HomeRoute)
     }
 
     // 각 탭마다 별도의 NavController를 생성하여 탭별 백스택 유지
@@ -57,19 +57,19 @@ fun MainContainerScreen(
 
     // 탭 라우트 -> NavController 맵핑
     val navControllers = remember {
-        mapOf(
-            AppRoutes.Main.Home.GRAPH_ROOT to homeNavController,
-            AppRoutes.Main.Calendar.GRAPH_ROOT to calendarNavController,
-            AppRoutes.Main.Profile.GRAPH_ROOT to profileNavController,
+        mapOf<TypeSafeRoute, NavHostController>(
+            HomeRoute to homeNavController,
+            CalendarRoute to calendarNavController,
+            ProfileRoute to profileNavController,
         )
     }
 
     // 각 탭의 마지막 방문 경로를 저장하는 맵
-    val tabLastRoutes = rememberSaveable {
-        mutableStateMapOf(
-            AppRoutes.Main.Home.GRAPH_ROOT to AppRoutes.Main.Home.ROOT_CONTENT,
-            AppRoutes.Main.Calendar.GRAPH_ROOT to AppRoutes.Main.Calendar.ROOT_CONTENT,
-            AppRoutes.Main.Profile.GRAPH_ROOT to AppRoutes.Main.Profile.ROOT_CONTENT,
+    val tabLastRoutes = remember {
+        mutableStateMapOf<TypeSafeRoute, String>(
+            HomeRoute to HomeRoute.toAppRoutePath(),
+            CalendarRoute to CalendarRoute.toAppRoutePath(),
+            ProfileRoute to ProfileRoute.toAppRoutePath(),
         )
     }
 
@@ -78,16 +78,15 @@ fun MainContainerScreen(
     
     // NavigationManager에서 pending_tab_navigation 결과를 확인하여 탭 전환
     LaunchedEffect(Unit) {
-        navigationManger.getResult<String>("pending_tab_navigation")?.let { pendingTabRoute ->
-            Log.d(TAG, "NavigationManager에서 보류중인 탭 이동 발견: $pendingTabRoute")
+        navigationManger.getResult<String>("pending_tab_navigation")?.let { pendingTabRoutePath ->
+            Log.d(TAG, "NavigationManager found pending tab navigation: $pendingTabRoutePath")
             
-            // 유효한 탭 경로인지 확인하고 해당 탭으로 전환
-            val validTabRoutes = mainBottomNavItems.map { it.route }
-            if (validTabRoutes.contains(pendingTabRoute)) {
-                Log.d(TAG, "보류중인 탭 이동 실행: $pendingTabRoute")
-                selectedTab = pendingTabRoute
+            val targetRoute = mainBottomNavItems.find { it.route.toAppRoutePath() == pendingTabRoutePath }?.route
+            if (targetRoute != null) {
+                Log.d(TAG, "Executing pending tab navigation to: $targetRoute")
+                selectedTab = targetRoute
             } else {
-                Log.w(TAG, "유효하지 않은 탭 경로: $pendingTabRoute")
+                Log.w(TAG, "Invalid tab route path: $pendingTabRoutePath")
             }
         }
     }
@@ -97,7 +96,7 @@ fun MainContainerScreen(
         val controller = navControllers[selectedTab]
         val startDestination = getTabStartDestination(selectedTab)
         
-        Log.d(TAG, "탭 전환: $selectedTab, 시작 목적지: $startDestination")
+        Log.d(TAG, "Tab switched: $selectedTab, start destination: $startDestination")
         
         // NavController가 올바른 화면으로 이동
         if (controller?.currentDestination?.route != startDestination) {
@@ -118,7 +117,7 @@ fun MainContainerScreen(
             // 현재 탭의 마지막 경로 저장
             currentNavController.currentDestination?.route?.let { route ->
                 tabLastRoutes[selectedTab] = route
-                Log.d(TAG, "탭($selectedTab) 마지막 경로 저장: $route")
+                Log.d(TAG, "Saved last route for tab($selectedTab): $route")
             }
             
             // NavigationHandler에서 현재 컨트롤러 제거(다른 화면으로 이동 시)
@@ -146,7 +145,7 @@ fun MainContainerScreen(
                                 // 현재 탭의 마지막 경로 저장
                                 currentNavController.currentDestination?.route?.let { route ->
                                     tabLastRoutes[selectedTab] = route
-                                    Log.d(TAG, "현재 탭($selectedTab) 마지막 경로 저장: $route")
+                                    Log.d(TAG, "Saved current tab($selectedTab) last route: $route")
                                 }
                                 
                                 // 새 탭으로 전환
@@ -163,21 +162,30 @@ fun MainContainerScreen(
             modifier = Modifier.padding(innerPadding),
         ) {
             when (selectedTab) {
-                AppRoutes.Main.Home.GRAPH_ROOT -> {
+                is HomeRoute -> {
                     HomeTabNavHost(
                         navController = homeNavController,
                         navigationManger = navigationManger
                     )
                 }
-                AppRoutes.Main.Calendar.GRAPH_ROOT -> {
+                is CalendarRoute -> {
                     CalendarTabNavHost(
                         navController = calendarNavController,
                         navigationManger = navigationManger
                     )
                 }
-                AppRoutes.Main.Profile.GRAPH_ROOT -> {
+                is ProfileRoute -> {
                     ProfileTabNavHost(
                         navController = profileNavController,
+                        navigationManger = navigationManger
+                    )
+                }
+                else -> {
+                    // when이 모든 경우를 처리하도록 하기 위한 else 브랜치.
+                    // 논리적으로는 Home, Calendar, Profile 중 하나여야 하지만,
+                    // 안전을 위해 기본값으로 Home을 표시한다.
+                    HomeTabNavHost(
+                        navController = homeNavController,
                         navigationManger = navigationManger
                     )
                 }
@@ -189,12 +197,12 @@ fun MainContainerScreen(
 /**
  * 탭 경로에 해당하는 시작 목적지를 반환
  */
-private fun getTabStartDestination(tabRoute: String): String {
+private fun getTabStartDestination(tabRoute: TypeSafeRoute): String {
     return when (tabRoute) {
-        AppRoutes.Main.Home.GRAPH_ROOT -> AppRoutes.Main.Home.ROOT_CONTENT
-        AppRoutes.Main.Calendar.GRAPH_ROOT -> AppRoutes.Main.Calendar.ROOT_CONTENT
-        AppRoutes.Main.Profile.GRAPH_ROOT -> AppRoutes.Main.Profile.ROOT_CONTENT
-        else -> AppRoutes.Main.Home.ROOT_CONTENT
+        is HomeRoute -> HomeRoute.toAppRoutePath()
+        is CalendarRoute -> CalendarRoute.toAppRoutePath()
+        is ProfileRoute -> ProfileRoute.toAppRoutePath()
+        else -> HomeRoute.toAppRoutePath()
     }
 }
 
@@ -218,9 +226,9 @@ private fun HomeTabNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.Main.Home.ROOT_CONTENT
+        startDestination = HomeRoute.toAppRoutePath()
     ) {
-        composable(AppRoutes.Main.Home.ROOT_CONTENT) {
+        composable(HomeRoute.toAppRoutePath()) {
             HomeScreen(
                 navigationManger = navigationManger
             )
@@ -248,9 +256,9 @@ private fun CalendarTabNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.Main.Calendar.ROOT_CONTENT
+        startDestination = CalendarRoute.toAppRoutePath()
     ) {
-        composable(AppRoutes.Main.Calendar.ROOT_CONTENT) {
+        composable(CalendarRoute.toAppRoutePath()) {
             CalendarScreen(
                 navigationManger = navigationManger,
             )
@@ -278,9 +286,9 @@ private fun ProfileTabNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.Main.Profile.ROOT_CONTENT
+        startDestination = ProfileRoute.toAppRoutePath()
     ) {
-        composable(AppRoutes.Main.Profile.ROOT_CONTENT) {
+        composable(ProfileRoute.toAppRoutePath()) {
             ProfileScreen(
                 navigationManger = navigationManger,
             )

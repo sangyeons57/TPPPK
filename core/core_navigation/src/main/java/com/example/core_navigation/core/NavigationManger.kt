@@ -2,6 +2,7 @@ package com.example.core_navigation.core
 
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
+import com.example.domain.model.vo.DocumentId
 
 /**
  * Clean, direct navigation interface without command pattern complexity.

@@ -58,20 +58,9 @@ class CheckNicknameAvailabilityUseCaseImpl @Inject constructor(
                         CustomResult.Failure(result.error)
                     }
                 }
-                is CustomResult.Loading -> {
-                    // This should ideally not happen if we take .first() and the underlying source emits quickly or is not a long-running stream for this specific check.
-                    // However, to be exhaustive:
-                    //("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is still loading. This is unexpected for a first() call.")
-                    CustomResult.Failure(Exception("Nickname check timed out or remained in loading state."))
-                }
-                is CustomResult.Initial -> {
-                     //("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is in initial state. This is unexpected for a first() call.")
-                    CustomResult.Failure(Exception("Nickname check remained in initial state."))
-                }
-                 is CustomResult.Progress -> {
-                    //("CheckNicknameAvailabilityUseCase", "Nickname check for '$nickname' is in progress state. This is unexpected for a first() call.")
-                    CustomResult.Failure(Exception("Nickname check remained in progress state."))
-                }
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Initial -> CustomResult.Initial
+                is CustomResult.Progress -> CustomResult.Progress(result.progress)
             }
         } catch (e: Exception) {
             // Catch any exceptions from the Flow collection itself (e.g., if the Flow is empty and .first() is called, though findByNameStream should emit NoSuchElementException)

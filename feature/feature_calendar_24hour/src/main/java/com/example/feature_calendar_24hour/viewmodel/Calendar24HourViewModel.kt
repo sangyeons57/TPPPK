@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.core_ui.theme.ScheduleColor1
 import com.example.core_ui.theme.ScheduleColor2
 import com.example.core_ui.theme.ScheduleColor3
@@ -83,9 +83,9 @@ class Calendar24HourViewModel @Inject constructor(
     private val scheduleUseCases = scheduleUseCaseProvider.createForCurrentUser()
 
     // --- 날짜 파라미터 ---
-    private val year: Int = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR) ?: LocalDate.now().year
-    private val month: Int = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_MONTH) ?: LocalDate.now().monthValue
-    private val day: Int = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_DAY) ?: LocalDate.now().dayOfMonth
+    private val year: Int = savedStateHandle.get<Int>(RouteArgs.YEAR) ?: LocalDate.now().year
+    private val month: Int = savedStateHandle.get<Int>(RouteArgs.MONTH) ?: LocalDate.now().monthValue
+    private val day: Int = savedStateHandle.get<Int>(RouteArgs.DAY) ?: LocalDate.now().dayOfMonth
     
     // --- 색상 관리자 ---
     private val colorManager = ScheduleColorManager()

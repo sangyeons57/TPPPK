@@ -1,5 +1,7 @@
 package com.example.domain.model.enum
 
+import com.google.firebase.firestore.PropertyName
+
 /**
  * 사용자의 접속 상태를 나타내는 열거형입니다.
  * Firestore의 `users/{userId}.status` 필드 값과 일치시키거나 매핑됩니다.
@@ -8,26 +10,31 @@ enum class UserStatus(val value: String) {
     /**
      * 사용자가 온라인 상태입니다.
      */
+    @PropertyName("online")
     ONLINE("online"),
 
     /**
      * 사용자가 오프라인 상태입니다.
      */
+    @PropertyName("offline")
     OFFLINE("offline"),
 
     /**
      * 사용자가 자리 비움 상태입니다. (예시)
      */
+    @PropertyName("away")
     AWAY("away"),
 
     /**
      * 사용자가 다른 용무 중(방해 금지) 상태입니다. (예시)
      */
+    @PropertyName("do_not_disturb")
     DO_NOT_DISTURB("do_not_disturb"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
+    @PropertyName("unknown")
     UNKNOWN("unknown");
 
     companion object {

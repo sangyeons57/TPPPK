@@ -5,7 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.category.CategoryName
@@ -86,8 +86,8 @@ class EditCategoryViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<EditCategoryEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    private val projectId: String? = savedStateHandle[AppRoutes.Project.ARG_PROJECT_ID]
-    private val categoryId: String? = savedStateHandle[AppRoutes.Project.ARG_CATEGORY_ID]
+    private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
+    private val categoryId: String = savedStateHandle.getRequiredString(RouteArgs.CATEGORY_ID)
     private var originalCategory: Category? = null
 
     // Provider를 통해 생성된 UseCase 그룹

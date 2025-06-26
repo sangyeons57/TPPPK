@@ -1,5 +1,8 @@
 package com.example.core_navigation.core
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.core_navigation.destination.RouteArgs
 import kotlinx.serialization.Serializable
 
 /**
@@ -8,6 +11,7 @@ import kotlinx.serialization.Serializable
  * This sealed interface hierarchy provides compile-time safety for navigation arguments
  * while maintaining backward compatibility with the existing AppRoutes system.
  */
+@Serializable(with = TypeSafeRouteSerializer::class)
 sealed interface TypeSafeRoute
 
 // ===== Authentication Routes =====
@@ -58,73 +62,149 @@ data object SelectProjectTypeRoute : TypeSafeRoute
 @Serializable
 data class ProjectDetailRoute(
     val projectId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}"
+        val arguments = listOf(navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType })
+    }
+}
 
 @Serializable
 data class ProjectSettingsRoute(
     val projectId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/settings"
+        val arguments = listOf(navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType })
+    }
+}
 
 // ===== Project Structure Routes =====
 @Serializable
 data class CreateCategoryRoute(
     val projectId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/category/create"
+        val arguments = listOf(navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType })
+    }
+}
 
 @Serializable
 data class EditCategoryRoute(
     val projectId: String,
     val categoryId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/category/edit/{${RouteArgs.CATEGORY_ID}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.CATEGORY_ID) { type = NavType.StringType }
+        )
+    }
+}
 
 @Serializable
 data class CreateChannelRoute(
     val projectId: String,
     val categoryId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/category/{${RouteArgs.CATEGORY_ID}}/channel/create"
+        val arguments = listOf(
+            navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.CATEGORY_ID) { type = NavType.StringType }
+        )
+    }
+}
 
 @Serializable
 data class EditChannelRoute(
     val projectId: String,
     val categoryId: String,
     val channelId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/category/{${RouteArgs.CATEGORY_ID}}/channel/edit/{${RouteArgs.CHANNEL_ID}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.CATEGORY_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.CHANNEL_ID) { type = NavType.StringType }
+        )
+    }
+}
 
 // ===== Member Management Routes =====
 @Serializable
 data class MemberListRoute(
     val projectId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/members"
+        val arguments = listOf(navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType })
+    }
+}
 
 @Serializable
 data class EditMemberRoute(
     val projectId: String,
     val userId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/members/edit/{${RouteArgs.USER_ID}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.USER_ID) { type = NavType.StringType }
+        )
+    }
+}
 
 // ===== Role Management Routes =====
 @Serializable
 data class RoleListRoute(
     val projectId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/roles"
+        val arguments = listOf(navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType })
+    }
+}
 
 @Serializable
 data class EditRoleRoute(
     val projectId: String,
     val roleId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/roles/edit/{${RouteArgs.ROLE_ID}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.ROLE_ID) { type = NavType.StringType }
+        )
+    }
+}
 
 @Serializable
 data class AddRoleRoute(
     val projectId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/roles/add"
+        val arguments = listOf(navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType })
+    }
+}
 
 // ===== Chat Routes =====
 @Serializable
 data class ChatRoute(
     val channelId: String,
     val messageId: String? = null
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "chat/{${RouteArgs.CHANNEL_ID}}"
+        val arguments = listOf(navArgument(RouteArgs.CHANNEL_ID) { type = NavType.StringType })
+    }
+}
 
 // ===== Schedule Routes =====
 @Serializable
@@ -132,30 +212,63 @@ data class Calendar24HourRoute(
     val year: Int,
     val month: Int,
     val day: Int
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "schedule/24hour/{${RouteArgs.YEAR}}/{${RouteArgs.MONTH}}/{${RouteArgs.DAY}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.YEAR) { type = NavType.IntType },
+            navArgument(RouteArgs.MONTH) { type = NavType.IntType },
+            navArgument(RouteArgs.DAY) { type = NavType.IntType }
+        )
+    }
+}
 
 @Serializable
 data class AddScheduleRoute(
     val year: Int,
     val month: Int,
     val day: Int
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "schedule/add/{${RouteArgs.YEAR}}/{${RouteArgs.MONTH}}/{${RouteArgs.DAY}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.YEAR) { type = NavType.IntType },
+            navArgument(RouteArgs.MONTH) { type = NavType.IntType },
+            navArgument(RouteArgs.DAY) { type = NavType.IntType }
+        )
+    }
+}
 
 @Serializable
 data class ScheduleDetailRoute(
     val scheduleId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "schedule/detail/{${RouteArgs.SCHEDULE_ID}}"
+        val arguments = listOf(navArgument(RouteArgs.SCHEDULE_ID) { type = NavType.StringType })
+    }
+}
 
 @Serializable
 data class EditScheduleRoute(
     val scheduleId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "schedule/edit/{${RouteArgs.SCHEDULE_ID}}"
+        val arguments = listOf(navArgument(RouteArgs.SCHEDULE_ID) { type = NavType.StringType })
+    }
+}
 
 // ===== User Routes =====
 @Serializable
 data class UserProfileRoute(
     val userId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "user/{${RouteArgs.USER_ID}}/profile"
+        val arguments = listOf(navArgument(RouteArgs.USER_ID) { type = NavType.StringType })
+    }
+}
 
 // ===== Settings Routes =====
 @Serializable
@@ -182,7 +295,15 @@ data object GlobalSearchRoute : TypeSafeRoute
 data class MessageDetailRoute(
     val channelId: String,
     val messageId: String
-) : TypeSafeRoute
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/channel/{${RouteArgs.CHANNEL_ID}}/message/{${RouteArgs.MESSAGE_ID}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.CHANNEL_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.MESSAGE_ID) { type = NavType.StringType }
+        )
+    }
+}
 
 // ===== Development Routes =====
 @Serializable

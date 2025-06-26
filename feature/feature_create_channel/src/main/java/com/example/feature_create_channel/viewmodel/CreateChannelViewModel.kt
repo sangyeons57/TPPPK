@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
@@ -48,8 +48,8 @@ class CreateChannelViewModel @Inject constructor(
 ) : ViewModel() {
 
     // SavedStateHandle 확장 함수와 AppDestination 상수를 사용하여 ID들 가져오기
-    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
-    private val categoryId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_CATEGORY_ID)
+    private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
+    private val categoryId: String = savedStateHandle.getRequiredString(RouteArgs.CATEGORY_ID)
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectChannelUseCases =

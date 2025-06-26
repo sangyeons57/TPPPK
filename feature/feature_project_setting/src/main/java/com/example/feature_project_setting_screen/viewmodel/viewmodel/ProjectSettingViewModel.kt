@@ -8,7 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.exceptionOrNull
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.project.ProjectName
@@ -70,7 +70,7 @@ class ProjectSettingViewModel @Inject constructor(
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
 ) : ViewModel() {
 
-    val projectId: DocumentId = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    val projectId: DocumentId = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
         .let { DocumentId.from((it)) }
 
     // Create UseCase groups via providers

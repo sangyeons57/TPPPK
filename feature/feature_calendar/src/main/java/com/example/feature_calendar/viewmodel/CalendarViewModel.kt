@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -222,8 +223,8 @@ class CalendarViewModel @Inject constructor(
      * 상세 화면으로 네비게이션 이벤트를 발생시킵니다.
      * @param scheduleId 선택된 일정의 ID
      */
-    fun onScheduleClick(scheduleId: String) {
-        navigationManger.navigateToScheduleDetail(scheduleId)
+    fun onScheduleClick(scheduleId: DocumentId) {
+        navigationManger.navigateToScheduleDetail(scheduleId.value)
     }
 
     /**

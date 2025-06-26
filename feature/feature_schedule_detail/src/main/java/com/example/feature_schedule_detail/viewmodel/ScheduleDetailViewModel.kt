@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.schedule.ScheduleContent
@@ -65,11 +65,8 @@ class ScheduleDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val scheduleId = savedStateHandle.get<String>(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID)
-            if (scheduleId == null) {
-                _uiState.update { it.copy(isLoading = false, error = "일정 ID를 찾을 수 없습니다.") }
-                return@launch
-            }
+            val scheduleId = savedStateHandle.getRequiredString(RouteArgs.SCHEDULE_ID)
+
             // _uiState.update { it.copy(scheduleId = scheduleId, isLoading = true) } // Moved to loadScheduleDetails
             loadScheduleDetails(scheduleId)
         }

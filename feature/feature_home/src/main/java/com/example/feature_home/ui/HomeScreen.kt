@@ -55,7 +55,6 @@ import androidx.navigation.NavOptions
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationResultManager
 import com.example.core_navigation.core.TypeSafeRoute
-import com.example.core_navigation.destination.AppRoutes
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialog
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
@@ -84,6 +83,8 @@ import kotlinx.coroutines.flow.collectLatest
 
 // 오버레이 투명도 상수
 private const val OVERLAY_ALPHA = 0.7f
+
+private const val HOME_SCREEN_STATE_KEY = "home_screen_state"
 
 // 상태 저장 키 상수
 private object HomeScreenStateKeys {
@@ -177,9 +178,8 @@ fun HomeScreen(
             
             // NavigationHandler를 통해 상태 저장
             // 현재 화면 경로를 키로 사용
-            val screenKey = AppRoutes.Main.Home.ROOT_CONTENT
-            navigationManger.saveScreenState(screenKey, screenState)
-            Log.d("HomeScreen", "상태 저장: $screenState for key $screenKey")
+            navigationManger.saveScreenState(HOME_SCREEN_STATE_KEY, screenState)
+            Log.d("HomeScreen", "상태 저장: $screenState for key $HOME_SCREEN_STATE_KEY")
         }
     }
 

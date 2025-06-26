@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.data.project.RolePermission
@@ -55,9 +55,9 @@ class EditRoleViewModel @Inject constructor(
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
-    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
     // 역할 ID는 수정 시에만 전달되므로 옵셔널로 처리
-    private val roleId: String? = savedStateHandle.getOptionalString(AppRoutes.Project.ARG_ROLE_ID)
+    private val roleId: String? = savedStateHandle.getOptionalString(RouteArgs.ROLE_ID)
     
     val isEditMode = roleId != null
 

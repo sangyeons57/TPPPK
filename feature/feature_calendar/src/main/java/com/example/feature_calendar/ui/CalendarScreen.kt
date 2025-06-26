@@ -13,7 +13,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.core.NavigationResultKeys
 import com.example.core_navigation.extension.ObserveNavigationResult
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -87,10 +87,10 @@ fun CalendarScreen(
     )
 
     navigationManger.getNavController()?.let { navController ->
-        com.example.core_navigation.extension.ObserveNavigationResult<Boolean>(
+        ObserveNavigationResult<Boolean>(
             navController,
             navigationManger.getResultManager(),
-            AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
+            NavigationResultKeys.REFRESH_SCHEDULE_LIST
         ) { needsRefresh ->
             if (needsRefresh == true) { // Explicitly check for true
                 viewModel.refreshSchedules() // Call the existing refresh method

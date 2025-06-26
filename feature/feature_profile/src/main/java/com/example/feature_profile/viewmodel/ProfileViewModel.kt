@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.vo.user.UserMemo
@@ -62,7 +63,8 @@ sealed class ProfileEvent {
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
-    private val userUseCaseProvider: UserUseCaseProvider
+    private val userUseCaseProvider: UserUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹들
@@ -181,9 +183,7 @@ class ProfileViewModel @Inject constructor(
 
     // 친구 목록 버튼 클릭 (기존 onFriendsClick)
     fun onFriendsClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(ProfileEvent.NavigateToFriends)
-        }
+        navigationManger.navigateToFriends()
     }
     // 설정 버튼 클릭
     fun onSettingsClick() {

@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.project.ProjectName
@@ -63,9 +63,9 @@ class AddScheduleViewModel @Inject constructor(
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
-    private val year: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_YEAR)
-    private val month: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_MONTH)
-    private val day: Int? = savedStateHandle.get<Int>(AppRoutes.Main.Calendar.ARG_DAY)
+    private val year: Int? = savedStateHandle.get<Int>(RouteArgs.YEAR)
+    private val month: Int? = savedStateHandle.get<Int>(RouteArgs.MONTH)
+    private val day: Int? = savedStateHandle.get<Int>(RouteArgs.DAY)
 
     private val _uiState = MutableStateFlow(AddScheduleUiState())
     val uiState: StateFlow<AddScheduleUiState> = _uiState.asStateFlow()

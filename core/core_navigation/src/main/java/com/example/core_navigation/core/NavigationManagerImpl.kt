@@ -5,6 +5,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
+import com.example.domain.model.vo.DocumentId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -116,6 +117,17 @@ class NavigationManagerImpl @Inject constructor(
         } ?: Log.e("NavigationManager", "No NavController available for navigation")
     }
 
+    private fun executeNavigationOnParent(route: String, navOptions: NavOptions? = null) {
+        parentNavController?.let { controller ->
+            try {
+                controller.navigate(route, navOptions)
+                Log.d("NavigationManager", "Navigated on parent to: $route")
+            } catch (e: Exception) {
+                Log.e("NavigationManager", "Failed to navigate on parent to $route: ${e.message}")
+            }
+        } ?: Log.e("NavigationManager", "Parent NavController not available for navigation")
+    }
+
     private fun executeNavigationClearingBackStack(route: String) {
         val targetController = parentNavController // Always use parent for clearing back stack
         targetController?.let { controller ->
@@ -189,7 +201,7 @@ class NavigationManagerImpl @Inject constructor(
     }
 
     override fun navigateToFriends(navOptions: NavOptions?) {
-        navigateTo(FriendsListRoute, navOptions)
+        executeNavigationOnParent(FriendsListRoute.toAppRoutePath(), navOptions)
     }
 
     override fun navigateToFindPassword(navOptions: NavOptions?) {

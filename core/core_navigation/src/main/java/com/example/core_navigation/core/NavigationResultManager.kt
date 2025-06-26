@@ -230,6 +230,7 @@ object NavigationResultKeys {
     const val SCHEDULE_CREATED = "schedule_created"
     const val SCHEDULE_UPDATED = "schedule_updated"
     const val SCHEDULE_DELETED = "schedule_deleted"
+    const val REFRESH_SCHEDULE_LIST = "refresh_schedule_list"
     
     // Friend-related result keys
     const val FRIEND_ADDED = "friend_added"

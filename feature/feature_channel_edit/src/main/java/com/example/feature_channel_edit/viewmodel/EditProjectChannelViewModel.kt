@@ -4,7 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
+import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
@@ -85,8 +86,8 @@ class EditProjectChannelViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<EditChannelEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    private val projectId: String? = savedStateHandle[AppRoutes.Project.ARG_PROJECT_ID]
-    private val channelId: String? = savedStateHandle[AppRoutes.Project.ARG_CHANNEL_ID]
+    private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
+    private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
 
     // Store the original channel to pass to the update use case
     private var originalChannel: ProjectChannel? = null

@@ -1,5 +1,7 @@
 package com.example.domain.model.enum
 
+import com.google.firebase.firestore.PropertyName
+
 /**
  * 프로젝트 채널의 유형을 나타내는 열거형입니다.
  * Firestore의 `projects/{projectId}/channels/{channelId}.channelType` 필드 값과 일치시키거나 매핑됩니다.
@@ -8,16 +10,19 @@ enum class ProjectChannelType(val value: String) {
     /**
      * 일반 메시지 교환용 채널
      */
+    @PropertyName("messages")
     MESSAGES("messages"),
 
     /**
      * 작업 또는 할 일 관리용 채널
      */
+    @PropertyName("tasks")
     TASKS("tasks"),
 
     /**
      * 알 수 없거나 정의되지 않은 채널 유형
      */
+    @PropertyName("unknown")
     UNKNOWN("unknown");
 
     companion object {

@@ -1,5 +1,7 @@
 package com.example.domain.model.enum
 
+import com.google.firebase.firestore.PropertyName
+
 /**
  * 초대장의 상태를 나타내는 열거형입니다.
  * Firestore의 `invites/{inviteId}.status` 필드 값과 일치시키거나 매핑됩니다.
@@ -8,21 +10,25 @@ enum class InviteStatus(val value: String) {
     /**
      * 초대장이 활성 상태이며 사용 가능합니다.
      */
+    @PropertyName("active")
     ACTIVE("active"),
 
     /**
      * 초대장이 비활성 상태이며 더 이상 사용할 수 없습니다.
      */
+    @PropertyName("inactive")
     INACTIVE("inactive"),
 
     /**
      * 초대장이 만료되어 더 이상 사용할 수 없습니다.
      */
+    @PropertyName("expired")
     EXPIRED("expired"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
+    @PropertyName("unknown")
     UNKNOWN("unknown");
 
     companion object {

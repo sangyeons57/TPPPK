@@ -1,6 +1,7 @@
 package com.example.feature_auth.viewmodel
 
 import android.util.Log
+import androidx.compose.foundation.layout.Box
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -87,32 +88,6 @@ class SplashViewModel @Inject constructor(
                     Log.e("SplashViewModel", "Auth check failed: ${exception.message}", exception)
                     
                     // Categorize errors for better handling
-                    val errorMessage = exception.message ?: ""
-                    when {
-                        errorMessage.contains("network", ignoreCase = true) -> {
-                            // Network error - could retry or show offline message
-                            Log.w("SplashViewModel", "Network error during auth check - retrying in 2 seconds")
-                            delay(2000)
-                            retryAuthCheck()
-                        }
-                        errorMessage.contains("timed out", ignoreCase = true) -> {
-                            // Timeout error - retry once more
-                            Log.w("SplashViewModel", "Timeout during auth check - retrying once")
-                            delay(1000)
-                            retryAuthCheck()
-                        }
-                        errorMessage.contains("No user is currently signed in", ignoreCase = true) -> {
-                            // Clear authentication error - go to login
-                            Log.d("SplashViewModel", "No user signed in - navigating to Login")
-                            navigationManger.navigateToLogin()
-                        }
-                        else -> {
-                            // Other authentication errors - go to login
-                            Log.e("SplashViewModel", "Authentication error - navigating to Login")
-                            navigationManger.navigateToLogin()
-                        }
-                    }
-                    
                     _uiState.update { it.copy(isLoading = false) }
                 }
 

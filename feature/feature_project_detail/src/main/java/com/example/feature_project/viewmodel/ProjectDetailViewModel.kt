@@ -5,7 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
+import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
@@ -59,9 +60,7 @@ class ProjectDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     // 매개변수 추출 - 안전한 방식으로 projectId 획득
-    private val projectId: DocumentId =
-        savedStateHandle.get<String>(AppRoutes.Project.ARG_PROJECT_ID)?.let { DocumentId(it) }
-        ?: error("${AppRoutes.Project.ARG_PROJECT_ID} is required - 프로젝트 ID가 전달되지 않았습니다")
+    private val projectId: DocumentId = DocumentId(savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID))
 
     // ProjectUseCaseProvider를 통해 해당 프로젝트의 UseCases 생성
     private val projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()

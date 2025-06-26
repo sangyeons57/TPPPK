@@ -176,8 +176,6 @@ class HomeViewModel @Inject constructor(
     private fun initializeUserSpecificUseCases(userId: UserId) {
         dmUseCases = dmUseCaseProvider.createForUser(userId)
         coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
-        projectStructureUseCases =
-            projectStructureUseCaseProvider.createForCurrentUser(projectId = DocumentId.EMPTY)
     }
 
     init {
@@ -505,6 +503,7 @@ class HomeViewModel @Inject constructor(
     
     // 프로젝트 구조 (카테고리 및 채널) 로드
     private fun loadProjectStructure(projectId: DocumentId) {
+        projectStructureUseCases = projectStructureUseCaseProvider.createForCurrentUser(projectId = projectId)
         viewModelScope.launch {
             Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
             if (::projectStructureUseCases.isInitialized) {

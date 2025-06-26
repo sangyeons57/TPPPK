@@ -28,10 +28,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
-import com.example.core_navigation.core.MainContainerRoute
-import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.*
+import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.domain.model.vo.DocumentId
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.calendarArguments
 import com.example.core_navigation.extension.extractProjectArguments
 import com.example.core_navigation.extension.projectArguments
@@ -101,7 +101,7 @@ import kotlinx.coroutines.launch
 fun AppNavigationGraph(
     navController: NavHostController,
     navigationManger: NavigationManger,
-    startDestination: String = AppRoutes.Auth.Graph.path
+    startDestination: String = "auth"
 ) {
 
     val activity = (LocalContext.current as? Activity)
@@ -147,10 +147,10 @@ fun AppNavigationGraph(
         scheduleGraph(navigationManger)
 
         // 프로필 수정 화면 (Settings Route)
-        composable(AppRoutes.Settings.EDIT_MY_PROFILE) {
+        composable(EditMyProfileRoute.toAppRoutePath()) {
             EditProfileScreen(navigationManger = navigationManger)
         }
-        composable(AppRoutes.Settings.APP_SETTINGS) {
+        composable(AppSettingsRoute.toAppRoutePath()) {
             SettingsScreen(navigationManger = navigationManger)
         }
     }
@@ -161,23 +161,23 @@ fun AppNavigationGraph(
  */
 fun NavGraphBuilder.authGraph(navigationManger: NavigationManger) {
     navigation(
-        route = AppRoutes.Auth.ROOT, // Changed to use ROOT
-        startDestination = AppRoutes.Auth.Splash.path
+        route = "auth",
+        startDestination = SplashRoute.toAppRoutePath()
     ) {
 
-        composable(AppRoutes.Auth.Splash.path) {
+        composable(SplashRoute.toAppRoutePath()) {
             Log.d("Splash", "Splash Screen")
             // Register this NavController when this NavHost is active
             SplashScreen(navigationManger = navigationManger)
         }
         
-        composable(AppRoutes.Auth.Login.path) {
+        composable(LoginRoute.toAppRoutePath()) {
             Log.d("Login", "Login Screen")
             LoginScreen(navigationManger = navigationManger)
         }
         
         // 회원가입 화면 추가
-        composable(AppRoutes.Auth.SignUp.path) {
+        composable(SignUpRoute.toAppRoutePath()) {
             Log.d("SignUp", "SignUp Screen")
             // viewModel은 나중에 추가
             SignUpScreen(
@@ -186,19 +186,19 @@ fun NavGraphBuilder.authGraph(navigationManger: NavigationManger) {
         }
         
         // 비밀번호 찾기 화면 추가
-        composable(AppRoutes.Auth.FindPassword.path) {
+        composable(FindPasswordRoute.toAppRoutePath()) {
             Log.d("FindPassword", "FindPassword Screen")
             FindPasswordScreen(navigationManger = navigationManger)
         }
 
         // 서비스 이용약관 화면 추가
-        composable(AppRoutes.Auth.TermsOfService.path) {
+        composable(TermsOfServiceRoute.toAppRoutePath()) {
             Log.d("TermsOfService", "TermsOfService Screen")
             TermsOfServiceScreen(navigationManger = navigationManger)
         }
 
         // 개인정보 처리방침 화면 추가
-        composable(AppRoutes.Auth.PrivacyPolicy.path) {
+        composable(PrivacyPolicyRoute.toAppRoutePath()) {
             Log.d("PrivacyPolicy", "PrivacyPolicy Screen")
             PrivacyPolicyScreen(navigationManger = navigationManger)
         }
@@ -210,7 +210,7 @@ fun NavGraphBuilder.authGraph(navigationManger: NavigationManger) {
  * 메인 화면 그래프 - MainContainerScreen이 자체적으로 탭 네비게이션 처리
  */
 fun NavGraphBuilder.mainGraph(navigationManger: NavigationManger) {
-    composable(AppRoutes.Main.ROOT) {
+    composable(MainContainerRoute.toAppRoutePath()) {
         MainContainerScreen(navigationManger = navigationManger)
     }
 }
@@ -220,15 +220,13 @@ fun NavGraphBuilder.mainGraph(navigationManger: NavigationManger) {
  */
 fun NavGraphBuilder.friendsGraph(navigationManger: NavigationManger) {
     navigation(
-      
-        route = AppRoutes.Friends.ROOT, // Changed to use ROOT
-
-        startDestination = AppRoutes.Friends.LIST
+        route = "friends",
+        startDestination = FriendsListRoute.toAppRoutePath()
     ) {
-        composable(AppRoutes.Friends.LIST) {
+        composable(FriendsListRoute.toAppRoutePath()) {
             FriendsScreen(navigationManger = navigationManger)
         }
-        composable(AppRoutes.Friends.ACCEPT_REQUESTS) {
+        composable(AcceptFriendsRoute.toAppRoutePath()) {
             AcceptFriendsScreen(navigationManger = navigationManger)
         }
         // TODO: 친구 요청 수락 화면 등 추가 경로 정의
@@ -241,19 +239,19 @@ fun NavGraphBuilder.friendsGraph(navigationManger: NavigationManger) {
  */
 fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
     navigation(
-        route = AppRoutes.Project.ROOT, // Changed to use ROOT
-        startDestination = AppRoutes.Project.ADD
+        route = "project",
+        startDestination = AddProjectRoute.toAppRoutePath()
     ) {
         // 프로젝트 생성 화면
-        composable(AppRoutes.Project.ADD) {
+        composable(AddProjectRoute.toAppRoutePath()) {
           // TODO: AddRoleScreen/EditRoleScreen for adding roles
             AddProjectScreen(navigationManger)
         }
 
         // Project Settings Screen - MODERNIZED EXAMPLE
         safeComposable(
-            route = AppRoutes.Project.settingsRoute(),
-            arguments = projectArguments()
+            route = ProjectSettingsRoute.ROUTE_PATTERN,
+            arguments = ProjectSettingsRoute.arguments
         ) { backStackEntry ->
             val args = backStackEntry.extractProjectArguments()
             ProjectSettingScreen(
@@ -263,32 +261,21 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
         
         // 프로젝트 참가 화면
         composable(
-            route = AppRoutes.Project.JOIN,
-            arguments = listOf(
-                navArgument(AppRoutes.Project.ARG_PROJECT_ID) {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
-            )
+            route = JoinProjectRoute.toAppRoutePath(),
         ) {
             JoinProjectScreen(navigationManger)
         }
         
         // 프로젝트 상세 화면 - 메인 탭 외부에서도 접근 가능
         composable(
-            route = AppRoutes.Project.detailRoute(),
-            arguments = listOf(
-                navArgument(AppRoutes.Project.ARG_PROJECT_ID) {
-                    type = NavType.StringType
-                }
-            )
+            route = ProjectDetailRoute.ROUTE_PATTERN,
+            arguments = ProjectDetailRoute.arguments
         ) { backStackEntry ->
-            val projectId = backStackEntry.arguments?.getString(AppRoutes.Project.ARG_PROJECT_ID) ?: ""
+            val projectId = backStackEntry.arguments?.getString(RouteArgs.PROJECT_ID) ?: ""
             
             // HomeViewModel을 Composable 컨텍스트에서 가져옵니다.
             val homeViewModelStoreOwner = remember(backStackEntry) {
-                navigationManger.getNavController()!!.getBackStackEntry(AppRoutes.Main.ROOT)
+                navigationManger.getNavController()!!.getBackStackEntry(MainContainerRoute.toAppRoutePath())
             }
             val homeViewModel = hiltViewModel<HomeViewModel>(homeViewModelStoreOwner)
 
@@ -319,17 +306,17 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
  */
 fun NavGraphBuilder.chatGraph(navigationManger: NavigationManger) {
     navigation(
-        route = AppRoutes.Chat.ROOT, // Changed to use ROOT
-        startDestination = AppRoutes.Chat.route
+        route = "chat",
+        startDestination = ChatRoute.ROUTE_PATTERN
     ) {
         // 채팅 화면
         composable(
-            route = AppRoutes.Chat.route,
-            arguments = AppRoutes.Chat.arguments
+            route = ChatRoute.ROUTE_PATTERN,
+            arguments = ChatRoute.arguments
         ) {
             // TODO: 실제 ChatScreen Composable 구현 필요
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Chat Screen Placeholder\nChannel ID: ${it.arguments?.getString(AppRoutes.Chat.ARG_CHANNEL_ID)}\nMessage ID: ${it.arguments?.getString(AppRoutes.Chat.ARG_MESSAGE_ID)}")
+                Text("Chat Screen Placeholder\nChannel ID: ${it.arguments?.getString(RouteArgs.CHANNEL_ID)}\nMessage ID: ${it.arguments?.getString(RouteArgs.MESSAGE_ID)}")
             }
         }
     }
@@ -340,13 +327,13 @@ fun NavGraphBuilder.chatGraph(navigationManger: NavigationManger) {
  */
 fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
     navigation(
-        route = AppRoutes.Main.Calendar.ROOT, // Changed to use ROOT
-        startDestination = AppRoutes.Main.Calendar.calendar24HourRoute()
+        route = "calendar",
+        startDestination = Calendar24HourRoute.ROUTE_PATTERN
     ) {
         // 24시간 캘린더 화면 - MODERNIZED EXAMPLE
         safeComposable(
-            route = AppRoutes.Main.Calendar.calendar24HourRoute(),
-            arguments = calendarArguments()
+            route = Calendar24HourRoute.ROUTE_PATTERN,
+            arguments = Calendar24HourRoute.arguments
         ) { backStackEntry ->
 
             Calendar24HourScreen(
@@ -356,13 +343,9 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
         
         // 일정 추가 화면
         composable(
-            route = AppRoutes.Main.Calendar.addScheduleRoute(),
-            arguments = AppRoutes.Main.Calendar.addScheduleArguments
-        ) { backStackEntry ->
-            backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_YEAR) ?: 0
-            backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_MONTH) ?: 0
-            backStackEntry.arguments?.getInt(AppRoutes.Main.Calendar.ARG_DAY) ?: 0
-            
+            route = AddScheduleRoute.ROUTE_PATTERN,
+            arguments = AddScheduleRoute.arguments
+        ) {
             com.example.feature_schedule.ui.AddScheduleScreen(
                 navigationManger = navigationManger
             )
@@ -370,11 +353,9 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
         
         // 일정 상세 화면
         composable(
-            route = AppRoutes.Main.Calendar.scheduleDetailRoute(),
-            arguments = AppRoutes.Main.Calendar.scheduleDetailArguments
-        ) { backStackEntry ->
-            backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
-
+            route = ScheduleDetailRoute.ROUTE_PATTERN,
+            arguments = ScheduleDetailRoute.arguments
+        ) {
             ScheduleDetailScreen(
                 navigationManger = navigationManger,
             )
@@ -382,11 +363,9 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
         
         // 일정 수정 화면
         composable(
-            route = AppRoutes.Main.Calendar.editScheduleRoute(),
-            arguments = AppRoutes.Main.Calendar.editScheduleArguments
-        ) { backStackEntry ->
-            backStackEntry.arguments?.getString(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID) ?: ""
-
+            route = EditScheduleRoute.ROUTE_PATTERN,
+            arguments = EditScheduleRoute.arguments
+        ) {
             EditScheduleScreen(
                 navigationManger = navigationManger,
             )
@@ -394,8 +373,8 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
 
         // 카테고리 수정 화면
         composable(
-            route = AppRoutes.Project.editCategoryRoute(),
-            arguments = AppRoutes.Project.editCategoryArguments
+            route = EditCategoryRoute.ROUTE_PATTERN,
+            arguments = EditCategoryRoute.arguments
         ) {
             // EditCategoryScreen 에는 projectId 와 categoryId 가 필요하며,
             // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.
@@ -406,8 +385,8 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
 
         // 채널 수정 화면
         composable(
-            route = AppRoutes.Project.editChannelRoute(),
-            arguments = AppRoutes.Project.editChannelArguments
+            route = EditChannelRoute.ROUTE_PATTERN,
+            arguments = EditChannelRoute.arguments
         ) {
             // EditProjectChannelScreen 에는 projectId, categoryId, channelId 가 필요하며,
             // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.

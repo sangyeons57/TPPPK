@@ -10,7 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationResultManager
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 
 /**
  * Extension functions to simplify AppNavigationGraph.kt definitions
@@ -74,7 +74,7 @@ fun NavGraphBuilder.projectComposable(
     content: @Composable (projectId: String, navigationManger: NavigationManger) -> Unit
 ) {
     composable(route = route, arguments = arguments) { backStackEntry ->
-        val projectId = backStackEntry.getRequiredStringArg(AppRoutes.Project.ARG_PROJECT_ID)
+        val projectId = backStackEntry.getRequiredStringArg(RouteArgs.PROJECT_ID)
         // Note: AppNavigator should be injected via Hilt in the actual composable
         // This is a simplified example - in practice, you'd get AppNavigator differently
         content(projectId, TODO("Inject AppNavigator"))
@@ -90,9 +90,9 @@ fun NavGraphBuilder.scheduleComposable(
     content: @Composable (year: Int, month: Int, day: Int, navigationManger: NavigationManger) -> Unit
 ) {
     composable(route = route, arguments = arguments) { backStackEntry ->
-        val year = backStackEntry.getRequiredIntArg(AppRoutes.Main.Calendar.ARG_YEAR)
-        val month = backStackEntry.getRequiredIntArg(AppRoutes.Main.Calendar.ARG_MONTH)
-        val day = backStackEntry.getRequiredIntArg(AppRoutes.Main.Calendar.ARG_DAY)
+        val year = backStackEntry.getRequiredIntArg(RouteArgs.YEAR)
+        val month = backStackEntry.getRequiredIntArg(RouteArgs.MONTH)
+        val day = backStackEntry.getRequiredIntArg(RouteArgs.DAY)
         content(year, month, day, TODO("Inject AppNavigator"))
     }
 }
@@ -106,8 +106,8 @@ fun NavGraphBuilder.chatComposable(
     content: @Composable (channelId: String, messageId: String?, navigationManger: NavigationManger) -> Unit
 ) {
     composable(route = route, arguments = arguments) { backStackEntry ->
-        val channelId = backStackEntry.getRequiredStringArg(AppRoutes.Chat.ARG_CHANNEL_ID)
-        val messageId = backStackEntry.getStringArg(AppRoutes.Chat.ARG_MESSAGE_ID)
+        val channelId = backStackEntry.getRequiredStringArg(RouteArgs.CHANNEL_ID)
+        val messageId = backStackEntry.getStringArg(RouteArgs.MESSAGE_ID)
         content(channelId, messageId, TODO("Inject AppNavigator"))
     }
 }
@@ -200,11 +200,11 @@ fun <T> ObserveNavigationResult(
  */
 fun NavBackStackEntry.extractProjectArguments(): ProjectArguments {
     return ProjectArguments(
-        projectId = getRequiredStringArg(AppRoutes.Project.ARG_PROJECT_ID),
-        categoryId = getStringArg(AppRoutes.Project.ARG_CATEGORY_ID),
-        channelId = getStringArg(AppRoutes.Project.ARG_CHANNEL_ID),
-        userId = getStringArg(AppRoutes.Project.ARG_USER_ID),
-        roleId = getStringArg(AppRoutes.Project.ARG_ROLE_ID)
+        projectId = getRequiredStringArg(RouteArgs.PROJECT_ID),
+        categoryId = getStringArg(RouteArgs.CATEGORY_ID),
+        channelId = getStringArg(RouteArgs.CHANNEL_ID),
+        userId = getStringArg(RouteArgs.USER_ID),
+        roleId = getStringArg(RouteArgs.ROLE_ID)
     )
 }
 
@@ -224,10 +224,10 @@ data class ProjectArguments(
  */
 fun NavBackStackEntry.extractCalendarArguments(): CalendarArguments {
     return CalendarArguments(
-        year = getRequiredIntArg(AppRoutes.Main.Calendar.ARG_YEAR),
-        month = getRequiredIntArg(AppRoutes.Main.Calendar.ARG_MONTH),
-        day = getRequiredIntArg(AppRoutes.Main.Calendar.ARG_DAY),
-        scheduleId = getStringArg(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID)
+        year = getRequiredIntArg(RouteArgs.YEAR),
+        month = getRequiredIntArg(RouteArgs.MONTH),
+        day = getRequiredIntArg(RouteArgs.DAY),
+        scheduleId = getStringArg(RouteArgs.SCHEDULE_ID)
     )
 }
 
@@ -246,8 +246,8 @@ data class CalendarArguments(
  */
 fun NavBackStackEntry.extractChatArguments(): ChatArguments {
     return ChatArguments(
-        channelId = getRequiredStringArg(AppRoutes.Chat.ARG_CHANNEL_ID),
-        messageId = getStringArg(AppRoutes.Chat.ARG_MESSAGE_ID)
+        channelId = getRequiredStringArg(RouteArgs.CHANNEL_ID),
+        messageId = getStringArg(RouteArgs.MESSAGE_ID)
     )
 }
 
@@ -279,45 +279,45 @@ inline fun NavGraphBuilder.safeComposable(
  * Creates a standard argument list for project routes.
  */
 fun projectArguments() = listOf(
-    stringArg(AppRoutes.Project.ARG_PROJECT_ID)
+    stringArg(RouteArgs.PROJECT_ID)
 )
 
 /**
  * Creates a standard argument list for project with category routes.
  */
 fun projectCategoryArguments() = listOf(
-    stringArg(AppRoutes.Project.ARG_PROJECT_ID),
-    stringArg(AppRoutes.Project.ARG_CATEGORY_ID)
+    stringArg(RouteArgs.PROJECT_ID),
+    stringArg(RouteArgs.CATEGORY_ID)
 )
 
 /**
  * Creates a standard argument list for project with category and channel routes.
  */
 fun projectChannelArguments() = listOf(
-    stringArg(AppRoutes.Project.ARG_PROJECT_ID),
-    stringArg(AppRoutes.Project.ARG_CATEGORY_ID),
-    stringArg(AppRoutes.Project.ARG_CHANNEL_ID)
+    stringArg(RouteArgs.PROJECT_ID),
+    stringArg(RouteArgs.CATEGORY_ID),
+    stringArg(RouteArgs.CHANNEL_ID)
 )
 
 /**
  * Creates a standard argument list for calendar routes.
  */
 fun calendarArguments() = listOf(
-    intArg(AppRoutes.Main.Calendar.ARG_YEAR),
-    intArg(AppRoutes.Main.Calendar.ARG_MONTH),
-    intArg(AppRoutes.Main.Calendar.ARG_DAY)
+    intArg(RouteArgs.YEAR),
+    intArg(RouteArgs.MONTH),
+    intArg(RouteArgs.DAY)
 )
 
 /**
  * Creates a standard argument list for schedule routes.
  */
 fun scheduleArguments() = listOf(
-    stringArg(AppRoutes.Main.Calendar.ARG_SCHEDULE_ID)
+    stringArg(RouteArgs.SCHEDULE_ID)
 )
 
 /**
  * Creates a standard argument list for chat routes.
  */
 fun chatArguments() = listOf(
-    stringArg(AppRoutes.Chat.ARG_CHANNEL_ID)
+    stringArg(RouteArgs.CHANNEL_ID)
 )

@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
@@ -50,7 +50,7 @@ class RoleListViewModel @Inject constructor(
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider, // Added
 ) : ViewModel() {
 
-    private val projectId: String = savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID)
+    private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
 
     // Create UseCase groups via provider
     private val projectRoleUseCases = projectRoleUseCaseProvider.createForProject(DocumentId.from(projectId))

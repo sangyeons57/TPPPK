@@ -1,5 +1,7 @@
 package com.example.domain.model.enum
 
+import com.google.firebase.firestore.PropertyName
+
 /**
  * 친구 관계의 상태를 나타내는 열거형입니다.
  * Firestore의 `users/{userId}/friends/{friendId}.status` 필드 값과 일치시키거나 매핑됩니다.
@@ -8,27 +10,33 @@ enum class FriendStatus(val value: String) {
     /**
      * 친구 요청을 보냈거나 받은 상태 (상대방의 수락 대기 중)
      */
+    @PropertyName("pending")
     PENDING("pending"),
+    @PropertyName("requested")
     REQUESTED("requested"),
 
     /**
      * 친구 관계가 수락된 상태
      */
+    @PropertyName("accepted")
     ACCEPTED("accepted"),
 
     /**
      * 친구 요청이 거절된 상태 (선택적)
      */
+    @PropertyName("declined")
     DECLINED("declined"),
 
     /**
      * 해당 사용자를 차단한 상태 (선택적)
      */
+    @PropertyName("blocked")
     BLOCKED("blocked"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
+    @PropertyName("unknown")
     UNKNOWN("unknown");
 
     companion object {

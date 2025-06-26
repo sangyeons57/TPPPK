@@ -1,5 +1,6 @@
 package com.example.domain.model.vo
 
+import android.os.Parcelable
 import com.example.domain.model.data.project.RolePermission
 
 /**

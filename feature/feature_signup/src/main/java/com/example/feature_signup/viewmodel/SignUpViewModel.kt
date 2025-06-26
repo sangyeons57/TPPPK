@@ -259,6 +259,7 @@ class SignUpViewModel @Inject constructor(
                 }
                 is CustomResult.Failure -> {
                     // 이름 중복 체크 에러 처리
+                    Log.d("SignUpViewModel", "Error checking nickname availability: ${resultName.error}")
                     _uiState.update {
                         it.copy(
                             isLoading = false, 
@@ -267,11 +268,11 @@ class SignUpViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                else -> {
+                is CustomResult.Loading, CustomResult.Initial , is CustomResult.Progress -> {
                     _uiState.update {
                         it.copy(
-                            isLoading = false,
-                            nameError = "알 수 없는 오류가 발생했습니다."
+                            isLoading = true,
+                            nameError = ""
                         )
                     }
                     return@launch

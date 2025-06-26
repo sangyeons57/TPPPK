@@ -75,7 +75,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.*
-import com.example.core_navigation.destination.AppRoutes
 import com.example.core_navigation.extension.ObserveNavigationResult
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.Dimens
@@ -128,26 +127,6 @@ fun Calendar24HourScreen(
         }
     }
 
-    // 이벤트 처리
-    // Result listener from AddScheduleScreen or ScheduleDetailScreen
-    DisposableEffect(navController) {
-        val savedStateHandle = navController?.currentBackStackEntry?.savedStateHandle
-        val liveData = savedStateHandle?.getLiveData<Boolean>(REFRESH_SCHEDULE_LIST_KEY)
-
-        val observer = Observer<Boolean> { result ->
-            if (result == true) {
-                viewModel.refreshSchedules()
-                savedStateHandle?.remove<Boolean>(REFRESH_SCHEDULE_LIST_KEY)
-            }
-        }
-
-        liveData?.observeForever(observer)
-
-        onDispose {
-            liveData?.removeObserver(observer)
-        }
-    }
-
     // Event handling from ViewModel
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
@@ -183,10 +162,10 @@ fun Calendar24HourScreen(
     }
 
     navigationManger.getNavController()?.let { navController ->
-        com.example.core_navigation.extension.ObserveNavigationResult<Boolean>(
+        ObserveNavigationResult<Boolean>(
             navController,
             navigationManger.getResultManager(),
-            AppRoutes.NavigationKeys.REFRESH_SCHEDULE_LIST_KEY
+            NavigationResultKeys.REFRESH_SCHEDULE_LIST
         ) { needsRefresh ->
             if (needsRefresh == true) { // Explicitly check for true
                 viewModel.refreshSchedules()

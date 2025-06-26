@@ -69,6 +69,7 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Schedule
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.schedule.ScheduleContent
@@ -456,7 +457,7 @@ fun DayCell(
 @Composable
 fun ScheduleSection(
     uiState: CalendarUiState,
-    onScheduleClick: (String) -> Unit,
+    onScheduleClick: (DocumentId) -> Unit,
     onDateClick24Hour: (LocalDate) -> Unit
 ) {
     Column(
@@ -593,11 +594,11 @@ fun ScheduleSection(
                 ) {
                     items(
                         items = uiState.schedulesForSelectedDate,
-                        key = { it.id }
+                        key = { it.id.value }
                     ) { schedule ->
                         ScheduleListItem(
                             schedule = schedule,
-                            onClick = { onScheduleClick(schedule.id.value) }
+                            onClick = { onScheduleClick(schedule.id) }
                         )
                     }
                 }

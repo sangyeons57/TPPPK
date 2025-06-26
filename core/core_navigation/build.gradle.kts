@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -105,4 +106,6 @@ dependencies {
     
     // MockK 테스트 의존성 추가
     testImplementation(libs.mockk) // 예: libs.versions.toml에 mockk = "1.13.11" 추가 가정
+
+    implementation(libs.kotlinx.serialization.json)
 }

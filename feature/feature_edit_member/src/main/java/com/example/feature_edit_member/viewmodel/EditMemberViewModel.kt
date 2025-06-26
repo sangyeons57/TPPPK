@@ -6,7 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.core_navigation.destination.AppRoutes
+import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
@@ -58,9 +58,9 @@ class EditMemberViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val projectId: DocumentId =
-        savedStateHandle.getRequiredString(AppRoutes.Project.ARG_PROJECT_ID).let(::DocumentId)
+        savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID).let(::DocumentId)
     private val userId: UserId =
-        savedStateHandle.getRequiredString(AppRoutes.Project.ARG_USER_ID).let(::UserId)
+        savedStateHandle.getRequiredString(RouteArgs.USER_ID).let(::UserId)
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
