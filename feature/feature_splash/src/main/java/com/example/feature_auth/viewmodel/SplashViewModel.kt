@@ -75,25 +75,67 @@ class SplashViewModel @Inject constructor(
                 val result = authUseCases.checkAuthenticationStatusUseCase()
                 Log.d("SplashViewModel", "Auth check result: $result")
 
-                result.onSuccess { isSuccess ->
-                    if (isSuccess) {
+                result.onSuccess { isAuthenticatedAndVerified ->
+                    if (isAuthenticatedAndVerified) {
+                        Log.d("SplashViewModel", "User is authenticated and email verified - navigating to Home")
                         navigationManger.navigateToHome()
                     } else {
+                        Log.d("SplashViewModel", "User is not authenticated or email not verified - navigating to Login")
                         navigationManger.navigateToLogin()
                     }
                 }.onFailure { exception ->
-                    // Handle failure (e.g., network error during check)
+                    Log.e("SplashViewModel", "Auth check failed: ${exception.message}", exception)
+                    
+                    // Categorize errors for better handling
+                    val errorMessage = exception.message ?: ""
+                    when {
+                        errorMessage.contains("network", ignoreCase = true) -> {
+                            // Network error - could retry or show offline message
+                            Log.w("SplashViewModel", "Network error during auth check - retrying in 2 seconds")
+                            delay(2000)
+                            retryAuthCheck()
+                        }
+                        errorMessage.contains("timed out", ignoreCase = true) -> {
+                            // Timeout error - retry once more
+                            Log.w("SplashViewModel", "Timeout during auth check - retrying once")
+                            delay(1000)
+                            retryAuthCheck()
+                        }
+                        errorMessage.contains("No user is currently signed in", ignoreCase = true) -> {
+                            // Clear authentication error - go to login
+                            Log.d("SplashViewModel", "No user signed in - navigating to Login")
+                            navigationManger.navigateToLogin()
+                        }
+                        else -> {
+                            // Other authentication errors - go to login
+                            Log.e("SplashViewModel", "Authentication error - navigating to Login")
+                            navigationManger.navigateToLogin()
+                        }
+                    }
+                    
                     _uiState.update { it.copy(isLoading = false) }
-                    // Optionally show an error message or allow retry
-                    navigationManger.navigateToLogin() // Or show error state
-                    Log.e("SplashViewModel", "Auth check failed: $exception")
                 }
 
-            } catch (e: Exception) { // Catch potential unexpected errors
+            } catch (e: Exception) {
+                Log.e("SplashViewModel", "Unexpected error during auth check", e)
                 _uiState.update { it.copy(isLoading = false) }
                 navigationManger.navigateToLogin() // Fallback to Login
-                Log.e("SplashViewModel", "Unexpected error", e)
             }
+        }
+    }
+
+    /**
+     * 인증 상태 확인을 재시도합니다. (무한 루프 방지를 위해 제한적으로 사용)
+     */
+    private var retryCount = 0
+    private fun retryAuthCheck() {
+        if (retryCount < 2) { // 최대 2회까지만 재시도
+            retryCount++
+            Log.d("SplashViewModel", "Retrying auth check (attempt $retryCount)")
+            checkAuthenticationStatus()
+        } else {
+            Log.w("SplashViewModel", "Max retry attempts reached - navigating to Login")
+            navigationManger.navigateToLogin()
         }
     }
 
@@ -101,6 +143,7 @@ class SplashViewModel @Inject constructor(
      * 사용자가 버튼을 클릭하여 재시도할 때 호출합니다.
      */
     fun retry() {
+        retryCount = 0 // Reset retry counter for manual retry
         _uiState.value = SplashUiState(true)
         checkAuthenticationStatus()
     }

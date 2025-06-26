@@ -22,18 +22,40 @@ class CheckAuthenticationStatusUseCaseImpl @Inject constructor(
 
     /**
      * 유스케이스를 실행하여 사용자의 인증 및 이메일 인증 상태를 확인합니다.
-     * @return CustomResult<Pair<Boolean, Boolean>, Exception> (인증 여부, 이메일 인증 여부) 확인 결과
+     * @return CustomResult<Boolean, Exception> 로그인되고 이메일 인증이 완료된 경우 true
      */
     override suspend fun invoke(): CustomResult<Boolean, Exception> {
         return try {
-
-            if (!authRepository.isLoggedIn())
+            // Step 1: Check if user is logged in
+            if (!authRepository.isLoggedIn()) {
                 return CustomResult.Success(false)
+            }
 
-            val result = authRepository.checkEmailVerification()
-            when (result){
-                is CustomResult.Success<Boolean> -> CustomResult.Success(true)
-                else -> CustomResult.Success(false)
+            // Step 2: Check email verification status
+            val emailVerificationResult = authRepository.checkEmailVerification()
+            when (emailVerificationResult) {
+                is CustomResult.Success -> {
+                    // Return true only if email is verified
+                    CustomResult.Success(emailVerificationResult.data)
+                }
+                is CustomResult.Failure -> {
+                    // Handle email verification check failure
+                    // Check if it's a network/timeout issue vs authentication issue
+                    val errorMessage = emailVerificationResult.error.message ?: ""
+                    
+                    if (errorMessage.contains("timed out", ignoreCase = true) || 
+                        errorMessage.contains("network", ignoreCase = true)) {
+                        // For network issues, try to proceed with cached status
+                        // but mark as not fully verified for safety
+                        CustomResult.Success(false)
+                    } else {
+                        // For authentication errors, the user should re-login
+                        CustomResult.Failure(emailVerificationResult.error)
+                    }
+                }
+                else -> {
+                    CustomResult.Success(false)
+                }
             }
         } catch (e: Exception) {
             CustomResult.Failure(e)

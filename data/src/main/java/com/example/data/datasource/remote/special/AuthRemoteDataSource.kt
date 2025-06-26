@@ -181,14 +181,49 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         return try {
             val currentUser = auth.currentUser
             if (currentUser != null) {
-                // Reload the user to get the latest email verification status (10초 타임아웃)
-                val reloadResult = withTimeoutOrNull(10000) {
-                    currentUser.reload().await()
+                // Try to reload user with retry logic
+                var retryCount = 0
+                val maxRetries = 2
+                var lastException: Exception? = null
+                
+                while (retryCount <= maxRetries) {
+                    try {
+                        // Use shorter timeout for better responsiveness (5 seconds instead of 10)
+                        val reloadResult = withTimeoutOrNull(5000) {
+                            currentUser.reload().await()
+                        }
+                        
+                        if (reloadResult != null) {
+                            // Successfully reloaded, return current verification status
+                            return CustomResult.Success(currentUser.isEmailVerified)
+                        } else {
+                            lastException = Exception("Email verification check timed out after 5 seconds")
+                        }
+                    } catch (e: Exception) {
+                        lastException = e
+                        if (e.message?.contains("network", ignoreCase = true) == true ||
+                            e.message?.contains("timeout", ignoreCase = true) == true) {
+                            // Network issue, worth retrying
+                            retryCount++
+                            if (retryCount <= maxRetries) {
+                                // Wait briefly before retry
+                                kotlinx.coroutines.delay(1000)
+                                continue
+                            }
+                        } else {
+                            // Authentication or other non-retryable error
+                            return CustomResult.Failure(e)
+                        }
+                    }
+                    retryCount++
                 }
-                if (reloadResult != null) {
+                
+                // All retries failed - check if we can use cached status
+                if (lastException?.message?.contains("timed out", ignoreCase = true) == true) {
+                    // For timeout, return cached status (might be stale but better than failing)
                     CustomResult.Success(currentUser.isEmailVerified)
                 } else {
-                    CustomResult.Failure(Exception("Email verification check timed out"))
+                    CustomResult.Failure(lastException ?: Exception("Email verification check failed after retries"))
                 }
             } else {
                 CustomResult.Failure(Exception("No user is currently signed in"))
