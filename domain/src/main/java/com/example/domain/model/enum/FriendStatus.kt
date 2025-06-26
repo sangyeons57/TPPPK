@@ -8,28 +8,28 @@ enum class FriendStatus(val value: String) {
     /**
      * 친구 요청을 보냈거나 받은 상태 (상대방의 수락 대기 중)
      */
-    PENDING("PENDING"),
-    REQUESTED("REQUESTED"),
+    PENDING("pending"),
+    REQUESTED("requested"),
 
     /**
      * 친구 관계가 수락된 상태
      */
-    ACCEPTED("ACCEPTED"),
+    ACCEPTED("accepted"),
 
     /**
      * 친구 요청이 거절된 상태 (선택적)
      */
-    DECLINED("DECLINED"),
+    DECLINED("declined"),
 
     /**
      * 해당 사용자를 차단한 상태 (선택적)
      */
-    BLOCKED("BLOCKED"),
+    BLOCKED("blocked"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
-    UNKNOWN("UNKNOWN");
+    UNKNOWN("unknown");
 
     companion object {
         /**

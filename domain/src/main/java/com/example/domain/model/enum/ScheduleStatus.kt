@@ -8,32 +8,32 @@ enum class ScheduleStatus(val value: String) {
     /**
      * 일정이 확정된 상태입니다.
      */
-    CONFIRMED("CONFIRMED"),
+    CONFIRMED("confirmed"),
 
     /**
      * 일정이 임시적이거나 미확정된 상태입니다.
      */
-    TENTATIVE("TENTATIVE"),
+    TENTATIVE("tentative"),
 
     /**
      * 일정이 취소된 상태입니다.
      */
-    CANCELLED("CANCELLED"),
+    CANCELLED("cancelled"),
 
     /**
      * 일정이 진행 중인 상태입니다. (기존 ScheduleStatus.kt 참고)
      */
-    IN_PROGRESS("IN_PROGRESS"),
+    IN_PROGRESS("in_progress"),
 
     /**
      * 일정이 완료된 상태입니다. (기존 ScheduleStatus.kt 참고)
      */
-    COMPLETED("COMPLETED"),
+    COMPLETED("completed"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
-    UNKNOWN("UNKNOWN");
+    UNKNOWN("unknown");
 
     companion object {
         /**

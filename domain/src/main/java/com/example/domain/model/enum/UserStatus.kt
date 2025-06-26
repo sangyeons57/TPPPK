@@ -8,27 +8,27 @@ enum class UserStatus(val value: String) {
     /**
      * 사용자가 온라인 상태입니다.
      */
-    ONLINE("ONLINE"),
+    ONLINE("online"),
 
     /**
      * 사용자가 오프라인 상태입니다.
      */
-    OFFLINE("OFFLINE"),
+    OFFLINE("offline"),
 
     /**
      * 사용자가 자리 비움 상태입니다. (예시)
      */
-    AWAY("AWAY"),
+    AWAY("away"),
 
     /**
      * 사용자가 다른 용무 중(방해 금지) 상태입니다. (예시)
      */
-    DO_NOT_DISTURB("DO_NOT_DISTURB"),
+    DO_NOT_DISTURB("do_not_disturb"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
-    UNKNOWN("UNKNOWN");
+    UNKNOWN("unknown");
 
     companion object {
         /**

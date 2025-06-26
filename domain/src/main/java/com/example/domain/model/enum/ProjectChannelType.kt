@@ -8,17 +8,17 @@ enum class ProjectChannelType(val value: String) {
     /**
      * 일반 메시지 교환용 채널
      */
-    MESSAGES("MESSAGES"),
+    MESSAGES("messages"),
 
     /**
      * 작업 또는 할 일 관리용 채널
      */
-    TASKS("TASKS"),
+    TASKS("tasks"),
 
     /**
      * 알 수 없거나 정의되지 않은 채널 유형
      */
-    UNKNOWN("UNKNOWN");
+    UNKNOWN("unknown");
 
     companion object {
         /**

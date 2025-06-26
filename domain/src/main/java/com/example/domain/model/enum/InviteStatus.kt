@@ -8,22 +8,22 @@ enum class InviteStatus(val value: String) {
     /**
      * 초대장이 활성 상태이며 사용 가능합니다.
      */
-    ACTIVE("ACTIVE"),
+    ACTIVE("active"),
 
     /**
      * 초대장이 비활성 상태이며 더 이상 사용할 수 없습니다.
      */
-    INACTIVE("INACTIVE"),
+    INACTIVE("inactive"),
 
     /**
      * 초대장이 만료되어 더 이상 사용할 수 없습니다.
      */
-    EXPIRED("EXPIRED"),
+    EXPIRED("expired"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
-    UNKNOWN("UNKNOWN");
+    UNKNOWN("unknown");
 
     companion object {
         /**

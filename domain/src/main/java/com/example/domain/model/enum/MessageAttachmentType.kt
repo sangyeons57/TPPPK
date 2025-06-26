@@ -8,32 +8,32 @@ enum class MessageAttachmentType(val value: String) {
     /**
      * 이미지 파일 첨부
      */
-    IMAGE("IMAGE"),
+    IMAGE("image"),
 
     /**
      * 일반 파일 첨부
      */
-    FILE("FILE"),
+    FILE("file"),
 
     /**
      * 비디오 파일 첨부
      */
-    VIDEO("VIDEO"),
+    VIDEO("video"),
 
     /**
      * 오디오 파일 첨부 (DTO 주석에는 없었으나 일반적인 유형)
      */
-    AUDIO("AUDIO"),
+    AUDIO("audio"),
 
     /**
      * 링크 첨부 (DTO 주석에는 없었으나 일반적인 유형)
      */
-    LINK("LINK"),
+    LINK("link"),
 
     /**
      * 알 수 없거나 정의되지 않은 첨부 파일 유형
      */
-    UNKNOWN("UNKNOWN");
+    UNKNOWN("unknown");
 
     companion object {
         /**
