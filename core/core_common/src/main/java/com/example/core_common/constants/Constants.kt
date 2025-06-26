@@ -28,4 +28,6 @@ object Constants {
      * Represents the role of an owner, typically for project membership or resource ownership.
      */
     const val OWNER = "OWNER"
+
+    const val EMPTY_VALUE_STRING = "__EMPTY__"
 }

@@ -1,21 +1,27 @@
 package com.example.domain.model.vo
 
 import android.util.Patterns
+import com.example.core_common.constants.Constants
 
 @JvmInline
-value class Email(val value: String) {
-    init {
-        if (isNotEmpty()) {
-            require(value.isNotBlank()) { "UserId must not be blank." }
-            require(value.length <= MAX_LENGTH) { "UserId cannot exceed $MAX_LENGTH characters." }
-        } else {
-            require(value.isEmpty()) { "UserId must be empty." }
+value class Email(private val internalValue: String) {
+    val value: String
+        get() {
+            return if (isEmpty()) {
+                ""
+            } else {
+                internalValue
+            }
         }
+
+    init {
+        require(value.isNotBlank()) { "UserId must not be blank." }
+        require(value.length <= MAX_LENGTH) { "UserId cannot exceed $MAX_LENGTH characters." }
     }
 
     companion object {
         const val MAX_LENGTH = 128
-        val EMPTY = Email("")
+        val EMPTY = Email(Constants.EMPTY_VALUE_STRING)
     }
 
     fun trim(): Email {
