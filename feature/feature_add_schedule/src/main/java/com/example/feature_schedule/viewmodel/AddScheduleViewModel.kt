@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.NavigationResultKeys
 import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.DocumentId
@@ -233,6 +234,8 @@ class AddScheduleViewModel @Inject constructor(
                 is CustomResult.Success -> {
                     _eventFlow.emit(AddScheduleEvent.ShowSnackbar("일정이 추가되었습니다."))
                     _uiState.update { it.copy(isLoading = false) }
+                    // 스케줄 생성 성공을 캘린더 화면에 알림
+                    navigationManger.setResult(NavigationResultKeys.REFRESH_SCHEDULE_LIST, true)
                     navigationManger.navigateBack()
                 }
                 is CustomResult.Failure -> {

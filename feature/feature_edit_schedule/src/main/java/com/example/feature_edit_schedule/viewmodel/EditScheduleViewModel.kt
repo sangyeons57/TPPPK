@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.NavigationResultKeys
 import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
@@ -207,6 +208,8 @@ class EditScheduleViewModel @Inject constructor(
                 viewModelScope.launch {
                     _uiState.update { it.copy(isSaving = false) }
                     _eventFlow.emit(EditScheduleEvent.ShowSnackbar("일정이 저장되었습니다."))
+                    // 스케줄 수정 성공을 캘린더 화면에 알림
+                    navigationManger.setResult(NavigationResultKeys.REFRESH_SCHEDULE_LIST, true)
                     navigationManger.navigateBack()
                 }
             }.onFailure { exception ->

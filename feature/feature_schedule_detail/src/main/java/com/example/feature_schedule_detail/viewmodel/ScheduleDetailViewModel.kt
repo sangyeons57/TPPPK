@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.NavigationResultKeys
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Schedule
@@ -166,6 +167,8 @@ class ScheduleDetailViewModel @Inject constructor(
                     viewModelScope.launch {
                         _eventFlow.emit(ScheduleDetailEvent.ShowSnackbar("일정이 삭제되었습니다."))
                         _uiState.update { it.copy(isLoading = false, deleteSuccess = true) }
+                        // 스케줄 삭제 성공을 캘린더 화면에 알림
+                        navigationManger.setResult(NavigationResultKeys.REFRESH_SCHEDULE_LIST, true)
                         navigationManger.navigateBack() // 삭제 성공 후 뒤로가기
                     }
                 }.onFailure { exception ->
