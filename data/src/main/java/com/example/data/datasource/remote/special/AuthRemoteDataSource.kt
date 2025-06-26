@@ -3,6 +3,7 @@ package com.example.data.datasource.remote.special
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.Email
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -48,7 +49,7 @@ interface AuthRemoteDataSource {
      * @param password 비밀번호
      * @return 성공 시 로그인된 사용자의 UID를 포함한 CustomResult 객체
      */
-    suspend fun signIn(email: String, password: String): CustomResult<String, Exception>
+    suspend fun signIn(email: Email, password: String): CustomResult<String, Exception>
 
     /**
      * 현재 로그인된 사용자를 로그아웃합니다.
@@ -122,10 +123,10 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             }
         }
 
-    override suspend fun signIn(email: String, password: String): CustomResult<String, Exception> =
+    override suspend fun signIn(email: Email, password: String): CustomResult<String, Exception> =
         withContext(Dispatchers.IO) {
             resultTry {
-                val authResult = auth.signInWithEmailAndPassword(email, password).await()
+                val authResult = auth.signInWithEmailAndPassword(email.value, password).await()
                 authResult.user?.uid ?: throw Exception("Failed to sign in: UID is null.")
             }
         }
