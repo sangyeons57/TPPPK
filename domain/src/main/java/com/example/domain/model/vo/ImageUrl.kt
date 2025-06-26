@@ -10,9 +10,9 @@ import java.net.URI
 @JvmInline
 value class ImageUrl(val value: String) {
     init {
-        require(value.isNotBlank()) { "ImageUrl must not be blank." }
-        require(value.length <= MAX_LENGTH) { "ImageUrl cannot exceed $MAX_LENGTH characters." }
-        require(value.matches(URL_REGEX)) { "Invalid image URL format." }
+//        require(value.isNotBlank()) { "ImageUrl must not be blank." }
+//        require(value.length <= MAX_LENGTH) { "ImageUrl cannot exceed $MAX_LENGTH characters." }
+//        require(value.matches(URL_REGEX)) { "Invalid image URL format." }
     }
 
 

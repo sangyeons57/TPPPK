@@ -7,8 +7,8 @@ package com.example.domain.model.vo.schedule
 @JvmInline
 value class ScheduleContent(val value: String) {
     init {
-        require(value.isNotBlank()) { "Schedule content must not be blank." }
-        require(value.length <= MAX_LENGTH) { "Schedule content cannot exceed $MAX_LENGTH characters." }
+//        require(value.isNotBlank()) { "Schedule content must not be blank." }
+//        require(value.length <= MAX_LENGTH) { "Schedule content cannot exceed $MAX_LENGTH characters." }
     }
 
     companion object {

@@ -241,8 +241,7 @@ class SignUpViewModel @Inject constructor(
             )}
 
             // 닉네임 중복 확인
-            val resultName = userUseCases.checkNicknameAvailabilityUseCase(state.name)
-            when (resultName) {
+            when (val resultName = userUseCases.checkNicknameAvailabilityUseCase(state.name)) {
                 is CustomResult.Success -> {
                     // 이름 중복 확인 결과
                     val isNameAvailable = resultName.data

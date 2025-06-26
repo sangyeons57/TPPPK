@@ -5,17 +5,16 @@ import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
 import com.example.data.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.AuthRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.TimeoutCancellationException
 import javax.inject.Inject
 
 /**
@@ -36,7 +35,10 @@ class AuthRepositoryImpl @Inject constructor(
      * @param password 사용자 비밀번호
      * @return 성공 시 UserSession이 포함된 CustomResult.Success, 실패 시 CustomResult.Failure
      */
-    override suspend fun login(email: Email, password: String): CustomResult<UserSession, Exception> {
+    override suspend fun login(
+        email: UserEmail,
+        password: String
+    ): CustomResult<UserSession, Exception> {
         // 로그인 시도
 
         return when (val loginResult = authRemoteDataSource.signIn(email, password)) {
@@ -227,7 +229,7 @@ class AuthRepositoryImpl @Inject constructor(
                 val userSession = UserSession(
                     userId = UserId(firebaseUser.uid),
                     token = tokenResult?.token?.let { value -> Token(value) },
-                    email = firebaseUser.email?.let { value -> Email(value) },
+                    email = firebaseUser.email?.let { value -> UserEmail(value) },
                     displayName = firebaseUser.displayName?.let { value -> UserName.from(value) },
                     photoUrl = firebaseUser.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                 )
@@ -271,7 +273,7 @@ class AuthRepositoryImpl @Inject constructor(
                     val userSession = UserSession(
                         userId = UserId(firebaseUser.data.uid),
                         token = tokenResult?.token?.let { value -> Token(value) },
-                        email = firebaseUser.data.email?.let { value -> Email(value) },
+                        email = firebaseUser.data.email?.let { value -> UserEmail(value) },
                         displayName = firebaseUser.data.displayName?.let { value ->
                             UserName.from(
                                 value

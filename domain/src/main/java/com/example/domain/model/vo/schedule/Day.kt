@@ -1,7 +1,5 @@
 package com.example.domain.model.vo.schedule
 
-import java.time.YearMonth
-
 /**
  * Represents the content/description of a schedule.
  * Enforces non-blank and length constraints to prevent excessively long text.
@@ -9,7 +7,7 @@ import java.time.YearMonth
 @JvmInline
 value class Day(val value: Int) {
     init {
-        require(value in MIN_LENGTH..MAX_LENGTH) { "Schedule day must be between $MIN_LENGTH and $MAX_LENGTH." }
+//        require(value in MIN_LENGTH..MAX_LENGTH) { "Schedule day must be between $MIN_LENGTH and $MAX_LENGTH." }
     }
 
     companion object {

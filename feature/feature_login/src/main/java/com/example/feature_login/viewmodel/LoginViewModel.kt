@@ -8,8 +8,8 @@ import com.example.core_navigation.core.FindPasswordRoute
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
-import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.IsLoading
+import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain.provider.auth.AuthValidationUseCaseProvider
 import com.example.domain.usecase.auth.session.WithdrawnAccountException
@@ -27,7 +27,7 @@ import javax.inject.Inject
  * 로그인 화면의 UI 상태를 정의하는 데이터 클래스
  */
 data class LoginUiState(
-    val email: Email = Email.EMPTY,
+    val email: UserEmail = UserEmail.EMPTY,
     val password: String = "",
     val isPasswordVisible: Boolean = false,
     val isLoginEnabled: Boolean = false,
@@ -78,7 +78,7 @@ class LoginViewModel @Inject constructor(
      * 입력값 변경 시 해당 필드 에러 초기화 및 로그인 버튼 활성화 조건 업데이트
      * @param email 변경된 이메일 값
      */
-    fun onEmailChange(email: Email) {
+    fun onEmailChange(email: UserEmail) {
         _uiState.update {
             it.copy(
                 email = email.trim(),

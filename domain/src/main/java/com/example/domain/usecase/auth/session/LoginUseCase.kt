@@ -5,7 +5,7 @@ import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Email
+import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
@@ -36,7 +36,10 @@ class LoginUseCase @Inject constructor(
      * @param credentials EmailPasswordCredentials 객체 (email, password 포함).
      * @return 성공 시 UserSession이 포함된 CustomResult.Success, 실패 시 CustomResult.Error.
      */
-    suspend operator fun invoke(email : Email, password : String): CustomResult<UserSession, Exception> {
+    suspend operator fun invoke(
+        email: UserEmail,
+        password: String
+    ): CustomResult<UserSession, Exception> {
         // 시작 로그 – 입력된 이메일 기준으로 로그인 시도
         //(TAG, "Attempting login for email=$email")
         return when (val loginResult = authRepository.login(email, password)) {

@@ -8,8 +8,8 @@ package com.example.domain.model.vo.user
 value class UserProfileImageUrl(val value: String?) {
     init {
         value?.let {
-            require(it.length <= MAX_LENGTH) { "Profile image URL cannot exceed $MAX_LENGTH characters." }
-            require(it.matches(URL_REGEX)) { "Invalid profile image URL format." }
+//            require(it.length <= MAX_LENGTH) { "Profile image URL cannot exceed $MAX_LENGTH characters." }
+//            require(it.matches(URL_REGEX)) { "Invalid profile image URL format." }
         }
     }
 

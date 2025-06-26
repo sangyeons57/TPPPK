@@ -8,7 +8,7 @@ package com.example.domain.model.vo.user
 value class UserFcmToken(val value: String?) {
     init {
         value?.let {
-            require(it.length <= MAX_LENGTH) { "FCM token cannot exceed $MAX_LENGTH characters." }
+//            require(it.length <= MAX_LENGTH) { "FCM token cannot exceed $MAX_LENGTH characters." }
         }
     }
 

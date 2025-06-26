@@ -1,9 +1,9 @@
 package com.example.domain.model.data
 
-import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
 
 /**
@@ -18,7 +18,7 @@ import com.example.domain.model.vo.user.UserName
 data class UserSession(
     val userId: UserId,
     val token: Token?,
-    val email: Email? = null,
+    val email: UserEmail? = null,
     val displayName: UserName? = null,
     val photoUrl: ImageUrl? = null
     // Add other relevant session/user data as needed

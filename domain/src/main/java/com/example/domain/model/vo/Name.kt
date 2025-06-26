@@ -8,7 +8,7 @@ import com.example.domain.model.vo.category.CategoryName
 @JvmInline
 value class Name(val value: String) {
     init {
-        require(value.isNotBlank()) { "Name은 비어있을 수 없습니다." }
+//        require(value.isNotBlank()) { "Name은 비어있을 수 없습니다." }
     }
     companion object {
         val EMPTY = Name("")

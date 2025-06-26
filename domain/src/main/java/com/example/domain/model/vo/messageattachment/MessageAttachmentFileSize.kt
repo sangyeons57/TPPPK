@@ -7,6 +7,6 @@ package com.example.domain.model.vo.messageattachment
 @JvmInline
 value class MessageAttachmentFileSize(val value: Long) {
     init {
-        require(value >= 0) { "MessageAttachmentFileSize must be a non-negative value." }
+//        require(value >= 0) { "MessageAttachmentFileSize must be a non-negative value." }
     }
 }

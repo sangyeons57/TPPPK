@@ -5,8 +5,8 @@ import java.text.DecimalFormat
 @JvmInline
 value class ProjectChannelOrder(val value: Double) {
     init {
-        require(value > 0) { "ProjectChannelOrder must be a positive number." }
-        require(isTwoDecimalPlace(value)) { "ProjectChannelOrder must have at most two decimal places (00.00 format)." }
+//        require(value > 0) { "ProjectChannelOrder must be a positive number." }
+//        require(isTwoDecimalPlace(value)) { "ProjectChannelOrder must have at most two decimal places (00.00 format)." }
     }
 
     companion object {

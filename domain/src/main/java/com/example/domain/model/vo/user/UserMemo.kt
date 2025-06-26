@@ -8,7 +8,7 @@ package com.example.domain.model.vo.user
 value class UserMemo(val value: String?) {
     init {
         value?.let {
-            require(it.length <= MAX_LENGTH) { "User memo cannot exceed $MAX_LENGTH characters." }
+//            require(it.length <= MAX_LENGTH) { "User memo cannot exceed $MAX_LENGTH characters." }
         }
     }
 

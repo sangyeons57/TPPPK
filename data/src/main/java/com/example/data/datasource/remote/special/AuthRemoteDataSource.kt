@@ -1,17 +1,16 @@
 package com.example.data.datasource.remote.special
 
-import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.flow.Flow
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.Email
+import com.example.domain.model.vo.user.UserEmail
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,7 +48,7 @@ interface AuthRemoteDataSource {
      * @param password 비밀번호
      * @return 성공 시 로그인된 사용자의 UID를 포함한 CustomResult 객체
      */
-    suspend fun signIn(email: Email, password: String): CustomResult<String, Exception>
+    suspend fun signIn(email: UserEmail, password: String): CustomResult<String, Exception>
 
     /**
      * 현재 로그인된 사용자를 로그아웃합니다.
@@ -123,7 +122,10 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             }
         }
 
-    override suspend fun signIn(email: Email, password: String): CustomResult<String, Exception> =
+    override suspend fun signIn(
+        email: UserEmail,
+        password: String
+    ): CustomResult<String, Exception> =
         withContext(Dispatchers.IO) {
             resultTry {
                 val authResult = auth.signInWithEmailAndPassword(email.value, password).await()
@@ -134,7 +136,6 @@ class AuthRemoteDataSourceImpl @Inject constructor(
     override suspend fun signOut(): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         resultTry {
             auth.signOut()
-            Unit
         }
     }
 

@@ -3,8 +3,7 @@ package com.example.domain.repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.Email
-import com.example.domain.repository.DefaultRepository
+import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.repository.Repository
 import kotlinx.coroutines.flow.Flow
 
@@ -15,7 +14,7 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository : Repository {
 
     // --- 로그인/로그아웃/상태 관련 ---
-    suspend fun login(email: Email, password: String): CustomResult<UserSession,Exception>
+    suspend fun login(email: UserEmail, password: String): CustomResult<UserSession, Exception>
     suspend fun isLoggedIn(): Boolean // 로그인 상태 확인 (Splash)
 
     suspend fun logout(): CustomResult<Unit, Exception> // 로그아웃

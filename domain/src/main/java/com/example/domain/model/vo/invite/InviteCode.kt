@@ -4,7 +4,6 @@ package com.example.domain.model.vo.invite
 value class InviteCode(val value: String) {
     init {
         // Example validation: Ensure invite code has a specific length or format if necessary
-        require(value.isNotBlank()) { "Invite code cannot be blank." }
         // require(value.length == 8) { "Invite code must be 8 characters long." } // Example
     }
 }

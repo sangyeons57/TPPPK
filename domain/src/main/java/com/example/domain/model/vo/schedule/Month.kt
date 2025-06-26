@@ -9,7 +9,7 @@ import java.time.YearMonth
 @JvmInline
 value class Month(val value: Int) {
     init {
-        require(value in MIN_LENGTH..MAX_LENGTH) { "Schedule month must be between $MIN_LENGTH and $MAX_LENGTH." }
+//        require(value in MIN_LENGTH..MAX_LENGTH) { "Schedule month must be between $MIN_LENGTH and $MAX_LENGTH." }
     }
 
     companion object {

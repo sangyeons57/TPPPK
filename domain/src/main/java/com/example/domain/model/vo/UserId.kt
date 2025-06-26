@@ -1,7 +1,5 @@
 package com.example.domain.model.vo
 
-import com.example.core_common.constants.Constants
-
 /**
  * Dedicated identifier for User aggregates. Separate from generic [DocumentId]
  * to allow semantic clarity and potential specialized validation.
@@ -24,7 +22,7 @@ value class UserId(val internalValue: String) {
         const val MAX_LENGTH = 128
 
         val UNKNOWN_USER = UserId("UNKNOWN_USER")
-        val EMPTY = UserId(Constants.EMPTY_VALUE_STRING)
+        val EMPTY = UserId("")
 
         fun from (value: String): UserId {
             return UserId(value)

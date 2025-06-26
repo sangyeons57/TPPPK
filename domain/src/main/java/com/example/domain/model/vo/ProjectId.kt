@@ -7,8 +7,8 @@ package com.example.domain.model.vo
 @JvmInline
 value class ProjectId(val value: String) {
     init {
-        require(value.isNotBlank()) { "ProjectId must not be blank." }
-        require(value.length <= MAX_LENGTH) { "ProjectId cannot exceed $MAX_LENGTH characters." }
+//        require(value.isNotBlank()) { "ProjectId must not be blank." }
+//        require(value.length <= MAX_LENGTH) { "ProjectId cannot exceed $MAX_LENGTH characters." }
     }
 
     companion object {

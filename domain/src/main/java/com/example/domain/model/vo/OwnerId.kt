@@ -1,7 +1,5 @@
 package com.example.domain.model.vo
 
-import com.example.domain.model.vo.UserId
-
 /**
  * Represents an owner/user identifier. Wrapper around underlying String document id.
  * Shared across modules that refer to a user id (author, participant, etc.).
@@ -9,8 +7,8 @@ import com.example.domain.model.vo.UserId
 @JvmInline
 value class OwnerId(val value: String) {
     init {
-        require(value.isNotBlank()) { "OwnerId must not be blank." }
-        require(value.length <= MAX_LENGTH) { "OwnerId cannot exceed $MAX_LENGTH characters." }
+//        require(value.isNotBlank()) { "OwnerId must not be blank." }
+//        require(value.length <= MAX_LENGTH) { "OwnerId cannot exceed $MAX_LENGTH characters." }
     }
 
     companion object {

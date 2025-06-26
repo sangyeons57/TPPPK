@@ -51,8 +51,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
-import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.IsLoading
+import com.example.domain.model.vo.user.UserEmail
 import com.example.feature_login.viewmodel.LoginEvent
 import com.example.feature_login.viewmodel.LoginUiState
 import com.example.feature_login.viewmodel.LoginViewModel
@@ -126,7 +126,7 @@ fun LoginContent(
     uiState: LoginUiState, // 표시할 UI 상태
     emailFocusRequester: FocusRequester,
     passwordFocusRequester: FocusRequester,
-    onEmailChange: (Email) -> Unit, // 이벤트 콜백 함수들
+    onEmailChange: (UserEmail) -> Unit, // 이벤트 콜백 함수들
     onPasswordChange: (String) -> Unit,
     onPasswordVisibilityToggle: () -> Unit,
     onLoginClick: () -> Unit,
@@ -155,7 +155,7 @@ fun LoginContent(
         // 이메일 입력 필드
         OutlinedTextField(
             value = uiState.email.value,
-            onValueChange = { onEmailChange(Email(it)) },
+            onValueChange = { onEmailChange(UserEmail(it)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(emailFocusRequester),
@@ -325,7 +325,7 @@ fun LoginContentLoadingPreview() {
         LoginContent(
             uiState = LoginUiState(
                 isLoading = IsLoading.True,
-                email = Email("test"),
+                email = UserEmail("test"),
                 password = "pwd"
             ), // 로딩 상태
             onEmailChange = {},

@@ -4,7 +4,6 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserEmail

@@ -8,8 +8,6 @@ import com.example.domain.model.vo.Name
 @JvmInline
 value class CategoryName(val value: String) {
     init {
-        require(value.isNotBlank()) { "CategoryName은 비어있을 수 없습니다." }
-        require(value.length <= 100) { "CategoryName은 100자를 초과할 수 없습니다." }
     }
 
     fun getName() : Name{

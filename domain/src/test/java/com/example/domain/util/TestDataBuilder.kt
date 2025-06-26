@@ -8,7 +8,6 @@ import com.example.domain.model.data.UserSession
 import com.example.domain.model.enum.FriendshipStatus
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Email
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId

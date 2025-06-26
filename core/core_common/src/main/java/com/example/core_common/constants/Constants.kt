@@ -29,5 +29,4 @@ object Constants {
      */
     const val OWNER = "OWNER"
 
-    const val EMPTY_VALUE_STRING = "__EMPTY__"
 }

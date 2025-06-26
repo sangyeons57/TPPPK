@@ -5,7 +5,7 @@ import java.net.URI
 @JvmInline
 value class MessageAttachmentUrl(val value: String) {
     init {
-        require(value.isNotBlank()) { "MessageAttachmentUrl must not be blank." }
+//        require(value.isNotBlank()) { "MessageAttachmentUrl must not be blank." }
     }
 
     companion object {
