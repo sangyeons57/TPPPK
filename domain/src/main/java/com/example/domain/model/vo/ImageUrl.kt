@@ -1,5 +1,6 @@
 package com.example.domain.model.vo
 
+import android.net.Uri
 import java.net.URI
 
 /**
@@ -20,6 +21,9 @@ value class ImageUrl(val value: String) {
         private val URL_REGEX = Regex("^(https?|ftp)://[^\\s/$.?#].[^\\s]*$")
 
         fun toImageUrl(uri: URI): ImageUrl {
+            return ImageUrl(uri.toString())
+        }
+        fun toImageUrl(uri: Uri): ImageUrl {
             return ImageUrl(uri.toString())
         }
     }

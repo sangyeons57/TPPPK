@@ -2,7 +2,7 @@ package com.example.teamnovapersonalprojectprojectingkotlin
 
 // import com.google.firebase.BuildConfig // Firebase 라이브러리의 BuildConfig가 아님
 import android.app.Application
-import com.example.teamnovapersonalprojectprojectingkotlin.BuildConfig
+import com.google.firebase.BuildConfig
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
