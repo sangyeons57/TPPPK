@@ -36,13 +36,13 @@ class AuthRepositoryImpl @Inject constructor(
      * @param password 사용자 비밀번호
      * @return 성공 시 UserSession이 포함된 CustomResult.Success, 실패 시 CustomResult.Failure
      */
-    override suspend fun login(email: String, password: String): CustomResult<UserSession, Exception> {
+    override suspend fun login(email: Email, password: String): CustomResult<UserSession, Exception> {
         // 로그인 시도
-        val loginResult = authRemoteDataSource.signIn(email, password)
 
-        return when (loginResult) {
+        return when (val loginResult = authRemoteDataSource.signIn(email, password)) {
             is CustomResult.Success -> {
                 // 로그인 성공 시 세션 정보 가져오기
+                Log.d("AuthRepositoryImpl", loginResult.data)
                 when (val userSessionResult = getCurrentUserSession()) {
                     is CustomResult.Success -> {
                         CustomResult.Success(userSessionResult.data)
