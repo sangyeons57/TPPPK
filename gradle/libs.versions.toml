@@ -43,6 +43,7 @@ workRuntime = "2.10.2"
 firebaseFirestoreKtx = "25.1.4"
 accompanistPermissions = "0.37.3"
 foundationAndroid = "1.8.3"
+leakcanary = "2.12"
 
 [libraries]
 androidx-animation = { module = "androidx.compose.animation:animation" }
@@ -133,6 +134,9 @@ google-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebas
 # Accompanist Permissions 라이브러리 별칭 추가
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
 androidx-foundation-android = { group = "androidx.compose.foundation", name = "foundation-android", version.ref = "foundationAndroid" }
+
+# LeakCanary for memory leak detection
+leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

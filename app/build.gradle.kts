@@ -192,6 +192,9 @@ dependencies {
 
 
     implementation(libs.sentry.android)
+    
+    // LeakCanary for memory leak detection (debug only)
+    debugImplementation(libs.leakcanary.android)
 }
 
 sentry {
