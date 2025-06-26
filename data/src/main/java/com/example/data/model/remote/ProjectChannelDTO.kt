@@ -19,8 +19,7 @@ data class ProjectChannelDTO(
     @DocumentId override val id: String = "",
     @get:PropertyName(CHANNEL_NAME)
     val channelName: String = "",
-    @get:PropertyName(CHANNEL_TYPE)
-    val channelType: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
+    private val channelTypeParam: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
     @get:PropertyName(ORDER)
     val order: Double = 0.0, // Added order field
     @get:PropertyName(CREATED_AT)
@@ -28,6 +27,14 @@ data class ProjectChannelDTO(
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
+    
+    @get:PropertyName(CHANNEL_TYPE)
+    @set:PropertyName(CHANNEL_TYPE)
+    var _channelTypeString: String = channelTypeParam.value
+        private set
+    
+    val channelType: ProjectChannelType
+        get() = ProjectChannelType.fromString(_channelTypeString)
 
     companion object {
         const val COLLECTION_NAME = ProjectChannel.COLLECTION_NAME
@@ -61,7 +68,7 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
     return ProjectChannelDTO(
         id = id.value,
         channelName = channelName.value,
-        channelType = channelType,
+        channelTypeParam = channelType,
         order = order.value, // Added order mapping
         createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}

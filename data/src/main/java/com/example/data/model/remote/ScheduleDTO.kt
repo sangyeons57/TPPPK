@@ -31,8 +31,7 @@ data class ScheduleDTO(
     val projectId: String? = null,
     @get:PropertyName(CREATOR_ID)
     val creatorId: String = "",
-    @get:PropertyName(STATUS)
-    val status: ScheduleStatus = ScheduleStatus.CONFIRMED, // "CONFIRMED", "TENTATIVE", "CANCELLED"
+    private val statusParam: ScheduleStatus = ScheduleStatus.CONFIRMED, // "CONFIRMED", "TENTATIVE", "CANCELLED"
     @get:PropertyName(COLOR)
     val color: String? = null, // 예: "#FF5733"
     @get:PropertyName(CREATED_AT)
@@ -40,6 +39,14 @@ data class ScheduleDTO(
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
+    
+    @get:PropertyName(STATUS)
+    @set:PropertyName(STATUS)
+    var _statusString: String = statusParam.value
+        private set
+    
+    val status: ScheduleStatus
+        get() = ScheduleStatus.fromString(_statusString)
 
     companion object {
         const val COLLECTION_NAME = Schedule.COLLECTION_NAME
@@ -62,7 +69,7 @@ data class ScheduleDTO(
                 endTime = DateTimeUtil.instantToFirebaseTimestamp(entity.endTime),
                 projectId = entity.projectId?.value,
                 creatorId = entity.creatorId.value,
-                status = entity.status,
+                statusParam = entity.status,
                 createdAt = DateTimeUtil.instantToFirebaseTimestamp(entity.createdAt),
                 updatedAt = DateTimeUtil.instantToFirebaseTimestamp(entity.updatedAt)
             )
@@ -103,7 +110,7 @@ fun Schedule.toDto(): ScheduleDTO {
         endTime = DateTimeUtil.instantToFirebaseTimestamp(endTime),
         projectId = projectId?.value,
         creatorId = creatorId.value,
-        status = status,
+        statusParam = status,
         createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt),
         updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt),
     )

@@ -32,17 +32,33 @@ data class UserDTO(
     val profileImageUrl: String? = null,
     @get:PropertyName(MEMO)
     val memo: String? = null,
-    @get:PropertyName(USER_STATUS)
-    val status: UserStatus = UserStatus.OFFLINE, // "online", "offline", "away" 등
     @get:PropertyName(CREATED_AT)
     val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
     val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(FCM_TOKEN)
     val fcmToken: String? = null,
-    @get:PropertyName(ACCOUNT_STATUS)
-    val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE // "active", "suspended", "deleted" 등
+    
+    // Constructor parameters for enum handling
+    private val statusParam: UserStatus = UserStatus.OFFLINE,
+    private val accountStatusParam: UserAccountStatus = UserAccountStatus.ACTIVE
 ) : DTO {
+    
+    @get:PropertyName(USER_STATUS)
+    @set:PropertyName(USER_STATUS)
+    var _statusString: String = statusParam.value
+        private set
+    
+    val status: UserStatus
+        get() = UserStatus.fromString(_statusString)
+    
+    @get:PropertyName(ACCOUNT_STATUS)
+    @set:PropertyName(ACCOUNT_STATUS)
+    var _accountStatusString: String = accountStatusParam.value
+        private set
+    
+    val accountStatus: UserAccountStatus
+        get() = UserAccountStatus.fromString(_accountStatusString)
 
     companion object {
         const val COLLECTION_NAME = User.COLLECTION_NAME
@@ -65,11 +81,11 @@ data class UserDTO(
                 consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp),
                 profileImageUrl = domain.profileImageUrl?.value,
                 memo = domain.memo?.value,
-                status = domain.userStatus,
                 createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt),
                 updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt),
                 fcmToken = domain.fcmToken?.value,
-                accountStatus = domain.accountStatus
+                statusParam = domain.userStatus,
+                accountStatusParam = domain.accountStatus
             )
         }
     }
@@ -106,10 +122,10 @@ fun User.toDto(): UserDTO {
         consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp), // consentTimeStamp is non-null in User
         profileImageUrl = profileImageUrl?.value,
         memo = memo?.value,  // Extract primitive value if memo is not null
-        status = userStatus, // Corrected from 'status' to 'userStatus'
         createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt), // createdAt is non-null in User
         updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt), // updatedAt is non-null in User
         fcmToken = fcmToken?.value,
-        accountStatus = accountStatus
+        statusParam = userStatus, // Corrected from 'status' to 'userStatus'
+        accountStatusParam = accountStatus
     )
 }

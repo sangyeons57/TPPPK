@@ -20,8 +20,7 @@ import com.google.firebase.firestore.ServerTimestamp
 data class MessageAttachmentDTO(
     @DocumentId override val id: String = "",
     // "IMAGE", "FILE", "VIDEO" 등
-    @get:PropertyName(ATTACHMENT_TYPE)
-    val attachmentType: MessageAttachmentType = MessageAttachmentType.FILE,
+    private val attachmentTypeParam: MessageAttachmentType = MessageAttachmentType.FILE,
     // Firebase Storage 등에 업로드된 파일의 URL
     @get:PropertyName(ATTACHMENT_URL)
     val attachmentUrl: String = "",
@@ -34,6 +33,14 @@ data class MessageAttachmentDTO(
     @get:PropertyName(UPDATED_AT)
     @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
+    
+    @get:PropertyName(ATTACHMENT_TYPE)
+    @set:PropertyName(ATTACHMENT_TYPE)
+    var _attachmentTypeString: String = attachmentTypeParam.value
+        private set
+    
+    val attachmentType: MessageAttachmentType
+        get() = MessageAttachmentType.fromString(_attachmentTypeString)
 
     companion object {
         const val COLLECTION_NAME = MessageAttachment.COLLECTION_NAME
@@ -47,7 +54,7 @@ data class MessageAttachmentDTO(
         fun from(messageAttachment: MessageAttachment): MessageAttachmentDTO {
             return MessageAttachmentDTO(
                 id = messageAttachment.id.value,
-                attachmentType = messageAttachment.attachmentType,
+                attachmentTypeParam = messageAttachment.attachmentType,
                 attachmentUrl = messageAttachment.attachmentUrl.value,
                 fileName = messageAttachment.fileName?.value,
                 fileSize = messageAttachment.fileSize?.value,
@@ -76,7 +83,7 @@ data class MessageAttachmentDTO(
 fun MessageAttachment.toDto(): MessageAttachmentDTO {
     return MessageAttachmentDTO(
         id = id.value,
-        attachmentType = attachmentType,
+        attachmentTypeParam = attachmentType,
         attachmentUrl = attachmentUrl.value,
         fileName = fileName?.value,
         fileSize = fileSize?.value,
