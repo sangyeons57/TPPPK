@@ -32,7 +32,7 @@ export class FirestoreUpdateService {
       const userRef = this.firestore.collection("users").doc(userId);
       batch.update(userRef, {
         profileImageUrl: newImageUrl,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.Timestamp.now(),
       });
       updateCount++;
 
@@ -46,7 +46,7 @@ export class FirestoreUpdateService {
       memberQuery.docs.forEach((doc) => {
         batch.update(doc.ref, {
           profileImageUrl: newImageUrl,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.Timestamp.now(),
         });
         updateCount++;
       });
@@ -65,7 +65,7 @@ export class FirestoreUpdateService {
       messageQuery.docs.forEach((doc) => {
         batch.update(doc.ref, {
           senderProfileImageUrl: newImageUrl,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.Timestamp.now(),
         });
         updateCount++;
       });
@@ -83,7 +83,7 @@ export class FirestoreUpdateService {
       friendQuery.docs.forEach((doc) => {
         batch.update(doc.ref, {
           friendProfileImageUrl: newImageUrl,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.Timestamp.now(),
         });
         updateCount++;
       });
@@ -108,7 +108,7 @@ export class FirestoreUpdateService {
 
           batch.update(doc.ref, {
             participantInfo: participantInfo,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.Timestamp.now(),
           });
           updateCount++;
         }
@@ -156,7 +156,7 @@ export class FirestoreUpdateService {
 
       await userRef.update({
         profileImageUrl: imageUrl,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.Timestamp.now(),
       });
 
       logger.info("User profile image updated", {

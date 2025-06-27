@@ -5,9 +5,11 @@ import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -35,12 +37,14 @@ class GetCurrentUserStreamUseCaseImpl @Inject constructor(
     override suspend operator fun invoke(): Flow<CustomResult<User, Exception>> {
         return when (val session = authRepository.getCurrentUserSession()) {
             is CustomResult.Success -> {
-                when (val result = userRepository.observe(DocumentId.from(session.data.userId)).first()) {
-                    is CustomResult.Success -> flowOf( CustomResult.Success((result.data as User)) )
-                    is CustomResult.Failure -> flowOf( CustomResult.Failure(Exception("로그인이 필요합니다.")) )
-                    is CustomResult.Initial -> flowOf( CustomResult.Initial )
-                    is CustomResult.Loading -> flowOf( CustomResult.Loading )
-                    is CustomResult.Progress -> flowOf( CustomResult.Progress(result.progress) )
+                userRepository.observe(DocumentId.from(session.data.userId)).map { result ->
+                    when (result) {
+                        is CustomResult.Success -> CustomResult.Success(result.data as User)
+                        is CustomResult.Failure -> CustomResult.Failure(result.error)
+                        is CustomResult.Initial -> CustomResult.Initial
+                        is CustomResult.Loading -> CustomResult.Loading
+                        is CustomResult.Progress -> CustomResult.Progress(result.progress)
+                    }
                 }
             }
             is CustomResult.Failure -> flowOf( CustomResult.Failure(session.error))

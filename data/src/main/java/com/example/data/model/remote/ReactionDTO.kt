@@ -21,9 +21,9 @@ data class ReactionDTO(
     @get:PropertyName(EMOJI)
     val emoji: String = "",  // 유니코드 이모지
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
     companion object {
         const val COLLECTION_NAME = Reaction.COLLECTION_NAME

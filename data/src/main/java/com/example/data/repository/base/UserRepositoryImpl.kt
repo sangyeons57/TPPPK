@@ -10,6 +10,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -23,9 +24,11 @@ class UserRepositoryImpl @Inject constructor(
         if (entity !is User)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
 
-        return if(entity.id.isAssigned()) {
+        return if(!entity.id.isAssigned()) {
+            // New entity without assigned ID – create and let Firestore assign one
             userRemoteDataSource.create(entity.toDto())
         } else {
+            // Existing entity – perform update only on changed fields
             userRemoteDataSource.update(entity.id, entity.getChangedFields())
             CustomResult.Success(entity.id)
         }

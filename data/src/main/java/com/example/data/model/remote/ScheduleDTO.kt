@@ -36,9 +36,9 @@ data class ScheduleDTO(
     @get:PropertyName(COLOR)
     val color: String? = null, // 예: "#FF5733"
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
 
     companion object {

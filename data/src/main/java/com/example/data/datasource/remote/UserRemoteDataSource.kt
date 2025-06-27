@@ -11,6 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import com.google.firebase.firestore.Source
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -47,7 +48,6 @@ interface UserRemoteDataSource : DefaultDatasource {
      * @return DMWrapperDTO 목록을 담은 Flow
      */
     fun getDmWrappersStream(userId: String): Flow<CustomResult<List<DMWrapperDTO>, Exception>>
-
 
 }
 
@@ -192,6 +192,5 @@ class UserRemoteDataSourceImpl @Inject constructor(
         }
         awaitClose { listenerRegistration.remove() }
     }
-
 
 }

@@ -24,9 +24,9 @@ data class ProjectChannelDTO(
     @get:PropertyName(ORDER)
     val order: Double = 0.0, // Added order field
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
 
     companion object {

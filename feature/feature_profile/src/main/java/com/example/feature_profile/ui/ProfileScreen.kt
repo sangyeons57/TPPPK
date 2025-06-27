@@ -283,6 +283,7 @@ fun ProfileContent(
             ),
             trailingIcon = {
                 if (isEditingStatusMessage) {
+                    // 완료(저장) 아이콘
                     IconButton(onClick = {
                         onSubmitStatusMessage()
                         focusManager.clearFocus()
@@ -290,6 +291,18 @@ fun ProfileContent(
                         Icon(
                             imageVector = Icons.Filled.Done,
                             contentDescription = "상태 메시지 저장"
+                        )
+                    }
+                } else {
+                    // 편집 시작 아이콘
+                    IconButton(onClick = {
+                        onToggleEditStatus()
+                        // 포커스를 바로 요청해 입력 편집을 시작한다
+                        focusRequester.requestFocus()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "상태 메시지 편집"
                         )
                     }
                 }

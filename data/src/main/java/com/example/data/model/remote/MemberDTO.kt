@@ -16,9 +16,9 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
 data class MemberDTO(
     @DocumentId override val id: String = "",
     @get:PropertyName(JOINED_AT)
-    @ServerTimestamp val joinedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val joinedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(ROLE_ID)
     val roleIds: List<String> = emptyList()
 ) : DTO {

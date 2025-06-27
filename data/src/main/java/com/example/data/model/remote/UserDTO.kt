@@ -14,6 +14,7 @@ import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserFcmToken
 import com.example.domain.model.vo.user.UserMemo
 import com.example.domain.model.vo.user.UserName
+import com.google.firebase.firestore.ServerTimestamp
 import com.example.domain.model.vo.DocumentId as VODocumentId
 import java.time.Instant
 
@@ -27,7 +28,7 @@ data class UserDTO(
     @get:PropertyName(NAME)
     val name: String = "",
     @get:PropertyName(CONSENT_TIMESTAMP)
-    val consentTimeStamp: Timestamp? = null,
+    @ServerTimestamp val consentTimeStamp: Timestamp? = null,
     @get:PropertyName(PROFILE_IMAGE_URL)
     val profileImageUrl: String? = null,
     @get:PropertyName(MEMO)

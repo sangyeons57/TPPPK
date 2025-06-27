@@ -30,9 +30,9 @@ data class MessageAttachmentDTO(
     @get:PropertyName(FILE_SIZE)
     val fileSize: Long? = null,
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
 
     companion object {

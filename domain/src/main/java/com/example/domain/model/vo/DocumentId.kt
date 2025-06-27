@@ -44,6 +44,9 @@ value class DocumentId(val value: String) {
     fun isAssigned(): Boolean {
         return value != EMPTY_VALUE
     }
+    fun isNotAssigned(): Boolean {
+        return value == EMPTY_VALUE
+    }
 
     fun isEmpty(): Boolean {
         return value == EMPTY_VALUE

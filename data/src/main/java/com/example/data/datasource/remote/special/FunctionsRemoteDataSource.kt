@@ -167,10 +167,10 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
         val userId = currentUser.uid
 
-        // Firebase Storage에 이미지 업로드
+        // Firebase Storage에 이미지 업로드 (기존 규칙에 맞는 경로 사용)
         val storageRef = storage.reference
         val profileImageRef =
-            storageRef.child("user_profile_uploads/$userId/${System.currentTimeMillis()}_profile.jpg")
+            storageRef.child("user_profile_images/$userId/${System.currentTimeMillis()}_profile.jpg")
 
         // 이미지 업로드
         profileImageRef.putFile(uri).await()

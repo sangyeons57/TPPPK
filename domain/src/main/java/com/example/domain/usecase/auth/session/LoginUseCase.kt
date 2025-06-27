@@ -8,6 +8,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
+import com.google.firebase.firestore.Source
 import javax.inject.Inject
 
 /**
@@ -49,7 +50,7 @@ class LoginUseCase @Inject constructor(
                 //(TAG, "Auth success. Session=$userSession")
                 // After successful authentication, fetch user details to check account status
                 //(TAG, "Fetching user details (may hit cache) for userId=${userSession.userId}")
-                when (val userResult = userRepository.findById(DocumentId.from(userSession.userId))) {
+                when (val userResult = userRepository.findById(DocumentId.from(userSession.userId), Source.SERVER)) {
                     is CustomResult.Success -> {
                         // Firestore 에서 가져온 사용자 정보 (캐시 또는 서버)
                         val user = userResult.data as User

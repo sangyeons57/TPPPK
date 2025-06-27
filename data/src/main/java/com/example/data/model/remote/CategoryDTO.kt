@@ -29,9 +29,9 @@ data class CategoryDTO(
     @get:PropertyName(CREATED_BY)
     val createdBy: String = "",
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(IS_CATEGORY) 
     val isCategory: Boolean = true
 ) : DTO {

@@ -4,7 +4,6 @@ import com.example.core_common.constants.Constants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
-import com.google.firebase.firestore.PersistentCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
 import dagger.Module
@@ -40,15 +39,11 @@ object FirebaseModule {
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore {
         // Firestore 인스턴스 가져오기
-        val firestore = FirebaseFirestore.getInstance(Constants.DB_NAME) // "default"는 기본 FirebaseApp 인스턴스를 사용함을 의미
+        val firestore = FirebaseFirestore.getInstance(Constants.DB_NAME)
 
-        val persistentCacheSettings = PersistentCacheSettings.newBuilder()
-            .setSizeBytes(100 * 1024 * 1024)
-            .build()
-
-        // Firestore 설정 객체 생성 및 디스크 지속성 활성화
+        // 캐시 완전 비활성화
         val settings = FirebaseFirestoreSettings.Builder()
-            .setLocalCacheSettings(persistentCacheSettings)
+            .setCacheSizeBytes(0) // 캐시 완전 비활성화
             .build()
         
         firestore.firestoreSettings = settings

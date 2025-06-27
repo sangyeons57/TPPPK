@@ -80,7 +80,7 @@ export const updateUserProfile = onCall({
 
     // 5. Firestore 업데이트 데이터 준비
     const updateData: any = {
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: admin.firestore.Timestamp.now()
     };
     const updatedFields: string[] = [];
 

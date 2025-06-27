@@ -28,9 +28,9 @@ data class DMWrapperDTO(
     @get:PropertyName(LAST_MESSAGE_PREVIEW)
     val lastMessagePreview: String? = null,
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
 ) : DTO {
 
     companion object {

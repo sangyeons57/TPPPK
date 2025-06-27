@@ -23,8 +23,8 @@ data class InviteDTO(
     @get:PropertyName(STATUS) val status: InviteStatus = InviteStatus.ACTIVE, // "ACTIVE", "INACTIVE", "EXPIRED"
     @get:PropertyName(CREATED_BY) val createdBy: String = "", // 초대를 생성한 사용자의 ID
     @get:PropertyName(EXPIRES_AT) val expiresAt: Timestamp? = null, // 만료 시간 (null이면 무제한)
-    @get:PropertyName(CREATED_AT) @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT) @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @get:PropertyName(CREATED_AT) val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @get:PropertyName(UPDATED_AT) val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
 ) : DTO {
 
     companion object {

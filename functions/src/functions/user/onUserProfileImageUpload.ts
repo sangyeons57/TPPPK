@@ -32,7 +32,7 @@ export const onUserProfileImageUpload = onObjectFinalized({
 
   try {
     // 1. 파일 경로 유효성 검사
-    if (!filePath || !filePath.startsWith("user_profile_uploads/")) {
+    if (!filePath || !filePath.startsWith("user_profile_images/")) {
       logger.info("Ignoring non-profile upload", {requestId, filePath});
       return;
     }

@@ -47,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage
@@ -101,8 +102,8 @@ fun EditProfileScreen(
             } else {
                 scope.launch {
                     snackbarHostState.showSnackbar(
-                        "사진 접근 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.",
-                        duration = SnackbarDuration.Short
+                        "이미지 접근 권한이 필요합니다. 설정 > 앱 권한에서 미디어 권한을 허용해주세요.",
+                        duration = SnackbarDuration.Long
                     )
                 }
             }
@@ -121,12 +122,19 @@ fun EditProfileScreen(
                 }
                 is EditProfileEvent.RequestImagePick -> {
                     Log.d("EditProfileScreen", "Requesting image pick...")
-                    when (PackageManager.PERMISSION_GRANTED) {
-                        ContextCompat.checkSelfPermission(context, readImagePermission) -> {
-                            imagePickerLauncher.launch("image/*")
-                        }
-                        else -> {
-                            permissionLauncher.launch(readImagePermission)
+                    
+                    // Android 13 (API 33) 이상에서는 PhotoPicker 사용 시 권한이 필요 없음
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        imagePickerLauncher.launch("image/*")
+                    } else {
+                        // Android 12 이하에서는 READ_EXTERNAL_STORAGE 권한 필요
+                        when (PackageManager.PERMISSION_GRANTED) {
+                            ContextCompat.checkSelfPermission(context, readImagePermission) -> {
+                                imagePickerLauncher.launch("image/*")
+                            }
+                            else -> {
+                                permissionLauncher.launch(readImagePermission)
+                            }
                         }
                     }
                 }
@@ -187,17 +195,48 @@ fun EditProfileContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Profile Image
-        UserProfileImage(
-            profileImageUrl = uiState.user?.profileImageUrl?.value,
-            contentDescription = "Profile Image",
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .clickable { onProfileImageClicked() }
-                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-            contentScale = ContentScale.Crop
-        )
+        // Profile Image - 선택된 이미지가 있으면 미리보기, 없으면 기존 이미지
+        if (uiState.selectedImageUri != null) {
+            // 선택된 이미지 미리보기
+            AsyncImage(
+                model = uiState.selectedImageUri,
+                contentDescription = "Selected Profile Image",
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .clickable { onProfileImageClicked() }
+                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            // 기존 프로필 이미지
+            UserProfileImage(
+                profileImageUrl = uiState.user?.profileImageUrl?.value,
+                contentDescription = "Profile Image",
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .clickable { onProfileImageClicked() }
+                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        }
+        
+        // 이미지 선택 안내 텍스트
+        if (uiState.selectedImageUri != null) {
+            Text(
+                text = "새 이미지가 선택되었습니다",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else {
+            Text(
+                text = "프로필 이미지를 탭하여 변경하세요",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
         Spacer(modifier = Modifier.height(8.dp))
 
 
@@ -213,13 +252,13 @@ fun EditProfileContent(
 
         Button(
             onClick = onSaveProfileClicked,
-            enabled = !uiState.isLoading,
+            enabled = !uiState.isLoading && uiState.hasChanges,
             modifier = Modifier.fillMaxWidth()
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text("저장하기")
+                Text(if (uiState.hasChanges) "저장하기" else "변경사항 없음")
             }
         }
 
@@ -251,7 +290,21 @@ fun EditProfileContentPreview() {
                     updatedAt = Instant.now(),
                     fcmToken = null,
                     accountStatus = UserAccountStatus.ACTIVE
-                )
+                ),
+                originalUser = User.fromDataSource(
+                    id = DocumentId("preview-user"),
+                    email = UserEmail("preview@test.com"),
+                    name = UserName("Original User"),
+                    consentTimeStamp = Instant.now(),
+                    profileImageUrl = ImageUrl(""),
+                    memo = null,
+                    userStatus = UserStatus.ONLINE,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now(),
+                    fcmToken = null,
+                    accountStatus = UserAccountStatus.ACTIVE
+                ),
+                hasChanges = true
             ),
             onNameChanged = {},
             onProfileImageClicked = {},
@@ -265,7 +318,11 @@ fun EditProfileContentPreview() {
 fun EditProfileContentLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditProfileContent(
-            uiState = EditProfileUiState(user = null, isLoading = true), // User is null during loading
+            uiState = EditProfileUiState(
+                user = null, 
+                originalUser = null,
+                isLoading = true
+            ), // User is null during loading
             onNameChanged = {},
             onProfileImageClicked = {},
             onSaveProfileClicked = {}

@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
+import com.example.core_navigation.core.MainContainerRoute
+import com.example.core_navigation.core.LoginRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -78,11 +80,12 @@ class SplashViewModel @Inject constructor(
 
                 result.onSuccess { isAuthenticatedAndVerified ->
                     if (isAuthenticatedAndVerified) {
-                        Log.d("SplashViewModel", "User is authenticated and email verified - navigating to Home")
-                        navigationManger.navigateToHome()
+                        Log.d("SplashViewModel", "User is authenticated and email verified - navigating to Home (clearing back stack)")
+                        // Clear SplashScreen from the back stack to prevent returning to it via the back button
+                        navigationManger.navigateToClearingBackStack(MainContainerRoute)
                     } else {
-                        Log.d("SplashViewModel", "User is not authenticated or email not verified - navigating to Login")
-                        navigationManger.navigateToLogin()
+                        Log.d("SplashViewModel", "User is not authenticated or email not verified - navigating to Login (clearing back stack)")
+                        navigationManger.navigateToClearingBackStack(LoginRoute)
                     }
                 }.onFailure { exception ->
                     Log.e("SplashViewModel", "Auth check failed: ${exception.message}", exception)
@@ -94,7 +97,7 @@ class SplashViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("SplashViewModel", "Unexpected error during auth check", e)
                 _uiState.update { it.copy(isLoading = false) }
-                navigationManger.navigateToLogin() // Fallback to Login
+                navigationManger.navigateToClearingBackStack(LoginRoute) // Fallback to Login and clear Splash
             }
         }
     }

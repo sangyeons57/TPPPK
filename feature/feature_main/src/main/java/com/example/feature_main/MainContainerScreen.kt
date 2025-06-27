@@ -93,7 +93,7 @@ fun MainContainerScreen(
 
     // 탭 선택 시 해당 탭의 시작 목적지로 이동하는 로직
     LaunchedEffect(selectedTab) {
-        val tab = selectedTab ?: return@LaunchedEffect // null이면 아무것도 하지 않음
+        val tab = selectedTab // null이면 아무것도 하지 않음
         val controller = navControllers[tab]
         val startDestination = getTabStartDestination(tab)
         
@@ -117,7 +117,7 @@ fun MainContainerScreen(
         onDispose {
             // 현재 탭의 마지막 경로 저장
             currentNavController.currentDestination?.route?.let { route ->
-                selectedTab?.let { tab ->
+                selectedTab.let { tab ->
                     tabLastRoutes[tab] = route
                     Log.d(TAG, "Saved last route for tab($tab): $route")
                 }
@@ -185,13 +185,7 @@ fun MainContainerScreen(
                         navigationManger = navigationManger
                     )
                 }
-                null -> {
-                    // selectedTab이 null일 때의 처리 (예: 기본 홈 탭 표시)
-                    HomeTabNavHost(
-                        navController = homeNavController,
-                        navigationManger = navigationManger
-                    )
-                }
+
                 else -> {
                     // when이 모든 경우를 처리하도록 하기 위한 else 브랜치.
                     // 논리적으로는 Home, Calendar, Profile 중 하나여야 하지만,

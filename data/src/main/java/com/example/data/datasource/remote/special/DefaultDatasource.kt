@@ -154,7 +154,7 @@ abstract class DefaultDatasourceImpl <Dto> (
     override suspend fun update(id: DocumentId, data: Map<String, Any?>): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("update")
         resultTry {
-            if (id.isAssigned()) throw IllegalArgumentException("ID cannot be empty when updating")
+            if (id.isNotAssigned()) throw IllegalArgumentException("ID cannot be empty when updating")
             collection.document(id.value).update(data).await()
             id
         }
@@ -164,7 +164,7 @@ abstract class DefaultDatasourceImpl <Dto> (
         Dispatchers.IO) {
         checkCollectionInitialized("delete")
         resultTry {
-            if (!id.isAssigned()) throw IllegalArgumentException("ID cannot be empty when deleting")
+            if (id.isNotAssigned()) throw IllegalArgumentException("ID cannot be empty when deleting")
             collection.document(id.value).delete().await()
             Unit
         }

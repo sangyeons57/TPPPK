@@ -20,8 +20,8 @@ data class RoleDTO(
     @DocumentId override var id: String = "",
     @get:PropertyName(NAME) var name: String = "",
     @get:PropertyName(IS_DEFAULT) var isDefault: Boolean = false,
-    @ServerTimestamp @get:PropertyName(CREATED_AT) var createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @ServerTimestamp @get:PropertyName(UPDATED_AT) var updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    @get:PropertyName(CREATED_AT) var createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @get:PropertyName(UPDATED_AT) var updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
 ) : DTO {
     companion object {
         const val COLLECTION_NAME = Role.COLLECTION_NAME

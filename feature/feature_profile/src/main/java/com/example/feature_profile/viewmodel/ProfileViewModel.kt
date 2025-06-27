@@ -260,9 +260,9 @@ class ProfileViewModel @Inject constructor(
             // Simulate a call and success
             when (val result = userUseCases.updateUserMemoUseCase(UserMemo(newMemo))) { // Assign to val and use actual use case call
                 is CustomResult.Success -> {
-                    // Optionally update UI state if memo is directly displayed and needs immediate refresh
-                    // _uiState.update { it.copy(userProfile = it.userProfile?.copy(memo = newMemo), isLoading = false) }
-                    _uiState.update { it.copy(isLoading = false) } // Stop loading
+                    // 서버에 저장 성공 후 프로필을 다시 로드하여 최신 메모 반영
+                    _uiState.update { it.copy(isLoading = false) }
+                    //loadUserProfile() // 최신 값 반영
                     _eventFlow.emit(ProfileEvent.ShowSnackbar("메모가 업데이트되었습니다."))
                     println("ViewModel: 메모 변경 성공")
                 }

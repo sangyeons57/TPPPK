@@ -22,9 +22,9 @@ data class DMChannelDTO(
     @get:PropertyName(PARTICIPANTS)
     val participants: List<String> = emptyList(),
     @get:PropertyName(CREATED_AT)
-    @ServerTimestamp val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
 ) : DTO {
 
     companion object {

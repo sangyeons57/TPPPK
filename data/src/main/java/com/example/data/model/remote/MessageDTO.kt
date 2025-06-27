@@ -23,9 +23,9 @@ data class MessageDTO(
     @get:PropertyName(SEND_MESSAGE)
     val content: String = "",
     @get:PropertyName(SENT_AT)
-    @ServerTimestamp val sentAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val sentAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(UPDATED_AT)
-    @ServerTimestamp val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(REPLY_TO_MESSAGE_ID)
     val replyToMessageId: String? = null,
     @get:PropertyName(IS_DELETED)
