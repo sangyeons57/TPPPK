@@ -2,7 +2,7 @@ package com.example.data.model.remote
 
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault

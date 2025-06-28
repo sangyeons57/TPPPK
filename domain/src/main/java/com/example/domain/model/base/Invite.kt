@@ -1,6 +1,6 @@
 package com.example.domain.model.base
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.event.invite.InviteCreatedEvent
 import com.example.domain.event.invite.InviteExpiredEvent
@@ -26,14 +26,14 @@ class Invite private constructor(
     // Immutable properties
     val inviteCode: InviteCode = initialInviteCode
     val createdBy: OwnerId = initialCreatedBy
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
     val expiresAt: Instant? = initialExpiresAt
 
     // Mutable properties
     var status: InviteStatus = initialStatus
         private set
 
-    var updatedAt: Instant = initialUpdateAt
+    override var updatedAt: Instant = initialUpdateAt
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {

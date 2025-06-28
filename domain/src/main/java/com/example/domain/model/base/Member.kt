@@ -1,6 +1,6 @@
 package com.example.domain.model.base
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.member.MemberRolesUpdatedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
@@ -16,11 +16,12 @@ class Member private constructor(
 
     // Immutable properties
     val joinedAt: Instant = initialJoinedAt
+    override val createdAt: Instant = initialJoinedAt // Map joinedAt to createdAt for AggregateRoot compatibility
 
     // Mutable properties
     var roleIds: List<DocumentId> = initialRoleIds
         private set
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {

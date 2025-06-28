@@ -5,6 +5,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
+import java.util.Date
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
 import com.example.domain.model.vo.UserId
@@ -23,13 +24,13 @@ data class MessageDTO(
     @get:PropertyName(SEND_MESSAGE)
     val content: String = "",
     @get:PropertyName(SENT_AT)
-    val sentAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @ServerTimestamp val sentAt: Date? = null,
     @get:PropertyName(REPLY_TO_MESSAGE_ID)
     val replyToMessageId: String? = null,
     @get:PropertyName(IS_DELETED)
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    @ServerTimestamp override val createdAt: Date? = null, // Map to sentAt for compatibility
+    @ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
 
     companion object {

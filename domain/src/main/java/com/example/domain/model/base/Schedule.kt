@@ -1,7 +1,7 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.ScheduleStatus
 import com.google.firebase.firestore.DocumentId as FirestoreDocumentId
 import java.time.Instant
@@ -23,7 +23,7 @@ class Schedule private constructor(
     @FirestoreDocumentId
     val projectId: ProjectId?,
     val creatorId: OwnerId,
-    val createdAt: Instant,
+    override val createdAt: Instant,
 
     // Mutable properties with private setters
     title: ScheduleTitle,
@@ -66,7 +66,7 @@ class Schedule private constructor(
         private set
 
 
-    var updatedAt: Instant = updatedAt
+    override var updatedAt: Instant = updatedAt
         private set
 
     /**

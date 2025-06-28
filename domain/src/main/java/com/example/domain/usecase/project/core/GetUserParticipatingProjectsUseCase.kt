@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.core
 
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.repository.base.ProjectRepository

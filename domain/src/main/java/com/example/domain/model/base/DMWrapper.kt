@@ -1,6 +1,6 @@
 package com.example.domain.model.base
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.event.dmwrapper.DMWrapperCreatedEvent
@@ -41,8 +41,8 @@ class DMWrapper private constructor(
         private set
     var lastMessagePreview: DMChannelLastMessagePreview? = initialLastMessagePreview
         private set
-    val createdAt: Instant = initialCreatedAt
-    var updatedAt: Instant = initialUpdatedAt
+    override val createdAt: Instant = initialCreatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     fun changeOtherUser(newOtherUserId: UserId) {

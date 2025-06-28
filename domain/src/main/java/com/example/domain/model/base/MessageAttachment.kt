@@ -1,7 +1,7 @@
 package com.example.domain.model.base
 
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.messageattachment.MessageAttachmentAddedEvent
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.vo.DocumentId
@@ -23,8 +23,8 @@ class MessageAttachment private constructor(
 
     val attachmentType: MessageAttachmentType = initialAttachmentType
     val attachmentUrl: MessageAttachmentUrl = initialAttachmentUrl
-    val createdAt: Instant = initialCreatedAt
-    val updatedAt: Instant = initialUpdatedAt
+    override val createdAt: Instant = initialCreatedAt
+    override val updatedAt: Instant = initialUpdatedAt
     val fileName: MessageAttachmentFileName? = initialFileName
     val fileSize: MessageAttachmentFileSize? = initialFileSize
 

@@ -1,7 +1,7 @@
 package com.example.domain.usecase.project.member
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId

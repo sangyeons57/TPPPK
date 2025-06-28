@@ -5,7 +5,7 @@ import com.example.data.datasource.remote.ScheduleRemoteDataSource
 import com.example.data.model.remote.ScheduleDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.CollectionPath

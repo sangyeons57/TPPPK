@@ -6,7 +6,7 @@ import com.example.data.datasource.remote.PermissionRemoteDataSource
 import com.example.data.model.remote.PermissionDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Member
 // import com.example.data.datasource.remote.PermissionRemoteDataSource // No longer needed for getAllPermissions, keep if getPermissionById still needs it
 import com.example.domain.model.base.Permission

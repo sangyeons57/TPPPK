@@ -1,7 +1,7 @@
 package com.example.domain.model.base
 
 import com.example.core_common.constants.Constants
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.event.category.CategoryCreatedEvent // These will be defined in the next step
 import com.example.domain.event.category.CategoryNameChangedEvent // These will be defined in the next step
@@ -56,8 +56,8 @@ class Category private constructor(
     var order: CategoryOrder = initialOrder
         private set
     val createdBy: OwnerId = initialCreatedBy
-    val createdAt: Instant = initialCreatedAt
-    var updatedAt: Instant = initialUpdatedAt
+    override val createdAt: Instant = initialCreatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
     val isCategory: IsCategoryFlag = initialIsCategory
 

@@ -4,7 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.message.MessageContentUpdatedEvent
 import com.example.domain.event.message.MessageDeletedEvent
 import com.example.domain.event.message.MessageSentEvent
@@ -26,11 +26,11 @@ class Message private constructor(
 
     val senderId: UserId = initialSenderId
     val replyToMessageId: DocumentId? = initialReplyToMessageId
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
 
     var content: MessageContent = initialContent
         private set
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
     var isDeleted: MessageIsDeleted = initialIsDeleted
         private set

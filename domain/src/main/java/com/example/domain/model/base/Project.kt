@@ -4,7 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.project.ProjectCreatedEvent
 import com.example.domain.event.project.ProjectImageUrlChangedEvent
 import com.example.domain.event.project.ProjectNameChangedEvent
@@ -26,14 +26,14 @@ class Project private constructor(
 
     // Immutable properties
     val ownerId: OwnerId = initialOwnerId
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
 
     // Mutable properties with private setters
     var name: ProjectName = initialName
         private set
     var imageUrl: ImageUrl? = initialImageUrl
         private set
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     // Implementation of abstract method from AggregateRoot

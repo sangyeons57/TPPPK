@@ -11,7 +11,7 @@ import javax.inject.Inject
 import com.example.data.model.remote.ProjectsWrapperDTO // Added for DTO mapping
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.DefaultRepositoryFactoryContext
 import com.google.firebase.firestore.Source

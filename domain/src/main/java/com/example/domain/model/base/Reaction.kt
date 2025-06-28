@@ -3,7 +3,7 @@ package com.example.domain.model.base
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.reaction.ReactionAddedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
@@ -20,8 +20,8 @@ class Reaction private constructor(
 
     val userId: UserId = initialUserId
     val emoji: Emoji = initialEmoji
-    val createdAt: Instant = initialCreatedAt
-    val updatedAt: Instant = initialUpdatedAt
+    override val createdAt: Instant = initialCreatedAt
+    override val updatedAt: Instant = initialUpdatedAt
 
     /**
      * A Reaction's state is immutable once created.

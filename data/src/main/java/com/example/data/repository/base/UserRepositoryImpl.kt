@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.UserRemoteDataSource
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserName

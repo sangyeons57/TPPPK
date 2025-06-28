@@ -1,6 +1,6 @@
 package com.example.domain.model.base
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.projectwrapper.ProjectWrapperCreatedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
@@ -17,11 +17,11 @@ class ProjectsWrapper(
     override val id: DocumentId,
     override val isNew: Boolean,
 ) : AggregateRoot() {
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
 
     var order: ProjectWrapperOrder = initialOrder
         private set
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
     var projectName: ProjectName = initialProjectName
         private set

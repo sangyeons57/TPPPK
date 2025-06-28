@@ -6,7 +6,7 @@ import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.CollectionPath

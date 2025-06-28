@@ -1,7 +1,7 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.event.dmchannel.DMChannelCreatedEvent
 import com.example.domain.event.dmchannel.DMChannelLastMessageUpdatedEvent
@@ -35,9 +35,9 @@ class DMChannel private constructor(
     var participants: List<UserId> = initialParticipants
         private set
     /** Timestamp indicating when the DM channel was created. */
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
     /** Timestamp indicating when the DM channel was last updated, either by a new message or participant change. */
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     /**

@@ -3,7 +3,7 @@ package com.example.domain.model.base
 import com.example.domain.model.enum.ProjectChannelType
 import java.time.Instant
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.projectchannel.ProjectChannelCreatedEvent
 import com.example.domain.event.projectchannel.ProjectChannelNameUpdatedEvent
 import com.example.domain.event.projectchannel.ProjectChannelOrderChangedEvent
@@ -22,7 +22,7 @@ class ProjectChannel private constructor(
     override val isNew: Boolean
 ) : AggregateRoot() {
 
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
 
     var channelType: ProjectChannelType = initialChannelType
         private set
@@ -30,7 +30,7 @@ class ProjectChannel private constructor(
         private set
     var order: ProjectChannelOrder = initialOrder
         private set
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {

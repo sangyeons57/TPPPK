@@ -4,7 +4,7 @@ import android.hardware.camera2.CameraExtensionSession.ExtensionCaptureCallback
 import android.net.Uri
 import com.example.core_common.constants.FirebaseStorageConstants
 import com.example.core_common.result.CustomResult
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.MediaRepository

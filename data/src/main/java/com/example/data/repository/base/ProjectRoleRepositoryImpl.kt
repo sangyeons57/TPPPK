@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Role
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.model.vo.DocumentId

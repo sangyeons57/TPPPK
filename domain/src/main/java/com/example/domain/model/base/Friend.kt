@@ -1,6 +1,6 @@
 package com.example.domain.model.base
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.event.friend.FriendCreatedEvent
 import com.example.domain.event.friend.FriendNameChangedEvent
@@ -42,8 +42,8 @@ class Friend private constructor(
     var status: FriendStatus = initialStatus
         private set
 
-    val createdAt: Instant = initialCreatedAt
-    var updatedAt: Instant = initialUpdatedAt
+    override val createdAt: Instant = initialCreatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
 

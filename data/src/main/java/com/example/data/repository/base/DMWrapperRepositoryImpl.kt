@@ -5,7 +5,7 @@ import com.example.data.datasource.remote.DMWrapperRemoteDataSource
 import com.example.data.model.remote.DMWrapperDTO // Assuming DMWrapperDTO is in this package
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId

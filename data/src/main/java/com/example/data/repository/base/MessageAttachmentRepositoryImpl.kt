@@ -5,7 +5,7 @@ import com.example.data.datasource.remote.MessageAttachmentRemoteDataSource
 import com.example.data.model.remote.MessageAttachmentDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.DefaultRepositoryFactoryContext

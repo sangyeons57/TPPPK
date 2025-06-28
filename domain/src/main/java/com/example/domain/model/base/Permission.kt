@@ -1,7 +1,7 @@
 package com.example.domain.model.base
 
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.permission.PermissionCreatedEvent
 import com.example.domain.event.permission.PermissionDescriptionUpdatedEvent
 import com.example.domain.event.permission.PermissionNameUpdatedEvent
@@ -18,10 +18,10 @@ class Permission private constructor(
     override val isNew: Boolean
 ) : AggregateRoot() {
 
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
 
 
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     fun getPermissionRole() : RolePermission {

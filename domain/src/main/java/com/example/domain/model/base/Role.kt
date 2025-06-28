@@ -2,7 +2,7 @@ package com.example.domain.model.base
 
 import com.example.domain.model.data.project.RolePermission // Added import
 
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.role.RoleCreatedEvent
 import com.example.domain.event.role.RoleDefaultStatusChangedEvent
 import com.example.domain.event.role.RoleNameChangedEvent
@@ -22,14 +22,14 @@ class Role private constructor(
 ) : AggregateRoot() {
 
     // Immutable properties
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
 
     // Mutable properties with private setters
     var name: Name = initialName
         private set
     var isDefault: RoleIsDefault = initialIsDefault
         private set
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     // Implementation of abstract method from AggregateRoot

@@ -2,7 +2,7 @@ package com.example.domain.model.base
 
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.event.user.UserAccountActivatedEvent
 import com.example.domain.event.user.UserAccountSuspendedEvent
 import com.example.domain.event.user.UserAccountWithdrawnEvent
@@ -47,7 +47,7 @@ class User private constructor(
     override val id: DocumentId = initialId
     val email: UserEmail = initialEmail
     val consentTimeStamp: Instant = initialConsentTimeStamp
-    val createdAt: Instant = initialCreatedAt
+    override val createdAt: Instant = initialCreatedAt
 
 
     // Exposed mutable properties with restricted setters
@@ -63,7 +63,7 @@ class User private constructor(
     var userStatus: UserStatus = initialUserStatus
         private set
 
-    var updatedAt: Instant = initialUpdatedAt
+    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     var fcmToken: UserFcmToken? = initialFcmToken

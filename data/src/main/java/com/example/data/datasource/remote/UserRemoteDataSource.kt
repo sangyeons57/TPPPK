@@ -82,9 +82,9 @@ class UserRemoteDataSourceImpl @Inject constructor(
                     try { UserStatus.valueOf(it) } catch (e: Exception) { UserStatus.OFFLINE }
                 } ?: UserStatus.OFFLINE,
                 createdAt = convertTimestampSafely(data["createdAt"]) 
-                    ?: DateTimeUtil.nowFirebaseTimestamp(),
+                    ?: java.util.Date(),
                 updatedAt = convertTimestampSafely(data["updatedAt"]) 
-                    ?: DateTimeUtil.nowFirebaseTimestamp(),
+                    ?: java.util.Date(),
                 fcmToken = data["fcmToken"] as? String,
                 accountStatus = (data["accountStatus"] as? String)?.let {
                     try { UserAccountStatus.valueOf(it) } catch (e: Exception) { UserAccountStatus.ACTIVE }
@@ -96,15 +96,16 @@ class UserRemoteDataSourceImpl @Inject constructor(
     }
 
     /**
-     * Safely converts Any value to Firebase Timestamp, handling both Timestamp and HashMap cases.
+     * Safely converts Any value to Date, handling both Timestamp, Date, and HashMap cases.
      */
-    private fun convertTimestampSafely(value: Any?): Timestamp? {
+    private fun convertTimestampSafely(value: Any?): java.util.Date? {
         return try {
             when (value) {
-                is Timestamp -> value
+                is java.util.Date -> value
+                is Timestamp -> value.toDate()
                 is HashMap<*, *> -> {
                     @Suppress("UNCHECKED_CAST")
-                    DateTimeUtil.hashMapToFirebaseTimestamp(value as HashMap<String, Any>)
+                    DateTimeUtil.hashMapToFirebaseTimestamp(value as HashMap<String, Any>)?.toDate()
                 }
                 else -> null
             }

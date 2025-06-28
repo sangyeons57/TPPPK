@@ -5,7 +5,7 @@ import com.example.data.datasource.remote.MemberRemoteDataSource
 import com.example.data.model.remote.MemberDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 // import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSource // 필요시
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId

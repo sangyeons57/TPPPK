@@ -1,7 +1,7 @@
 package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.vo.DocumentId

@@ -6,7 +6,7 @@ import com.example.data.model.DTO
 import com.example.data.model.remote.ProjectChannelDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.DefaultRepositoryFactoryContext

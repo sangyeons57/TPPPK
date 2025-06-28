@@ -6,7 +6,7 @@ import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.model.DTO
 import com.example.data.model.remote.ScheduleDTO
 import com.example.data.model.remote.toDto
-import com.example.domain.event.AggregateRoot
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Permission
 import com.example.domain.model.vo.CollectionPath

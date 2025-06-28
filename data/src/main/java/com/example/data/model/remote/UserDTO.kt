@@ -17,6 +17,7 @@ import com.example.domain.model.vo.user.UserName
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.domain.model.vo.DocumentId as VODocumentId
 import java.time.Instant
+import java.util.Date
 
 /**
  * 사용자 정보를 나타내는 DTO 클래스
@@ -28,24 +29,23 @@ data class UserDTO(
     @get:PropertyName(NAME)
     val name: String = "",
     @get:PropertyName(CONSENT_TIMESTAMP)
-    @ServerTimestamp val consentTimeStamp: Timestamp? = null,
+    @ServerTimestamp val consentTimeStamp: Date? = null,
     @get:PropertyName(PROFILE_IMAGE_URL)
     val profileImageUrl: String? = null,
     @get:PropertyName(MEMO)
     val memo: String? = null,
     @get:PropertyName(USER_STATUS)
     val status: UserStatus = UserStatus.OFFLINE, // "online", "offline", "away" 등
-    @get:PropertyName(CREATED_AT)
-    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(FCM_TOKEN)
     val fcmToken: String? = null,
     @get:PropertyName(ACCOUNT_STATUS)
-    val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE // "active", "suspended", "deleted" 등
+    val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE, // "active", "suspended", "deleted" 등
+    @ServerTimestamp override val createdAt: Date? = null,
+    @ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
 
     companion object {
+
         const val COLLECTION_NAME = User.COLLECTION_NAME
         const val EMAIL = User.KEY_EMAIL
         const val NAME = User.KEY_NAME
@@ -63,14 +63,14 @@ data class UserDTO(
                 id = domain.id.value,
                 email = domain.email.value,
                 name = domain.name.value,
-                consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp),
+                consentTimeStamp = Date.from(domain.consentTimeStamp), // Convert Instant to Date
                 profileImageUrl = domain.profileImageUrl?.value,
                 memo = domain.memo?.value,
                 status = domain.userStatus,
-                createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt),
-                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt),
                 fcmToken = domain.fcmToken?.value,
-                accountStatus = domain.accountStatus
+                accountStatus = domain.accountStatus,
+                createdAt = Date.from(domain.createdAt), // Convert Instant to Date
+                updatedAt = Date.from(domain.updatedAt) // Convert Instant to Date
             )
         }
     }
@@ -83,12 +83,12 @@ data class UserDTO(
             id = VODocumentId(id),
             email = UserEmail(email), // Wrap in Value Object
             name = UserName(name),   // Wrap in Value Object
-            consentTimeStamp = consentTimeStamp?.let{DateTimeUtil.firebaseTimestampToInstant(it)} ?: Instant.EPOCH, // Provide a default if null
+            consentTimeStamp = consentTimeStamp?.toInstant() ?: Instant.EPOCH, // Convert Date to Instant
             profileImageUrl = profileImageUrl.takeIf { !it.isNullOrBlank() }?.let { ImageUrl(it) }, // Wrap in Value Object.ImageUrl(profileImageUrl),
             memo = memo?.let { UserMemo(it) }, // Wrap in Value Object
             userStatus = status ,
-            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt), // Provide a default if null
-            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt), // Provide a default if null
+            createdAt = createdAt?.toInstant() ?: Instant.EPOCH, // Convert Date to Instant with fallback
+            updatedAt = updatedAt?.toInstant() ?: Instant.EPOCH, // Convert Date to Instant with fallback
             fcmToken = UserFcmToken(fcmToken),
             accountStatus = accountStatus
         )
@@ -104,13 +104,13 @@ fun User.toDto(): UserDTO {
         id = id.value,
         email = email.value, // Extract primitive value
         name = name.value,   // Extract primitive value
-        consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp), // consentTimeStamp is non-null in User
+        consentTimeStamp = Date.from(consentTimeStamp), // Convert Instant to Date
         profileImageUrl = profileImageUrl?.value,
         memo = memo?.value,  // Extract primitive value if memo is not null
         status = userStatus, // Corrected from 'status' to 'userStatus'
-        createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt), // createdAt is non-null in User
-        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt), // updatedAt is non-null in User
         fcmToken = fcmToken?.value,
-        accountStatus = accountStatus
+        accountStatus = accountStatus,
+        createdAt = Date.from(createdAt), // Convert Instant to Date
+        updatedAt = Date.from(updatedAt) // Convert Instant to Date
     )
 }

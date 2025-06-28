@@ -5,6 +5,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
+import java.util.Date
 
 import com.google.firebase.firestore.PropertyName
 import com.example.core_common.util.DateTimeUtil
@@ -16,11 +17,11 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
 data class MemberDTO(
     @DocumentId override val id: String = "",
     @get:PropertyName(JOINED_AT)
-    val joinedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @ServerTimestamp val joinedAt: Date? = null,
     @get:PropertyName(ROLE_ID)
-    val roleIds: List<String> = emptyList()
+    val roleIds: List<String> = emptyList(),
+    @ServerTimestamp override val createdAt: Date? = null, // Map to joinedAt for compatibility
+    @ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
 
     companion object {
@@ -32,9 +33,10 @@ data class MemberDTO(
         fun from(member: Member): MemberDTO {
             return MemberDTO(
                 id = member.id.value,
-                joinedAt = DateTimeUtil.instantToFirebaseTimestamp(member.joinedAt),
+                joinedAt = Date.from(member.joinedAt),
                 roleIds = member.roleIds.map { it.value },
-                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(member.updatedAt),
+                createdAt = Date.from(member.createdAt),
+                updatedAt = Date.from(member.updatedAt),
             )
         }
     }
@@ -46,8 +48,8 @@ data class MemberDTO(
         return Member.fromDataSource(
             id = VODocumentId(id),
             roleIds = roleIds.map { VODocumentId(it) },
-            joinedAt = joinedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+            joinedAt = joinedAt?.toInstant() ?: createdAt?.toInstant() ?: Instant.EPOCH,
+            updatedAt = updatedAt?.toInstant() ?: Instant.EPOCH
         )
     }
 }
@@ -59,8 +61,9 @@ data class MemberDTO(
 fun Member.toDto(): MemberDTO {
     return MemberDTO(
         id = id.value,
-        joinedAt = joinedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        joinedAt = Date.from(joinedAt),
         roleIds = roleIds.map { it.value },
-        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
+        createdAt = Date.from(createdAt),
+        updatedAt = Date.from(updatedAt)
     )
 }
