@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
@@ -16,10 +17,10 @@ class DMWrapper private constructor(
     initialOtherUserName: UserName,
     initialOtherUserImageUrl: ImageUrl?,
     initialLastMessagePreview: DMChannelLastMessagePreview?,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -41,15 +42,11 @@ class DMWrapper private constructor(
         private set
     var lastMessagePreview: DMChannelLastMessagePreview? = initialLastMessagePreview
         private set
-    override val createdAt: Instant = initialCreatedAt
-    override var updatedAt: Instant = initialUpdatedAt
-        private set
 
     fun changeOtherUser(newOtherUserId: UserId) {
         if (this.otherUserId == newOtherUserId) return
 
         this.otherUserId = newOtherUserId
-        this.updatedAt = Instant.now()
         this.pushDomainEvent(DMWrapperOtherUserChangedEvent(this.id, newOtherUserId))
     }
 
@@ -59,25 +56,21 @@ class DMWrapper private constructor(
         const val KEY_OTHER_USER_NAME = "otherUserName"
         const val KEY_OTHER_USER_IMAGE_URL = "otherUserImageUrl"
         const val KEY_LAST_MESSAGE_PREVIEW = "lastMessagePreview"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
 
         fun create(
             otherUserId: UserId,
             otherUserName: UserName,
         ): DMWrapper {
-            val now = Instant.now()
             val dmWrapper = DMWrapper(
                 id = DocumentId.EMPTY,
                 initialOtherUserId = otherUserId,
                 initialOtherUserName = otherUserName,
                 initialOtherUserImageUrl = null,
                 initialLastMessagePreview = null,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 isNew = true,
             )
-            dmWrapper.pushDomainEvent(DMWrapperCreatedEvent(dmWrapper.id))
             return dmWrapper
         }
 
@@ -87,8 +80,8 @@ class DMWrapper private constructor(
             otherUserName: UserName,
             otherUserImageUrl: ImageUrl?,
             lastMessagePreview: DMChannelLastMessagePreview?,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): DMWrapper {
             val dmWrapper = DMWrapper(
                 id = id,
@@ -96,11 +89,10 @@ class DMWrapper private constructor(
                 initialOtherUserName = otherUserName,
                 initialOtherUserImageUrl = otherUserImageUrl,
                 initialLastMessagePreview = lastMessagePreview,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 isNew = false,
             )
-            dmWrapper.pushDomainEvent(DMWrapperCreatedEvent(dmWrapper.id))
             return dmWrapper
         } 
     }

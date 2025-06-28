@@ -10,11 +10,11 @@ interface DTO {
     val id: String
 
     /** Standard timestamp fields for all DTOs - automatically managed by Firestore */
-    @get:PropertyName("createdAt")
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp
     val createdAt: Date?
 
-    @get:PropertyName("updatedAt")
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
     @get:ServerTimestamp
     val updatedAt: Date?
 

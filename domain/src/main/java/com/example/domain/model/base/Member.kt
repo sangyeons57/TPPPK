@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.AggregateRoot
 import com.example.domain.event.member.MemberRolesUpdatedEvent
 import com.example.domain.model.vo.DocumentId
@@ -8,26 +9,21 @@ import java.time.Instant
 
 class Member private constructor(
     initialRoleIds: List<DocumentId>,
-    initialJoinedAt: Instant,
-    initialUpdatedAt: Instant,
     override val id: DocumentId,
-    override var isNew: Boolean
+    override var isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     // Immutable properties
-    val joinedAt: Instant = initialJoinedAt
-    override val createdAt: Instant = initialJoinedAt // Map joinedAt to createdAt for AggregateRoot compatibility
-
     // Mutable properties
     var roleIds: List<DocumentId> = initialRoleIds
-        private set
-    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_ROLE_ID to this.roleIds,
-            KEY_JOINED_AT to this.joinedAt,
+            KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt
         )
     }
@@ -39,14 +35,12 @@ class Member private constructor(
         if (roleIds.contains(roleId)) return
 
         this.roleIds += roleId
-        this.updatedAt = Instant.now()
-        pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, this.updatedAt))
+        pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, DateTimeUtil.nowInstant()))
     }
 
     fun updateRoles(roleIds: List<DocumentId>) {
         this.roleIds = roleIds
-        this.updatedAt = Instant.now()
-        pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, this.updatedAt))
+        pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, DateTimeUtil.nowInstant()))
     }
 
     /**
@@ -56,15 +50,12 @@ class Member private constructor(
         if (!roleIds.contains(roleId)) return
 
         this.roleIds = this.roleIds - roleId
-        this.updatedAt = Instant.now()
-        pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, this.updatedAt))
+        pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, DateTimeUtil.nowInstant()))
     }
 
     companion object {
         const val COLLECTION_NAME = "members"
-        const val KEY_JOINED_AT = "joinedAt"
         const val KEY_ROLE_ID = "roleIds" // List<String>
-        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Factory method for a new member joining.
          */
@@ -73,11 +64,10 @@ class Member private constructor(
             roleIds: List<DocumentId>
         ): Member {
 
-            val now = Instant.now()
             val member = Member(
                 initialRoleIds = roleIds,
-                initialJoinedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 id = DocumentId.from(memberId),
                 isNew = true
             )
@@ -86,11 +76,10 @@ class Member private constructor(
 
         private val PROJECT_OWNER_MEMBER = DocumentId("OWNER")
         fun createOwnerMember() : Member {
-            val now = Instant.now()
             val member = Member(
                 initialRoleIds = emptyList(),
-                initialJoinedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 id = PROJECT_OWNER_MEMBER,
                 isNew = true
             )
@@ -103,13 +92,13 @@ class Member private constructor(
         fun fromDataSource(
             id: DocumentId,
             roleIds: List<DocumentId>,
-            joinedAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): Member {
             return Member(
                 initialRoleIds = roleIds,
-                initialJoinedAt = joinedAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 id = id,
                 isNew = false
             )

@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.AggregateRoot
 import com.example.domain.event.DomainEvent
 import com.example.domain.event.invite.InviteCreatedEvent
@@ -11,29 +12,26 @@ import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.invite.InviteCode
 import java.time.Instant
+import java.util.Date
 
 class Invite private constructor(
     initialInviteCode: InviteCode,
     initialStatus: InviteStatus,
     initialCreatedBy: OwnerId,
-    initialCreatedAt: Instant,
-    initialUpdateAt: Instant,
     initialExpiresAt: Instant?,
     override val id: DocumentId,
-    override var isNew: Boolean
+    override var isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     // Immutable properties
     val inviteCode: InviteCode = initialInviteCode
     val createdBy: OwnerId = initialCreatedBy
-    override val createdAt: Instant = initialCreatedAt
     val expiresAt: Instant? = initialExpiresAt
 
     // Mutable properties
     var status: InviteStatus = initialStatus
-        private set
-
-    override var updatedAt: Instant = initialUpdateAt
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -57,22 +55,19 @@ class Invite private constructor(
         }
 
         this.status = newStatus
-        this.updatedAt = Instant.now()
-        this.pushDomainEvent(InviteStatusChangedEvent(this.id, newStatus, oldStatus, this.updatedAt))
+        this.pushDomainEvent(InviteStatusChangedEvent(this.id, newStatus, oldStatus, DateTimeUtil.nowInstant()))
     }
 
     fun expire() {
         if (this.status == InviteStatus.EXPIRED) return // Already expired
 
         this.status = InviteStatus.EXPIRED
-        this.updatedAt = Instant.now()
-        this.pushDomainEvent(InviteExpiredEvent(this.id, this.updatedAt))
+        this.pushDomainEvent(InviteExpiredEvent(this.id, DateTimeUtil.nowInstant()))
     }
 
     // Method to check if invite is still valid (not expired and active)
     fun isActive(): Boolean {
-        val now = Instant.now()
-        return this.status == InviteStatus.ACTIVE && (this.expiresAt == null || this.expiresAt.isAfter(now))
+        return this.status == InviteStatus.ACTIVE && (this.expiresAt == null || this.expiresAt.isAfter(DateTimeUtil.nowInstant()))
     }
 
 
@@ -81,8 +76,6 @@ class Invite private constructor(
         const val KEY_INVITE_LINK = "inviteCode"
         const val KEY_STATUS = "status"
         const val KEY_CREATED_BY = "createdBy"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         const val KEY_EXPIRES_AT = "expiresAt"
 
         fun create(
@@ -91,9 +84,8 @@ class Invite private constructor(
             createdBy: OwnerId,
             expiresAt: Instant? // Optional expiration
         ): Invite {
-            val now = Instant.now()
             var initialStatus = InviteStatus.ACTIVE
-            if (expiresAt != null && expiresAt.isBefore(now)) {
+            if (expiresAt != null && expiresAt.isBefore(DateTimeUtil.nowInstant())) {
                 initialStatus = InviteStatus.EXPIRED
             }
 
@@ -101,13 +93,12 @@ class Invite private constructor(
                 initialInviteCode = inviteCode,
                 initialStatus = initialStatus,
                 initialCreatedBy = createdBy,
-                initialCreatedAt = now,
-                initialUpdateAt = now,
+                createdAt = null,
+                updatedAt = null,
                 initialExpiresAt = expiresAt,
                 id = id,
                 isNew = true
             )
-            invite.pushDomainEvent(InviteCreatedEvent(invite.id, invite.createdBy, invite.status, invite.expiresAt, invite.createdAt)) // Use invite.createdAt for occurredOn consistency
             return invite
         }
 
@@ -117,16 +108,16 @@ class Invite private constructor(
             inviteCode: InviteCode,
             status: InviteStatus,
             createdBy: OwnerId,
-            createdAt: Instant,
-            updatedAt: Instant,
+            createdAt: Instant?,
+            updatedAt: Instant?,
             expiresAt: Instant?
         ): Invite {
             return Invite(
                 initialInviteCode = inviteCode,
                 initialStatus = status,
                 initialCreatedBy = createdBy,
-                initialCreatedAt = createdAt,
-                initialUpdateAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 initialExpiresAt = expiresAt,
                 id = id,
                 isNew = false

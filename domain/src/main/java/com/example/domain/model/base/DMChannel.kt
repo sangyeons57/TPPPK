@@ -1,9 +1,6 @@
 package com.example.domain.model.base
 
-import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.AggregateRoot
-import com.example.domain.event.DomainEvent
-import com.example.domain.event.dmchannel.DMChannelCreatedEvent
 import com.example.domain.event.dmchannel.DMChannelLastMessageUpdatedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
@@ -18,26 +15,19 @@ import java.time.Instant
  *
  * @property id The unique identifier of the DM channel.
  * @property participants The list of user IDs participating in this DM channel.
- * @property lastMessagePreview A preview of the last message sent in the channel.
- * @property lastMessageTimestamp The timestamp of the last message.
  * @property createdAt The timestamp when the channel was created.
  * @property updatedAt The timestamp when the channel was last updated.
  */
 class DMChannel private constructor(
     initialParticipants: List<UserId>,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     /** List of user document IDs participating in this DM channel. */
     var participants: List<UserId> = initialParticipants
-        private set
-    /** Timestamp indicating when the DM channel was created. */
-    override val createdAt: Instant = initialCreatedAt
-    /** Timestamp indicating when the DM channel was last updated, either by a new message or participant change. */
-    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     /**
@@ -52,7 +42,6 @@ class DMChannel private constructor(
         // Or if newTimestamp is not null, it should be later than or equal to the current lastMessageTimestamp if it exists.
         // For now, direct update as per plan.
 
-        this.updatedAt = Instant.now()
         this.pushDomainEvent(DMChannelLastMessageUpdatedEvent(this.id))
     }
 
@@ -82,8 +71,6 @@ class DMChannel private constructor(
     companion object {
         const val COLLECTION_NAME = "dm_channels"
         const val KEY_PARTICIPANTS = "participants" // List<String> = "userId1"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Creates a new DMChannel instance.
          *
@@ -101,17 +88,15 @@ class DMChannel private constructor(
             val distinctParticipants = initialParticipants.distinct()
             require(distinctParticipants.size == initialParticipants.size) { "Participant IDs must be unique."}
             require(distinctParticipants.size >= 2) { "DMChannel must have at least two distinct participants."}
-            val now = DateTimeUtil.nowInstant()
 
 
             val channel = DMChannel(
                 id = DocumentId.EMPTY,
                 initialParticipants = distinctParticipants, // Use distinct participants
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 isNew = true,
             )
-            channel.pushDomainEvent(DMChannelCreatedEvent(channel.id)) // Add this line
             return channel
         }
 
@@ -129,17 +114,16 @@ class DMChannel private constructor(
         fun fromDataSource(
             id: DocumentId,
             participants: List<UserId>,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): DMChannel {
             val channel = DMChannel(
                 id = id,
                 initialParticipants = participants,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 isNew = false,
             )
-            channel.pushDomainEvent(DMChannelCreatedEvent(channel.id)) // Add this line
             return channel
         }
     }

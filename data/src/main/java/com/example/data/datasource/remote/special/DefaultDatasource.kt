@@ -3,6 +3,7 @@ package com.example.data.datasource.remote.special
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.model.DTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -194,7 +195,7 @@ abstract class DefaultDatasourceImpl <Dto> (
             if (id.isNotAssigned()) throw IllegalArgumentException("ID cannot be empty when updating")
             // Automatically add updatedAt timestamp to all updates
             val dataWithTimestamp = data.toMutableMap().apply {
-                put("updatedAt", FieldValue.serverTimestamp())
+                put(AggregateRoot.KEY_UPDATED_AT, FieldValue.serverTimestamp())
             }
             collection.document(id.value).update(dataWithTimestamp).await()
             id

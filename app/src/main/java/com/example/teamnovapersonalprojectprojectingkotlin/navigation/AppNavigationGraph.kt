@@ -23,18 +23,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import androidx.navigation.navArgument
 import com.example.core_navigation.core.*
 import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.domain.model.vo.DocumentId
 import com.example.core_navigation.destination.RouteArgs
-import com.example.core_navigation.extension.calendarArguments
 import com.example.core_navigation.extension.extractProjectArguments
-import com.example.core_navigation.extension.projectArguments
 import com.example.core_navigation.extension.safeComposable
 import com.example.feature_add_project.ui.AddProjectScreen
 import com.example.feature_auth.ui.SplashScreen
@@ -42,7 +38,7 @@ import com.example.feature_calendar_24hour.ui.Calendar24HourScreen
 import com.example.feature_edit_schedule.ui.EditScheduleScreen
 import com.example.feature_find_password.ui.FindPasswordScreen
 import com.example.feature_accept_friend.ui.AcceptFriendsScreen
-import com.example.feature_dev.DevMenuScreen
+import com.example.feature_dev.ui.DevMenuScreen
 import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_home.viewmodel.HomeViewModel
 import com.example.feature_join_project.ui.JoinProjectScreen

@@ -18,8 +18,8 @@ abstract class AggregateRoot {
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_UPDATED_AT = "updatedAt"
     }
-    abstract val createdAt: Instant
-    abstract val updatedAt: Instant
+    abstract val createdAt: Instant?
+    abstract val updatedAt: Instant?
     private val originalState: Map<String, Any?> = this.getCurrentStateMap()
 
     private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
@@ -48,7 +48,6 @@ abstract class AggregateRoot {
                 changedFields[key] = newState[key]
             }
         }
-        changedFields[AggregateRoot.KEY_UPDATED_AT] = FieldValue.serverTimestamp()
         return changedFields
     }
 }

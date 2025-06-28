@@ -6,10 +6,12 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.reaction.Emoji
 import com.google.firebase.firestore.PropertyName
 import com.example.domain.model.vo.DocumentId as VODocumentId
+import java.util.Date
 
 /**
  * 메시지 리액션 정보를 나타내는 DTO 클래스
@@ -20,27 +22,15 @@ data class ReactionDTO(
     val userId: String = "", // 리액션을 남긴 사용자 ID
     @get:PropertyName(EMOJI)
     val emoji: String = "",  // 유니코드 이모지
-    @get:PropertyName(CREATED_AT)
-    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
+    @get:ServerTimestamp override val createdAt: Date? = null,
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
+    @get:ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
     companion object {
         const val COLLECTION_NAME = Reaction.COLLECTION_NAME
         const val USER_ID = Reaction.KEY_USER_ID
         const val EMOJI = Reaction.KEY_EMOJI
-        const val CREATED_AT = Reaction.KEY_CREATED_AT
-        const val UPDATED_AT = Reaction.KEY_UPDATED_AT
-
-        fun from(reaction: Reaction): ReactionDTO {
-            return ReactionDTO(
-                id = reaction.id.value,
-                userId = reaction.userId.value,
-                emoji = reaction.emoji.value,
-                createdAt = DateTimeUtil.instantToFirebaseTimestamp(reaction.createdAt),
-                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(reaction.updatedAt)
-            )
-        }
     }
     /**
      * DTO를 도메인 모델로 변환
@@ -51,8 +41,8 @@ data class ReactionDTO(
             id = VODocumentId(id),
             userId = UserId(userId),
             emoji = Emoji(emoji),
-            createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+            createdAt = createdAt?.toInstant(),
+            updatedAt = updatedAt?.toInstant()
         )
     }
 }
@@ -66,7 +56,7 @@ fun Reaction.toDto(): ReactionDTO {
         id = id.value,
         userId = userId.value,
         emoji = emoji.value,
-        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)}
+        createdAt = Date.from(createdAt),
+        updatedAt = Date.from(updatedAt)
     )
 }

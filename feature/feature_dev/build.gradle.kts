@@ -73,7 +73,8 @@ dependencies {
 
     // Hilt (Dependency Injection)
     implementation(libs.hilt.android)
-    implementation(libs.androidx.core.ktx) // 버전 통일
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.firebase.firestore.ktx) // 버전 통일
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose) // ViewModel 주입
 

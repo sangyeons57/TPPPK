@@ -12,16 +12,13 @@ class ProjectsWrapper(
     val initialOrder: ProjectWrapperOrder,
     val initialProjectName: ProjectName,
     val initialProjectImageUrl: ImageUrl?,
-    val initialCreatedAt: Instant,
-    val initialUpdatedAt: Instant,
     override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
-    override val createdAt: Instant = initialCreatedAt
 
     var order: ProjectWrapperOrder = initialOrder
-        private set
-    override var updatedAt: Instant = initialUpdatedAt
         private set
     var projectName: ProjectName = initialProjectName
         private set
@@ -43,17 +40,14 @@ class ProjectsWrapper(
         const val KEY_ORDER = "order"
         const val KEY_PROJECT_NAME = "projectName"
         const val KEY_PROJECT_IMAGE_URL = "projectImageUrl"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
 
         fun create(id: DocumentId, projectName: ProjectName): ProjectsWrapper {
-            val now = Instant.now()
             val projectsWrapper = ProjectsWrapper(
                 initialOrder = ProjectWrapperOrder.CREATE,
                 initialProjectName = projectName,
                 initialProjectImageUrl = null,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 id = id,
                 isNew = true
             )
@@ -65,15 +59,15 @@ class ProjectsWrapper(
             order: ProjectWrapperOrder,
             projectName: ProjectName,
             projectImageUrl: ImageUrl?,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): ProjectsWrapper {
             return ProjectsWrapper(
                 initialOrder = order,
                 initialProjectName = projectName,
                 initialProjectImageUrl = projectImageUrl,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 id = id,
                 isNew = false
             )

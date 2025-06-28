@@ -1,4 +1,4 @@
-package com.example.feature_dev
+package com.example.feature_dev.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -22,23 +22,23 @@ class DevMenuViewModel @Inject constructor(
     private val functionsUseCaseProvider: FunctionsUseCaseProvider,
     private val firestore: FirebaseFirestore
 ) : ViewModel() {
-    
+
     private val functionsUseCases = functionsUseCaseProvider.create()
-    
+
     private val _helloWorldResult = MutableStateFlow<String>("")
     val helloWorldResult: StateFlow<String> = _helloWorldResult.asStateFlow()
-    
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-    
+
     // Firestore 캐시 삭제 결과 메시지
     private val _cacheClearResult = MutableStateFlow("")
     val cacheClearResult: StateFlow<String> = _cacheClearResult.asStateFlow()
-    
+
     // 캐시 삭제 진행 상태
     private val _isCacheClearing = MutableStateFlow(false)
     val isCacheClearing: StateFlow<Boolean> = _isCacheClearing.asStateFlow()
-    
+
     /**
      * Firebase Functions의 helloWorld 함수를 호출합니다.
      */
@@ -46,7 +46,7 @@ class DevMenuViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _helloWorldResult.value = "호출 중..."
-            
+
             when (val result = functionsUseCases.helloWorldUseCase()) {
                 is CustomResult.Success -> {
                     _helloWorldResult.value = "성공: ${result.data}"
@@ -58,11 +58,11 @@ class DevMenuViewModel @Inject constructor(
                     _helloWorldResult.value = "알 수 없는 상태: $result"
                 }
             }
-            
+
             _isLoading.value = false
         }
     }
-    
+
     /**
      * 결과를 초기화합니다.
      */
@@ -70,7 +70,7 @@ class DevMenuViewModel @Inject constructor(
         _helloWorldResult.value = ""
         _cacheClearResult.value = ""
     }
-    
+
     /**
      * Firestore 로컬 캐시를 삭제합니다.
      * terminate() 이후 clearPersistence() 순서로 실행해야 합니다.
@@ -83,8 +83,8 @@ class DevMenuViewModel @Inject constructor(
             try {
                 // 현재 Firestore 인스턴스 종료
                 firestore.terminate().await()
-                // 로컬 캐시 삭제
-                FirebaseFirestore.clearPersistence().await()
+                firestore.clearPersistence().await()
+                FirebaseFirestore.getInstance().clearPersistence()
 
                 _cacheClearResult.value = "성공: Firestore 캐시가 삭제되었습니다."
             } catch (e: Exception) {

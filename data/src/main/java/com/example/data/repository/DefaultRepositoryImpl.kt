@@ -3,9 +3,6 @@ package com.example.data.repository
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.Datasource
 import com.example.data.datasource.remote.special.DefaultDatasource
-import com.example.data.model.DTO
-import com.example.data.model.remote.ScheduleDTO
-import com.example.data.model.remote.toDto
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Permission

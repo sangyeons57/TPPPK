@@ -1,7 +1,6 @@
 package com.example.domain.model.base
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.ServerTimestamp
+import com.example.core_common.util.DateTimeUtil
 import java.time.Instant
 
 import com.example.domain.model.AggregateRoot
@@ -10,7 +9,6 @@ import com.example.domain.event.project.ProjectImageUrlChangedEvent
 import com.example.domain.event.project.ProjectNameChangedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.project.ProjectName
 
@@ -18,22 +16,19 @@ class Project private constructor(
     initialName: ProjectName,
     initialImageUrl: ImageUrl?,
     initialOwnerId: OwnerId,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     override val isNew: Boolean,
     override val id: DocumentId,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     // Immutable properties
     val ownerId: OwnerId = initialOwnerId
-    override val createdAt: Instant = initialCreatedAt
 
     // Mutable properties with private setters
     var name: ProjectName = initialName
         private set
     var imageUrl: ImageUrl? = initialImageUrl
-        private set
-    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     // Implementation of abstract method from AggregateRoot
@@ -55,8 +50,7 @@ class Project private constructor(
 
         val oldName = this.name
         this.name = newName
-        this.updatedAt = Instant.now()
-        pushDomainEvent(ProjectNameChangedEvent(this.id, oldName, newName, this.updatedAt))
+        pushDomainEvent(ProjectNameChangedEvent(this.id, oldName, newName, DateTimeUtil.nowInstant()))
     }
 
     /**
@@ -66,8 +60,7 @@ class Project private constructor(
         if (this.imageUrl == newImageUrl) return
 
         this.imageUrl = newImageUrl
-        this.updatedAt = Instant.now()
-        pushDomainEvent(ProjectImageUrlChangedEvent(this.id, newImageUrl, this.updatedAt))
+        pushDomainEvent(ProjectImageUrlChangedEvent(this.id, newImageUrl, DateTimeUtil.nowInstant()))
     }
 
     companion object {
@@ -75,8 +68,6 @@ class Project private constructor(
         const val KEY_NAME = "name"
         const val KEY_IMAGE_URL = "imageUrl"
         const val KEY_OWNER_ID = "ownerId"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Factory method to create a new Project.
          */
@@ -85,13 +76,12 @@ class Project private constructor(
             imageUrl: ImageUrl?,
             ownerId: OwnerId
         ): Project {
-            val now = Instant.now()
             val project = Project(
                 initialName = name,
                 initialImageUrl = imageUrl,
                 initialOwnerId = ownerId,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 isNew = true,
                 id = DocumentId.EMPTY
             )
@@ -106,15 +96,15 @@ class Project private constructor(
             name: ProjectName,
             imageUrl: ImageUrl?,
             ownerId: OwnerId,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): Project {
             return Project(
                 initialName = name,
                 initialImageUrl = imageUrl,
                 initialOwnerId = ownerId,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 id = id,
                 isNew = false,
             )

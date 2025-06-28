@@ -1,7 +1,7 @@
 package com.example.data.model.remote
 
-import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
@@ -9,10 +9,9 @@ import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.model.vo.category.IsCategoryFlag
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
-
+import java.util.Date
 import java.time.Instant
 
 /**
@@ -28,10 +27,10 @@ data class CategoryDTO(
     val order: Double = 0.0,
     @get:PropertyName(CREATED_BY)
     val createdBy: String = "",
-    @get:PropertyName(CREATED_AT)
-    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
+    @get:ServerTimestamp override val createdAt: Date? = null,
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
+    @get:ServerTimestamp override val updatedAt: Date? = null,
     @get:PropertyName(IS_CATEGORY) 
     val isCategory: Boolean = true
 ) : DTO {
@@ -41,8 +40,6 @@ data class CategoryDTO(
         const val NAME = Category.KEY_NAME
         const val ORDER = Category.KEY_ORDER
         const val CREATED_BY = Category.KEY_CREATED_BY
-        const val CREATED_AT = Category.KEY_CREATED_AT
-        const val UPDATED_AT = Category.KEY_UPDATED_AT
         const val IS_CATEGORY = Category.KEY_IS_CATEGORY
     }
     /**
@@ -55,8 +52,8 @@ data class CategoryDTO(
             name = CategoryName(name),
             order = CategoryOrder(order),
             createdBy = OwnerId(createdBy),
-            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt),
-            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt),
+            createdAt = createdAt?.toInstant(),
+            updatedAt = updatedAt?.toInstant(),
             isCategory= IsCategoryFlag(isCategory)
         )
     }
@@ -72,8 +69,8 @@ fun Category.toDto(): CategoryDTO {
         name = name.value,
         order = order.value,
         createdBy = createdBy.value,
-        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        createdAt = Date.from(createdAt),
+        updatedAt = Date.from(updatedAt),
         isCategory = isCategory.value
     )
 }

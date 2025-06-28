@@ -1,4 +1,4 @@
-package com.example.feature_dev
+package com.example.feature_dev.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,6 +51,7 @@ import com.example.core_navigation.core.SignUpRoute
 import com.example.core_navigation.core.SplashRoute
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.feature_dev.viewmodel.DevMenuViewModel
 import java.time.LocalDate
 
 /**
@@ -286,7 +287,7 @@ fun DevMenuScreen(
 
             if (isCacheClearing) {
                 Button(
-                    onClick = { },
+                    onClick = viewModel::clearFirestoreCache,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = false
                 ) {

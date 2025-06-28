@@ -36,28 +36,6 @@ interface MessageRemoteDataSource : DefaultDatasource {
      */
     suspend fun sendMessage(channelPath: String, message: MessageDTO): CustomResult<MessageDTO, Exception>
 
-    /**
-     * 기존 메시지의 내용을 수정합니다. `updatedAt` 필드도 서버 시간으로 갱신됩니다.
-     * **중요:** 이 메서드를 호출하기 전에 `setCollection(channelPath)`를 통해 컨텍스트를 설정해야 합니다.
-     * @param channelPath 대상 채널의 전체 경로. 이 경로는 `setCollection`에 전달된 경로와 일치해야 합니다.
-     * @param messageId 수정할 메시지의 ID.
-     * @param newContent 새로운 메시지 내용.
-     * @return 작업 성공 여부 또는 오류를 포함한 CustomResult.
-     * @throws IllegalStateException `setCollection(channelPath)`가 호출되지 않았거나 `channelPath`가 일치하지 않는 경우.
-     * @throws IllegalArgumentException `channelPath`가 유효한 Firestore 문서 경로 형식이 아니거나 `messageId` 또는 `newContent`가 비어있는 경우.
-     */
-    suspend fun updateMessageContent(channelPath: String, messageId: String, newContent: String): CustomResult<Unit, Exception>
-
-    /**
-     * 메시지를 논리적으로 삭제합니다 (soft delete). `isDeleted` 플래그를 true로 설정하고 `updatedAt`을 갱신합니다.
-     * **중요:** 이 메서드를 호출하기 전에 `setCollection(channelPath)`를 통해 컨텍스트를 설정해야 합니다.
-     * @param channelPath 대상 채널의 전체 경로. 이 경로는 `setCollection`에 전달된 경로와 일치해야 합니다.
-     * @param messageId 삭제할 메시지의 ID.
-     * @return 작업 성공 여부 또는 오류를 포함한 CustomResult.
-     * @throws IllegalStateException `setCollection(channelPath)`가 호출되지 않았거나 `channelPath`가 일치하지 않는 경우.
-     * @throws IllegalArgumentException `channelPath`가 유효한 Firestore 문서 경로 형식이 아니거나 `messageId`가 비어있는 경우.
-     */
-    suspend fun softDeleteMessage(channelPath: String, messageId: String): CustomResult<Unit, Exception>
 }
 
 @Singleton
@@ -81,38 +59,4 @@ class MessageRemoteDataSourceImpl @Inject constructor(
         return@withContext TODO()
     }
 
-    override suspend fun updateMessageContent(channelPath: String, messageId: String, newContent: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
-        setCollection(channelPath)
-        checkCollectionInitialized("updateMessageContent", channelPath)
-        require(messageId.isNotBlank()) { "messageId cannot be blank for updateMessageContent." }
-        require(newContent.isNotBlank()) { "newContent cannot be blank for updateMessageContent." }
-
-        try {
-            val updates = mapOf(
-                MessageDTO.SEND_MESSAGE to newContent,
-                MessageDTO.UPDATED_AT to FieldValue.serverTimestamp()
-            )
-            super.collection.document(messageId).update(updates).await()
-            CustomResult.Success(Unit)
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
-    }
-
-    override suspend fun softDeleteMessage(channelPath: String, messageId: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
-        setCollection(channelPath)
-        checkCollectionInitialized("softDeleteMessage", channelPath)
-        require(messageId.isNotBlank()) { "messageId cannot be blank for softDeleteMessage." }
-
-        try {
-            val updates = mapOf(
-                MessageDTO.IS_DELETED to true,
-                MessageDTO.UPDATED_AT to FieldValue.serverTimestamp()
-            )
-            super.collection.document(messageId).update(updates).await()
-            CustomResult.Success(Unit)
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
-    }
 }

@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.enum.ProjectChannelType
 import java.time.Instant
 
@@ -16,21 +17,17 @@ class ProjectChannel private constructor(
     initialChannelName: Name,
     initialOrder: ProjectChannelOrder,
     initialChannelType: ProjectChannelType,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     override val id: DocumentId,
-    override val isNew: Boolean
+    override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
-
-    override val createdAt: Instant = initialCreatedAt
 
     var channelType: ProjectChannelType = initialChannelType
         private set
     var channelName: Name = initialChannelName
         private set
     var order: ProjectChannelOrder = initialOrder
-        private set
-    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -55,8 +52,7 @@ class ProjectChannel private constructor(
         }
 
         this.channelName = newName
-        this.updatedAt = Instant.now()
-        pushDomainEvent(ProjectChannelNameUpdatedEvent(this.id, this.channelName, this.updatedAt))
+        pushDomainEvent(ProjectChannelNameUpdatedEvent(this.id, this.channelName, DateTimeUtil.nowInstant()))
     }
 
     /**
@@ -72,8 +68,7 @@ class ProjectChannel private constructor(
         }
 
         this.order = newOrder
-        this.updatedAt = Instant.now()
-        pushDomainEvent(ProjectChannelOrderChangedEvent(this.id, this.order, this.updatedAt))
+        pushDomainEvent(ProjectChannelOrderChangedEvent(this.id, this.order, DateTimeUtil.nowInstant()))
     }
 
     companion object {
@@ -81,8 +76,6 @@ class ProjectChannel private constructor(
         const val KEY_CHANNEL_NAME = "channelName"
         const val KEY_CHANNEL_TYPE = "channelType"
         const val KEY_ORDER = "order"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
 
         /**
          * Factory method for creating a new project channel.
@@ -92,24 +85,14 @@ class ProjectChannel private constructor(
             channelType: ProjectChannelType,
             order: ProjectChannelOrder
         ): ProjectChannel {
-            val now = Instant.now()
             val channel = ProjectChannel(
                 id = DocumentId.EMPTY,
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 isNew = true
-            )
-            channel.pushDomainEvent(
-                ProjectChannelCreatedEvent(
-                    channelId = channel.id,
-                    channelName = channel.channelName,
-                    channelType = channel.channelType,
-                    order = channel.order,
-                    occurredOn = now
-                )
             )
             return channel
         }
@@ -122,16 +105,16 @@ class ProjectChannel private constructor(
             channelName: Name,
             order: ProjectChannelOrder,
             channelType: ProjectChannelType,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): ProjectChannel {
             return ProjectChannel(
                 id = id,
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 isNew = false
             )
         }

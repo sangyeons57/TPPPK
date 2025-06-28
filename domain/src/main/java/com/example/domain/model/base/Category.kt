@@ -2,7 +2,6 @@ package com.example.domain.model.base
 
 import com.example.core_common.constants.Constants
 import com.example.domain.model.AggregateRoot
-import com.example.domain.event.DomainEvent
 import com.example.domain.event.category.CategoryCreatedEvent // These will be defined in the next step
 import com.example.domain.event.category.CategoryNameChangedEvent // These will be defined in the next step
 import com.example.domain.event.category.CategoryOrderChangedEvent // These will be defined in the next step
@@ -33,11 +32,11 @@ class Category private constructor(
     initialName: CategoryName,
     initialOrder: CategoryOrder,
     initialCreatedBy: OwnerId,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     initialIsCategory: IsCategoryFlag,
     override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -56,9 +55,6 @@ class Category private constructor(
     var order: CategoryOrder = initialOrder
         private set
     val createdBy: OwnerId = initialCreatedBy
-    override val createdAt: Instant = initialCreatedAt
-    override var updatedAt: Instant = initialUpdatedAt
-        private set
     val isCategory: IsCategoryFlag = initialIsCategory
 
     /**
@@ -69,19 +65,13 @@ class Category private constructor(
      * @param newOrder Optional new order; if null, order is unchanged.
      */
     fun update(newName: CategoryName? = null, newOrder: CategoryOrder? = null): Category {
-        var changed = false
         if (newName != null && this.name != newName) {
             this.name = newName
             this.pushDomainEvent(CategoryNameChangedEvent(this.id.value))
-            changed = true
         }
         if (newOrder != null && this.order != newOrder) {
             this.order = newOrder
             this.pushDomainEvent(CategoryOrderChangedEvent(this.id.value))
-            changed = true
-        }
-        if (changed) {
-            this.updatedAt = Instant.now()
         }
         return this
     }
@@ -89,8 +79,7 @@ class Category private constructor(
     /**
      * Updates only the `updatedAt` value (e.g., when the category's child collection changes order).
      */
-    fun touch(time: Instant = Instant.now()): Category {
-        this.updatedAt = time
+    fun touch(): Category {
         return this
     }
 
@@ -106,7 +95,6 @@ class Category private constructor(
         if (this.name == newName) return // No change if the name is the same
 
         this.name = newName
-        this.updatedAt = Instant.now()
         this.pushDomainEvent(CategoryNameChangedEvent(this.id.value))
     }
 
@@ -121,7 +109,6 @@ class Category private constructor(
         if (this.order == newOrder) return // No change if the order is the same
 
         this.order = newOrder
-        this.updatedAt = Instant.now()
         this.pushDomainEvent(CategoryOrderChangedEvent(this.id.value))
     }
 
@@ -141,8 +128,6 @@ class Category private constructor(
         const val KEY_NAME = "name"
         const val KEY_ORDER = "order"
         const val KEY_CREATED_BY = "createdBy"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         const val KEY_IS_CATEGORY = "isCategory"
         /**
          * Creates a new Category instance.
@@ -161,14 +146,13 @@ class Category private constructor(
             order: CategoryOrder,
             createdBy: OwnerId,
         ): Category {
-            val now = Instant.now()
             val category = Category(
                 id = DocumentId.EMPTY,
                 initialName = name,
                 initialOrder = order,
                 initialCreatedBy = createdBy,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 initialIsCategory = IsCategoryFlag.BASE,
                 isNew = true
             )
@@ -176,14 +160,13 @@ class Category private constructor(
         }
 
         fun createNoCategory(createdBy: OwnerId) : Category {
-            val now = Instant.now()
             val category = Category(
                 id = DocumentId(Constants.NO_CATEGORY_ID),
                 initialName = CategoryName.NO_CATEGORY_NAME,
                 initialOrder = CategoryOrder(Constants.NO_CATEGORY_ORDER),
                 initialCreatedBy = createdBy,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 initialIsCategory = IsCategoryFlag.FALSE,
                 isNew = true
             )
@@ -210,8 +193,8 @@ class Category private constructor(
             name: CategoryName,
             order: CategoryOrder,
             createdBy: OwnerId,
-            createdAt: Instant,
-            updatedAt: Instant,
+            createdAt: Instant?,
+            updatedAt: Instant?,
             isCategory: IsCategoryFlag
         ): Category {
             val category = Category(
@@ -219,8 +202,8 @@ class Category private constructor(
                 initialName = name,
                 initialOrder = order,
                 initialCreatedBy = createdBy,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 initialIsCategory = isCategory,
                 isNew = false
             )

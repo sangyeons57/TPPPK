@@ -28,27 +28,24 @@ import java.time.Instant
  * This class is responsible for managing its own state and enforcing business rules.
  */
 class User private constructor(
-    initialId: DocumentId,
     initialEmail: UserEmail,
     initialName: UserName,
     initialConsentTimeStamp: Instant,
     initialProfileImageUrl: ImageUrl?,
     initialMemo: UserMemo?,
     initialUserStatus: UserStatus,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     initialFcmToken: UserFcmToken?,
     initialAccountStatus: UserAccountStatus,
+    override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
 
     // Immutable properties
-    override val id: DocumentId = initialId
     val email: UserEmail = initialEmail
     val consentTimeStamp: Instant = initialConsentTimeStamp
-    override val createdAt: Instant = initialCreatedAt
-
 
     // Exposed mutable properties with restricted setters
     var name: UserName = initialName
@@ -61,9 +58,6 @@ class User private constructor(
         private set
 
     var userStatus: UserStatus = initialUserStatus
-        private set
-
-    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     var fcmToken: UserFcmToken? = initialFcmToken
@@ -283,20 +277,19 @@ class User private constructor(
             memo: UserMemo? = null,
             initialFcmToken: UserFcmToken? = null
         ): User {
-            val now = DateTimeUtil.nowInstant()
             val user = User(
-                initialId = DocumentId.EMPTY,
+                id = DocumentId.EMPTY,
                 initialEmail = email,
                 initialName = name,
                 initialConsentTimeStamp = consentTimeStamp,
                 initialProfileImageUrl = profileImageUrl,
                 initialMemo = memo,
                 initialUserStatus = UserStatus.OFFLINE, // Default to offline
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
                 initialFcmToken = initialFcmToken,
                 initialAccountStatus = UserAccountStatus.ACTIVE,
-                isNew = true // Default to active
+                isNew = true,
+                createdAt = null,
+                updatedAt = null // Default to active
             )
             user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
@@ -315,24 +308,24 @@ class User private constructor(
             profileImageUrl: ImageUrl?,
             memo: UserMemo?,
             userStatus: UserStatus,
-            createdAt: Instant,
-            updatedAt: Instant,
+            createdAt: Instant?,
+            updatedAt: Instant?,
             fcmToken: UserFcmToken?,
             accountStatus: UserAccountStatus
         ): User {
             val user = User(
-                initialId= id,
-                initialEmail= email,
-                initialName= name,
+                id = id,
+                initialEmail = email,
+                initialName = name,
                 initialConsentTimeStamp = consentTimeStamp,
                 initialProfileImageUrl = profileImageUrl,
                 initialMemo = memo,
                 initialUserStatus = userStatus,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
                 initialFcmToken = fcmToken,
                 initialAccountStatus = accountStatus,
-                isNew = false
+                isNew = false,
+                createdAt = createdAt,
+                updatedAt = updatedAt
             )
             user.pushDomainEvent(UserCreatedEvent(id.value))
             return user

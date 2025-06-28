@@ -12,16 +12,14 @@ import com.example.domain.model.vo.reaction.Emoji
 class Reaction private constructor(
     initialUserId: UserId, // The user who reacted
     initialEmoji: Emoji,      // The unicode emoji character
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     val userId: UserId = initialUserId
     val emoji: Emoji = initialEmoji
-    override val createdAt: Instant = initialCreatedAt
-    override val updatedAt: Instant = initialUpdatedAt
 
     /**
      * A Reaction's state is immutable once created.
@@ -40,29 +38,17 @@ class Reaction private constructor(
         const val COLLECTION_NAME = "reactions"
         const val KEY_USER_ID = "userId"
         const val KEY_EMOJI = "emoji"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Factory method for adding a new reaction.
          */
         fun create(id: DocumentId, userId: UserId, emoji: Emoji, messageId: DocumentId): Reaction {
-            val now = Instant.now()
             val reaction = Reaction(
                 initialUserId = userId,
                 initialEmoji = emoji,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 id = id,
                 isNew = true
-            )
-            reaction.pushDomainEvent(
-                ReactionAddedEvent(
-                    reactionId = reaction.id,
-                    messageId = messageId,
-                    userId = reaction.userId,
-                    emoji = reaction.emoji,
-                    occurredOn = now
-                )
             )
             return reaction
         }
@@ -74,14 +60,14 @@ class Reaction private constructor(
             id: DocumentId,
             userId: UserId,
             emoji: Emoji,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): Reaction {
             return Reaction(
                 initialUserId = userId,
                 initialEmoji = emoji,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 id = id,
                 isNew = false
             )

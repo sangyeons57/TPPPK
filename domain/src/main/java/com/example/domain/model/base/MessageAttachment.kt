@@ -13,18 +13,16 @@ import java.time.Instant
 class MessageAttachment private constructor(
     initialAttachmentType: MessageAttachmentType, // e.g., IMAGE, FILE, VIDEO
     initialAttachmentUrl: MessageAttachmentUrl, // URL to the file in storage
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     initialFileName: MessageAttachmentFileName?,
     initialFileSize: MessageAttachmentFileSize?,
     override val id: DocumentId,
-    override val isNew: Boolean
+    override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     val attachmentType: MessageAttachmentType = initialAttachmentType
     val attachmentUrl: MessageAttachmentUrl = initialAttachmentUrl
-    override val createdAt: Instant = initialCreatedAt
-    override val updatedAt: Instant = initialUpdatedAt
     val fileName: MessageAttachmentFileName? = initialFileName
     val fileSize: MessageAttachmentFileSize? = initialFileSize
 
@@ -51,8 +49,6 @@ class MessageAttachment private constructor(
         const val KEY_ATTACHMENT_URL = "attachmentUrl"
         const val KEY_FILE_NAME = "fileName"
         const val KEY_FILE_SIZE = "fileSize"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Factory method for creating a new message attachment.
          */
@@ -63,25 +59,16 @@ class MessageAttachment private constructor(
             fileName: MessageAttachmentFileName?,
             fileSize: MessageAttachmentFileSize?
         ): MessageAttachment {
-            val now = Instant.now()
             val attachment = MessageAttachment(
                 initialAttachmentType = attachmentType,
                 initialAttachmentUrl = attachmentUrl,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 initialFileName = fileName,
                 initialFileSize = fileSize,
                 id = id,
                 isNew = true,
             )
-            attachment.pushDomainEvent(MessageAttachmentAddedEvent(
-                attachmentId = id,
-                attachmentType = attachmentType,
-                attachmentUrl = attachmentUrl,
-                occurredOn = now,
-                fileName = fileName,
-                fileSize = fileSize
-            ))
             return attachment
         }
 
@@ -92,16 +79,16 @@ class MessageAttachment private constructor(
             id: DocumentId,
             attachmentType: MessageAttachmentType,
             attachmentUrl: MessageAttachmentUrl,
-            createdAt: Instant,
-            updatedAt: Instant,
+            createdAt: Instant?,
+            updatedAt: Instant?,
             fileName: MessageAttachmentFileName?,
             fileSize: MessageAttachmentFileSize?
         ): MessageAttachment {
             return MessageAttachment(
                 initialAttachmentType = attachmentType,
                 initialAttachmentUrl = attachmentUrl,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 initialFileName = fileName,
                 initialFileSize = fileSize,
                 id = id,

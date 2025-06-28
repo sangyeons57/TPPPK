@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.data.project.RolePermission // Added import
 
 import com.example.domain.model.AggregateRoot
@@ -10,26 +11,24 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
 import java.time.Instant
+import java.util.Date
 
 class Role private constructor(
     // Constructor parameters to initialize the state
     initialName: Name,
     initialIsDefault: RoleIsDefault,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     // Immutable properties
-    override val createdAt: Instant = initialCreatedAt
 
     // Mutable properties with private setters
     var name: Name = initialName
         private set
     var isDefault: RoleIsDefault = initialIsDefault
-        private set
-    override var updatedAt: Instant = initialUpdatedAt
         private set
 
     // Implementation of abstract method from AggregateRoot
@@ -50,8 +49,7 @@ class Role private constructor(
 
         val oldName = this.name
         this.name = newName
-        this.updatedAt = Instant.now()
-        pushDomainEvent(RoleNameChangedEvent(this.id, oldName, newName, this.updatedAt))
+        pushDomainEvent(RoleNameChangedEvent(this.id, oldName, newName, DateTimeUtil.nowInstant()))
     }
 
     /**
@@ -61,16 +59,13 @@ class Role private constructor(
         if (this.isDefault == newDefaultStatus) return // No change, no event
 
         this.isDefault = newDefaultStatus
-        this.updatedAt = Instant.now()
-        pushDomainEvent(RoleDefaultStatusChangedEvent(this.id, newDefaultStatus, this.updatedAt))
+        pushDomainEvent(RoleDefaultStatusChangedEvent(this.id, newDefaultStatus, DateTimeUtil.nowInstant()))
     }
 
     companion object {
         const val COLLECTION_NAME = "roles"
         const val KEY_NAME = "name"
         const val KEY_IS_DEFAULT = "isDefault"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Factory method to create a new Role.
          * This method encapsulates the creation logic and fires a domain event.
@@ -79,16 +74,14 @@ class Role private constructor(
             name: Name,
             isDefault: RoleIsDefault
         ): Role {
-            val now = Instant.now()
             val role = Role(
                 id = DocumentId.EMPTY,
                 initialName = name,
                 initialIsDefault = isDefault,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 isNew = true
             )
-            role.pushDomainEvent(RoleCreatedEvent(role.id, role.name, role.isDefault, now))
             return role
         }
 
@@ -100,15 +93,15 @@ class Role private constructor(
             id: DocumentId,
             name: Name,
             isDefault: RoleIsDefault,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): Role {
             return Role(
                 id = id,
                 initialName = name,
                 initialIsDefault = isDefault,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 isNew = false
             )
         }

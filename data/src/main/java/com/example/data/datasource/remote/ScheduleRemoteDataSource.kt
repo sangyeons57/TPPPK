@@ -137,7 +137,7 @@ class ScheduleRemoteDataSourceImpl @Inject constructor(
 
             val datesWithSchedules = querySnapshot.documents
                 .mapNotNull { document -> document.toObject(ScheduleDTO::class.java)?.startTime }
-                .mapNotNull { timestamp -> DateTimeUtil.firebaseTimestampToLocalDateTime(timestamp).toLocalDate() }
+                .mapNotNull { timestamp -> DateTimeUtil.toLocalDateTime(timestamp).toLocalDate() }
                 .toSet()
 
             datesWithSchedules

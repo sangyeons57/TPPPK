@@ -23,7 +23,6 @@ class Schedule private constructor(
     @FirestoreDocumentId
     val projectId: ProjectId?,
     val creatorId: OwnerId,
-    override val createdAt: Instant,
 
     // Mutable properties with private setters
     title: ScheduleTitle,
@@ -31,9 +30,10 @@ class Schedule private constructor(
     startTime: Instant,
     endTime: Instant,
     status: ScheduleStatus,
-    updatedAt: Instant,
     override val id: DocumentId,
     override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -66,16 +66,12 @@ class Schedule private constructor(
         private set
 
 
-    override var updatedAt: Instant = updatedAt
-        private set
-
     /**
      * Updates the schedule's main information.
      */
     fun updateDetails(newTitle: ScheduleTitle, newContent: ScheduleContent) {
         this.title = newTitle
         this.content = newContent
-        this.updatedAt = Instant.now()
         this.pushDomainEvent(ScheduleDetailsUpdatedEvent(id.value))
     }
 
@@ -88,7 +84,6 @@ class Schedule private constructor(
         }
         this.startTime = newStartTime
         this.endTime = newEndTime
-        this.updatedAt = Instant.now()
         this.pushDomainEvent(ScheduleRescheduledEvent(id.value))
     }
 
@@ -97,7 +92,6 @@ class Schedule private constructor(
      */
     fun changeStatus(newStatus: ScheduleStatus) {
         this.status = newStatus
-        this.updatedAt = Instant.now()
         this.pushDomainEvent(ScheduleStatusChangedEvent(id.value))
     }
 
@@ -111,8 +105,6 @@ class Schedule private constructor(
         const val KEY_CREATOR_ID = "creatorId"
         const val KEY_STATUS = "status"
         const val KEY_COLOR = "color"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
 
         fun create(
             projectId: ProjectId?,
@@ -123,7 +115,6 @@ class Schedule private constructor(
             endTime: Instant,
             status: ScheduleStatus,
         ): Schedule {
-            val now = DateTimeUtil.nowInstant()
             val schedule = Schedule(
                 id = DocumentId.EMPTY,
                 projectId = projectId,
@@ -133,8 +124,8 @@ class Schedule private constructor(
                 startTime = startTime,
                 endTime = endTime,
                 status = status,
-                createdAt = now,
-                updatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 isNew = true,
             )
             return schedule
@@ -146,19 +137,19 @@ class Schedule private constructor(
          * Further validation or transformation can be added if necessary.
          */
         fun fromDataSource(
-            scheduleId: DocumentId,
+            id: DocumentId,
             projectId: ProjectId?,
             creatorId: OwnerId,
-            createdAt: Instant,
             title: ScheduleTitle,
             content: ScheduleContent,
             startTime: Instant,
             endTime: Instant,
             status: ScheduleStatus,
-            updatedAt: Instant,
+            createdAt: Instant?,
+            updatedAt: Instant?,
         ): Schedule {
             val schedule = Schedule(
-                id = scheduleId,
+                id = id,
                 projectId = projectId,
                 creatorId = creatorId,
                 createdAt = createdAt,
@@ -170,7 +161,6 @@ class Schedule private constructor(
                 updatedAt = updatedAt,
                 isNew = false,
             )
-            schedule.pushDomainEvent(ScheduleCreatedEvent(scheduleId.value))
             return schedule
         }
     }

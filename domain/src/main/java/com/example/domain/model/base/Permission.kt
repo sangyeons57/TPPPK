@@ -12,17 +12,11 @@ import com.example.domain.model.vo.permission.PermissionDescription
 import java.time.Instant
 
 class Permission private constructor(
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     override val id: DocumentId,
-    override val isNew: Boolean
+    override val isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
-
-    override val createdAt: Instant = initialCreatedAt
-
-
-    override var updatedAt: Instant = initialUpdatedAt
-        private set
 
     fun getPermissionRole() : RolePermission {
         return RolePermission.valueOf(this.id.value)
@@ -30,24 +24,21 @@ class Permission private constructor(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            Permission.KEY_UPDATED_AT to this.updatedAt,
-            Permission.KEY_CREATED_AT to this.createdAt,
+            KEY_UPDATED_AT to this.updatedAt,
+            KEY_CREATED_AT to this.createdAt,
         )
     }
 
     companion object {
         const val COLLECTION_NAME = "permissions" // Sub-collection of Role
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         /**
          * Factory method for creating a new permission.
          */
         fun create(id: RolePermission): Permission {
-            val now = Instant.now()
             val permission = Permission(
                 id = DocumentId.from(id),
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 isNew = true
             )
             return permission
@@ -58,13 +49,13 @@ class Permission private constructor(
          */
         fun fromDataSource(
             id: RolePermission,
-            createdAt: Instant,
-            updatedAt: Instant
+            createdAt: Instant?,
+            updatedAt: Instant?
         ): Permission {
             return Permission(
                 id = DocumentId.from(id),
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 isNew = false
             )
         }

@@ -16,8 +16,6 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
  */
 data class MemberDTO(
     @DocumentId override val id: String = "",
-    @get:PropertyName(JOINED_AT)
-    @ServerTimestamp val joinedAt: Date? = null,
     @get:PropertyName(ROLE_ID)
     val roleIds: List<String> = emptyList(),
     @ServerTimestamp override val createdAt: Date? = null, // Map to joinedAt for compatibility
@@ -26,19 +24,8 @@ data class MemberDTO(
 
     companion object {
         const val COLLECTION_NAME = Member.COLLECTION_NAME
-        const val JOINED_AT = Member.KEY_JOINED_AT
         const val ROLE_ID = Member.KEY_ROLE_ID
-        const val UPDATED_AT = Member.KEY_UPDATED_AT
 
-        fun from(member: Member): MemberDTO {
-            return MemberDTO(
-                id = member.id.value,
-                joinedAt = Date.from(member.joinedAt),
-                roleIds = member.roleIds.map { it.value },
-                createdAt = Date.from(member.createdAt),
-                updatedAt = Date.from(member.updatedAt),
-            )
-        }
     }
     /**
      * DTO를 도메인 모델로 변환
@@ -48,8 +35,8 @@ data class MemberDTO(
         return Member.fromDataSource(
             id = VODocumentId(id),
             roleIds = roleIds.map { VODocumentId(it) },
-            joinedAt = joinedAt?.toInstant() ?: createdAt?.toInstant() ?: Instant.EPOCH,
-            updatedAt = updatedAt?.toInstant() ?: Instant.EPOCH
+            createdAt = createdAt?.toInstant(),
+            updatedAt = updatedAt?.toInstant()
         )
     }
 }
@@ -61,7 +48,6 @@ data class MemberDTO(
 fun Member.toDto(): MemberDTO {
     return MemberDTO(
         id = id.value,
-        joinedAt = Date.from(joinedAt),
         roleIds = roleIds.map { it.value },
         createdAt = Date.from(createdAt),
         updatedAt = Date.from(updatedAt)

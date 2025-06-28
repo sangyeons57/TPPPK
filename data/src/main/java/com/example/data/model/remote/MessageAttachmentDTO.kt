@@ -1,7 +1,7 @@
 package com.example.data.model.remote
 
-import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
@@ -12,6 +12,7 @@ import com.google.firebase.Timestamp
 import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
 
 
 /**
@@ -29,10 +30,10 @@ data class MessageAttachmentDTO(
     val fileName: String? = null,
     @get:PropertyName(FILE_SIZE)
     val fileSize: Long? = null,
-    @get:PropertyName(CREATED_AT)
-    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
+    @get:ServerTimestamp override val createdAt: Date? = null,
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
+    @get:ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
 
     companion object {
@@ -41,20 +42,6 @@ data class MessageAttachmentDTO(
         const val ATTACHMENT_URL = MessageAttachment.KEY_ATTACHMENT_URL
         const val FILE_NAME = MessageAttachment.KEY_FILE_NAME
         const val FILE_SIZE = MessageAttachment.KEY_FILE_SIZE
-        const val CREATED_AT = MessageAttachment.KEY_CREATED_AT
-        const val UPDATED_AT = MessageAttachment.KEY_UPDATED_AT
-
-        fun from(messageAttachment: MessageAttachment): MessageAttachmentDTO {
-            return MessageAttachmentDTO(
-                id = messageAttachment.id.value,
-                attachmentType = messageAttachment.attachmentType,
-                attachmentUrl = messageAttachment.attachmentUrl.value,
-                fileName = messageAttachment.fileName?.value,
-                fileSize = messageAttachment.fileSize?.value,
-                createdAt = DateTimeUtil.instantToFirebaseTimestamp(messageAttachment.createdAt),
-                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(messageAttachment.updatedAt),
-            )
-        }
     }
     override fun toDomain(): MessageAttachment {
         return MessageAttachment.fromDataSource(
@@ -63,8 +50,8 @@ data class MessageAttachmentDTO(
             attachmentUrl = MessageAttachmentUrl(attachmentUrl),
             fileName = fileName?.let { MessageAttachmentFileName(it) },
             fileSize = fileSize?.let { MessageAttachmentFileSize(it) },
-            createdAt = DateTimeUtil.firebaseTimestampToInstant(createdAt),
-            updatedAt = DateTimeUtil.firebaseTimestampToInstant(updatedAt),
+            createdAt = createdAt?.toInstant(),
+            updatedAt = updatedAt?.toInstant(),
         )
     }
 }
@@ -80,7 +67,7 @@ fun MessageAttachment.toDto(): MessageAttachmentDTO {
         attachmentUrl = attachmentUrl.value,
         fileName = fileName?.value,
         fileSize = fileSize?.value,
-        createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt),
-        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt),
+        createdAt = Date.from(createdAt),
+        updatedAt = Date.from(updatedAt),
     )
 }

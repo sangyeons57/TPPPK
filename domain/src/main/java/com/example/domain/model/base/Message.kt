@@ -1,5 +1,6 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
 import java.time.Instant
 
 import com.example.domain.model.AggregateRoot
@@ -15,20 +16,17 @@ class Message private constructor(
     initialSenderId: UserId,
     initialContent: MessageContent,
     initialReplyToMessageId: DocumentId?,
-    initialCreatedAt: Instant,
-    initialUpdatedAt: Instant,
     initialIsDeleted: MessageIsDeleted,
     override val id: DocumentId,
-    override var isNew: Boolean
+    override var isNew: Boolean,
+    override val createdAt: Instant?,
+    override val updatedAt: Instant?,
 ) : AggregateRoot() {
 
     val senderId: UserId = initialSenderId
     val replyToMessageId: DocumentId? = initialReplyToMessageId
-    override val createdAt: Instant = initialCreatedAt
 
     var content: MessageContent = initialContent
-        private set
-    override var updatedAt: Instant = initialUpdatedAt
         private set
     var isDeleted: MessageIsDeleted = initialIsDeleted
         private set
@@ -51,8 +49,7 @@ class Message private constructor(
         if (this.content == newContent || isDeleted.value) return
 
         this.content = newContent
-        this.updatedAt = Instant.now()
-        pushDomainEvent(MessageContentUpdatedEvent(this.id, this.content, this.updatedAt))
+        pushDomainEvent(MessageContentUpdatedEvent(this.id, this.content, DateTimeUtil.nowInstant()))
     }
 
     /**
@@ -62,16 +59,12 @@ class Message private constructor(
         if (isDeleted.value) return
 
         this.isDeleted = MessageIsDeleted.TRUE
-        this.updatedAt = Instant.now()
-        pushDomainEvent(MessageDeletedEvent(this.id, this.updatedAt))
     }
 
     companion object {
         const val COLLECTION_NAME = "messages"
         const val KEY_SENDER_ID = "senderId"
         const val KEY_SEND_MESSAGE = "content"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         const val KEY_REPLY_TO_MESSAGE_ID = "replyToMessageId"
         const val KEY_IS_DELETED = "isDeleted"
         /**
@@ -83,18 +76,16 @@ class Message private constructor(
             content: MessageContent,
             replyToMessageId: DocumentId?
         ): Message {
-            val now = Instant.now()
             val message = Message(
                 initialSenderId = senderId,
                 initialContent = content,
                 initialReplyToMessageId = replyToMessageId,
-                initialCreatedAt = now,
-                initialUpdatedAt = now,
+                createdAt = null,
+                updatedAt = null,
                 initialIsDeleted = MessageIsDeleted.FALSE,
                 id = id,
                 isNew = true
             )
-            message.pushDomainEvent(MessageSentEvent(message.id, message.senderId, message.content, message.replyToMessageId, now))
             return message
         }
 
@@ -106,16 +97,16 @@ class Message private constructor(
             senderId: UserId,
             content: MessageContent,
             replyToMessageId: DocumentId?,
-            createdAt: Instant,
-            updatedAt: Instant,
+            createdAt: Instant?,
+            updatedAt: Instant?,
             isDeleted: MessageIsDeleted
         ): Message {
             return Message(
                 initialSenderId = senderId,
                 initialContent = content,
                 initialReplyToMessageId = replyToMessageId,
-                initialCreatedAt = createdAt,
-                initialUpdatedAt = updatedAt,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
                 initialIsDeleted = isDeleted,
                 id = id,
                 isNew = false

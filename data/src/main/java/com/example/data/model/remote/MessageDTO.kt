@@ -1,16 +1,17 @@
 package com.example.data.model.remote
 
+
 import com.example.domain.model.base.Message
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
-import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
 import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.PropertyName
+import com.example.domain.model.AggregateRoot
 
 /*
  * 메시지 정보를 나타내는 DTO 클래스
@@ -25,30 +26,20 @@ data class MessageDTO(
     val replyToMessageId: String? = null,
     @get:PropertyName(IS_DELETED)
     val isDeleted: Boolean = false,
-    @get:PropertyName(CREATED_AT)
-    @ServerTimestamp override val createdAt: Date? = null, // Map to sentAt for compatibility
-    @ServerTimestamp override val updatedAt: Date? = null
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
+    @get:ServerTimestamp override val createdAt: Date? = null, // Map to sentAt for compatibility
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
+    @get:ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
 
     companion object {
         const val COLLECTION_NAME = Message.COLLECTION_NAME
         const val SENDER_ID = Message.KEY_SENDER_ID
         const val SEND_MESSAGE = Message.KEY_SEND_MESSAGE
-        const val CREATED_AT = Message.KEY_CREATED_AT
-        const val UPDATED_AT = Message.KEY_UPDATED_AT
         const val REPLY_TO_MESSAGE_ID = Message.KEY_REPLY_TO_MESSAGE_ID
         const val IS_DELETED = Message.KEY_IS_DELETED
 
-        fun from(message: Message): MessageDTO {
-            return MessageDTO(
-                id = message.id.value,
-                senderId = message.senderId.value,
-                content = message.content.value,
-                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(message.updatedAt),
-                replyToMessageId = message.replyToMessageId?.value,
-                isDeleted = message.isDeleted.value
-            )
-        }
+
     }
     /**
      * DTO를 도메인 모델로 변환
@@ -59,8 +50,8 @@ data class MessageDTO(
             id = VODocumentId(id),
             senderId = UserId(senderId),
             content = MessageContent(content),
-            createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+            createdAt = createdAt?.toInstant(),
+            updatedAt = updatedAt?.toInstant(),
             replyToMessageId = replyToMessageId?.let{VODocumentId(it)},
             isDeleted = MessageIsDeleted(isDeleted)
         )
@@ -76,8 +67,8 @@ fun Message.toDto(): MessageDTO {
         id = id.value,
         senderId = senderId.value,
         content = content.value,
-        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        createdAt = Date.from(createdAt),
+        updatedAt = Date.from(updatedAt),
         replyToMessageId = replyToMessageId?.value,
         isDeleted = isDeleted.value
     )

@@ -1,6 +1,5 @@
 package com.example.data.model.remote
 
-import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Role
@@ -12,33 +11,27 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
+import java.util.Date
 
 /**
  * 역할 정보를 나타내는 DTO 클래스
  */
 data class RoleDTO(
-    @DocumentId override var id: String = "",
-    @get:PropertyName(NAME) var name: String = "",
-    @get:PropertyName(IS_DEFAULT) var isDefault: Boolean = false,
-    @get:PropertyName(CREATED_AT) var createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT) var updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    @DocumentId 
+    override var id: String = "",
+    @get:PropertyName(NAME)
+    var name: String = "",
+    @get:PropertyName(IS_DEFAULT)
+    var isDefault: Boolean = false,
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
+    @get:ServerTimestamp override var createdAt: Date? = null,
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
+    @get:ServerTimestamp override var updatedAt: Date? = null
 ) : DTO {
     companion object {
         const val COLLECTION_NAME = Role.COLLECTION_NAME
         const val NAME = Role.KEY_NAME
         const val IS_DEFAULT = Role.KEY_IS_DEFAULT
-        const val CREATED_AT = Role.KEY_CREATED_AT
-        const val UPDATED_AT = Role.KEY_UPDATED_AT
-
-        fun from(role: Role): RoleDTO {
-            return RoleDTO(
-                id = role.id.value,
-                name = role.name.value,
-                isDefault = role.isDefault.value,
-                createdAt = DateTimeUtil.instantToFirebaseTimestamp(role.createdAt),
-                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(role.updatedAt)
-            )
-        }
     }
 
     override fun toDomain(): AggregateRoot {
@@ -47,8 +40,8 @@ data class RoleDTO(
             id = VODocumentId(this.id),
             name = Name(this.name),
             isDefault = RoleIsDefault(this.isDefault),
-            createdAt = this.createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
-            updatedAt = this.updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)}
+            createdAt = this.createdAt?.toInstant(),
+            updatedAt = this.updatedAt?.toInstant()
         )
     }
 }
@@ -62,7 +55,7 @@ fun Role.toDto(): RoleDTO {
         id = this.id.value,
         name = this.name.value,
         isDefault = this.isDefault.value,
-        createdAt = DateTimeUtil.instantToFirebaseTimestamp(this.createdAt),
-        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(this.updatedAt)
+        createdAt = Date.from(this.createdAt),
+        updatedAt = Date.from(this.updatedAt)
     )
 }

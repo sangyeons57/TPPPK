@@ -2,6 +2,7 @@ package com.example.data.model.remote
 
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.base.User
@@ -40,8 +41,10 @@ data class UserDTO(
     val fcmToken: String? = null,
     @get:PropertyName(ACCOUNT_STATUS)
     val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE, // "active", "suspended", "deleted" 등
-    @ServerTimestamp override val createdAt: Date? = null,
-    @ServerTimestamp override val updatedAt: Date? = null
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
+    @get:ServerTimestamp override val createdAt: Date? = null,
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
+    @get:ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
 
     companion object {
@@ -53,26 +56,9 @@ data class UserDTO(
         const val PROFILE_IMAGE_URL = User.KEY_PROFILE_IMAGE_URL
         const val MEMO = User.KEY_MEMO
         const val USER_STATUS = User.KEY_USER_STATUS // User's online/offline status
-        const val CREATED_AT = User.KEY_CREATED_AT
-        const val UPDATED_AT = User.KEY_UPDATED_AT
         const val FCM_TOKEN = User.KEY_FCM_TOKEN
         const val ACCOUNT_STATUS = User.KEY_ACCOUNT_STATUS
 
-        fun from(domain: User) : UserDTO{
-            return UserDTO(
-                id = domain.id.value,
-                email = domain.email.value,
-                name = domain.name.value,
-                consentTimeStamp = Date.from(domain.consentTimeStamp), // Convert Instant to Date
-                profileImageUrl = domain.profileImageUrl?.value,
-                memo = domain.memo?.value,
-                status = domain.userStatus,
-                fcmToken = domain.fcmToken?.value,
-                accountStatus = domain.accountStatus,
-                createdAt = Date.from(domain.createdAt), // Convert Instant to Date
-                updatedAt = Date.from(domain.updatedAt) // Convert Instant to Date
-            )
-        }
     }
     /**
      * DTO를 도메인 모델로 변환
@@ -87,8 +73,8 @@ data class UserDTO(
             profileImageUrl = profileImageUrl.takeIf { !it.isNullOrBlank() }?.let { ImageUrl(it) }, // Wrap in Value Object.ImageUrl(profileImageUrl),
             memo = memo?.let { UserMemo(it) }, // Wrap in Value Object
             userStatus = status ,
-            createdAt = createdAt?.toInstant() ?: Instant.EPOCH, // Convert Date to Instant with fallback
-            updatedAt = updatedAt?.toInstant() ?: Instant.EPOCH, // Convert Date to Instant with fallback
+            createdAt = createdAt?.toInstant(),
+            updatedAt = updatedAt?.toInstant(),
             fcmToken = UserFcmToken(fcmToken),
             accountStatus = accountStatus
         )
@@ -109,8 +95,6 @@ fun User.toDto(): UserDTO {
         memo = memo?.value,  // Extract primitive value if memo is not null
         status = userStatus, // Corrected from 'status' to 'userStatus'
         fcmToken = fcmToken?.value,
-        accountStatus = accountStatus,
-        createdAt = Date.from(createdAt), // Convert Instant to Date
-        updatedAt = Date.from(updatedAt) // Convert Instant to Date
+        accountStatus = accountStatus
     )
 }

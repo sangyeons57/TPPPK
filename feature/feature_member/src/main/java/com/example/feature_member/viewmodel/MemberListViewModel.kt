@@ -125,7 +125,7 @@ class MemberListViewModel @Inject constructor(
                                     userName = UserName("User ${domainMember.id.value.take(4)}"), // Placeholder from previous step
                                     profileImageUrl = null, // Placeholder
                                     roleNames = domainMember.roleIds.map { Name("Role_$it") }, // Placeholder
-                                    joinedAt = domainMember.joinedAt
+                                    joinedAt = domainMember.createdAt
                                 )
                             }
                             val filteredList = if (query.isBlank()) {
