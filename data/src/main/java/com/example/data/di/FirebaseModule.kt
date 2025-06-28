@@ -4,12 +4,14 @@ import com.example.core_common.constants.Constants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.LocalCacheSettings
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.tasks.await
 import javax.inject.Singleton
 
 /**
@@ -43,11 +45,11 @@ object FirebaseModule {
 
         // 캐시 완전 비활성화
         val settings = FirebaseFirestoreSettings.Builder()
-            .setCacheSizeBytes(0) // 캐시 완전 비활성화
+            .setPersistenceEnabled(false)
             .build()
         
         firestore.firestoreSettings = settings
-        
+
         return firestore
     }
 

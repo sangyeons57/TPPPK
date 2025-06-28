@@ -67,6 +67,8 @@ fun DevMenuScreen(
     rememberCoroutineScope()
     val helloWorldResult by viewModel.helloWorldResult.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val cacheClearResult by viewModel.cacheClearResult.collectAsState()
+    val isCacheClearing by viewModel.isCacheClearing.collectAsState()
     
     Scaffold(
         modifier = modifier,
@@ -260,6 +262,66 @@ fun DevMenuScreen(
                         )
                         Text(
                             text = helloWorldResult,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.clearResult() },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("지우기")
+                        }
+                    }
+                }
+            }
+
+            /* ----------------------------------------- */
+            /* Firestore 캐시 삭제 테스트                   */
+            /* ----------------------------------------- */
+            Text(
+                "--- Firestore 캐시 ---",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            if (isCacheClearing) {
+                Button(
+                    onClick = { },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("캐시 삭제 중...")
+                }
+            } else {
+                DevMenuButton(text = "Firestore 캐시 삭제") {
+                    viewModel.clearFirestoreCache()
+                }
+            }
+
+            // 캐시 삭제 결과 표시
+            if (cacheClearResult.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (cacheClearResult.startsWith("성공"))
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "결과:",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = cacheClearResult,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(modifier = Modifier.height(8.dp))

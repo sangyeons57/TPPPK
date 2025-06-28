@@ -1,7 +1,9 @@
 package com.example.domain.usecase.auth
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
 
 /**
@@ -17,6 +19,7 @@ interface CheckAuthenticationStatusUseCase {
  * @param authRepository 인증 관련 기능을 제공하는 Repository
  */
 class CheckAuthenticationStatusUseCaseImpl @Inject constructor(
+    private val userRepository: UserRepository,
     private val authRepository: AuthRepository
 ) : CheckAuthenticationStatusUseCase {
 

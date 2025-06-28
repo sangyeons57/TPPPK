@@ -42,8 +42,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 앱 시작 성능 측정 시작
-        appStartTransaction = Sentry.startTransaction("app.startup", "startup")
-        
         super.onCreate(savedInstanceState)
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
 

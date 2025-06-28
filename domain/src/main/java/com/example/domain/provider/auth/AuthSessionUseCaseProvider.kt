@@ -51,6 +51,7 @@ class AuthSessionUseCaseProvider @Inject constructor(
             
             // 세션 확인
             checkAuthenticationStatusUseCase = CheckAuthenticationStatusUseCaseImpl(
+                userRepository = userRepository,
                 authRepository = authRepository
             ),
             

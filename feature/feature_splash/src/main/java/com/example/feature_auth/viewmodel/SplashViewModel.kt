@@ -9,6 +9,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.LoginRoute
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,6 +50,7 @@ sealed class SplashEvent {
 class SplashViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
+    private val usesrUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -70,7 +72,7 @@ class SplashViewModel @Inject constructor(
      */
     private fun checkAuthenticationStatus() {
         viewModelScope.launch {
-            // 스플래시 화면을 최소 1초 이상 보여주기 위한 지연
+            // 스플래시 화면을 최소 1초 이상 보여주기 위한 지
             delay(1000)
 
             try {

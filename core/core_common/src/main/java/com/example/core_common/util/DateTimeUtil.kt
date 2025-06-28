@@ -649,4 +649,55 @@ object DateTimeUtil {
         // instantToTimestamp(instant)!! 와 같이 단언하거나, 아래처럼 직접 변환합니다.
         return Timestamp(instant.epochSecond, instant.nano)
     }
+
+    /**
+     * HashMap을 Firebase Timestamp로 변환합니다.
+     * Firestore에서 저장된 timestamp가 HashMap 형태로 반환될 때 사용합니다.
+     * 
+     * @param hashMap HashMap 형태의 timestamp (seconds, nanoseconds 키를 가져야 함)
+     * @return 변환된 Firebase Timestamp 객체
+     * @throws IllegalArgumentException HashMap이 올바른 timestamp 형식이 아닌 경우
+     */
+    fun hashMapToFirebaseTimestamp(hashMap: HashMap<String, Any>): Timestamp {
+        return try {
+            val seconds = when (val secondsValue = hashMap["seconds"]) {
+                is Long -> secondsValue
+                is Int -> secondsValue.toLong()
+                is Double -> secondsValue.toLong()
+                else -> throw IllegalArgumentException("Invalid seconds value: $secondsValue")
+            }
+            
+            val nanoseconds = when (val nanosValue = hashMap["nanoseconds"]) {
+                is Long -> nanosValue.toInt()
+                is Int -> nanosValue
+                is Double -> nanosValue.toInt()
+                else -> throw IllegalArgumentException("Invalid nanoseconds value: $nanosValue")
+            }
+            
+            Timestamp(seconds, nanoseconds)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Cannot convert HashMap to Timestamp: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Any 타입의 객체를 Firebase Timestamp로 변환합니다.
+     * Firestore 역직렬화 시 timestamp 필드가 Timestamp 또는 HashMap일 수 있으므로 
+     * 두 타입을 모두 처리합니다.
+     * 
+     * @param value Timestamp 또는 HashMap<String, Any> 타입의 객체
+     * @return 변환된 Firebase Timestamp 객체
+     * @throws IllegalArgumentException 지원하지 않는 타입인 경우
+     */
+    fun anyToFirebaseTimestamp(value: Any?): Timestamp {
+        return when (value) {
+            is Timestamp -> value
+            is HashMap<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                hashMapToFirebaseTimestamp(value as HashMap<String, Any>)
+            }
+            null -> nowFirebaseTimestamp() // null인 경우 현재 시간 반환
+            else -> throw IllegalArgumentException("Cannot convert ${value::class.simpleName} to Timestamp")
+        }
+    }
 }

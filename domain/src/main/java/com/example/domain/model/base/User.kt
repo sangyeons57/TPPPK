@@ -145,7 +145,7 @@ class User private constructor(
         if (isWithdrawn()) return
 
         this.memo = newMemo
-        this.updatedAt = Instant.now()
+        this.updatedAt = DateTimeUtil.nowInstant()
         pushDomainEvent(UserMemoChangedEvent(id.value))
     }
 

@@ -89,7 +89,8 @@ class UserRemoteDataSourceImpl @Inject constructor(
                         // toObject() might already populate it.
                         // If not, and UserDTO has a 'uid' field, explicitly set it.
                         // Assuming UserDTO is a data class or has a copy method and a 'uid' property.
-                        val finalUserDTO = if (userDTO.id.isEmpty() && document.id.isNotEmpty()) userDTO.copy(id = document.id) else userDTO
+                        val finalUserDTO = if (userDTO.id.isEmpty() && document.id.isNotEmpty())
+                            userDTO.copy(id = document.id) else userDTO
                         trySend(CustomResult.Success(finalUserDTO))
                     } else {
                         // This case (userDTO is null after toObject on an existing document) is less common
