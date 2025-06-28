@@ -2,6 +2,7 @@ package com.example.domain.model
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
+import com.google.firebase.firestore.FieldValue
 import java.time.Instant
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -13,6 +14,10 @@ abstract class AggregateRoot {
     abstract val isNew : Boolean
     
     /** Standard timestamp fields for all domain entities */
+    companion object {
+        const val KEY_CREATED_AT = "createdAt"
+        const val KEY_UPDATED_AT = "updatedAt"
+    }
     abstract val createdAt: Instant
     abstract val updatedAt: Instant
     private val originalState: Map<String, Any?> = this.getCurrentStateMap()
@@ -43,6 +48,7 @@ abstract class AggregateRoot {
                 changedFields[key] = newState[key]
             }
         }
+        changedFields[AggregateRoot.KEY_UPDATED_AT] = FieldValue.serverTimestamp()
         return changedFields
     }
 }

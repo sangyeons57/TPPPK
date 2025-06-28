@@ -109,7 +109,6 @@ class User private constructor(
 
         this.name = newName
         this.profileImageUrl = newProfileImageUrl
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserProfileUpdatedEvent(id.value))
     }
 
@@ -120,7 +119,6 @@ class User private constructor(
         if (isWithdrawn()) return
         if (this.name == newName) return
         this.name = newName
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserNameChangedEvent(id.value))
     }
 
@@ -131,7 +129,6 @@ class User private constructor(
         if (isWithdrawn()) return
         if (this.profileImageUrl == newProfileImageUrl) return
         this.profileImageUrl = newProfileImageUrl
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserProfileImageChangedEvent(id.value))
     }
 
@@ -145,7 +142,6 @@ class User private constructor(
         if (isWithdrawn()) return
 
         this.memo = newMemo
-        this.updatedAt = DateTimeUtil.nowInstant()
         pushDomainEvent(UserMemoChangedEvent(id.value))
     }
 
@@ -159,7 +155,6 @@ class User private constructor(
         if (isWithdrawn()) return
 
         this.userStatus = newStatus
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserStatusChangedEvent(id.value, newStatus))
     }
 
@@ -174,7 +169,6 @@ class User private constructor(
         if (this.fcmToken == newToken) return // no-op if unchanged
 
         this.fcmToken = newToken
-        this.updatedAt = DateTimeUtil.nowInstant()
         pushDomainEvent(UserFcmTokenUpdatedEvent(id.value))
     }
 
@@ -187,7 +181,6 @@ class User private constructor(
         if (profileImageUrl == null) return
 
         profileImageUrl = null
-        updatedAt = DateTimeUtil.nowInstant()
         pushDomainEvent(UserProfileImageChangedEvent(id.value))
     }
 
@@ -201,7 +194,6 @@ class User private constructor(
         // Allow suspension from any non-withdrawn state for now, as per user request.
         // Original stricter rule: if (this.accountStatus == UserAccountStatus.ACTIVE)
         this.accountStatus = UserAccountStatus.SUSPENDED
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserAccountSuspendedEvent(id.value))
     }
 
@@ -215,7 +207,6 @@ class User private constructor(
         // Allow activation from any non-withdrawn state for now, as per user request.
         // Original stricter rule: if (this.accountStatus == UserAccountStatus.SUSPENDED)
         this.accountStatus = UserAccountStatus.ACTIVE
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserAccountActivatedEvent(id.value))
     }
 
@@ -228,7 +219,6 @@ class User private constructor(
         if (!isWithdrawn()) return // Only proceed when the account is WITHDRAWN
 
         this.accountStatus = UserAccountStatus.ACTIVE
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserAccountActivatedEvent(id.value))
     }
 
@@ -243,7 +233,6 @@ class User private constructor(
         this.accountStatus = UserAccountStatus.WITHDRAWN
         this.userStatus = UserStatus.OFFLINE // Ensure offline status on withdrawal
         this.fcmToken = null // Clear FCM token on withdrawal
-        this.updatedAt = Instant.now()
         pushDomainEvent(UserAccountWithdrawnEvent(id.value))
     }
 
@@ -271,8 +260,6 @@ class User private constructor(
         const val KEY_PROFILE_IMAGE_URL = "profileImageUrl"
         const val KEY_MEMO = "memo"
         const val KEY_USER_STATUS = "userStatus"
-        const val KEY_CREATED_AT = "createdAt"
-        const val KEY_UPDATED_AT = "updatedAt"
         const val KEY_FCM_TOKEN = "fcmToken"
         const val KEY_ACCOUNT_STATUS = "accountStatus"
 

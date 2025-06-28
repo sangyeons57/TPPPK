@@ -1,10 +1,8 @@
 package com.example.data.model.remote
 
 import com.example.domain.model.base.Message
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
-import java.time.Instant
 import java.util.Date
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
@@ -23,12 +21,11 @@ data class MessageDTO(
     val senderId: String = "",
     @get:PropertyName(SEND_MESSAGE)
     val content: String = "",
-    @get:PropertyName(SENT_AT)
-    @ServerTimestamp val sentAt: Date? = null,
     @get:PropertyName(REPLY_TO_MESSAGE_ID)
     val replyToMessageId: String? = null,
     @get:PropertyName(IS_DELETED)
     val isDeleted: Boolean = false,
+    @get:PropertyName(CREATED_AT)
     @ServerTimestamp override val createdAt: Date? = null, // Map to sentAt for compatibility
     @ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
@@ -37,7 +34,7 @@ data class MessageDTO(
         const val COLLECTION_NAME = Message.COLLECTION_NAME
         const val SENDER_ID = Message.KEY_SENDER_ID
         const val SEND_MESSAGE = Message.KEY_SEND_MESSAGE
-        const val SENT_AT = Message.KEY_SENT_AT
+        const val CREATED_AT = Message.KEY_CREATED_AT
         const val UPDATED_AT = Message.KEY_UPDATED_AT
         const val REPLY_TO_MESSAGE_ID = Message.KEY_REPLY_TO_MESSAGE_ID
         const val IS_DELETED = Message.KEY_IS_DELETED
@@ -47,7 +44,6 @@ data class MessageDTO(
                 id = message.id.value,
                 senderId = message.senderId.value,
                 content = message.content.value,
-                sentAt = DateTimeUtil.instantToFirebaseTimestamp(message.createdAt),
                 updatedAt = DateTimeUtil.instantToFirebaseTimestamp(message.updatedAt),
                 replyToMessageId = message.replyToMessageId?.value,
                 isDeleted = message.isDeleted.value
@@ -63,7 +59,7 @@ data class MessageDTO(
             id = VODocumentId(id),
             senderId = UserId(senderId),
             content = MessageContent(content),
-            createdAt = sentAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
+            createdAt = createdAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             updatedAt = updatedAt.let{DateTimeUtil.firebaseTimestampToInstant(it)},
             replyToMessageId = replyToMessageId?.let{VODocumentId(it)},
             isDeleted = MessageIsDeleted(isDeleted)
@@ -80,7 +76,7 @@ fun Message.toDto(): MessageDTO {
         id = id.value,
         senderId = senderId.value,
         content = content.value,
-        sentAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
+        createdAt = createdAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         updatedAt = updatedAt.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
         replyToMessageId = replyToMessageId?.value,
         isDeleted = isDeleted.value

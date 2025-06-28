@@ -1,7 +1,5 @@
 package com.example.domain.model.base
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 
 import com.example.domain.model.AggregateRoot
@@ -40,7 +38,7 @@ class Message private constructor(
             KEY_SENDER_ID to this.senderId,
             KEY_SEND_MESSAGE to this.content,
             KEY_REPLY_TO_MESSAGE_ID to this.replyToMessageId,
-            KEY_SENT_AT to this.createdAt,
+            KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_IS_DELETED to this.isDeleted
         )
@@ -72,7 +70,7 @@ class Message private constructor(
         const val COLLECTION_NAME = "messages"
         const val KEY_SENDER_ID = "senderId"
         const val KEY_SEND_MESSAGE = "content"
-        const val KEY_SENT_AT = "sentAt"
+        const val KEY_CREATED_AT = "createdAt"
         const val KEY_UPDATED_AT = "updatedAt"
         const val KEY_REPLY_TO_MESSAGE_ID = "replyToMessageId"
         const val KEY_IS_DELETED = "isDeleted"
