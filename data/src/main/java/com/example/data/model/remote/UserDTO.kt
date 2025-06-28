@@ -27,41 +27,23 @@ data class UserDTO(
     val email: String = "",
     @get:PropertyName(NAME)
     val name: String = "",
+    @get:PropertyName(CONSENT_TIMESTAMP)
+    @ServerTimestamp val consentTimeStamp: Timestamp? = null,
     @get:PropertyName(PROFILE_IMAGE_URL)
     val profileImageUrl: String? = null,
     @get:PropertyName(MEMO)
     val memo: String? = null,
     @get:PropertyName(USER_STATUS)
     val status: UserStatus = UserStatus.OFFLINE, // "online", "offline", "away" 등
+    @get:PropertyName(CREATED_AT)
+    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
+    @get:PropertyName(UPDATED_AT)
+    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(FCM_TOKEN)
     val fcmToken: String? = null,
     @get:PropertyName(ACCOUNT_STATUS)
     val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE // "active", "suspended", "deleted" 등
 ) : DTO {
-
-    // Raw fields that Firestore can directly deserialize (HashMap or Timestamp)
-    @JvmField
-    @PropertyName(CONSENT_TIMESTAMP)
-    @ServerTimestamp
-    var consentTimeStampRaw: Any? = null
-
-    @JvmField
-    @PropertyName(CREATED_AT)
-    var createdAtRaw: Any = DateTimeUtil.nowFirebaseTimestamp()
-
-    @JvmField
-    @PropertyName(UPDATED_AT)
-    var updatedAtRaw: Any = DateTimeUtil.nowFirebaseTimestamp()
-
-    // Computed properties that always return Timestamp
-    val consentTimeStamp: Timestamp?
-        get() = consentTimeStampRaw?.let { DateTimeUtil.anyToFirebaseTimestamp(it) }
-
-    val createdAt: Timestamp
-        get() = DateTimeUtil.anyToFirebaseTimestamp(createdAtRaw)
-
-    val updatedAt: Timestamp
-        get() = DateTimeUtil.anyToFirebaseTimestamp(updatedAtRaw)
 
     companion object {
         const val COLLECTION_NAME = User.COLLECTION_NAME
@@ -81,16 +63,15 @@ data class UserDTO(
                 id = domain.id.value,
                 email = domain.email.value,
                 name = domain.name.value,
+                consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp),
                 profileImageUrl = domain.profileImageUrl?.value,
                 memo = domain.memo?.value,
                 status = domain.userStatus,
+                createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt),
+                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt),
                 fcmToken = domain.fcmToken?.value,
                 accountStatus = domain.accountStatus
-            ).apply {
-                this.consentTimeStampRaw = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp)
-                this.createdAtRaw = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt)
-                this.updatedAtRaw = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt)
-            }
+            )
         }
     }
     /**
@@ -123,14 +104,13 @@ fun User.toDto(): UserDTO {
         id = id.value,
         email = email.value, // Extract primitive value
         name = name.value,   // Extract primitive value
+        consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp), // consentTimeStamp is non-null in User
         profileImageUrl = profileImageUrl?.value,
         memo = memo?.value,  // Extract primitive value if memo is not null
         status = userStatus, // Corrected from 'status' to 'userStatus'
+        createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt), // createdAt is non-null in User
+        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt), // updatedAt is non-null in User
         fcmToken = fcmToken?.value,
         accountStatus = accountStatus
-    ).apply {
-        this.consentTimeStampRaw = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.consentTimeStamp) // consentTimeStamp is non-null in User
-        this.createdAtRaw = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.createdAt) // createdAt is non-null in User
-        this.updatedAtRaw = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.updatedAt) // updatedAt is non-null in User
-    }
+    )
 }
