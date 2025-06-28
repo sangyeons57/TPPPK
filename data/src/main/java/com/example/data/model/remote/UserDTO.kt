@@ -27,23 +27,44 @@ data class UserDTO(
     val email: String = "",
     @get:PropertyName(NAME)
     val name: String = "",
-    @get:PropertyName(CONSENT_TIMESTAMP)
-    @ServerTimestamp val consentTimeStamp: Timestamp? = null,
     @get:PropertyName(PROFILE_IMAGE_URL)
     val profileImageUrl: String? = null,
     @get:PropertyName(MEMO)
     val memo: String? = null,
     @get:PropertyName(USER_STATUS)
     val status: UserStatus = UserStatus.OFFLINE, // "online", "offline", "away" 등
-    @get:PropertyName(CREATED_AT)
-    val createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
-    @get:PropertyName(UPDATED_AT)
-    val updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp(),
     @get:PropertyName(FCM_TOKEN)
     val fcmToken: String? = null,
     @get:PropertyName(ACCOUNT_STATUS)
     val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE // "active", "suspended", "deleted" 등
 ) : DTO {
+
+    // Backing fields for timestamp properties to handle HashMap/Timestamp conversion
+    private var _consentTimeStamp: Timestamp? = null
+    private var _createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    private var _updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+
+    @get:PropertyName(CONSENT_TIMESTAMP)
+    @get:ServerTimestamp
+    var consentTimeStamp: Timestamp?
+        get() = _consentTimeStamp
+        set(value) {
+            _consentTimeStamp = value?.let { DateTimeUtil.anyToFirebaseTimestamp(it) }
+        }
+
+    @get:PropertyName(CREATED_AT)
+    var createdAt: Timestamp
+        get() = _createdAt
+        set(value) {
+            _createdAt = DateTimeUtil.anyToFirebaseTimestamp(value)
+        }
+
+    @get:PropertyName(UPDATED_AT)
+    var updatedAt: Timestamp
+        get() = _updatedAt
+        set(value) {
+            _updatedAt = DateTimeUtil.anyToFirebaseTimestamp(value)
+        }
 
     companion object {
         const val COLLECTION_NAME = User.COLLECTION_NAME
@@ -63,15 +84,16 @@ data class UserDTO(
                 id = domain.id.value,
                 email = domain.email.value,
                 name = domain.name.value,
-                consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp),
                 profileImageUrl = domain.profileImageUrl?.value,
                 memo = domain.memo?.value,
                 status = domain.userStatus,
-                createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt),
-                updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt),
                 fcmToken = domain.fcmToken?.value,
                 accountStatus = domain.accountStatus
-            )
+            ).apply {
+                this.consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp)
+                this.createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt)
+                this.updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt)
+            }
         }
     }
     /**
@@ -104,13 +126,14 @@ fun User.toDto(): UserDTO {
         id = id.value,
         email = email.value, // Extract primitive value
         name = name.value,   // Extract primitive value
-        consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(consentTimeStamp), // consentTimeStamp is non-null in User
         profileImageUrl = profileImageUrl?.value,
         memo = memo?.value,  // Extract primitive value if memo is not null
         status = userStatus, // Corrected from 'status' to 'userStatus'
-        createdAt = DateTimeUtil.instantToFirebaseTimestamp(createdAt), // createdAt is non-null in User
-        updatedAt = DateTimeUtil.instantToFirebaseTimestamp(updatedAt), // updatedAt is non-null in User
         fcmToken = fcmToken?.value,
         accountStatus = accountStatus
-    )
+    ).apply {
+        this.consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.consentTimeStamp) // consentTimeStamp is non-null in User
+        this.createdAt = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.createdAt) // createdAt is non-null in User
+        this.updatedAt = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.updatedAt) // updatedAt is non-null in User
+    }
 }
