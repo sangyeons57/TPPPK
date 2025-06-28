@@ -39,32 +39,29 @@ data class UserDTO(
     val accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE // "active", "suspended", "deleted" 등
 ) : DTO {
 
-    // Backing fields for timestamp properties to handle HashMap/Timestamp conversion
-    private var _consentTimeStamp: Timestamp? = null
-    private var _createdAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
-    private var _updatedAt: Timestamp = DateTimeUtil.nowFirebaseTimestamp()
+    // Raw fields that Firestore can directly deserialize (HashMap or Timestamp)
+    @JvmField
+    @PropertyName(CONSENT_TIMESTAMP)
+    @ServerTimestamp
+    var consentTimeStampRaw: Any? = null
 
-    @get:PropertyName(CONSENT_TIMESTAMP)
-    @get:ServerTimestamp
-    var consentTimeStamp: Timestamp?
-        get() = _consentTimeStamp
-        set(value) {
-            _consentTimeStamp = value?.let { DateTimeUtil.anyToFirebaseTimestamp(it) }
-        }
+    @JvmField
+    @PropertyName(CREATED_AT)
+    var createdAtRaw: Any = DateTimeUtil.nowFirebaseTimestamp()
 
-    @get:PropertyName(CREATED_AT)
-    var createdAt: Timestamp
-        get() = _createdAt
-        set(value) {
-            _createdAt = DateTimeUtil.anyToFirebaseTimestamp(value)
-        }
+    @JvmField
+    @PropertyName(UPDATED_AT)
+    var updatedAtRaw: Any = DateTimeUtil.nowFirebaseTimestamp()
 
-    @get:PropertyName(UPDATED_AT)
-    var updatedAt: Timestamp
-        get() = _updatedAt
-        set(value) {
-            _updatedAt = DateTimeUtil.anyToFirebaseTimestamp(value)
-        }
+    // Computed properties that always return Timestamp
+    val consentTimeStamp: Timestamp?
+        get() = consentTimeStampRaw?.let { DateTimeUtil.anyToFirebaseTimestamp(it) }
+
+    val createdAt: Timestamp
+        get() = DateTimeUtil.anyToFirebaseTimestamp(createdAtRaw)
+
+    val updatedAt: Timestamp
+        get() = DateTimeUtil.anyToFirebaseTimestamp(updatedAtRaw)
 
     companion object {
         const val COLLECTION_NAME = User.COLLECTION_NAME
@@ -90,9 +87,9 @@ data class UserDTO(
                 fcmToken = domain.fcmToken?.value,
                 accountStatus = domain.accountStatus
             ).apply {
-                this.consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp)
-                this.createdAt = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt)
-                this.updatedAt = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt)
+                this.consentTimeStampRaw = DateTimeUtil.instantToFirebaseTimestamp(domain.consentTimeStamp)
+                this.createdAtRaw = DateTimeUtil.instantToFirebaseTimestamp(domain.createdAt)
+                this.updatedAtRaw = DateTimeUtil.instantToFirebaseTimestamp(domain.updatedAt)
             }
         }
     }
@@ -132,8 +129,8 @@ fun User.toDto(): UserDTO {
         fcmToken = fcmToken?.value,
         accountStatus = accountStatus
     ).apply {
-        this.consentTimeStamp = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.consentTimeStamp) // consentTimeStamp is non-null in User
-        this.createdAt = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.createdAt) // createdAt is non-null in User
-        this.updatedAt = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.updatedAt) // updatedAt is non-null in User
+        this.consentTimeStampRaw = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.consentTimeStamp) // consentTimeStamp is non-null in User
+        this.createdAtRaw = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.createdAt) // createdAt is non-null in User
+        this.updatedAtRaw = DateTimeUtil.instantToFirebaseTimestamp(this@toDto.updatedAt) // updatedAt is non-null in User
     }
 }
