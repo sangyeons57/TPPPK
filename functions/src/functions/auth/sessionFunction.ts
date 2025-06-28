@@ -7,6 +7,7 @@ import {onCall, CallableRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {container} from "../../infrastructure/di/Container";
 import {FunctionError, FunctionErrorCode, ErrorResponse} from "../../shared/types/common";
+import {FUNCTION_REGION, FUNCTION_MEMORY, FUNCTION_TIMEOUT} from "../../constants";
 
 interface SessionRequest {
   action: "check" | "status" | "logout";
@@ -26,9 +27,9 @@ interface SessionResponse {
 
 export const session = onCall<SessionRequest, SessionResponse | ErrorResponse>(
   {
-    region: "asia-northeast3",
-    timeoutSeconds: 30,
-    memory: "256MiB",
+    region: FUNCTION_REGION,
+    timeoutSeconds: FUNCTION_TIMEOUT.STANDARD,
+    memory: FUNCTION_MEMORY.SMALL,
   },
   async (request: CallableRequest<SessionRequest>) => {
     const requestId = `session-${Date.now()}`;

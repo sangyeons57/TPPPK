@@ -22,6 +22,6 @@ class UploadProfileImageUseCase @Inject constructor(
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
     suspend operator fun invoke(imageUri: Uri): CustomResult<Unit, Exception> {
-        return functionsRepository.uploadProfileImage(imageUri)
+        return functionsRepository.uploadUserProfileImage(imageUri)
     }
 }

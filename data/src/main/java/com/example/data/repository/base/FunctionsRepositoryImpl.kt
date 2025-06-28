@@ -35,14 +35,8 @@ class FunctionsRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.callFunctionWithUserData(functionName, userId, customData)
     }
 
-    override suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception> {
-        return functionsRemoteDataSource.uploadProfileImage(uri)
+    override suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.uploadUserProfileImage(uri)
     }
 
-    override suspend fun updateUserProfile(
-        name: String?,
-        memo: String?
-    ): CustomResult<Unit, Exception> {
-        return functionsRemoteDataSource.updateUserProfile(name, memo)
-    }
 }

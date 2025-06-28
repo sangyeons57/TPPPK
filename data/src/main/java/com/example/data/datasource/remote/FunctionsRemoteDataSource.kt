@@ -1,6 +1,7 @@
 package com.example.data.datasource.remote
 
 import android.net.Uri
+import com.example.core_common.constants.Constants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.google.firebase.functions.FirebaseFunctions
@@ -32,7 +33,7 @@ interface FunctionsRemoteDataSource {
     /**
      * 사용자 프로필 이미지를 Firebase Storage에 업로드합니다.
      */
-    suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception>
+    suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception>
 }
 
 @Singleton
@@ -68,14 +69,14 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         responseData?.get("message") as? String ?: "No message received"
     }
     
-    override suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception> = resultTry {
+    override suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception> = resultTry {
         val currentUser = firebaseAuth.currentUser
             ?: throw IllegalStateException("User must be authenticated to upload profile image")
         
         val userId = currentUser.uid
         val fileName = "profile_${System.currentTimeMillis()}.jpg"
         val storageRef = firebaseStorage.reference
-            .child("user_profile_uploads")
+            .child(Constants.Storage.USER_PROFILE_IMAGES)
             .child(userId)
             .child(fileName)
         

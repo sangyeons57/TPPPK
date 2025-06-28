@@ -55,7 +55,7 @@ interface FunctionsRemoteDataSource {
      * @param uri 업로드할 이미지의 URI
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception>
+    suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception>
 
     /**
      * 사용자 프로필을 업데이트합니다.
@@ -162,7 +162,7 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception> = resultTry {
+    override suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception> = resultTry {
         // 현재 인증된 사용자 ID 가져오기
         val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
         val userId = currentUser.uid

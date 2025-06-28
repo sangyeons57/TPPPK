@@ -9,6 +9,7 @@ import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
 import sharp from "sharp";
+import {STORAGE_ROOT, STORAGE_METADATA} from "../constants";
 
 export class ImageProcessingService {
   private storage = admin.storage();
@@ -59,10 +60,10 @@ export class ImageProcessingService {
       });
 
       // 4. 처리된 이미지를 Storage에 업로드
-      const processedStoragePath = `user_profiles/${userId}/${processedFileName}`;
+      const processedStoragePath = `${STORAGE_ROOT.USER_PROFILE_PROCESSED}/${userId}/${processedFileName}`;
       const metadata = {
-        contentType: "image/webp",
-        cacheControl: "public, max-age=31536000", // 1년 캐시
+        contentType: STORAGE_METADATA.PROFILE_IMAGE.CONTENT_TYPE,
+        cacheControl: STORAGE_METADATA.PROFILE_IMAGE.CACHE_CONTROL,
         metadata: {
           processedAt: new Date().toISOString(),
           processedBy: "ImageProcessingService",

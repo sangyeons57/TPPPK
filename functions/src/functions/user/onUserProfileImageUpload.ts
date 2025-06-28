@@ -8,6 +8,7 @@ import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import {ImageProcessingService} from "../../services/imageProcessing.service";
 import {FirestoreUpdateService} from "../../services/firestoreUpdate.service";
+import {STORAGE_ROOT, FUNCTION_REGION, FUNCTION_MEMORY, FUNCTION_TIMEOUT} from "../../constants";
 
 // Firebase Admin 초기화 (이미 다른 곳에서 초기화되었다면 생략)
 if (!admin.apps.length) {
@@ -15,9 +16,9 @@ if (!admin.apps.length) {
 }
 
 export const onUserProfileImageUpload = onObjectFinalized({
-  region: "asia-northeast3",
-  memory: "512MiB",
-  timeoutSeconds: 540,
+  region: FUNCTION_REGION,
+  memory: FUNCTION_MEMORY.MEDIUM,
+  timeoutSeconds: FUNCTION_TIMEOUT.MAX,
 }, async (event) => {
   const requestId = `profile-upload-${Date.now()}`;
   const filePath = event.data.name;
@@ -32,13 +33,13 @@ export const onUserProfileImageUpload = onObjectFinalized({
 
   try {
     // 1. 파일 경로 유효성 검사
-    if (!filePath || !filePath.startsWith("user_profile_images/")) {
+    if (!filePath || !filePath.startsWith(`${STORAGE_ROOT.USER_PROFILE_ORIGIN}/`)) {
       logger.info("Ignoring non-profile upload", {requestId, filePath});
       return;
     }
 
     // 2. 이미 처리된 파일인지 확인 (무한 루프 방지)
-    if (filePath.includes("_processed") || filePath.includes("user_profiles/")) {
+    if (filePath.includes("_processed") || filePath.includes(`${STORAGE_ROOT.USER_PROFILE_PROCESSED}/`)) {
       logger.info("Ignoring already processed file", {requestId, filePath});
       return;
     }

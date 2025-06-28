@@ -5,6 +5,7 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
+import {FUNCTION_REGION, FUNCTION_MEMORY, FUNCTION_TIMEOUT} from "../../constants";
 
 interface HelloWorldRequest {
   message?: string;
@@ -13,9 +14,9 @@ interface HelloWorldRequest {
 
 export const helloWorld = onCall<HelloWorldRequest>(
   {
-    region: "asia-northeast3",
-    timeoutSeconds: 30,
-    memory: "256MiB",
+    region: FUNCTION_REGION,
+    timeoutSeconds: FUNCTION_TIMEOUT.STANDARD,
+    memory: FUNCTION_MEMORY.SMALL,
   },
   async (request) => {
     const requestId = `hello-${Date.now()}`;

@@ -4,6 +4,7 @@
  */
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {FUNCTION_REGION, FUNCTION_MEMORY, FUNCTION_TIMEOUT} from "../../constants";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 
@@ -24,9 +25,9 @@ interface UpdateUserProfileResponse {
 }
 
 export const updateUserProfile = onCall({
-  region: "asia-northeast3",
-  memory: "256MiB",
-  timeoutSeconds: 60,
+  region: FUNCTION_REGION,
+  memory: FUNCTION_MEMORY.SMALL,
+  timeoutSeconds: FUNCTION_TIMEOUT.LONG,
 }, async (request) => {
   const requestId = `update-profile-${Date.now()}`;
   

@@ -31,4 +31,8 @@ object Constants {
 
     const val REGION = "asia-northeast3"
 
+    object Storage {
+        const val USER_PROFILE_IMAGES = "user_profile_images"
+    }
+
 }

@@ -49,18 +49,6 @@ interface FunctionsRepository : Repository {
      * @param uri 업로드할 이미지의 URI
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception>
+    suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception>
 
-    /**
-     * 사용자 프로필을 업데이트합니다.
-     * Firebase Functions를 통해 이름, 메모 등의 프로필 정보를 업데이트합니다.
-     *
-     * @param name 새로운 사용자 이름 (nullable)
-     * @param memo 새로운 사용자 메모 (nullable)
-     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun updateUserProfile(
-        name: String? = null,
-        memo: String? = null
-    ): CustomResult<Unit, Exception>
 }
