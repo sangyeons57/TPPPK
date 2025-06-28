@@ -2,15 +2,21 @@ package com.example.data.datasource.remote
 
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.DMWrapperDTO
 import com.example.data.model.remote.UserDTO
+import com.example.domain.model.enum.UserAccountStatus
+import com.example.domain.model.enum.UserStatus
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.Source
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,6 +63,56 @@ class UserRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
 ) : DefaultDatasourceImpl<UserDTO>(firestore, UserDTO::class.java), UserRemoteDataSource {
 
+    /**
+     * Creates a default UserDTO instance when standard deserialization fails.
+     * Uses safe timestamp conversion to handle HashMap timestamp issues.
+     */
+    override fun createDefaultDto(documentId: String?, data: Map<String, Any?>?): UserDTO? {
+        return try {
+            if (data == null) return null
+            
+            UserDTO(
+                id = documentId ?: "",
+                email = data["email"] as? String ?: "",
+                name = data["name"] as? String ?: "",
+                consentTimeStamp = convertTimestampSafely(data["consentTimeStamp"]),
+                profileImageUrl = data["profileImageUrl"] as? String,
+                memo = data["memo"] as? String,
+                status = (data["status"] as? String)?.let { 
+                    try { UserStatus.valueOf(it) } catch (e: Exception) { UserStatus.OFFLINE }
+                } ?: UserStatus.OFFLINE,
+                createdAt = convertTimestampSafely(data["createdAt"]) 
+                    ?: DateTimeUtil.nowFirebaseTimestamp(),
+                updatedAt = convertTimestampSafely(data["updatedAt"]) 
+                    ?: DateTimeUtil.nowFirebaseTimestamp(),
+                fcmToken = data["fcmToken"] as? String,
+                accountStatus = (data["accountStatus"] as? String)?.let {
+                    try { UserAccountStatus.valueOf(it) } catch (e: Exception) { UserAccountStatus.ACTIVE }
+                } ?: UserAccountStatus.ACTIVE
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Safely converts Any value to Firebase Timestamp, handling both Timestamp and HashMap cases.
+     */
+    private fun convertTimestampSafely(value: Any?): Timestamp? {
+        return try {
+            when (value) {
+                is Timestamp -> value
+                is HashMap<*, *> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    DateTimeUtil.hashMapToFirebaseTimestamp(value as HashMap<String, Any>)
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
 
     /**
      * Searches for a single user by their exact name and returns a Flow that emits the UserDTO.
@@ -82,24 +138,19 @@ class UserRemoteDataSourceImpl @Inject constructor(
 
             if (snapshots != null && !snapshots.isEmpty) {
                 val document = snapshots.documents[0] // Get the first document due to limit(1)
-                try {
-                    val userDTO = document.toObject(UserDTO::class.java)
-                    if (userDTO != null) {
-                        // If UserDTO has @DocumentId annotation on a field for uid,
-                        // toObject() might already populate it.
-                        // If not, and UserDTO has a 'uid' field, explicitly set it.
-                        // Assuming UserDTO is a data class or has a copy method and a 'uid' property.
-                        val finalUserDTO = if (userDTO.id.isEmpty() && document.id.isNotEmpty())
-                            userDTO.copy(id = document.id) else userDTO
-                        trySend(CustomResult.Success(finalUserDTO))
-                    } else {
-                        // This case (userDTO is null after toObject on an existing document) is less common
-                        // but good to handle. It means parsing failed for some reason.
-                        trySend(CustomResult.Failure(Exception("Failed to parse user data for document: ${document.id}")))
-                    }
-                } catch (parseException: Exception) {
-                    // This catches errors during document.toObject()
-                    trySend(CustomResult.Failure(parseException))
+                val userDTO = document.toDtoSafely()
+                if (userDTO != null) {
+                    // If UserDTO has @DocumentId annotation on a field for uid,
+                    // toDtoSafely() might already populate it.
+                    // If not, and UserDTO has a 'uid' field, explicitly set it.
+                    // Assuming UserDTO is a data class or has a copy method and a 'uid' property.
+                    val finalUserDTO = if (userDTO.id.isEmpty() && document.id.isNotEmpty())
+                        userDTO.copy(id = document.id) else userDTO
+                    trySend(CustomResult.Success(finalUserDTO))
+                } else {
+                    // This case (userDTO is null after toDtoSafely on an existing document) 
+                    // means parsing failed for some reason.
+                    trySend(CustomResult.Failure(Exception("Failed to parse user data for document: ${document.id}")))
                 }
             } else {
                 // Snapshots is null or empty, meaning no user found with that exact name.
@@ -128,7 +179,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 trySend(CustomResult.Failure(error)); return@addSnapshotListener
             }
             if (snapshots != null) {
-                val list = snapshots.documents.mapNotNull { it.toObject(UserDTO::class.java) }
+                val list = snapshots.documents.mapNotNull { it.toDtoSafely() }
                 trySend(CustomResult.Success(list))
             }
         }
@@ -152,7 +203,7 @@ class UserRemoteDataSourceImpl @Inject constructor(
             if (snapshots != null && !snapshots.isEmpty) {
                 // Even with limit(1), snapshots.documents is a list. Get the first.
                 val document = snapshots.documents[0]
-                val userDto = document.toObject(UserDTO::class.java)
+                val userDto = document.toDtoSafely()
                 if (userDto != null) {
                     trySend(CustomResult.Success(userDto))
                 } else {
