@@ -20,29 +20,17 @@ import javax.inject.Inject
 class DMWrapperRepositoryImpl @Inject constructor(
     private val dmWrapperRemoteDataSource: DMWrapperRemoteDataSource,
     override val factoryContext: DMWrapperRepositoryFactoryContext
-) : DefaultRepositoryImpl(dmWrapperRemoteDataSource, factoryContext.collectionPath), DMWrapperRepository {
-
-    override fun getDMWrappersStream(userId: UserId): Flow<CustomResult<List<DMWrapper>, Exception>> {
-        return dmWrapperRemoteDataSource.observeAll()
-            .map { dtoListResult ->
-                when (dtoListResult) {
-                    is CustomResult.Success -> CustomResult.Success(dtoListResult.data.map { (it as DMWrapperDTO).toDomain() })
-                    is CustomResult.Failure -> CustomResult.Failure(dtoListResult.error)
-                    is CustomResult.Loading -> CustomResult.Loading
-                    is CustomResult.Initial -> CustomResult.Initial
-                    is CustomResult.Progress -> CustomResult.Progress(dtoListResult.progress)
-                }
-            }
-    }
+) : DefaultRepositoryImpl(dmWrapperRemoteDataSource, factoryContext), DMWrapperRepository {
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is DMWrapper)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMWrapper"))
+        ensureCollection()
 
-        if (entity.isNew) {
-            return dmWrapperRemoteDataSource.create(entity.toDto())
+        return if (entity.isNew) {
+            dmWrapperRemoteDataSource.create(entity.toDto())
         } else {
-            return dmWrapperRemoteDataSource.update(entity.id, entity.getChangedFields())
+            dmWrapperRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
 }

@@ -26,7 +26,7 @@ class PermissionRepositoryImpl @Inject constructor(
     private val permissionRemoteDataSource: PermissionRemoteDataSource,
     override val factoryContext: PermissionRepositoryFactoryContext, // Keep if getPermissionById still needs it
     // TODO: 필요한 Mapper 주입
-) : DefaultRepositoryImpl(permissionRemoteDataSource, factoryContext.collectionPath), PermissionRepository {
+) : DefaultRepositoryImpl(permissionRemoteDataSource, factoryContext), PermissionRepository {
 
     // Helper function to format enum names (e.g., "MANAGE_PROJECT" -> "Manage Project")
     private fun formatEnumName(enumName: String): String {
@@ -39,7 +39,7 @@ class PermissionRepositoryImpl @Inject constructor(
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Permission)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Permission"))
-
+        ensureCollection()
         return if (entity.isNew) {
             permissionRemoteDataSource.create(entity.toDto())
         } else {

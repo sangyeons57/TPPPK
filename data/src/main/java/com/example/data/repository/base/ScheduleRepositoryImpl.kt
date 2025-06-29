@@ -26,12 +26,12 @@ import javax.inject.Inject
 class ScheduleRepositoryImpl @Inject constructor(
     private val scheduleRemoteDataSource: ScheduleRemoteDataSource,
     override val factoryContext: ScheduleRepositoryFactoryContext,
-) : DefaultRepositoryImpl(scheduleRemoteDataSource, factoryContext.collectionPath), ScheduleRepository {
+) : DefaultRepositoryImpl(scheduleRemoteDataSource, factoryContext), ScheduleRepository {
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Schedule)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
-
+        ensureCollection()
         return if (entity.isNew) {
             scheduleRemoteDataSource.create(entity.toDto())
         } else {
@@ -43,10 +43,12 @@ class ScheduleRepositoryImpl @Inject constructor(
         userId: UserId,
         yearMonth: YearMonth
     ): CustomResult<Set<LocalDate>, Exception> {
+        ensureCollection()
         return scheduleRemoteDataSource.findDateSummaryForMonth(userId.value, yearMonth)
     }
 
     override suspend fun findByMonth(userId: UserId, yearMonth: YearMonth): Flow<CustomResult<List<Schedule>, Exception>> {
+        ensureCollection()
         return scheduleRemoteDataSource.findByMonth(userId.value, yearMonth).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
@@ -59,6 +61,7 @@ class ScheduleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun findByDate(userId: UserId, date: LocalDate): Flow<CustomResult<List<Schedule>, Exception>> {
+        ensureCollection()
         return scheduleRemoteDataSource.findByDate(userId.value, date).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })

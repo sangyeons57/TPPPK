@@ -36,6 +36,10 @@ value class DocumentId(val value: String) {
         fun from(value: RolePermission): DocumentId {
             return DocumentId(value.name)
         }
+
+        fun isAssigned(id: String): Boolean {
+            return id != EMPTY_VALUE
+        }
     }
 
     /**

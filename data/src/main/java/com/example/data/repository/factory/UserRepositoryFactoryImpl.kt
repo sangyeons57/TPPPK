@@ -1,5 +1,6 @@
 package com.example.data.repository.factory
 
+import android.util.Log
 import com.example.data.datasource.remote.UserRemoteDataSource
 import com.example.data.repository.base.UserRepositoryImpl
 import com.example.domain.model.base.User
@@ -14,6 +15,7 @@ class UserRepositoryFactoryImpl @Inject constructor(
 ): RepositoryFactory<UserRepositoryFactoryContext, UserRepository>{
 
     override fun create(input: UserRepositoryFactoryContext): UserRepository {
+        Log.d("UserRepositoryFactoryImpl", input.toString())
         return UserRepositoryImpl(
             userRemoteDataSource = userRemoteDataSource,
             factoryContext = input,

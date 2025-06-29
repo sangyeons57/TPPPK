@@ -75,19 +75,6 @@ class Member private constructor(
             )
             return member
         }
-        fun create(
-            roleIds: List<DocumentId>
-        ): Member {
-
-            val member = Member(
-                id = DocumentId.EMPTY,
-                initialRoleIds = roleIds,
-                createdAt = DateTimeUtil.nowInstant(),
-                updatedAt = DateTimeUtil.nowInstant(),
-                isNew = true
-            )
-            return member
-        }
 
         /**
          * Factory method to reconstitute a Member from a data source.

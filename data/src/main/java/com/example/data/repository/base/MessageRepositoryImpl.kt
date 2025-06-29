@@ -21,12 +21,12 @@ import javax.inject.Inject
 class MessageRepositoryImpl @Inject constructor(
     private val messageRemoteDataSource: MessageRemoteDataSource,
     override val factoryContext: MessageRepositoryFactoryContext
-) : DefaultRepositoryImpl(messageRemoteDataSource, factoryContext.collectionPath), MessageRepository {
+) : DefaultRepositoryImpl(messageRemoteDataSource, factoryContext), MessageRepository {
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Message)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Message"))
-
+        ensureCollection()
         return if (entity.isNew) {
             messageRemoteDataSource.create(entity.toDto())
         } else {

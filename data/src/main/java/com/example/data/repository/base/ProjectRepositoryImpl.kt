@@ -31,34 +31,13 @@ class ProjectRepositoryImpl @Inject constructor(
     private val categoryRemoteDataSource: CategoryRemoteDataSource, // ProjectStructure 관리용
     private val memberRemoteDataSource: MemberRemoteDataSource,
     override val factoryContext: ProjectRepositoryFactoryContext, // 멤버 관리용
-) : DefaultRepositoryImpl(projectRemoteDataSource, factoryContext.collectionPath), ProjectRepository {
+) : DefaultRepositoryImpl(projectRemoteDataSource, factoryContext), ProjectRepository {
 
-
-    /**
-     * 프로젝트 구조를 가져옵니다.
-     * Firebase의 자체 캐싱 시스템을 활용합니다.
-     * 
-     * @param projectId 프로젝트 ID
-     * @return 프로젝트 구조 정보
-     */
-    override suspend fun getProjectStructureStream(projectId: String): Flow<CustomResult<List<Category>, Exception>> {
-        return categoryRemoteDataSource.observeCategories(projectId).map { result ->
-            when (result) {
-                is CustomResult.Success -> {
-                    val categories = result.data.map { it.toDomain() }
-                    CustomResult.Success(categories)
-                }
-                else -> {
-                    CustomResult.Failure(Exception("Unknown error in getProjectStructureStream"))
-                }
-            }
-        }
-    }
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Project)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Project"))
-
+        ensureCollection()
         return if (entity.isNew) {
             projectRemoteDataSource.create(entity.toDto())
         } else {

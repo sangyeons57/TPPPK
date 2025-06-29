@@ -19,23 +19,11 @@ import com.google.firebase.firestore.Source
 class ProjectsWrapperRepositoryImpl @Inject constructor(
     private val projectsWrapperRemoteDataSource: ProjectsWrapperRemoteDataSource,
     override val factoryContext: ProjectsWrapperRepositoryFactoryContext
-) : DefaultRepositoryImpl(projectsWrapperRemoteDataSource, factoryContext.collectionPath), ProjectsWrapperRepository {
-
-    override fun observeAll(): Flow<CustomResult<List<ProjectsWrapper>, Exception>> {
-        return projectsWrapperRemoteDataSource.observeAll().map { result : CustomResult<List<DTO>, Exception> ->
-            when (result) {
-                is CustomResult.Success -> CustomResult.Success(result.data.map { (it as ProjectsWrapperDTO).toDomain() })
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                is CustomResult.Initial -> CustomResult.Initial
-                is CustomResult.Loading -> CustomResult.Loading
-                is CustomResult.Progress -> CustomResult.Progress(result.progress)
-            }
-        }
-    }
-
+) : DefaultRepositoryImpl(projectsWrapperRemoteDataSource, factoryContext), ProjectsWrapperRepository {
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is ProjectsWrapper)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type ProjectsWrapper"))
+        ensureCollection()
 
         return if (entity.isNew) {
             projectsWrapperRemoteDataSource.create(entity.toDto())

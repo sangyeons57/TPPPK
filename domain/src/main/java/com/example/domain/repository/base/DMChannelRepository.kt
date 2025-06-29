@@ -9,6 +9,5 @@ import kotlinx.coroutines.flow.Flow
 interface DMChannelRepository : DefaultRepository {
     override val factoryContext: DMChannelRepositoryFactoryContext
 
-    suspend fun getCurrentDmChannelsStream(): Flow<CustomResult<List<DMChannel>, Exception>>
     suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMChannel, Exception>
 }

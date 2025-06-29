@@ -22,28 +22,12 @@ import javax.inject.Inject
 class CategoryRepositoryImpl @Inject constructor(
     private val categoryRemoteDataSource: CategoryRemoteDataSource,
     override val factoryContext: CategoryRepositoryFactoryContext,
-) : DefaultRepositoryImpl(categoryRemoteDataSource, factoryContext.collectionPath), CategoryRepository {
-
-    /**
-     * 카테고리 목록을 스트림으로 가져옵니다.
-     * Firebase의 자체 캐싱 시스템을 활용하여 실시간 업데이트를 처리합니다.
-     */
-    override suspend fun getCategoriesStream(projectId: String): Flow<CustomResult<List<Category>, Exception>> {
-        return categoryRemoteDataSource.observeCategories(projectId).map { dtoResultList ->
-            if (dtoResultList is CustomResult.Success) {
-                CustomResult.Success(dtoResultList.data.map { it.toDomain() })
-            } else if (dtoResultList is CustomResult.Failure) {
-                CustomResult.Failure(dtoResultList.error)
-            } else {
-                CustomResult.Failure(Exception("Unknown error getting categories"))
-            }
-        }
-    }
+) : DefaultRepositoryImpl(categoryRemoteDataSource, factoryContext), CategoryRepository {
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Category)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Category"))
-
+        ensureCollection()
         return if (entity.isNew) {
             categoryRemoteDataSource.create(entity.toDto())
         } else {

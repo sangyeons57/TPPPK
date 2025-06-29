@@ -38,12 +38,11 @@ class GetUserDmChannelsUseCase @Inject constructor(
             emit(CustomResult.Failure(error))
             return@flow
         }
-        val session = currentUserSessionResult.data
         // val currentUserId = currentUserSessionResult.data.userId // Not directly used if DMWrapperRepository handles current user
 
         // 2. Get DMWrappers for the current user
         // Assuming getDmWrappersStreamForCurrentUser() exists and is properly scoped or uses current user context
-        dmWrapperRepository.getDMWrappersStream(session.userId).collect { dmWrappersResult ->
+        dmWrapperRepository.observeAll().collect { dmWrappersResult ->
             when (dmWrappersResult) {
                 is CustomResult.Loading -> {
                     // Initial loading already emitted. Can emit specific loading if needed.

@@ -12,17 +12,4 @@ import kotlinx.coroutines.flow.Flow
 interface FriendRepository: DefaultRepository {
     override val factoryContext: FriendRepositoryFactoryContext
 
-    /**
-     * 현재 사용자의 친구 목록을 실시간 스트림으로 가져옵니다.
-     * @param currentUserId 현재 사용자 ID
-     * @return 친구 목록을 담은 Result Flow.
-     */
-
-    /**
-     * 현재 사용자에게 온 친구 요청 목록을 실시간 스트림으로 가져옵니다.
-     * @param currentUserId 현재 사용자 ID
-     * @return 친구 요청 목록을 담은 Result Flow.
-     */
-    fun getFriendRequestsStream(): Flow<CustomResult<List<Friend>, Exception>>
-
 }

@@ -4,6 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
 import com.example.domain.repository.base.DMChannelRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -13,6 +14,14 @@ class GetCurrentUserDmChannelsUseCase @Inject constructor(
     private val dmRepository: DMChannelRepository
 ) {
     suspend operator fun invoke(): Flow<CustomResult<List<DMChannel>, Exception>> {
-        return dmRepository.getCurrentDmChannelsStream()
+        return dmRepository.observeAll().map { result ->
+            when(result) {
+                is CustomResult.Success -> CustomResult.Success(result.data.map { it as DMChannel })
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                is CustomResult.Initial -> CustomResult.Initial
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Progress -> CustomResult.Progress(result.progress)
+            }
+        }
     }
 } 

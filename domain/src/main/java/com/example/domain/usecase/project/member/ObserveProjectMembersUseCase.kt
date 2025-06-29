@@ -4,6 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Member
 import com.example.domain.repository.base.MemberRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -27,6 +28,14 @@ class ObserveProjectMembersUseCaseImpl @Inject constructor(
      * @return Flow<List<ProjectMember>> 멤버 목록 스트림
      */
     override fun invoke(): Flow<CustomResult<List<Member>, Exception>> {
-        return projectMemberRepository.getProjectMembersStream()
+        return projectMemberRepository.observeAll().map { result ->
+            when (result) {
+                is CustomResult.Success -> CustomResult.Success(result.data.map { it as Member })
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                is CustomResult.Initial -> CustomResult.Initial
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Progress -> CustomResult.Progress(result.progress)
+            }
+        }
     }
 } 

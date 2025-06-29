@@ -13,5 +13,4 @@ import kotlinx.coroutines.flow.Flow
 interface ProjectRepository : DefaultRepository {
     override val factoryContext: ProjectRepositoryFactoryContext
 
-    suspend fun getProjectStructureStream(projectId: String): Flow<CustomResult<List<Category>, Exception>>
 }

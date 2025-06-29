@@ -25,22 +25,19 @@ class GetPendingFriendRequestsUseCase @Inject constructor(
      * @return Flow<CustomResult<List<Friend>, Exception>> 받은 친구 요청 목록 스트림.
      */
     operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> {
-        return friendRepository.getFriendRequestsStream().map { result ->
+        return friendRepository.observeAll().map { result ->
             when (result) {
                 is CustomResult.Success -> {
                     // PENDING 상태인 친구 요청만 필터링
-                    result.data.map {
-                        //("GetPendingFriendRequestsUseCase", "Received friends: ${it}")
-                    }
-                    val pendingRequests = result.data.filter { it.status == FriendStatus.PENDING }
+                    val friends : List<Friend> = result.data.map { it as Friend }
+
+                    val pendingRequests = friends.filter { it.status == FriendStatus.PENDING }
                     CustomResult.Success(pendingRequests)
                 }
-                is CustomResult.Failure -> {
-                    CustomResult.Failure(result.error)
-                }
-                else -> {
-                    CustomResult.Failure(Exception("Unknown error in GetPendingFriendRequestsUseCase"))
-                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                is CustomResult.Initial -> CustomResult.Initial
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Progress -> CustomResult.Progress(result.progress)
             }
         }
     }

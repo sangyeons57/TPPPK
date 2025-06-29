@@ -18,26 +18,12 @@ import javax.inject.Inject
 class MemberRepositoryImpl @Inject constructor(
     private val memberRemoteDataSource: MemberRemoteDataSource,
     override val factoryContext: MemberRepositoryFactoryContext
-) : DefaultRepositoryImpl(memberRemoteDataSource, factoryContext.collectionPath), MemberRepository {
-
-    override fun getProjectMembersStream(): Flow<CustomResult<List<Member>, Exception>> {
-        // Using observeMembers from the data source, which returns Flow<List<MemberDTO>>
-        // Wrap it in CustomResult and map to domain models
-        return memberRemoteDataSource.observeAll()
-            .map { dtoListResult ->
-                when (dtoListResult) {
-                    is CustomResult.Success -> CustomResult.Success(dtoListResult.data.map { it.toDomain() as Member })
-                    is CustomResult.Failure -> CustomResult.Failure(dtoListResult.error)
-                    is CustomResult.Initial -> CustomResult.Initial
-                    is CustomResult.Loading -> CustomResult.Loading
-                    is CustomResult.Progress -> CustomResult.Progress(dtoListResult.progress)
-                }
-            }
-    }
+) : DefaultRepositoryImpl(memberRemoteDataSource, factoryContext), MemberRepository {
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Member)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Member"))
+        ensureCollection()
         return if (entity.isNew) {
             memberRemoteDataSource.create(entity.toDto())
         } else {

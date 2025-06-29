@@ -72,11 +72,11 @@ class AddCategoryUseCaseImpl @Inject constructor(
         }
 
         // 2. Fetch existing categories for the project to determine the next order
-        val existingCategoriesResult = categoryRepository.getCategoriesStream(projectId.value)
+        val existingCategoriesResult = categoryRepository.observeAll()
             .first() // Get the first emission
         val nextOrder = when (existingCategoriesResult) {
             is CustomResult.Success -> {
-                val categories = existingCategoriesResult.data
+                val categories = existingCategoriesResult.data.map { it as Category }
                 // Exclude NO_CATEGORY_ORDER when finding max, as it's fixed.
                 // New categories should be ordered after regular categories.
                 // 기존 카테고리들의 최대 order 값을 찾습니다. "카테고리 없음"의 order (0.0) 보다 큰 값을 기준으로 합니다.

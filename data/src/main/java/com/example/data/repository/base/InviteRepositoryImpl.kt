@@ -17,15 +17,11 @@ import javax.inject.Inject
 class InviteRepositoryImpl @Inject constructor(
     private val inviteRemoteDataSource: InviteRemoteDataSource,
     override val factoryContext: InviteRepositoryFactoryContext
-) : DefaultRepositoryImpl(inviteRemoteDataSource, factoryContext.collectionPath), InviteRepository {
-    override fun getActiveProjectInvitesStream(projectId: String): Flow<CustomResult<List<Invite>, Exception>> {
-        TODO("Not yet implemented")
-    }
-
+) : DefaultRepositoryImpl(inviteRemoteDataSource, factoryContext), InviteRepository {
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Invite)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Invite"))
-
+        ensureCollection()
         return if (entity.isNew) {
             inviteRemoteDataSource.create(entity.toDto())
         } else {

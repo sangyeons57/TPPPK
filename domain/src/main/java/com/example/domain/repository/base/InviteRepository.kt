@@ -12,10 +12,5 @@ import kotlinx.coroutines.flow.Flow
  */
 interface InviteRepository : DefaultRepository {
     override val factoryContext: InviteRepositoryFactoryContext
-    /**
-     * 특정 프로젝트에 대해 생성된 활성 초대 코드 목록을 가져옵니다.
-     * @param projectId 프로젝트 ID
-     * @return 활성 초대 코드 목록을 담은 Result Flow.
-     */
-    fun getActiveProjectInvitesStream(projectId: String): Flow<CustomResult<List<Invite>, Exception>>
+
 }

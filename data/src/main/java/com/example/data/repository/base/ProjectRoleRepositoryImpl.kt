@@ -1,5 +1,6 @@
 package com.example.data.repository.base
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.model.remote.toDto
@@ -16,7 +17,7 @@ class ProjectRoleRepositoryImpl @Inject constructor(
     private val roleRemoteDataSource: RoleRemoteDataSource,
     override val factoryContext: ProjectRoleRepositoryFactoryContext
     // private val roleMapper: RoleMapper // 개별 매퍼 사용시
-) : DefaultRepositoryImpl(roleRemoteDataSource, factoryContext.collectionPath), ProjectRoleRepository {
+) : DefaultRepositoryImpl(roleRemoteDataSource, factoryContext), ProjectRoleRepository {
 
     override suspend fun getRolePermissions(
         projectId: String,
@@ -28,7 +29,7 @@ class ProjectRoleRepositoryImpl @Inject constructor(
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Role)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Role"))
-
+        ensureCollection()
         return if (entity.isNew) {
             roleRemoteDataSource.create(entity.toDto())
         } else {

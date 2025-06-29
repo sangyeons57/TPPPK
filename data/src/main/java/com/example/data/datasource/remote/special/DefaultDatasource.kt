@@ -1,5 +1,6 @@
 package com.example.data.datasource.remote.special
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.model.DTO
@@ -65,6 +66,7 @@ abstract class DefaultDatasourceImpl <Dto> (
     override fun setCollection(vararg ids: String): DefaultDatasource {
         require(ids.isNotEmpty()) { "At least one path segment must be provided to setCollection()." }
         collection = firestore.collection(ids.joinToString("/"))
+        Log.d("DefaultDatasourceImpl", collection.path)
         return this
     }
 
@@ -176,9 +178,9 @@ abstract class DefaultDatasourceImpl <Dto> (
     override suspend fun create(dto: DTO): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("create")
         resultTry {
-            if(dto.id.isAssigned()) {
-                val ref = collection.document(dto.id.value).set(dto).await()
-                DocumentId(ref.id)
+            if(DocumentId.isAssigned(dto.id)) {
+                collection.document(dto.id).set(dto).await()
+                DocumentId(dto.id)
             } else {
                 val ref = collection.add(dto).await()
                 DocumentId(ref.id)

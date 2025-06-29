@@ -18,12 +18,12 @@ import javax.inject.Inject
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
     override val factoryContext: UserRepositoryFactoryContext,
-) : DefaultRepositoryImpl(userRemoteDataSource, factoryContext.collectionPath), UserRepository {
+) : DefaultRepositoryImpl(userRemoteDataSource, factoryContext), UserRepository {
 
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is User)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
-
+        ensureCollection()
         return if(entity.isNew) {
             userRemoteDataSource.create(entity.toDto())
         } else {
@@ -32,6 +32,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun observeByName(name: UserName): Flow<CustomResult<User, Exception>> {
+        ensureCollection()
         return userRemoteDataSource.findByNameStream(name.value).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
@@ -44,6 +45,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun observeByEmail(email: String): Flow<CustomResult<User, Exception>> {
+        ensureCollection()
         return userRemoteDataSource.findByNameStream(email).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
@@ -56,6 +58,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun observeAllByName(name: String, limit: Int): Flow<CustomResult<List<User>, Exception>> {
+        ensureCollection()
         return userRemoteDataSource.findAllByNameStream(name, limit).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })

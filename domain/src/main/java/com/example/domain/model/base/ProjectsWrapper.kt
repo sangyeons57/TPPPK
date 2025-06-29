@@ -37,7 +37,7 @@ class ProjectsWrapper(
     }
 
     companion object {
-        const val COLLECTION_NAME = "projectsWrapper"
+        const val COLLECTION_NAME = "projects_wrapper"
         const val KEY_ORDER = "order"
         const val KEY_PROJECT_NAME = "projectName"
         const val KEY_PROJECT_IMAGE_URL = "projectImageUrl"

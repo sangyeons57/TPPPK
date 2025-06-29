@@ -20,10 +20,11 @@ class MessageAttachmentRepositoryImpl @Inject constructor(
     override val factoryContext: MessageAttachmentRepositoryFactoryContext
     // private val localMediaDataSource: LocalMediaDataSource, // 파일 업로드 전처리 등에 사용 가능
     // TODO: 필요한 Mapper 주입
-) : DefaultRepositoryImpl(messageAttachmentRemoteDataSource, factoryContext.collectionPath), MessageAttachmentRepository {
+) : DefaultRepositoryImpl(messageAttachmentRemoteDataSource, factoryContext), MessageAttachmentRepository {
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is MessageAttachment)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type MessageAttachment"))
+        ensureCollection()
         return if (entity.isNew) {
             messageAttachmentRemoteDataSource.create(entity.toDto())
         } else {

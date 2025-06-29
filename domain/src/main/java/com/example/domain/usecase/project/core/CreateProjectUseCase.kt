@@ -94,8 +94,9 @@ class CreateProjectUseCase @Inject constructor(
                 }
 
                 // 생성된 프로젝트에 현재 사용자를 참여시킵니다.
-                Log.d("CreateProjectUseCase", "createdProjectId: ${memberRepository.factoryContext.collectionPath}")
-                roleRepository.factoryContext.changeCollectionPath(createdProjectId.value)
+                Log.d("CreateProjectUseCase", "createdProjectId: ${createdProjectId.value}")
+                val context = roleRepository.factoryContext.changeCollectionPath(createdProjectId.value)
+                Log.d("CreateProjectUseCase", "context: ${context.collectionPath.value}")
                 val roleId = when (val roleResult = roleRepository.save(Role.createOwner())){
                     is CustomResult.Success -> roleResult.data
                     is CustomResult.Failure -> return CustomResult.Failure(roleResult.error)
@@ -105,7 +106,11 @@ class CreateProjectUseCase @Inject constructor(
                 }
 
                 memberRepository.factoryContext.changeCollectionPath(createdProjectId.value)
-                val owner : Member = Member.create(listOf(roleId))
+                val owner : Member = Member.create(
+                    id = DocumentId.from(session.data.userId),
+                    roleIds = listOf(roleId)
+                )
+                Log.d("CreateProjectUseCase", "context: ${memberRepository.factoryContext.collectionPath.value}")
                 when (val memberResult = memberRepository.save(owner)) {
                     is CustomResult.Success -> {
                         // Member created successfully: $memberResult
@@ -144,9 +149,10 @@ class CreateProjectUseCase @Inject constructor(
                     is CustomResult.Progress -> CustomResult.Progress(addNoCategoryResult.progress)
                 }
             }
-            else -> {
-                return CustomResult.Failure(Exception("로그인이 필요합니다."))
-            }
+            is CustomResult.Failure -> return CustomResult.Failure(session.error)
+            is CustomResult.Initial -> return CustomResult.Initial
+            is CustomResult.Loading -> return CustomResult.Loading
+            is CustomResult.Progress -> return CustomResult.Progress(session.progress)
         }
     }
 } 
