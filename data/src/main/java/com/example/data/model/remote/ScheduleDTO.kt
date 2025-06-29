@@ -91,7 +91,7 @@ fun Schedule.toDto(): ScheduleDTO {
         projectId = projectId?.value,
         creatorId = creatorId.value,
         status = status,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt),
+        createdAt = null,
+        updatedAt = null,
     )
 }

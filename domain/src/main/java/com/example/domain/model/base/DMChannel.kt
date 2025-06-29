@@ -6,6 +6,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
 import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
 
 /**
  * Represents a Direct Message (DM) channel between users.
@@ -22,8 +23,8 @@ class DMChannel private constructor(
     initialParticipants: List<UserId>,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     /** List of user document IDs participating in this DM channel. */
@@ -93,8 +94,8 @@ class DMChannel private constructor(
             val channel = DMChannel(
                 id = DocumentId.EMPTY,
                 initialParticipants = distinctParticipants, // Use distinct participants
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
             )
             return channel
@@ -120,8 +121,8 @@ class DMChannel private constructor(
             val channel = DMChannel(
                 id = id,
                 initialParticipants = participants,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false,
             )
             return channel

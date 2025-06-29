@@ -11,6 +11,7 @@ import com.example.core_common.result.exceptionOrNull
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
@@ -74,7 +75,7 @@ class ProjectSettingViewModel @Inject constructor(
         .let { DocumentId.from((it)) }
 
     // Create UseCase groups via providers
-    private val coreProjectUseCases = coreProjectUseCaseProvider.createForProject(projectId)
+    private val coreProjectUseCases = coreProjectUseCaseProvider.createForProject(projectId, UserId.EMPTY)
     private val projectStructureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
     private val projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
 

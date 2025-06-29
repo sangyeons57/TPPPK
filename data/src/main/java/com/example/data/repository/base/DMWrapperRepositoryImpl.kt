@@ -9,7 +9,7 @@ import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
+import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryContext
 import com.example.domain.repository.base.DMWrapperRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +19,7 @@ import javax.inject.Inject
 
 class DMWrapperRepositoryImpl @Inject constructor(
     private val dmWrapperRemoteDataSource: DMWrapperRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: DMWrapperRepositoryFactoryContext
 ) : DefaultRepositoryImpl(dmWrapperRemoteDataSource, factoryContext.collectionPath), DMWrapperRepository {
 
     override fun getDMWrappersStream(userId: UserId): Flow<CustomResult<List<DMWrapper>, Exception>> {
@@ -39,16 +39,10 @@ class DMWrapperRepositoryImpl @Inject constructor(
         if (entity !is DMWrapper)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMWrapper"))
 
-        if (entity.id.isAssigned()) {
-            return dmWrapperRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        if (entity.isNew) {
             return dmWrapperRemoteDataSource.create(entity.toDto())
+        } else {
+            return dmWrapperRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
-    }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is DMWrapper)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMWrapper"))
-        return dmWrapperRemoteDataSource.create(entity.toDto())
     }
 }

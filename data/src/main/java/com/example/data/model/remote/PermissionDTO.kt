@@ -45,7 +45,7 @@ data class PermissionDTO(
 fun Permission.toDto(): PermissionDTO {
     return PermissionDTO(
         id = id.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

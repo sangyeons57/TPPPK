@@ -8,14 +8,15 @@ import com.example.domain.event.reaction.ReactionAddedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.reaction.Emoji
+import com.example.core_common.util.DateTimeUtil
 
 class Reaction private constructor(
     initialUserId: UserId, // The user who reacted
     initialEmoji: Emoji,      // The unicode emoji character
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     val userId: UserId = initialUserId
@@ -45,8 +46,8 @@ class Reaction private constructor(
             val reaction = Reaction(
                 initialUserId = userId,
                 initialEmoji = emoji,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = true
             )
@@ -66,8 +67,8 @@ class Reaction private constructor(
             return Reaction(
                 initialUserId = userId,
                 initialEmoji = emoji,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = false
             )

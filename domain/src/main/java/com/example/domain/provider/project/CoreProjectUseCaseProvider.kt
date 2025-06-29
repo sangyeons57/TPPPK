@@ -8,11 +8,13 @@ import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.MemberRepository
 import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectRoleRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
 import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import com.example.domain.usecase.project.JoinProjectWithTokenUseCase
@@ -23,6 +25,7 @@ import com.example.domain.usecase.project.core.GetUserParticipatingProjectsUseCa
 import com.example.domain.usecase.project.core.RenameProjectUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.round
 
 /**
  * 핵심 프로젝트 관리 UseCase들을 제공하는 Provider
@@ -35,7 +38,8 @@ class CoreProjectUseCaseProvider @Inject constructor(
     private val projectsWrapperRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>,
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
     private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
-    private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>
+    private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
+    private val roleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>
 ) {
 
     /**
@@ -46,8 +50,8 @@ class CoreProjectUseCaseProvider @Inject constructor(
      * @return 핵심 프로젝트 관리 UseCase 그룹
      */
     fun createForProject(
-        projectId: DocumentId? = null,
-        userId: UserId? = null
+        projectId: DocumentId,
+        userId: UserId
     ): CoreProjectUseCases {
         val projectRepository = projectRepositoryFactory.create(
             ProjectRepositoryFactoryContext(
@@ -59,45 +63,45 @@ class CoreProjectUseCaseProvider @Inject constructor(
             AuthRepositoryFactoryContext()
         )
 
-        val projectsWrapperRepository = if (userId != null) {
-            projectsWrapperRepositoryFactory.create(
+        val projectsWrapperRepository = projectsWrapperRepositoryFactory.create(
                 ProjectsWrapperRepositoryFactoryContext(
                     collectionPath = CollectionPath.userProjectWrappers(userId.value)
                 )
             )
-        } else null
 
-        val categoryRepository = if (projectId != null) {
-            categoryRepositoryFactory.create(
+        val categoryRepository = categoryRepositoryFactory.create(
                 CategoryRepositoryFactoryContext(
                     collectionPath = CollectionPath.projectCategories(projectId.value)
                 )
             )
-        } else null
 
-        val memberRepository = if (projectId != null) {
-            memberRepositoryFactory.create(
+        val memberRepository = memberRepositoryFactory.create(
                 MemberRepositoryFactoryContext(
                     collectionPath = CollectionPath.projectMembers(projectId.value)
                 )
             )
-        } else null
+
+        val roleRepository = roleRepositoryFactory.create(
+            ProjectRoleRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectRoles(projectId.value)
+            )
+        )
+
 
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
                 projectRepository = projectRepository,
-                projectsWrapperRepository = projectsWrapperRepository 
-                    ?: error("프로젝트 생성에는 사용자 ID가 필요합니다"),
+                projectsWrapperRepository = projectsWrapperRepository,
                 authRepository = authRepository,
-                categoryRepository = categoryRepository ?: error("프로젝트 생성에는 프로젝트 ID가 필요합니다"),
-                memberRepository = memberRepository ?: error("프로젝트 생성에는 프로젝트 ID가 필요합니다")
+                categoryRepository = categoryRepository,
+                memberRepository = memberRepository,
+                roleRepository = roleRepository
             ),
             
             deleteProjectUseCase = DeleteProjectUseCaseImpl(
                 projectRepository = projectRepository,
                 authRepository = authRepository,
                 projWrapperRepository = projectsWrapperRepository
-                    ?: error("프로젝트 삭제에는 사용자 ID가 필요합니다")
             ),
             
             renameProjectUseCase = RenameProjectUseCaseImpl(
@@ -164,13 +168,20 @@ class CoreProjectUseCaseProvider @Inject constructor(
             )
         )
 
+        val roleRepository = roleRepositoryFactory.create(
+            ProjectRoleRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectRoles("temp-project")
+            )
+        )
+
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
                 projectRepository = projectRepository,
                 projectsWrapperRepository = projectsWrapperRepository,
                 authRepository = authRepository,
                 categoryRepository = categoryRepository,
-                memberRepository = memberRepository
+                memberRepository = memberRepository,
+                roleRepository = roleRepository
             ),
             
             deleteProjectUseCase = DeleteProjectUseCaseImpl(

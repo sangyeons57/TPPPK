@@ -21,8 +21,8 @@ class Invite private constructor(
     initialExpiresAt: Instant?,
     override val id: DocumentId,
     override var isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     // Immutable properties
@@ -93,8 +93,8 @@ class Invite private constructor(
                 initialInviteCode = inviteCode,
                 initialStatus = initialStatus,
                 initialCreatedBy = createdBy,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 initialExpiresAt = expiresAt,
                 id = id,
                 isNew = true
@@ -116,8 +116,8 @@ class Invite private constructor(
                 initialInviteCode = inviteCode,
                 initialStatus = status,
                 initialCreatedBy = createdBy,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 initialExpiresAt = expiresAt,
                 id = id,
                 isNew = false

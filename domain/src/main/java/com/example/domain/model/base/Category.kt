@@ -12,6 +12,7 @@ import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.model.vo.category.IsCategoryFlag
 import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
 
 /**
  * Represents a Category aggregate in the domain.
@@ -35,8 +36,8 @@ class Category private constructor(
     initialIsCategory: IsCategoryFlag,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -151,8 +152,8 @@ class Category private constructor(
                 initialName = name,
                 initialOrder = order,
                 initialCreatedBy = createdBy,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 initialIsCategory = IsCategoryFlag.BASE,
                 isNew = true
             )
@@ -165,8 +166,8 @@ class Category private constructor(
                 initialName = CategoryName.NO_CATEGORY_NAME,
                 initialOrder = CategoryOrder(Constants.NO_CATEGORY_ORDER),
                 initialCreatedBy = createdBy,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 initialIsCategory = IsCategoryFlag.FALSE,
                 isNew = true
             )
@@ -202,8 +203,8 @@ class Category private constructor(
                 initialName = name,
                 initialOrder = order,
                 initialCreatedBy = createdBy,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 initialIsCategory = isCategory,
                 isNew = false
             )

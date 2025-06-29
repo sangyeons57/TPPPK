@@ -33,7 +33,6 @@ interface DefaultDatasource : Datasource {
     suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<DTO>, Exception>
 
     suspend fun create(dto: DTO): CustomResult<DocumentId, Exception>
-    suspend fun create(id: DocumentId, dto: DTO): CustomResult<DocumentId, Exception>
     suspend fun update(id: DocumentId, data: Map<String, Any?>): CustomResult<DocumentId, Exception>
     suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
 }
@@ -177,15 +176,13 @@ abstract class DefaultDatasourceImpl <Dto> (
     override suspend fun create(dto: DTO): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("create")
         resultTry {
-            val ref = collection.add(dto).await()
-            DocumentId(ref.id)
-        }
-    }
-    override suspend fun create(id: DocumentId, dto: DTO): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
-        checkCollectionInitialized("create[id]")
-        resultTry {
-            collection.document(id.value).set(dto).await()
-            id
+            if(dto.id.isAssigned()) {
+                val ref = collection.document(dto.id.value).set(dto).await()
+                DocumentId(ref.id)
+            } else {
+                val ref = collection.add(dto).await()
+                DocumentId(ref.id)
+            }
         }
     }
 

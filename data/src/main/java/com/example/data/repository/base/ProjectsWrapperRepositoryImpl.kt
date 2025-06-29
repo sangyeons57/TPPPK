@@ -13,12 +13,12 @@ import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
 import com.google.firebase.firestore.Source
 
 class ProjectsWrapperRepositoryImpl @Inject constructor(
     private val projectsWrapperRemoteDataSource: ProjectsWrapperRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: ProjectsWrapperRepositoryFactoryContext
 ) : DefaultRepositoryImpl(projectsWrapperRemoteDataSource, factoryContext.collectionPath), ProjectsWrapperRepository {
 
     override fun observeAll(): Flow<CustomResult<List<ProjectsWrapper>, Exception>> {
@@ -37,16 +37,11 @@ class ProjectsWrapperRepositoryImpl @Inject constructor(
         if (entity !is ProjectsWrapper)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type ProjectsWrapper"))
 
-        return if (entity.id.isAssigned()) {
-            projectsWrapperRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             projectsWrapperRemoteDataSource.create(entity.toDto())
+        } else {
+            projectsWrapperRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
 
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is ProjectsWrapper)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type ProjectsWrapper"))
-        return projectsWrapperRemoteDataSource.create(entity.toDto())
-    }
 }

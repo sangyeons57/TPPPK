@@ -6,7 +6,7 @@ import com.example.domain.repository.DefaultRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.YearMonth
-
+import com.example.domain.repository.factory.context.ScheduleRepositoryFactoryContext
 /**
  * 개인 및 프로젝트 스케줄 관련 데이터 처리를 위한 인터페이스입니다.
  */
@@ -14,6 +14,8 @@ import com.example.domain.model.vo.DocumentId // Ensure DocumentId is imported
 import com.example.domain.model.vo.UserId
 
 interface ScheduleRepository : DefaultRepository {
+    override val factoryContext: ScheduleRepositoryFactoryContext
+
     suspend fun findByDateSummaryForMonth(userId: UserId, yearMonth: YearMonth): CustomResult<Set<LocalDate>, Exception>
 
     /**

@@ -19,8 +19,8 @@ class Role private constructor(
     initialIsDefault: RoleIsDefault,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     // Immutable properties
@@ -66,6 +66,8 @@ class Role private constructor(
         const val COLLECTION_NAME = "roles"
         const val KEY_NAME = "name"
         const val KEY_IS_DEFAULT = "isDefault"
+
+        val PROJECT_ROLE_OWNER = "OWNER"
         /**
          * Factory method to create a new Role.
          * This method encapsulates the creation logic and fires a domain event.
@@ -78,8 +80,21 @@ class Role private constructor(
                 id = DocumentId.EMPTY,
                 initialName = name,
                 initialIsDefault = isDefault,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
+                isNew = true
+            )
+            return role
+        }
+
+        fun createOwner(
+        ) : Role {
+            val role = Role(
+                id = DocumentId(PROJECT_ROLE_OWNER),
+                initialName = Name(PROJECT_ROLE_OWNER),
+                initialIsDefault = RoleIsDefault.NON_DEFAULT,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true
             )
             return role
@@ -100,8 +115,8 @@ class Role private constructor(
                 id = id,
                 initialName = name,
                 initialIsDefault = isDefault,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false
             )
         }

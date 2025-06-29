@@ -19,8 +19,8 @@ class ProjectChannel private constructor(
     initialChannelType: ProjectChannelType,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     var channelType: ProjectChannelType = initialChannelType
@@ -90,8 +90,8 @@ class ProjectChannel private constructor(
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true
             )
             return channel
@@ -113,8 +113,8 @@ class ProjectChannel private constructor(
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false
             )
         }

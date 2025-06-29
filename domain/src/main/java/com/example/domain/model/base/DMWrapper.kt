@@ -19,8 +19,8 @@ class DMWrapper private constructor(
     initialLastMessagePreview: DMChannelLastMessagePreview?,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     override fun getCurrentStateMap(): Map<String, Any?> {
@@ -67,8 +67,8 @@ class DMWrapper private constructor(
                 initialOtherUserName = otherUserName,
                 initialOtherUserImageUrl = null,
                 initialLastMessagePreview = null,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
             )
             return dmWrapper
@@ -89,8 +89,8 @@ class DMWrapper private constructor(
                 initialOtherUserName = otherUserName,
                 initialOtherUserImageUrl = otherUserImageUrl,
                 initialLastMessagePreview = lastMessagePreview,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false,
             )
             return dmWrapper

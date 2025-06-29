@@ -60,7 +60,7 @@ fun ProjectsWrapper.toDto(): ProjectsWrapperDTO {
         order = order.value,
         projectName = projectName.value,
         projectImageUrl = projectImageUrl?.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

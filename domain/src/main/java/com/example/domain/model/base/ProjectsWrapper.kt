@@ -7,6 +7,7 @@ import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.project.ProjectName
 import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
 
 class ProjectsWrapper(
     val initialOrder: ProjectWrapperOrder,
@@ -14,8 +15,8 @@ class ProjectsWrapper(
     val initialProjectImageUrl: ImageUrl?,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     var order: ProjectWrapperOrder = initialOrder
@@ -46,8 +47,8 @@ class ProjectsWrapper(
                 initialOrder = ProjectWrapperOrder.CREATE,
                 initialProjectName = projectName,
                 initialProjectImageUrl = null,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = true
             )
@@ -66,8 +67,8 @@ class ProjectsWrapper(
                 initialOrder = order,
                 initialProjectName = projectName,
                 initialProjectImageUrl = projectImageUrl,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = false
             )

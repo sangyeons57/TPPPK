@@ -61,7 +61,7 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
         channelName = channelName.value,
         channelType = channelType,
         order = order.value, // Added order mapping
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

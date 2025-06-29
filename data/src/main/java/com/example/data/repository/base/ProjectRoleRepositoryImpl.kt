@@ -8,13 +8,13 @@ import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Role
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
 import com.example.domain.repository.base.ProjectRoleRepository
+import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
 import javax.inject.Inject
 
 class ProjectRoleRepositoryImpl @Inject constructor(
     private val roleRemoteDataSource: RoleRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: ProjectRoleRepositoryFactoryContext
     // private val roleMapper: RoleMapper // 개별 매퍼 사용시
 ) : DefaultRepositoryImpl(roleRemoteDataSource, factoryContext.collectionPath), ProjectRoleRepository {
 
@@ -29,16 +29,10 @@ class ProjectRoleRepositoryImpl @Inject constructor(
         if (entity !is Role)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Role"))
 
-        return if (entity.id.isAssigned()) {
-            roleRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             roleRemoteDataSource.create(entity.toDto())
+        } else {
+            roleRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
-    }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Role)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Role"))
-        return roleRemoteDataSource.create(entity.toDto())
     }
 }

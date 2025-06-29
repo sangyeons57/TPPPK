@@ -25,8 +25,8 @@ class Friend private constructor(
     initialStatus: FriendStatus,
     override val id :DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 
 ) : AggregateRoot() {
 
@@ -136,8 +136,8 @@ class Friend private constructor(
                 initialStatus = FriendStatus.REQUESTED, // Current user sent the request
                 initialRequestedAt = requestedAt,
                 initialAcceptedAt = null,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = true
             )
@@ -158,8 +158,8 @@ class Friend private constructor(
                 initialStatus = FriendStatus.PENDING, // Current user received the request, it's pending their action
                 initialRequestedAt = requestedAt,
                 initialAcceptedAt = null,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = true
             )
@@ -184,8 +184,8 @@ class Friend private constructor(
                 initialStatus = status,
                 initialRequestedAt = requestedAt,
                 initialAcceptedAt = acceptedAt,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = false
             )

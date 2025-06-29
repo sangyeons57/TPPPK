@@ -11,6 +11,7 @@ import com.example.domain.model.base.DMChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.DefaultRepositoryFactoryContext
 import com.example.domain.repository.base.DMChannelRepository
+import com.example.domain.repository.factory.context.DMChannelRepositoryFactoryContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -20,7 +21,7 @@ import javax.inject.Inject
 class DMChannelRepositoryImpl @Inject constructor(
     private val dmChannelRemoteDataSource: DMChannelRemoteDataSource,
     private val authRemoteDataSource: AuthRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: DMChannelRepositoryFactoryContext
 ) : DefaultRepositoryImpl(dmChannelRemoteDataSource, factoryContext.collectionPath), DMChannelRepository {
 
 
@@ -80,17 +81,10 @@ class DMChannelRepositoryImpl @Inject constructor(
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is DMChannel)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMChannel"))
-        if (entity.id.isAssigned()) {
-            return dmChannelRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        if (entity.isNew) {
             return dmChannelRemoteDataSource.create(entity.toDto())
+        } else {
+            return dmChannelRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
-    }
-
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is DMChannel)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMChannel"))
-        return dmChannelRemoteDataSource.create(entity.toDto())
     }
 }

@@ -11,8 +11,8 @@ class Member private constructor(
     initialRoleIds: List<DocumentId>,
     override val id: DocumentId,
     override var isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     // Immutable properties
@@ -56,31 +56,34 @@ class Member private constructor(
     companion object {
         const val COLLECTION_NAME = "members"
         const val KEY_ROLE_ID = "roleIds" // List<String>
+
+
         /**
          * Factory method for a new member joining.
          */
         fun create(
-            memberId: UserId,
+            id: DocumentId,
             roleIds: List<DocumentId>
         ): Member {
 
             val member = Member(
+                id = id,
                 initialRoleIds = roleIds,
-                createdAt = null,
-                updatedAt = null,
-                id = DocumentId.from(memberId),
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true
             )
             return member
         }
+        fun create(
+            roleIds: List<DocumentId>
+        ): Member {
 
-        private val PROJECT_OWNER_MEMBER = DocumentId("OWNER")
-        fun createOwnerMember() : Member {
             val member = Member(
-                initialRoleIds = emptyList(),
-                createdAt = null,
-                updatedAt = null,
-                id = PROJECT_OWNER_MEMBER,
+                id = DocumentId.EMPTY,
+                initialRoleIds = roleIds,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true
             )
             return member
@@ -97,8 +100,8 @@ class Member private constructor(
         ): Member {
             return Member(
                 initialRoleIds = roleIds,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = false
             )

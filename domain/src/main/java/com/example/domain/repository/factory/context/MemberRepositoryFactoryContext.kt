@@ -11,7 +11,7 @@ class MemberRepositoryFactoryContext(
 ) : DefaultRepositoryFactoryContext {
 
     fun changeCollectionPath(projectId: String) : MemberRepositoryFactoryContext {
-        this.collectionPath = CollectionPath("${Project.COLLECTION_NAME}/$projectId/${Member.COLLECTION_NAME}")
+        this.collectionPath = CollectionPath.projectMembers(projectId)
         return this
     }
 

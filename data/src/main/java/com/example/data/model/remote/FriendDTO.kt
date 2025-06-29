@@ -74,7 +74,7 @@ fun Friend.toDto(): FriendDTO {
         acceptedAt = acceptedAt?.let{Date.from(it)},
         name = name.value,
         profileImageUrl = profileImageUrl?.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

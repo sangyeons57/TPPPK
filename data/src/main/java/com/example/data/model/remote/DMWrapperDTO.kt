@@ -68,8 +68,6 @@ fun DMWrapper.toDto(): DMWrapperDTO {
         otherUserId = otherUserId.value,
         otherUserName = otherUserName.value,
         otherUserImageUrl = otherUserImageUrl?.value,
-        lastMessagePreview = lastMessagePreview?.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        lastMessagePreview = lastMessagePreview?.value, // timestamps omitted for ServerTimestamp
     )
 }

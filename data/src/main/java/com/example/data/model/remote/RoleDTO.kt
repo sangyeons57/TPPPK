@@ -55,7 +55,7 @@ fun Role.toDto(): RoleDTO {
         id = this.id.value,
         name = this.name.value,
         isDefault = this.isDefault.value,
-        createdAt = Date.from(this.createdAt),
-        updatedAt = Date.from(this.updatedAt)
+        createdAt = null, // Let Firestore set server timestamp
+        updatedAt = null
     )
 }

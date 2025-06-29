@@ -67,7 +67,7 @@ fun MessageAttachment.toDto(): MessageAttachmentDTO {
         attachmentUrl = attachmentUrl.value,
         fileName = fileName?.value,
         fileSize = fileSize?.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt),
+        createdAt = null,
+        updatedAt = null,
     )
 }

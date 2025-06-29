@@ -32,19 +32,12 @@ class ScheduleRepositoryImpl @Inject constructor(
         if (entity !is Schedule)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
 
-        return if (entity.id.isAssigned()) {
-            scheduleRemoteDataSource.update(entity.id,entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             scheduleRemoteDataSource.create(entity.toDto())
+        } else {
+            scheduleRemoteDataSource.update(entity.id,entity.getChangedFields())
         }
     }
-    
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Schedule)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Schedule"))
-        return scheduleRemoteDataSource.create(entity.toDto())
-    }
-
 
     override suspend fun findByDateSummaryForMonth(
         userId: UserId,

@@ -18,8 +18,8 @@ class Project private constructor(
     initialOwnerId: OwnerId,
     override val isNew: Boolean,
     override val id: DocumentId,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     // Immutable properties
@@ -80,8 +80,8 @@ class Project private constructor(
                 initialName = name,
                 initialImageUrl = imageUrl,
                 initialOwnerId = ownerId,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
                 id = DocumentId.EMPTY
             )
@@ -103,8 +103,8 @@ class Project private constructor(
                 initialName = name,
                 initialImageUrl = imageUrl,
                 initialOwnerId = ownerId,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = false,
             )

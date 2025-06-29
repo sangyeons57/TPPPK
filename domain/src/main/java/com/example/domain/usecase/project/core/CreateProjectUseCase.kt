@@ -1,5 +1,6 @@
 package com.example.domain.usecase.project.core
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository // Added
@@ -11,6 +12,7 @@ import com.example.core_common.result.resultTry
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
+import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
@@ -18,7 +20,10 @@ import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.model.vo.category.IsCategoryFlag
 import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.repository.Repository
 import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.base.ProjectRoleRepository
+import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
 import javax.inject.Inject
 
 /**
@@ -40,7 +45,8 @@ class CreateProjectUseCase @Inject constructor(
     private val projectsWrapperRepository: ProjectsWrapperRepository,
     private val authRepository: AuthRepository,
     private val categoryRepository: CategoryRepository, // Added
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
+    private val roleRepository: ProjectRoleRepository
 ) {
     /**
      * 새 프로젝트를 생성하고 초기 설정을 수행합니다.
@@ -88,8 +94,18 @@ class CreateProjectUseCase @Inject constructor(
                 }
 
                 // 생성된 프로젝트에 현재 사용자를 참여시킵니다.
+                Log.d("CreateProjectUseCase", "createdProjectId: ${memberRepository.factoryContext.collectionPath}")
+                roleRepository.factoryContext.changeCollectionPath(createdProjectId.value)
+                val roleId = when (val roleResult = roleRepository.save(Role.createOwner())){
+                    is CustomResult.Success -> roleResult.data
+                    is CustomResult.Failure -> return CustomResult.Failure(roleResult.error)
+                    is CustomResult.Initial -> return CustomResult.Initial
+                    is CustomResult.Loading -> return CustomResult.Loading
+                    is CustomResult.Progress -> return CustomResult.Progress(roleResult.progress)
+                }
+
                 memberRepository.factoryContext.changeCollectionPath(createdProjectId.value)
-                val owner : Member = Member.createOwnerMember()
+                val owner : Member = Member.create(listOf(roleId))
                 when (val memberResult = memberRepository.save(owner)) {
                     is CustomResult.Success -> {
                         // Member created successfully: $memberResult
@@ -100,11 +116,12 @@ class CreateProjectUseCase @Inject constructor(
                     is CustomResult.Progress -> return CustomResult.Progress(memberResult.progress)
                 }
 
+                projectsWrapperRepository.factoryContext.changeCollectionPath(session.data.userId)
                 val wrapper = ProjectsWrapper.create(
                     id = createdProjectId,
                     projectName = ProjectName(trimmedName),
                 )
-                when (val wrapperResult = projectsWrapperRepository.create(createdProjectId, wrapper)){
+                when (val wrapperResult = projectsWrapperRepository.save(wrapper)){
                     is CustomResult.Success -> {
                         // ProjectsWrapper created successfully: $wrapperResult
                     }

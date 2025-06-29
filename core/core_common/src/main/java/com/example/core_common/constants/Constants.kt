@@ -24,11 +24,6 @@ object Constants {
      */
     const val MAX_CHANNELS_PER_CATEGORY = 100
 
-    /**
-     * Represents the role of an owner, typically for project membership or resource ownership.
-     */
-    const val OWNER = "OWNER"
-
     const val REGION = "asia-northeast3"
 
     object Storage {

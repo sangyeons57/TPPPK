@@ -14,7 +14,7 @@ import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
 import com.example.domain.repository.base.ProjectRepository
 
 import com.google.firebase.Timestamp
@@ -30,7 +30,7 @@ class ProjectRepositoryImpl @Inject constructor(
     private val projectRemoteDataSource: ProjectRemoteDataSource,
     private val categoryRemoteDataSource: CategoryRemoteDataSource, // ProjectStructure 관리용
     private val memberRemoteDataSource: MemberRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext, // 멤버 관리용
+    override val factoryContext: ProjectRepositoryFactoryContext, // 멤버 관리용
 ) : DefaultRepositoryImpl(projectRemoteDataSource, factoryContext.collectionPath), ProjectRepository {
 
 
@@ -59,16 +59,11 @@ class ProjectRepositoryImpl @Inject constructor(
         if (entity !is Project)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Project"))
 
-        return if (entity.id.isAssigned()) {
-            projectRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             projectRemoteDataSource.create(entity.toDto())
+        } else {
+            projectRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
 
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Project)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Project"))
-        return projectRemoteDataSource.create(entity.toDto())
-    }
 }

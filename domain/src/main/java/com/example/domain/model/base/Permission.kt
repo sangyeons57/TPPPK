@@ -10,12 +10,13 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.permission.PermissionDescription
 import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
 
 class Permission private constructor(
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     fun getPermissionRole() : RolePermission {
@@ -37,8 +38,8 @@ class Permission private constructor(
         fun create(id: RolePermission): Permission {
             val permission = Permission(
                 id = DocumentId.from(id),
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true
             )
             return permission
@@ -54,8 +55,8 @@ class Permission private constructor(
         ): Permission {
             return Permission(
                 id = DocumentId.from(id),
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false
             )
         }

@@ -14,7 +14,7 @@ import com.example.domain.model.data.project.RolePermission // Import RolePermis
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.permission.PermissionDescription
-import com.example.domain.repository.DefaultRepositoryFactoryContext
+import com.example.domain.repository.factory.context.PermissionRepositoryFactoryContext
 import com.example.domain.repository.base.PermissionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -24,7 +24,7 @@ import javax.inject.Inject
 
 class PermissionRepositoryImpl @Inject constructor(
     private val permissionRemoteDataSource: PermissionRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext, // Keep if getPermissionById still needs it
+    override val factoryContext: PermissionRepositoryFactoryContext, // Keep if getPermissionById still needs it
     // TODO: 필요한 Mapper 주입
 ) : DefaultRepositoryImpl(permissionRemoteDataSource, factoryContext.collectionPath), PermissionRepository {
 
@@ -40,17 +40,11 @@ class PermissionRepositoryImpl @Inject constructor(
         if (entity !is Permission)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Permission"))
 
-        return if (entity.id.isAssigned()) {
-            permissionRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             permissionRemoteDataSource.create(entity.toDto())
+        } else {
+            permissionRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
-    }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Permission)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Permission"))
-        return permissionRemoteDataSource.create(entity.toDto())
     }
 
 }

@@ -49,7 +49,7 @@ fun Member.toDto(): MemberDTO {
     return MemberDTO(
         id = id.value,
         roleIds = roleIds.map { it.value },
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

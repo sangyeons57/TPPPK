@@ -38,8 +38,8 @@ class User private constructor(
     initialAccountStatus: UserAccountStatus,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
 
@@ -288,8 +288,8 @@ class User private constructor(
                 initialFcmToken = initialFcmToken,
                 initialAccountStatus = UserAccountStatus.ACTIVE,
                 isNew = true,
-                createdAt = null,
-                updatedAt = null // Default to active
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant() // Default to active
             )
             user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
@@ -324,8 +324,8 @@ class User private constructor(
                 initialFcmToken = fcmToken,
                 initialAccountStatus = accountStatus,
                 isNew = false,
-                createdAt = createdAt,
-                updatedAt = updatedAt
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant()
             )
             user.pushDomainEvent(UserCreatedEvent(id.value))
             return user

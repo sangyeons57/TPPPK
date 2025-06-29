@@ -52,8 +52,6 @@ data class DMChannelDTO(
 fun DMChannel.toDto(): DMChannelDTO {
     return DMChannelDTO(
         id = id.value,
-        participants = participants.map { it.value },
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        participants = participants.map { it.value } // createdAt/updatedAt omitted for ServerTimestamp
     )
 }

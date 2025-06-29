@@ -9,7 +9,6 @@ import com.example.domain.model.AggregateRoot
 // import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSource // 필요시
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
 import com.example.domain.repository.base.MemberRepository
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
@@ -39,21 +38,10 @@ class MemberRepositoryImpl @Inject constructor(
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Member)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Member"))
-        return if (entity.id.isAssigned()) {
-            memberRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             memberRemoteDataSource.create(entity.toDto())
+        } else {
+            memberRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
-
-    override suspend fun create(
-        id: DocumentId,
-        entity: AggregateRoot
-    ): CustomResult<DocumentId, Exception> {
-        if (entity !is Member)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Member"))
-
-        return memberRemoteDataSource.create(id, entity.toDto())
-    }
-
 }

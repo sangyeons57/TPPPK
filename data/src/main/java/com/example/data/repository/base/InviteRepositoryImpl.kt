@@ -9,14 +9,14 @@ import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.InviteStatus
 import com.example.domain.model.base.Invite
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
+import com.example.domain.repository.factory.context.InviteRepositoryFactoryContext
 import com.example.domain.repository.base.InviteRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class InviteRepositoryImpl @Inject constructor(
     private val inviteRemoteDataSource: InviteRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: InviteRepositoryFactoryContext
 ) : DefaultRepositoryImpl(inviteRemoteDataSource, factoryContext.collectionPath), InviteRepository {
     override fun getActiveProjectInvitesStream(projectId: String): Flow<CustomResult<List<Invite>, Exception>> {
         TODO("Not yet implemented")
@@ -26,17 +26,10 @@ class InviteRepositoryImpl @Inject constructor(
         if (entity !is Invite)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Invite"))
 
-        return if (entity.id.isAssigned()) {
-            inviteRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             inviteRemoteDataSource.create(entity.toDto())
+        } else {
+            inviteRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Invite)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Invite"))
-        return inviteRemoteDataSource.create(entity.toDto())
-    }
-
 }

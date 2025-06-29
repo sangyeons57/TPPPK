@@ -67,8 +67,8 @@ fun Message.toDto(): MessageDTO {
         id = id.value,
         senderId = senderId.value,
         content = content.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt),
+        createdAt = null,
+        updatedAt = null,
         replyToMessageId = replyToMessageId?.value,
         isDeleted = isDeleted.value
     )

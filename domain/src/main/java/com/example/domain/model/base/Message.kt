@@ -19,8 +19,8 @@ class Message private constructor(
     initialIsDeleted: MessageIsDeleted,
     override val id: DocumentId,
     override var isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     val senderId: UserId = initialSenderId
@@ -80,8 +80,8 @@ class Message private constructor(
                 initialSenderId = senderId,
                 initialContent = content,
                 initialReplyToMessageId = replyToMessageId,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 initialIsDeleted = MessageIsDeleted.FALSE,
                 id = id,
                 isNew = true
@@ -105,8 +105,8 @@ class Message private constructor(
                 initialSenderId = senderId,
                 initialContent = content,
                 initialReplyToMessageId = replyToMessageId,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 initialIsDeleted = isDeleted,
                 id = id,
                 isNew = false

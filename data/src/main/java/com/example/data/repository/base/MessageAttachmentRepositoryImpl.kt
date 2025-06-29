@@ -8,7 +8,7 @@ import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
+import com.example.domain.repository.factory.context.MessageAttachmentRepositoryFactoryContext
 import com.example.domain.repository.base.MessageAttachmentRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -17,23 +17,17 @@ import javax.inject.Inject
 
 class MessageAttachmentRepositoryImpl @Inject constructor(
     private val messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: MessageAttachmentRepositoryFactoryContext
     // private val localMediaDataSource: LocalMediaDataSource, // 파일 업로드 전처리 등에 사용 가능
     // TODO: 필요한 Mapper 주입
 ) : DefaultRepositoryImpl(messageAttachmentRemoteDataSource, factoryContext.collectionPath), MessageAttachmentRepository {
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is MessageAttachment)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type MessageAttachment"))
-        return if (entity.id.isAssigned()) {
-            messageAttachmentRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             messageAttachmentRemoteDataSource.create(entity.toDto())
+        } else {
+            messageAttachmentRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
-    }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is MessageAttachment)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type MessageAttachment"))
-        return messageAttachmentRemoteDataSource.create(entity.toDto())
     }
 }

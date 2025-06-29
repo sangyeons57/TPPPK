@@ -9,6 +9,7 @@ import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
 import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
 import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
 
 class MessageAttachment private constructor(
     initialAttachmentType: MessageAttachmentType, // e.g., IMAGE, FILE, VIDEO
@@ -17,8 +18,8 @@ class MessageAttachment private constructor(
     initialFileSize: MessageAttachmentFileSize?,
     override val id: DocumentId,
     override val isNew: Boolean,
-    override val createdAt: Instant?,
-    override val updatedAt: Instant?,
+    override val createdAt: Instant,
+    override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     val attachmentType: MessageAttachmentType = initialAttachmentType
@@ -62,8 +63,8 @@ class MessageAttachment private constructor(
             val attachment = MessageAttachment(
                 initialAttachmentType = attachmentType,
                 initialAttachmentUrl = attachmentUrl,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = DateTimeUtil.nowInstant(),
+                updatedAt = DateTimeUtil.nowInstant(),
                 initialFileName = fileName,
                 initialFileSize = fileSize,
                 id = id,
@@ -87,8 +88,8 @@ class MessageAttachment private constructor(
             return MessageAttachment(
                 initialAttachmentType = attachmentType,
                 initialAttachmentUrl = attachmentUrl,
-                createdAt = createdAt,
-                updatedAt = updatedAt,
+                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
+                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 initialFileName = fileName,
                 initialFileSize = fileSize,
                 id = id,

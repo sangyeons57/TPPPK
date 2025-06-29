@@ -35,10 +35,10 @@ class AddProjectMemberUseCaseImpl @Inject constructor(
         initialRoleIds: List<DocumentId>
     ): CustomResult<Unit, Exception> {
         val member = Member.create(
-            memberId = userId,
+            id = DocumentId.from(userId),
             roleIds = initialRoleIds
         )
-        return when (val createResult = projectMemberRepository.create(member.id, member)) {
+        return when (val createResult = projectMemberRepository.save(member)) {
             is CustomResult.Success -> CustomResult.Success(Unit)
             is CustomResult.Failure -> CustomResult.Failure(createResult.error)
             is CustomResult.Initial -> CustomResult.Initial

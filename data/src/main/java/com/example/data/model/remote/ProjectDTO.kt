@@ -64,7 +64,7 @@ fun Project.toDto(): ProjectDTO {
         name = name.value,
         imageUrl = imageUrl?.value,
         ownerId = ownerId.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

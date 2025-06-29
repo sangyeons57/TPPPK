@@ -56,7 +56,7 @@ fun Reaction.toDto(): ReactionDTO {
         id = id.value,
         userId = userId.value,
         emoji = emoji.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

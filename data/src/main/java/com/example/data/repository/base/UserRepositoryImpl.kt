@@ -24,20 +24,11 @@ class UserRepositoryImpl @Inject constructor(
         if (entity !is User)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
 
-        return if(!entity.id.isAssigned()) {
-            // New entity without assigned ID – create and let Firestore assign one
+        return if(entity.isNew) {
             userRemoteDataSource.create(entity.toDto())
         } else {
-            // Existing entity – perform update only on changed fields
             userRemoteDataSource.update(entity.id, entity.getChangedFields())
-            CustomResult.Success(entity.id)
         }
-    }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is User)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
-        return userRemoteDataSource.create(entity.toDto())
     }
 
     override fun observeByName(name: UserName): Flow<CustomResult<User, Exception>> {

@@ -4,6 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.DefaultRepository
+import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
  */
 interface UserRepository : DefaultRepository {
 
+    override val factoryContext: UserRepositoryFactoryContext
     /**
      * 주어진 이름(닉네임)과 정확히 일치하는 사용자 1명을 스트림으로 반환합니다.
      */

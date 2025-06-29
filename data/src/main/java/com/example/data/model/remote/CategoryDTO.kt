@@ -69,8 +69,8 @@ fun Category.toDto(): CategoryDTO {
         name = name.value,
         order = order.value,
         createdBy = createdBy.value,
-        createdAt = Date.from(createdAt),
-        updatedAt = Date.from(updatedAt),
+        createdAt = null,
+        updatedAt = null,
         isCategory = isCategory.value
     )
 }

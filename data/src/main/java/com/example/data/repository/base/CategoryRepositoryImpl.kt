@@ -44,16 +44,10 @@ class CategoryRepositoryImpl @Inject constructor(
         if (entity !is Category)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Category"))
 
-        return if (entity.id.isAssigned()) {
-            categoryRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             categoryRemoteDataSource.create(entity.toDto())
+        } else {
+            categoryRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
-    }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Category)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Category"))
-        return categoryRemoteDataSource.create(entity.toDto())
     }
 }

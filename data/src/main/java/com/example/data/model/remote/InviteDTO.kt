@@ -70,8 +70,8 @@ fun Invite.toDto(): InviteDTO {
         inviteCode = inviteCode.value,
         status = status,
         createdBy = createdBy.value,
-        createdAt = Date.from(createdAt),
         expiresAt = expiresAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
-        updatedAt = Date.from(updatedAt)
+        createdAt = null,
+        updatedAt = null
     )
 }

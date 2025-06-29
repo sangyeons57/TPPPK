@@ -14,7 +14,7 @@ import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.DefaultRepositoryFactoryContext
+import com.example.domain.repository.factory.context.FriendRepositoryFactoryContext
 import com.example.domain.repository.base.FriendRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -27,7 +27,7 @@ import javax.inject.Inject
  */
 class FriendRepositoryImpl @Inject constructor(
     private val friendRemoteDataSource: FriendRemoteDataSource,
-    override val factoryContext: DefaultRepositoryFactoryContext
+    override val factoryContext: FriendRepositoryFactoryContext
 ) : DefaultRepositoryImpl(friendRemoteDataSource, factoryContext.collectionPath), FriendRepository {
 
     /**
@@ -56,17 +56,10 @@ class FriendRepositoryImpl @Inject constructor(
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Friend)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Friend"))
-        return if (entity.id.isAssigned()) {
-            friendRemoteDataSource.update(entity.id, entity.getChangedFields())
-        } else {
+        return if (entity.isNew) {
             friendRemoteDataSource.create(entity.toDto())
+        } else {
+            friendRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
-
-    override suspend fun create(id: DocumentId, entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Friend)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Friend"))
-        return friendRemoteDataSource.create(entity.toDto())
-    }
-
 }

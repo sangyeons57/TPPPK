@@ -185,6 +185,28 @@ object DateTimeUtil {
     }
 
     /**
+     * 현재 시간을 Instant로 가져옵니다.
+     *
+     * @return 현재 시간의 Instant 객체
+     */
+    fun nowInstant(): Instant {
+        return Instant.now()
+    }
+
+    /**
+     * 현재 시간을 firestore timestamp로 가져옵니다.
+     * 
+     * @return 현재 시간의 firestore timestamp 객체
+     */
+    fun nowFirebaseTimestamp(): Timestamp {
+        return Timestamp.now()
+    }
+
+    fun nowDate(): Date {
+        return Date.from(nowInstant())
+    }
+
+    /**
      * LocalDateTime을 날짜 문자열로 포맷팅합니다.
      * 포맷: "yyyy-MM-dd" (예: "2023-07-15")
      * 
@@ -356,23 +378,6 @@ object DateTimeUtil {
         return toLocalTime(instant, zoneId).toSecondOfDay()
     }
 
-    /**
-     * 현재 시간을 Instant로 가져옵니다.
-     *
-     * @return 현재 시간의 Instant 객체
-     */
-    fun nowInstant(): Instant {
-        return Instant.now()
-    }
-
-    /**
-     * 현재 시간을 firestore timestamp로 가져옵니다.
-     * 
-     * @return 현재 시간의 firestore timestamp 객체
-     */
-    fun nowFirebaseTimestamp(): Timestamp {
-        return Timestamp.now()
-    }
 
     /**
      * Instant를 에포크 밀리초로 변환합니다.

@@ -49,6 +49,7 @@ import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Role
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.role.RoleIsDefault
@@ -259,7 +260,7 @@ private fun EditMemberContentPreview() {
     // as per current Member domain model. This is expected to be fixed in a later step.
     // For now, constructing Member according to its domain model using role IDs.
     val previewMember =
-        Member.create(memberId = UserId("u1"), roleIds = listOf(previewRole1.id, previewRole2.id))
+        Member.create(id = DocumentId.from(UserId("u1")), roleIds = listOf(previewRole1.id, previewRole2.id))
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
@@ -288,7 +289,7 @@ private fun EditMemberContentSavingPreview() {
     // Note: Member constructor and EditMemberContent's usage of memberInfo.userName/profileImageUrl is problematic.
     // Constructing Member according to its domain model using role IDs.
     val previewMember =
-        Member.create(memberId = UserId("u1"), roleIds = listOf(previewRole1.id, previewRole2.id))
+        Member.create(id = DocumentId.from(UserId("u1")), roleIds = listOf(previewRole1.id, previewRole2.id))
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
