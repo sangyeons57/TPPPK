@@ -26,7 +26,6 @@ import com.example.domain.usecase.user.UpdateUserMemoUseCaseImpl
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCaseImpl
 import com.example.domain.usecase.user.UploadProfileImageUseCase
-import com.example.domain.usecase.user.UpdateUserProfileUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -107,10 +106,7 @@ class UserUseCaseProvider @Inject constructor(
                 functionsRepository = functionsRepository
             ),
 
-            updateUserProfileUseCase = UpdateUserProfileUseCase(
-                functionsRepository = functionsRepository
-            ),
-            
+
             // 공통 Repository
             authRepository = authRepository,
             userRepository = userRepository,
@@ -135,8 +131,7 @@ data class UserUseCases(
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
     val removeProfileImageUseCase: RemoveProfileImageUseCase,
     val uploadProfileImageUseCase: UploadProfileImageUseCase,
-    val updateUserProfileUseCase: UpdateUserProfileUseCase,
-    
+
     // 공통 Repository
     val authRepository: AuthRepository,
     val userRepository: UserRepository

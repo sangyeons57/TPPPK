@@ -215,7 +215,7 @@ class EditProfileViewModel @Inject constructor(
 
                 if (hasNameChanged) {
                     val nameResult = withContext(dispatcherProvider.io) {
-                        userUseCases.updateUserProfileUseCase(name = currentUser.name.value)
+                        userUseCases.updateNameUseCase( currentUser.name)
                     }
                     when (nameResult) {
                         is CustomResult.Success -> {

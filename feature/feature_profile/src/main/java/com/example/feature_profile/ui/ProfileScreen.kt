@@ -69,6 +69,7 @@ import coil.compose.AsyncImage
 import com.example.core_navigation.core.AppSettingsRoute
 import com.example.core_navigation.core.LoginRoute
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.UserStatus
 import com.example.feature_profile.dialog.ChangeStatusDialog
@@ -226,8 +227,8 @@ fun ProfileContent(
 
         // 프로필 이미지 영역
         Box(contentAlignment = Alignment.BottomEnd) {
-            AsyncImage(
-                model = profile?.profileImageUrl,
+            UserProfileImage(
+                profileImageUrl = profile?.profileImageUrl,
                 contentDescription = "프로필 이미지",
                 modifier = Modifier
                     .size(120.dp)
@@ -235,7 +236,6 @@ fun ProfileContent(
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
             )
-
         }
 
         Spacer(modifier = Modifier.height(16.dp))

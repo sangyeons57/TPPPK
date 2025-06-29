@@ -3,6 +3,15 @@
  * Exports all callable functions using the new modular architecture
  */
 
+import * as admin from "firebase-admin";
+import { DATABASE_ID } from "./constants";
+
+if (!admin.apps.length) {
+  admin.initializeApp();
+  // Set Firestore to use the custom database ID (e.g., "default" without parentheses)
+  admin.firestore().settings({ databaseId: DATABASE_ID });
+}
+
 // System functions
 export {helloWorld} from "./functions/system/helloWorldFunction";
 

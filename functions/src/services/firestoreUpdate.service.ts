@@ -5,6 +5,7 @@
 
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import { COLLECTIONS } from "../constants";
 
 export class FirestoreUpdateService {
   private firestore = admin.firestore();
@@ -28,8 +29,21 @@ export class FirestoreUpdateService {
       const batch = this.firestore.batch();
       let updateCount = 0;
 
-      // 1. 사용자 자신의 문서 업데이트
-      const userRef = this.firestore.collection("users").doc(userId);
+      // 1. 사용자 자신의 문서 존재 여부 확인
+      const userRef = this.firestore.collection(COLLECTIONS.USERS).doc(userId);
+      const userDoc = await userRef.get();
+
+      logger.info("userDoc", {userDoc});
+      if (!userDoc.exists) {
+        logger.warn("User document not found. Skipping profile image update", {
+          requestId,
+          userId,
+        });
+        // 사용자 문서가 없으면 이미지 참조를 업데이트할 수 없으므로 조용히 종료한다.
+        return;
+      }
+
+      // 사용자 문서 업데이트
       batch.update(userRef, {
         profileImageUrl: newImageUrl,
         updatedAt: admin.firestore.Timestamp.now(),
@@ -38,6 +52,7 @@ export class FirestoreUpdateService {
 
       logger.info("Added user document to batch", {requestId, userId});
 
+      /**
       // 2. 사용자가 참여한 프로젝트의 멤버 정보 업데이트
       const memberQuery = await this.firestore.collectionGroup("members")
         .where("userId", "==", userId)
@@ -118,6 +133,7 @@ export class FirestoreUpdateService {
         requestId,
         dmCount: dmQuery.docs.length,
       });
+       */
 
       // 6. 배치 실행
       if (updateCount > 0) {

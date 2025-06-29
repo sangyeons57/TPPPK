@@ -63,7 +63,7 @@ export const onUserProfileImageUpload = onObjectFinalized({
       return;
     }
 
-    logger.info("Processing profile image", {
+    logger.debug("Processing profile image", {
       requestId,
       userId,
       originalPath: filePath,
