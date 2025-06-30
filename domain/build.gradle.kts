@@ -49,7 +49,7 @@ dependencies {
     
     // Hilt
     implementation(libs.hilt.android)
-    implementation(libs.google.firebase.auth.ktx)
+    implementation(libs.firebase.auth.ktx)
     ksp(libs.hilt.compiler)
     
     // 테스트 라이브러리
