@@ -281,8 +281,7 @@ class HomeViewModel @Inject constructor(
         projectsStreamJob?.cancel()
         projectsStreamJob = viewModelScope.launch {
             if (::coreProjectUseCases.isInitialized) {
-                coreProjectUseCases.getUserParticipatingProjectsUseCase()
-                .collectLatest { result ->
+                coreProjectUseCases.getUserParticipatingProjectsUseCase().collectLatest { result ->
                     when (result) {
                         is CustomResult.Loading -> {
                             _uiState.update { it.copy(isLoading = true, errorMessage = "default") }

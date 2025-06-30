@@ -2,9 +2,9 @@ package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.model.vo.Token
 import com.example.domain.repository.base.AuthRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -50,7 +50,6 @@ class FakeAuthRepository : AuthRepository {
         val newUserId = "new_user_id"
         userSession = UserSession(
             userId = UserId(newUserId),
-            token = Token("new_token"),
             email = UserEmail(email)
         )
         return CustomResult.Success(newUserId)
@@ -97,13 +96,17 @@ class FakeAuthRepository : AuthRepository {
         return "Password reset error: ${exception.message}"
     }
 
-    override suspend fun getCurrentUserSession(): CustomResult<UserSession, Exception> {
+    override fun getCurrentUserSession(): CustomResult<UserSession, Exception> {
         return userSession?.let {
             CustomResult.Success(it)
         } ?: CustomResult.Failure(Exception("No session"))
     }
 
-    override suspend fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
+    override fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
         return flowOf(getCurrentUserSession())
+    }
+
+    override suspend fun fetchIdToken(forceRefresh: Boolean): CustomResult<Token, Exception> {
+        return CustomResult.Failure(Exception("Not implemented"))
     }
 }

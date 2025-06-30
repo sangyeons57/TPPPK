@@ -2,6 +2,7 @@ package com.example.data.repository.base
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.CustomResult.Initial.getOrThrow
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
 import com.example.data.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
@@ -211,24 +212,12 @@ class AuthRepositoryImpl @Inject constructor(
      * 
      * @return 현재 사용자의 세션 정보가 포함된 CustomResult 또는 null
      */
-    override suspend fun getCurrentUserSession(): CustomResult<UserSession, Exception> {
+    override fun getCurrentUserSession(): CustomResult<UserSession, Exception> {
         return when (val result = authRemoteDataSource.getCurrentUser()) {
             is CustomResult.Success -> {
                 val firebaseUser = result.data
-                // 로그인된 상태 - 토큰 가져오기 (5초 타임아웃 적용)
-                val tokenResult = try {
-                    withTimeoutOrNull(5000) {
-                        firebaseUser.getIdToken(false).await()
-                    }
-                } catch (e: Exception) {
-                    // 토큰 가져오기 실패 시 빈 토큰으로 처리
-                    Log.w("AuthRepositoryImpl", "Failed to get token: ${e.message}")
-                    null
-                }
-
                 val userSession = UserSession(
                     userId = UserId(firebaseUser.uid),
-                    token = tokenResult?.token?.let { value -> Token(value) },
                     email = firebaseUser.email?.let { value -> UserEmail(value) },
                     displayName = firebaseUser.displayName?.let { value -> UserName.from(value) },
                     photoUrl = firebaseUser.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
@@ -236,12 +225,8 @@ class AuthRepositoryImpl @Inject constructor(
 
                 CustomResult.Success(userSession)
             }
-            is CustomResult.Failure -> {
-                CustomResult.Failure(result.error)
-            }
-            else -> {
-                CustomResult.Failure(Exception("Unknown error occurred during login"))
-            }
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            else -> CustomResult.Failure(Exception("Unknown error occurred during login"))
         }
     }
 
@@ -252,33 +237,14 @@ class AuthRepositoryImpl @Inject constructor(
      *
      * @return 사용자 세션 정보의 Flow
      */
-    override suspend fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
+    override fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
         return authRemoteDataSource.observeAuthState().map { firebaseUser ->
             when (firebaseUser) {
                 is CustomResult.Success -> {
-                    // 로그인 상태 - 토큰 가져오기 (5초 타임아웃 적용)
-                    val tokenResult = try {
-                        withTimeoutOrNull(5000) {
-                            firebaseUser.data.getIdToken(false).await()
-                        }
-                    } catch (e: Exception) {
-                        // 토큰 가져오기 실패 시 빈 토큰으로 처리
-                        Log.w(
-                            "AuthRepositoryImpl",
-                            "Failed to get token in stream: ${e.message}"
-                        )
-                        null
-                    }
-
                     val userSession = UserSession(
                         userId = UserId(firebaseUser.data.uid),
-                        token = tokenResult?.token?.let { value -> Token(value) },
                         email = firebaseUser.data.email?.let { value -> UserEmail(value) },
-                        displayName = firebaseUser.data.displayName?.let { value ->
-                            UserName.from(
-                                value
-                            )
-                        },
+                        displayName = firebaseUser.data.displayName?.let { value -> UserName.from(value) },
                         photoUrl = firebaseUser.data.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                     )
 
@@ -290,6 +256,28 @@ class AuthRepositoryImpl @Inject constructor(
                     return@map CustomResult.Failure(Exception("No user is currently signed in"))
                 }
             }
+        }
+    }
+
+    /**
+     * 신규 구현: ID Token 획득 전용 메서드.
+     */
+    override suspend fun fetchIdToken(forceRefresh: Boolean): CustomResult<Token, Exception> {
+        return when (val firebaseUserResult = authRemoteDataSource.getCurrentUser()) {
+            is CustomResult.Success -> {
+                try {
+                    val tokenResult = firebaseUserResult.data.getIdToken(forceRefresh).await()
+                    if ( tokenResult.token.isNullOrEmpty()) {
+                        CustomResult.Failure(Exception("No token found"))
+                    } else {
+                        CustomResult.Success(Token(tokenResult.token!!))
+                    }
+                } catch (e: Exception) {
+                    CustomResult.Failure(e)
+                }
+            }
+            is CustomResult.Failure -> CustomResult.Failure(firebaseUserResult.error)
+            else -> CustomResult.Failure(Exception("No authenticated user"))
         }
     }
 }

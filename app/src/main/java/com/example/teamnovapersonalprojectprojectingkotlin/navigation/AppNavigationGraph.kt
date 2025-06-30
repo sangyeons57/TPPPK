@@ -254,9 +254,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
             arguments = ProjectSettingsRoute.arguments
         ) { backStackEntry ->
             val args = backStackEntry.extractProjectArguments()
-            ProjectSettingScreen(
-                navigationManger = navigationManger
-            )
+            ProjectSettingScreen()
         }
         
         // 프로젝트 참가 화면

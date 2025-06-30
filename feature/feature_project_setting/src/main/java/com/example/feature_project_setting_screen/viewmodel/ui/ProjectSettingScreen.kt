@@ -1,6 +1,7 @@
 package com.example.feature_project_setting_screen.viewmodel.ui
 
 import android.net.Uri
+import com.example.core_ui.picker.ImagePicker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,13 +52,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.CreateCategoryRoute
-import com.example.core_navigation.core.CreateChannelRoute
-import com.example.core_navigation.core.EditCategoryRoute
-import com.example.core_navigation.core.EditChannelRoute
-import com.example.core_navigation.core.MemberListRoute
-import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.RoleListRoute
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.project.ProjectProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -77,15 +71,22 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectSettingScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
-    viewModel: ProjectSettingViewModel = hiltViewModel(),
-    onImagePickRequest: () -> Unit = {}
+    viewModel: ProjectSettingViewModel = hiltViewModel()
 ) {
-    // 이미지 선택 결과를 처리하는 함수 (외부에서 호출)
-    fun handleImageSelection(uri: Uri?) {
-        viewModel.handleImageSelection(uri)
-    }
+    // ImagePicker 유틸 초기화
+    val imagePicker = remember { ImagePicker() }
+    val launchImagePicker = imagePicker.createImagePicker(
+        callback = object : ImagePicker.ImagePickerCallback {
+            override fun onImageSelected(uri: Uri, mimeType: String?) {
+                viewModel.handleImageSelection(uri)
+            }
+
+            override fun onImageSelectionCancelled() {
+                // 선택 취소 시 특별 처리 필요 없으면 무시
+            }
+        }
+    )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -98,32 +99,8 @@ fun ProjectSettingScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ProjectSettingEvent.NavigateBack -> navigationManger.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is ProjectSettingEvent.RequestImagePick -> onImagePickRequest()
-                is ProjectSettingEvent.NavigateToEditCategory -> navigationManger.navigateTo(
-                    EditCategoryRoute(event.projectId.value, event.categoryId)
-                )
-
-                is ProjectSettingEvent.NavigateToCreateCategory -> navigationManger.navigateTo(
-                    CreateCategoryRoute(event.projectId.value)
-                )
-
-                is ProjectSettingEvent.NavigateToEditChannel -> navigationManger.navigateTo(
-                    EditChannelRoute(event.projectId.value, event.categoryId, event.channelId)
-                )
-
-                is ProjectSettingEvent.NavigateToCreateChannel -> navigationManger.navigateTo(
-                    CreateChannelRoute(event.projectId.value, event.categoryId)
-                )
-
-                is ProjectSettingEvent.NavigateToMemberList -> navigationManger.navigateTo(
-                    MemberListRoute(event.projectId.value)
-                )
-
-                is ProjectSettingEvent.NavigateToRoleList -> navigationManger.navigateTo(
-                    RoleListRoute(event.projectId.value)
-                )
+                is ProjectSettingEvent.RequestImagePick -> launchImagePicker()
                 is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
                 is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
             }
@@ -137,7 +114,7 @@ fun ProjectSettingScreen(
             TopAppBar(
                 title = { Text("프로젝트 설정") },
                 navigationIcon = {
-                    DebouncedBackButton(onClick = { navigationManger.navigateBack() })
+                    DebouncedBackButton(onClick = { viewModel.navigateBack() })
                 }
                 // TODO: 프로젝트 이름 변경, 프로젝트 삭제 등 추가 작업 버튼 (선택적)
             )
@@ -583,7 +560,6 @@ private fun RenameProjectDialogPreview() {
 private fun ProjectSettingScreenPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ProjectSettingScreen(
-            navigationManger = TODO(),
             modifier = TODO(),
             viewModel = TODO()
         )

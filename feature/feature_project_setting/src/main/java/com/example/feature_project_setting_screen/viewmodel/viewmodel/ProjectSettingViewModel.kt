@@ -20,6 +20,13 @@ import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
+import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.EditCategoryRoute
+import com.example.core_navigation.core.CreateCategoryRoute
+import com.example.core_navigation.core.EditChannelRoute
+import com.example.core_navigation.core.CreateChannelRoute
+import com.example.core_navigation.core.MemberListRoute
+import com.example.core_navigation.core.RoleListRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,31 +54,16 @@ data class ProjectSettingUiState(
 
 // --- 이벤트 ---
 sealed class ProjectSettingEvent {
-    object NavigateBack : ProjectSettingEvent()
     data class ShowSnackbar(val message: String) : ProjectSettingEvent()
     object RequestImagePick : ProjectSettingEvent()
-    data class NavigateToEditCategory(val projectId: DocumentId, val categoryId: String) :
-        ProjectSettingEvent()
-
-    data class NavigateToCreateCategory(val projectId: DocumentId) : ProjectSettingEvent()
-    data class NavigateToEditChannel(
-        val projectId: DocumentId,
-        val categoryId: String,
-        val channelId: String
-    ) : ProjectSettingEvent()
-
-    data class NavigateToCreateChannel(val projectId: DocumentId, val categoryId: String) :
-        ProjectSettingEvent()
-
-    data class NavigateToMemberList(val projectId: DocumentId) : ProjectSettingEvent()
-    data class NavigateToRoleList(val projectId: DocumentId) : ProjectSettingEvent()
-    data class ShowDeleteCategoryConfirm(val category: CategoryUiModel) : ProjectSettingEvent() // Changed
-    data class ShowDeleteChannelConfirm(val channel: ChannelUiModel) : ProjectSettingEvent() // Changed
+    data class ShowDeleteCategoryConfirm(val category: CategoryUiModel) : ProjectSettingEvent()
+    data class ShowDeleteChannelConfirm(val channel: ChannelUiModel) : ProjectSettingEvent()
 }
 
 @HiltViewModel
 class ProjectSettingViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    private val navigationManger: NavigationManger,
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
@@ -161,12 +153,9 @@ class ProjectSettingViewModel @Inject constructor(
 
     // --- 카테고리 관련 액션 ---
     fun requestEditCategory(categoryId: String) {
-        viewModelScope.launch { _eventFlow.emit(
-            ProjectSettingEvent.NavigateToEditCategory(
-                projectId,
-                categoryId
-            )
-        ) }
+        navigationManger.navigateTo(
+            EditCategoryRoute(projectId.value, categoryId)
+        )
     }
     fun requestDeleteCategory(category: CategoryUiModel) { // Changed to CategoryUiModel
         viewModelScope.launch { _eventFlow.emit(
@@ -200,22 +189,16 @@ class ProjectSettingViewModel @Inject constructor(
         }
     }
     fun requestCreateCategory() {
-        viewModelScope.launch { _eventFlow.emit(
-            ProjectSettingEvent.NavigateToCreateCategory(
-                projectId
-            )
-        ) }
+        navigationManger.navigateTo(
+            CreateCategoryRoute(projectId.value)
+        )
     }
 
     // --- 채널 관련 액션 ---
     fun requestEditChannel(categoryId: String, channelId: String) {
-        viewModelScope.launch { _eventFlow.emit(
-            ProjectSettingEvent.NavigateToEditChannel(
-                projectId,
-                categoryId,
-                channelId
-            )
-        ) }
+        navigationManger.navigateTo(
+            EditChannelRoute(projectId.value, categoryId, channelId)
+        )
     }
     fun requestDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteChannelConfirm(channel)) }
@@ -236,7 +219,7 @@ class ProjectSettingViewModel @Inject constructor(
                      _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널 삭제 실패: ${result.error}"))
                      _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
                  }
-                else ->{
+                else-> {
                     Log.e("ProjectSettingViewModel", "Unknown result type: $result")
                 }
             }
@@ -244,20 +227,21 @@ class ProjectSettingViewModel @Inject constructor(
         }
     }
     fun requestCreateChannel(categoryId: String) {
-        viewModelScope.launch { _eventFlow.emit(
-            ProjectSettingEvent.NavigateToCreateChannel(
-                projectId,
-                categoryId
-            )
-        ) }
+        navigationManger.navigateTo(
+            CreateChannelRoute(projectId.value, categoryId)
+        )
     }
 
     // --- 멤버/역할 관리 네비게이션 ---
     fun requestManageMembers() {
-        viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToMemberList(projectId)) }
+        navigationManger.navigateTo(
+            MemberListRoute(projectId.value)
+        )
     }
     fun requestManageRoles() {
-        viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.NavigateToRoleList(projectId)) }
+        navigationManger.navigateTo(
+            RoleListRoute(projectId.value)
+        )
     }
 
     // --- 프로젝트 이름 변경 ---
@@ -320,7 +304,7 @@ class ProjectSettingViewModel @Inject constructor(
             val result = coreProjectUseCases.deleteProjectUseCase(projectId)
             if (result.isSuccess) {
                  _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
-                 _eventFlow.emit(ProjectSettingEvent.NavigateBack) // Navigate back on success
+                 navigationManger.navigateBack() // Navigate back on success
                  // No need to turn off loading as we are navigating away
             } else {
                  _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: ${result.exceptionOrNull()?.message}"))
@@ -460,5 +444,10 @@ class ProjectSettingViewModel @Inject constructor(
                 "업로드 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
             else -> "이미지 업로드에 실패했습니다. 다시 시도해주세요."
         }
+    }
+
+    // UI 가 직접 뒤로가기를 요청할 때 호출
+    fun navigateBack() {
+        navigationManger.navigateBack()
     }
 }

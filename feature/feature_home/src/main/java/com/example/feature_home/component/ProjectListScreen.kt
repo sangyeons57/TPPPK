@@ -199,7 +199,7 @@ fun ProjectListScreen(
 
         // 2. 프로젝트 목록
         Log.d("ProjectListScreen", "project: $projects")
-        items(projects, key = { it.id }) { project ->
+        items(projects, key = { it.id.value }) { project ->
             ProjectListItem(
                 project = project,
                 isSelected = project.id == selectedProjectId && !isDmSelected, // DM이 선택되었으면 어떤 프로젝트도 선택되지 않은 상태

@@ -1,5 +1,10 @@
 package com.example.domain.provider.project
 
+import com.example.core_common.result.CustomResult
+import com.example.core_common.result.CustomResult.Initial.getOrThrow
+import com.example.core_common.result.exceptionOrNull
+import com.example.core_common.result.getOrNull
+import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
@@ -141,6 +146,8 @@ class CoreProjectUseCaseProvider @Inject constructor(
             AuthRepositoryFactoryContext()
         )
 
+        val session = authRepository.getCurrentUserSession().getOrThrow()
+
         val projectRepository = projectRepositoryFactory.create(
             ProjectRepositoryFactoryContext(
                 collectionPath = CollectionPath.projects
@@ -151,7 +158,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
         // Note: 현재 사용자 ID가 필요하므로 실제로는 createForProject를 사용해야 함
         val projectsWrapperRepository = projectsWrapperRepositoryFactory.create(
             ProjectsWrapperRepositoryFactoryContext(
-                collectionPath = CollectionPath.projects // 임시 경로, 실제 사용 시 userId 필요
+                collectionPath = CollectionPath.userProjectWrappers(session.userId.value)
             )
         )
 

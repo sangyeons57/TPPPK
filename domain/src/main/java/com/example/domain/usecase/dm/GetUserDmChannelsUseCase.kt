@@ -11,6 +11,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import android.util.Log
 
 /**
  * 현재 로그인한 사용자의 DM 채널 목록을 스트림으로 가져오는 UseCase.
@@ -28,10 +29,13 @@ class GetUserDmChannelsUseCase @Inject constructor(
      *         진행 상태에 따라 Loading, Success, Failure를 발행할 수 있습니다.
      */
     operator fun invoke(): Flow<CustomResult<List<DMChannel>, Exception>> = flow {
+        Log.d("GetUserDmChannelsUseCase", "Flow started → emitting Loading")
         emit(CustomResult.Loading)
 
         // 1. Get current user session
-        val currentUserSessionResult = authRepository.getCurrentUserSession()
+        val currentUserSessionResult = authRepository.getCurrentUserSession().also {
+            Log.d("GetUserDmChannelsUseCase", "getCurrentUserSession() result = $it")
+        }
         if (currentUserSessionResult !is CustomResult.Success) {
             val error = (currentUserSessionResult as? CustomResult.Failure)?.error
                 ?: Exception("User not authenticated or session could not be retrieved.")
@@ -42,7 +46,9 @@ class GetUserDmChannelsUseCase @Inject constructor(
 
         // 2. Get DMWrappers for the current user
         // Assuming getDmWrappersStreamForCurrentUser() exists and is properly scoped or uses current user context
+        Log.d("GetUserDmChannelsUseCase", "Start collecting dmWrapperRepository.observeAll()")
         dmWrapperRepository.observeAll().collect { dmWrappersResult ->
+            Log.d("GetUserDmChannelsUseCase", "dmWrapperRepository.observeAll() emitted: $dmWrappersResult")
             when (dmWrappersResult) {
                 is CustomResult.Loading -> {
                     // Initial loading already emitted. Can emit specific loading if needed.
@@ -57,7 +63,10 @@ class GetUserDmChannelsUseCase @Inject constructor(
                             // Fetch all DMChannels concurrently
                             val dmChannelDetailedResults = coroutineScope {
                                 wrappers.map { wrapper ->
-                                    async { dmChannelRepository.findById(wrapper.id) }
+                                    async {
+                                        Log.d("GetUserDmChannelsUseCase", "Fetching DMChannel id=${wrapper.id}")
+                                        dmChannelRepository.findById(wrapper.id)
+                                    }
                                 }.awaitAll()
                             }
 
@@ -68,16 +77,19 @@ class GetUserDmChannelsUseCase @Inject constructor(
                                 when (result) {
                                     is CustomResult.Success -> successfulChannels.add((result.data)  as DMChannel)
                                     is CustomResult.Failure -> {
+                                        Log.e("GetUserDmChannelsUseCase", "Failed to fetch DMChannel: ${result.error}")
                                         firstError = result.error
                                         break // Stop processing if one channel fails, and report this firstError
                                     }
 
                                     is CustomResult.Loading -> {
+                                        Log.d("GetUserDmChannelsUseCase", "Channel fetch returned Loading state")
                                         firstError =
                                             Exception("getDmChannelById returned Loading"); break
                                     }
 
                                     is CustomResult.Initial -> {
+                                        Log.d("GetUserDmChannelsUseCase", "Channel fetch returned Initial state")
                                         firstError =
                                             Exception("getDmChannelById returned Initial"); break
                                     }

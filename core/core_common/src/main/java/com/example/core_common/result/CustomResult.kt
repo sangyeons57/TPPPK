@@ -17,6 +17,12 @@ sealed class CustomResult<out S, out E> {
     val isInitial: Boolean get() = this is Initial
     val isProgress: Boolean get() = this is Progress
 
+    companion object {
+        fun isCustomResult(obj: Any?): Boolean {
+            return obj is CustomResult<*, *>
+        }
+    }
+
     fun onSuccess(block: (S) -> Unit): CustomResult<S, E> {
         if (this is Success) {
             block(data)

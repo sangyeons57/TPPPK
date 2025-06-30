@@ -174,7 +174,7 @@ fun RoleListContent(
     ) {
         items(
             items = roles,
-            key = { it.id }
+            key = { it.id.value }
         ) { role ->
             RoleListItem(
                 role = role,

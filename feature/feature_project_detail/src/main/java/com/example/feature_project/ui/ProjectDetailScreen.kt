@@ -137,7 +137,7 @@ private fun ProjectStructureList(
             item {
                 Text("직속 채널", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
             }
-            items(items = directChannels, key = { it.id }) {
+            items(items = directChannels, key = { it.id.value }) {
                 ChannelItem(channel = it, onClick = { onChannelClick(it) })
             }
             item {
@@ -146,7 +146,7 @@ private fun ProjectStructureList(
         }
 
         // Categories Section
-        items(items = categories, key = { it.id }) { category ->
+        items(items = categories, key = { it.id.value }) { category ->
             CategoryItem(
                 category = category,
                 onChannelClick = onChannelClick,

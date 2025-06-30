@@ -1,6 +1,7 @@
 package com.example.domain.usecase.project.core
 
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.domain.model.AggregateRoot
@@ -38,25 +39,58 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
     override suspend fun invoke(): Flow<CustomResult<List<Project>, Exception>> {
 
         // ProjectsWrapper에서 프로젝트 ID를 추출하고, ProjectRepository를 통해 전체 프로젝트 정보를 가져옵니다.
-        return when (val wrappersResult : CustomResult<List<AggregateRoot>, Exception> = projectsWrapperRepository.observeAll().first()) {
-            is CustomResult.Success -> {
-                val wrappers: List<ProjectsWrapper> = wrappersResult.data as List<ProjectsWrapper>
-                flowOf (CustomResult.Success(
-                    wrappers.map { wrapper ->
-                        when(val projectResult = projectRepository.findById(wrapper.id)) {
-                            is CustomResult.Success -> projectResult.data as Project
-                            is CustomResult.Failure -> return flowOf(CustomResult.Failure(projectResult.error))
-                            is CustomResult.Initial -> return flowOf(CustomResult.Initial)
-                            is CustomResult.Loading -> return flowOf(CustomResult.Loading)
-                            is CustomResult.Progress -> return flowOf(CustomResult.Progress(projectResult.progress))
+        return projectsWrapperRepository.observeAll().map { result ->
+            Log.d("GetUserParticipatingProjectsUseCase", "projectsWrapperRepository.observeAll() emitted: $result")
+            when (result) {
+                is CustomResult.Success -> {
+                    val wrappers: List<ProjectsWrapper> = result.data.map { it as ProjectsWrapper }
+                    Log.d("GetUserParticipatingProjectsUseCase", "Wrapper ids: ${wrappers.map{it.id}}")
+                    val projectResults = wrappers.map { wrapper ->
+                        Log.d("GetUserParticipatingProjectsUseCase", "Fetching project id=${wrapper.id}")
+                        projectRepository.findById(wrapper.id)
+                    }
+
+                    // 프로젝트 개별 조회 결과에 따라 전체 결과 타입 결정
+                    when {
+                        // 하나라도 Failure 가 있으면 즉시 Failure 반환
+                        projectResults.any { it is CustomResult.Failure } -> {
+                            val firstFailure = projectResults.first { it is CustomResult.Failure } as CustomResult.Failure<Exception>
+                            Log.e("GetUserParticipatingProjectsUseCase", "Failure fetching project: ${firstFailure.error}")
+                            return@map CustomResult.Failure(firstFailure.error)
+                        }
+
+                        // 진행률이 존재하면 Progress 상태 전달 (가장 첫 Progress 사용)
+                        projectResults.any { it is CustomResult.Progress } -> {
+                            val firstProgress = projectResults.first { it is CustomResult.Progress } as CustomResult.Progress
+                            Log.d("GetUserParticipatingProjectsUseCase", "Encountered Progress state = ${firstProgress.progress}")
+                            return@map CustomResult.Progress(firstProgress.progress)
+                        }
+
+                        // 로딩 중인 결과가 있으면 Loading 상태 전달
+                        projectResults.any { it is CustomResult.Loading } -> {
+                            Log.d("GetUserParticipatingProjectsUseCase", "Some project fetch still Loading")
+                            return@map CustomResult.Loading
+                        }
+
+                        // 초기 상태가 있으면 Initial 상태 전달
+                        projectResults.any { it is CustomResult.Initial } -> {
+                            Log.d("GetUserParticipatingProjectsUseCase", "Initial state encountered (shouldn't happen)")
+                            return@map CustomResult.Initial
+                        }
+
+                        // 전부 성공한 경우 리스트로 매핑
+                        else -> {
+                            val projects = projectResults.map { (it as CustomResult.Success).data as Project }
+                            Log.d("GetUserParticipatingProjectsUseCase", "All projects fetched successfully: size=${projects.size}")
+                            return@map CustomResult.Success(projects)
                         }
                     }
-                ))
+                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                is CustomResult.Initial -> CustomResult.Initial
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Progress -> CustomResult.Progress(result.progress)
             }
-            is CustomResult.Failure -> flowOf(CustomResult.Failure(wrappersResult.error))
-            is CustomResult.Initial -> flowOf(CustomResult.Initial)
-            is CustomResult.Loading -> flowOf(CustomResult.Loading)
-            is CustomResult.Progress -> flowOf(CustomResult.Progress(wrappersResult.progress))
         }
     }
 }

@@ -1,8 +1,10 @@
 package com.example.data.datasource.remote.special
 
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.core_common.util.MediaUtil
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
@@ -180,13 +182,23 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
         val userId = currentUser.uid
 
-        // Firebase Storage에 이미지 업로드 (기존 규칙에 맞는 경로 사용)
-        val storageRef = storage.reference
-        val profileImageRef =
-            storageRef.child("user_profile_images/$userId/${System.currentTimeMillis()}_profile.jpg")
+        // mimeType 및 확장자 계산
+        val mimeType = MediaUtil.getMimeType(storage.app.applicationContext, uri) ?: "image/jpeg"
+        val extFromUri = MediaUtil.getFileExtension(uri)
+        val extFromMime = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
+        val extension = extFromUri ?: extFromMime ?: "jpg"
+
+        val profileImageRef = storage.reference.child(
+            "user_profile_images/$userId/${System.currentTimeMillis()}_profile.$extension"
+        )
+
+        // 메타데이터 설정
+        val metadata = com.google.firebase.storage.StorageMetadata.Builder()
+            .setContentType(mimeType)
+            .build()
 
         // 이미지 업로드
-        profileImageRef.putFile(uri).await()
+        profileImageRef.putFile(uri, metadata).await()
 
         // 업로드가 성공하면 Firebase Functions onUserProfileImageUpload가 자동으로 처리됨
         // 별도의 URL 처리나 Firestore 업데이트 불필요
@@ -200,11 +212,21 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
 
         // Firebase Storage에 이미지 업로드 (프로젝트별 경로 사용)
-        val storageRef = storage.reference
-        val projectImageRef = storageRef.child("project_profile_images/${projectId.value}/${System.currentTimeMillis()}_profile.jpg")
+        val mimeType = MediaUtil.getMimeType(storage.app.applicationContext, uri) ?: "image/jpeg"
 
-        // 이미지 업로드
-        projectImageRef.putFile(uri).await()
+        // 확장자 보존을 위해 파일 이름에 extension 추가
+        val extension = MediaUtil.getFileExtension(uri) ?: "jpg"
+        val projectImageRef = storage.reference.child(
+            "project_profile_images/${projectId.value}/${System.currentTimeMillis()}_profile.$extension"
+        )
+
+        // 메타데이터 설정 (contentType 필수)
+        val metadata = com.google.firebase.storage.StorageMetadata.Builder()
+            .setContentType(mimeType)
+            .build()
+
+        // 이미지 업로드 (확장자 유지)
+        projectImageRef.putFile(uri, metadata).await()
 
         // 업로드가 성공하면 Firebase Functions onProjectProfileImageUpload가 자동으로 처리됨
         // 별도의 URL 처리나 Firestore 업데이트 불필요
