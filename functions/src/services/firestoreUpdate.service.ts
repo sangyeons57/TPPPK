@@ -213,5 +213,81 @@ export class FirestoreUpdateService {
       throw error;
     }
   }
+
+  /**
+   * 프로젝트 프로필 이미지 URL을 업데이트합니다.
+   *
+   * @param {string} projectId 프로젝트 ID
+   * @param {string} imageUrl 새로운 이미지 URL
+   */
+  async updateProjectProfileImage(projectId: string, imageUrl: string): Promise<void> {
+    const requestId = `project-update-${Date.now()}`;
+
+    logger.info("Starting project profile image update", {
+      requestId,
+      projectId,
+      imageUrl,
+    });
+
+    try {
+      // 1. 프로젝트 문서 존재 여부 확인
+      const projectRef = this.firestore.collection(COLLECTIONS.PROJECTS).doc(projectId);
+      const projectDoc = await projectRef.get();
+
+      if (!projectDoc.exists) {
+        logger.warn("Project document not found. Cannot update profile image", {
+          requestId,
+          projectId,
+        });
+        throw new Error(`Project not found: ${projectId}`);
+      }
+
+      // 2. 프로젝트 문서 업데이트
+      await projectRef.update({
+        imageUrl: imageUrl,
+        updatedAt: admin.firestore.Timestamp.now(),
+      });
+
+      logger.info("Project profile image updated successfully", {
+        requestId,
+        projectId,
+        imageUrl,
+      });
+    } catch (error) {
+      logger.error("Failed to update project profile image", {
+        requestId,
+        projectId,
+        imageUrl,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 프로젝트의 현재 프로필 이미지 URL을 가져옵니다.
+   *
+   * @param {string} projectId 프로젝트 ID
+   * @return {Promise<string | null>} 현재 프로젝트 프로필 이미지 URL (없으면 null)
+   */
+  async getCurrentProjectProfileImageUrl(projectId: string): Promise<string | null> {
+    try {
+      const projectDoc = await this.firestore.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+
+      if (projectDoc.exists) {
+        const projectData = projectDoc.data();
+        return projectData?.imageUrl || null;
+      }
+
+      return null;
+    } catch (error) {
+      logger.error("Failed to get current project profile image URL", {
+        projectId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
 }
 

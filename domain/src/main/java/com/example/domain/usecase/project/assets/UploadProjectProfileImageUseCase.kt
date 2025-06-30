@@ -1,36 +1,29 @@
 package com.example.domain.usecase.project.assets
 
-import android.hardware.camera2.CameraExtensionSession.ExtensionCaptureCallback
 import android.net.Uri
-import com.example.core_common.constants.FirebaseStorageConstants
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.MediaRepository
-import com.example.domain.repository.base.ProjectRepository
-import kotlinx.coroutines.flow.first
-import java.util.UUID
+import com.example.domain.repository.FunctionsRepository
 import javax.inject.Inject
 
 /**
- * 프로젝트 프로필 이미지를 업로드하고 Firestore에 해당 URL을 업데이트하는 유스케이스입니다.
- * 이미지가 null이면 기존 프로필 이미지를 제거(URL을 null로 설정)합니다.
+ * 프로젝트 프로필 이미지를 업로드하는 UseCase
+ *
+ * Firebase Functions를 통해 이미지를 업로드하고 자동으로 처리되도록 합니다.
+ * Firebase Functions가 이미지 최적화 및 Firestore 업데이트를 자동으로 처리합니다.
  */
 class UploadProjectProfileImageUseCase @Inject constructor(
-    private val projectRepository: ProjectRepository,
-    private val mediaRepository: MediaRepository
+    private val functionsRepository: FunctionsRepository
 ) {
-
     /**
-     * 유스케이스를 실행합니다.
-     *
-     * @param projectId 프로필 이미지를 업데이트할 프로젝트의 ID.
-     * @param imageUri 업로드할 새 프로필 이미지의 Uri. null일 경우 기존 이미지를 제거합니다.
-     * @param fileExtension 업로드할 파일의 확장자 (예: "jpg", "png"). `imageUri`가 null이 아니면 필수입니다.
-     * @return 작업 성공 시 [CustomResult.Success] (Unit), 실패 시 [CustomResult.Failure] (Exception).
+     * 프로젝트 프로필 이미지를 Firebase Storage에 업로드합니다.
+     * 업로드 후 Firebase Functions가 자동으로 이미지 처리 및 Firestore 업데이트를 수행합니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param imageUri 업로드할 이미지의 URI
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
-    suspend operator fun invoke(projectId: DocumentId, imageUri: Uri?, fileExtension: String?): CustomResult<Unit, Exception> {
-        TODO("Not yet implemented[Firebase FUnction을 통해 구현]")
+    suspend operator fun invoke(projectId: DocumentId, imageUri: Uri): CustomResult<Unit, Exception> {
+        return functionsRepository.uploadProjectProfileImage(projectId, imageUri)
     }
 }

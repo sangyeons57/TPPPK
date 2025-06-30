@@ -58,6 +58,19 @@ interface FunctionsRemoteDataSource {
     suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception>
 
     /**
+     * 프로젝트 프로필 이미지를 업로드합니다.
+     * Firebase Storage에 업로드 후 자동으로 Firebase Functions가 처리합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param uri 업로드할 이미지의 URI
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun uploadProjectProfileImage(
+        projectId: com.example.domain.model.vo.DocumentId,
+        uri: Uri
+    ): CustomResult<Unit, Exception>
+
+    /**
      * 사용자 프로필을 업데이트합니다.
      * Firebase Functions를 통해 이름, 메모 등의 프로필 정보를 업데이트합니다.
      *
@@ -176,6 +189,24 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         profileImageRef.putFile(uri).await()
 
         // 업로드가 성공하면 Firebase Functions onUserProfileImageUpload가 자동으로 처리됨
+        // 별도의 URL 처리나 Firestore 업데이트 불필요
+    }
+
+    override suspend fun uploadProjectProfileImage(
+        projectId: com.example.domain.model.vo.DocumentId,
+        uri: Uri
+    ): CustomResult<Unit, Exception> = resultTry {
+        // 현재 인증된 사용자 확인
+        val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+
+        // Firebase Storage에 이미지 업로드 (프로젝트별 경로 사용)
+        val storageRef = storage.reference
+        val projectImageRef = storageRef.child("project_profile_images/${projectId.value}/${System.currentTimeMillis()}_profile.jpg")
+
+        // 이미지 업로드
+        projectImageRef.putFile(uri).await()
+
+        // 업로드가 성공하면 Firebase Functions onProjectProfileImageUpload가 자동으로 처리됨
         // 별도의 URL 처리나 Firestore 업데이트 불필요
     }
 

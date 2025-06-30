@@ -2,6 +2,7 @@ package com.example.feature_project_setting_screen.viewmodel.viewmodel
 
 // Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
 // import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -14,6 +15,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.domain.provider.project.ProjectAssetsUseCaseProvider
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.feature_model.CategoryUiModel
@@ -33,6 +35,9 @@ import javax.inject.Inject
 data class ProjectSettingUiState(
     val projectId: DocumentId,
     val projectName: ProjectName = ProjectName.EMPTY,
+    val projectImageUrl: String? = null,
+    val selectedImageUri: Uri? = null,
+    val hasImageChanges: Boolean = false,
     val categories: List<CategoryUiModel> = emptyList(), // Changed to CategoryUiModel
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -44,6 +49,7 @@ data class ProjectSettingUiState(
 sealed class ProjectSettingEvent {
     object NavigateBack : ProjectSettingEvent()
     data class ShowSnackbar(val message: String) : ProjectSettingEvent()
+    object RequestImagePick : ProjectSettingEvent()
     data class NavigateToEditCategory(val projectId: DocumentId, val categoryId: String) :
         ProjectSettingEvent()
 
@@ -69,6 +75,7 @@ class ProjectSettingViewModel @Inject constructor(
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
+    private val projectAssetsUseCaseProvider: ProjectAssetsUseCaseProvider,
 ) : ViewModel() {
 
     val projectId: DocumentId = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
@@ -78,6 +85,7 @@ class ProjectSettingViewModel @Inject constructor(
     private val coreProjectUseCases = coreProjectUseCaseProvider.createForProject(projectId, UserId.EMPTY)
     private val projectStructureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
     private val projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
+    private val projectAssetsUseCases = projectAssetsUseCaseProvider.createForProject(projectId.value)
 
     private val _uiState = MutableStateFlow(ProjectSettingUiState(projectId = projectId, isLoading = true))
     val uiState: StateFlow<ProjectSettingUiState> = _uiState.asStateFlow()
@@ -94,7 +102,26 @@ class ProjectSettingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading structure for project $projectId (UseCase)")
 
+            // Load project details to get name and image URL
+            when (val projectResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
+                is CustomResult.Success -> {
+                    val project = projectResult.data
+                    _uiState.update {
+                        it.copy(
+                            projectName = project.name,
+                            projectImageUrl = project.imageUrl?.value
+                        )
+                    }
+                }
+                is CustomResult.Failure -> {
+                    println("Failed to load project details: ${projectResult.error}")
+                }
+                else -> {
+                    println("Unknown result for project details")
+                }
+            }
 
+            // Load project structure (categories)
             when (val result = projectStructureUseCases.getProjectAllCategoriesUseCase(projectId).first()) {
                 is CustomResult.Success -> {
                     val domainCategories = result.data // This is List<com.example.domain.model.base.Category>
@@ -111,7 +138,6 @@ class ProjectSettingViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            // projectName은 ProjectStructure에 포함되지 않으므로 현재 상태 유지
                             categories = uiCategories // Assign mapped UI models
                         )
                     }
@@ -305,5 +331,134 @@ class ProjectSettingViewModel @Inject constructor(
 
     fun dismiss() {
         _uiState.update { it.copy(showRenameProjectDialog = false, showDeleteProjectDialog = false) }
+    }
+
+    // --- 프로젝트 이미지 관련 ---
+    fun onProjectImageClicked() {
+        viewModelScope.launch {
+            _eventFlow.emit(ProjectSettingEvent.RequestImagePick)
+        }
+    }
+
+    fun handleImageSelection(uri: Uri?) {
+        if (uri == null) {
+            viewModelScope.launch {
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이미지 선택이 취소되었습니다."))
+            }
+            return
+        }
+
+        // 이미지 유효성 검사
+        val validationResult = validateImageUri(uri)
+        if (!validationResult.isValid) {
+            viewModelScope.launch {
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(validationResult.errorMessage!!))
+            }
+            return
+        }
+
+        _uiState.update { currentState ->
+            currentState.copy(
+                selectedImageUri = uri,
+                hasImageChanges = true,
+                error = null
+            )
+        }
+        
+        viewModelScope.launch {
+            _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이미지가 선택되었습니다. 저장 버튼을 눌러 적용하세요."))
+        }
+    }
+
+    private fun validateImageUri(uri: Uri): ValidationResult {
+        // 여기서는 기본적인 검증만 수행
+        // 실제 파일 크기와 형식 검증은 Firebase Storage Rules에서 처리됨
+        
+        val scheme = uri.scheme
+        if (scheme != "content" && scheme != "file") {
+            return ValidationResult(false, "지원되지 않는 이미지 형식입니다.")
+        }
+
+        return ValidationResult(true)
+    }
+
+    private data class ValidationResult(
+        val isValid: Boolean,
+        val errorMessage: String? = null
+    )
+
+    fun onSaveProjectImageClicked() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val selectedImageUri = currentState.selectedImageUri
+            
+            if (selectedImageUri == null) {
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("선택된 이미지가 없습니다."))
+                return@launch
+            }
+
+            if (!currentState.hasImageChanges) {
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("변경된 이미지가 없습니다."))
+                return@launch
+            }
+
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            try {
+                val imageResult = projectAssetsUseCases.uploadProjectProfileImageUseCase(projectId, selectedImageUri)
+                when (imageResult) {
+                    is CustomResult.Success -> {
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false, 
+                                selectedImageUri = null,
+                                hasImageChanges = false
+                            ) 
+                        }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지가 성공적으로 업데이트되었습니다."))
+                        
+                        // 프로젝트 정보 다시 로드하여 새 이미지 URL 가져오기
+                        loadProjectStructure()
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        val errorMessage = getHumanReadableErrorMessage(imageResult.error)
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(errorMessage))
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이미지 업로드 중 알 수 없는 오류가 발생했습니다."))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "이미지 업로드 중 오류가 발생했습니다",
+                        isLoading = false
+                    )
+                }
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이미지 업로드 실패: ${e.message}"))
+            }
+        }
+    }
+
+    private fun getHumanReadableErrorMessage(error: Exception): String {
+        val errorMessage = error.message?.lowercase() ?: ""
+        
+        return when {
+            errorMessage.contains("network") || errorMessage.contains("timeout") -> 
+                "네트워크 연결을 확인해주세요."
+            errorMessage.contains("permission") || errorMessage.contains("access") -> 
+                "파일 접근 권한이 없습니다."
+            errorMessage.contains("size") || errorMessage.contains("large") -> 
+                "파일 크기가 너무 큽니다. 5MB 이하의 이미지를 선택해주세요."
+            errorMessage.contains("format") || errorMessage.contains("invalid") -> 
+                "지원되지 않는 이미지 형식입니다. JPG, PNG 파일을 선택해주세요."
+            errorMessage.contains("storage") -> 
+                "서버 저장 공간에 문제가 있습니다. 잠시 후 다시 시도해주세요."
+            errorMessage.contains("quota") || errorMessage.contains("limit") -> 
+                "업로드 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
+            else -> "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+        }
     }
 }

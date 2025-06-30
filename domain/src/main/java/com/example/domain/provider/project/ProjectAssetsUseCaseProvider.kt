@@ -1,6 +1,7 @@
 package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
+import com.example.domain.repository.FunctionsRepository
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.MediaRepository
 import com.example.domain.repository.base.ProjectRepository
@@ -18,7 +19,8 @@ import javax.inject.Singleton
 @Singleton
 class ProjectAssetsUseCaseProvider @Inject constructor(
     private val projectRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
-    private val mediaRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
+    private val mediaRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>,
+    private val functionsRepository: FunctionsRepository
 ) {
 
     /**
@@ -41,8 +43,7 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
         return ProjectAssetsUseCases(
             // 프로젝트 이미지/파일 관리
             uploadProjectProfileImageUseCase = UploadProjectProfileImageUseCase(
-                projectRepository = projectRepository,
-                mediaRepository = mediaRepository
+                functionsRepository = functionsRepository
             ),
             
             // 공통 Repository

@@ -1,5 +1,6 @@
 package com.example.feature_project_setting_screen.viewmodel.ui
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +59,7 @@ import com.example.core_navigation.core.MemberListRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.RoleListRoute
 import com.example.core_ui.components.buttons.DebouncedBackButton
+import com.example.core_ui.components.project.ProjectProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.project.ProjectName
@@ -77,8 +79,13 @@ import kotlinx.coroutines.flow.collectLatest
 fun ProjectSettingScreen(
     navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
-    viewModel: ProjectSettingViewModel = hiltViewModel()
+    viewModel: ProjectSettingViewModel = hiltViewModel(),
+    onImagePickRequest: () -> Unit = {}
 ) {
+    // 이미지 선택 결과를 처리하는 함수 (외부에서 호출)
+    fun handleImageSelection(uri: Uri?) {
+        viewModel.handleImageSelection(uri)
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -93,6 +100,7 @@ fun ProjectSettingScreen(
             when (event) {
                 is ProjectSettingEvent.NavigateBack -> navigationManger.navigateBack()
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is ProjectSettingEvent.RequestImagePick -> onImagePickRequest()
                 is ProjectSettingEvent.NavigateToEditCategory -> navigationManger.navigateTo(
                     EditCategoryRoute(event.projectId.value, event.categoryId)
                 )
@@ -161,7 +169,9 @@ fun ProjectSettingScreen(
                 onManageMembersClick = viewModel::requestManageMembers,
                 onManageRolesClick = viewModel::requestManageRoles,
                 onRenameProjectClick = viewModel::requestRenameProject, // 프로젝트 이름 변경 요청
-                onDeleteProjectClick = viewModel::requestDeleteProject // 프로젝트 삭제 요청
+                onDeleteProjectClick = viewModel::requestDeleteProject, // 프로젝트 삭제 요청
+                onProjectImageClick = viewModel::onProjectImageClicked,
+                onSaveProjectImageClick = viewModel::onSaveProjectImageClicked
             )
         }
     }
@@ -251,13 +261,27 @@ fun ProjectSettingContent(
     onManageMembersClick: () -> Unit,
     onManageRolesClick: () -> Unit,
     onRenameProjectClick: () -> Unit,
-    onDeleteProjectClick: () -> Unit
+    onDeleteProjectClick: () -> Unit,
+    onProjectImageClick: () -> Unit,
+    onSaveProjectImageClick: () -> Unit
 ) {
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(bottom = 16.dp) // 하단 여백 추가
     ) {
+        // --- 프로젝트 프로필 ---
+        item {
+            SettingSectionTitle(title = "프로젝트 프로필")
+            ProjectProfileSection(
+                uiState = uiState,
+                onProjectImageClick = onProjectImageClick,
+                onSaveProjectImageClick = onSaveProjectImageClick
+            )
+        }
+
+        item { Spacer(modifier = Modifier.height(16.dp)) }
+
         // --- 일반 설정 ---
         item {
             SettingSectionTitle(title = "일반")
@@ -333,6 +357,94 @@ fun SettingMenuItem(
         }
     }
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) // 구분선
+}
+
+// 프로젝트 프로필 섹션
+@Composable
+fun ProjectProfileSection(
+    uiState: ProjectSettingUiState,
+    onProjectImageClick: () -> Unit,
+    onSaveProjectImageClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // 프로젝트 이미지
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onProjectImageClick)
+                .padding(vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 프로젝트 이미지 표시
+                ProjectProfileImage(
+                    projectImageUrl = uiState.projectImageUrl,
+                    selectedImageUri = uiState.selectedImageUri,
+                    contentDescription = "프로젝트 프로필 이미지",
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.medium
+                        )
+                )
+                
+                Column {
+                    Text(
+                        text = "프로젝트 이미지",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = if (uiState.selectedImageUri != null) "새 이미지 선택됨" 
+                               else if (uiState.projectImageUrl != null) "현재 이미지" 
+                               else "이미지 없음",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline
+            )
+        }
+        
+        // 저장 버튼 (이미지가 선택되었을 때만 표시)
+        if (uiState.hasImageChanges) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onSaveProjectImageClick,
+                    enabled = !uiState.isLoading
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("이미지 저장")
+                }
+            }
+        }
+    }
+    
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 }
 
 // 카테고리 헤더
@@ -501,7 +613,9 @@ private fun ProjectSettingContentLoadingPreview() {
             onManageMembersClick = {},
             onManageRolesClick = {},
             onRenameProjectClick = {},
-            onDeleteProjectClick = {}
+            onDeleteProjectClick = {},
+            onProjectImageClick = {},
+            onSaveProjectImageClick = {}
         )
     }
 }
@@ -529,7 +643,9 @@ private fun ProjectSettingContentErrorPreview() {
             onManageMembersClick = {},
             onManageRolesClick = {},
             onRenameProjectClick = {},
-            onDeleteProjectClick = {}
+            onDeleteProjectClick = {},
+            onProjectImageClick = {},
+            onSaveProjectImageClick = {}
         )
     }
 }

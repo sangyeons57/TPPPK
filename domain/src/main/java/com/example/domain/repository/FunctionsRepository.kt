@@ -51,4 +51,14 @@ interface FunctionsRepository : Repository {
      */
     suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception>
 
+    /**
+     * 프로젝트 프로필 이미지를 업로드합니다.
+     * Firebase Storage에 업로드 후 자동으로 Firebase Functions가 처리합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param uri 업로드할 이미지의 URI
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun uploadProjectProfileImage(projectId: com.example.domain.model.vo.DocumentId, uri: Uri): CustomResult<Unit, Exception>
+
 }

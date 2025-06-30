@@ -130,6 +130,89 @@ export class ImageProcessingService {
   }
 
   /**
+   * 프로젝트 프로필 이미지를 처리하고 저장합니다.
+   *
+   * @param {string} projectId 프로젝트 ID
+   * @param {string} sourceFilePath 원본 파일 경로 (Storage 내)
+   * @return {Promise<string>} 처리된 이미지의 Storage 경로
+   */
+  async processAndSaveProjectProfileImage(projectId: string, sourceFilePath: string): Promise<string> {
+    const requestId = `proj-img-${Date.now()}`;
+
+    logger.info("Starting project profile image processing", {
+      requestId,
+      projectId,
+      sourceFilePath,
+    });
+
+    try {
+      // 1. 임시 파일 경로 설정
+      const bucket = this.storage.bucket();
+      const fileName = path.basename(sourceFilePath);
+      const tempFilePath = path.join(os.tmpdir(), fileName);
+      const processedFileName = "profile.webp";
+      const processedTempPath = path.join(os.tmpdir(), processedFileName);
+
+      // 2. 원본 파일 다운로드
+      await bucket.file(sourceFilePath).download({destination: tempFilePath});
+      logger.info("Downloaded source file", {requestId, tempFilePath});
+
+      // 3. Sharp로 이미지 처리 (프로젝트 이미지는 500x500으로 더 크게)
+      await sharp(tempFilePath)
+        .resize(500, 500, {
+          fit: "cover",
+          position: "center",
+        })
+        .webp({
+          quality: 85,
+          effort: 4,
+        })
+        .toFile(processedTempPath);
+
+      logger.info("Project image processing completed", {
+        requestId,
+        outputPath: processedTempPath,
+      });
+
+      // 4. 처리된 이미지를 Storage에 업로드
+      const processedStoragePath = `${STORAGE_ROOT.PROJECT_PROFILE_PROCESSED}/${projectId}/${processedFileName}`;
+      const metadata = {
+        contentType: STORAGE_METADATA.PROFILE_IMAGE.CONTENT_TYPE,
+        cacheControl: STORAGE_METADATA.PROFILE_IMAGE.CACHE_CONTROL,
+        metadata: {
+          processedAt: new Date().toISOString(),
+          processedBy: "ImageProcessingService",
+          projectId: projectId,
+        },
+      };
+
+      await bucket.upload(processedTempPath, {
+        destination: processedStoragePath,
+        metadata,
+      });
+
+      logger.info("Processed project image uploaded", {
+        requestId,
+        processedStoragePath,
+      });
+
+      // 5. 임시 파일 정리
+      this.cleanupTempFiles([tempFilePath, processedTempPath]);
+
+      return processedStoragePath;
+    } catch (error) {
+      logger.error("Project image processing failed", {
+        requestId,
+        projectId,
+        sourceFilePath,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * 임시 파일들을 정리합니다.
    *
    * @param {string[]} filePaths 삭제할 파일 경로 배열

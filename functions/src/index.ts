@@ -22,3 +22,6 @@ export {helloWorld} from "./functions/system/helloWorldFunction";
 // User data related functions
 export {onUserProfileImageUpload} from "./functions/user/onUserProfileImageUpload";
 export {updateUserProfile} from "./functions/user/updateUserProfileFunction";
+
+// Project data related functions
+export {onProjectProfileImageUpload} from "./functions/project/onProjectProfileImageUpload";

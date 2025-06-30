@@ -39,4 +39,11 @@ class FunctionsRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.uploadUserProfileImage(uri)
     }
 
+    override suspend fun uploadProjectProfileImage(
+        projectId: com.example.domain.model.vo.DocumentId, 
+        uri: Uri
+    ): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.uploadProjectProfileImage(projectId, uri)
+    }
+
 }
