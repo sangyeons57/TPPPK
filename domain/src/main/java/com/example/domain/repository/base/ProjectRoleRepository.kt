@@ -11,13 +11,7 @@ import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactor
 interface ProjectRoleRepository : DefaultRepository {
     override val factoryContext: ProjectRoleRepositoryFactoryContext
 
-    /**
-     * Fetches the list of enabled permissions for a specific role.
-     * Permissions are typically stored as a subcollection of the role.
-     * @param projectId The ID of the project.
-     * @param roleId The ID of the role.
-     * @return A [CustomResult] containing a list of enabled [RolePermission] enums on success, or an [Exception] on failure.
-     */
+
     suspend fun getRolePermissions(projectId: String, roleId: String): CustomResult<List<RolePermission>, Exception>
 
 }

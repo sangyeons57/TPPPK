@@ -2,11 +2,10 @@ package com.example.teamnovapersonalprojectprojectingkotlin
 
 // import com.google.firebase.BuildConfig // Firebase 라이브러리의 BuildConfig가 아님
 import android.app.Application
-import com.google.firebase.BuildConfig
+import android.util.Log
 import com.google.firebase.FirebaseApp
+import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.HiltAndroidApp
 
 
@@ -17,13 +16,15 @@ import dagger.hilt.android.HiltAndroidApp
  */
 @HiltAndroidApp
 class MyApp : Application() {
-    
+
+    private val TAG = "MyApp"
     override fun onCreate() {
         super.onCreate()
-        
-        // Firebase 초기화
-        initializeFirebase()
-        
+
+        FirebaseApp.initializeApp(this)
+        appcheck()
+
+
         // Sentry 초기화 :: 잠시 꺼두기
         //SentryUtil.SentryInit(this)
         //SentryUtil.logInfo("앱 시작됨", mapOf("startup_type" to "manual_init"))
@@ -32,19 +33,22 @@ class MyApp : Application() {
     /**
      * FirebaseApp을 명시적으로 초기화합니다.
      */
-    private fun initializeFirebase() {
-        FirebaseApp.initializeApp(this)
-        val firebaseAppCheck = com.google.firebase.appcheck.FirebaseAppCheck.getInstance()
-        // 앱 모듈의 BuildConfig.DEBUG를 사용해야 합니다.
-        if (BuildConfig.DEBUG) {
+    private fun appcheck() {
+        try {
+            val firebaseAppCheck = FirebaseAppCheck.getInstance()
             firebaseAppCheck.installAppCheckProviderFactory(
-                DebugAppCheckProviderFactory.getInstance()
+                DebugAppCheckProviderFactory.getInstance(),
             )
-        } else {
-            firebaseAppCheck.installAppCheckProviderFactory(
-                PlayIntegrityAppCheckProviderFactory.getInstance()
-            )
+            Log.d(TAG, "DebugAppCheckProviderFactory installed.")
+
+            if (firebaseAppCheck != null) {
+                Log.d(TAG, "FirebaseAppCheck instance is not null.")
+            } else {
+                Log.e(TAG, "FirebaseAppCheck instance is null (unexpected)! Check Firebase initialization.")
+            }
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "FirebaseApp is not initialized. Ensure google-services.json is correct " +
+                    "or call FirebaseApp.initializeApp() explicitly if needed.", e)
         }
     }
-    
 }

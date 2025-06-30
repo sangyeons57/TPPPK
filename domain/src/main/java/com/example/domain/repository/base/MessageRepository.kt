@@ -14,9 +14,7 @@ data class MessageAttachmentToSend(
     // val bytes: ByteArray? // 또는 직접 바이트를 전달할 경우
 )
 
-/**
- * 채널 내 메시지 관련 데이터 처리를 위한 인터페이스입니다.
- */
+
 interface MessageRepository : DefaultRepository {
     override val factoryContext: MessageRepositoryFactoryContext
 }
