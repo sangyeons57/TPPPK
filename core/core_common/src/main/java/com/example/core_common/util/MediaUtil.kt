@@ -3,6 +3,7 @@ package com.example.core_common.util
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.webkit.MimeTypeMap
 import java.util.UUID
 
@@ -139,7 +140,8 @@ object MediaUtil {
      * @param uri 파일 URI
      * @return 파일 확장자 또는 null
      */
-    fun getFileExtension(uri: Uri): String? {
+    fun getFileExtension(uri: Uri): String {
+        Log.d("MediaUtil", "getFileExtension called with URI: $uri")
         return MimeTypeMap.getFileExtensionFromUrl(uri.toString())
     }
     
@@ -171,5 +173,22 @@ object MediaUtil {
             "text/plain"
         )
         return documentMimeTypes.contains(mimeType)
+    }
+    
+    /**
+     * URI에서 파일 크기를 가져옵니다.
+     * 
+     * @param context 컨텍스트
+     * @param uri 파일 URI
+     * @return 파일 크기 (바이트) 또는 -1 (실패 시)
+     */
+    fun getFileSize(context: Context, uri: Uri): Long {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                inputStream.available().toLong()
+            } ?: -1L
+        } catch (e: Exception) {
+            -1L
+        }
     }
 }

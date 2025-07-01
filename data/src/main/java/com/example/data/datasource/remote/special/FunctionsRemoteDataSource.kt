@@ -1,6 +1,7 @@
 package com.example.data.datasource.remote.special
 
 import android.net.Uri
+import android.util.Log
 import android.webkit.MimeTypeMap
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
@@ -184,6 +185,18 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
 
         // mimeType 및 확장자 계산
         val mimeType = MediaUtil.getMimeType(storage.app.applicationContext, uri) ?: "image/jpeg"
+
+        // 파일 크기 제한 확인 (1MB)
+        val fileSize = MediaUtil.getFileSize(storage.app.applicationContext, uri)
+        if (fileSize > 0 && fileSize > 1 * 1024 * 1024) {
+            throw Exception("File size exceeds 1MB limit. Please choose a smaller image.")
+        }
+
+        // 이미지 파일 타입 확인
+        if (!mimeType.startsWith("image/")) {
+            throw Exception("Only image files are allowed for profile pictures.")
+        }
+        
         val extFromUri = MediaUtil.getFileExtension(uri)
         val extFromMime = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
         val extension = extFromUri ?: extFromMime ?: "jpg"
@@ -197,11 +210,22 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             .setContentType(mimeType)
             .build()
 
-        // 이미지 업로드
-        profileImageRef.putFile(uri, metadata).await()
+        try {
+            // 이미지 업로드
+            profileImageRef.putFile(uri, metadata).await()
 
-        // 업로드가 성공하면 Firebase Functions onUserProfileImageUpload가 자동으로 처리됨
-        // 별도의 URL 처리나 Firestore 업데이트 불필요
+            // 업로드가 성공하면 Firebase Functions onUserProfileImageUpload가 자동으로 처리됨
+            // 별도의 URL 처리나 Firestore 업데이트 불필요
+        } catch (e: Exception) {
+            // 권한 오류에 대한 더 명확한 메시지 제공
+            when {
+                e.message?.contains("403") == true || e.message?.contains("Permission denied") == true ->
+                    throw Exception("You don't have permission to update your profile image. Please ensure you are logged in.")
+                e.message?.contains("413") == true || e.message?.contains("too large") == true ->
+                    throw Exception("Image file is too large. Please choose an image smaller than 1MB.")
+                else -> throw Exception("Failed to upload profile image: ${e.message}")
+            }
+        }
     }
 
     override suspend fun uploadProjectProfileImage(
@@ -209,27 +233,55 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         uri: Uri
     ): CustomResult<Unit, Exception> = resultTry {
         // 현재 인증된 사용자 확인
+        Log.d("FunctionRemoteDatasource", "start projectId: ${projectId.value}")
         val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
 
+        Log.d("FunctionRemoteDatasource", "currentUser:  ${currentUser}")
         // Firebase Storage에 이미지 업로드 (프로젝트별 경로 사용)
         val mimeType = MediaUtil.getMimeType(storage.app.applicationContext, uri) ?: "image/jpeg"
 
+        // 파일 크기 제한 확인 (2MB)
+        val fileSize = MediaUtil.getFileSize(storage.app.applicationContext, uri)
+        if (fileSize > 0 && fileSize > 2 * 1024 * 1024) {
+            throw Exception("File size exceeds 2MB limit. Please choose a smaller image.")
+        }
+
+        // 이미지 파일 타입 확인
+        if (!mimeType.startsWith("image/")) {
+            throw Exception("Only image files are allowed for project profile pictures.")
+        }
+
         // 확장자 보존을 위해 파일 이름에 extension 추가
-        val extension = MediaUtil.getFileExtension(uri) ?: "jpg"
+        val extension = MediaUtil.getFileExtension(uri)
         val projectImageRef = storage.reference.child(
             "project_profile_images/${projectId.value}/${System.currentTimeMillis()}_profile.$extension"
         )
+        Log.d("FunctionRemoteDatasource", projectImageRef.path)
+        Log.d("FunctionRemoteDatasource", projectImageRef.bucket)
+        Log.d("FunctionRemoteDatasource", projectImageRef.name)
 
         // 메타데이터 설정 (contentType 필수)
         val metadata = com.google.firebase.storage.StorageMetadata.Builder()
             .setContentType(mimeType)
             .build()
 
-        // 이미지 업로드 (확장자 유지)
-        projectImageRef.putFile(uri, metadata).await()
+        try {
+            Log.d("FunctionRemoteDatasource", "upload")
+            // 이미지 업로드 (확장자 유지)
+            projectImageRef.putFile(uri, metadata).await()
 
-        // 업로드가 성공하면 Firebase Functions onProjectProfileImageUpload가 자동으로 처리됨
-        // 별도의 URL 처리나 Firestore 업데이트 불필요
+            // 업로드가 성공하면 Firebase Functions onProjectProfileImageUpload가 자동으로 처리됨
+            // 별도의 URL 처리나 Firestore 업데이트 불필요
+        } catch (e: Exception) {
+            // 권한 오류에 대한 더 명확한 메시지 제공
+            when {
+                e.message?.contains("403") == true || e.message?.contains("Permission denied") == true ->
+                    throw Exception("You don't have permission to update this project's profile image. Only project members can change project profile pictures.")
+                e.message?.contains("413") == true || e.message?.contains("too large") == true ->
+                    throw Exception("Image file is too large. Please choose an image smaller than 2MB.")
+                else -> throw Exception("Failed to upload project profile image: ${e.message}")
+            }
+        }
     }
 
     override suspend fun updateUserProfile(

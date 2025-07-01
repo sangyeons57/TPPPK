@@ -6,6 +6,10 @@ service firebase.storage {
     // === Utility Functions ===
 
     // Check if the user is authenticated
+    function DBName() {
+      return "default";
+    }
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -19,21 +23,28 @@ service firebase.storage {
     // Assumes /projects/{projectId} document has an 'ownerId' field
     function isProjectOwner(projectId) {
       return isAuthenticated() &&
-             firestore.get(/databases/(default)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+             firestore.get(/databases/default/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
     }
 
     // Check if the user is a participant in a DM channel
     // Assumes /dm_channels/{dmChannelId}/participants/{userId} document exists
     function isDMChannelParticipant(dmChannelId) {
       return isAuthenticated() &&
-             firestore.exists(/databases/(default)/documents/dm_channels/$(dmChannelId)/participants/$(request.auth.uid));
+             firestore.exists(/databases/default/documents/dm_channels/$(dmChannelId)/participants/$(request.auth.uid));
+    }
+
+    // Check if the user is a member of a project
+    // Assumes /projects/{projectId}/members/{userId} document exists
+    function isProjectMember(projectId) {
+      return isAuthenticated() &&
+             firestore.exists(/databases/default/documents/projects/$(projectId)/members/$(request.auth.uid));
     }
 
     // Check if the user is the author of a DM message
     // Assumes /dm_channels/{dmChannelId}/messages/{messageId} document has an 'authorId' field
     function isDMMessageAuthor(dmChannelId, messageId) {
       return isAuthenticated() &&
-             firestore.get(/databases/(default)/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.authorId == request.auth.uid;
+             firestore.get(/databases/default/documents/dm_channels/$(dmChannelId)/messages/$(messageId)).data.authorId == request.auth.uid;
     }
 
     // Check if the user is the author of a project channel message
@@ -44,7 +55,7 @@ service firebase.storage {
       // If project_channels is a subcollection of projects, the path would be:
       // /databases/(default)/documents/projects/$(getProjectIdForChannel(projectChannelId))/project_channels/$(projectChannelId)/messages/$(messageId)
       return isAuthenticated() &&
-             firestore.get(/databases/(default)/documents/project_channels/$(projectChannelId)/messages/$(messageId)).data.authorId == request.auth.uid;
+             firestore.get(/databases/default/documents/project_channels/$(projectChannelId)/messages/$(messageId)).data.authorId == request.auth.uid;
     }
 
     // Get the projectId associated with a projectChannelId
@@ -52,7 +63,7 @@ service firebase.storage {
     // IMPORTANT: Adjust Firestore path as needed if project_channels is a subcollection.
     function getProjectIdForChannel(projectChannelId) {
         // If project_channels is a top-level collection with a projectId field:
-        return firestore.get(/databases/(default)/documents/project_channels/$(projectChannelId)).data.projectId;
+        return firestore.get(/databases/default/documents/project_channels/$(projectChannelId)).data.projectId;
         // If project_channels is a subcollection, you might pass projectId directly or derive it differently.
     }
 
@@ -60,23 +71,23 @@ service firebase.storage {
     // This function needs to know the projectId to correctly check member permissions.
     // Assumes /projects/{projectId}/members/{userId} exists or has specific role/permission fields.
     function hasProjectChannelReadPermission(projectId, projectChannelId) {
-      // Example: return isAuthenticated() && firestore.get(/databases/(default)/documents/projects/$(projectId)/project_channels/$(projectChannelId)/members/$(request.auth.uid)).data.canRead == true;
+      // Example: return isAuthenticated() && firestore.get(/databases/default/documents/projects/$(projectId)/project_channels/$(projectChannelId)/members/$(request.auth.uid)).data.canRead == true;
       // Simpler: Check if user is a member of the project this channel belongs to.
-      return isAuthenticated() && firestore.exists(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid));
+      return isAuthenticated() && firestore.exists(/databases/default/documents/projects/$(projectId)/members/$(request.auth.uid));
     }
 
     // Placeholder: Check if user can post (create files/messages) in a project channel.
     // Assumes /projects/{projectId}/members/{userId} has a 'canPost' or similar role-based permission.
     function canPostToProjectChannel(projectId, projectChannelId) {
-      // Example: return isAuthenticated() && firestore.get(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid)).data.canPostInChannel[$(projectChannelId)] == true;
+      // Example: return isAuthenticated() && firestore.get(/databases/default/documents/projects/$(projectId)/members/$(request.auth.uid)).data.canPostInChannel[$(projectChannelId)] == true;
       // Simpler: Check if user is a member of the project this channel belongs to.
-      return isAuthenticated() && firestore.exists(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid));
+      return isAuthenticated() && firestore.exists(/databases/default/documents/projects/$(projectId)/members/$(request.auth.uid));
     }
 
     // Placeholder: Check if user has delete permission for messages/files in a project channel.
     // Assumes /projects/{projectId}/members/{userId} has a 'canDeleteMessages' or similar role-based permission.
     function hasProjectChannelDeletePermission(projectId, projectChannelId) {
-      // Example: return isAuthenticated() && firestore.get(/databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid)).data.role == 'moderator';
+      // Example: return isAuthenticated() && firestore.get(/databases/default/documents/projects/$(projectId)/members/$(request.auth
       return false; // Default to false, requiring explicit project owner or author status.
     }
 
@@ -101,8 +112,7 @@ service firebase.storage {
     // Path: project_profile_images/{projectId}/{fileName}
     match /project_profile_images/{projectId}/{fileName} {
       allow read: if isAuthenticated(); // As per markdown: (로그인)인증된 모두
-      allow write: if isProjectOwner(projectId) &&
-                      request.resource.size < 2 * 1024 * 1024 && // Max 2MB
+      allow write, update, delete: if request.resource.size < 2 * 1024 * 1024 && // Max 2MB
                       request.resource.contentType.matches('image/.*'); // Only images
     }
 
