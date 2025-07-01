@@ -36,9 +36,9 @@ class Invite private constructor(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_INVITE_LINK to this.inviteCode,
+            KEY_INVITE_LINK to this.inviteCode.value,
             KEY_STATUS to this.status,
-            KEY_CREATED_BY to this.createdBy,
+            KEY_CREATED_BY to this.createdBy.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_EXPIRES_AT to this.expiresAt,
             KEY_UPDATED_AT to this.updatedAt

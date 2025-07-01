@@ -34,8 +34,8 @@ class Role private constructor(
     // Implementation of abstract method from AggregateRoot
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_NAME to this.name,
-            KEY_IS_DEFAULT to this.isDefault,
+            KEY_NAME to this.name.value,
+            KEY_IS_DEFAULT to this.isDefault.value,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_CREATED_AT to this.createdAt,
         )

@@ -22,7 +22,7 @@ class Member private constructor(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_ROLE_ID to this.roleIds,
+            KEY_ROLE_ID to this.roleIds.map { it.value },
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt
         )

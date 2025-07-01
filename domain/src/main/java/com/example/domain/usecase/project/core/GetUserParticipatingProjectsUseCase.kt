@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+import com.example.domain.model.vo.DocumentId
 
 /**
  * 사용자가 참여하고 있는 프로젝트 목록을 가져오는 UseCase
@@ -38,51 +39,60 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
 
     override suspend fun invoke(): Flow<CustomResult<List<Project>, Exception>> {
 
-        // ProjectsWrapper에서 프로젝트 ID를 추출하고, ProjectRepository를 통해 전체 프로젝트 정보를 가져옵니다.
+        // ProjectsWrapper에서 프로젝트 ID별 CustomResult 를 Map 형태로 구성하여 어떤 ID에서 오류가 발생했는지 추적하기 쉽도록 변경한다.
         return projectsWrapperRepository.observeAll().map { result ->
             Log.d("GetUserParticipatingProjectsUseCase", "projectsWrapperRepository.observeAll() emitted: $result")
             when (result) {
                 is CustomResult.Success -> {
                     val wrappers: List<ProjectsWrapper> = result.data.map { it as ProjectsWrapper }
-                    Log.d("GetUserParticipatingProjectsUseCase", "Wrapper ids: ${wrappers.map{it.id}}")
-                    val projectResults = wrappers.map { wrapper ->
-                        Log.d("GetUserParticipatingProjectsUseCase", "Fetching project id=${wrapper.id}")
-                        projectRepository.findById(wrapper.id)
+                    Log.d("GetUserParticipatingProjectsUseCase", "Wrapper ids: ${wrappers.map { it.id }}")
+
+                    // id -> 조회 결과 매핑
+                    val projectResultsMap: Map<DocumentId, CustomResult<Project, Exception>> = wrappers.associate { wrapper ->
+                        Log.d("GetUserParticipatingProjectsUseCase", "Fetching project id=${wrapper.id.value}")
+                        (wrapper.id to projectRepository.findById(wrapper.id)) as Pair<DocumentId, CustomResult<Project, Exception>>
                     }
 
-                    // 프로젝트 개별 조회 결과에 따라 전체 결과 타입 결정
+                    // ----- 결과 집계 -----
                     when {
-                        // 하나라도 Failure 가 있으면 즉시 Failure 반환
-                        projectResults.any { it is CustomResult.Failure } -> {
-                            val firstFailure = projectResults.first { it is CustomResult.Failure } as CustomResult.Failure<Exception>
-                            Log.e("GetUserParticipatingProjectsUseCase", "Failure fetching project: ${firstFailure.error}")
-                            return@map CustomResult.Failure(firstFailure.error)
+                        // 하나라도 Failure 인 경우 ⇒ 어떤 ID 인지 명확히 로깅 후 Failure 반환
+                        projectResultsMap.values.any { it is CustomResult.Failure } -> {
+                            val failureEntry = projectResultsMap.entries.first { it.value is CustomResult.Failure }
+                            val error = (failureEntry.value as CustomResult.Failure).error
+                            Log.e(
+                                "GetUserParticipatingProjectsUseCase",
+                                "Failure fetching project id=${failureEntry.key.value}: $error"
+                            )
+                            CustomResult.Failure(error)
                         }
 
-                        // 진행률이 존재하면 Progress 상태 전달 (가장 첫 Progress 사용)
-                        projectResults.any { it is CustomResult.Progress } -> {
-                            val firstProgress = projectResults.first { it is CustomResult.Progress } as CustomResult.Progress
-                            Log.d("GetUserParticipatingProjectsUseCase", "Encountered Progress state = ${firstProgress.progress}")
-                            return@map CustomResult.Progress(firstProgress.progress)
+                        // 진행률 존재시 Progress 전달 (첫 번째 Progress 사용)
+                        projectResultsMap.values.any { it is CustomResult.Progress } -> {
+                            val progress = (projectResultsMap.values.first { it is CustomResult.Progress } as CustomResult.Progress).progress
+                            Log.d("GetUserParticipatingProjectsUseCase", "Encountered Progress state = $progress")
+                            CustomResult.Progress(progress)
                         }
 
-                        // 로딩 중인 결과가 있으면 Loading 상태 전달
-                        projectResults.any { it is CustomResult.Loading } -> {
+                        // 로딩 중 결과가 있으면 Loading 전달
+                        projectResultsMap.values.any { it is CustomResult.Loading } -> {
                             Log.d("GetUserParticipatingProjectsUseCase", "Some project fetch still Loading")
-                            return@map CustomResult.Loading
+                            CustomResult.Loading
                         }
 
-                        // 초기 상태가 있으면 Initial 상태 전달
-                        projectResults.any { it is CustomResult.Initial } -> {
+                        // 초기 상태가 있으면 Initial 전달
+                        projectResultsMap.values.any { it is CustomResult.Initial } -> {
                             Log.d("GetUserParticipatingProjectsUseCase", "Initial state encountered (shouldn't happen)")
-                            return@map CustomResult.Initial
+                            CustomResult.Initial
                         }
 
-                        // 전부 성공한 경우 리스트로 매핑
+                        // 전부 성공한 경우 Map → List 변환 후 Success 반환
                         else -> {
-                            val projects = projectResults.map { (it as CustomResult.Success).data as Project }
-                            Log.d("GetUserParticipatingProjectsUseCase", "All projects fetched successfully: size=${projects.size}")
-                            return@map CustomResult.Success(projects)
+                            val projects: List<Project> = projectResultsMap.values.map { (it as CustomResult.Success).data }
+                            Log.d(
+                                "GetUserParticipatingProjectsUseCase",
+                                "All projects fetched successfully: size=${projects.size}"
+                            )
+                            CustomResult.Success(projects)
                         }
                     }
                 }

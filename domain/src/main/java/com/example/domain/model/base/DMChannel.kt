@@ -48,7 +48,7 @@ class DMChannel private constructor(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_PARTICIPANTS to participants,
+            KEY_PARTICIPANTS to participants.map { it.value },
             KEY_CREATED_AT to createdAt,
             KEY_UPDATED_AT to updatedAt,
         )

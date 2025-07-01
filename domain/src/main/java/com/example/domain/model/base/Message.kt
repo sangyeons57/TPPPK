@@ -33,12 +33,12 @@ class Message private constructor(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_SENDER_ID to this.senderId,
-            KEY_SEND_MESSAGE to this.content,
-            KEY_REPLY_TO_MESSAGE_ID to this.replyToMessageId,
+            KEY_SENDER_ID to this.senderId.value,
+            KEY_SEND_MESSAGE to this.content.value,
+            KEY_REPLY_TO_MESSAGE_ID to this.replyToMessageId?.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
-            KEY_IS_DELETED to this.isDeleted
+            KEY_IS_DELETED to this.isDeleted.value
         )
     }
 

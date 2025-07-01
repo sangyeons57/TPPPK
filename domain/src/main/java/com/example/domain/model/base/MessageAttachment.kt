@@ -33,12 +33,12 @@ class MessageAttachment private constructor(
      */
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_ATTACHMENT_TYPE to this.attachmentType,
-            KEY_ATTACHMENT_URL to this.attachmentUrl,
+            KEY_ATTACHMENT_TYPE to this.attachmentType.value,
+            KEY_ATTACHMENT_URL to this.attachmentUrl.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
-            KEY_FILE_NAME to this.fileName,
-            KEY_FILE_SIZE to this.fileSize,
+            KEY_FILE_NAME to this.fileName?.value,
+            KEY_FILE_SIZE to this.fileSize?.value,
         )
     }
 

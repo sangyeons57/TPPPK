@@ -28,8 +28,8 @@ class Reaction private constructor(
      */
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_USER_ID to this.userId,
-            KEY_EMOJI to this.emoji,
+            KEY_USER_ID to this.userId.value,
+            KEY_EMOJI to this.emoji.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
         )

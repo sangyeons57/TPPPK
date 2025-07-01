@@ -28,9 +28,9 @@ class ProjectsWrapper(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_ORDER to this.order,
-            KEY_PROJECT_NAME to this.projectName,
-            KEY_PROJECT_IMAGE_URL to this.projectImageUrl,
+            KEY_ORDER to this.order.value,
+            KEY_PROJECT_NAME to this.projectName.value,
+            KEY_PROJECT_IMAGE_URL to this.projectImageUrl?.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt
         )

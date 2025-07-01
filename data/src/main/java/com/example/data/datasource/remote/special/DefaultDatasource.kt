@@ -192,8 +192,12 @@ abstract class DefaultDatasourceImpl <Dto> (
         checkCollectionInitialized("update")
         resultTry {
             if (id.isNotAssigned()) throw IllegalArgumentException("ID cannot be empty when updating")
-            // Automatically add updatedAt timestamp to all updates
+            // Ensure createdAt is never modified during update
             val dataWithTimestamp = data.toMutableMap().apply {
+                // Remove any accidental createdAt field in update map
+                remove(AggregateRoot.KEY_CREATED_AT)
+
+                // Always set updatedAt to server time
                 put(AggregateRoot.KEY_UPDATED_AT, FieldValue.serverTimestamp())
             }
             collection.document(id.value).update(dataWithTimestamp).await()

@@ -112,7 +112,8 @@ service firebase.storage {
     // Path: project_profile_images/{projectId}/{fileName}
     match /project_profile_images/{projectId}/{fileName} {
       allow read: if isAuthenticated(); // As per markdown: (로그인)인증된 모두
-      allow write, update, delete: if request.resource.size < 2 * 1024 * 1024 && // Max 2MB
+      allow write, update, delete: if isAuthenticated() &&
+                      request.resource.size < 2 * 1024 * 1024 && // Max 2MB
                       request.resource.contentType.matches('image/.*'); // Only images
     }
 

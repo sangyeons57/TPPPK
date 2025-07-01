@@ -32,9 +32,9 @@ class ProjectChannel private constructor(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
-            KEY_CHANNEL_NAME to this.channelName,
-            KEY_CHANNEL_TYPE to this.channelType,
-            KEY_ORDER to this.order,
+            KEY_CHANNEL_NAME to this.channelName.value,
+            KEY_CHANNEL_TYPE to this.channelType.value,
+            KEY_ORDER to this.order.value,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_CREATED_AT to this.createdAt
         )
