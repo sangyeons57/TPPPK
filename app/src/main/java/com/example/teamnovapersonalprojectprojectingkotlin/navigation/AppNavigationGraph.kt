@@ -51,6 +51,8 @@ import com.example.feature_schedule_detail.ui.ScheduleDetailScreen
 import com.example.feature_settings.ui.SettingsScreen
 import com.example.feature_signup.ui.SignUpScreen
 import com.example.feature_terms_of_service.ui.TermsOfServiceScreen
+import com.example.feature_member.ui.MemberListScreen
+import com.example.feature_role_list.ui.RoleListScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -262,6 +264,22 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
             route = JoinProjectRoute.toAppRoutePath(),
         ) {
             JoinProjectScreen(navigationManger)
+        }
+        
+        // 멤버 관리 화면
+        composable(
+            route = MemberListRoute.ROUTE_PATTERN,
+            arguments = MemberListRoute.arguments
+        ) {
+            MemberListScreen(navigationManger = navigationManger)
+        }
+        
+        // 역할 관리 화면
+        composable(
+            route = RoleListRoute.ROUTE_PATTERN,
+            arguments = RoleListRoute.arguments
+        ) {
+            RoleListScreen(navigationManger = navigationManger)
         }
         
         // 프로젝트 상세 화면 - 메인 탭 외부에서도 접근 가능
