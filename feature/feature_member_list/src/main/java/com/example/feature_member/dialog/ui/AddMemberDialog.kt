@@ -160,7 +160,7 @@ fun AddMemberDialogContent(
                             LazyColumn(modifier = Modifier.fillMaxSize()) {
                                 items(
                                     items = searchResults,
-                                    key = { it.userId }
+                                    key = { it.userId.value }
                                 ) { user ->
                                     UserSearchResultItem(
                                         user = user,

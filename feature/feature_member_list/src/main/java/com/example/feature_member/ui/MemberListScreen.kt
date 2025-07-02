@@ -211,7 +211,7 @@ fun MemberListContent(
                 )
             }
         } else {
-            items(uiState.members, key = { it.userId }) { member ->
+            items(uiState.members, key = { it.userId.value }) { member ->
                 ProjectMemberListItemComposable(
                     member = member, // Pass Member directly
                     onClick = { onMemberClick(member) },
@@ -257,7 +257,7 @@ fun ProjectMemberListItemComposable(
             )
             if (member.roleNames.isNotEmpty()) { // Use MemberUiModel.roleNames
                 Text(
-                    text = member.roleNames.joinToString(", "), // Display role names
+                    text = member.roleNames.joinToString(", ") { it.value }, // ValueObject에서 .value 사용
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

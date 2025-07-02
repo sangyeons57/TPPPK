@@ -12,6 +12,8 @@ import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCase
 import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCaseImpl
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCaseImpl
+import com.example.domain.usecase.user.GetUserByIdUseCase
+import com.example.domain.usecase.user.GetUserByIdUseCaseImpl
 import com.example.domain.usecase.user.GetUserStreamUseCase
 import com.example.domain.usecase.user.GetUserStreamUseCaseImpl
 import com.example.domain.usecase.user.RemoveProfileImageUseCase
@@ -64,6 +66,10 @@ class UserUseCaseProvider @Inject constructor(
 
         return UserUseCases(
             getUserStreamUseCase = GetUserStreamUseCaseImpl(
+                userRepository = userRepository
+            ),
+            
+            getUserByIdUseCase = GetUserByIdUseCaseImpl(
                 userRepository = userRepository
             ),
             
@@ -120,6 +126,7 @@ class UserUseCaseProvider @Inject constructor(
 data class UserUseCases(
     // 사용자 정보 조회
     val getUserStreamUseCase: GetUserStreamUseCase,
+    val getUserByIdUseCase: GetUserByIdUseCase,
     val getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase,
     val searchUserByNameUseCase: SearchUserByNameUseCase,
     

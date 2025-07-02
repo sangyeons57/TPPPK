@@ -10,6 +10,6 @@ data class MemberUiModel(
     val userId: UserId,
     val userName: UserName,
     val profileImageUrl: ImageUrl?,
-    val roleNames: List<Name>, // List of role names for display
-    val joinedAt: Instant? // Keep joinedAt if needed, or remove
+    val roleNames: List<Name>,
+    val joinedAt: Instant?
 )

@@ -13,6 +13,8 @@ import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain.provider.project.ProjectRoleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +27,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import javax.inject.Inject
 
 
@@ -68,6 +72,8 @@ sealed class MemberListEvent {
 class MemberListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider,
+    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -77,6 +83,8 @@ class MemberListViewModel @Inject constructor(
     
     // Provider를 통해 생성된 UseCase 그룹
     private val projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+    private val userUseCases = userUseCaseProvider.createForUser()
+    private val projectRoleUseCases = projectRoleUseCaseProvider.createForProject(projectId)
 
     /**
      * UI 상태 (내부 Mutable 버전)
@@ -119,19 +127,53 @@ class MemberListViewModel @Inject constructor(
                     when (membersResult) {
                         is CustomResult.Success -> {
                             val domainMembers = membersResult.data
+                            
+                            // 각 멤버에 대해 사용자 정보와 역할 정보를 비동기로 가져오기
                             val uiMembers = domainMembers.map { domainMember ->
-                                MemberUiModel(
-                                    userId = UserId.from(domainMember.id),
-                                    userName = UserName("User ${domainMember.id.value.take(4)}"), // Placeholder from previous step
-                                    profileImageUrl = null, // Placeholder
-                                    roleNames = domainMember.roleIds.map { Name("Role_$it") }, // Placeholder
-                                    joinedAt = domainMember.createdAt
-                                )
-                            }
+                                async {
+                                    try {
+                                        // 사용자 정보 가져오기 - UseCase 사용
+                                        val userResult = userUseCases.getUserByIdUseCase(domainMember.id)
+                                        val (userName, profileImageUrl) = when (userResult) {
+                                            is CustomResult.Success -> {
+                                                Pair(userResult.data.name, userResult.data.profileImageUrl)
+                                            }
+                                            else -> Pair(UserName("사용자 ${domainMember.id.value.take(4)}"), null) // 백업값
+                                        }
+
+                                        // 역할 정보들 가져오기
+                                        val roleNames = domainMember.roleIds.map { roleId ->
+                                            val roleResult = projectRoleUseCases.getProjectRoleUseCase(roleId.value)
+                                            when (roleResult) {
+                                                is CustomResult.Success -> roleResult.data.name
+                                                else -> Name("역할 ${roleId.value.take(4)}") // 백업값
+                                            }
+                                        }
+
+                                        MemberUiModel(
+                                            userId = UserId.from(domainMember.id),
+                                            userName = userName,
+                                            profileImageUrl = profileImageUrl,
+                                            roleNames = roleNames,
+                                            joinedAt = domainMember.createdAt
+                                        )
+                                    } catch (e: Exception) {
+                                        // 에러 발생 시 백업 데이터 사용
+                                        MemberUiModel(
+                                            userId = UserId.from(domainMember.id),
+                                            userName = UserName("사용자 ${domainMember.id.value.take(4)}"),
+                                            profileImageUrl = null,
+                                            roleNames = listOf(Name("역할 로딩 실패")),
+                                            joinedAt = domainMember.createdAt
+                                        )
+                                    }
+                                }
+                            }.awaitAll() // 모든 비동기 작업 완료 대기
+
                             val filteredList = if (query.isBlank()) {
                                 uiMembers
                             } else {
-                                uiMembers.filter { it.userName.contains(query, ignoreCase = true) }
+                                uiMembers.filter { it.userName.value.contains(query, ignoreCase = true) }
                             }
                             _uiState.update { it.copy(members = filteredList, isLoading = false, error = null) }
                         }
@@ -241,7 +283,7 @@ class MemberListViewModel @Inject constructor(
             val result = projectMemberUseCases.deleteProjectMemberUseCase(member.userId)
             when (result){
                 is CustomResult.Success -> {
-                    _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName}님을 내보냈습니다.")) // Used MemberUiModel.userName
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName.value}님을 내보냈습니다.")) // Used MemberUiModel.userName
                 }
                 is CustomResult.Failure -> {
                     _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 내보내기 실패: ${result.error}"))
