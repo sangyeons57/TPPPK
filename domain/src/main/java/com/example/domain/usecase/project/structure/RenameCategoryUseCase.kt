@@ -1,6 +1,7 @@
 package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.repository.base.CategoryRepository

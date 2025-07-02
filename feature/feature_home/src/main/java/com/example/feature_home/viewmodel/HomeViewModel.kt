@@ -537,7 +537,7 @@ class HomeViewModel @Inject constructor(
 
                                         CategoryUiModel(
                                             id = categoryDomain.id,
-                                            name = categoryDomain.name.getName(),
+                                            name = categoryDomain.name,
                                             channels = emptyList(), // TODO: Load channels for each category
                                             isExpanded = isExpanded
                                         )
