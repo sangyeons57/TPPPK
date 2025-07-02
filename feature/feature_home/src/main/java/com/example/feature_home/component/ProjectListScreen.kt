@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -29,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.project.ProjectName
@@ -134,13 +137,25 @@ fun ProjectListItem(
                     .background(MaterialTheme.colorScheme.surfaceVariant), // 기본 배경색
                 contentAlignment = Alignment.Center
             ) {
-                // TODO: project.imageUrl을 사용하여 Coil 등으로 이미지 로드 구현
-                // 현재는 이름 첫 글자만 표시
-                Text(
-                    text = project.name.value.firstOrNull()?.uppercase() ?: "P",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // 이미지가 있으면 이미지 표시, 없으면 첫 글자 표시
+                if (!project.imageUrl?.value.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = project.imageUrl!!.value,
+                        contentDescription = "프로젝트 이미지",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                        // 로딩 실패 시 기본 텍스트 표시 (fallback은 아래 else 블록에서 처리)
+                    )
+                } else {
+                    // 이미지가 없는 경우 프로젝트 이름 첫 글자 표시
+                    Text(
+                        text = project.name.value.firstOrNull()?.uppercase() ?: "P",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
