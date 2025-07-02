@@ -37,12 +37,9 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
     ): Flow<CustomResult<List<Role>, Exception>> {
         return when (val customResult = projectRoleRepository.observeAll().first()){
             is CustomResult.Success -> {
-                var roles = customResult.data.toList().filter{
-                    if (it !is Role) return@filter false
-
-                    it.isDefault.isDefault()
-                } as List<Role>
-
+                // Filter to only include Role objects and remove the default filter 
+                // so we can see both default and custom roles
+                var roles = customResult.data.filterIsInstance<Role>()
 
                 // Apply sorting if specified
                 sortBy?.let { option ->
