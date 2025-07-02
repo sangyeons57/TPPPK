@@ -41,32 +41,27 @@ class User private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     // Immutable properties
     val email: UserEmail = initialEmail
     val consentTimeStamp: Instant = initialConsentTimeStamp
 
-    // Exposed mutable properties with restricted setters
+    // Mutable properties
     var name: UserName = initialName
         private set
-
     var profileImageUrl: ImageUrl? = initialProfileImageUrl
         private set
-
     var memo: UserMemo? = initialMemo
         private set
-
     var userStatus: UserStatus = initialUserStatus
         private set
-
     var fcmToken: UserFcmToken? = initialFcmToken
         private set
-
     var accountStatus: UserAccountStatus = initialAccountStatus
         private set
+
+    init {
+        setOriginalState()
+    }
 
     /**
      * Returns and clears the accumulated domain events.

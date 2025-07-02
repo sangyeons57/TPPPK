@@ -19,12 +19,12 @@ class Reaction private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    val userId: UserId = initialUserId
+    val emoji: Emoji = initialEmoji
+
     init {
         setOriginalState()
     }
-
-    val userId: UserId = initialUserId
-    val emoji: Emoji = initialEmoji
 
     /**
      * A Reaction's state is immutable once created.

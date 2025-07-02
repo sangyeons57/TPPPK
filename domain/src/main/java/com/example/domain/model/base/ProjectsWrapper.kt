@@ -19,16 +19,16 @@ class ProjectsWrapper(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     var order: ProjectWrapperOrder = initialOrder
         private set
     var projectName: ProjectName = initialProjectName
         private set
     var projectImageUrl: ImageUrl? = initialProjectImageUrl
         private set
+
+    init {
+        setOriginalState()
+    }
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(

@@ -22,10 +22,6 @@ class Project private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     // Immutable properties
     val ownerId: OwnerId = initialOwnerId
 
@@ -34,6 +30,10 @@ class Project private constructor(
         private set
     var imageUrl: ImageUrl? = initialImageUrl
         private set
+
+    init {
+        setOriginalState()
+    }
 
     // Implementation of abstract method from AggregateRoot
     override fun getCurrentStateMap(): Map<String, Any?> {

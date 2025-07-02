@@ -40,6 +40,14 @@ class Category private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    val createdBy: OwnerId = initialCreatedBy
+    var name: CategoryName = initialName
+        private set
+    var order: CategoryOrder = initialOrder
+        private set
+    var isCategory: IsCategoryFlag = initialIsCategory
+        private set
+
     init {
         setOriginalState()
     }
@@ -55,12 +63,6 @@ class Category private constructor(
         )
     }
 
-    var name: CategoryName = initialName
-        private set
-    var order: CategoryOrder = initialOrder
-        private set
-    val createdBy: OwnerId = initialCreatedBy
-    val isCategory: IsCategoryFlag = initialIsCategory
 
     /**
      * Updates mutable fields (name and/or order). If any field actually changes, `updatedAt` is refreshed and

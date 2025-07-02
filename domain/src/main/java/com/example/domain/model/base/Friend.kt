@@ -30,13 +30,10 @@ class Friend private constructor(
 
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     val requestedAt: Instant? = initialRequestedAt
     var acceptedAt: Instant? = initialAcceptedAt // Made var in case it needs to be set by a method
         private set
+
 
     var name: Name = initialName
         private set
@@ -47,7 +44,9 @@ class Friend private constructor(
     var status: FriendStatus = initialStatus
         private set
 
-
+    init {
+        setOriginalState()
+    }
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(

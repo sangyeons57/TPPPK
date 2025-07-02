@@ -23,10 +23,6 @@ class Message private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     val senderId: UserId = initialSenderId
     val replyToMessageId: DocumentId? = initialReplyToMessageId
 
@@ -34,6 +30,10 @@ class Message private constructor(
         private set
     var isDeleted: MessageIsDeleted = initialIsDeleted
         private set
+
+    init {
+        setOriginalState()
+    }
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(

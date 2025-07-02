@@ -23,6 +23,18 @@ class DMWrapper private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    var otherUserId: UserId = initialOtherUserId
+        private set
+
+    var otherUserName: UserName = initialOtherUserName
+        private set
+
+    var otherUserImageUrl: ImageUrl? = initialOtherUserImageUrl
+        private set
+
+    var lastMessagePreview: DMChannelLastMessagePreview? = initialLastMessagePreview
+        private set
+
     init {
         setOriginalState()
     }
@@ -37,15 +49,6 @@ class DMWrapper private constructor(
             KEY_UPDATED_AT to updatedAt,
         )
     }
-
-    var otherUserId: UserId = initialOtherUserId
-        private set
-    var otherUserName: UserName = initialOtherUserName
-        private set
-    var otherUserImageUrl: ImageUrl? = initialOtherUserImageUrl
-        private set
-    var lastMessagePreview: DMChannelLastMessagePreview? = initialLastMessagePreview
-        private set
 
     fun changeOtherUser(newOtherUserId: UserId) {
         if (this.otherUserId == newOtherUserId) return

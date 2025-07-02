@@ -23,10 +23,6 @@ class Role private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     // Immutable properties
 
     // Mutable properties with private setters
@@ -34,6 +30,10 @@ class Role private constructor(
         private set
     var isDefault: RoleIsDefault = initialIsDefault
         private set
+
+    init {
+        setOriginalState()
+    }
 
     // Implementation of abstract method from AggregateRoot
     override fun getCurrentStateMap(): Map<String, Any?> {

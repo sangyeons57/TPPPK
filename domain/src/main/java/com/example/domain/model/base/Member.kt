@@ -15,14 +15,14 @@ class Member private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     // Immutable properties
     // Mutable properties
     var roleIds: List<DocumentId> = initialRoleIds
         private set
+
+    init {
+        setOriginalState()
+    }
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(

@@ -20,21 +20,34 @@ import com.example.domain.event.schedule.ScheduleStatusChangedEvent
  */
 class Schedule private constructor(
     // Immutable properties
-    @FirestoreDocumentId
-    val projectId: ProjectId?,
-    val creatorId: OwnerId,
+    initialProjectId: ProjectId?,
+     initialCreatorId: OwnerId,
 
     // Mutable properties with private setters
-    title: ScheduleTitle,
-    content: ScheduleContent,
-    startTime: Instant,
-    endTime: Instant,
-    status: ScheduleStatus,
+    initialTitle: ScheduleTitle,
+    initialContent: ScheduleContent,
+    initialStartTime: Instant,
+    initialEndTime: Instant,
+    initialStatus: ScheduleStatus,
     override val id: DocumentId,
     override val isNew: Boolean,
     override val createdAt: Instant,
     override val updatedAt: Instant,
 ) : AggregateRoot() {
+    val creatorId: OwnerId = initialCreatorId
+
+    var projectId: ProjectId? = initialProjectId
+        private set
+    var title: ScheduleTitle = initialTitle
+        private set
+    var content: ScheduleContent = initialContent
+        private set
+    var startTime: Instant = initialStartTime
+        private set
+    var endTime: Instant = initialEndTime
+        private set
+    var status: ScheduleStatus = initialStatus
+        private set
 
     init {
         setOriginalState()
@@ -53,22 +66,6 @@ class Schedule private constructor(
             KEY_UPDATED_AT to this.updatedAt,
         )
     }
-
-    var title: ScheduleTitle = title
-        private set
-
-    var content: ScheduleContent = content
-        private set
-
-    var startTime: Instant = startTime
-        private set
-
-    var endTime: Instant = endTime
-        private set
-
-    var status: ScheduleStatus = status
-        private set
-
 
     /**
      * Updates the schedule's main information.
@@ -121,13 +118,13 @@ class Schedule private constructor(
         ): Schedule {
             val schedule = Schedule(
                 id = DocumentId.EMPTY,
-                projectId = projectId,
-                creatorId = creatorId,
-                title = title,
-                content = content,
-                startTime = startTime,
-                endTime = endTime,
-                status = status,
+                initialProjectId = projectId,
+                initialCreatorId = creatorId,
+                initialTitle = title,
+                initialContent = content,
+                initialStartTime = startTime,
+                initialEndTime = endTime,
+                initialStatus = status,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
@@ -154,13 +151,13 @@ class Schedule private constructor(
         ): Schedule {
             val schedule = Schedule(
                 id = id,
-                projectId = projectId,
-                creatorId = creatorId,
-                title = title,
-                content = content,
-                startTime = startTime,
-                endTime = endTime,
-                status = status,
+                initialProjectId = projectId,
+                initialCreatorId = creatorId,
+                initialTitle = title,
+                initialContent = content,
+                initialStartTime = startTime,
+                initialEndTime = endTime,
+                initialStatus = status,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false,

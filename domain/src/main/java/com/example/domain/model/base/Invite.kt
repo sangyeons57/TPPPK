@@ -25,18 +25,19 @@ class Invite private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
-
     // Immutable properties
     val inviteCode: InviteCode = initialInviteCode
     val createdBy: OwnerId = initialCreatedBy
-    val expiresAt: Instant? = initialExpiresAt
 
     // Mutable properties
     var status: InviteStatus = initialStatus
         private set
+    var expiresAt: Instant? = initialExpiresAt
+        private set
+
+    init {
+        setOriginalState()
+    }
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
@@ -71,7 +72,7 @@ class Invite private constructor(
 
     // Method to check if invite is still valid (not expired and active)
     fun isActive(): Boolean {
-        return this.status == InviteStatus.ACTIVE && (this.expiresAt == null || this.expiresAt.isAfter(DateTimeUtil.nowInstant()))
+        return this.status == InviteStatus.ACTIVE && (this.expiresAt == null || this.expiresAt!!.isAfter(DateTimeUtil.nowInstant()))
     }
 
 
