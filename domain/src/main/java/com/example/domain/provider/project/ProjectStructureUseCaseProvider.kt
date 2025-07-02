@@ -20,6 +20,8 @@ import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
 import com.example.domain.usecase.project.structure.DeleteCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCaseImpl
+import com.example.domain.usecase.project.structure.RenameCategoryUseCase
+import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,16 +70,17 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             ),
             
             deleteCategoryUseCase = DeleteCategoryUseCaseImpl(
-                categoryRepositoryFactory = categoryRepositoryFactory
+                categoryRepository = categoryRepository
             ),
             
-            // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
-            // renameCategoryUseCase = null,
+            renameCategoryUseCase = RenameCategoryUseCaseImpl(
+                categoryRepository = categoryRepository
+            ),
             
 
             // 프로젝트 구조 조회 및 변환
             getProjectAllCategoriesUseCase = GetProjectAllCategoriesUseCaseImpl(
-                categoryRepositoryFactory = categoryRepositoryFactory
+                categoryRepository = categoryRepository
             ),
             
 
@@ -117,8 +120,7 @@ data class ProjectStructureUseCases(
     // 카테고리 관리
     val addCategoryUseCase: AddCategoryUseCase,
     val deleteCategoryUseCase: DeleteCategoryUseCase,
-    // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
-    // val renameCategoryUseCase: RenameCategoryUseCase,
+    val renameCategoryUseCase: RenameCategoryUseCase,
 
     // 프로젝트 구조 조회 및 변환
     val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,

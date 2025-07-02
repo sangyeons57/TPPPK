@@ -2,6 +2,9 @@ package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.repository.base.CategoryRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -25,20 +28,46 @@ interface RenameCategoryUseCase {
 }
 
 /**
- * RenameCategoryUseCase 임시 스텁 구현체
- * TODO: DDD 방식으로 CategoryRepository를 직접 사용하도록 수정 필요
+ * RenameCategoryUseCase 실제 구현체
+ * Provider로부터 CategoryRepository를 받아 카테고리 이름을 변경합니다.
  */
-class RenameCategoryUseCaseImpl @Inject constructor() : RenameCategoryUseCase {
+class RenameCategoryUseCaseImpl @Inject constructor(
+    private val categoryRepository: CategoryRepository
+) : RenameCategoryUseCase {
     
     /**
-     * 임시 스텁 구현 - 항상 성공을 반환합니다.
+     * 카테고리 이름을 변경합니다.
      */
     override suspend operator fun invoke(
         projectId: DocumentId,
         categoryId: DocumentId,
         newName: String
     ): CustomResult<Unit, Exception> {
-        // TODO: CategoryRepository를 사용한 실제 이름 변경 로직 구현
-        return CustomResult.Success(Unit)
+        return try {
+            // 카테고리 조회
+            val categoryResult = categoryRepository.observe(categoryId).first()
+            
+            when (categoryResult) {
+                is CustomResult.Success -> {
+                    val category = categoryResult.data as Category
+                    
+                    // 카테고리 이름 변경
+                    category.changeName(CategoryName.from(newName))
+                    
+                    // 변경된 카테고리 저장
+                    val saveResult = categoryRepository.save(category)
+                    
+                    when (saveResult) {
+                        is CustomResult.Success -> CustomResult.Success(Unit)
+                        is CustomResult.Failure -> saveResult
+                        else -> CustomResult.Failure(Exception("Unexpected save result"))
+                    }
+                }
+                is CustomResult.Failure -> categoryResult
+                else -> CustomResult.Failure(Exception("Failed to load category"))
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 }
