@@ -6,7 +6,7 @@ import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.ProjectChannelRepository
-import com.example.domain.repository.collection.CategoryCollectionRepository
+
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
@@ -16,19 +16,10 @@ import com.example.domain.usecase.project.category.UpdateCategoryUseCase
 import com.example.domain.usecase.project.category.UpdateCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.AddCategoryUseCase
 import com.example.domain.usecase.project.structure.AddCategoryUseCaseImpl
-import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCase
-import com.example.domain.usecase.project.structure.ConvertProjectStructureToDraggableItemsUseCaseImpl
 import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
 import com.example.domain.usecase.project.structure.DeleteCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCaseImpl
-import com.example.domain.usecase.project.structure.MoveCategoryUseCase
-import com.example.domain.usecase.project.structure.MoveCategoryUseCaseImpl
-import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCase
-import com.example.domain.usecase.project.structure.MoveChannelBetweenCategoriesUseCaseImpl
-import com.example.domain.usecase.project.structure.RenameCategoryUseCase
-import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
-import com.example.domain.usecase.project.structure.UpdateProjectStructureUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,8 +32,7 @@ import javax.inject.Singleton
 class ProjectStructureUseCaseProvider @Inject constructor(
     private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
     private val projectChannelRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val categoryCollectionRepository: CategoryCollectionRepository
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
     /**
@@ -52,6 +42,8 @@ class ProjectStructureUseCaseProvider @Inject constructor(
      * @return 프로젝트 구조 관리 UseCase 그룹
      */
     fun createForProject(projectId: DocumentId): ProjectStructureUseCases {
+        // repository 생성은 viewmodel 에서 해야함
+        // 정확히는 provider 에서 해야함 provider를 viemodel 에서 주입받고
         val categoryRepository = categoryRepositoryFactory.create(
             CategoryRepositoryFactoryContext(
                 collectionPath = CollectionPath.projectCategories(projectId.value)
@@ -76,32 +68,21 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             ),
             
             deleteCategoryUseCase = DeleteCategoryUseCaseImpl(
-                categoryCollectionRepository = categoryCollectionRepository
+                categoryRepositoryFactory = categoryRepositoryFactory
             ),
             
-            renameCategoryUseCase = RenameCategoryUseCaseImpl(
-                categoryCollectionRepository = categoryCollectionRepository
-            ),
+            // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
+            // renameCategoryUseCase = null,
             
-            moveCategoryUseCase = MoveCategoryUseCaseImpl(),
-            
+
             // 프로젝트 구조 조회 및 변환
             getProjectAllCategoriesUseCase = GetProjectAllCategoriesUseCaseImpl(
-                categoryCollectionRepository = categoryCollectionRepository
+                categoryRepositoryFactory = categoryRepositoryFactory
             ),
             
-            convertProjectStructureToDraggableItemsUseCase = ConvertProjectStructureToDraggableItemsUseCaseImpl(),
-            
-            // 구조 업데이트
-            updateProjectStructureUseCase = UpdateProjectStructureUseCase(
-                categoryRepository = categoryRepository,
-                projectChannelRepository = projectChannelRepository
-            ),
-            
-            // 채널-카테고리 간 이동
-            moveChannelBetweenCategoriesUseCase = MoveChannelBetweenCategoriesUseCaseImpl(
-                categoryCollectionRepository = categoryCollectionRepository
-            ),
+
+            // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
+            // moveChannelBetweenCategoriesUseCase = MoveChannelBetweenCategoriesUseCaseImpl(),
             
             // 카테고리 도메인 UseCases
             getCategoryDetailsUseCase = GetCategoryDetailsUseCaseImpl(
@@ -136,18 +117,17 @@ data class ProjectStructureUseCases(
     // 카테고리 관리
     val addCategoryUseCase: AddCategoryUseCase,
     val deleteCategoryUseCase: DeleteCategoryUseCase,
-    val renameCategoryUseCase: RenameCategoryUseCase,
-    val moveCategoryUseCase: MoveCategoryUseCase,
-    
+    // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
+    // val renameCategoryUseCase: RenameCategoryUseCase,
+
     // 프로젝트 구조 조회 및 변환
     val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
-    val convertProjectStructureToDraggableItemsUseCase: ConvertProjectStructureToDraggableItemsUseCase,
-    
+
     // 구조 업데이트
-    val updateProjectStructureUseCase: UpdateProjectStructureUseCase,
-    
+
+    // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
     // 채널-카테고리 간 이동
-    val moveChannelBetweenCategoriesUseCase: MoveChannelBetweenCategoriesUseCase,
+    // val moveChannelBetweenCategoriesUseCase: MoveChannelBetweenCategoriesUseCase,
     
     // 카테고리 도메인 UseCases
     val getCategoryDetailsUseCase: GetCategoryDetailsUseCase,

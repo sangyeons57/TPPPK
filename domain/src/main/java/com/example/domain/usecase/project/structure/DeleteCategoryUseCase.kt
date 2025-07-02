@@ -1,18 +1,20 @@
 package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.collection.CategoryCollectionRepository
+import com.example.domain.repository.RepositoryFactory
+import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import javax.inject.Inject
 
 /**
- * 카테고리 컬렉션 목록에서 카테고리를 삭제하는 유스케이스
- * 
- * 이 유스케이스는 카테고리 컬렉션 목록에서 카테고리를 삭제하고 남은 카테고리들의 순서를 재정렬하는 기능을 제공합니다.
+ * 카테고리를 삭제하는 유스케이스
+ * DDD 방식에 따라 CategoryRepository를 직접 사용합니다.
  */
 interface DeleteCategoryUseCase {
     /**
-     * 카테고리 컬렉션 목록에서 카테고리를 삭제합니다.
+     * 카테고리를 삭제합니다.
      * 
      * @param projectId 프로젝트 ID
      * @param categoryId 삭제할 카테고리 ID
@@ -28,11 +30,11 @@ interface DeleteCategoryUseCase {
  * DeleteCategoryUseCase 구현체
  */
 class DeleteCategoryUseCaseImpl @Inject constructor(
-    private val categoryCollectionRepository: CategoryCollectionRepository
+    private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>
 ) : DeleteCategoryUseCase {
     
     /**
-     * 카테고리 컬렉션 목록에서 카테고리를 삭제합니다.
+     * 카테고리를 삭제합니다.
      * 
      * @param projectId 프로젝트 ID
      * @param categoryId 삭제할 카테고리 ID
@@ -42,10 +44,16 @@ class DeleteCategoryUseCaseImpl @Inject constructor(
         projectId: DocumentId,
         categoryId: DocumentId
     ): CustomResult<Unit, Exception> {
-        // 저장소를 통해 카테고리 삭제
-        return categoryCollectionRepository.removeCategory(
-            projectId = projectId.value,
-            categoryId = categoryId.value
+        // CategoryRepository 생성
+        // repository 생성은 viewmodel 에서 해야함
+        // 정확히는 provider 에서 해야함 provider를 viemodel 에서 주입받고
+        val categoryRepository = categoryRepositoryFactory.create(
+            CategoryRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectCategories(projectId.value)
+            )
         )
+        
+        // Repository의 delete() 메서드를 사용하여 카테고리 삭제
+        return categoryRepository.delete(categoryId)
     }
 }

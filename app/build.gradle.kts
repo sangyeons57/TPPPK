@@ -106,7 +106,7 @@ dependencies {
     implementation(project(":feature:feature_calendar_24hour"))
     implementation(project(":feature:feature_add_project"))
     implementation(project(":feature:feature_join_project"))
-    implementation(project(":feature:feature_member"))
+    implementation(project(":feature:feature_member_list"))
     implementation(project(":feature:feature_create_category"))
     implementation(project(":feature:feature_create_channel"))
     implementation(project(":feature:feature_edit_category"))

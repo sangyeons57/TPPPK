@@ -14,7 +14,6 @@ import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.User
-import com.example.domain.model.collection.CategoryCollection
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
@@ -502,6 +501,7 @@ class HomeViewModel @Inject constructor(
     
     // 프로젝트 구조 (카테고리 및 채널) 로드
     private fun loadProjectStructure(projectId: DocumentId) {
+        /** 잠시 멈춰두기
         projectStructureUseCases = projectStructureUseCaseProvider.createForCurrentUser(projectId = projectId)
         viewModelScope.launch {
             Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
@@ -619,6 +619,7 @@ class HomeViewModel @Inject constructor(
                 Log.w("HomeViewModel", "projectStructureUseCases not initialized yet")
             }
         }
+        */
     }
 
     // 카테고리 클릭 시 (접기/펼치기)

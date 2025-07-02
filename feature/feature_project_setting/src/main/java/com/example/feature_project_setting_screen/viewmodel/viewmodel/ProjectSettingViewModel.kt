@@ -122,8 +122,8 @@ class ProjectSettingViewModel @Inject constructor(
                         // For now, placeholder:
                         val placeholderChannels = emptyList<ChannelUiModel>() // Empty list for now
                         CategoryUiModel(
-                            id = domainCategory.category.id,
-                            name = domainCategory.category.name,
+                            id = domainCategory.id,
+                            name = domainCategory.name,
                             channels = placeholderChannels
                         )
                     }
@@ -204,6 +204,7 @@ class ProjectSettingViewModel @Inject constructor(
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteChannelConfirm(channel)) }
     }
     fun confirmDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel
+        /** 잠시 멈춰두기
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteChannelUseCase 호출
@@ -225,6 +226,7 @@ class ProjectSettingViewModel @Inject constructor(
             }
              // isLoading will be turned off by loadProjectStructure on success
         }
+        **/
     }
     fun requestCreateChannel(categoryId: String) {
         navigationManger.navigateTo(

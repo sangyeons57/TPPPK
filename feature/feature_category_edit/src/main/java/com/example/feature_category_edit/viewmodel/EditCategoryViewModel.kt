@@ -150,7 +150,7 @@ class EditCategoryViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         val categories = result.data
-                        _uiState.update { it.copy(allCategoriesInProject = categories.map { it.category } ) }
+                        _uiState.update { it.copy(allCategoriesInProject = categories) }
                     }
                     is CustomResult.Failure -> {
                         _uiState.update { it.copy(generalError = (_uiState.value.generalError ?: "") + "\nFailed to load project categories for validation: ${result.error.message}") }

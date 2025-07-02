@@ -86,6 +86,7 @@ class AddProjectElementViewModel @Inject constructor(
      * Fetches the list of categories for the current project to populate the selection dropdown.
      */
     private fun loadCategoriesForDropdown() {
+        /** 잠시 멈춰두기
         val currentProjectId = projectId ?: return
         val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
@@ -111,6 +112,7 @@ class AddProjectElementViewModel @Inject constructor(
                 }
             }
         }
+        */
     }
 
     /**

@@ -176,28 +176,26 @@ class EditProjectChannelViewModel @Inject constructor(
      * @param catId The ID of the category to which the current channel belongs.
      */
     private fun loadCategoryAndChannelContext(projId: DocumentId, catId: String) {
+        /** 잠시 멈춰두기
         viewModelScope.launch {
             projectStructureUseCases?.getProjectAllCategoriesUseCase(projId)?.collect { result ->
                 when (result) {
                     is CustomResult.Success -> {
-                        val categoryCollection = result.data
-                        val parentCategory =
-                            categoryCollection.find { it.category.id.value == catId }
-                        val channels = parentCategory?.channels ?: emptyList()
-
-                        parentCategoryOrder = parentCategory?.category?.order?.value
+                        val categories = result.data
+                        val parentCategory = categories.find { it.id.value == catId }
+                        
+                        parentCategoryOrder = parentCategory?.order?.value
                         _uiState.update {
-                            it.copy(channelsInSameCategory = channels)
+                            // TODO: 채널 정보는 별도 UseCase로 가져와야 함 (현재는 빈 목록)
+                            it.copy(channelsInSameCategory = emptyList())
                         }
 
                         // Optional: Add a warning if context could not be fully loaded
                         var errorUpdate = ""
-                        if (parentCategoryOrder == null) {
-                            errorUpdate += "\nWarning: Could not load parent category order for validation."
+                        if (parentCategory == null) {
+                            errorUpdate += "\nWarning: Could not find parent category for validation."
                         }
-                        if (channels.isEmpty() && channelId != null) { // Only warn if not a new channel context and channels are expected
-                            errorUpdate += "\nWarning: Could not load other channels in the category for order validation."
-                        }
+                        // TODO: 채널 목록 검증 로직은 별도 UseCase로 구현 필요
                         if (errorUpdate.isNotEmpty() && _uiState.value.generalError == null) {
                             _uiState.update { it.copy(generalError = (_uiState.value.generalError ?: "") + errorUpdate) }
                         }
@@ -213,6 +211,7 @@ class EditProjectChannelViewModel @Inject constructor(
 
             }
         }
+        **/
     }
 
     /**

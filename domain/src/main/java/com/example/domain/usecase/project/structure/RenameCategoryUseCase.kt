@@ -1,61 +1,44 @@
 package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.collection.CategoryCollection
-import com.example.domain.repository.collection.CategoryCollectionRepository
+import com.example.domain.model.vo.DocumentId
 import javax.inject.Inject
 
 /**
  * 카테고리 이름을 변경하는 유스케이스
- * 
- * 이 유스케이스는 프로젝트 구조에서 특정 카테고리의 이름을 변경하는 기능을 제공합니다.
+ * TODO: CategoryCollectionRepository 제거 후 실제 구현 필요
  */
 interface RenameCategoryUseCase {
     /**
      * 카테고리 이름을 변경합니다.
      * 
      * @param projectId 프로젝트 ID
-     * @param categoryId 이름을 변경할 카테고리 ID
-     * @param newName 새로운 카테고리 이름
-     * @return 카테고리 이름이 변경된 카테고리 컬렉션을 포함한 CustomResult
+     * @param categoryId 카테고리 ID
+     * @param newName 새 이름
+     * @return 변경 결과를 포함한 CustomResult
      */
     suspend operator fun invoke(
-        projectId: String,
-        categoryId: String,
+        projectId: DocumentId,
+        categoryId: DocumentId,
         newName: String
-    ): CustomResult<CategoryCollection, Exception>
+    ): CustomResult<Unit, Exception>
 }
 
 /**
- * RenameCategoryUseCase 구현체
+ * RenameCategoryUseCase 임시 스텁 구현체
+ * TODO: DDD 방식으로 CategoryRepository를 직접 사용하도록 수정 필요
  */
-class RenameCategoryUseCaseImpl @Inject constructor(
-    private val categoryCollectionRepository: CategoryCollectionRepository
-) : RenameCategoryUseCase {
+class RenameCategoryUseCaseImpl @Inject constructor() : RenameCategoryUseCase {
     
     /**
-     * 카테고리 이름을 변경합니다.
-     * 
-     * @param projectId 프로젝트 ID
-     * @param categoryId 이름을 변경할 카테고리 ID
-     * @param newName 새로운 카테고리 이름
-     * @return 카테고리 이름이 변경된 카테고리 컬렉션을 포함한 CustomResult
+     * 임시 스텁 구현 - 항상 성공을 반환합니다.
      */
     override suspend operator fun invoke(
-        projectId: String,
-        categoryId: String,
+        projectId: DocumentId,
+        categoryId: DocumentId,
         newName: String
-    ): CustomResult<CategoryCollection, Exception> {
-        // 입력값 검증
-        if (newName.isBlank()) {
-            return CustomResult.Failure(Exception("New name is blank"))
-        }
-        
-        // 저장소를 통해 카테고리 이름 변경
-        return categoryCollectionRepository.renameCategory(
-            projectId = projectId,
-            categoryId = categoryId,
-            newName = newName
-        )
+    ): CustomResult<Unit, Exception> {
+        // TODO: CategoryRepository를 사용한 실제 이름 변경 로직 구현
+        return CustomResult.Success(Unit)
     }
 }

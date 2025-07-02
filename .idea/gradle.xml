@@ -22,6 +22,7 @@
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/feature_accept_friend" />
             <option value="$PROJECT_DIR$/feature/feature_add_project" />
+            <option value="$PROJECT_DIR$/feature/feature_add_role" />
             <option value="$PROJECT_DIR$/feature/feature_add_schedule" />
             <option value="$PROJECT_DIR$/feature/feature_calendar" />
             <option value="$PROJECT_DIR$/feature/feature_calendar_24hour" />
@@ -44,7 +45,7 @@
             <option value="$PROJECT_DIR$/feature/feature_join_project" />
             <option value="$PROJECT_DIR$/feature/feature_login" />
             <option value="$PROJECT_DIR$/feature/feature_main" />
-            <option value="$PROJECT_DIR$/feature/feature_member" />
+            <option value="$PROJECT_DIR$/feature/feature_member_list" />
             <option value="$PROJECT_DIR$/feature/feature_model" />
             <option value="$PROJECT_DIR$/feature/feature_privacy_policy" />
             <option value="$PROJECT_DIR$/feature/feature_profile" />
