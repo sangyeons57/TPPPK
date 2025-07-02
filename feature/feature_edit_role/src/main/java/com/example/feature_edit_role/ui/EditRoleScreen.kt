@@ -1,4 +1,4 @@
-package com.example.feature_project.roles.ui
+package com.example.feature_edit_role.ui
 
 // Domain 모델 및 ViewModel 관련 요소 Import
 import androidx.compose.foundation.layout.Arrangement
@@ -303,7 +303,7 @@ fun PermissionCategorySection(
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
-    androidx.compose.material3.Card(
+    Card(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
