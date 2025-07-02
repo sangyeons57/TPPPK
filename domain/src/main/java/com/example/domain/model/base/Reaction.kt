@@ -19,6 +19,10 @@ class Reaction private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     val userId: UserId = initialUserId
     val emoji: Emoji = initialEmoji
 

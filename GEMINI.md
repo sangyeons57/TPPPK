@@ -8,7 +8,7 @@ This is an Android application built with Kotlin and Jetpack Compose, following 
 *   **Architecture:** MVVM (Model-View-ViewModel) with UseCases
 *   **Dependency Injection:** Hilt
 *   **Asynchronous Programming:** Kotlin Coroutines & Flow
-*   **Backend:** Firebase (Firestore, Authentication, Storage)
+*   **Backend:** Firebase (Firestore, Authentication, Storage, Functions)
 *   **Navigation:** Jetpack Navigation for Compose, managed by `NavigationManager`
 *   **Image Loading:** Coil
 
@@ -17,6 +17,7 @@ This is an Android application built with Kotlin and Jetpack Compose, following 
 The project is divided into several module types:
 
 *   `app`: The main application module, responsible for tying all the other modules together, including navigation graphs and dependency injection setup.
+*   `app_api`: This module defines the API that the `app` module exposes to other feature modules. It helps to decouple the `app` module from the feature modules, improving build times and modularity.
 *   `core`: Contains shared functionality used across multiple feature modules.
     *   `core_common`: Common utilities, constants, and helper classes.
     *   `core_navigation`: Navigation logic, routes, and the `NavigationManager`. The `NavigationManager` is a central component responsible for handling all navigation events within the application. It provides a consistent way to navigate between different screens and modules, ensuring proper back stack management and navigation state.
@@ -24,12 +25,15 @@ The project is divided into several module types:
     *   `core_fcm`: Firebase Cloud Messaging setup and handling.
 *   `data`: Handles data sources, repositories, and data mapping (DTOs). It interacts directly with Firebase.
 *   `domain`: Contains the core business logic of the application. This includes UseCases, domain models (entities), and repository interfaces.
-*   `feature`: Each feature of the application is encapsulated in its own module. This promotes separation of concerns and independent development. Examples include:
+*   `feature`: Each feature of the application is encapsulated in its own module. This promotes separation of concerns and independent development. The project contains a wide range of feature modules, covering all aspects of the application's functionality. Examples include:
     *   `feature_home`: The main screen, likely displaying a list of projects and direct messages.
     *   `feature_chat`: The chat screen for channels and direct messages.
     *   `feature_calendar`: A calendar view for schedules.
     *   `feature_login`, `feature_signup`: User authentication screens.
-    *   Many other features for creating/editing projects, channels, schedules, etc.
+    *   `feature_project_setting`, `feature_add_project`, `feature_join_project`: Features related to project management.
+    *   `feature_friends`, `feature_profile`, `feature_settings`: Features for user profile and relationship management.
+    *   Many other features for creating/editing projects, channels, schedules, roles, and members.
+*   `functions`: Contains the backend logic for the application, written in TypeScript and deployed as Firebase Functions. This handles server-side tasks such as data validation, and other operations that require administrative privileges.
 
 ## Key Features
 

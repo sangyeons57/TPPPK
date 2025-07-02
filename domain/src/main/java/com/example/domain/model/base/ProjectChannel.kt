@@ -23,6 +23,10 @@ class ProjectChannel private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     var channelType: ProjectChannelType = initialChannelType
         private set
     var channelName: Name = initialChannelName

@@ -20,9 +20,13 @@ abstract class AggregateRoot {
     }
     abstract val createdAt: Instant
     abstract val updatedAt: Instant
-    private val originalState: Map<String, Any?> = this.getCurrentStateMap()
+    private lateinit var originalState: Map<String, Any?>
 
     private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
+
+    protected fun setOriginalState() {
+        originalState = this.getCurrentStateMap()
+    }
 
     abstract fun getCurrentStateMap(): Map<String, Any?>
 
@@ -42,6 +46,9 @@ abstract class AggregateRoot {
         val changedFields = mutableMapOf<String, Any?>()
         if(isNew){
             return newState
+        }
+        if (!::originalState.isInitialized) {
+            return changedFields
         }
         originalState.forEach { (key, value) ->
             if (newState[key] != value) {

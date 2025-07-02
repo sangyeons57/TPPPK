@@ -30,6 +30,10 @@ class Friend private constructor(
 
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     val requestedAt: Instant? = initialRequestedAt
     var acceptedAt: Instant? = initialAcceptedAt // Made var in case it needs to be set by a method
         private set

@@ -6,7 +6,6 @@ import com.example.domain.model.AggregateRoot
 import com.example.domain.event.user.UserAccountActivatedEvent
 import com.example.domain.event.user.UserAccountSuspendedEvent
 import com.example.domain.event.user.UserAccountWithdrawnEvent
-import com.example.domain.event.user.UserCreatedEvent
 import com.example.domain.event.user.UserFcmTokenUpdatedEvent
 import com.example.domain.event.user.UserMemoChangedEvent
 import com.example.domain.event.user.UserNameChangedEvent
@@ -42,6 +41,9 @@ class User private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
 
     // Immutable properties
     val email: UserEmail = initialEmail
@@ -278,7 +280,7 @@ class User private constructor(
             initialFcmToken: UserFcmToken? = null
         ): User {
             val user = User(
-                id = DocumentId.EMPTY,
+                id = id,
                 initialEmail = email,
                 initialName = name,
                 initialConsentTimeStamp = consentTimeStamp,
@@ -291,7 +293,6 @@ class User private constructor(
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant() // Default to active
             )
-            user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
         }
 
@@ -327,7 +328,6 @@ class User private constructor(
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant()
             )
-            user.pushDomainEvent(UserCreatedEvent(id.value))
             return user
         }
     }

@@ -36,6 +36,10 @@ class Schedule private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_PROJECT_ID to this.projectId?.value,

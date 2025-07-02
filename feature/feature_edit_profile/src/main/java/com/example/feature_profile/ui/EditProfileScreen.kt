@@ -241,11 +241,20 @@ fun EditProfileContent(
 
 
         OutlinedTextField(
-            value = uiState.user?.name?.value ?: "", // Use uiState.user directly
+            value = uiState.nameInput,
             onValueChange = onNameChanged,
             label = { Text("이름") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = uiState.user != null // Disable if user data is not loaded
+            enabled = uiState.user != null
+        )
+
+        OutlinedTextField(
+            value = uiState.user?.email?.value ?: "",
+            onValueChange = { },
+            label = { Text("이메일") },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            readOnly = true
         )
 
         Spacer(modifier = Modifier.weight(1F)) // Pushes save button to bottom

@@ -23,6 +23,10 @@ class DMWrapper private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_OTHER_USER_ID to otherUserId.value,

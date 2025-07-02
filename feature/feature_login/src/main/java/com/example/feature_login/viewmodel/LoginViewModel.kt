@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.constants.NavigationResultKeys
 import com.example.core_navigation.core.FindPasswordRoute
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
@@ -72,6 +73,11 @@ class LoginViewModel @Inject constructor(
 
     private val _eventFlow = MutableSharedFlow<LoginEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
+
+    init {
+        // 회원가입 성공 후 이메일 인증 안내 메시지 확인
+        checkSignUpSuccessResult()
+    }
 
     /**
      * 이메일 입력값 변경 처리
@@ -190,5 +196,17 @@ class LoginViewModel @Inject constructor(
      */
     fun onSignUpClick() {
         navigationManger.navigateToSignUp()
+    }
+
+    /**
+     * 회원가입 성공 후 이메일 인증 안내 메시지 확인
+     */
+    private fun checkSignUpSuccessResult() {
+        val signUpSuccess = navigationManger.getResult<Boolean>(NavigationResultKeys.Auth.SIGNUP_SUCCESS_EMAIL_VERIFICATION)
+        if (signUpSuccess == true) {
+            viewModelScope.launch {
+                _eventFlow.emit(LoginEvent.ShowSnackbar("회원가입이 완료되었습니다! 이메일 인증을 완료한 후 로그인해주세요."))
+            }
+        }
     }
 }

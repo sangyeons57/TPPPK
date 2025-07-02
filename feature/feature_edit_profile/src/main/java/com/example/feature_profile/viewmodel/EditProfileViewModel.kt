@@ -27,6 +27,7 @@ import javax.inject.Inject
 data class EditProfileUiState(
     val user: User? = null,
     val originalUser: User? = null, // 변경사항 비교를 위한 원본 사용자 정보
+    val nameInput: String = "", // 이름 입력 필드를 위한 별도 상태
     val selectedImageUri: Uri? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -77,6 +78,7 @@ class EditProfileViewModel @Inject constructor(
                             currentState.copy(
                                 user = loadedUser,
                                 originalUser = loadedUser, // 원본 사용자 정보 저장
+                                nameInput = loadedUser.name.value, // 이름 입력 상태 초기화
                                 isLoading = false,
                                 errorMessage = null
                             )
@@ -106,17 +108,12 @@ class EditProfileViewModel @Inject constructor(
      */
     fun onNameChanged(newName: String) {
         _uiState.update { currentState ->
-            currentState.user?.let { user ->
-                user.changeName(UserName(newName))
-                val hasNameChanged = currentState.originalUser?.let { original ->
-                    newName != original.name.value
-                } ?: false
-                val hasImageChanged = currentState.selectedImageUri != null
-                currentState.copy(
-                    user = user,
-                    hasChanges = hasNameChanged || hasImageChanged
-                )
-            } ?: currentState
+            val hasNameChanged = currentState.originalUser?.name?.value != newName
+            val hasImageChanged = currentState.selectedImageUri != null
+            currentState.copy(
+                nameInput = newName,
+                hasChanges = hasNameChanged || hasImageChanged
+            )
         }
     }
 
@@ -210,12 +207,12 @@ class EditProfileViewModel @Inject constructor(
 
                 // 2. 이름 업데이트 (이름이 변경된 경우)
                 val hasNameChanged = currentState.originalUser?.let { original ->
-                    currentUser.name.value != original.name.value
+                    currentState.nameInput != original.name.value
                 } ?: false
 
                 if (hasNameChanged) {
                     val nameResult = withContext(dispatcherProvider.io) {
-                        userUseCases.updateNameUseCase( currentUser.name)
+                        userUseCases.updateNameUseCase(UserName(currentState.nameInput))
                     }
                     when (nameResult) {
                         is CustomResult.Success -> {

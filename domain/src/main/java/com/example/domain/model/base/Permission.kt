@@ -19,6 +19,10 @@ class Permission private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     fun getPermissionRole() : RolePermission {
         return RolePermission.valueOf(this.id.value)
     }

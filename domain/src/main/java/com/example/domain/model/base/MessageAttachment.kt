@@ -22,6 +22,10 @@ class MessageAttachment private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     val attachmentType: MessageAttachmentType = initialAttachmentType
     val attachmentUrl: MessageAttachmentUrl = initialAttachmentUrl
     val fileName: MessageAttachmentFileName? = initialFileName

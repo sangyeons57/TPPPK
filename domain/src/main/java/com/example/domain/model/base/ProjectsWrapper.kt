@@ -19,6 +19,10 @@ class ProjectsWrapper(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     var order: ProjectWrapperOrder = initialOrder
         private set
     var projectName: ProjectName = initialProjectName

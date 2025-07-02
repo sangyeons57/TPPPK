@@ -23,6 +23,10 @@ class Role private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     // Immutable properties
 
     // Mutable properties with private setters

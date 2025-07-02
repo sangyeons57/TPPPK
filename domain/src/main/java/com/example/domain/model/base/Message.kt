@@ -23,6 +23,10 @@ class Message private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     val senderId: UserId = initialSenderId
     val replyToMessageId: DocumentId? = initialReplyToMessageId
 

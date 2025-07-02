@@ -22,6 +22,10 @@ class Project private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     // Immutable properties
     val ownerId: OwnerId = initialOwnerId
 

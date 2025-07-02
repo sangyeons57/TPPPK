@@ -27,6 +27,10 @@ class DMChannel private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     /** List of user document IDs participating in this DM channel. */
     var participants: List<UserId> = initialParticipants
         private set

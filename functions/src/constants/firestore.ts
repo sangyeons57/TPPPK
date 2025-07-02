@@ -7,4 +7,4 @@ export const COLLECTIONS = {
   DM_CHANNELS: "dmChannels",
 } as const;
 
-export const DATABASE_ID = "default" as const; 
+export const DATABASE_ID = "(default)" as const; 

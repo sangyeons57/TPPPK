@@ -25,6 +25,10 @@ class Invite private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     // Immutable properties
     val inviteCode: InviteCode = initialInviteCode
     val createdBy: OwnerId = initialCreatedBy

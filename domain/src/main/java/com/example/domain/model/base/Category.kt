@@ -40,6 +40,10 @@ class Category private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
+    init {
+        setOriginalState()
+    }
+
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_NAME to name.value,
