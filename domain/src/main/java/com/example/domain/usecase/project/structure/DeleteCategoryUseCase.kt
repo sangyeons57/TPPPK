@@ -1,11 +1,8 @@
 package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.CategoryRepository
-import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import javax.inject.Inject
 
 /**
@@ -28,15 +25,16 @@ interface DeleteCategoryUseCase {
 
 /**
  * DeleteCategoryUseCase 구현체
+ * Provider로부터 CategoryRepository를 받아 카테고리를 삭제합니다.
  */
 class DeleteCategoryUseCaseImpl @Inject constructor(
-    private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>
+    private val categoryRepository: CategoryRepository
 ) : DeleteCategoryUseCase {
     
     /**
      * 카테고리를 삭제합니다.
      * 
-     * @param projectId 프로젝트 ID
+     * @param projectId 프로젝트 ID (사용되지 않음 - Repository에서 이미 프로젝트별로 생성됨)
      * @param categoryId 삭제할 카테고리 ID
      * @return 삭제 성공 여부를 포함한 CustomResult
      */
@@ -44,15 +42,6 @@ class DeleteCategoryUseCaseImpl @Inject constructor(
         projectId: DocumentId,
         categoryId: DocumentId
     ): CustomResult<Unit, Exception> {
-        // CategoryRepository 생성
-        // repository 생성은 viewmodel 에서 해야함
-        // 정확히는 provider 에서 해야함 provider를 viemodel 에서 주입받고
-        val categoryRepository = categoryRepositoryFactory.create(
-            CategoryRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories(projectId.value)
-            )
-        )
-        
         // Repository의 delete() 메서드를 사용하여 카테고리 삭제
         return categoryRepository.delete(categoryId)
     }

@@ -84,17 +84,26 @@ class RoleListViewModel @Inject constructor(
                                 RoleItem(
                                     id = domainRole.id,
                                     name = domainRole.name
-                                ) // Handle nullable id
+                                )
                             }
                             _uiState.update {
                                 it.copy(isLoading = false, roles = roleItems, error = null)
                             }
                         }
-
-                        is CustomResult.Failure -> {}
-                        is CustomResult.Initial -> {}
-                        is CustomResult.Loading -> {}
-                        is CustomResult.Progress -> {}
+                        is CustomResult.Failure -> {
+                            _uiState.update {
+                                it.copy(isLoading = false, error = "역할 로드 실패: ${result.error.localizedMessage}")
+                            }
+                        }
+                        is CustomResult.Loading -> {
+                            _uiState.update { it.copy(isLoading = true) }
+                        }
+                        is CustomResult.Initial -> {
+                            // Initial state, keep loading
+                        }
+                        is CustomResult.Progress -> {
+                            // Progress state, maintain loading
+                        }
                     }
                 }
         }
@@ -126,22 +135,59 @@ class RoleListViewModel @Inject constructor(
 
     fun confirmDeleteRole(roleId: DocumentId) {
         viewModelScope.launch {
-            // Optional: _uiState.update { it.copy(isLoading = true) } // Indicate loading for delete
-            /**
-            val result = deleteProjectRoleUseCase(projectId, roleId)
-            when (result){
-                is CustomResult.Success -> {
-                    _eventFlow.emit(RoleListEvent.ShowSnackbar("역할이 삭제되었습니다."))
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val result = projectRoleUseCases.deleteRoleUseCase(roleId)
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(RoleListEvent.ShowSnackbar("역할이 삭제되었습니다."))
+                        // Refresh the role list after deletion
+                        refreshRoles()
+                    }
+                    is CustomResult.Failure -> {
+                        _eventFlow.emit(RoleListEvent.ShowSnackbar("역할 삭제 실패: ${result.error.localizedMessage}"))
+                    }
+                    else -> {
+                        _eventFlow.emit(RoleListEvent.ShowSnackbar("알 수 없는 오류가 발생했습니다."))
+                    }
                 }
-                is CustomResult.Failure -> {
-                    _eventFlow.emit(RoleListEvent.ShowSnackbar("역할 삭제 실패: ${result.error}"))
-                }
-                else -> {
-                    _eventFlow.emit(RoleListEvent.ShowSnackbar("알 수 없는 오류가 발생했습니다."))
+            } catch (e: Exception) {
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할 삭제 중 오류 발생: ${e.localizedMessage}"))
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    private suspend fun refreshRoles() {
+        projectRoleUseCases.getProjectRolesUseCase(DocumentId.from(projectId))
+            .catch { e ->
+                _uiState.update {
+                    it.copy(isLoading = false, error = "역할 로드 실패: ${e.localizedMessage}")
                 }
             }
-            */
-            // Optional: _uiState.update { it.copy(isLoading = false) }
-        }
+            .collect { result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        val roleItems = result.data.map { domainRole ->
+                            RoleItem(
+                                id = domainRole.id,
+                                name = domainRole.name
+                            )
+                        }
+                        _uiState.update {
+                            it.copy(isLoading = false, roles = roleItems, error = null)
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update {
+                            it.copy(isLoading = false, error = "역할 로드 실패: ${result.error.localizedMessage}")
+                        }
+                    }
+                    else -> {
+                        // Handle other states if needed
+                    }
+                }
+            }
     }
 }

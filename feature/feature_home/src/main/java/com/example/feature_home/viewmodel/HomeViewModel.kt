@@ -11,6 +11,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogBuilder
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
+import com.example.domain.model.base.Category
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.User
@@ -501,7 +502,6 @@ class HomeViewModel @Inject constructor(
     
     // 프로젝트 구조 (카테고리 및 채널) 로드
     private fun loadProjectStructure(projectId: DocumentId) {
-        /** 잠시 멈춰두기
         projectStructureUseCases = projectStructureUseCaseProvider.createForCurrentUser(projectId = projectId)
         viewModelScope.launch {
             Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
@@ -509,7 +509,7 @@ class HomeViewModel @Inject constructor(
                 val projectStructureFlow =
                     projectStructureUseCases.getProjectAllCategoriesUseCase(projectId)
 
-                projectStructureFlow.collectLatest { result: CustomResult<List<CategoryCollection>, Exception> ->
+                projectStructureFlow.collectLatest { result: CustomResult<List<Category>, Exception> ->
                     Log.d("HomeViewModel", "Received project structure result: $result")
                     when (result) {
                         is CustomResult.Loading -> {
@@ -524,43 +524,27 @@ class HomeViewModel @Inject constructor(
                         }
 
                         is CustomResult.Success -> {
-                            val categoryCollections = result.data
+                            val categories = result.data
                             val categoriesMap =
                                 categoryExpandedStates.getOrPut(projectId.value) { mutableMapOf() }
 
+                            // Filter categories that are actual categories (not special "no category")
                             val categoryUiModels =
-                                categoryCollections.filter { categoryCollection -> categoryCollection.category.isCategory.value }
-                                    .map { categoryCollection ->
-                                        val categoryDomain = categoryCollection.category
+                                categories.filter { category -> category.isCategory.value }
+                                    .map { categoryDomain ->
                                         val isExpanded =
                                             categoriesMap.getOrPut(categoryDomain.id.value) { true } // Default to expanded
 
                                         CategoryUiModel(
                                             id = categoryDomain.id,
-                                            name = categoryDomain.name,
-                                            channels = categoryCollection.channels.map { channelDomain ->
-                                                ChannelUiModel(
-                                                    id = channelDomain.id,
-                                                    name = channelDomain.channelName,
-                                                    // Assuming ProjectChannel has channelMode, otherwise adjust
-                                                    mode = channelDomain.channelType, // Provide a default or handle null
-                                                    isSelected = channelDomain.id == selectedChannelId // Use .value for StateFlow
-                                                )
-                                            },
+                                            name = categoryDomain.name.getName(),
+                                            channels = emptyList(), // TODO: Load channels for each category
                                             isExpanded = isExpanded
                                         )
                                     }
 
-                            val directChannelUiModels =
-                                categoryCollections.filter { categoryCollection -> categoryCollection.category.id.value == Constants.NO_CATEGORY_ID }
-                                    .flatMap { categoryCollection -> categoryCollection.channels }
-                                    .map { projectChannel ->
-                                        ChannelUiModel(
-                                            id = projectChannel.id,
-                                            name = projectChannel.channelName,
-                                            mode = projectChannel.channelType,
-                                        )
-                                    }
+                            // TODO: Load direct channels (no category)
+                            val directChannelUiModels = emptyList<ChannelUiModel>()
 
                             _uiState.update { state ->
                                 state.copy(
@@ -619,7 +603,6 @@ class HomeViewModel @Inject constructor(
                 Log.w("HomeViewModel", "projectStructureUseCases not initialized yet")
             }
         }
-        */
     }
 
     // 카테고리 클릭 시 (접기/펼치기)

@@ -38,12 +38,10 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
         return when (val customResult = projectRoleRepository.observeAll().first()){
             is CustomResult.Success -> {
                 // 🚨 모든 역할을 보여주되, 시스템 역할(OWNER 등)만 제외
-                var roles = customResult.data.toList().filter{
-                    if (it !is Role) return@filter false
-                    
-                    // 시스템 역할이 아닌 경우만 포함 (isDefault 필터링 제거)
-                    !Role.isSystemRole(it.id.value)
-                } as List<Role>
+                // filterIsInstance를 사용하여 타입 안전성 확보 + 시스템 역할 필터링
+                var roles = customResult.data.filterIsInstance<Role>().filter { role ->
+                    !Role.isSystemRole(role.id.value)
+                }
 
 
                 // Apply sorting if specified
