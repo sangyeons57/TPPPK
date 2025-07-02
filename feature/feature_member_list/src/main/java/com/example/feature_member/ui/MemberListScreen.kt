@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.domain.model.ui.data.MemberUiModel
+import com.example.domain.model.vo.UserId
 import com.example.feature_member.dialog.ui.AddMemberDialog
 import com.example.feature_member.viewmodel.MemberListEvent
 import com.example.feature_member.viewmodel.MemberListUiState
@@ -214,6 +215,7 @@ fun MemberListContent(
             items(uiState.members, key = { it.userId.value }) { member ->
                 ProjectMemberListItemComposable(
                     member = member, // Pass Member directly
+                    currentUserId = uiState.currentUserId, // 현재 사용자 ID 전달 👈
                     onClick = { onMemberClick(member) },
                     onMoreClick = { onDeleteMemberClick(member) }
                 )
@@ -228,10 +230,14 @@ fun MemberListContent(
 @Composable
 fun ProjectMemberListItemComposable(
     member: MemberUiModel, // Changed parameter to MemberUiModel
+    currentUserId: UserId?, // 현재 사용자 ID 추가 👈
     onClick: (MemberUiModel) -> Unit, // Changed
     onMoreClick: (MemberUiModel) -> Unit, // Changed
     modifier: Modifier = Modifier
 ) {
+    // 🚨 자기 자신인지 확인
+    val isSelf = currentUserId?.value == member.userId.value
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -266,8 +272,11 @@ fun ProjectMemberListItemComposable(
             }
         }
 
-        IconButton(onClick = { onMoreClick(member) }) { // Pass MemberUiModel
-            Icon(Icons.Filled.MoreVert, contentDescription = "더 보기")
+        // 🚨 자기 자신이 아닌 경우에만 삭제 버튼 표시
+        if (!isSelf) {
+            IconButton(onClick = { onMoreClick(member) }) { // Pass MemberUiModel
+                Icon(Icons.Filled.MoreVert, contentDescription = "더 보기")
+            }
         }
     }
 }

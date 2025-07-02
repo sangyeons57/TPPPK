@@ -1,51 +1,39 @@
 package com.example.feature_member.dialog.ui
 
-// Removed direct Coil imports
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.components.user.UserProfileImage
@@ -53,130 +41,97 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserName
-import com.example.feature_member.dialog.viewmodel.AddMemberDialogEvent
 import com.example.feature_member.dialog.viewmodel.AddMemberViewModel
+import com.example.feature_member.dialog.viewmodel.AddMemberDialogEvent
 import kotlinx.coroutines.flow.collectLatest
 
-// R import might be removed if UserProfileImage handles it all.
-
 /**
- * 사용자 검색 결과를 표현하는 데이터 클래스
- * 
- * @param userId 사용자 ID
- * @param userName 사용자 이름
- * @param userEmail 사용자 이메일 (nullable)
- * @param profileImageUrl 프로필 이미지 URL (nullable)
+ * 친구 정보를 나타내는 UI 모델
  */
-data class UserSearchResult(
+data class FriendItem(
     val userId: UserId,
     val userName: UserName,
     val userEmail: String?,
-    val profileImageUrl: String?
+    val profileImageUrl: String?,
+    val isOnline: Boolean = false // 온라인 상태 (나중에 추가 가능)
 )
 
 /**
- * 프로젝트에 멤버를 검색하고 추가하는 다이얼로그 Composable
+ * 프로젝트에 멤버를 초대하는 다이얼로그 Composable
+ * 두 가지 방식을 제공:
+ * 1. 프로젝트 참가 링크 복사
+ * 2. 친구 목록에서 선택하여 초대
  *
  * @param onDismissRequest 다이얼로그 닫기 요청 콜백
- * @param onAddMembers 선택된 사용자 목록(ID)으로 멤버 추가 요청 콜백
- * @param username 현재 검색어 상태
- * @param onSearchQueryChange 검색어 변경 콜백
- * @param searchResults 사용자 검색 결과 목록 상태
- * @param selectedUsers 현재 선택된 사용자 ID Set 상태
- * @param onUserSelectionChange 사용자 선택/해제 콜백 (userId, isSelected)
- * @param isLoading 검색 로딩 상태
- * @param error 검색 에러 메시지
+ * @param onFriendsInvited 선택된 친구들에게 초대 요청 후 콜백
+ * @param projectInviteLink 프로젝트 참가 링크 (null이면 생성 중)
+ * @param friends 친구 목록
+ * @param selectedFriends 현재 선택된 친구들
+ * @param onFriendSelectionChange 친구 선택/해제 콜백
+ * @param onGenerateInviteLink 초대 링크 생성 요청 콜백
+ * @param onCopyInviteLink 초대 링크 복사 요청 콜백
+ * @param isLoadingLink 링크 생성 로딩 상태
+ * @param isLoadingFriends 친구 목록 로딩 상태
+ * @param error 에러 메시지
  */
-// Renamed from AddMemberDialog to AddMemberDialogContent
 @Composable
 fun AddMemberDialogContent(
     onDismissRequest: () -> Unit,
-    onAddMembers: (Set<UserId>) -> Unit, // This will be called by the ViewModel-driven AddMemberDialog
-    username: UserName,
-    onSearchQueryChange: (UserName) -> Unit,
-    searchResults: List<UserSearchResult>,
-    selectedUsers: Set<UserId>,
-    onUserSelectionChange: (UserId, Boolean) -> Unit,
-    isLoading: Boolean,
+    onFriendsInvited: (Set<UserId>) -> Unit,
+    projectInviteLink: String?, // 생성된 프로젝트 참가 링크
+    friends: List<FriendItem>,
+    selectedFriends: Set<UserId>,
+    onFriendSelectionChange: (UserId, Boolean) -> Unit,
+    onGenerateInviteLink: () -> Unit,
+    onCopyInviteLink: (String) -> Unit,
+    isLoadingLink: Boolean,
+    isLoadingFriends: Boolean,
     error: String?
 ) {
-    val focusManager = LocalFocusManager.current
-    val focusRequester = remember { FocusRequester() }
+    val clipboardManager = LocalClipboardManager.current
 
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 200.dp, max = 600.dp)
+                .heightIn(min = 400.dp, max = 700.dp)
         ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text("멤버 초대", style = MaterialTheme.typography.headlineSmall)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = username.value,
-                    onValueChange = { value -> onSearchQueryChange(UserName(value)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester),
-                    label = { Text("이름 또는 이메일로 검색") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (username.isNotBlank()) {
-                            IconButton(onClick = { onSearchQueryChange(UserName.EMPTY) }) {
-                                Icon(Icons.Filled.Clear, contentDescription = "지우기")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = {
-                        focusManager.clearFocus()
-                    })
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // 제목
+                Text(
+                    "멤버 초대",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Box(modifier = Modifier.weight(1f)) {
-                    when {
-                        isLoading -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                        error != null -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("오류: $error", color = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                        username.isNotBlank() && searchResults.isEmpty() && !isLoading -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("검색 결과가 없습니다.", color = MaterialTheme.colorScheme.outline)
-                            }
-                        }
-                        else -> {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                items(
-                                    items = searchResults,
-                                    key = { it.userId.value }
-                                ) { user ->
-                                    UserSearchResultItem(
-                                        user = user,
-                                        isSelected = user.userId in selectedUsers,
-                                        onCheckedChange = { isChecked ->
-                                            onUserSelectionChange(user.userId, isChecked)
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                // 1️⃣ 프로젝트 참가 링크 섹션
+                InviteLinkSection(
+                    inviteLink = projectInviteLink,
+                    isLoading = isLoadingLink,
+                    onGenerateLink = onGenerateInviteLink,
+                    onCopyLink = { link ->
+                        clipboardManager.setText(AnnotatedString(link))
+                        onCopyInviteLink(link)
                     }
-                }
+                )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Divider()
 
+                // 2️⃣ 친구 초대 섹션
+                FriendInviteSection(
+                    friends = friends,
+                    selectedFriends = selectedFriends,
+                    onFriendSelectionChange = onFriendSelectionChange,
+                    isLoading = isLoadingFriends,
+                    error = error,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // 하단 버튼들
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -186,65 +141,251 @@ fun AddMemberDialogContent(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onAddMembers(selectedUsers) },
-                        enabled = selectedUsers.isNotEmpty()
+                        onClick = { onFriendsInvited(selectedFriends) },
+                        enabled = selectedFriends.isNotEmpty()
                     ) {
-                        Text("추가")
+                        Icon(Icons.Filled.PersonAdd, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("친구 초대 (${selectedFriends.size})")
                     }
                 }
             }
         }
     }
+}
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+/**
+ * 프로젝트 참가 링크 섹션
+ */
+@Composable
+private fun InviteLinkSection(
+    inviteLink: String?,
+    isLoading: Boolean,
+    onGenerateLink: () -> Unit,
+    onCopyLink: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Filled.Link,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                "프로젝트 참가 링크",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when {
+            isLoading -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("링크 생성 중...", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            
+            inviteLink != null -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            inviteLink,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { onCopyLink(inviteLink) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.ContentCopy, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("복사")
+                            }
+                            OutlinedButton(onClick = onGenerateLink) {
+                                Icon(Icons.Filled.Refresh, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("새로 생성")
+                            }
+                        }
+                    }
+                }
+            }
+            
+            else -> {
+                OutlinedButton(
+                    onClick = onGenerateLink,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Link, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("초대 링크 생성")
+                }
+            }
+        }
     }
 }
 
 /**
- * 사용자 검색 결과 목록의 각 항목 UI
- * 
- * @param user 표시할 사용자 검색 결과 정보
- * @param isSelected 사용자가 선택되었는지 여부
- * @param onCheckedChange 선택 상태 변경 콜백
- * @param modifier 커스텀 모디파이어
+ * 친구 초대 섹션
  */
 @Composable
-fun UserSearchResultItem(
-    user: UserSearchResult,
+private fun FriendInviteSection(
+    friends: List<FriendItem>,
+    selectedFriends: Set<UserId>,
+    onFriendSelectionChange: (UserId, Boolean) -> Unit,
+    isLoading: Boolean,
+    error: String?,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Filled.PersonAdd,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                "친구 초대",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Box(modifier = Modifier.weight(1f)) {
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                error != null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "오류: $error",
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                friends.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "초대할 수 있는 친구가 없습니다.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(
+                            items = friends,
+                            key = { it.userId.value }
+                        ) { friend ->
+                            FriendInviteItem(
+                                friend = friend,
+                                isSelected = friend.userId in selectedFriends,
+                                onSelectionChange = { isSelected ->
+                                    onFriendSelectionChange(friend.userId, isSelected)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 개별 친구 초대 아이템
+ */
+@Composable
+private fun FriendInviteItem(
+    friend: FriendItem,
     isSelected: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onSelectionChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!isSelected) }
-            .padding(vertical = 8.dp),
+            .clickable { onSelectionChange(!isSelected) }
+            .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = user.profileImageUrl,
-            contentDescription = "${user.userName} 프로필",
+            profileImageUrl = friend.profileImageUrl,
+            contentDescription = "${friend.userName.value} 프로필",
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-            // contentScale is handled by UserProfileImage by default
         )
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = user.userName.value,
-                style = MaterialTheme.typography.bodyLarge
+                text = friend.userName.value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
             )
-            user.userEmail?.let {
+            friend.userEmail?.let { email ->
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = email,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -252,94 +393,92 @@ fun UserSearchResultItem(
 
         Checkbox(
             checked = isSelected,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onSelectionChange
         )
     }
 }
 
 /**
- * 미리보기: 멤버 추가 다이얼로그
+ * 멤버 추가 다이얼로그 컴포넌트 (ViewModel 연동)
  */
-@Preview(showBackground = true)
 @Composable
-fun AddMemberDialogPreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        // Preview now calls AddMemberDialogContent directly
-        AddMemberDialogContent(
-            onDismissRequest = {},
-            onAddMembers = {},
-            username = UserName.EMPTY,
-            onSearchQueryChange = {},
-            searchResults = listOf(
-                UserSearchResult(
-                    userId = UserId("user1"),
-                    userName = UserName("김영희"),
-                    userEmail = "kim@example.com",
-                    profileImageUrl = null
-                ),
-                UserSearchResult(
-                    userId = UserId("user2"),
-                    userName = UserName("김철수"),
-                    userEmail = "kim2@example.com",
-                    profileImageUrl = null
-                )
-            ),
-            selectedUsers = setOf(UserId("user1")),
-            onUserSelectionChange = { _, _ -> },
-            isLoading = false,
-            error = null
-        )
-    }
-}
-
-
-/**
- * 멤버 추가 다이얼로그 컴포넌트의 간편한 버전
- * 
- * @param projectId 프로젝트 ID
- * @param onDismissRequest 다이얼로그 닫기 요청 콜백
- * @param onMemberAdded 멤버 추가 완료 후 콜백
- */
-// This is the new AddMemberDialog that uses the ViewModel
-@Composable
-fun AddMemberDialog( // This is the one called by MemberListScreen
+fun AddMemberDialog(
     projectId: DocumentId,
     onDismissRequest: () -> Unit,
-    onMemberAdded: () -> Unit, // Callback when members are successfully added
-    viewModel: AddMemberViewModel = hiltViewModel() // Inject ViewModel
+    onMemberAdded: () -> Unit,
+    viewModel: AddMemberViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // val snackbarHostState = remember { SnackbarHostState() } // Requires Scaffold or another SnackbarHost
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is AddMemberDialogEvent.ShowSnackbar -> {
-                    // snackbarHostState.showSnackbar(event.message) // Requires SnackbarHostState
-                    println("Snackbar: ${event.message}") // Placeholder
+                    // 스낵바 표시 (부모에서 처리)
+                    println("Snackbar: ${event.message}")
                 }
-                AddMemberDialogEvent.DismissDialog -> onDismissRequest() // Dialog might be dismissed by parent too
+                AddMemberDialogEvent.DismissDialog -> onDismissRequest()
                 AddMemberDialogEvent.MembersAddedSuccessfully -> {
-                    onMemberAdded() // Call parent's callback
-                    // onDismissRequest() // Parent screen (MemberListScreen) will handle dismissal
+                    onMemberAdded()
                 }
             }
         }
     }
 
-    // Use the more detailed AddMemberDialogContent composable, passing state and event handlers
+    LaunchedEffect(projectId) {
+        viewModel.loadProjectInviteLink(projectId)
+        viewModel.loadFriends()
+    }
+
     AddMemberDialogContent(
         onDismissRequest = onDismissRequest,
-        onAddMembers = { _ -> // selectedUserIds Set<String> - ViewModel handles selected users
-            viewModel.addSelectedMembers(projectId) // Pass default roles if any, e.g., emptyList()
+        onFriendsInvited = { selectedFriends ->
+            viewModel.inviteFriends(projectId, selectedFriends)
         },
-        username = uiState.username,
-        onSearchQueryChange = viewModel::onSearchQueryChanged,
-        searchResults = listOf(uiState.searchResults!!),
-        selectedUsers = uiState.selectedUsers,
-        onUserSelectionChange = viewModel::onUserSelectionChanged,
-        isLoading = uiState.isLoading,
+        projectInviteLink = uiState.projectInviteLink,
+        friends = uiState.friends,
+        selectedFriends = uiState.selectedFriends,
+        onFriendSelectionChange = viewModel::onFriendSelectionChanged,
+        onGenerateInviteLink = { viewModel.generateProjectInviteLink(projectId) },
+        onCopyInviteLink = { link -> viewModel.onInviteLinkCopied(link) },
+        isLoadingLink = uiState.isLoadingLink,
+        isLoadingFriends = uiState.isLoadingFriends,
         error = uiState.error
     )
+}
+
+/**
+ * 미리보기: 새로운 멤버 초대 다이얼로그
+ */
+@Preview(showBackground = true)
+@Composable
+fun AddMemberDialogPreview() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        AddMemberDialogContent(
+            onDismissRequest = {},
+            onFriendsInvited = {},
+            projectInviteLink = "https://projecting.app/join/abc123def456",
+            friends = listOf(
+                FriendItem(
+                    userId = UserId("friend1"),
+                    userName = UserName("김영희"),
+                    userEmail = "kim@example.com",
+                    profileImageUrl = null
+                ),
+                FriendItem(
+                    userId = UserId("friend2"),
+                    userName = UserName("박철수"),
+                    userEmail = "park@example.com",
+                    profileImageUrl = null
+                )
+            ),
+            selectedFriends = setOf(UserId("friend1")),
+            onFriendSelectionChange = { _, _ -> },
+            onGenerateInviteLink = {},
+            onCopyInviteLink = {},
+            isLoadingLink = false,
+            isLoadingFriends = false,
+            error = null
+        )
+    }
 } 
-// Removed the simpler, overloaded AddMemberDialog function with dummy logic

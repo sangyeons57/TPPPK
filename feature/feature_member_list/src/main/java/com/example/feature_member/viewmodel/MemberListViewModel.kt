@@ -15,6 +15,7 @@ import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.domain.provider.project.ProjectRoleUseCaseProvider
+import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +39,8 @@ data class MemberListUiState(
     val error: String? = null,
     val searchQuery: String = "",
     // val selectedMember: Member? = null, // Type will be MemberUiModel if used - Removed for now as per plan
-    val projectId: DocumentId = DocumentId.EMPTY
+    val projectId: DocumentId = DocumentId.EMPTY,
+    val currentUserId: UserId? = null // 현재 로그인한 사용자 ID 추가 👈
 )
 
 /**
@@ -74,6 +76,7 @@ class MemberListViewModel @Inject constructor(
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -85,6 +88,7 @@ class MemberListViewModel @Inject constructor(
     private val projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
     private val userUseCases = userUseCaseProvider.createForUser()
     private val projectRoleUseCases = projectRoleUseCaseProvider.createForProject(projectId)
+    private val authSessionUseCases = authSessionUseCaseProvider.create()
 
     /**
      * UI 상태 (내부 Mutable 버전)
@@ -107,8 +111,30 @@ class MemberListViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
+        loadCurrentUser()
         observeMembers()
         refreshMembers()
+    }
+
+    /**
+     * 현재 로그인한 사용자 정보를 로드합니다.
+     */
+    private fun loadCurrentUser() {
+        viewModelScope.launch {
+            when (val sessionResult = authSessionUseCases.checkSessionUseCase()) {
+                is CustomResult.Success -> {
+                    val currentUserId = sessionResult.data.userId
+                    _uiState.update { it.copy(currentUserId = currentUserId) }
+                }
+                is CustomResult.Failure -> {
+                    // 세션 정보를 가져올 수 없음 - 로그인 상태가 아님
+                    _uiState.update { it.copy(error = "사용자 인증 정보를 확인할 수 없습니다.") }
+                }
+                else -> {
+                    // Initial, Loading, Progress 상태는 무시
+                }
+            }
+        }
     }
 
     /**
@@ -270,6 +296,13 @@ class MemberListViewModel @Inject constructor(
      */
     fun requestDeleteMember(member: MemberUiModel) { // Changed
         viewModelScope.launch {
+            // 🚨 자기 자신 삭제 방지 체크
+            val currentUserId = _uiState.value.currentUserId
+            if (currentUserId != null && currentUserId.value == member.userId.value) {
+                _eventFlow.emit(MemberListEvent.ShowSnackbar("자기 자신은 내보낼 수 없습니다. 프로젝트 나가기 기능을 사용해주세요."))
+                return@launch
+            }
+
             _eventFlow.emit(MemberListEvent.ShowDeleteConfirm(member))
         }
     }
@@ -279,6 +312,13 @@ class MemberListViewModel @Inject constructor(
      */
     fun confirmDeleteMember(member: MemberUiModel) { // Changed
         viewModelScope.launch {
+            // 🚨 안전장치: 자기 자신 삭제 재확인
+            val currentUserId = _uiState.value.currentUserId
+            if (currentUserId != null && currentUserId.value == member.userId.value) {
+                _eventFlow.emit(MemberListEvent.ShowSnackbar("자기 자신은 내보낼 수 없습니다."))
+                return@launch
+            }
+
             _uiState.update { it.copy(isLoading = true) }
             val result = projectMemberUseCases.deleteProjectMemberUseCase(member.userId)
             when (result){

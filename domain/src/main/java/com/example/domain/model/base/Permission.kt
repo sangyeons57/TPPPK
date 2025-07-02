@@ -2,13 +2,9 @@ package com.example.domain.model.base
 
 
 import com.example.domain.model.AggregateRoot
-import com.example.domain.event.permission.PermissionCreatedEvent
-import com.example.domain.event.permission.PermissionDescriptionUpdatedEvent
-import com.example.domain.event.permission.PermissionNameUpdatedEvent
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.permission.PermissionDescription
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
 
