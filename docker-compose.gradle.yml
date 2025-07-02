@@ -1,0 +1,82 @@
+# =================================================================
+# Android Gradle Docker Compose 설정
+# =================================================================
+#
+# 목적: Android 프로젝트를 위한 Docker 개발 환경 구성
+#
+# 주요 기능:
+# - 가벼운 Alpine 기반 Android 빌드 환경
+# - Gradle 캐시 영구 보존으로 빌드 속도 향상
+# - 소스 코드 실시간 동기화 (볼륨 마운트)
+# - 다양한 개발 시나리오를 위한 멀티 서비스 구성
+#
+# 사용법:
+#   docker-compose -f docker-compose.gradle.yml run --rm android-gradle ./gradlew build
+#   또는 run-gradle.sh/run-gradle.bat 스크립트 사용 권장
+#
+# =================================================================
+
+version: '3.8'
+
+services:
+  # 메인 Android 개발 환경 서비스
+  android-gradle:
+    build:
+      context: .                          # 현재 디렉토리를 빌드 컨텍스트로 사용
+      dockerfile: Dockerfile.gradle.slim  # 최적화된 Multi-stage Dockerfile 사용
+    image: android-gradle-slim:latest
+    container_name: android-gradle-dev
+    working_dir: /workspace               # 컨테이너 내 작업 디렉토리
+    volumes:
+      # 호스트의 프로젝트 전체를 컨테이너에 마운트
+      # cached 옵션으로 macOS에서 파일 I/O 성능 향상
+      - .:/workspace:cached
+      # Gradle 캐시를 영구 볼륨으로 유지 (빌드 속도 향상)
+      - gradle-cache:/root/.gradle
+      # 빌드 출력을 영구 볼륨으로 유지 (재빌드 시간 단축)
+      - build-cache:/workspace/build
+    environment:
+      # Gradle JVM 메모리 설정 및 인코딩 설정
+      - GRADLE_OPTS=-Xmx2048m -Dfile.encoding=UTF-8
+      # Gradle 사용자 홈 디렉토리 설정
+      - GRADLE_USER_HOME=/root/.gradle
+    stdin_open: true                      # 표준 입력 유지 (interactive 모드)
+    tty: true                            # 가상 터미널 할당
+    # 포트 매핑 (개발 서버나 디버깅이 필요한 경우 활성화)
+    # ports:
+    #   - "8080:8080"                     # HTTP 서버용
+    #   - "5005:5005"                     # 원격 디버깅용
+    command: tail -f /dev/null           # 컨테이너 유지용 명령어
+
+  # 빠른 빌드 테스트용 서비스
+  # Gradle 버전 확인 등 간단한 테스트에 사용
+  gradle-test:
+    extends: android-gradle
+    container_name: android-gradle-test
+    command: ./gradlew --version
+
+  # 종속성 다운로드 전용 서비스  
+  # 프로젝트 초기 설정이나 캐시 워밍업에 사용
+  gradle-deps:
+    extends: android-gradle 
+    container_name: android-gradle-deps
+    command: ./gradlew dependencies --no-daemon
+
+# 영구 볼륨 정의
+# Docker 컨테이너가 재시작되어도 데이터 유지
+volumes:
+  # Gradle 캐시 볼륨 (종속성, 빌드 스크립트 캐시)
+  # 빌드 시간을 대폭 단축시키는 핵심 볼륨
+  gradle-cache:
+    driver: local
+  
+  # 빌드 출력 캐시 볼륨 (컴파일된 클래스, 리소스 등)
+  # 증분 빌드 성능 향상을 위한 볼륨
+  build-cache:
+    driver: local
+
+# 네트워크 설정
+# 여러 서비스 간 통신이 필요한 경우 사용
+networks:
+  default:
+    name: android-dev-network
