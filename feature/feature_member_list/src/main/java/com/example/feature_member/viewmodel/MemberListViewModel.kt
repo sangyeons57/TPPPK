@@ -7,6 +7,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.base.Role
 import com.example.domain.model.ui.data.MemberUiModel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
@@ -196,10 +197,22 @@ class MemberListViewModel @Inject constructor(
                                 }
                             }.awaitAll() // 모든 비동기 작업 완료 대기
 
+                            // 🔄 멤버 정렬: 시스템 역할(OWNER)을 가진 멤버를 맨 위로 우선 정렬
+                            val sortedMembers = uiMembers.sortedWith(compareBy<MemberUiModel> { member ->
+                                // 시스템 역할을 가진 멤버인지 확인 (OWNER 등)
+                                val hasSystemRole = member.roleNames.any { roleName ->
+                                    Role.isSystemRole(roleName.value)
+                                }
+                                !hasSystemRole // false가 먼저 오므로 시스템 역할이 위로
+                            }.thenBy { member ->
+                                // 두 번째 정렬 기준: 이름 순
+                                member.userName.value.lowercase()
+                            })
+                            
                             val filteredList = if (query.isBlank()) {
-                                uiMembers
+                                sortedMembers
                             } else {
-                                uiMembers.filter { it.userName.value.contains(query, ignoreCase = true) }
+                                sortedMembers.filter { it.userName.value.contains(query, ignoreCase = true) }
                             }
                             _uiState.update { it.copy(members = filteredList, isLoading = false, error = null) }
                         }
