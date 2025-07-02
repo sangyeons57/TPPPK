@@ -81,6 +81,11 @@ value class CollectionPath(val value: String) {
         fun projectCategory(projectId: String, categoryId: String): CollectionPath = 
             CollectionPath("${projectCategories(projectId).value}/$categoryId")
         
+        fun projectChannels(projectId: String): CollectionPath = 
+            CollectionPath("${project(projectId).value}/${ProjectChannel.COLLECTION_NAME}")
+        fun projectChannel(projectId: String, channelId: String): CollectionPath = 
+            CollectionPath("${projectChannels(projectId).value}/$channelId")
+        
         fun projectCategoryChannels(projectId: String, categoryId: String): CollectionPath =
             CollectionPath("${projectCategory(projectId, categoryId).value}/${ProjectChannel.COLLECTION_NAME}")
         fun projectCategoryChannel(projectId: String, categoryId: String, channelId: String): CollectionPath =

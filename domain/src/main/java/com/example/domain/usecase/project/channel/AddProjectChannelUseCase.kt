@@ -43,7 +43,7 @@ interface AddProjectChannelUseCase {
  * 실제 프로젝트 채널 추가 로직을 수행하며, 채널 이름 유효성 검사, 대상 카테고리 조회,
  * 카테고리 내 채널 수 제한 확인, 새 채널 순서 계산, 새 채널 객체 생성 및 저장소 호출을 담당합니다.
  */
-class AddProjectChannelUseCaseImpl @Inject constructor(
+class AddProjectChannelUseCaseImpl(
     private val projectChannelRepository: ProjectChannelRepository
 ) : AddProjectChannelUseCase {
     
@@ -78,29 +78,61 @@ class AddProjectChannelUseCaseImpl @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Channel name cannot be blank."))
         }
 
-        // 1. Fetch the category collection to get current channels in the target category
+        // 1. Fetch all channels in the project to calculate the correct order
         val projectChannelsResult = projectChannelRepository.observeAll().first()
-        val projectChannels = when (projectChannelsResult) {
-            is CustomResult.Success -> projectChannelsResult.data
+        val allProjectChannels = when (projectChannelsResult) {
+            is CustomResult.Success -> projectChannelsResult.data.filterIsInstance<ProjectChannel>()
             is CustomResult.Failure -> return CustomResult.Failure(projectChannelsResult.error)
             else -> return CustomResult.Failure(Exception("Failed to fetch project channels."))
         }
 
-        if (projectChannels.size >= Constants.MAX_CHANNELS_PER_CATEGORY) {
-            return CustomResult.Failure(IllegalStateException("Maximum channels per category (${Constants.MAX_CHANNELS_PER_CATEGORY}) reached for category '$categoryId'."))
+        // 2. Filter channels for the specific category (including NoCategory if categoryId matches)
+        // Note: This assumes channels have a categoryId field. For now, we'll work with the current structure
+        // TODO: Once we implement the new structure with categoryId field, update this logic
+        
+        // 3. Calculate the correct order based on whether this is a NoCategory channel or category channel
+        val newOrderValue = if (categoryId.value == Constants.NO_CATEGORY_ID) {
+            // For NoCategory channels: they share order space with categories
+            // We need to place them after existing categories and NoCategory channels
+            // TODO: Query categories to get their max order for true unified ordering
+            // For now, use a simplified approach
+            if (allProjectChannels.isEmpty()) {
+                1.0 // First NoCategory channel gets order 1.0 (after NoCategory category at 0.0)
+            } else {
+                // Find max order among NoCategory channels and add 1.0
+                val maxNoCategoryChannelOrder = allProjectChannels
+                    .filter { it.categoryId?.value == Constants.NO_CATEGORY_ID }
+                    .maxOfOrNull { it.order.value } ?: 0.0
+                maxOf(maxNoCategoryChannelOrder + 1.0, 1.0)
+            }
+        } else {
+            // For category channels: place after existing channels in this category
+            val categoryChannels = allProjectChannels.filter { it.categoryId == categoryId }
+            if (categoryChannels.isEmpty()) {
+                // First channel in this category: place after the category itself
+                // TODO: Query category order and place channel right after it
+                1.0 // Simplified for now
+            } else {
+                // Place after existing channels in this category
+                (categoryChannels.maxOfOrNull { it.order.value } ?: 0.0) + 0.1 // Use 0.1 increment for channels within categories
+            }
         }
-
-        val newOrderValue = projectChannels.size + 0.01
         val newOrder = ProjectChannelOrder.from(newOrderValue)
 
-        // 4. Create new ProjectChannel object
+        // 4. Check maximum channels limit (optional - remove if not needed)
+        if (allProjectChannels.size >= Constants.MAX_CHANNELS_PER_CATEGORY) {
+            return CustomResult.Failure(IllegalStateException("Maximum channels per project (${Constants.MAX_CHANNELS_PER_CATEGORY}) reached."))
+        }
+
+        // 5. Create new ProjectChannel object
         val newChannel = ProjectChannel.create(
             channelName = trimmedChannelName,
             order = newOrder,
             channelType = channelType,
+            categoryId = categoryId
         )
 
-        // 5. Add channel using repository
+        // 6. Add channel using repository
         return when(val addResult = projectChannelRepository.save(newChannel)) {
             is CustomResult.Success -> CustomResult.Success(newChannel) // Return the channel we attempted to add
             is CustomResult.Failure -> CustomResult.Failure(addResult.error)

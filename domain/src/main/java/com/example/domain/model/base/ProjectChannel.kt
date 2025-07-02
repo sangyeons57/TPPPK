@@ -17,6 +17,7 @@ class ProjectChannel private constructor(
     initialChannelName: Name,
     initialOrder: ProjectChannelOrder,
     initialChannelType: ProjectChannelType,
+    initialCategoryId: DocumentId?,
     override val id: DocumentId,
     override val isNew: Boolean,
     override val createdAt: Instant,
@@ -29,6 +30,8 @@ class ProjectChannel private constructor(
         private set
     var order: ProjectChannelOrder = initialOrder
         private set
+    var categoryId: DocumentId? = initialCategoryId
+        private set
 
     init {
         setOriginalState()
@@ -39,6 +42,7 @@ class ProjectChannel private constructor(
             KEY_CHANNEL_NAME to this.channelName.value,
             KEY_CHANNEL_TYPE to this.channelType.value,
             KEY_ORDER to this.order.value,
+            KEY_CATEGORY_ID to this.categoryId?.value,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_CREATED_AT to this.createdAt
         )
@@ -75,11 +79,25 @@ class ProjectChannel private constructor(
         pushDomainEvent(ProjectChannelOrderChangedEvent(this.id, this.order, DateTimeUtil.nowInstant()))
     }
 
+    /**
+     * Moves the channel to a different category.
+     * Use null for NoCategory (project-level channels).
+     *
+     * @param newCategoryId The ID of the target category, or null for NoCategory
+     */
+    fun moveToCategory(newCategoryId: DocumentId?) {
+        if (this.categoryId == newCategoryId) return
+        
+        this.categoryId = newCategoryId
+        // Note: We could add a domain event here if needed for tracking category moves
+    }
+
     companion object {
         const val COLLECTION_NAME = "project_channels"
         const val KEY_CHANNEL_NAME = "channelName"
         const val KEY_CHANNEL_TYPE = "channelType"
         const val KEY_ORDER = "order"
+        const val KEY_CATEGORY_ID = "categoryId"
 
         /**
          * Factory method for creating a new project channel.
@@ -87,13 +105,15 @@ class ProjectChannel private constructor(
         fun create(
             channelName: Name,
             channelType: ProjectChannelType,
-            order: ProjectChannelOrder
+            order: ProjectChannelOrder,
+            categoryId: DocumentId? = null
         ): ProjectChannel {
             val channel = ProjectChannel(
                 id = DocumentId.EMPTY,
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
+                initialCategoryId = categoryId,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true
@@ -109,6 +129,7 @@ class ProjectChannel private constructor(
             channelName: Name,
             order: ProjectChannelOrder,
             channelType: ProjectChannelType,
+            categoryId: DocumentId? = null,
             createdAt: Instant?,
             updatedAt: Instant?
         ): ProjectChannel {
@@ -117,6 +138,7 @@ class ProjectChannel private constructor(
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
+                initialCategoryId = categoryId,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false
