@@ -39,7 +39,7 @@ interface AddCategoryUseCase {
  * 실제 카테고리 추가 로직을 수행하며, 사용자 인증 정보 확인, 기존 카테고리 목록 조회,
  * 새 카테고리 객체 생성 및 저장소 호출을 담당합니다.
  */
-class AddCategoryUseCaseImpl @Inject constructor(
+class AddCategoryUseCaseImpl(
     private val categoryRepository: CategoryRepository,
     private val authRepository: AuthRepository
 ) : AddCategoryUseCase {
@@ -71,25 +71,28 @@ class AddCategoryUseCaseImpl @Inject constructor(
             else -> return CustomResult.Failure(Exception("Failed to get current user ID."))
         }
 
-        // 2. Fetch existing categories for the project to determine the next order
-        val existingCategoriesResult = categoryRepository.observeAll()
-            .first() // Get the first emission
+        // 2. Determine the next order by considering both categories and NoCategory channels
+        // For unified ordering, we need to find the maximum order from both categories and NoCategory channels
+        val existingCategoriesResult = categoryRepository.observeAll().first()
         val nextOrder = when (existingCategoriesResult) {
             is CustomResult.Success -> {
                 val categories = existingCategoriesResult.data.map { it as Category }
-                // Exclude NO_CATEGORY_ORDER when finding max, as it's fixed.
-                // New categories should be ordered after regular categories.
-                // 기존 카테고리들의 최대 order 값을 찾습니다. "카테고리 없음"의 order (0.0) 보다 큰 값을 기준으로 합니다.
-                // 만약 "카테고리 없음"만 있거나 아무 카테고리도 없다면, 새로운 카테고리는 1.0부터 시작합니다.
-                val newOrder = if (categories.isEmpty() || (categories.size == 1 && categories.first().order.value == Constants.NO_CATEGORY_ORDER)) {
-                    1.0 // First actual category gets order 1.0
-                } else {
-                    (categories.filter { it.order.value > Constants.NO_CATEGORY_ORDER }.maxOfOrNull { it.order.value } ?: 0.0) + 1.0
-                }
+                
+                // Find the maximum order among all categories (excluding NoCategory itself which is fixed at 0.0)
+                val maxCategoryOrder = categories
+                    .filter { it.order.value > Constants.NO_CATEGORY_ORDER } // Exclude NoCategory (0.0)
+                    .maxOfOrNull { it.order.value } ?: 0.0
+
+                // TODO: Also consider NoCategory channels when implementing full unified ordering
+                // For now, new categories are placed after existing categories
+                // In the future, we should query NoCategory channels and find their max order too
+                
+                // New category gets the next available order (minimum 1.0)
+                val newOrder = maxOf(maxCategoryOrder + 1.0, 1.0)
                 newOrder
             }
             is CustomResult.Failure -> {
-                return CustomResult.Failure(existingCategoriesResult.error) // Propagate error
+                return CustomResult.Failure(existingCategoriesResult.error)
             }
             else -> {
                 return CustomResult.Failure(Exception("Failed to get existing categories."))

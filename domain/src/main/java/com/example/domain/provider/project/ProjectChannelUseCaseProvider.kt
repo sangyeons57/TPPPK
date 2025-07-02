@@ -51,7 +51,7 @@ class ProjectChannelUseCaseProvider @Inject constructor(
         
         val projectChannelRepository = projectChannelRepositoryFactory.create(
             ProjectChannelRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories(projectId.value)
+                collectionPath = CollectionPath.projectChannels(projectId.value)
             )
         )
 

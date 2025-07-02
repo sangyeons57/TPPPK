@@ -23,6 +23,8 @@ data class ProjectChannelDTO(
     val channelType: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
     @get:PropertyName(ORDER)
     val order: Double = 0.0, // Added order field
+    @get:PropertyName(CATEGORY_ID)
+    val categoryId: String? = null, // Added categoryId field for category association
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp override val createdAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
@@ -34,6 +36,7 @@ data class ProjectChannelDTO(
         const val CHANNEL_NAME = ProjectChannel.KEY_CHANNEL_NAME
         const val CHANNEL_TYPE = ProjectChannel.KEY_CHANNEL_TYPE
         const val ORDER = ProjectChannel.KEY_ORDER
+        const val CATEGORY_ID = ProjectChannel.KEY_CATEGORY_ID
     }
     /**
      * DTO를 도메인 모델로 변환
@@ -45,6 +48,7 @@ data class ProjectChannelDTO(
             channelName = Name(channelName),
             channelType = channelType,
             order = ProjectChannelOrder(order), // Added order mapping
+            categoryId = categoryId?.let { VODocumentId(it) }, // Added categoryId mapping
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant()
         )
@@ -61,6 +65,7 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
         channelName = channelName.value,
         channelType = channelType,
         order = order.value, // Added order mapping
+        categoryId = categoryId?.value, // Added categoryId mapping
         createdAt = null,
         updatedAt = null
     )
