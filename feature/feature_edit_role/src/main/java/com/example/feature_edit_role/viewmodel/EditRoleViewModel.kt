@@ -8,7 +8,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.model.data.project.RolePermission
+import com.example.domain.model.vo.permission.PermissionType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
@@ -29,10 +29,10 @@ import javax.inject.Inject
 data class EditRoleUiState(
     val roleId: DocumentId? = null,
     val roleName: Name = Name(""),
-    val permissions: Map<RolePermission, Boolean> = RolePermission.entries.associateWith { false },
+    val permissions: Map<PermissionType, Boolean> = PermissionType.defaultPermissions(false),
     val isDefault: RoleIsDefault = RoleIsDefault.NON_DEFAULT,
     val originalRoleName: Name = Name.EMPTY,
-    val originalPermissions: Map<RolePermission, Boolean> = emptyMap(),
+    val originalPermissions: Map<PermissionType, Boolean> = emptyMap(),
     val originalIsDefault: RoleIsDefault = RoleIsDefault.NON_DEFAULT,
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -167,7 +167,7 @@ class EditRoleViewModel @Inject constructor(
     /**
      * 권한 스위치 변경 시 호출
      */
-    fun onPermissionCheckedChange(permission: RolePermission, isChecked: Boolean) {
+    fun onPermissionCheckedChange(permission: PermissionType, isChecked: Boolean) {
         _uiState.update {
             val newPermissions = it.permissions.toMutableMap().apply { put(permission, isChecked) }
             it.copy(

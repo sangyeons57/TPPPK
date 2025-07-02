@@ -53,6 +53,8 @@ import com.example.feature_signup.ui.SignUpScreen
 import com.example.feature_terms_of_service.ui.TermsOfServiceScreen
 import com.example.feature_member.ui.MemberListScreen
 import com.example.feature_role_list.ui.RoleListScreen
+import com.example.feature_add_role.ui.AddRoleScreen
+import com.example.feature_edit_role.ui.EditRoleScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -280,6 +282,22 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
             arguments = RoleListRoute.arguments
         ) {
             RoleListScreen(navigationManger = navigationManger)
+        }
+        
+        // 역할 추가 화면
+        composable(
+            route = AddRoleRoute.ROUTE_PATTERN,
+            arguments = AddRoleRoute.arguments
+        ) {
+            AddRoleScreen(navigationManger = navigationManger)
+        }
+        
+        // 역할 편집 화면
+        composable(
+            route = EditRoleRoute.ROUTE_PATTERN,
+            arguments = EditRoleRoute.arguments
+        ) {
+            EditRoleScreen(navigationManger = navigationManger)
         }
         
         // 프로젝트 상세 화면 - 메인 탭 외부에서도 접근 가능
