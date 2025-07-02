@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain.provider.friend.FriendUseCaseProvider
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
@@ -77,7 +78,7 @@ class AddMemberViewModel @Inject constructor(
                             val friendItems = friends.map { friend ->
                                 FriendItem(
                                     userId = UserId(friend.id.value), // DocumentId를 UserId로 변환
-                                    userName = friend.name, // Friend 모델의 Name 타입
+                                    userName = UserName.from(friend.name), // Friend 모델의 Name 타입
                                     userEmail = null, // 이메일은 추가 조회 필요 (나중에 개선)
                                     profileImageUrl = friend.profileImageUrl?.value,
                                     isOnline = false // 온라인 상태는 나중에 추가

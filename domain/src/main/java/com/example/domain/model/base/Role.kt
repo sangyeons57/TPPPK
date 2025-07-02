@@ -71,7 +71,23 @@ class Role private constructor(
         const val KEY_NAME = "name"
         const val KEY_IS_DEFAULT = "isDefault"
 
-        val PROJECT_ROLE_OWNER = "OWNER"
+        // ===== 시스템 역할 상수 =====
+        /**
+         * 프로젝트 소유자 역할
+         * - 프로젝트 생성자에게 자동으로 할당
+         * - 최고 권한을 가지며 삭제하거나 편집할 수 없음
+         */
+        const val OWNER = "OWNER"
+        
+        /**
+         * 시스템 역할 목록
+         * 새로운 시스템 역할이 추가되면 이 목록에도 추가해야 함
+         */
+        val SYSTEM_ROLES = setOf(OWNER)
+        
+        // 하위 호환성을 위해 유지
+        @Deprecated("Use OWNER instead", ReplaceWith("OWNER"))
+        val PROJECT_ROLE_OWNER = OWNER
         /**
          * Factory method to create a new Role.
          * This method encapsulates the creation logic and fires a domain event.
@@ -91,11 +107,21 @@ class Role private constructor(
             return role
         }
 
+        /**
+         * 주어진 역할 ID가 시스템 역할인지 확인
+         *
+         * @param roleId 확인할 역할 ID
+         * @return 시스템 역할이면 true, 아니면 false
+         */
+        fun isSystemRole(roleId: String): Boolean {
+            return SYSTEM_ROLES.contains(roleId)
+        }
+
         fun createOwner(
         ) : Role {
             val role = Role(
-                id = DocumentId(PROJECT_ROLE_OWNER),
-                initialName = Name(PROJECT_ROLE_OWNER),
+                id = DocumentId(OWNER),
+                initialName = Name(OWNER),
                 initialIsDefault = RoleIsDefault.NON_DEFAULT,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),

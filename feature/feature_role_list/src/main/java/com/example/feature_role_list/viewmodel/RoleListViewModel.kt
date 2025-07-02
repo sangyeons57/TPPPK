@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.provider.project.ProjectRoleUseCaseProvider
@@ -74,7 +75,12 @@ class RoleListViewModel @Inject constructor(
                 .collect { result ->
                     when (result) {
                         is CustomResult.Success -> {
-                            val roleItems = result.data.map { domainRole ->
+                            // 🚨 추가 안전장치: 시스템 역할 제외 (UseCase에서 이미 필터링되지만 2중 보안)
+                            val filteredRoles = result.data.filter { role ->
+                                !Role.isSystemRole(role.id.value)
+                            }
+                            
+                            val roleItems = filteredRoles.map { domainRole ->
                                 RoleItem(
                                     id = domainRole.id,
                                     name = domainRole.name

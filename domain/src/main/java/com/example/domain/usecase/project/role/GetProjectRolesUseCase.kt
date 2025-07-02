@@ -37,10 +37,12 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
     ): Flow<CustomResult<List<Role>, Exception>> {
         return when (val customResult = projectRoleRepository.observeAll().first()){
             is CustomResult.Success -> {
+                // 🚨 모든 역할을 보여주되, 시스템 역할(OWNER 등)만 제외
                 var roles = customResult.data.toList().filter{
                     if (it !is Role) return@filter false
-
-                    it.isDefault.isDefault()
+                    
+                    // 시스템 역할이 아닌 경우만 포함 (isDefault 필터링 제거)
+                    !Role.isSystemRole(it.id.value)
                 } as List<Role>
 
 

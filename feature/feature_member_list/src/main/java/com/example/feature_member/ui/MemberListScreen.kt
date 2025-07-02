@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,16 +19,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -44,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,8 +80,12 @@ fun MemberListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDeleteConfirmationDialog by remember { mutableStateOf<MemberUiModel?>(null) } // Changed type
+    var showDeleteConfirmationDialog by remember { mutableStateOf<MemberUiModel?>(null) }
     var showAddMemberDialogState by remember { mutableStateOf(false) }
+    
+    // 🆕 Bottom Sheet 상태 관리
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var selectedMember by remember { mutableStateOf<MemberUiModel?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
@@ -116,20 +127,45 @@ fun MemberListScreen(
             uiState = uiState,
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
             onMemberClick = viewModel::onMemberClick,
-            onDeleteMemberClick = viewModel::requestDeleteMember
+            onMemberMoreClick = { member ->
+                selectedMember = member
+                showBottomSheet = true
+            }
+        )
+    }
+
+    // 🆕 멤버 옵션 Bottom Sheet
+    if (showBottomSheet) {
+        MemberOptionsBottomSheet(
+            member = selectedMember!!,
+            currentUserId = uiState.currentUserId,
+            onDismiss = { 
+                showBottomSheet = false
+                selectedMember = null
+            },
+            onEditMember = { member ->
+                viewModel.onMemberClick(member)
+                showBottomSheet = false
+                selectedMember = null
+            },
+            onDeleteMember = { member ->
+                showDeleteConfirmationDialog = member
+                showBottomSheet = false
+                selectedMember = null
+            }
         )
     }
 
     // 멤버 삭제 확인 다이얼로그
-    showDeleteConfirmationDialog?.let { memberUiModel -> // Changed variable name for clarity
+    showDeleteConfirmationDialog?.let { memberUiModel ->
         AlertDialog(
             onDismissRequest = { showDeleteConfirmationDialog = null },
             title = { Text("멤버 내보내기") },
-            text = { Text("${memberUiModel.userName}님을 프로젝트에서 내보내시겠습니까?") }, // Used MemberUiModel.userName
+            text = { Text("${memberUiModel.userName.value}님을 프로젝트에서 내보내시겠습니까?") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.confirmDeleteMember(memberUiModel) // Pass MemberUiModel
+                        viewModel.confirmDeleteMember(memberUiModel)
                         showDeleteConfirmationDialog = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -155,15 +191,152 @@ fun MemberListScreen(
 }
 
 /**
+ * 🆕 멤버 옵션 Bottom Sheet
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MemberOptionsBottomSheet(
+    member: MemberUiModel,
+    currentUserId: UserId?,
+    onDismiss: () -> Unit,
+    onEditMember: (MemberUiModel) -> Unit,
+    onDeleteMember: (MemberUiModel) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // 🚨 자기 자신인지 확인
+    val isSelf = currentUserId?.value == member.userId.value
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // 멤버 정보 헤더
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                UserProfileImage(
+                    profileImageUrl = member.profileImageUrl?.value,
+                    contentDescription = "${member.userName.value}님의 프로필",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = member.userName.value,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (member.roleNames.isNotEmpty()) {
+                        Text(
+                            text = member.roleNames.joinToString(", ") { it.value },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 편집 옵션
+            MemberOptionItem(
+                icon = Icons.Filled.Edit,
+                title = "멤버 편집",
+                subtitle = "역할 및 권한 수정",
+                onClick = { onEditMember(member) }
+            )
+
+            // 🚨 자기 자신이 아닌 경우에만 제거 옵션 표시
+            if (!isSelf) {
+                MemberOptionItem(
+                    icon = Icons.Filled.Delete,
+                    title = "멤버 내보내기",
+                    subtitle = "프로젝트에서 제거",
+                    onClick = { onDeleteMember(member) },
+                    isDestructive = true
+                )
+            }
+
+            // 하단 여백
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+/**
+ * 🆕 Bottom Sheet 옵션 아이템
+ */
+@Composable
+private fun MemberOptionItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    isDestructive: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val contentColor = if (isDestructive) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isDestructive) {
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
+    }
+}
+
+/**
  * MemberListContent: 멤버 목록 UI (Stateless)
  */
 @Composable
 fun MemberListContent(
     paddingValues: PaddingValues,
-    uiState: MemberListUiState, // This uiState now contains List<MemberUiModel>
+    uiState: MemberListUiState,
     onSearchQueryChanged: (String) -> Unit,
-    onMemberClick: (MemberUiModel) -> Unit, // Changed
-    onDeleteMemberClick: (MemberUiModel) -> Unit, // Changed
+    onMemberClick: (MemberUiModel) -> Unit,
+    onMemberMoreClick: (MemberUiModel) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -214,10 +387,10 @@ fun MemberListContent(
         } else {
             items(uiState.members, key = { it.userId.value }) { member ->
                 ProjectMemberListItemComposable(
-                    member = member, // Pass Member directly
-                    currentUserId = uiState.currentUserId, // 현재 사용자 ID 전달 👈
+                    member = member,
+                    currentUserId = uiState.currentUserId,
                     onClick = { onMemberClick(member) },
-                    onMoreClick = { onDeleteMemberClick(member) }
+                    onMoreClick = { onMemberMoreClick(member) }
                 )
             }
         }
@@ -229,25 +402,22 @@ fun MemberListContent(
  */
 @Composable
 fun ProjectMemberListItemComposable(
-    member: MemberUiModel, // Changed parameter to MemberUiModel
-    currentUserId: UserId?, // 현재 사용자 ID 추가 👈
-    onClick: (MemberUiModel) -> Unit, // Changed
-    onMoreClick: (MemberUiModel) -> Unit, // Changed
+    member: MemberUiModel,
+    currentUserId: UserId?,
+    onClick: (MemberUiModel) -> Unit,
+    onMoreClick: (MemberUiModel) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 🚨 자기 자신인지 확인
-    val isSelf = currentUserId?.value == member.userId.value
-
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick(member) } // Use member (which is MemberUiModel)
+            .clickable { onClick(member) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = member.profileImageUrl?.value, // Use MemberUiModel.profileImageUrl
-            contentDescription = "${member.userName}님의 프로필 사진", // Use MemberUiModel.userName
+            profileImageUrl = member.profileImageUrl?.value,
+            contentDescription = "${member.userName.value}님의 프로필 사진",
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
@@ -255,15 +425,15 @@ fun ProjectMemberListItemComposable(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = member.userName.value, // Use MemberUiModel.userName
+                text = member.userName.value,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (member.roleNames.isNotEmpty()) { // Use MemberUiModel.roleNames
+            if (member.roleNames.isNotEmpty()) {
                 Text(
-                    text = member.roleNames.joinToString(", ") { it.value }, // ValueObject에서 .value 사용
+                    text = member.roleNames.joinToString(", ") { it.value },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -272,11 +442,9 @@ fun ProjectMemberListItemComposable(
             }
         }
 
-        // 🚨 자기 자신이 아닌 경우에만 삭제 버튼 표시
-        if (!isSelf) {
-            IconButton(onClick = { onMoreClick(member) }) { // Pass MemberUiModel
-                Icon(Icons.Filled.MoreVert, contentDescription = "더 보기")
-            }
+        // 🔄 모든 멤버에게 더보기 버튼 표시 (Bottom Sheet에서 제어)
+        IconButton(onClick = { onMoreClick(member) }) {
+            Icon(Icons.Filled.MoreVert, contentDescription = "더 보기")
         }
     }
 }

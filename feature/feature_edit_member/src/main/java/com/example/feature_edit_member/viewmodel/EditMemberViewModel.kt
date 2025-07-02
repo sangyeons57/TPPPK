@@ -9,6 +9,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Member
+import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
@@ -137,8 +138,13 @@ class EditMemberViewModel @Inject constructor(
                     when (result) {
                         is CustomResult.Success -> {
                             val roles = result.data
-                            // Convert List<Role> to List<RoleSelectionItem>
-                            val roleSelectionItems = roles.map { role ->
+                            // 🚨 시스템 역할 필터링: OWNER 등 시스템 역할은 일반 사용자에게 할당할 수 없음
+                            val userAssignableRoles = roles.filter { role ->
+                                !Role.isSystemRole(role.id.value)
+                            }
+                            
+                            // Convert List<Role> to List<RoleSelectionItem> (시스템 역할 제외)
+                            val roleSelectionItems = userAssignableRoles.map { role ->
                                 RoleSelectionItem(
                                     id = role.id.value, // Convert DocumentId to String
                                     name = role.name.value, // Convert Name to String
@@ -183,29 +189,52 @@ class EditMemberViewModel @Inject constructor(
         val currentState = _uiState.value
         if (currentState.isLoading || currentState.isSaving) return
 
+        // 🚨 UI에서 선택된 역할 (시스템 역할 제외)
         val currentSelectedRoleIds = currentState.availableRoles
             .filter { it.isSelected }
             .map { it.id }
             .toSet()
 
-        if (currentSelectedRoleIds == originalSelectedRoleIds) {
+        // 🚨 기존 시스템 역할 보존: 기존 역할 중 시스템 역할만 추출
+        val existingSystemRoles = originalSelectedRoleIds.filter { roleId ->
+            Role.isSystemRole(roleId)
+        }
+
+        // 🚨 최종 역할 리스트: 새로 선택된 역할 + 기존 시스템 역할
+        val finalRoleIds = (currentSelectedRoleIds + existingSystemRoles).toSet()
+
+        // 🚨 시스템 역할을 제외한 일반 역할만 비교하여 변경 여부 확인
+        val originalNonSystemRoles = originalSelectedRoleIds.filter { roleId ->
+            !Role.isSystemRole(roleId)
+        }.toSet()
+
+        if (currentSelectedRoleIds == originalNonSystemRoles) {
             viewModelScope.launch { _eventFlow.emit(EditMemberEvent.ShowSnackbar("변경된 내용이 없습니다.")) }
             return
         }
+
+        // 🚨 디버그: 역할 변경 사항 로그
+        println("EditMemberViewModel - Role Update:")
+        println("  Original all roles: $originalSelectedRoleIds")
+        println("  Original non-system: $originalNonSystemRoles") 
+        println("  Current selected: $currentSelectedRoleIds")
+        println("  Existing system roles: $existingSystemRoles")
+        println("  Final roles: $finalRoleIds")
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, error = null) }
             // _eventFlow.emit(EditMemberEvent.ShowSnackbar("역할을 저장하는 중...")) // 스낵바 중복 표시 방지 위해 일단 주석 처리 (성공/실패 시 표시)
 
-            // UseCase 호출
+            // 🚨 UseCase 호출: 시스템 역할이 포함된 최종 역할 리스트로 업데이트
             val result = projectMemberUseCases.updateMemberRolesUseCase(
                 userId,
-                currentSelectedRoleIds.toList()
+                finalRoleIds.toList()
             )
 
             when (result) {
                 is CustomResult.Success -> {
-                    originalSelectedRoleIds = currentSelectedRoleIds
+                    // 🚨 성공 시 originalSelectedRoleIds를 시스템 역할 포함한 최종 리스트로 업데이트
+                    originalSelectedRoleIds = finalRoleIds
                     _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
                     _eventFlow.emit(EditMemberEvent.ShowSnackbar("멤버 역할이 성공적으로 업데이트되었습니다."))
                     _eventFlow.emit(EditMemberEvent.NavigateBack)
