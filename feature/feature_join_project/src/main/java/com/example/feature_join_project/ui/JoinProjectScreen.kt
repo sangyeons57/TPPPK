@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.*
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_join_project.viewmodel.JoinProjectEvent
 import com.example.feature_join_project.viewmodel.JoinProjectUiState
@@ -32,7 +33,6 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinProjectScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: JoinProjectViewModel = hiltViewModel()
 ) {
@@ -45,9 +45,7 @@ fun JoinProjectScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is JoinProjectEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is JoinProjectEvent.JoinSuccess -> {
-                    navigationManger.navigateToClearingBackStack(MainContainerRoute)
-                }
+                is JoinProjectEvent.JoinSuccess -> viewModel.navigateToClearingBackStack()
                 is JoinProjectEvent.ClearFocus -> focusManager.clearFocus()
             }
         }
@@ -60,9 +58,7 @@ fun JoinProjectScreen(
             TopAppBar(
                 title = { Text("프로젝트 참여하기") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManger.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(onClick = viewModel::navigateToClearingBackStack)
                 }
             )
         }

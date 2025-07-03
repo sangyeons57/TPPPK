@@ -3,6 +3,7 @@ package com.example.core_navigation.core
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import com.example.domain.model.vo.DocumentId
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Clean, direct navigation interface without command pattern complexity.
@@ -11,6 +12,14 @@ import com.example.domain.model.vo.DocumentId
  * can use intuitively without needing to understand complex command patterns.
  */
 interface NavigationManger {
+    // ===== Navigation State Management =====
+    
+    /**
+     * 네비게이션이 현재 진행 중인지를 나타내는 StateFlow입니다.
+     * UI 컴포넌트에서 구독하여 로딩 상태나 버튼 비활성화 등에 활용할 수 있습니다.
+     */
+    val isNavigationInProgress: StateFlow<Boolean>
+    
     // ===== Core Navigation =====
     
     /**

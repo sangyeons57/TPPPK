@@ -1,4 +1,3 @@
-
 package com.example.data.datasource.remote
 
 
@@ -22,6 +21,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 
 /**
  * 사용자 간의 친구 관계 데이터에 접근하기 위한 인터페이스입니다.
@@ -90,6 +90,8 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : DefaultDatasourceImpl<FriendDTO>(firestore, FriendDTO::class.java), FriendRemoteDataSource {
 
+    private val TAG = "FriendRemoteDS"
+
     override fun observeFriendRequests(): Flow<CustomResult<List<FriendDTO>, Exception>> {
         return callbackFlow {
             val listener = collection
@@ -138,26 +140,33 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     }
     
     override suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception> {
+        Log.d(TAG, "sendFriendRequest called: fromUserId=$fromUserId, toUsername=$toUsername")
         return resultTry {
             withContext(Dispatchers.IO) {
+                Log.d(TAG, "Fetching target user document by username…")
                 val usersSnapshot = firestore.collection(CollectionPath.users.value)
                     .whereEqualTo("username", toUsername)
                     .get()
                     .await()
+                Log.d(TAG, "usersSnapshot.isEmpty=${usersSnapshot.isEmpty}")
                 
                 if (usersSnapshot.isEmpty) {
+                    Log.d(TAG, "User not found for username=$toUsername")
                     throw Exception("User not found")
                 }
                 
                 val targetUser = usersSnapshot.documents.first()
                 val targetUserId = targetUser.id
+                Log.d(TAG, "targetUserId=$targetUserId")
                 
                 val fromUserDoc = firestore.collection(CollectionPath.users.value)
                     .document(fromUserId)
                     .get()
                     .await()
+                Log.d(TAG, "fromUserDoc.exists()=${fromUserDoc.exists()}")
                 
                 if (!fromUserDoc.exists()) {
+                    Log.d(TAG, "Current user doc not found for id=$fromUserId")
                     throw Exception("Current user not found")
                 }
                 
@@ -167,6 +176,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 
                 val targetUsername = targetUser.getString("username") ?: ""
                 val targetProfileImageUrl = targetUser.getString("profileImageUrl") ?: ""
+                Log.d(TAG, "Creating FriendDTO for both users – fromUsername=$fromUsername, targetUsername=$targetUsername")
                 
                 val batch = firestore.batch()
                 
@@ -200,6 +210,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 batch.set(toUserFriendRef, toUserFriendData)
                 
                 batch.commit().await()
+                Log.d(TAG, "Batch commit succeeded – friend request stored for both users")
             }
         }
     }

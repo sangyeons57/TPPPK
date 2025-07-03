@@ -17,6 +17,7 @@ import com.example.domain.usecase.friend.SendFriendRequestUseCaseImpl
 import com.example.domain.usecase.friend.ValidateSearchQueryUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 
 /**
  * 친구 관련 UseCase들을 제공하는 Provider
@@ -30,6 +31,8 @@ class FriendUseCaseProvider @Inject constructor(
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
+    private val TAG = "FriendUseCaseProvider"
+
     /**
      * 특정 사용자의 친구 관련 UseCase들을 생성합니다.
      * 
@@ -37,6 +40,7 @@ class FriendUseCaseProvider @Inject constructor(
      * @return 친구 관련 UseCase 그룹
      */
     fun createForUser(userId: String): FriendUseCases {
+        Log.d(TAG, "createForUser called with userId=$userId")
         val friendRepository = friendRepositoryFactory.create(
             FriendRepositoryFactoryContext(
                 collectionPath = CollectionPath.userFriends(userId)
@@ -53,7 +57,7 @@ class FriendUseCaseProvider @Inject constructor(
             AuthRepositoryFactoryContext()
         )
 
-        return FriendUseCases(
+        val useCases = FriendUseCases(
             sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
                 friendRepository = friendRepository,
                 authRepository = authRepository
@@ -84,6 +88,8 @@ class FriendUseCaseProvider @Inject constructor(
             friendRepository = friendRepository,
             userRepository = userRepository
         )
+        Log.d(TAG, "FriendUseCases for user created")
+        return useCases
     }
 
     /**
@@ -92,6 +98,7 @@ class FriendUseCaseProvider @Inject constructor(
      * @return 친구 관련 UseCase 그룹 (현재 사용자 기준)
      */
      fun createForCurrentUser(): FriendUseCases {
+        Log.d(TAG, "createForCurrentUser called")
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
@@ -113,7 +120,7 @@ class FriendUseCaseProvider @Inject constructor(
             )
         )
 
-        return FriendUseCases(
+        val useCases = FriendUseCases(
             sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
                 friendRepository = friendRepository,
                 authRepository = authRepository
@@ -144,6 +151,8 @@ class FriendUseCaseProvider @Inject constructor(
             friendRepository = friendRepository,
             userRepository = userRepository
         )
+        Log.d(TAG, "FriendUseCases for current user created (userId=$currentUserId)")
+        return useCases
     }
 }
 

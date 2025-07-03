@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.util.Log
 
 // --- UI 상태 ---
 data class AddFriendUiState(
@@ -45,15 +46,11 @@ class AddFriendViewModel @Inject constructor(
     private val authUtil: AuthUtil
 ) : ViewModel() {
 
+    private val TAG = "AddFriendViewModel"
+
     // Provider를 통해 생성된 UseCase 그룹들
-    private lateinit var friendUseCases: com.example.domain.provider.friend.FriendUseCases
+    private val friendUseCases = friendUseCaseProvider.createForCurrentUser()
     private val userUseCases = userUseCaseProvider.createForUser()
-    
-    init {
-        viewModelScope.launch {
-            friendUseCases = friendUseCaseProvider.createForCurrentUser()
-        }
-    }
 
     private val _uiState = MutableStateFlow(AddFriendUiState())
     val uiState: StateFlow<AddFriendUiState> = _uiState.asStateFlow()
@@ -80,30 +77,36 @@ class AddFriendViewModel @Inject constructor(
      */
     fun sendFriendRequest() {
         val usernameToSearch = _uiState.value.username.trim()
+        Log.d(TAG, "sendFriendRequest called with usernameToSearch='$usernameToSearch'")
         
-        // 검색어 유효성 검사
-        if (!::friendUseCases.isInitialized || !friendUseCases.validateSearchQueryUseCase(usernameToSearch.value)) {
+        if (!friendUseCases.validateSearchQueryUseCase(usernameToSearch.value)) {
+            Log.d(TAG, "Validation failed for usernameToSearch='$usernameToSearch'")
             _uiState.update { it.copy(error = "유효한 사용자 이름을 입력해주세요 (2글자 이상).") }
             return
         }
         
-        if (_uiState.value.isLoading) return
+        if (_uiState.value.isLoading) {
+            Log.d(TAG, "Duplicate click ignored – friend request already in progress")
+            return
+        }
 
         viewModelScope.launch {
+            Log.d(TAG, "Starting friend request flow…")
             _uiState.update { it.copy(isLoading = true, error = null, infoMessage = null) }
             _eventFlow.emit(AddFriendEvent.ClearFocus)
 
             try {
                 val currentUserId = authUtil.getCurrentUserId()
+                Log.d(TAG, "Current userId=$currentUserId")
                 
-                // 사용자 검색 - 이름으로 검색
                 userUseCases.searchUserByNameUseCase(usernameToSearch).collect { userResult ->
                     when(userResult) {
                         is CustomResult.Success -> {
                             val user = userResult.data
+                            Log.d(TAG, "User found: id=${user.id.value}, name=${user.name.value}")
 
-                            // 자기 자신에게는 친구 요청을 보낼 수 없음
                             if (user.id.value == currentUserId) {
+                                Log.d(TAG, "Attempted to add self as friend – aborting")
                                 _uiState.update { it.copy(
                                     isLoading = false,
                                     error = "자기 자신에게는 친구 요청을 보낼 수 없습니다."
@@ -111,18 +114,20 @@ class AddFriendViewModel @Inject constructor(
                                 return@collect
                             }
 
-                            // 친구 요청 보내기 (사용자 이름으로 전송)
                             val requestResult = friendUseCases.sendFriendRequestUseCase(user.name.value)
+                            Log.d(TAG, "Sending friend request to ${user.name.value}")
                             
                             handleFriendRequestResult(requestResult, user.name.value)
                         }
                         is CustomResult.Failure -> {
+                            Log.d(TAG, "User not found: $usernameToSearch")
                             _uiState.update { it.copy(
                                 isLoading = false,
                                 error = "사용자를 찾을 수 없습니다: $usernameToSearch"
                             )}
                         }
                         else -> {
+                            Log.d(TAG, "Unhandled user search result: $userResult")
                             _uiState.update { it.copy(
                                 isLoading = false,
                                 error = "처리 중 오류가 발생했습니다."
@@ -131,6 +136,7 @@ class AddFriendViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Exception during sendFriendRequest", e)
                 _uiState.update { it.copy(
                     isLoading = false, 
                     error = e.message ?: "사용자 검색 중 오류 발생"
@@ -145,6 +151,7 @@ class AddFriendViewModel @Inject constructor(
     ) {
         when (requestResult) {
             is CustomResult.Success -> {
+                Log.d(TAG, "Friend request success to $targetUsername")
                 _uiState.update { it.copy(
                     isLoading = false,
                     infoMessage = "${targetUsername}님에게 친구 요청을 보냈습니다.",
@@ -153,12 +160,14 @@ class AddFriendViewModel @Inject constructor(
                 _eventFlow.emit(AddFriendEvent.ShowSnackbar("친구 요청을 보냈습니다."))
             }
             is CustomResult.Failure -> {
+                Log.d(TAG, "Friend request failure: ${requestResult.error}")
                 _uiState.update { it.copy(
                     isLoading = false,
                     error = requestResult.error.message ?: "친구 요청 실패"
                 )}
             }
             else -> {
+                Log.d(TAG, "Unhandled friend request result")
                 _uiState.update { it.copy(
                     isLoading = false,
                     error = "처리 중 오류가 발생했습니다."

@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.domain.model.ui.data.MemberUiModel
 import com.example.domain.model.vo.UserId
@@ -110,9 +111,9 @@ fun MemberListScreen(
             TopAppBar(
                 title = { Text("멤버 관리") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManger.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(
+                        onClick = navigationManger::navigateBack
+                    )
                 },
                 actions = {
                     IconButton(onClick = { viewModel.onAddMemberClick() }) {

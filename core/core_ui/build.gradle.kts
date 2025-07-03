@@ -43,6 +43,7 @@ kotlin {
 dependencies {
 
     implementation(project(":core:core_common"))
+    implementation(project(":core:core_navigation"))
     implementation(project(":domain"))
 
     implementation(libs.androidx.core.ktx)

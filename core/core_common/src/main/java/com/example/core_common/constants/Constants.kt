@@ -30,4 +30,20 @@ object Constants {
         const val USER_PROFILE_IMAGES = "user_profile_images"
     }
 
+    /**
+     * 네비게이션 관련 상수들
+     */
+    object Navigation {
+        /**
+         * 중복 클릭/네비게이션 방지를 위한 debounce 시간 (밀리초)
+         * 버튼 클릭, 뒤로가기 등에서 연속 동작을 방지합니다.
+         */
+        const val DEBOUNCE_TIMEOUT_MS = 500L
+        
+        /**
+         * 앱 종료를 위한 연속 뒤로가기 감지 시간 (밀리초)
+         * 이 시간 내에 뒤로가기를 다시 누르면 앱이 종료됩니다.
+         */
+        const val EXIT_APP_TIMEOUT_MS = 2000L
+    }
 }

@@ -173,21 +173,19 @@ fun NavGraphBuilder.authGraph(navigationManger: NavigationManger) {
         composable(SplashRoute.toAppRoutePath()) {
             Log.d("Splash", "Splash Screen")
             // Register this NavController when this NavHost is active
-            SplashScreen(navigationManger = navigationManger)
+            SplashScreen()
         }
         
         composable(LoginRoute.toAppRoutePath()) {
             Log.d("Login", "Login Screen")
-            LoginScreen(navigationManger = navigationManger)
+            LoginScreen()
         }
         
         // 회원가입 화면 추가
         composable(SignUpRoute.toAppRoutePath()) {
             Log.d("SignUp", "SignUp Screen")
             // viewModel은 나중에 추가
-            SignUpScreen(
-                navigationManger = navigationManger
-            )
+            SignUpScreen( )
         }
         
         // 비밀번호 찾기 화면 추가
@@ -250,7 +248,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
         // 프로젝트 생성 화면
         composable(AddProjectRoute.toAppRoutePath()) {
           // TODO: AddRoleScreen/EditRoleScreen for adding roles
-            AddProjectScreen(navigationManger)
+            AddProjectScreen()
         }
 
         // Project Settings Screen - MODERNIZED EXAMPLE
@@ -266,7 +264,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
         composable(
             route = JoinProjectRoute.toAppRoutePath(),
         ) {
-            JoinProjectScreen(navigationManger)
+            JoinProjectScreen()
         }
         
         // 멤버 관리 화면

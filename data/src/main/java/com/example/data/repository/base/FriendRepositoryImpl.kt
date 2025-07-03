@@ -33,6 +33,8 @@ class FriendRepositoryImpl @Inject constructor(
     override val factoryContext: FriendRepositoryFactoryContext
 ) : DefaultRepositoryImpl(friendRemoteDataSource, factoryContext), FriendRepository {
 
+    private val TAG = "FriendRepository"
+
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is Friend)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Friend"))
@@ -105,7 +107,10 @@ class FriendRepositoryImpl @Inject constructor(
     }
     
     override suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception> {
-        return friendRemoteDataSource.sendFriendRequest(fromUserId, toUsername)
+        Log.d(TAG, "sendFriendRequest called: fromUserId=$fromUserId, toUsername=$toUsername")
+        val result = friendRemoteDataSource.sendFriendRequest(fromUserId, toUsername)
+        Log.d(TAG, "Remote data source result: $result")
+        return result
     }
     
     override suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {

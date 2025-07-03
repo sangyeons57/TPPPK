@@ -4,8 +4,17 @@ import android.util.Log
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
+import com.example.core_common.constants.Constants
 import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.domain.model.vo.DocumentId
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,6 +34,16 @@ class NavigationManagerImpl @Inject constructor(
     
     // Currently active child navigation controller (nested NavHost)
     private var activeChildNavController: NavHostController? = null
+
+    // Navigation state management
+    private val _isNavigationInProgress = MutableStateFlow(false)
+    override val isNavigationInProgress: StateFlow<Boolean> = _isNavigationInProgress.asStateFlow()
+    
+    // Debounce 관리를 위한 추가 상태
+    private var lastBackNavigationTime = 0L
+    
+    // Coroutine scope for managing navigation state timeouts
+    private val navigationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     // ===== NavController Management =====
     
@@ -59,9 +78,40 @@ class NavigationManagerImpl @Inject constructor(
         // For now, this is a no-op implementation
     }
 
+    // ===== Navigation State Management Helpers =====
+    
+    /**
+     * 네비게이션 진행 상태를 시작하고 일정 시간 후 자동으로 해제합니다.
+     */
+    private fun startNavigationProgress() {
+        _isNavigationInProgress.value = true
+        navigationScope.launch {
+            delay(Constants.Navigation.DEBOUNCE_TIMEOUT_MS)
+            _isNavigationInProgress.value = false
+        }
+    }
+
     // ===== Core Navigation =====
     
     override fun navigateBack(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        
+        // 전역 debounce 체크 - NavigationManager 수준에서 연속 호출 방지
+        if (currentTime - lastBackNavigationTime < Constants.Navigation.DEBOUNCE_TIMEOUT_MS) {
+            Log.d("NavigationManager", "Back navigation ignored due to debounce (${currentTime - lastBackNavigationTime}ms)")
+            return false
+        }
+        
+        // 홈화면(MainContainerRoute)에서는 뒤로가기 차단
+        val currentRoute = (activeChildNavController ?: parentNavController)?.currentDestination?.route
+        if (currentRoute != null && currentRoute.startsWith(MainContainerRoute.toAppRoutePath())) {
+            Log.d("NavigationManager", "Back navigation blocked at home screen")
+            return false
+        }
+        
+        lastBackNavigationTime = currentTime
+        startNavigationProgress()
+        
         // Try child controller first
         if (activeChildNavController?.popBackStack() == true) {
             Log.d("NavigationManager", "Navigated back using child NavController")
@@ -77,20 +127,25 @@ class NavigationManagerImpl @Inject constructor(
         }
         
         Log.d("NavigationManager", "No back stack entries to pop")
+        // 네비게이션이 실제로 발생하지 않았으므로 상태 해제
+        _isNavigationInProgress.value = false
         return false
     }
 
     override fun navigateTo(route: TypeSafeRoute, navOptions: NavOptions?) {
+        startNavigationProgress()
         val routePath = route.toAppRoutePath()
         executeNavigation(routePath, navOptions)
     }
 
     override fun navigateToClearingBackStack(route: TypeSafeRoute) {
+        startNavigationProgress()
         val routePath = route.toAppRoutePath()
         executeNavigationClearingBackStack(routePath)
     }
 
     override fun <T> navigateBackWithResult(key: String, result: T): Boolean {
+        startNavigationProgress()
         return try {
             val currentController = activeChildNavController ?: parentNavController
             currentController?.let { controller ->
@@ -99,6 +154,7 @@ class NavigationManagerImpl @Inject constructor(
             } ?: false
         } catch (e: Exception) {
             Log.e("NavigationManager", "Failed to navigate back with result: ${e.message}")
+            _isNavigationInProgress.value = false
             false
         }
     }
@@ -113,19 +169,28 @@ class NavigationManagerImpl @Inject constructor(
                 Log.d("NavigationManager", "Navigated to: $route")
             } catch (e: Exception) {
                 Log.e("NavigationManager", "Failed to navigate to $route: ${e.message}")
+                _isNavigationInProgress.value = false
             }
-        } ?: Log.e("NavigationManager", "No NavController available for navigation")
+        } ?: run {
+            Log.e("NavigationManager", "No NavController available for navigation")
+            _isNavigationInProgress.value = false
+        }
     }
 
     private fun executeNavigationOnParent(route: String, navOptions: NavOptions? = null) {
+        startNavigationProgress()
         parentNavController?.let { controller ->
             try {
                 controller.navigate(route, navOptions)
                 Log.d("NavigationManager", "Navigated on parent to: $route")
             } catch (e: Exception) {
                 Log.e("NavigationManager", "Failed to navigate on parent to $route: ${e.message}")
+                _isNavigationInProgress.value = false
             }
-        } ?: Log.e("NavigationManager", "Parent NavController not available for navigation")
+        } ?: run {
+            Log.e("NavigationManager", "Parent NavController not available for navigation")
+            _isNavigationInProgress.value = false
+        }
     }
 
     private fun executeNavigationClearingBackStack(route: String) {
@@ -138,8 +203,12 @@ class NavigationManagerImpl @Inject constructor(
                 Log.d("NavigationManager", "Navigated to $route clearing back stack")
             } catch (e: Exception) {
                 Log.e("NavigationManager", "Failed to navigate clearing back stack: ${e.message}")
+                _isNavigationInProgress.value = false
             }
-        } ?: Log.e("NavigationManager", "No NavController available for navigation")
+        } ?: run {
+            Log.e("NavigationManager", "No NavController available for navigation")
+            _isNavigationInProgress.value = false
+        }
     }
     
     // ===== Convenience Navigation Methods =====

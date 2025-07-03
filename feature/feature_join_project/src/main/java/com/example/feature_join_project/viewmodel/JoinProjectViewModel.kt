@@ -5,6 +5,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.MainContainerRoute
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -30,6 +32,7 @@ sealed class JoinProjectEvent {
 @HiltViewModel
 class JoinProjectViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
+    private val navigationManger: NavigationManger,
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider
 ) : ViewModel() {
 
@@ -49,6 +52,10 @@ class JoinProjectViewModel @Inject constructor(
         _uiState.update {
             it.copy(inviteCodeOrLink = input, error = null) // 에러 초기화
         }
+    }
+
+    fun navigateToClearingBackStack() {
+        navigationManger.navigateToClearingBackStack(MainContainerRoute)
     }
 
     /**

@@ -15,6 +15,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.core_common.constants.Constants
 import com.example.core_navigation.core.DevMenuRoute
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
@@ -92,29 +93,42 @@ class MainActivity : ComponentActivity() {
 
     private fun setupBackPressHandler() {
         val callback = object : OnBackPressedCallback(true) {
+            private var lastBackNavigateTime: Long = 0L // 추가: 연속 뒤로가기 방지용 타임스탬프
+
             override fun handleOnBackPressed() {
+                val now = System.currentTimeMillis()
+
+                // 최근에 처리된 뒤로가기라면 무시 (모든 화면 공통)
+                if (now - lastBackNavigateTime < Constants.Navigation.DEBOUNCE_TIMEOUT_MS) {
+                    return // 입력 무시 → 연속 팝 방지
+                }
+                lastBackNavigateTime = now // 타임스탬프 갱신
+
                 val currentRoute = navigationManger.getNavController()?.currentDestination?.route
                 val isMainScreen = currentRoute?.startsWith(MainContainerRoute.toAppRoutePath()) ?: false
 
                 if (isMainScreen) {
-                    if (System.currentTimeMillis() > backPressedTime + 2000) {
-                        backPressedTime = System.currentTimeMillis()
-                        backToast?.cancel() // 이전 토스트가 있다면 취소
+                    // 메인 화면에서는 "두 번 눌러서 종료" 로직 유지
+                    if (now > backPressedTime + Constants.Navigation.EXIT_APP_TIMEOUT_MS) {
+                        backPressedTime = now
+                        backToast?.cancel()
                         backToast = Toast.makeText(this@MainActivity, "한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT)
                         backToast?.show()
                         return
                     }
-                    if (System.currentTimeMillis() <= backPressedTime + 2000) {
+                    if (now <= backPressedTime + Constants.Navigation.EXIT_APP_TIMEOUT_MS) {
                         backToast?.cancel()
                         finish()
                     }
                 } else {
+                    // 메인 이외 화면 → 한 번만 popBackStack 수행 (위의 debounce로 연속 입력 방지)
                     if (!navigationManger.navigateBack()) {
                         // 더 이상 뒤로 갈 곳이 없을 때의 예외 처리
-                        if (currentRoute != "auth" && currentRoute != "splash") {
-                            navigationManger.navigateToClearingBackStack(SplashRoute)
+                        // 인증/스플래시가 아닌데 back stack 이 비었으면 앱 종료
+                        if (currentRoute != SplashRoute.toAppRoutePath() && currentRoute != "auth") {
+                            finish()
                         } else {
-                            // Auth 또는 Splash 화면에서는 종료
+                            // Splash, Auth 화면이라면 그대로 종료
                             finish()
                         }
                     }

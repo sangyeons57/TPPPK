@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class) // Scaffold, TopAppBar 등 사용
 @Composable
 fun AddProjectScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: AddProjectViewModel = hiltViewModel()
 ) {

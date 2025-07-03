@@ -6,21 +6,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.example.core_ui.R
-import kotlinx.coroutines.delay
-
-private const val DEBOUNCE_TIMEOUT_MS = 1000L
+import com.example.core_common.constants.Constants
 
 /**
  * 중복 클릭 방지 기능이 있는 뒤로 가기 아이콘 버튼입니다.
- * 지정된 시간(기본값: 1000ms) 내에 연속적인 클릭을 무시합니다.
+ * 지정된 시간(기본값: 500ms) 내에 연속적인 클릭을 무시합니다.
  *
  * @param onClick 버튼 클릭 시 호출될 콜백 함수입니다.
  * @param modifier 이 컴포저블에 적용할 [Modifier]입니다.
@@ -33,48 +30,26 @@ fun DebouncedBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    debounceMillis: Long = DEBOUNCE_TIMEOUT_MS,
-    contentDescription: String = stringResource(id = R.string.action_back) // R.string.action_back 사용
+    debounceMillis: Long = Constants.Navigation.DEBOUNCE_TIMEOUT_MS,
+    contentDescription: String = stringResource(id = R.string.action_back)
 ) {
-    var lastClickTime by remember { mutableStateOf(0L) }
-    var internalEnabled by remember(enabled) { mutableStateOf(enabled) }
-
-    // 외부 enabled 상태가 false로 변경되면 내부 상태도 즉시 반영하고,
-    // true로 변경되면 debounce 로직에 따라 클릭 가능하도록 lastClickTime을 초기화.
-    LaunchedEffect(enabled) {
-        if (!enabled) {
-            internalEnabled = false
-        } else {
-            // 외부에서 다시 enabled 될 때, 즉시 클릭 가능하게 만듭니다.
-            // 만약 이전 비활성화 상태에서 debounce가 진행중이었다면 이를 초기화합니다.
-            lastClickTime = 0L 
-            internalEnabled = true
-        }
-    }
+    var lastClickTime by remember { mutableLongStateOf(0L) }
 
     IconButton(
         onClick = {
             val currentTime = System.currentTimeMillis()
-            if (currentTime - lastClickTime > debounceMillis) {
+            if (enabled && (currentTime - lastClickTime) >= debounceMillis) {
                 lastClickTime = currentTime
                 onClick()
-                // 클릭 후 잠시 비활성화 (선택 사항: UX에 따라 조절)
-                // internalEnabled = false 
-                // LaunchedEffect(Unit) {
-                //     delay(debounceMillis)
-                //     if (enabled) { // 외부 enabled 상태가 여전히 true일 때만 다시 활성화
-                //         internalEnabled = true
-                //     }
-                // }
             }
         },
         modifier = modifier,
-        enabled = internalEnabled // 내부 활성화 상태 사용
+        enabled = enabled
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface // 테마에 맞는 아이콘 색상 사용
+            tint = MaterialTheme.colorScheme.onSurface
         )
     }
 }

@@ -68,7 +68,6 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun SignUpScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: SignUpViewModel = hiltViewModel()
 ) {
@@ -131,8 +130,8 @@ fun SignUpScreen(
             onPasswordConfirmFocus = viewModel::onPasswordConfirmFocus,
             onNameFocus = viewModel::onNameFocus,
 
-            onNavigateBack = { navigationManger.navigateBack() },
-            
+            onNavigateBack = viewModel::navigateBack,
+
         )
     }
 }

@@ -175,6 +175,10 @@ class SignUpViewModel @Inject constructor(
         navigationManger.navigateTo(PrivacyPolicyRoute)
     }
 
+    fun navigateBack() {
+        navigationManger.navigateBack()
+    }
+
     /**
      * 회원가입 처리 함수
      * 각 필드 유효성 검사 후 회원가입 UseCase 실행

@@ -24,7 +24,6 @@ import com.example.feature_auth.viewmodel.SplashViewModel
 @Composable
 fun SplashScreen(
     modifier: Modifier = Modifier,
-    navigationManger: NavigationManger,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
 

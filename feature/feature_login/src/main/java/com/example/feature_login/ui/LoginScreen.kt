@@ -68,7 +68,6 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
-    navigationManger: NavigationManger,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

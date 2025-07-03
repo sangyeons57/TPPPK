@@ -41,11 +41,6 @@ class MyApp : Application() {
             )
             Log.d(TAG, "DebugAppCheckProviderFactory installed.")
 
-            if (firebaseAppCheck != null) {
-                Log.d(TAG, "FirebaseAppCheck instance is not null.")
-            } else {
-                Log.e(TAG, "FirebaseAppCheck instance is null (unexpected)! Check Firebase initialization.")
-            }
         } catch (e: IllegalStateException) {
             Log.e(TAG, "FirebaseApp is not initialized. Ensure google-services.json is correct " +
                     "or call FirebaseApp.initializeApp() explicitly if needed.", e)
