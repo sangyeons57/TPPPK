@@ -280,49 +280,83 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "loadProjects called")
         projectsStreamJob?.cancel()
         projectsStreamJob = viewModelScope.launch {
-            if (::coreProjectUseCases.isInitialized) {
-                coreProjectUseCases.getUserParticipatingProjectsUseCase().collectLatest { result ->
-                    when (result) {
-                        is CustomResult.Loading -> {
-                            _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
-                        }
-                        is CustomResult.Success -> {
-                            val projectWrappers = result.data
-                            // Assuming com.example.feature_main.ui.toProjectUiModel extension function exists or will be created
-                            val mappedProjectUiModels = projectWrappers.map { it.toProjectUiModel() }
-                            _uiState.update { state ->
-                                state.copy(
-                                    projects = mappedProjectUiModels, // Update with mapped models
-                                    isLoading = false,
-                                    errorMessage = if (mappedProjectUiModels.isEmpty()) "프로젝트가 없습니다." else "default"
-                                )
+            try {
+                if (::coreProjectUseCases.isInitialized) {
+                    coreProjectUseCases.getUserParticipatingProjectsUseCase().collectLatest { result ->
+                        when (result) {
+                            is CustomResult.Loading -> {
+                                _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
                             }
-                            Log.d("HomeViewModel", "Projects loaded: ${mappedProjectUiModels.size}")
-                        }
-                        is CustomResult.Failure -> {
-                            Log.e("HomeViewModel", "Failed to load projects", result.error)
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    errorMessage = result.error.message ?: "알 수 없는 오류가 발생했습니다."
-                                )
+                            is CustomResult.Success -> {
+                                val projectWrappers = result.data
+                                // Assuming com.example.feature_main.ui.toProjectUiModel extension function exists or will be created
+                                val mappedProjectUiModels = projectWrappers.map { it.toProjectUiModel() }
+                                _uiState.update { state ->
+                                    state.copy(
+                                        projects = mappedProjectUiModels, // Update with mapped models
+                                        isLoading = false,
+                                        errorMessage = if (mappedProjectUiModels.isEmpty()) "프로젝트가 없습니다." else "default"
+                                    )
+                                }
+                                Log.d("HomeViewModel", "Projects loaded: ${mappedProjectUiModels.size}")
                             }
-                        }
-                        is CustomResult.Initial -> {
-                            // Optionally handle Initial state, e.g., by showing loading
-                            _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
-                        }
-                        is CustomResult.Progress -> {
-                            // Handle progress if applicable, e.g. update a progress bar
-                            // For now, we can treat it as loading
-                            val progressValue = result.progress
-                            Log.d("HomeViewModel", "Project loading progress: $progressValue%")
-                            _uiState.update { it.copy(isLoading = true) } // Keep isLoading true during progress
+                            is CustomResult.Failure -> {
+                                // 권한 에러가 아닌 경우만 에러로 표시
+                                val errorMessage = result.error.message
+                                val isPermissionError = errorMessage?.contains("permission", ignoreCase = true) == true ||
+                                        errorMessage?.contains("PERMISSION_DENIED", ignoreCase = true) == true
+
+                                if (isPermissionError) {
+                                    Log.w("HomeViewModel", "Permission error in project loading - user likely logged out, clearing projects")
+                                    _uiState.update {
+                                        it.copy(
+                                            projects = emptyList(),
+                                            isLoading = false,
+                                            errorMessage = "default"
+                                        )
+                                    }
+                                } else {
+                                    Log.e("HomeViewModel", "Failed to load projects", result.error)
+                                    _uiState.update {
+                                        it.copy(
+                                            isLoading = false,
+                                            errorMessage = "프로젝트를 불러올 수 없습니다."
+                                        )
+                                    }
+                                }
+                            }
+                            is CustomResult.Initial -> {
+                                // Optionally handle Initial state, e.g., by showing loading
+                                _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
+                            }
+                            is CustomResult.Progress -> {
+                                // Handle progress if applicable, e.g. update a progress bar
+                                // For now, we can treat it as loading
+                                val progressValue = result.progress
+                                Log.d("HomeViewModel", "Project loading progress: $progressValue%")
+                                _uiState.update { it.copy(isLoading = true) } // Keep isLoading true during progress
+                            }
                         }
                     }
+                } else {
+                    Log.w("HomeViewModel", "coreProjectUseCases not initialized yet")
+                    _uiState.update {
+                        it.copy(
+                            projects = emptyList(),
+                            isLoading = false,
+                            errorMessage = "default"
+                        )
+                    }
                 }
-            } else {
-                Log.w("HomeViewModel", "coreProjectUseCases not initialized yet")
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Unexpected error in loadProjects", e)
+                _uiState.update {
+                    it.copy(
+                        projects = emptyList(),
+                        isLoading = false,
+                        errorMessage = "default"
+                    )
+                }
             }
         }
     }
@@ -331,98 +365,153 @@ class HomeViewModel @Inject constructor(
     private fun loadDms() {
         dmsStreamJob?.cancel()
         dmsStreamJob = viewModelScope.launch {
-            val currentUserResult = userUseCases.getCurrentUserStreamUseCase().first()
-            when (currentUserResult) {
-                is CustomResult.Failure -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "사용자 정보를 가져올 수 없습니다."
-                        )
+            try {
+                val currentUserResult = userUseCases.getCurrentUserStreamUseCase().first()
+                when (currentUserResult) {
+                    is CustomResult.Failure -> {
+                        Log.w("HomeViewModel", "User not authenticated in loadDms - clearing DMs")
+                        _uiState.update {
+                            it.copy(
+                                dms = emptyList(),
+                                isLoading = false,
+                                errorMessage = "default"
+                            )
+                        }
+                        return@launch
                     }
-                    Log.e("HomeViewModel", "Current user ID is null or empty in loadDms.")
-                    Log.d("HomeViewModel", "loadDms called with currentUserId: $currentUserId")
-                    return@launch
-                }
 
-                is CustomResult.Success -> {
-                    if (::dmUseCases.isInitialized) {
-                        dmUseCases.getUserDmChannelsUseCase()
-                            .collectLatest { result: CustomResult<List<DMChannel>, Exception> ->
-                                Log.d("HomeViewModel", "Received DM channels result: $result")
-                                when (result) {
-                                    is CustomResult.Loading -> {
-                                        _uiState.update {
-                                            it.copy(
-                                                isLoading = true,
-                                                errorMessage = "default"
-                                            )
-                                        }
-                                    }
+                    is CustomResult.Success -> {
+                        val currentUser = currentUserResult.data
+                        if (currentUser.id.value.isEmpty()) {
+                            Log.w("HomeViewModel", "Current user ID is empty - clearing DMs")
+                            _uiState.update {
+                                it.copy(
+                                    dms = emptyList(),
+                                    isLoading = false,
+                                    errorMessage = "default"
+                                )
+                            }
+                            return@launch
+                        }
 
-                                    is CustomResult.Success -> {
-                                        Log.d(
-                                            "HomeViewModel",
-                                            "Successfully fetched DM channels: ${result.data.size} channels."
-                                        )
-                                        // Map DMChannel domain models to DmUiModel, fetching partner info
-                                        val dmUiModels = result.data.map { dmChannel ->
-                                            async {
-                                                toDmUiModel(
-                                                    dmChannel,
-                                                    currentUserResult.data.id.value
+                        if (::dmUseCases.isInitialized) {
+                            dmUseCases.getUserDmChannelsUseCase()
+                                .collectLatest { result: CustomResult<List<DMChannel>, Exception> ->
+                                    Log.d("HomeViewModel", "Received DM channels result: $result")
+                                    when (result) {
+                                        is CustomResult.Loading -> {
+                                            _uiState.update {
+                                                it.copy(
+                                                    isLoading = true,
+                                                    errorMessage = "default"
                                                 )
-                                            } // Launch async mapping for each
-                                        }.awaitAll() // Wait for all mappings to complete
-                                        _uiState.update { state ->
-                                            state.copy(
-                                                dms = dmUiModels,
-                                                isLoading = false,
-                                                errorMessage = if (dmUiModels.isEmpty()) "DM이 없습니다." else "default"
+                                            }
+                                        }
+
+                                        is CustomResult.Success -> {
+                                            Log.d(
+                                                "HomeViewModel",
+                                                "Successfully fetched DM channels: ${result.data.size} channels."
+                                            )
+                                            // Map DMChannel domain models to DmUiModel, fetching partner info
+                                            val dmUiModels = result.data.map { dmChannel ->
+                                                async {
+                                                    toDmUiModel(
+                                                        dmChannel,
+                                                        currentUser.id.value
+                                                    )
+                                                } // Launch async mapping for each
+                                            }.awaitAll() // Wait for all mappings to complete
+                                            _uiState.update { state ->
+                                                state.copy(
+                                                    dms = dmUiModels,
+                                                    isLoading = false,
+                                                    errorMessage = if (dmUiModels.isEmpty()) "DM이 없습니다." else "default"
+                                                )
+                                            }
+                                            Log.d(
+                                                "HomeViewModel",
+                                                "DMs loaded and UI updated: ${dmUiModels.size}"
                                             )
                                         }
-                                        Log.d(
-                                            "HomeViewModel",
-                                            "DMs loaded and UI updated: ${dmUiModels.size}"
-                                        )
-                                    }
 
-                                    is CustomResult.Failure -> {
-                                        Log.e("HomeViewModel", "Failed to load DMs", result.error)
-                                        _uiState.update {
-                                            it.copy(
-                                                isLoading = false,
-                                                errorMessage = result.error.message
-                                                    ?: "알 수 없는 DM 오류가 발생했습니다."
-                                            )
+                                        is CustomResult.Failure -> {
+                                            // 권한 에러가 아닌 경우만 에러로 표시
+                                            val errorMessage = result.error.message
+                                            val isPermissionError = errorMessage?.contains("permission", ignoreCase = true) == true ||
+                                                    errorMessage?.contains("PERMISSION_DENIED", ignoreCase = true) == true
+
+                                            if (isPermissionError) {
+                                                Log.w("HomeViewModel", "Permission error in DM loading - user likely logged out, clearing DMs")
+                                                _uiState.update {
+                                                    it.copy(
+                                                        dms = emptyList(),
+                                                        isLoading = false,
+                                                        errorMessage = "default"
+                                                    )
+                                                }
+                                            } else {
+                                                Log.e("HomeViewModel", "Failed to load DMs", result.error)
+                                                _uiState.update {
+                                                    it.copy(
+                                                        isLoading = false,
+                                                        errorMessage = "DM을 불러올 수 없습니다."
+                                                    )
+                                                }
+                                            }
                                         }
-                                    }
 
-                                    is CustomResult.Initial -> {
-                                        _uiState.update {
-                                            it.copy(
-                                                isLoading = true,
-                                                errorMessage = "default"
-                                            )
+                                        is CustomResult.Initial -> {
+                                            _uiState.update {
+                                                it.copy(
+                                                    isLoading = true,
+                                                    errorMessage = "default"
+                                                )
+                                            }
+                                            Log.d("HomeViewModel", "DM loading initial state.")
                                         }
-                                        Log.d("HomeViewModel", "DM loading initial state.")
-                                    }
 
-                                    is CustomResult.Progress -> {
-                                        val progressValue = result.progress
-                                        Log.d(
-                                            "HomeViewModel",
-                                            "DM loading progress: $progressValue%"
-                                        )
-                                        _uiState.update { it.copy(isLoading = true) }
+                                        is CustomResult.Progress -> {
+                                            val progressValue = result.progress
+                                            Log.d(
+                                                "HomeViewModel",
+                                                "DM loading progress: $progressValue%"
+                                            )
+                                            _uiState.update { it.copy(isLoading = true) }
+                                        }
                                     }
                                 }
+                        } else {
+                            Log.w("HomeViewModel", "dmUseCases not initialized yet")
+                            _uiState.update {
+                                it.copy(
+                                    dms = emptyList(),
+                                    isLoading = false,
+                                    errorMessage = "default"
+                                )
                             }
+                        }
+                    }
+
+                    else -> {
+                        Log.w("HomeViewModel", "Unexpected result type in loadDms: $currentUserResult")
+                        _uiState.update {
+                            it.copy(
+                                dms = emptyList(),
+                                isLoading = false,
+                                errorMessage = "default"
+                            )
+                        }
                     }
                 }
-
-                else -> {
-                    Log.e("HomeViewModel", "Unexpected result type in loadDms.")
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Unexpected error in loadDms", e)
+                _uiState.update {
+                    it.copy(
+                        dms = emptyList(),
+                        isLoading = false,
+                        errorMessage = "default"
+                    )
                 }
             }
         }

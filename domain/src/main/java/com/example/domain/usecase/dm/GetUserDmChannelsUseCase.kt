@@ -10,8 +10,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.catch
 import javax.inject.Inject
 import android.util.Log
+import com.google.firebase.firestore.FirebaseFirestoreException
 
 /**
  * 현재 로그인한 사용자의 DM 채널 목록을 스트림으로 가져오는 UseCase.
@@ -126,14 +128,23 @@ class GetUserDmChannelsUseCase @Inject constructor(
                 }
 
                 is CustomResult.Failure -> {
-                    emit(
-                        CustomResult.Failure(
-                            Exception(
-                                "Failed to get DM wrappers.",
-                                dmWrappersResult.error
+                    // 권한 에러인 경우 특별 처리: 빈 리스트 반환
+                    val isPermissionError = dmWrappersResult.error is FirebaseFirestoreException &&
+                            (dmWrappersResult.error as FirebaseFirestoreException).code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+
+                    if (isPermissionError) {
+                        Log.w("GetUserDmChannelsUseCase", "Permission denied for DM wrappers - returning empty list (user likely logged out)")
+                        emit(CustomResult.Success(emptyList()))
+                    } else {
+                        emit(
+                            CustomResult.Failure(
+                                Exception(
+                                    "Failed to get DM wrappers.",
+                                    dmWrappersResult.error
+                                )
                             )
                         )
-                    )
+                    }
                 }
 
                 is CustomResult.Initial -> { /* Optional: Handle Initial state from DMWrapper stream */
@@ -142,6 +153,20 @@ class GetUserDmChannelsUseCase @Inject constructor(
                 is CustomResult.Progress -> { /* Optional: Handle Progress state from DMWrapper stream */
                 }
             }
+        }
+    }.catch { exception ->
+        // 전체 Flow에서 발생하는 예외를 catch하여 graceful하게 처리
+        Log.e("GetUserDmChannelsUseCase", "Unexpected error in flow", exception)
+        
+        // 권한 에러인 경우 빈 리스트 반환
+        val isPermissionError = exception is FirebaseFirestoreException &&
+                exception.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+        
+        if (isPermissionError) {
+            Log.w("GetUserDmChannelsUseCase", "Permission denied - returning empty list (user likely logged out)")
+            emit(CustomResult.Success(emptyList()))
+        } else {
+            emit(CustomResult.Failure(Exception("Unexpected error occurred while loading DM channels", exception)))
         }
     }
 }

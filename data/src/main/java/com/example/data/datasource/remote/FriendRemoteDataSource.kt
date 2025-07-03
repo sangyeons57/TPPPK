@@ -4,11 +4,13 @@ package com.example.data.datasource.remote
 
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
-import com.example.data.model.FirestorePaths
 import com.example.data.model.remote.FriendDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.FriendStatus
+import com.example.domain.model.vo.CollectionPath
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -104,7 +106,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     override fun observeFriendsList(): Flow<CustomResult<List<FriendDTO>, Exception>> {
         return callbackFlow {
             val listener = collection
-                .whereEqualTo(FriendDTO.STATUS, FriendStatus.ACCEPTED.name)
+                .whereEqualTo(FriendDTO.STATUS, FriendStatus.ACCEPTED)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) { trySend(CustomResult.Failure(error)); close(error); return@addSnapshotListener }
                     val list = snapshot?.documents?.mapNotNull { it.toObject(FriendDTO::class.java) } ?: emptyList()
@@ -116,7 +118,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     
     override suspend fun searchFriendsByUsername(username: String): CustomResult<List<FriendDTO>, Exception> {
         return resultTry {
-            val snapshot = firestore.collection(FirestorePaths.USERS_COLLECTION)
+            val snapshot = firestore.collection(CollectionPath.users.value)
                 .whereEqualTo("username", username)
                 .get()
                 .await()
@@ -124,11 +126,11 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             val users = snapshot.documents.mapNotNull { doc ->
                 FriendDTO(
                     id = doc.id,
-                    username = doc.getString("username") ?: "",
+                    name = doc.getString("username") ?: "",
                     profileImageUrl = doc.getString("profileImageUrl") ?: "",
                     status = FriendStatus.UNKNOWN,
-                    createdAt = Timestamp.now(),
-                    updatedAt = Timestamp.now()
+                    createdAt = DateTimeUtil.nowDate(),
+                    updatedAt = DateTimeUtil.nowDate()
                 )
             }
             users
@@ -138,7 +140,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     override suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception> {
         return resultTry {
             withContext(Dispatchers.IO) {
-                val usersSnapshot = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                val usersSnapshot = firestore.collection(CollectionPath.users.value)
                     .whereEqualTo("username", toUsername)
                     .get()
                     .await()
@@ -150,7 +152,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 val targetUser = usersSnapshot.documents.first()
                 val targetUserId = targetUser.id
                 
-                val fromUserDoc = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                val fromUserDoc = firestore.collection(CollectionPath.users.value)
                     .document(fromUserId)
                     .get()
                     .await()
@@ -168,21 +170,17 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 
                 val batch = firestore.batch()
                 
-                val fromUserFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(fromUserId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val fromUserFriendRef = firestore.collection(CollectionPath.userFriends(fromUserId).value)
                     .document(targetUserId)
                 
-                val toUserFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(targetUserId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val toUserFriendRef = firestore.collection(CollectionPath.userFriends(targetUserId).value)
                     .document(fromUserId)
                 
-                val now = Timestamp.now()
+                val now = DateTimeUtil.nowDate()
                 
                 val fromUserFriendData = FriendDTO(
                     id = targetUserId,
-                    username = targetUsername,
+                    name = targetUsername,
                     profileImageUrl = targetProfileImageUrl,
                     status = FriendStatus.REQUESTED,
                     createdAt = now,
@@ -191,7 +189,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 
                 val toUserFriendData = FriendDTO(
                     id = fromUserId,
-                    username = fromUsername,
+                    name = fromUsername,
                     profileImageUrl = fromProfileImageUrl,
                     status = FriendStatus.PENDING,
                     createdAt = now,
@@ -211,26 +209,22 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             withContext(Dispatchers.IO) {
                 val batch = firestore.batch()
                 
-                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(userId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val userFriendRef = firestore.collection(CollectionPath.userFriends(userId).value)
                     .document(friendId)
                 
-                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(friendId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val friendUserRef = firestore.collection(CollectionPath.userFriends(friendId).value)
                     .document(userId)
                 
                 val now = Timestamp.now()
                 
                 batch.update(userFriendRef, mapOf(
                     FriendDTO.STATUS to FriendStatus.ACCEPTED.name,
-                    FriendDTO.UPDATED_AT to now
+                    AggregateRoot.KEY_UPDATED_AT to now
                 ))
                 
                 batch.update(friendUserRef, mapOf(
                     FriendDTO.STATUS to FriendStatus.ACCEPTED.name,
-                    FriendDTO.UPDATED_AT to now
+                    AggregateRoot.KEY_UPDATED_AT to now
                 ))
                 
                 batch.commit().await()
@@ -243,14 +237,10 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             withContext(Dispatchers.IO) {
                 val batch = firestore.batch()
                 
-                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(userId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val userFriendRef = firestore.collection(CollectionPath.userFriends(userId).value)
                     .document(friendId)
                 
-                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(friendId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val friendUserRef = firestore.collection(CollectionPath.userFriends(friendId).value)
                     .document(userId)
                 
                 batch.delete(userFriendRef)
@@ -266,21 +256,17 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             withContext(Dispatchers.IO) {
                 val batch = firestore.batch()
                 
-                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(userId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val userFriendRef = firestore.collection(CollectionPath.userFriends(userId).value)
                     .document(friendId)
                 
-                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(friendId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val friendUserRef = firestore.collection(CollectionPath.userFriends(friendId).value)
                     .document(userId)
                 
                 val now = Timestamp.now()
                 
                 batch.update(userFriendRef, mapOf(
                     FriendDTO.STATUS to FriendStatus.BLOCKED.name,
-                    FriendDTO.UPDATED_AT to now
+                    AggregateRoot.KEY_UPDATED_AT to now
                 ))
                 
                 batch.delete(friendUserRef)
@@ -295,14 +281,10 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             withContext(Dispatchers.IO) {
                 val batch = firestore.batch()
                 
-                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(userId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val userFriendRef = firestore.collection(CollectionPath.userFriends(userId).value)
                     .document(friendId)
                 
-                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
-                    .document(friendId)
-                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                val friendUserRef = firestore.collection(CollectionPath.userFriends(friendId).value)
                     .document(userId)
                 
                 batch.delete(userFriendRef)

@@ -32,6 +32,12 @@ abstract class DefaultRepositoryImpl  (
         Log.d("DefaultRepositoryImpl", "ensureCollection: ${factoryContext.collectionPath.value}")
     }
 
+    fun ensureCollection(collectionPath: CollectionPath) {
+        defaultDatasource.setCollection(collectionPath.value)
+        Log.d("DefaultRepositoryImpl", "ensureCollection(Temp): ${collectionPath.value}")
+
+    }
+
     override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> {
         ensureCollection()
         return defaultDatasource.delete(id)

@@ -13,8 +13,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.catch
 import javax.inject.Inject
 import com.example.domain.model.vo.DocumentId
+import com.google.firebase.firestore.FirebaseFirestoreException
 
 /**
  * 사용자가 참여하고 있는 프로젝트 목록을 가져오는 UseCase
@@ -96,10 +98,35 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
                         }
                     }
                 }
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                is CustomResult.Failure -> {
+                    // 권한 에러인 경우 특별 처리: 빈 리스트 반환
+                    val isPermissionError = result.error is FirebaseFirestoreException &&
+                            (result.error as FirebaseFirestoreException).code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+
+                    if (isPermissionError) {
+                        Log.w("GetUserParticipatingProjectsUseCase", "Permission denied for projects wrapper - returning empty list (user likely logged out)")
+                        CustomResult.Success(emptyList())
+                    } else {
+                        CustomResult.Failure(result.error)
+                    }
+                }
                 is CustomResult.Initial -> CustomResult.Initial
                 is CustomResult.Loading -> CustomResult.Loading
                 is CustomResult.Progress -> CustomResult.Progress(result.progress)
+            }
+        }.catch { exception ->
+            // 전체 Flow에서 발생하는 예외를 catch하여 graceful하게 처리
+            Log.e("GetUserParticipatingProjectsUseCase", "Unexpected error in flow", exception)
+            
+            // 권한 에러인 경우 빈 리스트 반환
+            val isPermissionError = exception is FirebaseFirestoreException &&
+                    exception.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+            
+            if (isPermissionError) {
+                Log.w("GetUserParticipatingProjectsUseCase", "Permission denied - returning empty list (user likely logged out)")
+                emit(CustomResult.Success(emptyList()))
+            } else {
+                emit(CustomResult.Failure(Exception("Unexpected error occurred while loading participating projects", exception)))
             }
         }
     }

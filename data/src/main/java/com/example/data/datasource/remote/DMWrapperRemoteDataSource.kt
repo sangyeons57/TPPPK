@@ -5,7 +5,6 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
-import com.example.data.model.FirestorePaths
 import com.example.data.model.remote.DMWrapperDTO
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.FirebaseFirestore

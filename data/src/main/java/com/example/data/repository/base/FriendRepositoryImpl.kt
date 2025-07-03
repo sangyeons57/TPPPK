@@ -2,6 +2,8 @@ package com.example.data.repository.base
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.CustomResult.Initial.getOrThrow
+import com.example.core_common.result.getOrNull
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.FriendRemoteDataSource
@@ -13,6 +15,7 @@ import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
 import com.example.domain.model.data.UserSession
+import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.factory.context.FriendRepositoryFactoryContext
 import com.example.domain.repository.base.FriendRepository
@@ -43,40 +46,62 @@ class FriendRepositoryImpl @Inject constructor(
     
     override suspend fun findFriendsByUserId(userId: String): CustomResult<List<Friend>, Exception> {
         return resultTry {
-            friendRemoteDataSource.setCollection(userId)
+            ensureCollection(CollectionPath.users)
             friendRemoteDataSource.observeFriendsList().first().getOrThrow().map { it.toDomain() }
         }
     }
     
     override suspend fun findFriendRequestsByUserId(userId: String): CustomResult<List<Friend>, Exception> {
         return resultTry {
-            friendRemoteDataSource.setCollection(userId)
+            ensureCollection()
             friendRemoteDataSource.observeFriendRequests().first().getOrThrow().map { it.toDomain() }
         }
     }
     
     override suspend fun findFriendByUserIdAndFriendId(userId: String, friendId: String): CustomResult<Friend?, Exception> {
         return resultTry {
-            friendRemoteDataSource.setCollection(userId)
-            friendRemoteDataSource.read(friendId).getOrNull()?.toDomain()
+            ensureCollection()
+            friendRemoteDataSource.findById(DocumentId.from(friendId)).getOrNull()?.toDomain() as Friend?
         }
     }
     
     override suspend fun searchFriendsByUsername(username: String): CustomResult<List<Friend>, Exception> {
-        return friendRemoteDataSource.searchFriendsByUsername(username)
-            .map { dtoList -> dtoList.map { it.toDomain() } }
+        return when (val result = friendRemoteDataSource.searchFriendsByUsername(username)){
+            is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
     
     override fun observeFriendRequests(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
         friendRemoteDataSource.setCollection(userId)
         return friendRemoteDataSource.observeFriendRequests()
-            .map { result -> result.map { dtoList -> dtoList.map { it.toDomain() } } }
+            .map { result ->
+                when(result) {
+                    is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
+                    is CustomResult.Failure -> CustomResult.Failure(result.error)
+                    is CustomResult.Initial -> CustomResult.Initial
+                    is CustomResult.Loading -> CustomResult.Loading
+                    is CustomResult.Progress -> CustomResult.Progress(result.progress)
+                }
+            }
     }
     
     override fun observeFriendsList(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
         friendRemoteDataSource.setCollection(userId)
         return friendRemoteDataSource.observeFriendsList()
-            .map { result -> result.map { dtoList -> dtoList.map { it.toDomain() } } }
+            .map { result ->
+                when(result) {
+                    is CustomResult.Success -> CustomResult.Success(result.data.map { dto -> dto.toDomain()})
+                    is CustomResult.Failure ->
+                        CustomResult.Failure(result.error)
+                    is CustomResult.Initial -> CustomResult.Initial
+                    is CustomResult.Loading -> CustomResult.Loading
+                    is CustomResult.Progress -> CustomResult.Progress(progress = result.progress)
+                }
+            }
     }
     
     override suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception> {

@@ -91,7 +91,7 @@ class FriendUseCaseProvider @Inject constructor(
      * 
      * @return 친구 관련 UseCase 그룹 (현재 사용자 기준)
      */
-    suspend fun createForCurrentUser(): FriendUseCases {
+     fun createForCurrentUser(): FriendUseCases {
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
