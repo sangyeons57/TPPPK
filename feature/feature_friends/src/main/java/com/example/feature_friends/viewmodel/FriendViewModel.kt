@@ -64,7 +64,7 @@ class FriendViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹들
-    private val friendUseCases = friendUseCaseProvider.createForCurrentUser()
+    private lateinit var friendUseCases: com.example.domain.provider.friend.FriendUseCases
     private val userUseCases = userUseCaseProvider.createForUser()
     private lateinit var dmUseCases: com.example.domain.provider.dm.DMUseCases
 
@@ -86,13 +86,19 @@ class FriendViewModel @Inject constructor(
     init {
         // Initialize with current user ID
         currentUserId = authUtil.getCurrentUserId()
-        observeFriendRelationships()
+        
+        viewModelScope.launch {
+            friendUseCases = friendUseCaseProvider.createForCurrentUser()
+            observeFriendRelationships()
+        }
     }
 
     /**
      * 친구 목록 실시간 스트림을 구독하고 UI 상태를 업데이트합니다.
      */
     private fun observeFriendRelationships() {
+        if (!::friendUseCases.isInitialized) return
+        
         Log.d("FriendViewModel", "1")
         viewModelScope.launch {
             Log.d("FriendViewModel", "2")

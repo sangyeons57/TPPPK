@@ -1,5 +1,6 @@
 package com.example.domain.provider.friend
 
+import com.example.core_common.result.getOrNull
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
@@ -54,11 +55,13 @@ class FriendUseCaseProvider @Inject constructor(
 
         return FriendUseCases(
             sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
-                friendRepository = friendRepository
+                friendRepository = friendRepository,
+                authRepository = authRepository
             ),
             
             acceptFriendRequestUseCase = AcceptFriendRequestUseCase(
-                friendRepository = friendRepository
+                friendRepository = friendRepository,
+                authRepository = authRepository
             ),
             
             removeOrDenyFriendUseCase = RemoveOrDenyFriendUseCase(
@@ -88,7 +91,7 @@ class FriendUseCaseProvider @Inject constructor(
      * 
      * @return 친구 관련 UseCase 그룹 (현재 사용자 기준)
      */
-    fun createForCurrentUser(): FriendUseCases {
+    suspend fun createForCurrentUser(): FriendUseCases {
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
@@ -99,21 +102,26 @@ class FriendUseCaseProvider @Inject constructor(
             )
         )
 
-        // 현재 사용자 ID를 기반으로 FriendRepository 생성 (AuthRepository에서 가져오도록 구성)
-        // TODO: 실제로는 현재 사용자 ID를 얻어서 userFriends를 사용해야 함
+        // 현재 사용자 ID를 가져와서 FriendRepository 생성
+        val currentUserResult = authRepository.getCurrentUserSession()
+        val currentUserId = currentUserResult.getOrNull()?.userId?.value 
+            ?: throw IllegalStateException("User not authenticated")
+        
         val friendRepository = friendRepositoryFactory.create(
             FriendRepositoryFactoryContext(
-                collectionPath = CollectionPath.userFriends("current-user") // 임시 처리
+                collectionPath = CollectionPath.userFriends(currentUserId)
             )
         )
 
         return FriendUseCases(
             sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
-                friendRepository = friendRepository
+                friendRepository = friendRepository,
+                authRepository = authRepository
             ),
             
             acceptFriendRequestUseCase = AcceptFriendRequestUseCase(
-                friendRepository = friendRepository
+                friendRepository = friendRepository,
+                authRepository = authRepository
             ),
             
             removeOrDenyFriendUseCase = RemoveOrDenyFriendUseCase(

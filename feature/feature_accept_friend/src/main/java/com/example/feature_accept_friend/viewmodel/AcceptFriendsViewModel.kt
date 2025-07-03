@@ -55,7 +55,7 @@ class AcceptFriendsViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
-    private val friendUseCases = friendUseCaseProvider.createForCurrentUser()
+    private lateinit var friendUseCases: com.example.domain.provider.friend.FriendUseCases
 
     // UI 상태 (MutableStateFlow -> StateFlow로 외부 노출)
     private val _uiState = MutableStateFlow(AcceptFriendsUiState())
@@ -66,13 +66,18 @@ class AcceptFriendsViewModel @Inject constructor(
     val eventFlow: SharedFlow<AcceptFriendsEvent> = _eventFlow.asSharedFlow()
 
     init {
-        loadPendingFriendRequests()
+        viewModelScope.launch {
+            friendUseCases = friendUseCaseProvider.createForCurrentUser()
+            loadPendingFriendRequests()
+        }
     }
 
     /**
      * 받은 친구 요청 목록을 불러옵니다.
      */
-    fun loadPendingFriendRequests() {
+    private fun loadPendingFriendRequests() {
+        if (!::friendUseCases.isInitialized) return
+        
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
@@ -144,7 +149,7 @@ class AcceptFriendsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 authUtil.getCurrentUserId()
-                val result = friendUseCases.acceptFriendRequestUseCase(userId)
+                val result = friendUseCases.acceptFriendRequestUseCase(userId.value)
                 when (result) {
                     is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)

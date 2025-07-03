@@ -40,4 +40,62 @@ class FriendRepositoryImpl @Inject constructor(
             friendRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
+    
+    override suspend fun findFriendsByUserId(userId: String): CustomResult<List<Friend>, Exception> {
+        return resultTry {
+            friendRemoteDataSource.setCollection(userId)
+            friendRemoteDataSource.observeFriendsList().first().getOrThrow().map { it.toDomain() }
+        }
+    }
+    
+    override suspend fun findFriendRequestsByUserId(userId: String): CustomResult<List<Friend>, Exception> {
+        return resultTry {
+            friendRemoteDataSource.setCollection(userId)
+            friendRemoteDataSource.observeFriendRequests().first().getOrThrow().map { it.toDomain() }
+        }
+    }
+    
+    override suspend fun findFriendByUserIdAndFriendId(userId: String, friendId: String): CustomResult<Friend?, Exception> {
+        return resultTry {
+            friendRemoteDataSource.setCollection(userId)
+            friendRemoteDataSource.read(friendId).getOrNull()?.toDomain()
+        }
+    }
+    
+    override suspend fun searchFriendsByUsername(username: String): CustomResult<List<Friend>, Exception> {
+        return friendRemoteDataSource.searchFriendsByUsername(username)
+            .map { dtoList -> dtoList.map { it.toDomain() } }
+    }
+    
+    override fun observeFriendRequests(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
+        friendRemoteDataSource.setCollection(userId)
+        return friendRemoteDataSource.observeFriendRequests()
+            .map { result -> result.map { dtoList -> dtoList.map { it.toDomain() } } }
+    }
+    
+    override fun observeFriendsList(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
+        friendRemoteDataSource.setCollection(userId)
+        return friendRemoteDataSource.observeFriendsList()
+            .map { result -> result.map { dtoList -> dtoList.map { it.toDomain() } } }
+    }
+    
+    override suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception> {
+        return friendRemoteDataSource.sendFriendRequest(fromUserId, toUsername)
+    }
+    
+    override suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return friendRemoteDataSource.acceptFriendRequest(userId, friendId)
+    }
+    
+    override suspend fun declineFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return friendRemoteDataSource.declineFriendRequest(userId, friendId)
+    }
+    
+    override suspend fun blockUser(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return friendRemoteDataSource.blockUser(userId, friendId)
+    }
+    
+    override suspend fun removeFriend(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return friendRemoteDataSource.removeFriend(userId, friendId)
+    }
 }

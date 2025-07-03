@@ -12,4 +12,25 @@ import kotlinx.coroutines.flow.Flow
 interface FriendRepository: DefaultRepository {
     override val factoryContext: FriendRepositoryFactoryContext
 
+    suspend fun findFriendsByUserId(userId: String): CustomResult<List<Friend>, Exception>
+    
+    suspend fun findFriendRequestsByUserId(userId: String): CustomResult<List<Friend>, Exception>
+    
+    suspend fun findFriendByUserIdAndFriendId(userId: String, friendId: String): CustomResult<Friend?, Exception>
+    
+    suspend fun searchFriendsByUsername(username: String): CustomResult<List<Friend>, Exception>
+    
+    fun observeFriendRequests(userId: String): Flow<CustomResult<List<Friend>, Exception>>
+    
+    fun observeFriendsList(userId: String): Flow<CustomResult<List<Friend>, Exception>>
+    
+    suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception>
+    
+    suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception>
+    
+    suspend fun declineFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception>
+    
+    suspend fun blockUser(userId: String, friendId: String): CustomResult<Unit, Exception>
+    
+    suspend fun removeFriend(userId: String, friendId: String): CustomResult<Unit, Exception>
 }

@@ -30,12 +30,57 @@ import javax.inject.Singleton
  */
 interface FriendRemoteDataSource : DefaultDatasource {
 
-
     /**
      * 특정 사용자에게 온 친구 요청("pending" 상태) 목록을 실시간으로 관찰합니다.
      * @param userId 조회할 사용자의 ID
      */
     fun observeFriendRequests(): Flow<CustomResult<List<FriendDTO>, Exception>>
+    
+    /**
+     * 특정 사용자의 친구 목록을 실시간으로 관찰합니다.
+     */
+    fun observeFriendsList(): Flow<CustomResult<List<FriendDTO>, Exception>>
+    
+    /**
+     * 사용자 이름으로 친구를 검색합니다.
+     * @param username 검색할 사용자 이름
+     */
+    suspend fun searchFriendsByUsername(username: String): CustomResult<List<FriendDTO>, Exception>
+    
+    /**
+     * 친구 요청을 전송합니다.
+     * @param fromUserId 요청을 보내는 사용자 ID
+     * @param toUsername 요청을 받을 사용자 이름
+     */
+    suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception>
+    
+    /**
+     * 친구 요청을 수락합니다.
+     * @param userId 현재 사용자 ID
+     * @param friendId 친구 ID
+     */
+    suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception>
+    
+    /**
+     * 친구 요청을 거절합니다.
+     * @param userId 현재 사용자 ID
+     * @param friendId 친구 ID
+     */
+    suspend fun declineFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception>
+    
+    /**
+     * 사용자를 차단합니다.
+     * @param userId 현재 사용자 ID
+     * @param friendId 차단할 사용자 ID
+     */
+    suspend fun blockUser(userId: String, friendId: String): CustomResult<Unit, Exception>
+    
+    /**
+     * 친구를 삭제합니다.
+     * @param userId 현재 사용자 ID
+     * @param friendId 삭제할 친구 ID
+     */
+    suspend fun removeFriend(userId: String, friendId: String): CustomResult<Unit, Exception>
 }
 
 @Singleton
@@ -54,6 +99,218 @@ class FriendRemoteDataSourceImpl @Inject constructor(
                 }
             awaitClose { listener.remove() }
         }.flowOn(Dispatchers.IO)
+    }
+    
+    override fun observeFriendsList(): Flow<CustomResult<List<FriendDTO>, Exception>> {
+        return callbackFlow {
+            val listener = collection
+                .whereEqualTo(FriendDTO.STATUS, FriendStatus.ACCEPTED.name)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) { trySend(CustomResult.Failure(error)); close(error); return@addSnapshotListener }
+                    val list = snapshot?.documents?.mapNotNull { it.toObject(FriendDTO::class.java) } ?: emptyList()
+                    trySend(CustomResult.Success(list))
+                }
+            awaitClose { listener.remove() }
+        }.flowOn(Dispatchers.IO)
+    }
+    
+    override suspend fun searchFriendsByUsername(username: String): CustomResult<List<FriendDTO>, Exception> {
+        return resultTry {
+            val snapshot = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                .whereEqualTo("username", username)
+                .get()
+                .await()
+            
+            val users = snapshot.documents.mapNotNull { doc ->
+                FriendDTO(
+                    id = doc.id,
+                    username = doc.getString("username") ?: "",
+                    profileImageUrl = doc.getString("profileImageUrl") ?: "",
+                    status = FriendStatus.UNKNOWN,
+                    createdAt = Timestamp.now(),
+                    updatedAt = Timestamp.now()
+                )
+            }
+            users
+        }
+    }
+    
+    override suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception> {
+        return resultTry {
+            withContext(Dispatchers.IO) {
+                val usersSnapshot = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .whereEqualTo("username", toUsername)
+                    .get()
+                    .await()
+                
+                if (usersSnapshot.isEmpty) {
+                    throw Exception("User not found")
+                }
+                
+                val targetUser = usersSnapshot.documents.first()
+                val targetUserId = targetUser.id
+                
+                val fromUserDoc = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(fromUserId)
+                    .get()
+                    .await()
+                
+                if (!fromUserDoc.exists()) {
+                    throw Exception("Current user not found")
+                }
+                
+                val fromUserData = fromUserDoc.data
+                val fromUsername = fromUserData?.get("username") as? String ?: ""
+                val fromProfileImageUrl = fromUserData?.get("profileImageUrl") as? String ?: ""
+                
+                val targetUsername = targetUser.getString("username") ?: ""
+                val targetProfileImageUrl = targetUser.getString("profileImageUrl") ?: ""
+                
+                val batch = firestore.batch()
+                
+                val fromUserFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(fromUserId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(targetUserId)
+                
+                val toUserFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(targetUserId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(fromUserId)
+                
+                val now = Timestamp.now()
+                
+                val fromUserFriendData = FriendDTO(
+                    id = targetUserId,
+                    username = targetUsername,
+                    profileImageUrl = targetProfileImageUrl,
+                    status = FriendStatus.REQUESTED,
+                    createdAt = now,
+                    updatedAt = now
+                )
+                
+                val toUserFriendData = FriendDTO(
+                    id = fromUserId,
+                    username = fromUsername,
+                    profileImageUrl = fromProfileImageUrl,
+                    status = FriendStatus.PENDING,
+                    createdAt = now,
+                    updatedAt = now
+                )
+                
+                batch.set(fromUserFriendRef, fromUserFriendData)
+                batch.set(toUserFriendRef, toUserFriendData)
+                
+                batch.commit().await()
+            }
+        }
+    }
+    
+    override suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return resultTry {
+            withContext(Dispatchers.IO) {
+                val batch = firestore.batch()
+                
+                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(userId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(friendId)
+                
+                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(friendId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(userId)
+                
+                val now = Timestamp.now()
+                
+                batch.update(userFriendRef, mapOf(
+                    FriendDTO.STATUS to FriendStatus.ACCEPTED.name,
+                    FriendDTO.UPDATED_AT to now
+                ))
+                
+                batch.update(friendUserRef, mapOf(
+                    FriendDTO.STATUS to FriendStatus.ACCEPTED.name,
+                    FriendDTO.UPDATED_AT to now
+                ))
+                
+                batch.commit().await()
+            }
+        }
+    }
+    
+    override suspend fun declineFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return resultTry {
+            withContext(Dispatchers.IO) {
+                val batch = firestore.batch()
+                
+                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(userId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(friendId)
+                
+                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(friendId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(userId)
+                
+                batch.delete(userFriendRef)
+                batch.delete(friendUserRef)
+                
+                batch.commit().await()
+            }
+        }
+    }
+    
+    override suspend fun blockUser(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return resultTry {
+            withContext(Dispatchers.IO) {
+                val batch = firestore.batch()
+                
+                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(userId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(friendId)
+                
+                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(friendId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(userId)
+                
+                val now = Timestamp.now()
+                
+                batch.update(userFriendRef, mapOf(
+                    FriendDTO.STATUS to FriendStatus.BLOCKED.name,
+                    FriendDTO.UPDATED_AT to now
+                ))
+                
+                batch.delete(friendUserRef)
+                
+                batch.commit().await()
+            }
+        }
+    }
+    
+    override suspend fun removeFriend(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        return resultTry {
+            withContext(Dispatchers.IO) {
+                val batch = firestore.batch()
+                
+                val userFriendRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(userId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(friendId)
+                
+                val friendUserRef = firestore.collection(FirestorePaths.USERS_COLLECTION)
+                    .document(friendId)
+                    .collection(FirestorePaths.FRIENDS_COLLECTION)
+                    .document(userId)
+                
+                batch.delete(userFriendRef)
+                batch.delete(friendUserRef)
+                
+                batch.commit().await()
+            }
+        }
     }
 }
 
