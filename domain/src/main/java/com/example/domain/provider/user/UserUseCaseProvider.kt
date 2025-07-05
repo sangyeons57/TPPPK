@@ -2,7 +2,6 @@ package com.example.domain.provider.user
 
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.provider.context.ContextDependentUseCaseProvider
-import com.example.domain.repository.FunctionsRepository
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
@@ -40,7 +39,6 @@ import javax.inject.Singleton
 class UserUseCaseProvider @Inject constructor(
     private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val functionsRepository: FunctionsRepository,
     private val contextDependentUseCaseProvider: ContextDependentUseCaseProvider // Context가 필요한 UseCase들의 Provider
 ) {
 
@@ -109,7 +107,7 @@ class UserUseCaseProvider @Inject constructor(
             ),
 
             uploadProfileImageUseCase = UploadProfileImageUseCase(
-                functionsRepository = functionsRepository
+                userRepository = userRepository
             ),
 
 

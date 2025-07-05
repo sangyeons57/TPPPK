@@ -1,11 +1,13 @@
 package com.example.data.repository.base
 
+import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.ProjectRemoteDataSource
 import com.example.data.datasource.remote.CategoryRemoteDataSource
 import com.example.data.datasource.remote.MemberRemoteDataSource // ProjectMember 관리를 위해 필요
+import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data.model.remote.ProjectDTO
 import com.example.core_common.constants.Constants
 import com.example.data.model.remote.toDto
@@ -30,6 +32,7 @@ class ProjectRepositoryImpl @Inject constructor(
     private val projectRemoteDataSource: ProjectRemoteDataSource,
     private val categoryRemoteDataSource: CategoryRemoteDataSource, // ProjectStructure 관리용
     private val memberRemoteDataSource: MemberRemoteDataSource,
+    private val functionsRemoteDataSource: FunctionsRemoteDataSource,
     override val factoryContext: ProjectRepositoryFactoryContext, // 멤버 관리용
 ) : DefaultRepositoryImpl(projectRemoteDataSource, factoryContext), ProjectRepository {
 
@@ -43,6 +46,10 @@ class ProjectRepositoryImpl @Inject constructor(
         } else {
             projectRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
+    }
+
+    override suspend fun uploadProfileImage(projectId: DocumentId, uri: Uri): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.uploadProjectProfileImage(projectId, uri)
     }
 
 }

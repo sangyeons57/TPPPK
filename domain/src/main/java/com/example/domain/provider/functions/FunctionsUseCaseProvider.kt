@@ -1,11 +1,8 @@
 package com.example.domain.provider.functions
 
-import com.example.domain.repository.FunctionsRepository
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.factory.context.FunctionsRepositoryFactoryContext
+import com.example.domain.repository.base.SystemRepository
 import com.example.domain.usecase.functions.HelloWorldUseCase
 import com.example.domain.usecase.functions.HelloWorldUseCaseImpl
-import com.example.domain.usecase.user.UploadProfileImageUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.jvm.JvmSuppressWildcards
@@ -16,13 +13,12 @@ import kotlin.jvm.JvmSuppressWildcards
  */
 data class FunctionsUseCases(
     val helloWorldUseCase: HelloWorldUseCase,
-    val uploadProfileImageUseCase: UploadProfileImageUseCase,
-    val functionsRepository: FunctionsRepository
+    val systemRepository: SystemRepository
 )
 
 @Singleton
 class FunctionsUseCaseProvider @Inject constructor(
-    private val functionsRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<FunctionsRepositoryFactoryContext, FunctionsRepository>
+    private val systemRepository: SystemRepository
 ) {
     
     /**
@@ -31,12 +27,9 @@ class FunctionsUseCaseProvider @Inject constructor(
      * @return FunctionsUseCases 객체
      */
     fun create(): FunctionsUseCases {
-        val functionsRepository = functionsRepositoryFactory.create(FunctionsRepositoryFactoryContext())
-        
         return FunctionsUseCases(
-            helloWorldUseCase = HelloWorldUseCaseImpl(functionsRepository),
-            uploadProfileImageUseCase = UploadProfileImageUseCase(functionsRepository),
-            functionsRepository = functionsRepository
+            helloWorldUseCase = HelloWorldUseCaseImpl(systemRepository),
+            systemRepository = systemRepository
         )
     }
 }

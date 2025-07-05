@@ -2,7 +2,7 @@ package com.example.domain.usecase.user
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.FunctionsRepository
+import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
 
 /**
@@ -12,7 +12,7 @@ import javax.inject.Inject
  * Firebase Functions가 이미지 최적화 및 Firestore 업데이트를 자동으로 처리합니다.
  */
 class UploadProfileImageUseCase @Inject constructor(
-    private val functionsRepository: FunctionsRepository
+    private val userRepository: UserRepository
 ) {
     /**
      * 이미지 URI를 Firebase Storage에 업로드합니다.
@@ -22,6 +22,6 @@ class UploadProfileImageUseCase @Inject constructor(
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
     suspend operator fun invoke(imageUri: Uri): CustomResult<Unit, Exception> {
-        return functionsRepository.uploadUserProfileImage(imageUri)
+        return userRepository.uploadProfileImage(imageUri)
     }
 }

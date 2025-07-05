@@ -1,7 +1,9 @@
 package com.example.data.repository.base
 
+import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.UserRemoteDataSource
+import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
@@ -17,6 +19,7 @@ import javax.inject.Inject
 
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
+    private val functionsRemoteDataSource: FunctionsRemoteDataSource,
     override val factoryContext: UserRepositoryFactoryContext,
 ) : DefaultRepositoryImpl(userRemoteDataSource, factoryContext), UserRepository {
 
@@ -68,6 +71,14 @@ class UserRepositoryImpl @Inject constructor(
                 is CustomResult.Progress -> CustomResult.Progress(result.progress)
             }
         }
+    }
+
+    override suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.uploadUserProfileImage(uri)
+    }
+
+    override suspend fun updateProfile(name: String?, memo: String?): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.updateUserProfile(name, memo)
     }
 
 }

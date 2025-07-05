@@ -1,7 +1,7 @@
 package com.example.data.di
 
-import com.example.data.repository.base.FunctionsRepositoryImpl
-import com.example.domain.repository.FunctionsRepository
+import com.example.data.repository.base.SystemRepositoryImpl
+import com.example.domain.repository.base.SystemRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -17,12 +17,12 @@ import javax.inject.Singleton
 abstract class RepositoryModule {
 
     /**
-     * FunctionsRepository 인터페이스 요청 시
-     * FunctionsRepositoryImpl 구현체를 제공하도록 Hilt에 알립니다.
+     * SystemRepository 인터페이스 요청 시
+     * SystemRepositoryImpl 구현체를 제공하도록 Hilt에 알립니다.
      */
     @Binds
     @Singleton
-    abstract fun bindFunctionsRepository(
-        functionsRepositoryImpl: FunctionsRepositoryImpl
-    ): FunctionsRepository
+    abstract fun bindSystemRepository(
+        systemRepositoryImpl: SystemRepositoryImpl
+    ): SystemRepository
 }

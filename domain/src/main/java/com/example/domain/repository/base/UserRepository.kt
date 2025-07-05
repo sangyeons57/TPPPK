@@ -1,5 +1,6 @@
 package com.example.domain.repository.base
 
+import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
@@ -34,5 +35,27 @@ interface UserRepository : DefaultRepository {
      * @param userId 사용자 ID
      * @return ProjectsWrapper 목록을 담은 Flow
      */
+
+    /**
+     * 사용자 프로필 이미지를 업로드합니다.
+     * Firebase Storage에 업로드 후 자동으로 Firebase Functions가 처리합니다.
+     *
+     * @param uri 업로드할 이미지의 URI
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception>
+
+    /**
+     * 사용자 프로필을 업데이트합니다.
+     * Firebase Functions를 통해 이름, 메모 등의 프로필 정보를 업데이트합니다.
+     *
+     * @param name 새로운 사용자 이름 (nullable)
+     * @param memo 새로운 사용자 메모 (nullable)
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun updateProfile(
+        name: String? = null,
+        memo: String? = null
+    ): CustomResult<Unit, Exception>
 
 }

@@ -1,7 +1,7 @@
 package com.example.domain.usecase.functions
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.FakeFunctionsRepository
+import com.example.domain.repository.FakeSystemRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -11,12 +11,12 @@ import org.junit.Test
 class HelloWorldUseCaseTest {
 
     private lateinit var helloWorldUseCase: HelloWorldUseCase
-    private lateinit var fakeFunctionsRepository: FakeFunctionsRepository
+    private lateinit var fakeSystemRepository: FakeSystemRepository
 
     @Before
     fun setUp() {
-        fakeFunctionsRepository = FakeFunctionsRepository()
-        helloWorldUseCase = HelloWorldUseCaseImpl(fakeFunctionsRepository)
+        fakeSystemRepository = FakeSystemRepository()
+        helloWorldUseCase = HelloWorldUseCaseImpl(fakeSystemRepository)
     }
 
     @Test
@@ -33,7 +33,7 @@ class HelloWorldUseCaseTest {
     fun `getHelloWorld returns success with custom message`() = runTest {
         // Given
         val customMessage = "Custom Hello World!"
-        fakeFunctionsRepository.setHelloWorldMessage(customMessage)
+        fakeSystemRepository.setHelloWorldMessage(customMessage)
 
         // When
         val result = helloWorldUseCase()
@@ -46,7 +46,7 @@ class HelloWorldUseCaseTest {
     @Test
     fun `getHelloWorld returns failure when repository throws error`() = runTest {
         // Given
-        fakeFunctionsRepository.setShouldThrowError(true)
+        fakeSystemRepository.setShouldThrowError(true)
 
         // When
         val result = helloWorldUseCase()
@@ -61,7 +61,7 @@ class HelloWorldUseCaseTest {
         // Given
         val customMessage = "Test message"
         val expectedResponse = mapOf("message" to "Processed: $customMessage")
-        fakeFunctionsRepository.setFunctionResult("customHelloWorld", expectedResponse)
+        fakeSystemRepository.setFunctionResult("customHelloWorld", expectedResponse)
 
         // When
         val result = helloWorldUseCase.callWithCustomMessage(customMessage)
@@ -76,7 +76,7 @@ class HelloWorldUseCaseTest {
         // Given
         val customMessage = "Test message"
         val expectedResponse = mapOf("result" to "Result response")
-        fakeFunctionsRepository.setFunctionResult("customHelloWorld", expectedResponse)
+        fakeSystemRepository.setFunctionResult("customHelloWorld", expectedResponse)
 
         // When
         val result = helloWorldUseCase.callWithCustomMessage(customMessage)
@@ -91,7 +91,7 @@ class HelloWorldUseCaseTest {
         // Given
         val customMessage = "Test message"
         val expectedResponse = mapOf("data" to "Some other data")
-        fakeFunctionsRepository.setFunctionResult("customHelloWorld", expectedResponse)
+        fakeSystemRepository.setFunctionResult("customHelloWorld", expectedResponse)
 
         // When
         val result = helloWorldUseCase.callWithCustomMessage(customMessage)
@@ -105,7 +105,7 @@ class HelloWorldUseCaseTest {
     fun `callWithCustomMessage returns failure when repository throws error`() = runTest {
         // Given
         val customMessage = "Test message"
-        fakeFunctionsRepository.setShouldThrowError(true)
+        fakeSystemRepository.setShouldThrowError(true)
 
         // When
         val result = helloWorldUseCase.callWithCustomMessage(customMessage)
@@ -119,7 +119,7 @@ class HelloWorldUseCaseTest {
     fun `callWithCustomMessage handles exception and returns failure`() = runTest {
         // Given
         val customMessage = "Test message"
-        fakeFunctionsRepository.setFunctionResult("customHelloWorld", mapOf("message" to null))
+        fakeSystemRepository.setFunctionResult("customHelloWorld", mapOf("message" to null))
 
         // When
         val result = helloWorldUseCase.callWithCustomMessage(customMessage)

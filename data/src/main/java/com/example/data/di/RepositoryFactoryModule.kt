@@ -6,7 +6,6 @@ import com.example.data.repository.factory.DMChannelRepositoryFactoryImpl
 import com.example.data.repository.factory.DMWrapperRepositoryFactoryImpl
 import com.example.data.repository.factory.FileRepositoryFactoryImpl
 import com.example.data.repository.factory.FriendRepositoryFactoryImpl
-import com.example.data.repository.factory.FunctionsRepositoryFactoryImpl
 import com.example.data.repository.factory.InviteRepositoryFactoryImpl
 import com.example.data.repository.factory.MediaRepositoryFactoryImpl
 import com.example.data.repository.factory.MemberRepositoryFactoryImpl
@@ -20,7 +19,6 @@ import com.example.data.repository.factory.RoleRepositoryFactoryImpl
 import com.example.data.repository.factory.ScheduleRepositoryFactoryImpl
 import com.example.data.repository.factory.SearchRepositoryFactoryImpl
 import com.example.data.repository.factory.UserRepositoryFactoryImpl
-import com.example.domain.repository.FunctionsRepository
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
@@ -47,7 +45,6 @@ import com.example.domain.repository.factory.context.DMChannelRepositoryFactoryC
 import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryContext
 import com.example.domain.repository.factory.context.FileRepositoryFactoryContext
 import com.example.domain.repository.factory.context.FriendRepositoryFactoryContext
-import com.example.domain.repository.factory.context.FunctionsRepositoryFactoryContext
 import com.example.domain.repository.factory.context.InviteRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MediaRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
@@ -148,8 +145,5 @@ abstract class RepositoryFactoryModule {
     @Singleton
     abstract fun bindSearchRepositoryFactory(impl: SearchRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<SearchRepositoryFactoryContext, SearchRepository>
 
-    @Binds
-    @Singleton
-    abstract fun bindFunctionsRepositoryFactory(impl: FunctionsRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<FunctionsRepositoryFactoryContext, FunctionsRepository>
 
 }

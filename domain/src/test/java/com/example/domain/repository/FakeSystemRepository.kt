@@ -1,12 +1,12 @@
 package com.example.domain.repository
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.repository.base.SystemRepository
 
-class FakeFunctionsRepository : FunctionsRepository {
-
+class FakeSystemRepository : SystemRepository {
     private var shouldThrowError = false
     private var helloWorldMessage = "Hello from Firebase!"
-    private var functionResults = mutableMapOf<String, Map<String, Any?>>()
+    private val functionResults = mutableMapOf<String, Map<String, Any?>>()
 
     fun setShouldThrowError(shouldThrow: Boolean) {
         shouldThrowError = shouldThrow
@@ -24,19 +24,19 @@ class FakeFunctionsRepository : FunctionsRepository {
         functionName: String,
         data: Map<String, Any?>?
     ): CustomResult<Map<String, Any?>, Exception> {
-        if (shouldThrowError) {
-            return CustomResult.Failure(Exception("Function call failed"))
+        return if (shouldThrowError) {
+            CustomResult.Failure(Exception("Function call failed"))
+        } else {
+            CustomResult.Success(functionResults[functionName] ?: mapOf("result" to "default"))
         }
-        
-        val result = functionResults[functionName] ?: mapOf("result" to "Default response")
-        return CustomResult.Success(result)
     }
 
     override suspend fun getHelloWorld(): CustomResult<String, Exception> {
-        if (shouldThrowError) {
-            return CustomResult.Failure(Exception("Hello World function failed"))
+        return if (shouldThrowError) {
+            CustomResult.Failure(Exception("Hello World function failed"))
+        } else {
+            CustomResult.Success(helloWorldMessage)
         }
-        return CustomResult.Success(helloWorldMessage)
     }
 
     override suspend fun callFunctionWithUserData(
@@ -44,15 +44,10 @@ class FakeFunctionsRepository : FunctionsRepository {
         userId: String,
         customData: Map<String, Any?>?
     ): CustomResult<Map<String, Any?>, Exception> {
-        if (shouldThrowError) {
-            return CustomResult.Failure(Exception("Function with user data failed"))
+        return if (shouldThrowError) {
+            CustomResult.Failure(Exception("Function call with user data failed"))
+        } else {
+            CustomResult.Success(functionResults[functionName] ?: mapOf("result" to "default"))
         }
-        
-        val result = functionResults[functionName] ?: mapOf(
-            "result" to "Default user response",
-            "userId" to userId,
-            "customData" to customData
-        )
-        return CustomResult.Success(result)
     }
 }

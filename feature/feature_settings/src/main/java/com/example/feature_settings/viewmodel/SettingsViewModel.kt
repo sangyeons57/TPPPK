@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.auth.AuthAccountUseCaseProvider
-import com.example.domain.repository.FunctionsRepository
+import com.example.domain.repository.base.SystemRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authAccountUseCaseProvider: AuthAccountUseCaseProvider,
-    private val functionsRepository: FunctionsRepository,
+    private val systemRepository: SystemRepository,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -68,7 +68,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d("SettingsViewModel", "Testing Firebase Functions HelloWorld...")
 
-            when (val result = functionsRepository.getHelloWorld()) {
+            when (val result = systemRepository.getHelloWorld()) {
                 is CustomResult.Success -> {
                     val message = "✅ Firebase Functions 연결 성공!\n결과: ${result.data}"
                     Log.d("SettingsViewModel", "HelloWorld success: ${result.data}")

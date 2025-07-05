@@ -1,20 +1,16 @@
 package com.example.data.repository.base
 
-import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
-import com.example.domain.repository.FunctionsRepository
+import com.example.domain.repository.base.SystemRepository
 import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
- * FunctionsRepository의 구현체
- * FunctionsRemoteDataSource를 사용하여 Firebase Functions과 통신합니다.
+ * 시스템 공통 기능 및 Firebase Functions 호출과 관련된 Repository 구현체입니다.
  */
-@Singleton
-class FunctionsRepositoryImpl @Inject constructor(
+class SystemRepositoryImpl @Inject constructor(
     private val functionsRemoteDataSource: FunctionsRemoteDataSource
-) : FunctionsRepository {
+) : SystemRepository {
 
     override suspend fun callFunction(
         functionName: String,
@@ -34,16 +30,4 @@ class FunctionsRepositoryImpl @Inject constructor(
     ): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.callFunctionWithUserData(functionName, userId, customData)
     }
-
-    override suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception> {
-        return functionsRemoteDataSource.uploadUserProfileImage(uri)
-    }
-
-    override suspend fun uploadProjectProfileImage(
-        projectId: com.example.domain.model.vo.DocumentId, 
-        uri: Uri
-    ): CustomResult<Unit, Exception> {
-        return functionsRemoteDataSource.uploadProjectProfileImage(projectId, uri)
-    }
-
 }
