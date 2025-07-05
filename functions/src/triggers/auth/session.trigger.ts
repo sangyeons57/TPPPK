@@ -79,8 +79,8 @@ export const logoutUserFunction = onCall(
         throw new HttpsError("invalid-argument", "Session token is required");
       }
 
-      const authUseCases = Providers.getAuthSessionProvider().create();
       // TODO: Implement LogoutUserUseCase and use authUseCases.logoutUserUseCase
+      // const authUseCases = Providers.getAuthSessionProvider().create();
 
       return {success: true};
     } catch (error) {

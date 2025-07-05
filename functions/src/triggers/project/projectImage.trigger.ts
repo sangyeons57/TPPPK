@@ -1,7 +1,7 @@
 import {onObjectFinalized} from "firebase-functions/v2/storage";
 import {UpdateProjectImageUseCase} from "../../business/project/usecases/updateProjectImage.usecase";
-import {ImageProcessingService} from "../../core/services/imageProcessing.service";
-import {FirebaseStorageService} from "../../infrastructure/datasources/firestore/image.datasource";
+// import {ImageProcessingService} from "../../core/services/imageProcessing.service";
+// import {FirebaseStorageService} from "../../infrastructure/datasources/firestore/image.datasource";
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {STORAGE_BUCKETS} from "../../core/constants";
 import {Providers} from "../../config/dependencies";
