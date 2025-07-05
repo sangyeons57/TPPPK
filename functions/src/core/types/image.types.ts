@@ -60,3 +60,4 @@ export interface ImageMetadata {
   format: string;
   size: number;
 }
+ 
