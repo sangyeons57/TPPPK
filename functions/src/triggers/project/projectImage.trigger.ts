@@ -1,10 +1,10 @@
-import { onObjectFinalized } from 'firebase-functions/v2/storage';
-import { UpdateProjectImageUseCase } from '../../application/project/updateProjectImage.usecase';
-import { ImageProcessingService } from '../../domain/image/imageProcessing.service';
-import { FirebaseStorageService } from '../../data/firestore/image.datasource';
-import { RUNTIME_CONFIG } from '../../core/constants';
-import { STORAGE_BUCKETS } from '../../core/constants';
-import { Providers } from '../../config/dependencies';
+import {onObjectFinalized} from "firebase-functions/v2/storage";
+import {UpdateProjectImageUseCase} from "../../application/project/updateProjectImage.usecase";
+import {ImageProcessingService} from "../../domain/image/imageProcessing.service";
+import {FirebaseStorageService} from "../../data/firestore/image.datasource";
+import {RUNTIME_CONFIG} from "../../core/constants";
+import {STORAGE_BUCKETS} from "../../core/constants";
+import {Providers} from "../../config/dependencies";
 
 export const onProjectImageUpload = onObjectFinalized(
   {
@@ -15,28 +15,28 @@ export const onProjectImageUpload = onObjectFinalized(
   },
   async (event) => {
     try {
-      const { bucket, name, contentType } = event.data;
-      
+      const {bucket, name, contentType} = event.data;
+
       if (!name || !contentType) {
-        console.log('Missing file name or content type');
+        console.log("Missing file name or content type");
         return;
       }
 
-      if (!contentType.startsWith('image/')) {
-        console.log('File is not an image');
+      if (!contentType.startsWith("image/")) {
+        console.log("File is not an image");
         return;
       }
 
-      const { projectId, userId } = extractInfoFromPath(name);
+      const {projectId, userId} = extractInfoFromPath(name);
       if (!projectId || !userId) {
-        console.log('Cannot extract project ID or user ID from file path');
+        console.log("Cannot extract project ID or user ID from file path");
         return;
       }
 
-      const { getStorage } = await import('firebase-admin/storage');
+      const {getStorage} = await import("firebase-admin/storage");
       const storage = getStorage();
       const file = storage.bucket(bucket).file(name);
-      
+
       const [fileBuffer] = await file.download();
 
       const projectUseCases = Providers.getProjectProvider().create();
@@ -52,30 +52,30 @@ export const onProjectImageUpload = onObjectFinalized(
         projectId,
         userId,
         imageBuffer: fileBuffer,
-        contentType
+        contentType,
       });
 
       if (!result.success) {
-        console.error('Failed to update project image:', result.error);
+        console.error("Failed to update project image:", result.error);
         return;
       }
 
-      console.log('Project image updated successfully:', result.data);
+      console.log("Project image updated successfully:", result.data);
     } catch (error) {
-      console.error('Error processing project image:', error);
+      console.error("Error processing project image:", error);
     }
   }
 );
 
 function extractInfoFromPath(filePath: string): { projectId: string | null; userId: string | null } {
-  const parts = filePath.split('/');
-  
+  const parts = filePath.split("/");
+
   if (parts.length < 2) {
-    return { projectId: null, userId: null };
+    return {projectId: null, userId: null};
   }
-  
+
   return {
     projectId: parts[0],
-    userId: parts[1]
+    userId: parts[1],
   };
 }
