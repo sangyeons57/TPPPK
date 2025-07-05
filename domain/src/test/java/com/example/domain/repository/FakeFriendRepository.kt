@@ -8,6 +8,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
 import com.example.domain.repository.base.FriendRepository
+import com.example.domain.repository.factory.context.DefaultRepositoryFactoryContext
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf

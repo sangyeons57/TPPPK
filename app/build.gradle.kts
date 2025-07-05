@@ -107,8 +107,6 @@ dependencies {
     implementation(project(":feature:feature_add_project"))
     implementation(project(":feature:feature_join_project"))
     implementation(project(":feature:feature_member_list"))
-    implementation(project(":feature:feature_create_category"))
-    implementation(project(":feature:feature_create_channel"))
     implementation(project(":feature:feature_edit_category"))
     implementation(project(":feature:feature_edit_channel"))
     implementation(project(":feature:feature_edit_member"))

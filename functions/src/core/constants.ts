@@ -1,10 +1,10 @@
 // Firestore Collections
 export const FIRESTORE_COLLECTIONS = {
-  USERS: 'users',
-  PROJECTS: 'projects',
-  SESSIONS: 'sessions',
-  USER_PROFILES: 'userProfiles',
-  PROJECT_MEMBERS: 'projectMembers',
+  USERS: "users",
+  PROJECTS: "projects",
+  SESSIONS: "sessions",
+  USER_PROFILES: "userProfiles",
+  PROJECT_MEMBERS: "projectMembers",
 } as const;
 
 // Legacy Collections (merged from old constants)
@@ -21,8 +21,8 @@ export const DATABASE_ID = "(default)" as const;
 
 // Storage Configuration
 export const STORAGE_BUCKETS = {
-  USER_PROFILES: 'user-profiles',
-  PROJECT_IMAGES: 'project-images',
+  USER_PROFILES: "user-profiles",
+  PROJECT_IMAGES: "project-images",
 } as const;
 
 export const STORAGE_ROOT = {
@@ -42,7 +42,7 @@ export const STORAGE_METADATA = {
 // Image Processing Configuration
 export const IMAGE_PROCESSING = {
   MAX_SIZE: 5 * 1024 * 1024, // 5MB
-  SUPPORTED_FORMATS: ['jpg', 'jpeg', 'png', 'webp'],
+  SUPPORTED_FORMATS: ["jpg", "jpeg", "png", "webp"],
   THUMBNAIL_SIZE: 300,
   QUALITY: 80,
 } as const;

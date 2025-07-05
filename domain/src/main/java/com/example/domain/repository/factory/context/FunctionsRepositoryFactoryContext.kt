@@ -1,7 +1,5 @@
 package com.example.domain.repository.factory.context
 
-import com.example.domain.repository.RepositoryFactoryContext
-
 
 /**
  * Firebase Functions Repository 생성을 위한 Factory Context

@@ -1,26 +1,26 @@
-import { Result } from '../../core/types';
+import { Result, CustomResult } from '../../core/types';
 
 export class TestUtils {
-  static createSuccessResult<T>(data: T): Result<T, never> {
+  static createSuccessResult<T>(data: T): CustomResult<T, Error> {
     return Result.success(data);
   }
 
-  static createFailureResult<E>(error: E): Result<never, E> {
+  static createFailureResult<E>(error: E): CustomResult<never, E> {
     return Result.failure(error);
   }
 
-  static expectSuccess<T, E>(result: Result<T, E>): T {
+  static expectSuccess<T, E>(result: CustomResult<T, E>): T {
     if (!result.success) {
-      throw new Error(`Expected success but got failure: ${JSON.stringify(result.error)}`);
+      throw new Error(`Expected success but got failure: ${JSON.stringify((result as any).error)}`);
     }
     return result.data;
   }
 
-  static expectFailure<T, E>(result: Result<T, E>): E {
+  static expectFailure<T, E>(result: CustomResult<T, E>): E {
     if (result.success) {
       throw new Error(`Expected failure but got success: ${JSON.stringify(result.data)}`);
     }
-    return result.error;
+    return (result as any).error;
   }
 
   static mockDateNow(date: Date): jest.SpyInstance {

@@ -19,7 +19,10 @@
       "Bash(/mnt/c/Program\\ Files/Docker/Docker/resources/bin/docker run --rm -v \"$(pwd):/workspace\" android-kotlin-app ./gradlew :domain:compileDebugKotlin --no-daemon)",
       "Bash(timeout:*)",
       "Bash(chmod:*)",
-      "Bash(gemini:*)"
+      "Bash(gemini:*)",
+      "Bash(cp:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

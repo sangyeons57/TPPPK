@@ -30,8 +30,6 @@
             <option value="$PROJECT_DIR$/feature/feature_change_password" />
             <option value="$PROJECT_DIR$/feature/feature_channel_edit" />
             <option value="$PROJECT_DIR$/feature/feature_chat" />
-            <option value="$PROJECT_DIR$/feature/feature_create_category" />
-            <option value="$PROJECT_DIR$/feature/feature_create_channel" />
             <option value="$PROJECT_DIR$/feature/feature_dev" />
             <option value="$PROJECT_DIR$/feature/feature_edit_category" />
             <option value="$PROJECT_DIR$/feature/feature_edit_channel" />

@@ -1,7 +1,6 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { UpdateUserProfileUseCase } from '../../application/user/updateUserProfile.usecase';
-import { FirestoreUserProfileDataSource } from '../../data/firestore/userProfile.datasource';
 import { RUNTIME_CONFIG } from '../../core/constants';
+import { Providers } from '../../config/dependencies';
 
 interface UpdateUserProfileRequest {
   userId: string;
@@ -29,10 +28,9 @@ export const updateUserProfileFunction = onCall(
         throw new HttpsError('invalid-argument', 'User ID is required');
       }
 
-      const userProfileRepository = new FirestoreUserProfileDataSource();
-      const updateUseCase = new UpdateUserProfileUseCase(userProfileRepository);
+      const userUseCases = Providers.getUserProvider().create();
 
-      const result = await updateUseCase.execute({
+      const result = await userUseCases.updateUserProfileUseCase.execute({
         userId,
         username,
         profileImage,
@@ -41,10 +39,10 @@ export const updateUserProfileFunction = onCall(
       });
 
       if (!result.success) {
-        if (result.error.code === 'NOT_FOUND') {
+        if (result.error.name === 'NOT_FOUND') {
           throw new HttpsError('not-found', result.error.message);
         }
-        if (result.error.code === 'VALIDATION_ERROR') {
+        if (result.error.name === 'VALIDATION_ERROR') {
           throw new HttpsError('invalid-argument', result.error.message);
         }
         throw new HttpsError('internal', result.error.message);

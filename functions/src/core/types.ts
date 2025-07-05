@@ -19,10 +19,10 @@ export type CustomResult<T, E = Error> = {
 
 export class Result {
   static success<T>(data: T): CustomResult<T> {
-    return { success: true, data };
+    return {success: true, data};
   }
 
   static failure<T, E = Error>(error: E): CustomResult<T, E> {
-    return { success: false, error };
+    return {success: false, error};
   }
 }

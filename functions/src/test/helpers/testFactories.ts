@@ -1,7 +1,7 @@
-import { UserProfileEntity, Email, Username } from '../../domain/user/user.entity';
-import { FriendEntity, FriendStatus, UserId, FriendId } from '../../domain/friend/friend.entity';
-import { SessionEntity, SessionToken, RefreshToken, SessionStatus } from '../../domain/auth/session.entity';
-import { ProjectEntity, ProjectName, ProjectDescription, ProjectImage, ProjectStatus } from '../../domain/project/project.entity';
+import { UserProfileEntity, Email, Username } from '../../domain/user/entities/user.entity';
+import { FriendEntity, FriendStatus, UserId, FriendId } from '../../domain/friend/entities/friend.entity';
+import { SessionEntity, SessionToken, RefreshToken, SessionStatus } from '../../domain/auth/entities/session.entity';
+import { ProjectEntity, ProjectName, ProjectDescription, ProjectImage, ProjectStatus } from '../../domain/project/entities/project.entity';
 
 export class TestFactories {
   static createUserProfile(overrides: Partial<{

@@ -13,11 +13,13 @@
   },
   "compileOnSave": true,
   "include": [
-    "src"
+    "src/**/*"
   ],
   "exclude": [
-    "src/functions/auth/sessionFunction.ts",
-    "src/functions/auth/signUpFunction.ts",
-    "src/test/helloWorld.test.ts"
-  ]
+    "node_modules",
+    "lib"
+  ],
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  }
 }

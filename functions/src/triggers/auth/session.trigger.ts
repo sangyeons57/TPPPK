@@ -1,8 +1,6 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { LoginUserUseCase } from '../../application/auth/loginUser.usecase';
-import { FirestoreSessionDataSource } from '../../data/firestore/session.datasource';
-import { FirestoreUserProfileDataSource } from '../../data/firestore/userProfile.datasource';
-import { RUNTIME_CONFIG } from '../../core/constants';
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {RUNTIME_CONFIG} from "../../core/constants";
+import {Providers} from "../../config/dependencies";
 
 interface LoginRequest {
   email: string;
@@ -25,42 +23,40 @@ export const loginUserFunction = onCall(
   },
   async (request): Promise<LoginResponse> => {
     try {
-      const { email, password, deviceInfo } = request.data as LoginRequest;
+      const {email, password, deviceInfo} = request.data as LoginRequest;
       const ipAddress = request.rawRequest.ip;
 
       if (!email || !password) {
-        throw new HttpsError('invalid-argument', 'Email and password are required');
+        throw new HttpsError("invalid-argument", "Email and password are required");
       }
 
-      const sessionRepository = new FirestoreSessionDataSource();
-      const userProfileRepository = new FirestoreUserProfileDataSource();
-      const loginUseCase = new LoginUserUseCase(sessionRepository, userProfileRepository);
+      const authUseCases = Providers.getAuthSessionProvider().create();
 
-      const result = await loginUseCase.execute({
+      const result = await authUseCases.loginUserUseCase.execute({
         email,
         password,
         deviceInfo,
-        ipAddress
+        ipAddress,
       });
 
       if (!result.success) {
-        if (result.error.code === 'UNAUTHORIZED') {
-          throw new HttpsError('unauthenticated', result.error.message);
+        if (result.error.name === "Unauthorized") {
+          throw new HttpsError("unauthenticated", result.error.message);
         }
-        throw new HttpsError('internal', result.error.message);
+        throw new HttpsError("internal", result.error.message);
       }
 
       return {
         sessionToken: result.data.sessionToken,
         refreshToken: result.data.refreshToken,
         expiresAt: result.data.expiresAt.toISOString(),
-        userProfile: result.data.userProfile
+        userProfile: result.data.userProfile,
       };
     } catch (error) {
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError('internal', `Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new HttpsError("internal", `Login failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 );
@@ -77,21 +73,21 @@ export const logoutUserFunction = onCall(
   },
   async (request): Promise<{ success: boolean }> => {
     try {
-      const { sessionToken } = request.data as LogoutRequest;
+      const {sessionToken} = request.data as LogoutRequest;
 
       if (!sessionToken) {
-        throw new HttpsError('invalid-argument', 'Session token is required');
+        throw new HttpsError("invalid-argument", "Session token is required");
       }
 
-      const sessionRepository = new FirestoreSessionDataSource();
-      // TODO: Implement LogoutUserUseCase
-      
-      return { success: true };
+      const authUseCases = Providers.getAuthSessionProvider().create();
+      // TODO: Implement LogoutUserUseCase and use authUseCases.logoutUserUseCase
+
+      return {success: true};
     } catch (error) {
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError('internal', `Logout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new HttpsError("internal", `Logout failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 );

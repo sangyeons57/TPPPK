@@ -1,10 +1,10 @@
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import { ProcessUserImageUseCase } from '../../application/user/processUserImage.usecase';
 import { ImageProcessingService } from '../../domain/image/imageProcessing.service';
-import { FirestoreUserProfileDataSource } from '../../data/firestore/userProfile.datasource';
-import { FirestoreImageDataSource, FirebaseStorageService } from '../../data/firestore/image.datasource';
+import { FirebaseStorageService } from '../../data/firestore/image.datasource';
 import { RUNTIME_CONFIG } from '../../core/constants';
 import { STORAGE_BUCKETS } from '../../core/constants';
+import { Providers } from '../../config/dependencies';
 
 export const onUserProfileImageUpload = onObjectFinalized(
   {
@@ -39,14 +39,13 @@ export const onUserProfileImageUpload = onObjectFinalized(
       
       const [fileBuffer] = await file.download();
 
-      const imageRepository = new FirestoreImageDataSource();
+      const userUseCases = Providers.getUserProvider().create();
       const storageService = new FirebaseStorageService();
-      const imageProcessingService = new ImageProcessingService(imageRepository, storageService);
-      const userProfileRepository = new FirestoreUserProfileDataSource();
+      const imageProcessingService = new ImageProcessingService(userUseCases.imageRepository, storageService);
 
       const processUseCase = new ProcessUserImageUseCase(
         imageProcessingService,
-        userProfileRepository
+        userUseCases.userProfileRepository
       );
 
       const result = await processUseCase.execute({

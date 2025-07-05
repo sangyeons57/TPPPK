@@ -3,6 +3,7 @@ package com.example.domain.repository
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.repository.factory.context.DefaultRepositoryFactoryContext
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 

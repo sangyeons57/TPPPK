@@ -1,7 +1,6 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { RegisterUserUseCase } from '../../application/auth/registerUser.usecase';
-import { FirestoreUserProfileDataSource } from '../../data/firestore/userProfile.datasource';
-import { RUNTIME_CONFIG } from '../../core/constants';
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {RUNTIME_CONFIG} from "../../core/constants";
+import {Providers} from "../../config/dependencies";
 
 interface RegisterRequest {
   email: string;
@@ -24,44 +23,43 @@ export const registerUserFunction = onCall(
   },
   async (request): Promise<RegisterResponse> => {
     try {
-      const { email, username, password, displayName, deviceInfo } = request.data as RegisterRequest;
+      const {email, username, password, displayName, deviceInfo} = request.data as RegisterRequest;
       const ipAddress = request.rawRequest.ip;
 
       if (!email || !username || !password) {
-        throw new HttpsError('invalid-argument', 'Email, username, and password are required');
+        throw new HttpsError("invalid-argument", "Email, username, and password are required");
       }
 
-      const userProfileRepository = new FirestoreUserProfileDataSource();
-      const registerUseCase = new RegisterUserUseCase(userProfileRepository);
+      const authUseCases = Providers.getAuthSessionProvider().create();
 
-      const result = await registerUseCase.execute({
+      const result = await authUseCases.registerUserUseCase.execute({
         email,
         username,
         password,
         displayName,
         deviceInfo,
-        ipAddress
+        ipAddress,
       });
 
       if (!result.success) {
-        if (result.error.code === 'CONFLICT') {
-          throw new HttpsError('already-exists', result.error.message);
+        if (result.error.name === "Conflict") {
+          throw new HttpsError("already-exists", result.error.message);
         }
-        if (result.error.code === 'VALIDATION_ERROR') {
-          throw new HttpsError('invalid-argument', result.error.message);
+        if (result.error.name === "ValidationError") {
+          throw new HttpsError("invalid-argument", result.error.message);
         }
-        throw new HttpsError('internal', result.error.message);
+        throw new HttpsError("internal", result.error.message);
       }
 
       return {
         userProfile: result.data.userProfile,
-        message: result.data.message
+        message: result.data.message,
       };
     } catch (error) {
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError('internal', `Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new HttpsError("internal", `Registration failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 );

@@ -1,6 +1,6 @@
 package com.example.domain.repository
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.repository.factory.context.RepositoryFactoryContext
 
 interface RepositoryFactory <in Input, out Output>
         where Input : RepositoryFactoryContext,

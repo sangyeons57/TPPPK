@@ -5,12 +5,16 @@
 
 import * as admin from "firebase-admin";
 import { DATABASE_ID } from "./core/constants";
+import { DependencyConfig } from "./config/dependencies";
 
 if (!admin.apps.length) {
   admin.initializeApp();
   // Set Firestore to use the custom database ID (e.g., "default" without parentheses)
   admin.firestore().settings({ databaseId: DATABASE_ID });
 }
+
+// Initialize dependency injection container
+DependencyConfig.initialize();
 
 // Authentication functions
 export { loginUserFunction as loginUser } from "./triggers/auth/session.trigger";
