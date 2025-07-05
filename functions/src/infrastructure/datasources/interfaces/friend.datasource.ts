@@ -1,5 +1,5 @@
 import { CustomResult } from '../../../core/types';
-import { FriendEntity, UserId, FriendId, FriendStatus } from '../entities/friend.entity';
+import { FriendEntity, UserId, FriendId, FriendStatus } from '../../../domain/friend/entities/friend.entity';
 
 export interface FriendSearchCriteria {
   userId?: string;
@@ -88,4 +88,4 @@ export interface FriendDatasource {
    * 사용자의 대기 중인 친구 요청 수를 조회합니다.
    */
   countPendingRequestsByUserId(userId: UserId): Promise<CustomResult<number>>;
-} 
+}

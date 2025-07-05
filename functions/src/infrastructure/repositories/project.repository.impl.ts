@@ -1,7 +1,7 @@
-import { ProjectRepository } from '../project.repository';
-import { ProjectDatasource } from '../../datasources/project.datasource';
-import { ProjectEntity, ProjectStatus, ProjectName } from '../../entities/project.entity';
-import { CustomResult } from '../../../../core/types';
+import { ProjectRepository } from '../../domain/project/repositories/project.repository';
+import { ProjectDatasource } from '../datasources/interfaces/project.datasource';
+import { ProjectEntity, ProjectStatus, ProjectName } from '../../domain/project/entities/project.entity';
+import { CustomResult } from '../../core/types';
 
 /**
  * Project Repository 구현체
@@ -53,4 +53,4 @@ export class ProjectRepositoryImpl implements ProjectRepository {
   async updateMemberCount(projectId: string, count: number): Promise<CustomResult<void>> {
     return this.datasource.updateMemberCount(projectId, count);
   }
-} 
+}

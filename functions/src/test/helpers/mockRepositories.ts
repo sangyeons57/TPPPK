@@ -2,7 +2,7 @@ import { UserProfileRepository } from '../../domain/user/repositories/userProfil
 import { FriendRepository } from '../../domain/friend/repositories/friend.repository';
 import { SessionRepository } from '../../domain/auth/repositories/session.repository';
 import { ProjectRepository } from '../../domain/project/repositories/project.repository';
-import { ImageRepository } from '../../domain/image/repositories/image.repository';
+import { ImageRepository } from '../../core/services/imageProcessing.service';
 
 export const createMockUserProfileRepository = (): jest.Mocked<UserProfileRepository> => ({
   findById: jest.fn(),

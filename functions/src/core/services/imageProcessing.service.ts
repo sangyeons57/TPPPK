@@ -1,8 +1,93 @@
-import { ProcessedImageEntity, ImageType, ImageUrl, ImageSize, ImageFormat } from './image.entity';
-import { ImageRepository, ImageStorageService } from './image.repository';
-import { CustomResult, Result } from '../../../core/types';
-import { ValidationError, InternalError } from '../../../core/errors';
-import { IMAGE_PROCESSING } from '../../../core/constants';
+import { ImageUrl, ImageSize, ImageFormat, ImageType, ImageMetadata } from '../types/image.types';
+import { CustomResult, Result } from '../types';
+import { ValidationError, InternalError } from '../errors';
+import { IMAGE_PROCESSING } from '../constants';
+
+export interface ProcessedImage {
+  id: string;
+  originalUrl: ImageUrl;
+  thumbnailUrl?: ImageUrl;
+  size: ImageSize;
+  format: ImageFormat;
+  type: ImageType;
+  ownerId: string;
+  width?: number;
+  height?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class ProcessedImageEntity implements ProcessedImage {
+  constructor(
+    public readonly id: string,
+    public readonly originalUrl: ImageUrl,
+    public readonly size: ImageSize,
+    public readonly format: ImageFormat,
+    public readonly type: ImageType,
+    public readonly ownerId: string,
+    public readonly createdAt: Date,
+    public readonly updatedAt: Date,
+    public readonly thumbnailUrl?: ImageUrl,
+    public readonly width?: number,
+    public readonly height?: number
+  ) {}
+
+  addThumbnail(thumbnailUrl: ImageUrl): ProcessedImageEntity {
+    return new ProcessedImageEntity(
+      this.id,
+      this.originalUrl,
+      this.size,
+      this.format,
+      this.type,
+      this.ownerId,
+      this.createdAt,
+      new Date(),
+      thumbnailUrl,
+      this.width,
+      this.height
+    );
+  }
+
+  updateDimensions(width: number, height: number): ProcessedImageEntity {
+    if (width <= 0 || height <= 0) {
+      throw new ValidationError('imageDimensions', 'Image dimensions must be positive');
+    }
+
+    return new ProcessedImageEntity(
+      this.id,
+      this.originalUrl,
+      this.size,
+      this.format,
+      this.type,
+      this.ownerId,
+      this.createdAt,
+      new Date(),
+      this.thumbnailUrl,
+      width,
+      height
+    );
+  }
+}
+
+export interface ImageRepository {
+  findById(id: string): Promise<CustomResult<ProcessedImageEntity | null>>;
+  findByOwnerId(ownerId: string): Promise<CustomResult<ProcessedImageEntity[]>>;
+  findByType(type: ImageType): Promise<CustomResult<ProcessedImageEntity[]>>;
+  findByOwnerIdAndType(ownerId: string, type: ImageType): Promise<CustomResult<ProcessedImageEntity[]>>;
+  save(image: ProcessedImageEntity): Promise<CustomResult<ProcessedImageEntity>>;
+  update(image: ProcessedImageEntity): Promise<CustomResult<ProcessedImageEntity>>;
+  delete(id: string): Promise<CustomResult<void>>;
+  exists(id: string): Promise<CustomResult<boolean>>;
+  deleteByUrl(url: ImageUrl): Promise<CustomResult<void>>;
+}
+
+export interface ImageStorageService {
+  uploadImage(file: Buffer, path: string, contentType: string): Promise<CustomResult<ImageUrl>>;
+  deleteImage(url: ImageUrl): Promise<CustomResult<void>>;
+  generateThumbnail(imageBuffer: Buffer, width: number, height: number): Promise<CustomResult<Buffer>>;
+  validateImageFormat(contentType: string): Promise<CustomResult<boolean>>;
+  getImageMetadata(imageBuffer: Buffer): Promise<CustomResult<ImageMetadata>>;
+}
 
 export class ImageProcessingService {
   constructor(

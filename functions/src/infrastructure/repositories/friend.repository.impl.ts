@@ -1,7 +1,7 @@
-import { FriendRepository } from '../friend.repository';
-import { FriendDatasource, FriendSearchCriteria } from '../../datasources/friend.datasource';
-import { FriendEntity, UserId, FriendId, FriendStatus } from '../../entities/friend.entity';
-import { CustomResult } from '../../../../core/types';
+import { FriendRepository } from '../../domain/friend/repositories/friend.repository';
+import { FriendDatasource, FriendSearchCriteria } from '../datasources/interfaces/friend.datasource';
+import { FriendEntity, UserId, FriendId, FriendStatus } from '../../domain/friend/entities/friend.entity';
+import { CustomResult } from '../../core/types';
 
 /**
  * Friend Repository 구현체
@@ -69,4 +69,4 @@ export class FriendRepositoryImpl implements FriendRepository {
   async countPendingRequestsByUserId(userId: UserId): Promise<CustomResult<number>> {
     return this.datasource.countPendingRequestsByUserId(userId);
   }
-} 
+}

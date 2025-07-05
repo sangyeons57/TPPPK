@@ -6,9 +6,9 @@ import {FirestoreFriendDataSource} from "../datasources/firestore/friend.datasou
 import {FirestoreProjectDataSource} from "../datasources/firestore/project.datasource";
 
 // Repository Implementations
-import {UserProfileRepositoryImpl} from "../../domain/user/repositories/impl/userProfile.repository.impl";
-import {FriendRepositoryImpl} from "../../domain/friend/repositories/impl/friend.repository.impl";
-import {ProjectRepositoryImpl} from "../../domain/project/repositories/impl/project.repository.impl";
+import {UserProfileRepositoryImpl} from "../repositories/userProfile.repository.impl";
+import {FriendRepositoryImpl} from "../repositories/friend.repository.impl";
+import {ProjectRepositoryImpl} from "../repositories/project.repository.impl";
 
 // Repository Interfaces
 import {UserProfileRepository} from "../../domain/user/repositories/userProfile.repository";

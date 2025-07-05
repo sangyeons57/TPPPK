@@ -1,4 +1,5 @@
-import {ValidationError} from "../errors";
+import { ValidationError } from "../errors";
+import { IMAGE_PROCESSING } from "../constants";
 
 export interface ValueObject<T> {
   readonly value: T;
@@ -22,9 +23,8 @@ export class ImageSize implements ValueObject<number> {
     if (value <= 0) {
       throw new ValidationError("imageSize", "Image size must be positive");
     }
-    // 최대 크기 검증 (10MB)
-    if (value > 10 * 1024 * 1024) {
-      throw new ValidationError("imageSize", "Image size must be less than 10MB");
+    if (value > IMAGE_PROCESSING.MAX_SIZE) {
+      throw new ValidationError("imageSize", `Image size must be less than ${IMAGE_PROCESSING.MAX_SIZE} bytes`);
     }
   }
 
@@ -36,11 +36,10 @@ export class ImageSize implements ValueObject<number> {
 export type SupportedImageFormat = "jpg" | "jpeg" | "png" | "webp";
 
 export class ImageFormat implements ValueObject<string> {
-  private static readonly SUPPORTED_FORMATS: SupportedImageFormat[] = ["jpg", "jpeg", "png", "webp"];
-
   constructor(public readonly value: string) {
-    if (!ImageFormat.SUPPORTED_FORMATS.includes(value.toLowerCase() as SupportedImageFormat)) {
-      throw new ValidationError("imageFormat", `Image format must be one of: ${ImageFormat.SUPPORTED_FORMATS.join(", ")}`);
+    const supportedFormats = IMAGE_PROCESSING.SUPPORTED_FORMATS as readonly string[];
+    if (!supportedFormats.includes(value.toLowerCase())) {
+      throw new ValidationError("imageFormat", `Image format must be one of: ${supportedFormats.join(", ")}`);
     }
   }
 

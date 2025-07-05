@@ -1,7 +1,7 @@
 import {onObjectFinalized} from "firebase-functions/v2/storage";
-import {UpdateProjectImageUseCase} from "../../application/project/updateProjectImage.usecase";
-import {ImageProcessingService} from "../../domain/image/imageProcessing.service";
-import {FirebaseStorageService} from "../../data/firestore/image.datasource";
+import {UpdateProjectImageUseCase} from "../../business/project/usecases/updateProjectImage.usecase";
+import {ImageProcessingService} from "../../core/services/imageProcessing.service";
+import {FirebaseStorageService} from "../../infrastructure/datasources/firestore/image.datasource";
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {STORAGE_BUCKETS} from "../../core/constants";
 import {Providers} from "../../config/dependencies";
@@ -40,11 +40,9 @@ export const onProjectImageUpload = onObjectFinalized(
       const [fileBuffer] = await file.download();
 
       const projectUseCases = Providers.getProjectProvider().create();
-      const storageService = new FirebaseStorageService();
-      const imageProcessingService = new ImageProcessingService(projectUseCases.imageRepository, storageService);
 
       const updateUseCase = new UpdateProjectImageUseCase(
-        imageProcessingService,
+        projectUseCases.imageProcessingService,
         projectUseCases.projectRepository
       );
 

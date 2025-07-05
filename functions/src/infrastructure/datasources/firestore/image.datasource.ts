@@ -1,8 +1,8 @@
-import { ImageRepository, ImageStorageService } from '../../domain/image/image.repository';
-import { ProcessedImageEntity, ImageType, ImageUrl, ImageSize, ImageFormat } from '../../domain/image/image.entity';
-import { CustomResult, Result } from '../../core/types';
-import { NotFoundError, InternalError } from '../../core/errors';
-import { FIRESTORE_COLLECTIONS, STORAGE_BUCKETS, IMAGE_PROCESSING } from '../../core/constants';
+import { ImageRepository, ImageStorageService, ProcessedImageEntity } from '../../../core/services/imageProcessing.service';
+import { ImageType, ImageUrl, ImageSize, ImageFormat, ImageMetadata } from '../../../core/types/image.types';
+import { CustomResult, Result } from '../../../core/types';
+import { NotFoundError, InternalError } from '../../../core/errors';
+import { FIRESTORE_COLLECTIONS, STORAGE_BUCKETS, IMAGE_PROCESSING } from '../../../core/constants';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
@@ -237,7 +237,7 @@ export class FirebaseStorageService implements ImageStorageService {
     }
   }
 
-  async getImageMetadata(imageBuffer: Buffer): Promise<CustomResult<{ width: number; height: number; format: string }>> {
+  async getImageMetadata(imageBuffer: Buffer): Promise<CustomResult<ImageMetadata>> {
     try {
       const sharp = require('sharp');
       const metadata = await sharp(imageBuffer).metadata();
@@ -245,7 +245,8 @@ export class FirebaseStorageService implements ImageStorageService {
       return Result.success({
         width: metadata.width || 0,
         height: metadata.height || 0,
-        format: metadata.format || 'unknown'
+        format: metadata.format || 'unknown',
+        size: imageBuffer.length
       });
     } catch (error) {
       return Result.failure(new InternalError(`Failed to get image metadata: ${error instanceof Error ? error.message : 'Unknown error'}`));

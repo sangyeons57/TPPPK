@@ -1,4 +1,4 @@
-import { UserProfileDatasource } from '../../../domain/user/datasources/userProfile.datasource';
+import { UserProfileDatasource } from '../interfaces/userProfile.datasource';
 import { UserProfileEntity, Email, Username, UserProfileImage } from '../../../domain/user/entities/user.entity';
 import { CustomResult, Result } from '../../../core/types';
 import { NotFoundError, InternalError } from '../../../core/errors';

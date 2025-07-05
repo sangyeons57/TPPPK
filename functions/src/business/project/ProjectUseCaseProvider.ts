@@ -1,8 +1,7 @@
 import { RepositoryFactory } from '../../domain/shared/RepositoryFactory';
 import { ProjectRepositoryFactoryContext } from '../../domain/project/repositories/factory/ProjectRepositoryFactoryContext';
-import { ImageRepositoryFactoryContext } from '../../domain/image/repositories/factory/ImageRepositoryFactoryContext';
 import { ProjectRepository } from '../../domain/project/repositories/project.repository';
-import { ImageRepository } from '../../domain/image/repositories/image.repository';
+import { ImageProcessingService } from '../../core/services/imageProcessing.service';
 import { UpdateProjectImageUseCase } from './usecases/updateProjectImage.usecase';
 
 /**
@@ -13,7 +12,7 @@ export interface ProjectUseCases {
   
   // Common repositories for advanced use cases
   projectRepository: ProjectRepository;
-  imageRepository: ImageRepository;
+  imageProcessingService: ImageProcessingService;
 }
 
 /**
@@ -23,7 +22,7 @@ export interface ProjectUseCases {
 export class ProjectUseCaseProvider {
   constructor(
     private readonly projectRepositoryFactory: RepositoryFactory<ProjectRepository, ProjectRepositoryFactoryContext>,
-    private readonly imageRepositoryFactory: RepositoryFactory<ImageRepository, ImageRepositoryFactoryContext>
+    private readonly imageProcessingService: ImageProcessingService
   ) {}
 
   /**
@@ -33,17 +32,16 @@ export class ProjectUseCaseProvider {
    */
   create(context?: ProjectRepositoryFactoryContext): ProjectUseCases {
     const projectRepository = this.projectRepositoryFactory.create(context);
-    const imageRepository = this.imageRepositoryFactory.create();
 
     return {
       updateProjectImageUseCase: new UpdateProjectImageUseCase(
-        projectRepository,
-        imageRepository
+        this.imageProcessingService,
+        projectRepository
       ),
 
       // Common repositories
       projectRepository,
-      imageRepository
+      imageProcessingService: this.imageProcessingService
     };
   }
 }

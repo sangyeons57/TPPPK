@@ -1,6 +1,6 @@
-import { ImageProcessingService } from '../../../domain/image/services/imageProcessing.service';
+import { ImageProcessingService, ProcessedImageEntity } from '../../../core/services/imageProcessing.service';
 import { ProjectRepository } from '../../../domain/project/repositories/project.repository';
-import { ProcessedImageEntity, ImageType } from '../../../domain/image/entities/image.entity';
+import { ImageType } from '../../../core/types/image.types';
 import { CustomResult, Result } from '../../../core/types';
 import { NotFoundError, UnauthorizedError } from '../../../core/errors';
 

@@ -1,4 +1,4 @@
-import { UserProfileEntity, Email, Username } from '../entities/user.entity';
+import { UserProfileEntity, Email, Username } from '../../../domain/user/entities/user.entity';
 import { CustomResult } from '../../../core/types';
 
 /**
@@ -15,4 +15,4 @@ export interface UserProfileDatasource {
   delete(id: string): Promise<CustomResult<void>>;
   exists(userId: string): Promise<CustomResult<boolean>>;
   findActiveProfiles(limit?: number): Promise<CustomResult<UserProfileEntity[]>>;
-} 
+}

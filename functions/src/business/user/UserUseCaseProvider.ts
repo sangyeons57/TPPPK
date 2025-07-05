@@ -1,8 +1,7 @@
 import { RepositoryFactory } from '../../domain/shared/RepositoryFactory';
 import { UserRepositoryFactoryContext } from '../../domain/user/repositories/factory/UserRepositoryFactoryContext';
-import { ImageRepositoryFactoryContext } from '../../domain/image/repositories/factory/ImageRepositoryFactoryContext';
 import { UserProfileRepository } from '../../domain/user/repositories/userProfile.repository';
-import { ImageRepository } from '../../domain/image/repositories/image.repository';
+import { ImageRepository, ImageProcessingService } from '../../core/services/imageProcessing.service';
 import { UpdateUserProfileUseCase } from './usecases/updateUserProfile.usecase';
 import { ProcessUserImageUseCase } from './usecases/processUserImage.usecase';
 
@@ -15,7 +14,7 @@ export interface UserUseCases {
   
   // Common repositories for advanced use cases
   userProfileRepository: UserProfileRepository;
-  imageRepository: ImageRepository;
+  imageProcessingService: ImageProcessingService;
 }
 
 /**
@@ -25,7 +24,7 @@ export interface UserUseCases {
 export class UserUseCaseProvider {
   constructor(
     private readonly userRepositoryFactory: RepositoryFactory<UserProfileRepository, UserRepositoryFactoryContext>,
-    private readonly imageRepositoryFactory: RepositoryFactory<ImageRepository, ImageRepositoryFactoryContext>
+    private readonly imageProcessingService: ImageProcessingService
   ) {}
 
   /**
@@ -35,7 +34,6 @@ export class UserUseCaseProvider {
    */
   create(context?: UserRepositoryFactoryContext): UserUseCases {
     const userProfileRepository = this.userRepositoryFactory.create(context);
-    const imageRepository = this.imageRepositoryFactory.create();
 
     return {
       updateUserProfileUseCase: new UpdateUserProfileUseCase(
@@ -43,13 +41,13 @@ export class UserUseCaseProvider {
       ),
       
       processUserImageUseCase: new ProcessUserImageUseCase(
-        userProfileRepository,
-        imageRepository
+        this.imageProcessingService,
+        userProfileRepository
       ),
 
       // Common repositories
       userProfileRepository,
-      imageRepository
+      imageProcessingService: this.imageProcessingService
     };
   }
 }

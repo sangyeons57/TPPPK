@@ -1,4 +1,4 @@
-import { ProjectEntity, ProjectStatus, ProjectName } from '../entities/project.entity';
+import { ProjectEntity, ProjectStatus, ProjectName } from '../../../domain/project/entities/project.entity';
 import { CustomResult } from '../../../core/types';
 
 /**
@@ -17,4 +17,4 @@ export interface ProjectDatasource {
   findActiveProjects(limit?: number): Promise<CustomResult<ProjectEntity[]>>;
   findProjectsByMemberId(memberId: string): Promise<CustomResult<ProjectEntity[]>>;
   updateMemberCount(projectId: string, count: number): Promise<CustomResult<void>>;
-} 
+}

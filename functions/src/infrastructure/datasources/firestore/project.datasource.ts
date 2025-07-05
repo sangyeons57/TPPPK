@@ -1,4 +1,4 @@
-import { ProjectRepository } from '../../domain/project/project.repository';
+import { ProjectDatasource } from '../interfaces/project.datasource';
 import { ProjectEntity, ProjectName, ProjectDescription, ProjectImage, ProjectStatus } from '../../domain/project/project.entity';
 import { CustomResult, Result } from '../../core/types';
 import { NotFoundError, InternalError } from '../../core/errors';
@@ -17,7 +17,7 @@ interface ProjectData {
   updatedAt: FirebaseFirestore.Timestamp;
 }
 
-export class FirestoreProjectDataSource implements ProjectRepository {
+export class FirestoreProjectDataSource implements ProjectDatasource {
   private readonly db = getFirestore();
   private readonly collection = this.db.collection(FIRESTORE_COLLECTIONS.PROJECTS);
 

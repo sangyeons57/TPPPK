@@ -1,7 +1,7 @@
-import { UserProfileRepository } from '../userProfile.repository';
-import { UserProfileDatasource } from '../../datasources/userProfile.datasource';
-import { UserProfileEntity, Email, Username } from '../../entities/user.entity';
-import { CustomResult } from '../../../../core/types';
+import { UserProfileRepository } from '../../domain/user/repositories/userProfile.repository';
+import { UserProfileDatasource } from '../datasources/interfaces/userProfile.datasource';
+import { UserProfileEntity, Email, Username } from '../../domain/user/entities/user.entity';
+import { CustomResult } from '../../core/types';
 
 /**
  * UserProfile Repository 구현체
@@ -45,4 +45,4 @@ export class UserProfileRepositoryImpl implements UserProfileRepository {
   async findActiveProfiles(limit?: number): Promise<CustomResult<UserProfileEntity[]>> {
     return this.datasource.findActiveProfiles(limit);
   }
-} 
+}

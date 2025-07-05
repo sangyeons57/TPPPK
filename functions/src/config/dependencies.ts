@@ -2,13 +2,15 @@ import {SessionRepositoryFactory} from "../domain/auth/repositories/factory/Sess
 import {FriendRepositoryFactory} from "../domain/friend/repositories/factory/FriendRepositoryFactory";
 import {UserRepositoryFactory} from "../domain/user/repositories/factory/UserRepositoryFactory";
 import {ProjectRepositoryFactory} from "../domain/project/repositories/factory/ProjectRepositoryFactory";
-import {ImageRepositoryFactory} from "../domain/image/repositories/factory/ImageRepositoryFactory";
 import {
   AuthSessionUseCaseProvider,
   FriendUseCaseProvider,
   UserUseCaseProvider,
   ProjectUseCaseProvider,
 } from "../business";
+import { ProviderContainer, ProviderKeys } from "../infrastructure/container/ProviderContainer";
+import { ImageProcessingService } from "../core/services/imageProcessing.service";
+import { FirestoreImageDataSource, FirebaseStorageService } from "../infrastructure/datasources/firestore/image.datasource";
 
 /**
  * Configuration class for setting up dependency injection
@@ -81,12 +83,17 @@ export class DependencyConfig {
       new ProjectRepositoryFactory()
     );
     
+    // Register Image Processing Service instead of factory
+    const imageRepository = new FirestoreImageDataSource();
+    const imageStorageService = new FirebaseStorageService();
+    const imageProcessingService = new ImageProcessingService(imageRepository, imageStorageService);
+    
     container.register(
-      ProviderKeys.IMAGE_REPOSITORY_FACTORY,
-      new ImageRepositoryFactory()
+      ProviderKeys.IMAGE_PROCESSING_SERVICE,
+      imageProcessingService
     );
 
-    console.log("Repository factories registered");
+    console.log("Repository factories and services registered");
   }
 
   /**
@@ -120,7 +127,7 @@ export class DependencyConfig {
       ProviderKeys.USER_USECASE_PROVIDER,
       new UserUseCaseProvider(
         container.get(ProviderKeys.USER_REPOSITORY_FACTORY),
-        container.get(ProviderKeys.IMAGE_REPOSITORY_FACTORY)
+        container.get(ProviderKeys.IMAGE_PROCESSING_SERVICE)
       )
     );
 
@@ -129,7 +136,7 @@ export class DependencyConfig {
       ProviderKeys.PROJECT_USECASE_PROVIDER,
       new ProjectUseCaseProvider(
         container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY),
-        container.get(ProviderKeys.IMAGE_REPOSITORY_FACTORY)
+        container.get(ProviderKeys.IMAGE_PROCESSING_SERVICE)
       )
     );
 

@@ -5,7 +5,7 @@ import { COLLECTIONS } from '../../../core/constants';
 import { 
   FriendDatasource, 
   FriendSearchCriteria 
-} from '../../../domain/friend/datasources/friend.datasource';
+} from '../interfaces/friend.datasource';
 import { 
   FriendEntity, 
   FriendId, 

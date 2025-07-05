@@ -119,7 +119,9 @@ export const ProviderKeys = {
   FRIEND_REPOSITORY_FACTORY: 'friendRepositoryFactory',
   USER_REPOSITORY_FACTORY: 'userRepositoryFactory',
   PROJECT_REPOSITORY_FACTORY: 'projectRepositoryFactory',
-  IMAGE_REPOSITORY_FACTORY: 'imageRepositoryFactory',
+
+  // Services
+  IMAGE_PROCESSING_SERVICE: 'imageProcessingService',
 
   // UseCase Providers
   AUTH_SESSION_USECASE_PROVIDER: 'authSessionUseCaseProvider',

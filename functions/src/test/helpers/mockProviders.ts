@@ -13,7 +13,7 @@ import { SessionRepository } from '../../domain/auth/repositories/session.reposi
 import { FriendRepository } from '../../domain/friend/repositories/friend.repository';
 import { UserProfileRepository } from '../../domain/user/repositories/userProfile.repository';
 import { ProjectRepository } from '../../domain/project/repositories/project.repository';
-import { ImageRepository } from '../../domain/image/repositories/image.repository';
+import { ImageProcessingService } from '../../core/services/imageProcessing.service';
 
 /**
  * Mock repository factory for testing
@@ -70,16 +70,13 @@ export class MockProviderHelper {
    */
   static createMockUserProvider(
     mockUserRepository?: UserProfileRepository,
-    mockImageRepository?: ImageRepository
+    mockImageProcessingService?: ImageProcessingService
   ): UserUseCaseProvider {
     const userRepoFactory = new MockRepositoryFactory(
       mockUserRepository || ({} as UserProfileRepository)
     );
-    const imageRepoFactory = new MockRepositoryFactory(
-      mockImageRepository || ({} as ImageRepository)
-    );
 
-    return new UserUseCaseProvider(userRepoFactory, imageRepoFactory);
+    return new UserUseCaseProvider(userRepoFactory, mockImageProcessingService || ({} as ImageProcessingService));
   }
 
   /**
@@ -87,16 +84,13 @@ export class MockProviderHelper {
    */
   static createMockProjectProvider(
     mockProjectRepository?: ProjectRepository,
-    mockImageRepository?: ImageRepository
+    mockImageProcessingService?: ImageProcessingService
   ): ProjectUseCaseProvider {
     const projectRepoFactory = new MockRepositoryFactory(
       mockProjectRepository || ({} as ProjectRepository)
     );
-    const imageRepoFactory = new MockRepositoryFactory(
-      mockImageRepository || ({} as ImageRepository)
-    );
 
-    return new ProjectUseCaseProvider(projectRepoFactory, imageRepoFactory);
+    return new ProjectUseCaseProvider(projectRepoFactory, mockImageProcessingService || ({} as ImageProcessingService));
   }
 
   /**
@@ -143,7 +137,7 @@ export class MockProviderHelper {
       updateUserProfileUseCase: {} as any,
       processUserImageUseCase: {} as any,
       userProfileRepository: {} as any,
-      imageRepository: {} as any,
+      imageProcessingService: {} as any,
       ...partial
     };
   }
@@ -157,7 +151,7 @@ export class MockProviderHelper {
     return {
       updateProjectImageUseCase: {} as any,
       projectRepository: {} as any,
-      imageRepository: {} as any,
+      imageProcessingService: {} as any,
       ...partial
     };
   }
