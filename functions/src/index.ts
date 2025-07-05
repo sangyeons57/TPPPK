@@ -1,10 +1,10 @@
 /**
  * Firebase Functions entry point
- * Exports all callable functions using the new modular architecture
+ * Exports all callable functions using the new DDD architecture
  */
 
 import * as admin from "firebase-admin";
-import { DATABASE_ID } from "./constants";
+import { DATABASE_ID } from "./core/constants";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -12,16 +12,25 @@ if (!admin.apps.length) {
   admin.firestore().settings({ databaseId: DATABASE_ID });
 }
 
+// Authentication functions
+export { loginUserFunction as loginUser } from "./triggers/auth/session.trigger";
+export { logoutUserFunction as logoutUser } from "./triggers/auth/session.trigger";
+export { registerUserFunction as registerUser } from "./triggers/auth/signup.trigger";
+
+// User management functions
+export { updateUserProfileFunction as updateUserProfile } from "./triggers/user/userProfile.trigger";
+export { onUserProfileImageUpload } from "./triggers/user/userImage.trigger";
+
+// Project management functions
+export { onProjectImageUpload } from "./triggers/project/projectImage.trigger";
+
 // System functions
-export {helloWorld} from "./functions/system/helloWorldFunction";
+export { helloWorldFunction as helloWorld } from "./triggers/system/helloWorld.trigger";
 
-// Authentication functions - temporarily disabled due to compilation errors
-// export {signUp} from "./functions/auth/signUpFunction";
-// export {session} from "./functions/auth/sessionFunction";
-
-// User data related functions
-export {onUserProfileImageUpload} from "./functions/user/onUserProfileImageUpload";
-export {updateUserProfile} from "./functions/user/updateUserProfileFunction";
-
-// Project data related functions
-export {onProjectProfileImageUpload} from "./functions/project/onProjectProfileImageUpload";
+// Friend management functions
+export { sendFriendRequestFunction as sendFriendRequest } from "./triggers/friend/friendManagement.trigger";
+export { acceptFriendRequestFunction as acceptFriendRequest } from "./triggers/friend/friendManagement.trigger";
+export { rejectFriendRequestFunction as rejectFriendRequest } from "./triggers/friend/friendManagement.trigger";
+export { removeFriendFunction as removeFriend } from "./triggers/friend/friendManagement.trigger";
+export { getFriendsFunction as getFriends } from "./triggers/friend/friendManagement.trigger";
+export { getFriendRequestsFunction as getFriendRequests } from "./triggers/friend/friendManagement.trigger";
