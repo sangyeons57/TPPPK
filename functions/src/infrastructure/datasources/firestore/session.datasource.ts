@@ -1,8 +1,8 @@
-import { SessionRepository } from '../../domain/auth/session.repository';
-import { SessionEntity, SessionToken, RefreshToken, SessionStatus } from '../../domain/auth/session.entity';
-import { CustomResult, Result } from '../../core/types';
-import { NotFoundError, InternalError } from '../../core/errors';
-import { FIRESTORE_COLLECTIONS } from '../../core/constants';
+import { SessionRepository } from '../../../domain/auth/repositories/session.repository';
+import { SessionEntity, SessionToken, RefreshToken, SessionStatus } from '../../../domain/auth/entities/session.entity';
+import { CustomResult, Result } from '../../../core/types';
+import { NotFoundError, InternalError } from '../../../core/errors';
+import { FIRESTORE_COLLECTIONS } from '../../../core/constants';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 interface SessionData {

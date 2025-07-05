@@ -164,7 +164,7 @@ export class FriendEntity {
   accept(): CustomResult<FriendEntity> {
     if (this._status !== FriendStatus.REQUESTED) {
       return Result.failure(
-        new ConflictError(`Cannot accept friend request. Current status: ${this._status}. Expected: ${FriendStatus.REQUESTED}`)
+        new ConflictError('Friend', 'status', `Cannot accept friend request. Current status: ${this._status}. Expected: ${FriendStatus.REQUESTED}`)
       );
     }
 
@@ -198,7 +198,7 @@ export class FriendEntity {
   reject(): CustomResult<FriendEntity> {
     if (this._status !== FriendStatus.REQUESTED) {
       return Result.failure(
-        new ConflictError(`Cannot reject friend request. Current status: ${this._status}. Expected: ${FriendStatus.REQUESTED}`)
+        new ConflictError('Friend', 'status', `Cannot reject friend request. Current status: ${this._status}. Expected: ${FriendStatus.REQUESTED}`)
       );
     }
 
@@ -232,7 +232,7 @@ export class FriendEntity {
   remove(): CustomResult<FriendEntity> {
     if (this._status !== FriendStatus.ACCEPTED) {
       return Result.failure(
-        new ConflictError(`Cannot remove friend. Current status: ${this._status}. Expected: ${FriendStatus.ACCEPTED}`)
+        new ConflictError('Friend', 'status', `Cannot remove friend. Current status: ${this._status}. Expected: ${FriendStatus.ACCEPTED}`)
       );
     }
 

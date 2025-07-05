@@ -1,8 +1,8 @@
 import { ProjectDatasource } from '../interfaces/project.datasource';
-import { ProjectEntity, ProjectName, ProjectDescription, ProjectImage, ProjectStatus } from '../../domain/project/project.entity';
-import { CustomResult, Result } from '../../core/types';
-import { NotFoundError, InternalError } from '../../core/errors';
-import { FIRESTORE_COLLECTIONS } from '../../core/constants';
+import { ProjectEntity, ProjectName, ProjectDescription, ProjectImage, ProjectStatus } from '../../../domain/project/entities/project.entity';
+import { CustomResult, Result } from '../../../core/types';
+import { NotFoundError, InternalError } from '../../../core/errors';
+import { FIRESTORE_COLLECTIONS } from '../../../core/constants';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 interface ProjectData {
