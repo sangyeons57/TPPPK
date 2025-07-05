@@ -26,3 +26,11 @@ export { onProjectImageUpload } from "./triggers/project/projectImage.trigger";
 
 // System functions
 export { helloWorldFunction as helloWorld } from "./triggers/system/helloWorld.trigger";
+
+// Friend management functions
+export { sendFriendRequestFunction as sendFriendRequest } from "./triggers/friend/friendManagement.trigger";
+export { acceptFriendRequestFunction as acceptFriendRequest } from "./triggers/friend/friendManagement.trigger";
+export { rejectFriendRequestFunction as rejectFriendRequest } from "./triggers/friend/friendManagement.trigger";
+export { removeFriendFunction as removeFriend } from "./triggers/friend/friendManagement.trigger";
+export { getFriendsFunction as getFriends } from "./triggers/friend/friendManagement.trigger";
+export { getFriendRequestsFunction as getFriendRequests } from "./triggers/friend/friendManagement.trigger";
