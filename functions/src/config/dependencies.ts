@@ -1,9 +1,7 @@
-import {SessionRepositoryFactory} from "../domain/auth/repositories/factory/SessionRepositoryFactory";
 import {FriendRepositoryFactory} from "../domain/friend/repositories/factory/FriendRepositoryFactory";
 import {UserRepositoryFactory} from "../domain/user/repositories/factory/UserRepositoryFactory";
 import {ProjectRepositoryFactory} from "../domain/project/repositories/factory/ProjectRepositoryFactory";
 import {
-  AuthSessionUseCaseProvider,
   FriendUseCaseProvider,
   UserUseCaseProvider,
   ProjectUseCaseProvider,
@@ -63,10 +61,6 @@ export class DependencyConfig {
 
     const container = DependencyConfig.container;
 
-    container.register(
-      ProviderKeys.SESSION_REPOSITORY_FACTORY,
-      new SessionRepositoryFactory()
-    );
 
     container.register(
       ProviderKeys.FRIEND_REPOSITORY_FACTORY,
@@ -104,14 +98,6 @@ export class DependencyConfig {
 
     const container = DependencyConfig.container;
 
-    // Auth Session Use Case Provider
-    container.register(
-      ProviderKeys.AUTH_SESSION_USECASE_PROVIDER,
-      new AuthSessionUseCaseProvider(
-        container.get(ProviderKeys.SESSION_REPOSITORY_FACTORY),
-        container.get(ProviderKeys.USER_REPOSITORY_FACTORY)
-      )
-    );
 
     // Friend Use Case Provider
     container.register(
@@ -187,7 +173,6 @@ export function getProvider<T>(key: string): T {
  * Type-safe helper functions for getting specific providers
  */
 export const Providers = {
-  getAuthSessionProvider: () => getProvider<AuthSessionUseCaseProvider>(ProviderKeys.AUTH_SESSION_USECASE_PROVIDER),
   getFriendProvider: () => getProvider<FriendUseCaseProvider>(ProviderKeys.FRIEND_USECASE_PROVIDER),
   getUserProvider: () => getProvider<UserUseCaseProvider>(ProviderKeys.USER_USECASE_PROVIDER),
   getProjectProvider: () => getProvider<ProjectUseCaseProvider>(ProviderKeys.PROJECT_USECASE_PROVIDER),

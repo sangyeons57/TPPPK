@@ -18,10 +18,6 @@ if (!admin.apps.length) {
 // Initialize dependency injection container
 DependencyConfig.initialize();
 
-// Authentication functions
-export {loginUserFunction as loginUser} from "./triggers/auth/session.trigger";
-export {logoutUserFunction as logoutUser} from "./triggers/auth/session.trigger";
-export {registerUserFunction as registerUser} from "./triggers/auth/signup.trigger";
 
 // User management functions
 export {updateUserProfileFunction as updateUserProfile} from "./triggers/user/userProfile.trigger";
