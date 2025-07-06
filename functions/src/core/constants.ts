@@ -21,8 +21,8 @@ export const DATABASE_ID = "(default)" as const;
 
 // Storage Configuration
 export const STORAGE_BUCKETS = {
-  USER_PROFILES: "user-profiles",
-  PROJECT_IMAGES: "project-images",
+  USER_PROFILES: "teamnovaprojectprojecting",
+  PROJECT_IMAGES: "teamnovaprojectprojecting",
 } as const;
 
 export const STORAGE_ROOT = {
