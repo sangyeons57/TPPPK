@@ -68,17 +68,13 @@ export class FirestoreFriendDataSource implements FriendDatasource {
 
   async findByUserIds(userId: string, friendUserId: string): Promise<CustomResult<FriendEntity | null>> {
     try {
-      const query = this.getUserFriendsCollection(userId)
-        .where("name", "==", friendUserId) // name 필드에 친구의 userId를 저장한다고 가정
-        .limit(1);
+      // Use friendUserId as document ID to find the friend document
+      const doc = await this.getUserFriendsCollection(userId).doc(friendUserId).get();
 
-      const snapshot = await query.get();
-
-      if (snapshot.empty) {
+      if (!doc.exists) {
         return Result.success(null);
       }
 
-      const doc = snapshot.docs[0];
       return this.createFriendEntity(doc);
     } catch (error) {
       return Result.failure(
@@ -223,15 +219,12 @@ export class FirestoreFriendDataSource implements FriendDatasource {
 
       // Use the userId parameter to determine which user's collection to save to
       const collection = this.getUserFriendsCollection(userId);
-      const docRef = await collection.add(docData);
+      // Use custom ID (friend.id) instead of auto-generated ID
+      const docRef = collection.doc(friend.id);
+      await docRef.set(docData);
 
-      // 새로 생성된 ID로 엔티티 재생성
-      const savedEntityResult = FriendEntity.fromData({
-        ...friendData,
-        id: docRef.id,
-      });
-
-      return savedEntityResult;
+      // Return the original friend entity with the same ID
+      return Result.success(friend);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to save friend: ${error instanceof Error ? error.message : "Unknown error"}`)
