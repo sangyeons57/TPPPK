@@ -1,8 +1,8 @@
-import { CustomResult, Result } from '../../../core/types';
-import { ValidationError, ConflictError, NotFoundError } from '../../../core/errors';
-import { FriendRepository } from '../../../domain/friend/repositories/friend.repository';
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { FriendEntity, UserId } from '../../../domain/friend/entities/friend.entity';
+import {CustomResult, Result} from "../../../core/types";
+import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
+import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
+import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {FriendEntity, UserId} from "../../../domain/friend/entities/friend.entity";
 
 export interface SendFriendRequestRequest {
   requesterId: string;
@@ -25,11 +25,11 @@ export class SendFriendRequestUseCase {
     try {
       // 입력 검증
       if (!request.requesterId || !request.receiverUserId) {
-        return Result.failure(new ValidationError('userId', 'Both requester and receiver IDs are required'));
+        return Result.failure(new ValidationError("userId", "Both requester and receiver IDs are required"));
       }
 
       if (request.requesterId === request.receiverUserId) {
-        return Result.failure(new ValidationError('receiverUserId', 'Cannot send friend request to yourself'));
+        return Result.failure(new ValidationError("receiverUserId", "Cannot send friend request to yourself"));
       }
 
       const requesterId = new UserId(request.requesterId);
@@ -41,7 +41,7 @@ export class SendFriendRequestUseCase {
         return Result.failure(requesterResult.error);
       }
       if (!requesterResult.data) {
-        return Result.failure(new NotFoundError('Requester not found'));
+        return Result.failure(new NotFoundError("Requester not found", "requesterResult"));
       }
 
       // 수신자 존재 확인
@@ -50,12 +50,16 @@ export class SendFriendRequestUseCase {
         return Result.failure(receiverResult.error);
       }
       if (!receiverResult.data) {
-        return Result.failure(new NotFoundError('Receiver not found'));
+        return Result.failure(
+          new NotFoundError("Receiver not found", "receiverResult")
+        );
       }
 
       // 수신자가 친구 요청을 받을 수 있는지 확인
       if (!receiverResult.data.canReceiveRequests()) {
-        return Result.failure(new ConflictError('User is not accepting friend requests'));
+        return Result.failure(
+          new ConflictError("User is not accepting friend requests", "canReceiveRequests", "receiverResult")
+        );
       }
 
       // 이미 친구인지 확인
@@ -64,7 +68,9 @@ export class SendFriendRequestUseCase {
         return Result.failure(areFriendsResult.error);
       }
       if (areFriendsResult.data) {
-        return Result.failure(new ConflictError('Users are already friends'));
+        return Result.failure(
+          new ConflictError("Users are already friends", "areUsersFriends", "areFriendsResult")
+        );
       }
 
       // 기존 친구 요청 확인 (양방향)
@@ -73,7 +79,9 @@ export class SendFriendRequestUseCase {
         return Result.failure(existingRequestResult.error);
       }
       if (existingRequestResult.data) {
-        return Result.failure(new ConflictError('Friend request already exists'));
+        return Result.failure(
+          new ConflictError("Friend request already exists", "friendRequestExists", "reverseRequestResult")
+        );
       }
 
       const reverseRequestResult = await this.friendRepository.friendRequestExists(receiverId, requesterId);
@@ -81,7 +89,9 @@ export class SendFriendRequestUseCase {
         return Result.failure(reverseRequestResult.error);
       }
       if (reverseRequestResult.data) {
-        return Result.failure(new ConflictError('Friend request already exists from the other user'));
+        return Result.failure(
+          new ConflictError("Friend request already exists", "friendRequestExists", "reverseRequestResult")
+        );
       }
 
       // 친구 요청 생성
@@ -101,10 +111,12 @@ export class SendFriendRequestUseCase {
       return Result.success({
         friendRequestId: savedFriend.id.value,
         status: savedFriend.status,
-        requestedAt: savedFriend.requestedAt.toISOString()
+        requestedAt: savedFriend.requestedAt.toISOString(),
       });
     } catch (error) {
-      return Result.failure(error instanceof Error ? error : new Error('Failed to send friend request'));
+      return Result.failure(
+        error instanceof Error ? error : new Error("Failed to send friend request")
+      );
     }
   }
 }

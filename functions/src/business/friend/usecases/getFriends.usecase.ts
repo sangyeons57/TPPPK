@@ -1,9 +1,9 @@
-import { CustomResult, Result } from '../../../core/types';
-import { ValidationError, NotFoundError } from '../../../core/errors';
-import { FriendRepository } from '../../../domain/friend/repositories/friend.repository';
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { UserId, FriendStatus } from '../../../domain/friend/entities/friend.entity';
-import { UserSearchProfile } from '../../../domain/user/entities/user.entity';
+import {CustomResult, Result} from "../../../core/types";
+import {ValidationError, NotFoundError} from "../../../core/errors";
+import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
+import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {UserId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {UserSearchProfile} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendsRequest {
   userId: string;
@@ -37,7 +37,7 @@ export class GetFriendsUseCase {
     try {
       // 입력 검증
       if (!request.userId) {
-        return Result.failure(new ValidationError('userId', 'User ID is required'));
+        return Result.failure(new ValidationError("userId", "User ID is required"));
       }
 
       const userId = new UserId(request.userId);
@@ -50,12 +50,12 @@ export class GetFriendsUseCase {
         return Result.failure(userResult.error);
       }
       if (!userResult.data) {
-        return Result.failure(new NotFoundError('User not found'));
+        return Result.failure(new NotFoundError("User not found", request.userId));
       }
 
       // 친구 관계 조회
       const friendsResult = await this.friendRepository.findFriendsByUserId(
-        userId, 
+        userId,
         request.status || FriendStatus.ACCEPTED
       );
       if (!friendsResult.success) {
@@ -63,34 +63,32 @@ export class GetFriendsUseCase {
       }
 
       const friendRelations = friendsResult.data;
-      
+
       // 페이징 적용
       const paginatedRelations = friendRelations.slice(offset, offset + limit);
       const hasMore = friendRelations.length > offset + limit;
 
       // 친구 사용자 정보 조회
       const friendInfos: FriendInfo[] = [];
-      
+
       for (const relation of paginatedRelations) {
         // 친구의 UserId 결정 (현재 사용자가 아닌 상대방)
-        const friendUserId = relation.isRequester(userId) 
-          ? relation.friendUserId.value 
-          : relation.userId.value;
+        const friendUserId = relation.isRequester(userId) ? relation.friendUserId.value : relation.userId.value;
 
         // 친구 사용자 정보 조회
         const friendUserResult = await this.userRepository.findByUserId(friendUserId);
         if (friendUserResult.success && friendUserResult.data) {
           const friendUser = friendUserResult.data;
-          
+
           friendInfos.push({
             friendId: relation.id.value,
             userId: friendUserId,
             user: friendUser.toSearchProfile(true, false),
             status: relation.status,
-            friendsSince: relation.status === FriendStatus.ACCEPTED && relation.respondedAt 
-              ? relation.respondedAt.toISOString() 
-              : undefined,
-            requestedAt: relation.requestedAt.toISOString()
+            friendsSince:
+              relation.status === FriendStatus.ACCEPTED &&
+              relation.respondedAt ? relation.respondedAt.toISOString() : undefined,
+            requestedAt: relation.requestedAt.toISOString(),
           });
         }
       }
@@ -98,10 +96,10 @@ export class GetFriendsUseCase {
       return Result.success({
         friends: friendInfos,
         totalCount: friendRelations.length,
-        hasMore
+        hasMore,
       });
     } catch (error) {
-      return Result.failure(error instanceof Error ? error : new Error('Failed to get friends'));
+      return Result.failure(error instanceof Error ? error : new Error("Failed to get friends"));
     }
   }
 }

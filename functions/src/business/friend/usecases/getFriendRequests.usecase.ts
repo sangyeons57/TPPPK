@@ -1,13 +1,13 @@
-import { CustomResult, Result } from '../../../core/types';
-import { ValidationError, NotFoundError } from '../../../core/errors';
-import { FriendRepository } from '../../../domain/friend/repositories/friend.repository';
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { UserId } from '../../../domain/friend/entities/friend.entity';
-import { UserSearchProfile } from '../../../domain/user/entities/user.entity';
+import {CustomResult, Result} from "../../../core/types";
+import {ValidationError, NotFoundError} from "../../../core/errors";
+import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
+import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {UserId} from "../../../domain/friend/entities/friend.entity";
+import {UserSearchProfile} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendRequestsRequest {
   userId: string;
-  type: 'received' | 'sent';
+  type: "received" | "sent";
   limit?: number;
   offset?: number;
 }
@@ -39,11 +39,11 @@ export class GetFriendRequestsUseCase {
     try {
       // 입력 검증
       if (!request.userId) {
-        return Result.failure(new ValidationError('userId', 'User ID is required'));
+        return Result.failure(new ValidationError("userId", "User ID is required"));
       }
 
-      if (!['received', 'sent'].includes(request.type)) {
-        return Result.failure(new ValidationError('type', 'Type must be either "received" or "sent"'));
+      if (!["received", "sent"].includes(request.type)) {
+        return Result.failure(new ValidationError("type", "Type must be either 'received' or 'sent'"));
       }
 
       const userId = new UserId(request.userId);
@@ -56,12 +56,12 @@ export class GetFriendRequestsUseCase {
         return Result.failure(userResult.error);
       }
       if (!userResult.data) {
-        return Result.failure(new NotFoundError('User not found'));
+        return Result.failure(new NotFoundError("User not found", request.userId));
       }
 
       // 친구 요청 조회
       let requestsResult;
-      if (request.type === 'received') {
+      if (request.type === "received") {
         requestsResult = await this.friendRepository.findReceivedFriendRequests(userId);
       } else {
         requestsResult = await this.friendRepository.findSentFriendRequests(userId);
@@ -72,14 +72,14 @@ export class GetFriendRequestsUseCase {
       }
 
       const friendRequests = requestsResult.data;
-      
+
       // 페이징 적용
       const paginatedRequests = friendRequests.slice(offset, offset + limit);
       const hasMore = friendRequests.length > offset + limit;
 
       // 친구 요청 정보 구성
       const requestInfos: FriendRequestInfo[] = [];
-      
+
       for (const friendRequest of paginatedRequests) {
         const requestInfo: FriendRequestInfo = {
           requestId: friendRequest.id.value,
@@ -87,11 +87,11 @@ export class GetFriendRequestsUseCase {
           receiverUserId: friendRequest.friendUserId.value,
           status: friendRequest.status,
           requestedAt: friendRequest.requestedAt.toISOString(),
-          respondedAt: friendRequest.respondedAt?.toISOString()
+          respondedAt: friendRequest.respondedAt?.toISOString(),
         };
 
         // 요청자 정보 조회 (received 타입일 때 또는 sent 타입에서 상대방 정보)
-        if (request.type === 'received' || request.type === 'sent') {
+        if (request.type === "received" || request.type === "sent") {
           const requesterResult = await this.userRepository.findByUserId(friendRequest.userId.value);
           if (requesterResult.success && requesterResult.data) {
             requestInfo.requester = requesterResult.data.toSearchProfile();
@@ -109,10 +109,10 @@ export class GetFriendRequestsUseCase {
       return Result.success({
         requests: requestInfos,
         totalCount: friendRequests.length,
-        hasMore
+        hasMore,
       });
     } catch (error) {
-      return Result.failure(error instanceof Error ? error : new Error('Failed to get friend requests'));
+      return Result.failure(error instanceof Error ? error : new Error("Failed to get friend requests"));
     }
   }
 }

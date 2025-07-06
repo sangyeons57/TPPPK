@@ -1,8 +1,8 @@
-import { ImageProcessingService, ProcessedImageEntity } from '../../../core/services/imageProcessing.service';
-import { ProjectRepository } from '../../../domain/project/repositories/project.repository';
-import { ImageType } from '../../../core/types/image.types';
-import { CustomResult, Result } from '../../../core/types';
-import { NotFoundError, UnauthorizedError } from '../../../core/errors';
+import {ImageProcessingService} from "../../../core/services/imageProcessing.service";
+import {ProjectRepository} from "../../../domain/project/repositories/project.repository";
+import {ImageType} from "../../../core/types/image.types";
+import {CustomResult, Result} from "../../../core/types";
+import {NotFoundError, UnauthorizedError} from "../../../core/errors";
 
 export interface UpdateProjectImageRequest {
   projectId: string;
@@ -32,11 +32,13 @@ export class UpdateProjectImageUseCase {
 
       const project = projectResult.data;
       if (!project) {
-        return Result.failure(new NotFoundError('Project', request.projectId));
+        return Result.failure(new NotFoundError("Project", request.projectId));
       }
 
       if (project.ownerId !== request.userId) {
-        return Result.failure(new UnauthorizedError('Only project owner can update project image'));
+        return Result.failure(
+          new UnauthorizedError("Only project owner can update project image")
+        );
       }
 
       const processResult = await this.imageProcessingService.processAndUploadImage(
@@ -53,7 +55,7 @@ export class UpdateProjectImageUseCase {
       const processedImage = processResult.data;
 
       const updatedProject = project.updateProject({
-        image: processedImage.originalUrl
+        image: processedImage.originalUrl,
       });
 
       const updateResult = await this.projectRepository.update(updatedProject);
@@ -65,10 +67,12 @@ export class UpdateProjectImageUseCase {
       return Result.success({
         imageUrl: processedImage.originalUrl.value,
         thumbnailUrl: processedImage.thumbnailUrl?.value,
-        project: updateResult.data
+        project: updateResult.data,
       });
     } catch (error) {
-      return Result.failure(new Error(`Failed to update project image: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return Result.failure(
+        new Error(`Failed to update project image: ${error instanceof Error ? error.message : "Unknown error"}`)
+      );
     }
   }
 }

@@ -1,8 +1,8 @@
-import { CustomResult, Result } from '../../../core/types';
-import { ValidationError, ConflictError, NotFoundError } from '../../../core/errors';
-import { FriendRepository } from '../../../domain/friend/repositories/friend.repository';
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { FriendEntity, UserId, FriendId, FriendStatus } from '../../../domain/friend/entities/friend.entity';
+import {CustomResult, Result} from "../../../core/types";
+import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
+import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
+import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {FriendEntity, UserId, FriendId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
 
 export interface AcceptFriendRequestRequest {
   friendRequestId: string;
@@ -26,7 +26,7 @@ export class AcceptFriendRequestUseCase {
     try {
       // 입력 검증
       if (!request.friendRequestId || !request.userId) {
-        return Result.failure(new ValidationError('request', 'Friend request ID and user ID are required'));
+        return Result.failure(new ValidationError("request", "Friend request ID and user ID are required"));
       }
 
       const friendId = new FriendId(request.friendRequestId);
@@ -38,19 +38,19 @@ export class AcceptFriendRequestUseCase {
         return Result.failure(friendRequestResult.error);
       }
       if (!friendRequestResult.data) {
-        return Result.failure(new NotFoundError('Friend request not found'));
+        return Result.failure(new NotFoundError("Friend request not found", request.friendRequestId));
       }
 
       const friendRequest = friendRequestResult.data;
 
       // 요청 수신자가 맞는지 확인
       if (!friendRequest.isReceiver(userId)) {
-        return Result.failure(new ValidationError('userId', 'Only the request receiver can accept this friend request'));
+        return Result.failure(new ValidationError("userId", "Only the request receiver can accept this friend request"));
       }
 
       // 요청 상태 확인
       if (friendRequest.status !== FriendStatus.REQUESTED) {
-        return Result.failure(new ConflictError(`Cannot accept friend request. Current status: ${friendRequest.status}`));
+        return Result.failure(new ConflictError("friendRequest", "status", friendRequest.status));
       }
 
       // 사용자 존재 확인
@@ -59,7 +59,7 @@ export class AcceptFriendRequestUseCase {
         return Result.failure(userResult.error);
       }
       if (!userResult.data) {
-        return Result.failure(new NotFoundError('User not found'));
+        return Result.failure(new NotFoundError("User not found", request.userId));
       }
 
       // 친구 요청 수락
@@ -79,26 +79,26 @@ export class AcceptFriendRequestUseCase {
       // 상대방을 위한 친구 관계 생성 (양방향 관계)
       const reciprocalFriendResult = FriendEntity.createFriendRequest(
         friendRequest.friendUserId, // 원래 수신자
-        friendRequest.userId        // 원래 요청자
+        friendRequest.userId // 원래 요청자
       );
 
       if (!reciprocalFriendResult.success) {
         // 원본 친구 관계는 이미 저장되었으므로 롤백하지 않고 에러만 반환
-        return Result.failure(new Error('Failed to create reciprocal friend relationship'));
+        return Result.failure(new Error("Failed to create reciprocal friend relationship"));
       }
 
       // 상대방 친구 관계를 즉시 수락 상태로 변경
       const reciprocalFriend = reciprocalFriendResult.data;
       const acceptReciprocalResult = reciprocalFriend.accept();
       if (!acceptReciprocalResult.success) {
-        return Result.failure(new Error('Failed to accept reciprocal friend relationship'));
+        return Result.failure(new Error("Failed to accept reciprocal friend relationship"));
       }
 
       // 상대방 친구 관계 저장
       const saveReciprocalResult = await this.friendRepository.save(acceptReciprocalResult.data);
       if (!saveReciprocalResult.success) {
         // 이 경우 데이터 일관성이 깨질 수 있으므로 에러 반환
-        return Result.failure(new Error('Failed to save reciprocal friend relationship'));
+        return Result.failure(new Error("Failed to save reciprocal friend relationship"));
       }
 
       // 양쪽 사용자의 친구 수 업데이트 (백그라운드에서 수행)
@@ -108,16 +108,13 @@ export class AcceptFriendRequestUseCase {
         friendRequestId: acceptedFriend.id.value,
         status: acceptedFriend.status,
         acceptedAt: acceptedFriend.respondedAt!.toISOString(),
-        reciprocalFriendId: saveReciprocalResult.data.id.value
+        reciprocalFriendId: saveReciprocalResult.data.id.value,
       });
     } catch (error) {
-      return Result.failure(error instanceof Error ? error : new Error('Failed to accept friend request'));
+      return Result.failure(error instanceof Error ? error : new Error("Failed to accept friend request"));
     }
   }
 
-  /**
-   * 사용자들의 친구 수를 업데이트합니다 (백그라운드 작업)
-   */
   private async updateFriendCounts(userId1: string, userId2: string): Promise<void> {
     try {
       // 사용자 1의 친구 수 업데이트
@@ -141,7 +138,7 @@ export class AcceptFriendRequestUseCase {
       }
     } catch (error) {
       // 친구 수 업데이트 실패는 주요 기능에 영향을 주지 않으므로 로그만 남김
-      console.error('Failed to update friend counts:', error);
+      console.error("Failed to update friend counts:", error);
     }
   }
 }

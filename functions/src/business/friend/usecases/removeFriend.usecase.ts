@@ -1,11 +1,11 @@
-import { CustomResult, Result } from '../../../core/types';
-import { ValidationError, ConflictError, NotFoundError } from '../../../core/errors';
-import { FriendRepository } from '../../../domain/friend/repositories/friend.repository';
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { UserId, FriendStatus } from '../../../domain/friend/entities/friend.entity';
+import {CustomResult, Result} from "../../../core/types";
+import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
+import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
+import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {UserId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
 
 export interface RemoveFriendRequest {
-  userId: string;       // 친구를 제거하는 사용자
+  userId: string;// 친구를 제거하는 사용자
   friendUserId: string; // 제거될 친구
 }
 
@@ -24,11 +24,15 @@ export class RemoveFriendUseCase {
     try {
       // 입력 검증
       if (!request.userId || !request.friendUserId) {
-        return Result.failure(new ValidationError('request', 'Both user ID and friend user ID are required'));
+        return Result.failure(
+          new ValidationError("request", "Both user ID and friend user ID are required")
+        );
       }
 
       if (request.userId === request.friendUserId) {
-        return Result.failure(new ValidationError('friendUserId', 'Cannot remove yourself as a friend'));
+        return Result.failure(
+          new ValidationError("friendUserId", "Cannot remove yourself as a friend")
+        );
       }
 
       const userId = new UserId(request.userId);
@@ -40,7 +44,7 @@ export class RemoveFriendUseCase {
         return Result.failure(userResult.error);
       }
       if (!userResult.data) {
-        return Result.failure(new NotFoundError('User not found'));
+        return Result.failure(new NotFoundError("User not found", "userResult"));
       }
 
       // 친구 사용자 존재 확인
@@ -49,7 +53,9 @@ export class RemoveFriendUseCase {
         return Result.failure(friendUserResult.error);
       }
       if (!friendUserResult.data) {
-        return Result.failure(new NotFoundError('Friend user not found'));
+        return Result.failure(
+          new NotFoundError("Friend user not found", "friendUserResult")
+        );
       }
 
       // 현재 친구 관계인지 확인
@@ -58,7 +64,9 @@ export class RemoveFriendUseCase {
         return Result.failure(areFriendsResult.error);
       }
       if (!areFriendsResult.data) {
-        return Result.failure(new ConflictError('Users are not friends'));
+        return Result.failure(
+          new ConflictError("Users are not friends", "areUsersFriends", "areFriendsResult")
+        );
       }
 
       // 양방향 친구 관계 조회
@@ -74,7 +82,9 @@ export class RemoveFriendUseCase {
       }
 
       if (relations.length === 0) {
-        return Result.failure(new NotFoundError('Friend relationship not found'));
+        return Result.failure(
+          new NotFoundError("Friend relationship not found", "friendRelation1Result")
+        );
       }
 
       const now = new Date();
@@ -92,7 +102,9 @@ export class RemoveFriendUseCase {
       }
 
       if (removedRelations.length === 0) {
-        return Result.failure(new ConflictError('No active friend relationships to remove'));
+        return Result.failure(
+          new ConflictError("No active friend relationships to remove", "removedRelations.length", "removedRelations")
+        );
       }
 
       // 제거된 관계 저장
@@ -100,7 +112,7 @@ export class RemoveFriendUseCase {
         const saveResult = await this.friendRepository.update(removedRelation);
         if (!saveResult.success) {
           // 일부만 저장되었을 수 있으므로 에러를 반환하지만 성공한 것은 유지
-          console.error('Failed to save removed friend relation:', saveResult.error);
+          console.error("Failed to save removed friend relation:", saveResult.error);
         }
       }
 
@@ -113,16 +125,15 @@ export class RemoveFriendUseCase {
 
       return Result.success({
         success: true,
-        removedAt: now.toISOString()
+        removedAt: now.toISOString(),
       });
     } catch (error) {
-      return Result.failure(error instanceof Error ? error : new Error('Failed to remove friend'));
+      return Result.failure(
+        error instanceof Error ? error : new Error("Failed to remove friend")
+      );
     }
   }
 
-  /**
-   * 사용자들의 친구 수를 업데이트합니다 (백그라운드 작업)
-   */
   private async updateFriendCounts(userId1: string, userId2: string): Promise<void> {
     try {
       // 사용자 1의 친구 수 업데이트
@@ -146,7 +157,7 @@ export class RemoveFriendUseCase {
       }
     } catch (error) {
       // 친구 수 업데이트 실패는 주요 기능에 영향을 주지 않으므로 로그만 남김
-      console.error('Failed to update friend counts:', error);
+      console.error("Failed to update friend counts:", error);
     }
   }
 }

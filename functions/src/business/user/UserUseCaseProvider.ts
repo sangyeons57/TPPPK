@@ -1,9 +1,9 @@
-import { RepositoryFactory } from '../../domain/shared/RepositoryFactory';
-import { UserRepositoryFactoryContext } from '../../domain/user/repositories/factory/UserRepositoryFactoryContext';
-import { UserProfileRepository } from '../../domain/user/repositories/userProfile.repository';
-import { ImageRepository, ImageProcessingService } from '../../core/services/imageProcessing.service';
-import { UpdateUserProfileUseCase } from './usecases/updateUserProfile.usecase';
-import { ProcessUserImageUseCase } from './usecases/processUserImage.usecase';
+import {RepositoryFactory} from "../../domain/shared/RepositoryFactory";
+import {UserRepositoryFactoryContext} from "../../domain/user/repositories/factory/UserRepositoryFactoryContext";
+import {UserProfileRepository} from "../../domain/user/repositories/userProfile.repository";
+import {ImageProcessingService} from "../../core/services/imageProcessing.service";
+import {UpdateUserProfileUseCase} from "./usecases/updateUserProfile.usecase";
+import {ProcessUserImageUseCase} from "./usecases/processUserImage.usecase";
 
 /**
  * Interface for user management use cases
@@ -11,7 +11,7 @@ import { ProcessUserImageUseCase } from './usecases/processUserImage.usecase';
 export interface UserUseCases {
   updateUserProfileUseCase: UpdateUserProfileUseCase;
   processUserImageUseCase: ProcessUserImageUseCase;
-  
+
   // Common repositories for advanced use cases
   userProfileRepository: UserProfileRepository;
   imageProcessingService: ImageProcessingService;
@@ -27,11 +27,6 @@ export class UserUseCaseProvider {
     private readonly imageProcessingService: ImageProcessingService
   ) {}
 
-  /**
-   * Creates user management use cases
-   * @param context - Optional context for repository creation
-   * @returns UserUseCases instance
-   */
   create(context?: UserRepositoryFactoryContext): UserUseCases {
     const userProfileRepository = this.userRepositoryFactory.create(context);
 
@@ -39,7 +34,7 @@ export class UserUseCaseProvider {
       updateUserProfileUseCase: new UpdateUserProfileUseCase(
         userProfileRepository
       ),
-      
+
       processUserImageUseCase: new ProcessUserImageUseCase(
         this.imageProcessingService,
         userProfileRepository
@@ -47,7 +42,7 @@ export class UserUseCaseProvider {
 
       // Common repositories
       userProfileRepository,
-      imageProcessingService: this.imageProcessingService
+      imageProcessingService: this.imageProcessingService,
     };
   }
 }

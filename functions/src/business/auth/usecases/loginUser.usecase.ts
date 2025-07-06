@@ -1,9 +1,9 @@
-import { SessionRepository } from '../../../domain/auth/repositories/session.repository';
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { SessionEntity, SessionToken, RefreshToken } from '../../../domain/auth/entities/session.entity';
-import { Email } from '../../../domain/user/entities/user.entity';
-import { CustomResult, Result } from '../../../core/types';
-import { UnauthorizedError, NotFoundError } from '../../../core/errors';
+import {SessionRepository} from "../../../domain/auth/repositories/session.repository";
+import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {SessionEntity, SessionToken, RefreshToken} from "../../../domain/auth/entities/session.entity";
+import {Email} from "../../../domain/user/entities/user.entity";
+import {CustomResult, Result} from "../../../core/types";
+import {UnauthorizedError} from "../../../core/errors";
 
 export interface LoginUserRequest {
   email: string;
@@ -34,16 +34,16 @@ export class LoginUserUseCase {
 
       const user = userResult.data;
       if (!user) {
-        return Result.failure(new UnauthorizedError('Invalid email or password'));
+        return Result.failure(new UnauthorizedError("Invalid email or password"));
       }
 
       if (!user.isActive) {
-        return Result.failure(new UnauthorizedError('Account is deactivated'));
+        return Result.failure(new UnauthorizedError("Account is deactivated"));
       }
 
       const isValidPassword = await this.validatePassword(request.password, user.userId);
       if (!isValidPassword) {
-        return Result.failure(new UnauthorizedError('Invalid email or password'));
+        return Result.failure(new UnauthorizedError("Invalid email or password"));
       }
 
       const session = this.createSession(user.userId, request.deviceInfo, request.ipAddress);
@@ -57,10 +57,10 @@ export class LoginUserUseCase {
         sessionToken: session.token.value,
         refreshToken: session.refreshToken.value,
         expiresAt: session.expiresAt,
-        userProfile: user
+        userProfile: user,
       });
     } catch (error) {
-      return Result.failure(new Error(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return Result.failure(new Error(`Login failed: ${error instanceof Error ? error.message : "Unknown error"}`));
     }
   }
 

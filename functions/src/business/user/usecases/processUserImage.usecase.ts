@@ -1,8 +1,8 @@
-import { ImageProcessingService, ProcessedImageEntity } from '../../../core/services/imageProcessing.service';
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { ImageType } from '../../../core/types/image.types';
-import { CustomResult, Result } from '../../../core/types';
-import { NotFoundError, ValidationError } from '../../../core/errors';
+import {ImageProcessingService} from "../../../core/services/imageProcessing.service";
+import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {ImageType} from "../../../core/types/image.types";
+import {CustomResult, Result} from "../../../core/types";
+import {NotFoundError} from "../../../core/errors";
 
 export interface ProcessUserImageRequest {
   userId: string;
@@ -32,7 +32,7 @@ export class ProcessUserImageUseCase {
 
       const userProfile = userProfileResult.data;
       if (!userProfile) {
-        return Result.failure(new NotFoundError('UserProfile', request.userId));
+        return Result.failure(new NotFoundError("UserProfile", request.userId));
       }
 
       const processResult = await this.imageProcessingService.processAndUploadImage(
@@ -49,7 +49,7 @@ export class ProcessUserImageUseCase {
       const processedImage = processResult.data;
 
       const updatedProfile = userProfile.updateProfile({
-        profileImage: processedImage.originalUrl
+        profileImage: processedImage.originalUrl,
       });
 
       const updateResult = await this.userProfileRepository.update(updatedProfile);
@@ -61,10 +61,10 @@ export class ProcessUserImageUseCase {
       return Result.success({
         imageUrl: processedImage.originalUrl.value,
         thumbnailUrl: processedImage.thumbnailUrl?.value,
-        userProfile: updateResult.data
+        userProfile: updateResult.data,
       });
     } catch (error) {
-      return Result.failure(new Error(`Failed to process user image: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return Result.failure(new Error(`Failed to process user image: ${error instanceof Error ? error.message : "Unknown error"}`));
     }
   }
 }
