@@ -3,7 +3,6 @@ import {ValidationError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {FriendStatus} from "../../../domain/friend/entities/friend.entity";
-import {UserId} from "../../../core/validation";
 import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendsRequest {
@@ -74,7 +73,7 @@ export class GetFriendsUseCase {
 
       for (const relation of paginatedRelations) {
         // Friend ID가 상대방의 userId
-        const friendUserId = relation.id.value;
+        const friendUserId = relation.id;
 
         // 친구 사용자 정보 조회
         const friendUserResult = await this.userRepository.findByUserId(friendUserId);
@@ -82,7 +81,7 @@ export class GetFriendsUseCase {
           const friendUser = friendUserResult.data;
 
           friendInfos.push({
-            friendId: relation.id.value,
+            friendId: relation.id,
             userId: friendUserId,
             user: {
               id: friendUser.id,

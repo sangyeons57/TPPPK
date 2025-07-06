@@ -1,7 +1,6 @@
 import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {ProjectRepository} from "../../../domain/project/repositories/project.repository";
-import {ProjectImage} from "../../../domain/project/entities/project.entity";
 
 export interface UpdateProjectImageRequest {
   projectId: string;
@@ -46,10 +45,9 @@ export class UpdateProjectImageUseCase {
 
       const project = projectResult.data;
 
-      // Create new ProjectImage and update project
-      const newImage = new ProjectImage(request.imageUrl);
+      // Update project image
       const updatedProject = project.updateProject({
-        image: newImage
+        image: request.imageUrl
       });
 
       // Save updated project
@@ -60,7 +58,7 @@ export class UpdateProjectImageUseCase {
 
       return Result.success({
         projectId: updatedProject.id,
-        imageUrl: updatedProject.image?.value,
+        imageUrl: updatedProject.image,
         updatedAt: updatedProject.updatedAt.toISOString()
       });
 

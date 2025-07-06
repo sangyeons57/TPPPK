@@ -2,7 +2,7 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {UserId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {FriendStatus} from "../../../domain/friend/entities/friend.entity";
 
 export interface RejectFriendRequestRequest {
   requesterId: string; // 요청자 ID (Friend ID로 사용됨)
@@ -28,8 +28,8 @@ export class RejectFriendRequestUseCase {
         return Result.failure(new ValidationError("request", "Requester ID and receiver ID are required"));
       }
 
-      const requesterId = new UserId(request.requesterId);
-      const receiverId = new UserId(request.receiverId);
+      const requesterId = request.requesterId;
+      const receiverId = request.receiverId;
 
       // 수신자의 friends subcollection에서 요청자의 Friend 조회
       const friendRequestResult = await this.friendRepository.findByUserIds(receiverId, requesterId);
@@ -71,7 +71,7 @@ export class RejectFriendRequestUseCase {
       }
 
       return Result.success({
-        friendId: rejectedFriend.id.value,
+        friendId: rejectedFriend.id,
         status: rejectedFriend.status,
         rejectedAt: rejectedFriend.updatedAt.toISOString(),
       });

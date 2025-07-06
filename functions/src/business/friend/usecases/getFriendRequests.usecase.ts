@@ -2,7 +2,6 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {UserId} from "../../../domain/friend/entities/friend.entity";
 import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendRequestsRequest {
@@ -46,17 +45,17 @@ export class GetFriendRequestsUseCase {
         return Result.failure(new ValidationError("type", "Type must be either 'received' or 'sent'"));
       }
 
-      const userId = new UserId(request.userId);
+      const userId = request.userId;
       const limit = request.limit || 50;
       const offset = request.offset || 0;
 
       // 사용자 존재 확인
-      const userResult = await this.userRepository.findByUserId(request.userId);
+      const userResult = await this.userRepository.findByUserId(userId);
       if (!userResult.success) {
         return Result.failure(userResult.error);
       }
       if (!userResult.data) {
-        return Result.failure(new NotFoundError("User not found", request.userId));
+        return Result.failure(new NotFoundError("User not found", userId));
       }
 
       // 친구 요청 조회
@@ -87,16 +86,16 @@ export class GetFriendRequestsUseCase {
         }
 
         const requestInfo: FriendRequestInfo = {
-          requestId: friendRequest.id.value,
-          requesterUserId: request.type === "received" ? friendRequest.id.value : request.userId, // Friend ID가 상대방 ID
-          receiverUserId: request.type === "received" ? request.userId : friendRequest.id.value,
+          requestId: friendRequest.id,
+          requesterUserId: request.type === "received" ? friendRequest.id : request.userId, // Friend ID가 상대방 ID
+          receiverUserId: request.type === "received" ? request.userId : friendRequest.id,
           status: friendRequest.status,
           requestedAt: friendRequest.requestedAt.toISOString(),
           respondedAt: friendRequest.acceptedAt?.toISOString(), // acceptedAt을 respondedAt으로 사용
         };
 
         // 상대방 정보 조회 (Friend ID가 상대방의 userId)
-        const otherUserId = friendRequest.id.value;
+        const otherUserId = friendRequest.id;
         const otherUserResult = await this.userRepository.findByUserId(otherUserId);
         if (otherUserResult.success && otherUserResult.data) {
           const otherUserInfo = {

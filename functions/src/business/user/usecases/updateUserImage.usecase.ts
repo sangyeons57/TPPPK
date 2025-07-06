@@ -1,7 +1,6 @@
 import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {ImageUrl} from "../../../domain/user/entities/user.entity";
 
 export interface UpdateUserImageRequest {
   userId: string;
@@ -46,10 +45,9 @@ export class UpdateUserImageUseCase {
 
       const user = userResult.data;
 
-      // Create new ImageUrl and update user
-      const newImageUrl = new ImageUrl(request.imageUrl);
+      // Update user profile image
       const updatedUser = user.updateProfile({
-        profileImageUrl: newImageUrl
+        profileImageUrl: request.imageUrl
       });
 
       // Save updated user
@@ -60,7 +58,7 @@ export class UpdateUserImageUseCase {
 
       return Result.success({
         userId: updatedUser.id,
-        profileImageUrl: updatedUser.profileImageUrl?.value,
+        profileImageUrl: updatedUser.profileImageUrl,
         updatedAt: updatedUser.updatedAt.toISOString()
       });
 

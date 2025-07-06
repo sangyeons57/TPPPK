@@ -1,7 +1,6 @@
 import {FriendRepository} from "../../domain/friend/repositories/friend.repository";
 import {FriendDatasource, FriendSearchCriteria} from "../datasources/interfaces/friend.datasource";
 import {FriendEntity, FriendStatus} from "../../domain/friend/entities/friend.entity";
-import {UserId, FriendId} from "../../core/validation";
 import {CustomResult} from "../../core/types";
 
 /**

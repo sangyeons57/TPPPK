@@ -3,7 +3,6 @@ import {ValidationError, ConflictError, NotFoundError} from "../../../core/error
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {FriendEntity} from "../../../domain/friend/entities/friend.entity";
-import {FriendId, UserId} from "../../../core/validation";
 
 export interface SendFriendRequestRequest {
   requesterId: string;

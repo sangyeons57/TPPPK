@@ -2,7 +2,7 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {UserId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {FriendStatus} from "../../../domain/friend/entities/friend.entity";
 
 export interface RemoveFriendRequest {
   userId: string;// 친구를 제거하는 사용자
@@ -35,8 +35,8 @@ export class RemoveFriendUseCase {
         );
       }
 
-      const userId = new UserId(request.userId);
-      const friendUserId = new UserId(request.friendUserId);
+      const userId = request.userId;
+      const friendUserId = request.friendUserId;
 
       // 사용자 존재 확인
       const userResult = await this.userRepository.findByUserId(request.userId);
@@ -137,7 +137,7 @@ export class RemoveFriendUseCase {
   private async updateFriendCounts(userId1: string, userId2: string): Promise<void> {
     try {
       // 사용자 1의 친구 수 업데이트
-      const user1FriendsResult = await this.friendRepository.countFriendsByUserId(new UserId(userId1));
+      const user1FriendsResult = await this.friendRepository.countFriendsByUserId(userId1);
       if (user1FriendsResult.success) {
         const user1Result = await this.userRepository.findByUserId(userId1);
         if (user1Result.success && user1Result.data) {
@@ -147,7 +147,7 @@ export class RemoveFriendUseCase {
       }
 
       // 사용자 2의 친구 수 업데이트
-      const user2FriendsResult = await this.friendRepository.countFriendsByUserId(new UserId(userId2));
+      const user2FriendsResult = await this.friendRepository.countFriendsByUserId(userId2);
       if (user2FriendsResult.success) {
         const user2Result = await this.userRepository.findByUserId(userId2);
         if (user2Result.success && user2Result.data) {

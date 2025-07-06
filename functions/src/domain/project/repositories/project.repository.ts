@@ -1,10 +1,10 @@
-import {ProjectEntity, ProjectStatus, ProjectName} from "../entities/project.entity";
+import {ProjectEntity, ProjectStatus} from "../entities/project.entity";
 import {CustomResult} from "../../../core/types";
 
 export interface ProjectRepository {
   findById(id: string): Promise<CustomResult<ProjectEntity | null>>;
   findByOwnerId(ownerId: string): Promise<CustomResult<ProjectEntity[]>>;
-  findByName(name: ProjectName): Promise<CustomResult<ProjectEntity | null>>;
+  findByName(name: string): Promise<CustomResult<ProjectEntity | null>>;
   findByStatus(status: ProjectStatus): Promise<CustomResult<ProjectEntity[]>>;
   save(project: ProjectEntity): Promise<CustomResult<ProjectEntity>>;
   update(project: ProjectEntity): Promise<CustomResult<ProjectEntity>>;

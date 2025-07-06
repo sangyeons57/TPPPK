@@ -1,6 +1,5 @@
 import { CustomResult } from '../../../core/types';
 import { FriendEntity, FriendStatus } from '../../../domain/friend/entities/friend.entity';
-import { UserId, FriendId } from '../../../core/validation';
 
 export interface FriendSearchCriteria {
   userId?: string;

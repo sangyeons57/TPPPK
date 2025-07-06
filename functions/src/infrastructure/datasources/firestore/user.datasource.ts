@@ -4,7 +4,6 @@ import {
   UserData,
   UserAccountStatus,
   UserStatus,
-  UserFcmToken,
 } from "../../../domain/user/entities/user.entity";
 import {CustomResult, Result} from "../../../core/types";
 import {DatabaseError} from "../../../core/errors";
@@ -223,9 +222,7 @@ export class FirestoreUserDataSource implements UserDataSource {
         return Result.failure(new ValidationError("userId", "User not found"));
       }
 
-      const updatedUser = userResult.data.updateFcmToken(
-        fcmToken ? new UserFcmToken(fcmToken) : undefined
-      );
+      const updatedUser = userResult.data.updateFcmToken(fcmToken);
       return await this.update(updatedUser);
     } catch (error) {
       return Result.failure(

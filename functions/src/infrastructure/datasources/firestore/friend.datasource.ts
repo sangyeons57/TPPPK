@@ -10,7 +10,6 @@ import {
   FriendStatus,
   FriendData,
 } from "../../../domain/friend/entities/friend.entity";
-import {FriendId, UserId} from "../../../core/validation";
 import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export class FirestoreFriendDataSource implements FriendDatasource {
@@ -214,7 +213,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
   async friendRequestExists(requesterId: string, receiverId: string): Promise<CustomResult<boolean>> {
     try {
       // 요청자의 subcollection에서 확인
-      const requesterQuery = this.getUserFriendsCollection(requesterId.value)
+      const requesterQuery = this.getUserFriendsCollection(requesterId)
         .where(FriendEntity.KEY_NAME, "==", receiverId)
         .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
         .limit(1);
@@ -226,7 +225,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       }
 
       // 수신자의 subcollection에서도 확인
-      const receiverQuery = this.getUserFriendsCollection(receiverId.value)
+      const receiverQuery = this.getUserFriendsCollection(receiverId)
         .where(FriendEntity.KEY_NAME, "==", requesterId)
         .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
         .limit(1);
@@ -285,7 +284,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       };
 
       // 단일 사용자의 subcollection에서 업데이트
-      const docRef = this.getUserFriendsCollection(friendData.name).doc(friend.id.value);
+      const docRef = this.getUserFriendsCollection(friendData.name).doc(friend.id);
       await docRef.update(docData);
       
       return Result.success(friend);

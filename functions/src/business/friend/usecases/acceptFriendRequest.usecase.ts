@@ -3,7 +3,6 @@ import {ValidationError, ConflictError, NotFoundError} from "../../../core/error
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {FriendEntity, FriendStatus} from "../../../domain/friend/entities/friend.entity";
-import {UserId, FriendId} from "../../../core/validation";
 
 export interface AcceptFriendRequestRequest {
   requesterId: string; // 요청자 ID (Friend ID로 사용됨)
@@ -107,7 +106,7 @@ export class AcceptFriendRequestUseCase {
   private async updateFriendCounts(userId1: string, userId2: string): Promise<void> {
     try {
       // 사용자 1의 친구 수 업데이트
-      const user1FriendsResult = await this.friendRepository.countFriendsByUserId(new UserId(userId1));
+      const user1FriendsResult = await this.friendRepository.countFriendsByUserId(userId1);
       if (user1FriendsResult.success) {
         const user1Result = await this.userRepository.findByUserId(userId1);
         if (user1Result.success && user1Result.data) {
@@ -117,7 +116,7 @@ export class AcceptFriendRequestUseCase {
       }
 
       // 사용자 2의 친구 수 업데이트
-      const user2FriendsResult = await this.friendRepository.countFriendsByUserId(new UserId(userId2));
+      const user2FriendsResult = await this.friendRepository.countFriendsByUserId(userId2);
       if (user2FriendsResult.success) {
         const user2Result = await this.userRepository.findByUserId(userId2);
         if (user2Result.success && user2Result.data) {

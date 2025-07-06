@@ -116,7 +116,7 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  updateFcmToken(newToken?: UserFcmToken): UserEntity {
+  updateFcmToken(newToken?: string): UserEntity {
     if (this.isWithdrawn()) return this;
 
     return new UserEntity(

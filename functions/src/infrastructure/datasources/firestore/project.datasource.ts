@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import {ProjectDatasource} from "../interfaces/project.datasource";
-import {ProjectEntity, ProjectName, ProjectDescription, ProjectImage, ProjectStatus} from "../../../domain/project/entities/project.entity";
+import {ProjectEntity, ProjectStatus} from "../../../domain/project/entities/project.entity";
 import {CustomResult, Result} from "../../../core/types";
 import {InternalError} from "../../../core/errors";
 
@@ -36,11 +36,11 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
       // Create ProjectEntity from Firestore data
       const project = ProjectEntity.fromDataSource(
         doc.id,
-        new ProjectName(data.name),
+        data.name,
         data.ownerId,
         data.createdAt?.toDate(),
         data.updatedAt?.toDate(),
-        data.image ? new ProjectImage(data.image) : undefined
+        data.image
       );
 
       return Result.success(project);
@@ -65,9 +65,9 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
     }
   }
 
-  async findByName(name: ProjectName): Promise<CustomResult<ProjectEntity | null>> {
+  async findByName(name: string): Promise<CustomResult<ProjectEntity | null>> {
     try {
-      const query = await this.collection.where("name", "==", name.value).limit(1).get();
+      const query = await this.collection.where("name", "==", name).limit(1).get();
       if (query.empty) {
         return Result.success(null);
       }
@@ -202,14 +202,14 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
   private mapToEntity(id: string, data: ProjectData): ProjectEntity {
     return new ProjectEntity(
       id,
-      new ProjectName(data.name),
+      data.name,
       data.ownerId,
       data.createdAt.toDate(),
       data.updatedAt.toDate(),
       data.status || ProjectStatus.ACTIVE,
       data.memberCount || 1,
-      data.description ? new ProjectDescription(data.description) : undefined,
-      data.image ? new ProjectImage(data.image) : undefined
+      data.description,
+      data.image
     );
   }
 }

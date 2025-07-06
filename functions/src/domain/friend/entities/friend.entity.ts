@@ -1,6 +1,6 @@
 import {CustomResult, Result} from "../../../core/types";
 import {ValidationError} from "../../../core/errors";
-import {FriendId, UserId, validateId, validateUsername, validateImageUrl} from "../../../core/validation";
+import {FriendId, validateId, validateUsername, validateImageUrl} from "../../../core/validation";
 
 export enum FriendStatus {
   PENDING = "PENDING", // 수신자 입장에서 응답 대기

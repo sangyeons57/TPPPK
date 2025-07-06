@@ -1,6 +1,6 @@
 import {ProjectRepository} from "../../domain/project/repositories/project.repository";
 import {ProjectDatasource} from "../datasources/interfaces/project.datasource";
-import {ProjectEntity, ProjectStatus, ProjectName} from "../../domain/project/entities/project.entity";
+import {ProjectEntity, ProjectStatus} from "../../domain/project/entities/project.entity";
 import {CustomResult} from "../../core/types";
 
 /**
@@ -18,7 +18,7 @@ export class ProjectRepositoryImpl implements ProjectRepository {
     return this.datasource.findByOwnerId(ownerId);
   }
 
-  async findByName(name: ProjectName): Promise<CustomResult<ProjectEntity | null>> {
+  async findByName(name: string): Promise<CustomResult<ProjectEntity | null>> {
     return this.datasource.findByName(name);
   }
 

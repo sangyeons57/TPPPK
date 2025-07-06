@@ -1,6 +1,6 @@
 import {BaseEntity} from "../../../core/types";
 import {ValidationError} from "../../../core/errors";
-import {validateProjectName, validateProjectDescription, validateImageUrl, ProjectId} from "../../../core/validation";
+import {validateProjectName, validateProjectDescription, validateImageUrl} from "../../../core/validation";
 
 
 export enum ProjectStatus {
