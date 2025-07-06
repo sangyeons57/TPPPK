@@ -1,5 +1,5 @@
-import { UserEntity, Email, UserName } from '../entities/user.entity';
-import { CustomResult } from '../../../core/types';
+import {UserEntity, Email, UserName} from "../entities/user.entity";
+import {CustomResult} from "../../../core/types";
 
 export interface UserRepository {
   findById(id: string): Promise<CustomResult<UserEntity | null>>;
