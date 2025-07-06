@@ -24,7 +24,6 @@ export interface FriendData {
 }
 
 
-
 export class FriendEntity {
   public static readonly COLLECTION_NAME = "friends";
 
@@ -112,7 +111,7 @@ export class FriendEntity {
       this._status = FriendStatus.ACCEPTED;
       this._acceptedAt = new Date();
       this._updatedAt = new Date();
-      }
+    }
   }
 
   blockUser(): void {
@@ -154,7 +153,7 @@ export class FriendEntity {
         this._status = FriendStatus.ACCEPTED;
         this._acceptedAt = new Date();
         this._updatedAt = new Date();
-            return Result.success(this);
+        return Result.success(this);
       }
       return Result.failure(new ValidationError("status", "Cannot accept friend request with current status"));
     } catch (error) {
@@ -167,7 +166,7 @@ export class FriendEntity {
       if (this._status === FriendStatus.PENDING || this._status === FriendStatus.REQUESTED) {
         this._status = FriendStatus.REJECTED;
         this._updatedAt = new Date();
-            return Result.success(this);
+        return Result.success(this);
       }
       return Result.failure(new ValidationError("status", "Cannot reject friend request with current status"));
     } catch (error) {
@@ -180,7 +179,7 @@ export class FriendEntity {
       if (this._status === FriendStatus.ACCEPTED) {
         this._status = FriendStatus.REMOVED;
         this._updatedAt = new Date();
-            return Result.success(this);
+        return Result.success(this);
       }
       return Result.failure(new ValidationError("status", "Cannot remove friend with current status"));
     } catch (error) {
