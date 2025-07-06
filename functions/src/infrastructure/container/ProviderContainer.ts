@@ -115,7 +115,6 @@ export class ProviderContainer {
  */
 export const ProviderKeys = {
   // Repository Factories
-  SESSION_REPOSITORY_FACTORY: 'sessionRepositoryFactory',
   FRIEND_REPOSITORY_FACTORY: 'friendRepositoryFactory',
   USER_REPOSITORY_FACTORY: 'userRepositoryFactory',
   PROJECT_REPOSITORY_FACTORY: 'projectRepositoryFactory',
@@ -124,7 +123,6 @@ export const ProviderKeys = {
   IMAGE_PROCESSING_SERVICE: 'imageProcessingService',
 
   // UseCase Providers
-  AUTH_SESSION_USECASE_PROVIDER: 'authSessionUseCaseProvider',
   FRIEND_USECASE_PROVIDER: 'friendUseCaseProvider',
   USER_USECASE_PROVIDER: 'userUseCaseProvider',
   PROJECT_USECASE_PROVIDER: 'projectUseCaseProvider',
