@@ -1,2 +1,2 @@
 export * from './updateUserProfile.usecase';
-export * from './processUserImage.usecase';
+export * from './updateUserImage.usecase';

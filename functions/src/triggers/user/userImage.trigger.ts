@@ -1,11 +1,13 @@
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
-import { ProcessUserImageUseCase } from '../../business/user/usecases/processUserImage.usecase';
-// import { ImageProcessingService } from '../../core/services/imageProcessing.service';
-// import { FirebaseStorageService } from '../../infrastructure/datasources/firestore/image.datasource';
+import { UpdateUserImageUseCase } from '../../business/user/usecases/updateUserImage.usecase';
 import { RUNTIME_CONFIG } from '../../core/constants';
 import { STORAGE_BUCKETS } from '../../core/constants';
 import { Providers } from '../../config/dependencies';
 
+/**
+ * Simplified Storage trigger for user profile images
+ * Updates User entity's profileImageUrl when image is uploaded
+ */
 export const onUserProfileImageUpload = onObjectFinalized(
   {
     region: RUNTIME_CONFIG.REGION,
@@ -22,49 +24,45 @@ export const onUserProfileImageUpload = onObjectFinalized(
         return;
       }
 
+      // Only process image files
       if (!contentType.startsWith('image/')) {
-        console.log('File is not an image');
+        console.log(`Skipping non-image file: ${contentType}`);
         return;
       }
 
-      const userId = extractUserIdFromPath(name);
+      // Extract userId from file path (e.g., "users/{userId}/profile.jpg")
+      const pathParts = name.split('/');
+      if (pathParts.length < 2 || pathParts[0] !== 'users') {
+        console.log(`Invalid file path structure: ${name}`);
+        return;
+      }
+
+      const userId = pathParts[1];
       if (!userId) {
-        console.log('Cannot extract user ID from file path');
+        console.log('Could not extract userId from file path');
         return;
       }
 
-      const { getStorage } = await import('firebase-admin/storage');
-      const storage = getStorage();
-      const file = storage.bucket(bucket).file(name);
-      
-      const [fileBuffer] = await file.download();
+      // Generate public URL
+      const publicUrl = `https://storage.googleapis.com/${bucket}/${name}`;
 
+      // Get use case and update user
       const userUseCases = Providers.getUserProvider().create();
+      const updateImageUseCase = new UpdateUserImageUseCase(userUseCases.userRepository);
 
-      const processUseCase = new ProcessUserImageUseCase(
-        userUseCases.imageProcessingService,
-        userUseCases.userRepository
-      );
-
-      const result = await processUseCase.execute({
-        userId,
-        imageBuffer: fileBuffer,
-        contentType
+      const result = await updateImageUseCase.execute({
+        userId: userId,
+        imageUrl: publicUrl
       });
 
-      if (!result.success) {
-        console.error('Failed to process user image:', result.error);
-        return;
+      if (result.success) {
+        console.log(`Successfully updated user ${userId} profile image: ${publicUrl}`);
+      } else {
+        console.error(`Failed to update user ${userId} profile image:`, result.error);
       }
 
-      console.log('User profile image processed successfully:', result.data);
     } catch (error) {
-      console.error('Error processing user profile image:', error);
+      console.error('Error processing user profile image upload:', error);
     }
   }
 );
-
-function extractUserIdFromPath(filePath: string): string | null {
-  const parts = filePath.split('/');
-  return parts.length > 1 ? parts[0] : null;
-}
