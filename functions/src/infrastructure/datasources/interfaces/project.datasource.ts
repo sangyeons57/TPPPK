@@ -15,6 +15,5 @@ export interface ProjectDatasource {
   delete(id: string): Promise<CustomResult<void>>;
   exists(id: string): Promise<CustomResult<boolean>>;
   findActiveProjects(limit?: number): Promise<CustomResult<ProjectEntity[]>>;
-  findProjectsByMemberId(memberId: string): Promise<CustomResult<ProjectEntity[]>>;
   updateMemberCount(projectId: string, count: number): Promise<CustomResult<void>>;
 }

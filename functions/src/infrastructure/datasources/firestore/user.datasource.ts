@@ -7,10 +7,11 @@ import {
 import {UserDataSource} from "../interfaces/user.datasource";
 import {CustomResult, Result} from "../../../core/types";
 import {DatabaseError} from "../../../core/errors";
+import {FIRESTORE_COLLECTIONS} from "../../../core/constants";
 
 export class FirestoreUserDataSource implements UserDataSource {
   private readonly db: admin.firestore.Firestore;
-  private readonly collectionName = "users";
+  private readonly collectionName = FIRESTORE_COLLECTIONS.USERS;
 
   constructor() {
     this.db = admin.firestore();
@@ -19,7 +20,7 @@ export class FirestoreUserDataSource implements UserDataSource {
   async findById(id: string): Promise<CustomResult<UserEntity | null>> {
     try {
       const doc = await this.db.collection(this.collectionName).doc(id).get();
-      
+
       if (!doc.exists) {
         return Result.success(null);
       }
@@ -34,20 +35,17 @@ export class FirestoreUserDataSource implements UserDataSource {
 
   async findByUserId(userId: string): Promise<CustomResult<UserEntity | null>> {
     try {
-      const query = await this.db
-        .collection(this.collectionName)
-        .where("id", "==", userId)
-        .limit(1)
-        .get();
+      // Fetch the document whose ID equals the userId (new canonical way)
+      const docRef = this.db.collection(this.collectionName).doc(userId);
+      const docSnap = await docRef.get();
 
-      if (query.empty) {
+      if (!docSnap.exists) {
         return Result.success(null);
       }
 
-      const doc = query.docs[0];
-      const userData = doc.data() as UserData;
-      const userEntity = this.mapToEntity(doc.id, userData);
-      return Result.success(userEntity);
+      const data = docSnap.data() as UserData;
+      const entity = this.mapToEntity(docSnap.id, data);
+      return Result.success(entity);
     } catch (error) {
       return Result.failure(new DatabaseError("Failed to find user by userId", error instanceof Error ? error.message : String(error)));
     }
@@ -99,7 +97,7 @@ export class FirestoreUserDataSource implements UserDataSource {
     try {
       const userData = user.toData();
       const docRef = this.db.collection(this.collectionName).doc(user.id);
-      
+
       await docRef.set({
         ...userData,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -110,7 +108,7 @@ export class FirestoreUserDataSource implements UserDataSource {
       const savedDoc = await docRef.get();
       const savedData = savedDoc.data() as UserData;
       const savedEntity = this.mapToEntity(user.id, savedData);
-      
+
       return Result.success(savedEntity);
     } catch (error) {
       return Result.failure(new DatabaseError("Failed to save user", error instanceof Error ? error.message : String(error)));
@@ -121,7 +119,7 @@ export class FirestoreUserDataSource implements UserDataSource {
     try {
       const userData = user.toData();
       const docRef = this.db.collection(this.collectionName).doc(user.id);
-      
+
       await docRef.update({
         ...userData,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -131,7 +129,7 @@ export class FirestoreUserDataSource implements UserDataSource {
       const updatedDoc = await docRef.get();
       const updatedData = updatedDoc.data() as UserData;
       const updatedEntity = this.mapToEntity(user.id, updatedData);
-      
+
       return Result.success(updatedEntity);
     } catch (error) {
       return Result.failure(new DatabaseError("Failed to update user", error instanceof Error ? error.message : String(error)));
@@ -149,13 +147,9 @@ export class FirestoreUserDataSource implements UserDataSource {
 
   async exists(userId: string): Promise<CustomResult<boolean>> {
     try {
-      const query = await this.db
-        .collection(this.collectionName)
-        .where("id", "==", userId)
-        .limit(1)
-        .get();
-
-      return Result.success(!query.empty);
+      // Check by document ID only (new canonical way)
+      const docSnap = await this.db.collection(this.collectionName).doc(userId).get();
+      return Result.success(docSnap.exists);
     } catch (error) {
       return Result.failure(new DatabaseError("Failed to check user existence", error instanceof Error ? error.message : String(error)));
     }
@@ -171,7 +165,7 @@ export class FirestoreUserDataSource implements UserDataSource {
       const snapshot = await query.get();
       const users: UserEntity[] = [];
 
-      snapshot.docs.forEach(doc => {
+      snapshot.docs.forEach((doc) => {
         const userData = doc.data() as UserData;
         const userEntity = this.mapToEntity(doc.id, userData);
         users.push(userEntity);
@@ -184,18 +178,17 @@ export class FirestoreUserDataSource implements UserDataSource {
   }
 
   /**
-   * Maps Firestore document data to UserEntity
+   * Maps Firestore document data to a UserEntity.
+   * @param {string} docId Firestore document ID
+   * @param {UserData} data Firestore document data
+   * @return {UserEntity} Corresponding UserEntity instance
    */
   private mapToEntity(docId: string, data: UserData): UserEntity {
     return UserEntity.fromData({
       ...data,
       id: data.id || docId, // Use data.id if available, fallback to docId
-      createdAt: data.createdAt instanceof admin.firestore.Timestamp 
-        ? data.createdAt.toDate() 
-        : data.createdAt,
-      updatedAt: data.updatedAt instanceof admin.firestore.Timestamp 
-        ? data.updatedAt.toDate() 
-        : data.updatedAt,
+      createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : data.createdAt,
+      updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : data.updatedAt,
     });
   }
 }

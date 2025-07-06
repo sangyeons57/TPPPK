@@ -1,5 +1,5 @@
-import { ProjectEntity, ProjectStatus, ProjectName } from '../entities/project.entity';
-import { CustomResult } from '../../../core/types';
+import {ProjectEntity, ProjectStatus, ProjectName} from "../entities/project.entity";
+import {CustomResult} from "../../../core/types";
 
 export interface ProjectRepository {
   findById(id: string): Promise<CustomResult<ProjectEntity | null>>;
@@ -11,6 +11,5 @@ export interface ProjectRepository {
   delete(id: string): Promise<CustomResult<void>>;
   exists(id: string): Promise<CustomResult<boolean>>;
   findActiveProjects(limit?: number): Promise<CustomResult<ProjectEntity[]>>;
-  findProjectsByMemberId(memberId: string): Promise<CustomResult<ProjectEntity[]>>;
   updateMemberCount(projectId: string, count: number): Promise<CustomResult<void>>;
 }

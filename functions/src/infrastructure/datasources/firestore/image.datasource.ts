@@ -2,7 +2,7 @@ import {ImageRepository, ImageStorageService, ProcessedImageEntity} from "../../
 import {ImageType, ImageUrl, ImageSize, ImageFormat, ImageMetadata} from "../../../core/types/image.types";
 import {CustomResult, Result} from "../../../core/types";
 import {InternalError} from "../../../core/errors";
-import {IMAGE_PROCESSING} from "../../../core/constants";
+import {IMAGE_PROCESSING, FIRESTORE_COLLECTIONS} from "../../../core/constants";
 import {getFirestore, FieldValue} from "firebase-admin/firestore";
 import {getStorage} from "firebase-admin/storage";
 
@@ -22,7 +22,7 @@ interface ImageData {
 
 export class FirestoreImageDataSource implements ImageRepository {
   private readonly db = getFirestore();
-  private readonly collection = this.db.collection("images");
+  private readonly collection = this.db.collection(FIRESTORE_COLLECTIONS.IMAGES);
 
   async findById(id: string): Promise<CustomResult<ProcessedImageEntity | null>> {
     try {

@@ -1,19 +1,25 @@
-// Firestore Collections  
+// Firestore Collections (aligned with Android CollectionPath.kt)
 export const FIRESTORE_COLLECTIONS = {
+  // Root Collections
   USERS: "users",
-  PROJECTS: "projects",
-  SESSIONS: "sessions",
-  PROJECT_MEMBERS: "projectMembers",
-} as const;
-
-// Legacy Collections (merged from old constants)
-export const COLLECTIONS = {
-  USERS: "users",
-  PROJECTS: "projects",
-  MEMBERS: "members",
-  MESSAGES: "messages",
-  FRIENDS: "friends",
   DM_CHANNELS: "dmChannels",
+  PROJECTS: "projects",
+  SCHEDULES: "schedules",
+  IMAGES: "images", // For centralized image metadata storage
+
+  // Subcollections
+  FRIENDS: "friends",
+  MESSAGES: "messages",
+  PROJECTS_WRAPPERS: "projectsWrappers",
+  MEMBERS: "members",
+  ROLES: "roles",
+  PERMISSIONS: "permissions",
+  INVITES: "invites",
+  CATEGORIES: "categories",
+  CHANNELS: "channels",
+  MESSAGE_ATTACHMENTS: "messageAttachments",
+  DM_WRAPPERS: "dmWrappers",
+
 } as const;
 
 export const DATABASE_ID = "(default)" as const;

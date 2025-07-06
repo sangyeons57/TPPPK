@@ -139,35 +139,6 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
     }
   }
 
-  async findProjectsByMemberId(memberId: string): Promise<CustomResult<ProjectEntity[]>> {
-    try {
-      const memberQuery = await this.db
-        .collection(FIRESTORE_COLLECTIONS.PROJECT_MEMBERS)
-        .where("userId", "==", memberId)
-        .get();
-
-      if (memberQuery.empty) {
-        return Result.success([]);
-      }
-
-      const projectIds = memberQuery.docs.map((doc) => doc.data().projectId);
-      const projects: ProjectEntity[] = [];
-
-      for (const projectId of projectIds) {
-        const projectResult = await this.findById(projectId);
-        if (projectResult.success && projectResult.data) {
-          projects.push(projectResult.data);
-        }
-      }
-
-      return Result.success(projects);
-    } catch (error) {
-      return Result.failure(
-        new InternalError(`Failed to find projects by member: ${error instanceof Error ? error.message : "Unknown error"}`)
-      );
-    }
-  }
-
   async updateMemberCount(projectId: string, count: number): Promise<CustomResult<void>> {
     try {
       await this.collection.doc(projectId).update({

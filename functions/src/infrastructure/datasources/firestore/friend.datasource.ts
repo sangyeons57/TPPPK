@@ -1,7 +1,7 @@
 import * as admin from "firebase-admin";
 import {CustomResult, Result} from "../../../core/types";
 import {InternalError} from "../../../core/errors";
-import {COLLECTIONS} from "../../../core/constants";
+import {FIRESTORE_COLLECTIONS} from "../../../core/constants";
 import {
   FriendDatasource,
   FriendSearchCriteria,
@@ -16,7 +16,7 @@ import {
 
 export class FirestoreFriendDataSource implements FriendDatasource {
   private readonly db = admin.firestore();
-  private readonly collection = this.db.collection(COLLECTIONS.FRIENDS);
+  private readonly collection = this.db.collection(FIRESTORE_COLLECTIONS.FRIENDS);
 
   async findById(id: FriendId): Promise<CustomResult<FriendEntity | null>> {
     try {
