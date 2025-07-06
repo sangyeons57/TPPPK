@@ -7,8 +7,6 @@ import {
   ProjectUseCaseProvider,
 } from "../business";
 import { ProviderContainer, ProviderKeys } from "../infrastructure/container/ProviderContainer";
-import { ImageProcessingService } from "../core/services/imageProcessing.service";
-import { FirestoreImageDataSource, FirebaseStorageService } from "../infrastructure/datasources/firestore/image.datasource";
 
 /**
  * Configuration class for setting up dependency injection
@@ -77,15 +75,6 @@ export class DependencyConfig {
       new ProjectRepositoryFactory()
     );
     
-    // Register Image Processing Service instead of factory
-    const imageRepository = new FirestoreImageDataSource();
-    const imageStorageService = new FirebaseStorageService();
-    const imageProcessingService = new ImageProcessingService(imageRepository, imageStorageService);
-    
-    container.register(
-      ProviderKeys.IMAGE_PROCESSING_SERVICE,
-      imageProcessingService
-    );
 
     console.log("Repository factories and services registered");
   }
@@ -112,8 +101,7 @@ export class DependencyConfig {
     container.register(
       ProviderKeys.USER_USECASE_PROVIDER,
       new UserUseCaseProvider(
-        container.get(ProviderKeys.USER_REPOSITORY_FACTORY),
-        container.get(ProviderKeys.IMAGE_PROCESSING_SERVICE)
+        container.get(ProviderKeys.USER_REPOSITORY_FACTORY)
       )
     );
 
@@ -121,8 +109,7 @@ export class DependencyConfig {
     container.register(
       ProviderKeys.PROJECT_USECASE_PROVIDER,
       new ProjectUseCaseProvider(
-        container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY),
-        container.get(ProviderKeys.IMAGE_PROCESSING_SERVICE)
+        container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY)
       )
     );
 

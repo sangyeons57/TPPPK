@@ -1,20 +1,18 @@
 import {RepositoryFactory} from "../../domain/shared/RepositoryFactory";
 import {UserRepositoryFactoryContext} from "../../domain/user/repositories/factory/UserRepositoryFactoryContext";
 import {UserRepository} from "../../domain/user/repositories/user.repository";
-import {ImageProcessingService} from "../../core/services/imageProcessing.service";
 import {UpdateUserProfileUseCase} from "./usecases/updateUserProfile.usecase";
-import {ProcessUserImageUseCase} from "./usecases/processUserImage.usecase";
+import {UpdateUserImageUseCase} from "./usecases/updateUserImage.usecase";
 
 /**
  * Interface for user management use cases
  */
 export interface UserUseCases {
   updateUserProfileUseCase: UpdateUserProfileUseCase;
-  processUserImageUseCase: ProcessUserImageUseCase;
+  updateUserImageUseCase: UpdateUserImageUseCase;
 
   // Common repositories for advanced use cases
   userRepository: UserRepository;
-  imageProcessingService: ImageProcessingService;
 }
 
 /**
@@ -23,8 +21,7 @@ export interface UserUseCases {
  */
 export class UserUseCaseProvider {
   constructor(
-    private readonly userRepositoryFactory: RepositoryFactory<UserRepository, UserRepositoryFactoryContext>,
-    private readonly imageProcessingService: ImageProcessingService
+    private readonly userRepositoryFactory: RepositoryFactory<UserRepository, UserRepositoryFactoryContext>
   ) {}
 
   create(context?: UserRepositoryFactoryContext): UserUseCases {
@@ -34,15 +31,13 @@ export class UserUseCaseProvider {
       updateUserProfileUseCase: new UpdateUserProfileUseCase(
         userRepository
       ),
-
-      processUserImageUseCase: new ProcessUserImageUseCase(
-        this.imageProcessingService,
+      
+      updateUserImageUseCase: new UpdateUserImageUseCase(
         userRepository
       ),
 
       // Common repositories
       userRepository,
-      imageProcessingService: this.imageProcessingService,
     };
   }
 }
