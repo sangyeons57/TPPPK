@@ -34,6 +34,12 @@ enum class FriendStatus(val value: String) {
     BLOCKED("blocked"),
 
     /**
+     * 친구 관계가 해제된 상태
+     */
+    @PropertyName("removed")
+    REMOVED("removed"),
+
+    /**
      * 알 수 없거나 정의되지 않은 상태
      */
     @PropertyName("unknown")

@@ -24,7 +24,7 @@ interface FriendRepository: DefaultRepository {
     
     fun observeFriendsList(userId: String): Flow<CustomResult<List<Friend>, Exception>>
     
-    suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception>
+    suspend fun sendFriendRequest(fromUserId: String, toUserId: String): CustomResult<Unit, Exception>
     
     suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception>
     

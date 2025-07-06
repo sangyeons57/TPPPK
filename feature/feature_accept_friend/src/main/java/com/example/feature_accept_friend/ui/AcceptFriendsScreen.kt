@@ -114,12 +114,12 @@ fun AcceptFriendsListContent(
     ) {
         items(
             items = requests,
-            key = { it.userId.value }
+            key = { it.friendRequestId.value }
         ) { request ->
             FriendRequestItemComposable(
                 request = request,
-                onAcceptClick = { onAcceptClick(request.userId) },
-                onDenyClick = { onDenyClick(request.userId) }
+                onAcceptClick = { onAcceptClick(request.friendRequestId) },
+                onDenyClick = { onDenyClick(request.friendRequestId) }
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
@@ -184,14 +184,16 @@ private fun AcceptFriendsScreenPreview() {
     // 미리보기용 가짜 데이터 생성
     val sampleRequests = listOf(
         FriendRequestItem(
-            com.example.domain.model.vo.UserId.from("user1"), 
-            com.example.domain.model.vo.user.UserName.from("사용자1"), 
-            null
+            friendRequestId = com.example.domain.model.vo.UserId.from("req1"),
+            requesterId = com.example.domain.model.vo.UserId.from("user1"), 
+            userName = com.example.domain.model.vo.user.UserName.from("사용자1"), 
+            profileImageUrl = null
         ),
         FriendRequestItem(
-            com.example.domain.model.vo.UserId.from("user2"), 
-            com.example.domain.model.vo.user.UserName.from("사용자2"), 
-            null
+            friendRequestId = com.example.domain.model.vo.UserId.from("req2"),
+            requesterId = com.example.domain.model.vo.UserId.from("user2"), 
+            userName = com.example.domain.model.vo.user.UserName.from("사용자2"), 
+            profileImageUrl = null
         )
     )
     

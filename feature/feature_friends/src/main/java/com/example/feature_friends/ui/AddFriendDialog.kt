@@ -201,10 +201,6 @@ private fun AddFriendDialogContentPreview_Success() {
     }
 }
 
-@Composable
-fun UsserName(x0: String) {
-    TODO("Not yet implemented")
-}
 
 @Preview(showBackground = true)
 @Composable

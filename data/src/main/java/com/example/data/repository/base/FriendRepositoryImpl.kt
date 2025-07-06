@@ -8,6 +8,7 @@ import com.example.core_common.result.resultTry
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.FriendRemoteDataSource
 import com.example.data.datasource.remote.UserRemoteDataSource // 사용자 검색 및 정보 업데이트 시 필요
+import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data.model.remote.FriendDTO
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
@@ -30,6 +31,7 @@ import javax.inject.Inject
  */
 class FriendRepositoryImpl @Inject constructor(
     private val friendRemoteDataSource: FriendRemoteDataSource,
+    private val functionsRemoteDataSource: FunctionsRemoteDataSource,
     override val factoryContext: FriendRepositoryFactoryContext
 ) : DefaultRepositoryImpl(friendRemoteDataSource, factoryContext), FriendRepository {
 
@@ -106,26 +108,74 @@ class FriendRepositoryImpl @Inject constructor(
             }
     }
     
-    override suspend fun sendFriendRequest(fromUserId: String, toUsername: String): CustomResult<Unit, Exception> {
-        Log.d(TAG, "sendFriendRequest called: fromUserId=$fromUserId, toUsername=$toUsername")
-        val result = friendRemoteDataSource.sendFriendRequest(fromUserId, toUsername)
-        Log.d(TAG, "Remote data source result: $result")
-        return result
+    override suspend fun sendFriendRequest(fromUserId: String, toUserId: String): CustomResult<Unit, Exception> {
+        Log.d(TAG, "sendFriendRequest called: fromUserId=$fromUserId, toUserId=$toUserId")
+        return when (val result = functionsRemoteDataSource.sendFriendRequest(toUserId)) {
+            is CustomResult.Success -> {
+                Log.d(TAG, "Friend request sent successfully: ${result.data}")
+                CustomResult.Success(Unit)
+            }
+            is CustomResult.Failure -> {
+                Log.e(TAG, "Failed to send friend request", result.error)
+                CustomResult.Failure(result.error)
+            }
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
     
     override suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
-        return friendRemoteDataSource.acceptFriendRequest(userId, friendId)
+        return when (val result = functionsRemoteDataSource.acceptFriendRequest(friendId)) {
+            is CustomResult.Success -> {
+                Log.d(TAG, "Friend request accepted successfully: ${result.data}")
+                CustomResult.Success(Unit)
+            }
+            is CustomResult.Failure -> {
+                Log.e(TAG, "Failed to accept friend request", result.error)
+                CustomResult.Failure(result.error)
+            }
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
     
     override suspend fun declineFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
-        return friendRemoteDataSource.declineFriendRequest(userId, friendId)
+        return when (val result = functionsRemoteDataSource.rejectFriendRequest(friendId)) {
+            is CustomResult.Success -> {
+                Log.d(TAG, "Friend request declined successfully: ${result.data}")
+                CustomResult.Success(Unit)
+            }
+            is CustomResult.Failure -> {
+                Log.e(TAG, "Failed to decline friend request", result.error)
+                CustomResult.Failure(result.error)
+            }
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
     
     override suspend fun blockUser(userId: String, friendId: String): CustomResult<Unit, Exception> {
+        // Note: blocking functionality may need to be implemented as a separate Firebase Function
+        // For now, keeping the original implementation
         return friendRemoteDataSource.blockUser(userId, friendId)
     }
     
     override suspend fun removeFriend(userId: String, friendId: String): CustomResult<Unit, Exception> {
-        return friendRemoteDataSource.removeFriend(userId, friendId)
+        return when (val result = functionsRemoteDataSource.removeFriend(friendId)) {
+            is CustomResult.Success -> {
+                Log.d(TAG, "Friend removed successfully: ${result.data}")
+                CustomResult.Success(Unit)
+            }
+            is CustomResult.Failure -> {
+                Log.e(TAG, "Failed to remove friend", result.error)
+                CustomResult.Failure(result.error)
+            }
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
 }
