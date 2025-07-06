@@ -38,12 +38,12 @@ export class FriendRepositoryImpl implements FriendRepository {
     return this.datasource.friendRequestExists(requesterId, receiverId);
   }
 
-  async save(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
-    return this.datasource.save(friend);
+  async save(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+    return this.datasource.save(userId, friend);
   }
 
-  async update(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
-    return this.datasource.update(friend);
+  async update(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+    return this.datasource.update(userId, friend);
   }
 
   async delete(id: string): Promise<CustomResult<void>> {

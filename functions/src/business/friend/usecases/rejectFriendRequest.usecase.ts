@@ -64,8 +64,8 @@ export class RejectFriendRequestUseCase {
 
       const rejectedFriend = rejectResult.data;
 
-      // 거절된 친구 요청 저장
-      const saveResult = await this.friendRepository.update(rejectedFriend);
+      // 거절된 친구 요청 저장 (수신자의 subcollection에)
+      const saveResult = await this.friendRepository.update(receiverId, rejectedFriend);
       if (!saveResult.success) {
         return Result.failure(saveResult.error);
       }

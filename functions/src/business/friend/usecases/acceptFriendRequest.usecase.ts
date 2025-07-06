@@ -67,14 +67,14 @@ export class AcceptFriendRequestUseCase {
       const acceptedFriend = acceptResult.data;
 
       // 수락된 친구 요청 저장 (수신자의 subcollection에)
-      const saveResult = await this.friendRepository.update(acceptedFriend);
+      const saveResult = await this.friendRepository.update(request.receiverId, acceptedFriend);
       if (!saveResult.success) {
         return Result.failure(saveResult.error);
       }
 
       // 요청자의 friends subcollection에 수신자의 Friend 생성 (양방향 관계)
       const reciprocalFriend = FriendEntity.fromDataSource(
-        request.receiverId, // 수신자의 ID가 Friend ID가 됨
+        request.receiverId, // Friend ID (수신자의 ID)
         receiverResult.data.name,
         receiverResult.data.profileImageUrl,
         FriendStatus.ACCEPTED,
@@ -84,8 +84,8 @@ export class AcceptFriendRequestUseCase {
         new Date() // updatedAt
       );
 
-      // 요청자의 subcollection에 저장 (임시로 save 메서드 사용)
-      const saveReciprocalResult = await this.friendRepository.save(reciprocalFriend);
+      // 요청자의 subcollection에 저장
+      const saveReciprocalResult = await this.friendRepository.save(request.requesterId, reciprocalFriend);
       if (!saveReciprocalResult.success) {
         return Result.failure(new Error("Failed to save reciprocal friend relationship"));
       }

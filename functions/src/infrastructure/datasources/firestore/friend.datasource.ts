@@ -16,6 +16,21 @@ export class FirestoreFriendDataSource implements FriendDatasource {
   private readonly db = admin.firestore();
 
   /**
+   * Helper method to convert Firestore document data to FriendEntity
+   */
+  private createFriendEntity(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirestore.DocumentSnapshot): CustomResult<FriendEntity> {
+    const data = doc.data() as FriendData;
+    return FriendEntity.fromData({
+      ...data,
+      id: doc.id,
+      requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
+      acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
+      createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+      updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
+    });
+  }
+
+  /**
    * 특정 사용자의 friends subcollection 참조를 반환합니다
    * @param {string} userId - 사용자 ID
    * @return {FirebaseFirestore.CollectionReference} Friends subcollection 참조
@@ -43,17 +58,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
         return Result.success(null);
       }
 
-      const data = doc.data() as FriendData;
-      const entityResult = FriendEntity.fromData({
-        ...data,
-        id: doc.id,
-        requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
-        acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
-        createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-      });
-
-      return entityResult;
+      return this.createFriendEntity(doc);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to find friend by ID: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -74,18 +79,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       }
 
       const doc = snapshot.docs[0];
-      const data = doc.data() as FriendData;
-
-      const entityResult = FriendEntity.fromData({
-        ...data,
-        id: doc.id,
-        requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
-        acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
-        createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-      });
-
-      return entityResult;
+      return this.createFriendEntity(doc);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to find friend by user IDs: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -105,16 +99,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       const friends: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
-          acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
-
+        const entityResult = this.createFriendEntity(doc);
         if (entityResult.success) {
           friends.push(entityResult.data);
         }
@@ -138,15 +123,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       const requests: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
-          acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
+        const entityResult = this.createFriendEntity(doc);
 
         if (entityResult.success) {
           requests.push(entityResult.data);
@@ -171,15 +148,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       const requests: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
-          acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
+        const entityResult = this.createFriendEntity(doc);
 
         if (entityResult.success) {
           requests.push(entityResult.data);
@@ -239,7 +208,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async save(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+  async save(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
     try {
       const friendData = friend.toData();
       const docData = {
@@ -252,8 +221,8 @@ export class FirestoreFriendDataSource implements FriendDatasource {
         updatedAt: admin.firestore.Timestamp.fromDate(friendData.updatedAt),
       };
 
-      // 단일 사용자의 subcollection에만 저장 (Android 구조에 맞게)
-      const collection = this.getUserFriendsCollection(friendData.name); // name 필드를 userId로 사용
+      // Use the userId parameter to determine which user's collection to save to
+      const collection = this.getUserFriendsCollection(userId);
       const docRef = await collection.add(docData);
 
       // 새로 생성된 ID로 엔티티 재생성
@@ -270,7 +239,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async update(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+  async update(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
     try {
       const friendData = friend.toData();
       const docData = {
@@ -283,8 +252,8 @@ export class FirestoreFriendDataSource implements FriendDatasource {
         updatedAt: admin.firestore.Timestamp.fromDate(friendData.updatedAt),
       };
 
-      // 단일 사용자의 subcollection에서 업데이트
-      const docRef = this.getUserFriendsCollection(friendData.name).doc(friend.id);
+      // Use the userId parameter to determine which user's collection to update
+      const docRef = this.getUserFriendsCollection(userId).doc(friend.id);
       await docRef.update(docData);
       
       return Result.success(friend);
@@ -385,15 +354,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       const friends: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
-          acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
+        const entityResult = this.createFriendEntity(doc);
 
         if (entityResult.success) {
           friends.push(entityResult.data);

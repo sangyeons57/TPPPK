@@ -88,7 +88,7 @@ export class SendFriendRequestUseCase {
       const now = new Date();
       const friendRequestId = `${request.requesterId}_${request.receiverUserId}_${now.getTime()}`;
 
-      // 요청자 관점: 상대방을 REQUESTED 상태로 추가
+      // 요청자 관점: 상대방을 REQUESTED 상태로 추가 (요청자의 subcollection에 저장)
       const requesterFriend = FriendEntity.newRequest(
         friendRequestId,
         receiverResult.data.name,
@@ -96,7 +96,7 @@ export class SendFriendRequestUseCase {
         now
       );
 
-      // 수신자 관점: 상대방을 PENDING 상태로 추가  
+      // 수신자 관점: 상대방을 PENDING 상태로 추가 (수신자의 subcollection에 저장)
       const receiverFriend = FriendEntity.receivedRequest(
         friendRequestId,
         requesterResult.data.name,
@@ -105,13 +105,13 @@ export class SendFriendRequestUseCase {
       );
 
       // 요청자의 friends subcollection에 저장
-      const saveRequesterResult = await this.friendRepository.save(requesterFriend);
+      const saveRequesterResult = await this.friendRepository.save(requesterId, requesterFriend);
       if (!saveRequesterResult.success) {
         return Result.failure(saveRequesterResult.error);
       }
 
       // 수신자의 friends subcollection에 저장
-      const saveReceiverResult = await this.friendRepository.save(receiverFriend);
+      const saveReceiverResult = await this.friendRepository.save(receiverId, receiverFriend);
       if (!saveReceiverResult.success) {
         // 롤백을 위해 요청자 쪽 데이터 삭제 시도
         await this.friendRepository.delete(friendRequestId);

@@ -69,47 +69,43 @@ export class RemoveFriendUseCase {
         );
       }
 
-      // 양방향 친구 관계 조회
+      // 양방향 친구 관계 조회 및 처리
       const friendRelation1Result = await this.friendRepository.findByUserIds(userId, friendUserId);
       const friendRelation2Result = await this.friendRepository.findByUserIds(friendUserId, userId);
 
-      const relations = [];
+      const relationUpdates: Array<{userId: string, relation: any}> = [];
+
+      // 첫 번째 사용자의 관계 (userId 컬렉션에서)
       if (friendRelation1Result.success && friendRelation1Result.data) {
-        relations.push(friendRelation1Result.data);
-      }
-      if (friendRelation2Result.success && friendRelation2Result.data) {
-        relations.push(friendRelation2Result.data);
-      }
-
-      if (relations.length === 0) {
-        return Result.failure(
-          new NotFoundError("Friend relationship not found", "friendRelation1Result")
-        );
-      }
-
-      const now = new Date();
-      const removedRelations = [];
-
-      // 모든 친구 관계를 제거 상태로 변경
-      for (const relation of relations) {
-        if (relation.status === FriendStatus.ACCEPTED) {
-          const removeResult = relation.remove();
+        if (friendRelation1Result.data.status === FriendStatus.ACCEPTED) {
+          const removeResult = friendRelation1Result.data.remove();
           if (!removeResult.success) {
             return Result.failure(removeResult.error);
           }
-          removedRelations.push(removeResult.data);
+          relationUpdates.push({userId: userId, relation: removeResult.data});
         }
       }
 
-      if (removedRelations.length === 0) {
+      // 두 번째 사용자의 관계 (friendUserId 컬렉션에서)
+      if (friendRelation2Result.success && friendRelation2Result.data) {
+        if (friendRelation2Result.data.status === FriendStatus.ACCEPTED) {
+          const removeResult = friendRelation2Result.data.remove();
+          if (!removeResult.success) {
+            return Result.failure(removeResult.error);
+          }
+          relationUpdates.push({userId: friendUserId, relation: removeResult.data});
+        }
+      }
+
+      if (relationUpdates.length === 0) {
         return Result.failure(
-          new ConflictError("No active friend relationships to remove", "removedRelations.length", "removedRelations")
+          new ConflictError("No active friend relationships to remove", "relationUpdates.length", "relationUpdates")
         );
       }
 
-      // 제거된 관계 저장
-      for (const removedRelation of removedRelations) {
-        const saveResult = await this.friendRepository.update(removedRelation);
+      // 제거된 관계 저장 - 각각의 올바른 컬렉션에
+      for (const update of relationUpdates) {
+        const saveResult = await this.friendRepository.update(update.userId, update.relation);
         if (!saveResult.success) {
           // 일부만 저장되었을 수 있으므로 에러를 반환하지만 성공한 것은 유지
           console.error("Failed to save removed friend relation:", saveResult.error);
@@ -123,6 +119,7 @@ export class RemoveFriendUseCase {
       // 양쪽 사용자의 친구 수 업데이트 (백그라운드에서 수행)
       this.updateFriendCounts(request.userId, request.friendUserId);
 
+      const now = new Date();
       return Result.success({
         success: true,
         removedAt: now.toISOString(),
