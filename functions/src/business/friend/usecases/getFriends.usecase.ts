@@ -72,8 +72,8 @@ export class GetFriendsUseCase {
       const friendInfos: FriendInfo[] = [];
 
       for (const relation of paginatedRelations) {
-        // 친구의 UserId 결정 (현재 사용자가 아닌 상대방)
-        const friendUserId = relation.isRequester(userId) ? relation.friendUserId.value : relation.userId.value;
+        // Friend ID가 상대방의 userId
+        const friendUserId = relation.id.value;
 
         // 친구 사용자 정보 조회
         const friendUserResult = await this.userRepository.findByUserId(friendUserId);
@@ -87,13 +87,12 @@ export class GetFriendsUseCase {
               id: friendUser.id,
               name: friendUser.name,
               profileImageUrl: friendUser.profileImageUrl,
-              userStatus: friendUser.userStatus
+              userStatus: friendUser.userStatus,
             },
             status: relation.status,
             friendsSince:
-              relation.status === FriendStatus.ACCEPTED &&
-              relation.respondedAt ? relation.respondedAt.toISOString() : undefined,
-            requestedAt: relation.requestedAt.toISOString(),
+              relation.status === FriendStatus.ACCEPTED && relation.acceptedAt ? relation.acceptedAt.toISOString() : undefined,
+            requestedAt: relation.requestedAt?.toISOString() || new Date().toISOString(),
           });
         }
       }

@@ -1,19 +1,19 @@
-import { CustomResult, Result } from '../../../core/types';
-import { ValidationError, ConflictError } from '../../../core/errors';
+import {CustomResult, Result} from "../../../core/types";
+import {ValidationError} from "../../../core/errors";
 
 export enum FriendStatus {
-  PENDING = 'PENDING',       // 요청자 입장에서 대기중
-  REQUESTED = 'REQUESTED',   // 수신자 입장에서 응답 대기
-  ACCEPTED = 'ACCEPTED',     // 친구 관계 성립
-  REJECTED = 'REJECTED',     // 거절됨
-  BLOCKED = 'BLOCKED',       // 차단됨
-  REMOVED = 'REMOVED'        // 친구 관계 해제
+  PENDING = "PENDING", // 수신자 입장에서 응답 대기
+  REQUESTED = "REQUESTED", // 요청자 입장에서 대기중
+  ACCEPTED = "ACCEPTED", // 친구 관계 성립
+  REJECTED = "REJECTED", // 거절됨
+  BLOCKED = "BLOCKED", // 차단됨
+  REMOVED = "REMOVED", // 친구 관계 해제
 }
 
 export class FriendId {
   constructor(public readonly value: string) {
     if (!value || value.trim().length === 0) {
-      throw new ValidationError('friendId', 'Friend ID cannot be empty');
+      throw new ValidationError("friendId", "Friend ID cannot be empty");
     }
   }
 
@@ -29,7 +29,7 @@ export class FriendId {
 export class UserId {
   constructor(public readonly value: string) {
     if (!value || value.trim().length === 0) {
-      throw new ValidationError('userId', 'User ID cannot be empty');
+      throw new ValidationError("userId", "User ID cannot be empty");
     }
   }
 
@@ -42,13 +42,45 @@ export class UserId {
   }
 }
 
+export class UserName {
+  constructor(public readonly value: string) {
+    if (!value || value.trim().length === 0) {
+      throw new ValidationError("name", "Name cannot be empty");
+    }
+  }
+
+  equals(other: UserName): boolean {
+    return this.value === other.value;
+  }
+
+  toString(): string {
+    return this.value;
+  }
+}
+
+export class ImageUrl {
+  constructor(public readonly value: string) {
+    if (!value.startsWith("https://")) {
+      throw new ValidationError("profileImageUrl", "Profile image must be a valid HTTPS URL");
+    }
+  }
+
+  equals(other: ImageUrl): boolean {
+    return this.value === other.value;
+  }
+
+  toString(): string {
+    return this.value;
+  }
+}
+
 export interface FriendData {
   id: string;
-  userId: string;
-  friendUserId: string;
+  name: string;
+  profileImageUrl?: string;
   status: FriendStatus;
-  requestedAt: Date;
-  respondedAt?: Date;
+  requestedAt?: Date;
+  acceptedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -102,16 +134,52 @@ export class FriendRemovedEvent extends DomainEvent {
   }
 }
 
+export class FriendStatusChangedEvent extends DomainEvent {
+  constructor(
+    friendId: string,
+    public readonly newStatus: FriendStatus
+  ) {
+    super(friendId);
+  }
+}
+
+export class FriendNameChangedEvent extends DomainEvent {
+  constructor(
+    friendId: string,
+    public readonly newName: UserName
+  ) {
+    super(friendId);
+  }
+}
+
+export class FriendProfileImageChangedEvent extends DomainEvent {
+  constructor(
+    friendId: string,
+    public readonly newProfileImageUrl?: ImageUrl
+  ) {
+    super(friendId);
+  }
+}
+
 export class FriendEntity {
+  public static readonly COLLECTION_NAME = "friends";
+
+  // Keys matching Android Friend.kt
+  public static readonly KEY_STATUS = "status";
+  public static readonly KEY_REQUESTED_AT = "requestedAt";
+  public static readonly KEY_ACCEPTED_AT = "acceptedAt";
+  public static readonly KEY_NAME = "name";
+  public static readonly KEY_PROFILE_IMAGE_URL = "profileImageUrl";
+
   private domainEvents: DomainEvent[] = [];
 
   constructor(
     private readonly _id: FriendId,
-    private readonly _userId: UserId,
-    private readonly _friendUserId: UserId,
+    private _name: UserName,
+    private _profileImageUrl: ImageUrl | undefined,
     private _status: FriendStatus,
-    private readonly _requestedAt: Date,
-    private _respondedAt?: Date,
+    private readonly _requestedAt: Date | undefined,
+    private _acceptedAt: Date | undefined,
     private readonly _createdAt: Date = new Date(),
     private _updatedAt: Date = new Date()
   ) {
@@ -123,24 +191,24 @@ export class FriendEntity {
     return this._id;
   }
 
-  get userId(): UserId {
-    return this._userId;
+  get name(): UserName {
+    return this._name;
   }
 
-  get friendUserId(): UserId {
-    return this._friendUserId;
+  get profileImageUrl(): ImageUrl | undefined {
+    return this._profileImageUrl;
   }
 
   get status(): FriendStatus {
     return this._status;
   }
 
-  get requestedAt(): Date {
+  get requestedAt(): Date | undefined {
     return this._requestedAt;
   }
 
-  get respondedAt(): Date | undefined {
-    return this._respondedAt;
+  get acceptedAt(): Date | undefined {
+    return this._acceptedAt;
   }
 
   get createdAt(): Date {
@@ -155,244 +223,231 @@ export class FriendEntity {
     return [...this.domainEvents];
   }
 
-  // Business Logic Methods
+  // Business Logic Methods (matching Android Friend.kt)
 
-  /**
-   * 친구 요청을 수락합니다.
-   * REQUESTED 상태에서만 호출 가능합니다.
-   */
-  accept(): CustomResult<FriendEntity> {
-    if (this._status !== FriendStatus.REQUESTED) {
-      return Result.failure(
-        new ConflictError('Friend', 'status', `Cannot accept friend request. Current status: ${this._status}. Expected: ${FriendStatus.REQUESTED}`)
-      );
+  changeName(newName: UserName): void {
+    if (this._name.equals(newName)) return;
+    this._name = newName;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new FriendNameChangedEvent(this._id.value, newName));
+  }
+
+  changeProfileImage(newProfileImageUrl?: ImageUrl): void {
+    if (this._profileImageUrl?.equals(newProfileImageUrl || new ImageUrl("https://placeholder.com"))) return;
+    this._profileImageUrl = newProfileImageUrl;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new FriendProfileImageChangedEvent(this._id.value, newProfileImageUrl));
+  }
+
+  acceptRequest(): void {
+    if (this._status === FriendStatus.PENDING || this._status === FriendStatus.REQUESTED) {
+      this._status = FriendStatus.ACCEPTED;
+      this._acceptedAt = new Date();
+      this._updatedAt = new Date();
+      this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
     }
-
-    const now = new Date();
-    const acceptedFriend = new FriendEntity(
-      this._id,
-      this._userId,
-      this._friendUserId,
-      FriendStatus.ACCEPTED,
-      this._requestedAt,
-      now,
-      this._createdAt,
-      now
-    );
-
-    acceptedFriend.addDomainEvent(
-      new FriendRequestAcceptedEvent(
-        this._id.value,
-        this._userId.value,
-        this._friendUserId.value
-      )
-    );
-
-    return Result.success(acceptedFriend);
   }
 
-  /**
-   * 친구 요청을 거절합니다.
-   * REQUESTED 상태에서만 호출 가능합니다.
-   */
-  reject(): CustomResult<FriendEntity> {
-    if (this._status !== FriendStatus.REQUESTED) {
-      return Result.failure(
-        new ConflictError('Friend', 'status', `Cannot reject friend request. Current status: ${this._status}. Expected: ${FriendStatus.REQUESTED}`)
-      );
-    }
-
-    const now = new Date();
-    const rejectedFriend = new FriendEntity(
-      this._id,
-      this._userId,
-      this._friendUserId,
-      FriendStatus.REJECTED,
-      this._requestedAt,
-      now,
-      this._createdAt,
-      now
-    );
-
-    rejectedFriend.addDomainEvent(
-      new FriendRequestRejectedEvent(
-        this._id.value,
-        this._userId.value,
-        this._friendUserId.value
-      )
-    );
-
-    return Result.success(rejectedFriend);
+  blockUser(): void {
+    if (this._status === FriendStatus.BLOCKED) return;
+    this._status = FriendStatus.BLOCKED;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
-  /**
-   * 친구 관계를 해제합니다.
-   * ACCEPTED 상태에서만 호출 가능합니다.
-   */
-  remove(): CustomResult<FriendEntity> {
-    if (this._status !== FriendStatus.ACCEPTED) {
-      return Result.failure(
-        new ConflictError('Friend', 'status', `Cannot remove friend. Current status: ${this._status}. Expected: ${FriendStatus.ACCEPTED}`)
-      );
-    }
-
-    const now = new Date();
-    const removedFriend = new FriendEntity(
-      this._id,
-      this._userId,
-      this._friendUserId,
-      FriendStatus.REMOVED,
-      this._requestedAt,
-      this._respondedAt,
-      this._createdAt,
-      now
-    );
-
-    removedFriend.addDomainEvent(
-      new FriendRemovedEvent(
-        this._id.value,
-        this._userId.value,
-        this._friendUserId.value
-      )
-    );
-
-    return Result.success(removedFriend);
+  removeFriend(): void {
+    if (this._status === FriendStatus.REMOVED) return;
+    this._status = FriendStatus.REMOVED;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
-  /**
-   * 사용자가 이 친구 관계에서 요청자인지 확인합니다.
-   */
-  isRequester(userId: UserId): boolean {
-    return this._userId.equals(userId);
+  markAsPending(): void {
+    if (this._status === FriendStatus.PENDING) return;
+    this._status = FriendStatus.PENDING;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
-  /**
-   * 사용자가 이 친구 관계에서 수신자인지 확인합니다.
-   */
-  isReceiver(userId: UserId): boolean {
-    return this._friendUserId.equals(userId);
+  markAsRequested(): void {
+    if (this._status === FriendStatus.REQUESTED) return;
+    this._status = FriendStatus.REQUESTED;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
-  /**
-   * 친구 관계가 활성 상태인지 확인합니다.
-   */
   isActive(): boolean {
     return this._status === FriendStatus.ACCEPTED;
   }
 
-  /**
-   * 친구 관계가 대기 중인지 확인합니다.
-   */
   isPending(): boolean {
     return this._status === FriendStatus.PENDING || this._status === FriendStatus.REQUESTED;
   }
 
-  /**
-   * 도메인 이벤트를 추가합니다.
-   */
+  // Methods matching Android Friend.kt
+  accept(): CustomResult<FriendEntity> {
+    try {
+      if (this._status === FriendStatus.PENDING || this._status === FriendStatus.REQUESTED) {
+        this._status = FriendStatus.ACCEPTED;
+        this._acceptedAt = new Date();
+        this._updatedAt = new Date();
+        this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
+        return Result.success(this);
+      }
+      return Result.failure(new ValidationError("status", "Cannot accept friend request with current status"));
+    } catch (error) {
+      return Result.failure(error instanceof Error ? error : new Error("Failed to accept friend request"));
+    }
+  }
+
+  reject(): CustomResult<FriendEntity> {
+    try {
+      if (this._status === FriendStatus.PENDING || this._status === FriendStatus.REQUESTED) {
+        this._status = FriendStatus.REJECTED;
+        this._updatedAt = new Date();
+        this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
+        return Result.success(this);
+      }
+      return Result.failure(new ValidationError("status", "Cannot reject friend request with current status"));
+    } catch (error) {
+      return Result.failure(error instanceof Error ? error : new Error("Failed to reject friend request"));
+    }
+  }
+
+  remove(): CustomResult<FriendEntity> {
+    try {
+      if (this._status === FriendStatus.ACCEPTED) {
+        this._status = FriendStatus.REMOVED;
+        this._updatedAt = new Date();
+        this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
+        return Result.success(this);
+      }
+      return Result.failure(new ValidationError("status", "Cannot remove friend with current status"));
+    } catch (error) {
+      return Result.failure(error instanceof Error ? error : new Error("Failed to remove friend"));
+    }
+  }
+
   private addDomainEvent(event: DomainEvent): void {
     this.domainEvents.push(event);
   }
 
-  /**
-   * 도메인 이벤트를 클리어합니다.
-   */
   clearDomainEvents(): void {
     this.domainEvents = [];
   }
 
-  /**
-   * 불변 조건을 검증합니다.
-   */
   private validateInvariant(): void {
-    if (this._userId.equals(this._friendUserId)) {
-      throw new ValidationError('friendUserId', 'Cannot be friends with yourself');
-    }
-
     if (!Object.values(FriendStatus).includes(this._status)) {
-      throw new ValidationError('status', `Invalid friend status: ${this._status}`);
+      throw new ValidationError("status", `Invalid friend status: ${this._status}`);
     }
 
-    if (this._requestedAt > new Date()) {
-      throw new ValidationError('requestedAt', 'Requested date cannot be in the future');
+    if (this._requestedAt && this._requestedAt > new Date()) {
+      throw new ValidationError("requestedAt", "Requested date cannot be in the future");
     }
 
-    if (this._respondedAt && this._respondedAt < this._requestedAt) {
-      throw new ValidationError('respondedAt', 'Response date cannot be before request date');
+    if (this._acceptedAt && this._requestedAt && this._acceptedAt < this._requestedAt) {
+      throw new ValidationError("acceptedAt", "Accepted date cannot be before request date");
     }
   }
 
-  /**
-   * 데이터 객체로 변환합니다.
-   */
   toData(): FriendData {
     return {
       id: this._id.value,
-      userId: this._userId.value,
-      friendUserId: this._friendUserId.value,
+      name: this._name.value,
+      profileImageUrl: this._profileImageUrl?.value,
       status: this._status,
       requestedAt: this._requestedAt,
-      respondedAt: this._respondedAt,
+      acceptedAt: this._acceptedAt,
       createdAt: this._createdAt,
-      updatedAt: this._updatedAt
+      updatedAt: this._updatedAt,
     };
   }
 
-  /**
-   * 데이터 객체로부터 엔티티를 생성합니다.
-   */
   static fromData(data: FriendData): CustomResult<FriendEntity> {
     try {
       const friend = new FriendEntity(
         new FriendId(data.id),
-        new UserId(data.userId),
-        new UserId(data.friendUserId),
+        new UserName(data.name),
+        data.profileImageUrl ? new ImageUrl(data.profileImageUrl) : undefined,
         data.status,
         data.requestedAt,
-        data.respondedAt,
+        data.acceptedAt,
         data.createdAt,
         data.updatedAt
       );
 
       return Result.success(friend);
     } catch (error) {
-      return Result.failure(error instanceof Error ? error : new Error('Failed to create friend entity'));
+      return Result.failure(
+        error instanceof Error ? error : new Error("Failed to create friend entity")
+      );
     }
   }
 
-  /**
-   * 새로운 친구 요청을 생성합니다.
-   */
-  static createFriendRequest(
-    requesterId: UserId,
-    receiverId: UserId
-  ): CustomResult<FriendEntity> {
-    try {
-      const now = new Date();
-      const friendId = new FriendId(`friend_${requesterId.value}_${receiverId.value}_${now.getTime()}`);
-      
-      const friend = new FriendEntity(
-        friendId,
-        requesterId,
-        receiverId,
-        FriendStatus.REQUESTED,
-        now,
-        undefined,
-        now,
-        now
-      );
+  // Factory methods matching Android Friend.kt
+  static newRequest(
+    id: FriendId,
+    name: UserName,
+    profileImageUrl?: ImageUrl,
+    requestedAt?: Date
+  ): FriendEntity {
+    const friend = new FriendEntity(
+      id,
+      name,
+      profileImageUrl,
+      FriendStatus.REQUESTED,
+      requestedAt || new Date(),
+      undefined,
+      new Date(),
+      new Date()
+    );
 
-      friend.addDomainEvent(
-        new FriendRequestSentEvent(
-          friendId.value,
-          requesterId.value,
-          receiverId.value
-        )
-      );
+    friend.addDomainEvent(
+      new FriendRequestSentEvent(id.value, "currentUserId", "friendUserId")
+    );
 
-      return Result.success(friend);
-    } catch (error) {
-      return Result.failure(error instanceof Error ? error : new Error('Failed to create friend request'));
-    }
+    return friend;
+  }
+
+  static receivedRequest(
+    id: FriendId,
+    name: UserName,
+    profileImageUrl?: ImageUrl,
+    requestedAt?: Date
+  ): FriendEntity {
+    const friend = new FriendEntity(
+      id,
+      name,
+      profileImageUrl,
+      FriendStatus.PENDING,
+      requestedAt || new Date(),
+      undefined,
+      new Date(),
+      new Date()
+    );
+
+    return friend;
+  }
+
+  static fromDataSource(
+    id: FriendId,
+    name: UserName,
+    profileImageUrl: ImageUrl | undefined,
+    status: FriendStatus,
+    requestedAt?: Date,
+    acceptedAt?: Date,
+    createdAt?: Date,
+    updatedAt?: Date
+  ): FriendEntity {
+    return new FriendEntity(
+      id,
+      name,
+      profileImageUrl,
+      status,
+      requestedAt,
+      acceptedAt,
+      createdAt || new Date(),
+      updatedAt || new Date()
+    );
   }
 }

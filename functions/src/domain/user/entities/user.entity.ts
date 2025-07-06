@@ -1,12 +1,12 @@
-import { BaseEntity, ValueObject } from '../../../core/types';
-import { ValidationError } from '../../../core/errors';
-import { VALIDATION_RULES } from '../../../core/constants';
+import {BaseEntity, ValueObject} from "../../../core/types";
+import {ValidationError} from "../../../core/errors";
+import {VALIDATION_RULES} from "../../../core/constants";
 
 // Value Objects
 export class Email implements ValueObject<string> {
   constructor(public readonly value: string) {
     if (!VALIDATION_RULES.EMAIL_REGEX.test(value)) {
-      throw new ValidationError('email', 'Invalid email format');
+      throw new ValidationError("email", "Invalid email format");
     }
   }
 
@@ -18,10 +18,10 @@ export class Email implements ValueObject<string> {
 export class UserName implements ValueObject<string> {
   constructor(public readonly value: string) {
     if (value.length < VALIDATION_RULES.USERNAME_MIN_LENGTH) {
-      throw new ValidationError('name', `Username must be at least ${VALIDATION_RULES.USERNAME_MIN_LENGTH} characters`);
+      throw new ValidationError("name", `Username must be at least ${VALIDATION_RULES.USERNAME_MIN_LENGTH} characters`);
     }
     if (value.length > VALIDATION_RULES.USERNAME_MAX_LENGTH) {
-      throw new ValidationError('name', `Username must be at most ${VALIDATION_RULES.USERNAME_MAX_LENGTH} characters`);
+      throw new ValidationError("name", `Username must be at most ${VALIDATION_RULES.USERNAME_MAX_LENGTH} characters`);
     }
   }
 
@@ -32,8 +32,8 @@ export class UserName implements ValueObject<string> {
 
 export class ImageUrl implements ValueObject<string> {
   constructor(public readonly value: string) {
-    if (!value.startsWith('https://')) {
-      throw new ValidationError('profileImageUrl', 'Profile image must be a valid HTTPS URL');
+    if (!value.startsWith("https://")) {
+      throw new ValidationError("profileImageUrl", "Profile image must be a valid HTTPS URL");
     }
   }
 
@@ -45,7 +45,7 @@ export class ImageUrl implements ValueObject<string> {
 export class UserMemo implements ValueObject<string> {
   constructor(public readonly value: string) {
     if (value.length > 500) {
-      throw new ValidationError('memo', 'User memo must be at most 500 characters');
+      throw new ValidationError("memo", "User memo must be at most 500 characters");
     }
   }
 
@@ -57,7 +57,7 @@ export class UserMemo implements ValueObject<string> {
 export class UserFcmToken implements ValueObject<string> {
   constructor(public readonly value: string) {
     if (value.trim().length === 0) {
-      throw new ValidationError('fcmToken', 'FCM token cannot be empty');
+      throw new ValidationError("fcmToken", "FCM token cannot be empty");
     }
   }
 
@@ -68,19 +68,19 @@ export class UserFcmToken implements ValueObject<string> {
 
 // Enums (matching Android exactly)
 export enum UserStatus {
-  ONLINE = 'online',
-  OFFLINE = 'offline',
-  AWAY = 'away',
-  DO_NOT_DISTURB = 'do_not_disturb',
-  UNKNOWN = 'unknown'
+  ONLINE = "online",
+  OFFLINE = "offline",
+  AWAY = "away",
+  DO_NOT_DISTURB = "do_not_disturb",
+  UNKNOWN = "unknown"
 }
 
 export enum UserAccountStatus {
-  ACTIVE = 'active',
-  SUSPENDED = 'suspended',
-  DELETED = 'deleted',
-  WITHDRAWN = 'withdrawn',
-  UNKNOWN = 'unknown'
+  ACTIVE = "active",
+  SUSPENDED = "suspended",
+  DELETED = "deleted",
+  WITHDRAWN = "withdrawn",
+  UNKNOWN = "unknown"
 }
 
 // User Data Interface (for Firestore mapping)
@@ -100,6 +100,20 @@ export interface UserData {
 
 // User Entity (matching Android User.kt structure exactly)
 export class UserEntity implements BaseEntity {
+  public static readonly COLLECTION_NAME = "users";
+
+  // Keys matching Android User.kt
+  public static readonly KEY_EMAIL = "email";
+  public static readonly KEY_NAME = "name";
+  public static readonly KEY_CONSENT_TIMESTAMP = "consentTimeStamp";
+  public static readonly KEY_PROFILE_IMAGE_URL = "profileImageUrl";
+  public static readonly KEY_MEMO = "memo";
+  public static readonly KEY_USER_STATUS = "userStatus";
+  public static readonly KEY_FCM_TOKEN = "fcmToken";
+  public static readonly KEY_ACCOUNT_STATUS = "accountStatus";
+  public static readonly KEY_CREATED_AT = "createdAt";
+  public static readonly KEY_UPDATED_AT = "updatedAt";
+
   constructor(
     public readonly id: string,
     public readonly email: Email,
@@ -115,10 +129,6 @@ export class UserEntity implements BaseEntity {
   ) {}
 
   // Business logic methods
-  
-  /**
-   * Updates the user's profile information.
-   */
   updateProfile(updates: {
     name?: UserName;
     profileImageUrl?: ImageUrl;
@@ -139,9 +149,6 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Updates the user's online status.
-   */
   updateUserStatus(newStatus: UserStatus): UserEntity {
     if (this.isWithdrawn()) return this;
 
@@ -160,9 +167,6 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Updates the FCM token for push notifications.
-   */
   updateFcmToken(newToken?: UserFcmToken): UserEntity {
     if (this.isWithdrawn()) return this;
 
@@ -181,9 +185,6 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Suspends the user's account.
-   */
   suspendAccount(): UserEntity {
     if (this.isWithdrawn()) return this;
 
@@ -202,9 +203,6 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Activates a previously suspended user's account.
-   */
   activateAccount(): UserEntity {
     if (this.isWithdrawn()) return this;
 
@@ -223,9 +221,6 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Marks the user's account as withdrawn.
-   */
   markAsWithdrawn(): UserEntity {
     if (this.isWithdrawn()) return this;
 
@@ -244,9 +239,6 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Removes the user's profile image.
-   */
   removeProfileImage(): UserEntity {
     if (this.isWithdrawn()) return this;
 
@@ -265,30 +257,18 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Checks if the account is in a withdrawn state.
-   */
   isWithdrawn(): boolean {
     return this.accountStatus === UserAccountStatus.WITHDRAWN;
   }
 
-  /**
-   * Checks if the account is active.
-   */
   isActive(): boolean {
     return this.accountStatus === UserAccountStatus.ACTIVE;
   }
 
-  /**
-   * Checks if the user can receive friend requests.
-   */
   canReceiveRequests(): boolean {
     return this.isActive() && this.userStatus !== UserStatus.UNKNOWN;
   }
 
-  /**
-   * Converts to data object for Firestore storage.
-   */
   toData(): UserData {
     return {
       id: this.id,
@@ -301,13 +281,10 @@ export class UserEntity implements BaseEntity {
       fcmToken: this.fcmToken?.value,
       accountStatus: this.accountStatus,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
 
-  /**
-   * Creates a UserEntity from Firestore data.
-   */
   static fromData(data: UserData): UserEntity {
     return new UserEntity(
       data.id,
@@ -324,31 +301,21 @@ export class UserEntity implements BaseEntity {
     );
   }
 
-  /**
-   * Updates friend count (for compatibility with existing friend management code).
-   * Note: This is a placeholder method as user friend count is typically calculated dynamically.
-   */
   updateFriendCount(count: number): UserEntity {
     // In a real implementation, you might want to store friend count as a field
     // For now, just return the same entity since friend count is calculated dynamically
     return this;
   }
 
-  /**
-   * Creates a search profile subset for friend operations
-   */
   toSearchProfile(): Partial<UserEntity> {
     return {
       id: this.id,
       name: this.name,
       profileImageUrl: this.profileImageUrl,
-      userStatus: this.userStatus
+      userStatus: this.userStatus,
     };
   }
 
-  /**
-   * Creates a new User instance for registration.
-   */
   static create(
     id: string,
     email: Email,

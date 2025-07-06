@@ -71,7 +71,10 @@ export const acceptFriendRequestFunction = onCall(
 
       const friendUseCases = Providers.getFriendProvider().create();
 
-      const result = await friendUseCases.acceptFriendRequestUseCase.execute({friendRequestId, userId});
+      const result = await friendUseCases.acceptFriendRequestUseCase.execute({
+        requesterId: friendRequestId,
+        receiverId: userId,
+      });
 
       if (!result.success) {
         if (result.error.message.includes("not found")) {
@@ -98,8 +101,8 @@ export const acceptFriendRequestFunction = onCall(
 
 // Reject Friend Request Function
 interface RejectFriendRequestRequest {
-  friendRequestId: string;
-  userId: string;
+  requesterId: string;
+  receiverId: string;
 }
 
 export const rejectFriendRequestFunction = onCall(
@@ -110,15 +113,18 @@ export const rejectFriendRequestFunction = onCall(
   },
   async (request) => {
     try {
-      const {friendRequestId, userId} = request.data as RejectFriendRequestRequest;
+      const {requesterId, receiverId} = request.data as RejectFriendRequestRequest;
 
-      if (!friendRequestId || !userId) {
-        throw new HttpsError("invalid-argument", "Friend request ID and user ID are required");
+      if (!requesterId || !receiverId) {
+        throw new HttpsError("invalid-argument", "Requester ID and receiver ID are required");
       }
 
       const friendUseCases = Providers.getFriendProvider().create();
 
-      const result = await friendUseCases.rejectFriendRequestUseCase.execute({friendRequestId, userId});
+      const result = await friendUseCases.rejectFriendRequestUseCase.execute({
+        requesterId: requesterId,
+        receiverId: receiverId,
+      });
 
       if (!result.success) {
         if (result.error.message.includes("not found")) {
