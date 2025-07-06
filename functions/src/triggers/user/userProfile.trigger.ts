@@ -22,7 +22,7 @@ export const updateUserProfileFunction = onCall(
   },
   async (request): Promise<UpdateUserProfileResponse> => {
     try {
-      const { userId, username, profileImage, bio, displayName } = request.data as UpdateUserProfileRequest;
+      const { userId, username, profileImage, bio } = request.data as UpdateUserProfileRequest;
 
       if (!userId) {
         throw new HttpsError('invalid-argument', 'User ID is required');

@@ -1,17 +1,17 @@
 import {ProviderContainer, ProviderKeys} from "./ProviderContainer";
 
 // Datasources
-import {FirestoreUserProfileDataSource} from "../datasources/firestore/userProfile.datasource";
+import {FirestoreUserDataSource} from "../datasources/firestore/user.datasource";
 import {FirestoreFriendDataSource} from "../datasources/firestore/friend.datasource";
 import {FirestoreProjectDataSource} from "../datasources/firestore/project.datasource";
 
 // Repository Implementations
-import {UserProfileRepositoryImpl} from "../repositories/userProfile.repository.impl";
+import {UserRepositoryImpl} from "../repositories/user.repository.impl";
 import {FriendRepositoryImpl} from "../repositories/friend.repository.impl";
 import {ProjectRepositoryImpl} from "../repositories/project.repository.impl";
 
 // Repository Interfaces
-import {UserProfileRepository} from "../../domain/user/repositories/userProfile.repository";
+import {UserRepository} from "../../domain/user/repositories/user.repository";
 import {FriendRepository} from "../../domain/friend/repositories/friend.repository";
 import {ProjectRepository} from "../../domain/project/repositories/project.repository";
 
@@ -22,30 +22,30 @@ export function setupContainer(): void {
   const container = ProviderContainer.getInstance();
 
   // Datasources 등록
-  const userProfileDataSource = new FirestoreUserProfileDataSource();
+  const userDataSource = new FirestoreUserDataSource();
   const friendDataSource = new FirestoreFriendDataSource();
   const projectDataSource = new FirestoreProjectDataSource();
 
   // Repository 구현체 등록
-  const userProfileRepository: UserProfileRepository = new UserProfileRepositoryImpl(userProfileDataSource);
+  const userRepository: UserRepository = new UserRepositoryImpl(userDataSource);
   const friendRepository: FriendRepository = new FriendRepositoryImpl(friendDataSource);
   const projectRepository: ProjectRepository = new ProjectRepositoryImpl(projectDataSource);
 
   // 컨테이너에 등록
-  container.register("userProfileRepository", userProfileRepository);
+  container.register("userRepository", userRepository);
   container.register("friendRepository", friendRepository);
   container.register("projectRepository", projectRepository);
 
   // 기존 Factory 패턴 지원을 위한 Factory 등록
-  container.register(ProviderKeys.USER_REPOSITORY_FACTORY, () => userProfileRepository);
+  container.register(ProviderKeys.USER_REPOSITORY_FACTORY, () => userRepository);
   container.register(ProviderKeys.FRIEND_REPOSITORY_FACTORY, () => friendRepository);
   container.register(ProviderKeys.PROJECT_REPOSITORY_FACTORY, () => projectRepository);
 
   container.markAsInitialized();
 }
 
-export function getUserProfileRepository(): UserProfileRepository {
-  return ProviderContainer.getInstance().get<UserProfileRepository>("userProfileRepository");
+export function getUserRepository(): UserRepository {
+  return ProviderContainer.getInstance().get<UserRepository>("userRepository");
 }
 
 export function getFriendRepository(): FriendRepository {

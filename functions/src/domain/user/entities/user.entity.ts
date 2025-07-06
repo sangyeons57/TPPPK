@@ -325,6 +325,28 @@ export class UserEntity implements BaseEntity {
   }
 
   /**
+   * Updates friend count (for compatibility with existing friend management code).
+   * Note: This is a placeholder method as user friend count is typically calculated dynamically.
+   */
+  updateFriendCount(count: number): UserEntity {
+    // In a real implementation, you might want to store friend count as a field
+    // For now, just return the same entity since friend count is calculated dynamically
+    return this;
+  }
+
+  /**
+   * Creates a search profile subset for friend operations
+   */
+  toSearchProfile(): Partial<UserEntity> {
+    return {
+      id: this.id,
+      name: this.name,
+      profileImageUrl: this.profileImageUrl,
+      userStatus: this.userStatus
+    };
+  }
+
+  /**
    * Creates a new User instance for registration.
    */
   static create(

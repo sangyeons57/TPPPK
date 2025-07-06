@@ -1,9 +1,9 @@
 import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
-import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {UserId} from "../../../domain/friend/entities/friend.entity";
-import {UserSearchProfile} from "../../../domain/user/entities/user.entity";
+import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendRequestsRequest {
   userId: string;
@@ -16,8 +16,8 @@ export interface FriendRequestInfo {
   requestId: string;
   requesterUserId: string;
   receiverUserId: string;
-  requester?: UserSearchProfile;
-  receiver?: UserSearchProfile;
+  requester?: Partial<UserEntity>;
+  receiver?: Partial<UserEntity>;
   status: string;
   requestedAt: string;
   respondedAt?: string;
@@ -32,7 +32,7 @@ export interface GetFriendRequestsResponse {
 export class GetFriendRequestsUseCase {
   constructor(
     private readonly friendRepository: FriendRepository,
-    private readonly userRepository: UserProfileRepository
+    private readonly userRepository: UserRepository
   ) {}
 
   async execute(request: GetFriendRequestsRequest): Promise<CustomResult<GetFriendRequestsResponse>> {
@@ -94,12 +94,22 @@ export class GetFriendRequestsUseCase {
         if (request.type === "received" || request.type === "sent") {
           const requesterResult = await this.userRepository.findByUserId(friendRequest.userId.value);
           if (requesterResult.success && requesterResult.data) {
-            requestInfo.requester = requesterResult.data.toSearchProfile();
+            requestInfo.requester = {
+              id: requesterResult.data.id,
+              name: requesterResult.data.name,
+              profileImageUrl: requesterResult.data.profileImageUrl,
+              userStatus: requesterResult.data.userStatus
+            };
           }
 
           const receiverResult = await this.userRepository.findByUserId(friendRequest.friendUserId.value);
           if (receiverResult.success && receiverResult.data) {
-            requestInfo.receiver = receiverResult.data.toSearchProfile();
+            requestInfo.receiver = {
+              id: receiverResult.data.id,
+              name: receiverResult.data.name,
+              profileImageUrl: receiverResult.data.profileImageUrl,
+              userStatus: receiverResult.data.userStatus
+            };
           }
         }
 

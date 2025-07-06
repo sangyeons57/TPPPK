@@ -26,6 +26,13 @@ export class UnauthorizedError extends DomainError {
   }
 }
 
+export class DatabaseError extends DomainError {
+  constructor(message: string, details?: string) {
+    super(details ? `${message}: ${details}` : message, "DATABASE_ERROR");
+    this.name = "DatabaseError";
+  }
+}
+
 export class ConflictError extends DomainError {
   constructor(resource: string, field: string, value: string) {
     super(`${resource} with ${field} ${value} already exists`, "CONFLICT");

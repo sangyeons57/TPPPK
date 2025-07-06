@@ -1,5 +1,5 @@
 import {ImageProcessingService} from "../../../core/services/imageProcessing.service";
-import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {ImageType} from "../../../core/types/image.types";
 import {CustomResult, Result} from "../../../core/types";
 import {NotFoundError} from "../../../core/errors";
@@ -20,7 +20,7 @@ export interface ProcessUserImageResponse {
 export class ProcessUserImageUseCase {
   constructor(
     private readonly imageProcessingService: ImageProcessingService,
-    private readonly userProfileRepository: UserProfileRepository
+    private readonly userProfileRepository: UserRepository
   ) {}
 
   async execute(request: ProcessUserImageRequest): Promise<CustomResult<ProcessUserImageResponse>> {
@@ -49,7 +49,7 @@ export class ProcessUserImageUseCase {
       const processedImage = processResult.data;
 
       const updatedProfile = userProfile.updateProfile({
-        profileImage: processedImage.originalUrl,
+        profileImageUrl: processedImage.originalUrl,
       });
 
       const updateResult = await this.userProfileRepository.update(updatedProfile);

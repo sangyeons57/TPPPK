@@ -1,9 +1,9 @@
 import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
-import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {UserId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
-import {UserSearchProfile} from "../../../domain/user/entities/user.entity";
+import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendsRequest {
   userId: string;
@@ -15,7 +15,7 @@ export interface GetFriendsRequest {
 export interface FriendInfo {
   friendId: string;
   userId: string;
-  user: UserSearchProfile;
+  user: Partial<UserEntity>;
   status: string;
   friendsSince?: string;
   requestedAt: string;
@@ -30,7 +30,7 @@ export interface GetFriendsResponse {
 export class GetFriendsUseCase {
   constructor(
     private readonly friendRepository: FriendRepository,
-    private readonly userRepository: UserProfileRepository
+    private readonly userRepository: UserRepository
   ) {}
 
   async execute(request: GetFriendsRequest): Promise<CustomResult<GetFriendsResponse>> {
@@ -83,7 +83,12 @@ export class GetFriendsUseCase {
           friendInfos.push({
             friendId: relation.id.value,
             userId: friendUserId,
-            user: friendUser.toSearchProfile(true, false),
+            user: {
+              id: friendUser.id,
+              name: friendUser.name,
+              profileImageUrl: friendUser.profileImageUrl,
+              userStatus: friendUser.userStatus
+            },
             status: relation.status,
             friendsSince:
               relation.status === FriendStatus.ACCEPTED &&

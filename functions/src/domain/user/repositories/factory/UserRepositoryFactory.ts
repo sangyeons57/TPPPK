@@ -1,6 +1,7 @@
 import { RepositoryFactory } from '../../../shared/RepositoryFactory';
 import { UserRepositoryFactoryContext } from './UserRepositoryFactoryContext';
 import { UserRepository } from '../user.repository';
+import { UserRepositoryImpl } from '../../../../infrastructure/repositories/user.repository.impl';
 import { FirestoreUserDataSource } from '../../../../infrastructure/datasources/firestore/user.datasource';
 
 /**
@@ -13,6 +14,7 @@ export class UserRepositoryFactory implements RepositoryFactory<UserRepository, 
    * @returns UserRepository instance
    */
   create(context?: UserRepositoryFactoryContext): UserRepository {
-    return new FirestoreUserDataSource();
+    const dataSource = new FirestoreUserDataSource();
+    return new UserRepositoryImpl(dataSource);
   }
 }
