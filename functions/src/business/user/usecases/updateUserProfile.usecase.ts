@@ -1,72 +1,60 @@
-import { UserProfileRepository } from '../../../domain/user/repositories/userProfile.repository';
-import { UserProfileEntity, Username, UserProfileImage } from '../../../domain/user/entities/user.entity';
+import { UserRepository } from '../../../domain/user/repositories/user.repository';
+import { UserEntity, UserName, ImageUrl, UserMemo } from '../../../domain/user/entities/user.entity';
 import { CustomResult, Result } from '../../../core/types';
 import { NotFoundError, ValidationError } from '../../../core/errors';
 
 export interface UpdateUserProfileRequest {
   userId: string;
-  username?: string;
-  profileImage?: string;
-  bio?: string;
-  displayName?: string;
-  canReceiveFriendRequests?: boolean;
+  name?: string;
+  profileImageUrl?: string;
+  memo?: string;
 }
 
 export interface UpdateUserProfileResponse {
-  userProfile: UserProfileEntity;
+  userProfile: UserEntity;
 }
 
 export class UpdateUserProfileUseCase {
   constructor(
-    private readonly userProfileRepository: UserProfileRepository
+    private readonly userRepository: UserRepository
   ) {}
 
   async execute(request: UpdateUserProfileRequest): Promise<CustomResult<UpdateUserProfileResponse>> {
     try {
-      const existingProfileResult = await this.userProfileRepository.findByUserId(request.userId);
-      if (!existingProfileResult.success) {
-        return Result.failure(existingProfileResult.error);
+      const existingUserResult = await this.userRepository.findByUserId(request.userId);
+      if (!existingUserResult.success) {
+        return Result.failure(existingUserResult.error);
       }
 
-      const existingProfile = existingProfileResult.data;
-      if (!existingProfile) {
-        return Result.failure(new NotFoundError('UserProfile', request.userId));
+      const existingUser = existingUserResult.data;
+      if (!existingUser) {
+        return Result.failure(new NotFoundError('User', request.userId));
       }
 
       const updates: {
-        username?: Username;
-        profileImage?: UserProfileImage;
-        bio?: string;
-        displayName?: string;
-        canReceiveFriendRequests?: boolean;
+        name?: UserName;
+        profileImageUrl?: ImageUrl;
+        memo?: UserMemo;
       } = {};
 
-      if (request.username) {
-        const usernameValidation = await this.validateUsername(request.username, existingProfile.id);
-        if (!usernameValidation.success) {
-          return Result.failure(usernameValidation.error);
+      if (request.name) {
+        const nameValidation = await this.validateUserName(request.name, existingUser.id);
+        if (!nameValidation.success) {
+          return Result.failure(nameValidation.error);
         }
-        updates.username = new Username(request.username);
+        updates.name = new UserName(request.name);
       }
 
-      if (request.profileImage) {
-        updates.profileImage = new UserProfileImage(request.profileImage);
+      if (request.profileImageUrl) {
+        updates.profileImageUrl = new ImageUrl(request.profileImageUrl);
       }
 
-      if (request.bio !== undefined) {
-        updates.bio = request.bio;
+      if (request.memo !== undefined) {
+        updates.memo = request.memo ? new UserMemo(request.memo) : undefined;
       }
 
-      if (request.displayName !== undefined) {
-        updates.displayName = request.displayName;
-      }
-
-      if (request.canReceiveFriendRequests !== undefined) {
-        updates.canReceiveFriendRequests = request.canReceiveFriendRequests;
-      }
-
-      const updatedProfile = existingProfile.updateProfile(updates);
-      const saveResult = await this.userProfileRepository.update(updatedProfile);
+      const updatedUser = existingUser.updateProfile(updates);
+      const saveResult = await this.userRepository.update(updatedUser);
 
       if (!saveResult.success) {
         return Result.failure(saveResult.error);
@@ -80,15 +68,15 @@ export class UpdateUserProfileUseCase {
     }
   }
 
-  private async validateUsername(username: string, currentProfileId: string): Promise<CustomResult<void>> {
+  private async validateUserName(name: string, currentUserId: string): Promise<CustomResult<void>> {
     try {
-      const existingUser = await this.userProfileRepository.findByUsername(new Username(username));
+      const existingUser = await this.userRepository.findByName(new UserName(name));
       if (!existingUser.success) {
         return Result.failure(existingUser.error);
       }
 
-      if (existingUser.data && existingUser.data.id !== currentProfileId) {
-        return Result.failure(new ValidationError('username', 'Username already exists'));
+      if (existingUser.data && existingUser.data.id !== currentUserId) {
+        return Result.failure(new ValidationError('name', 'Username already exists'));
       }
 
       return Result.success(undefined);

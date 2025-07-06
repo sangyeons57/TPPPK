@@ -2,7 +2,7 @@ import { RepositoryFactory } from '../../domain/shared/RepositoryFactory';
 import { FriendRepositoryFactoryContext } from '../../domain/friend/repositories/factory/FriendRepositoryFactoryContext';
 import { UserRepositoryFactoryContext } from '../../domain/user/repositories/factory/UserRepositoryFactoryContext';
 import { FriendRepository } from '../../domain/friend/repositories/friend.repository';
-import { UserProfileRepository } from '../../domain/user/repositories/userProfile.repository';
+import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { SendFriendRequestUseCase } from './usecases/sendFriendRequest.usecase';
 import { AcceptFriendRequestUseCase } from './usecases/acceptFriendRequest.usecase';
 import { RejectFriendRequestUseCase } from './usecases/rejectFriendRequest.usecase';
@@ -23,7 +23,7 @@ export interface FriendUseCases {
   
   // Common repositories for advanced use cases
   friendRepository: FriendRepository;
-  userProfileRepository: UserProfileRepository;
+  userRepository: UserRepository;
 }
 
 /**
@@ -33,7 +33,7 @@ export interface FriendUseCases {
 export class FriendUseCaseProvider {
   constructor(
     private readonly friendRepositoryFactory: RepositoryFactory<FriendRepository, FriendRepositoryFactoryContext>,
-    private readonly userRepositoryFactory: RepositoryFactory<UserProfileRepository, UserRepositoryFactoryContext>
+    private readonly userRepositoryFactory: RepositoryFactory<UserRepository, UserRepositoryFactoryContext>
   ) {}
 
   /**
@@ -43,42 +43,42 @@ export class FriendUseCaseProvider {
    */
   create(context?: FriendRepositoryFactoryContext): FriendUseCases {
     const friendRepository = this.friendRepositoryFactory.create(context);
-    const userProfileRepository = this.userRepositoryFactory.create();
+    const userRepository = this.userRepositoryFactory.create();
 
     return {
       sendFriendRequestUseCase: new SendFriendRequestUseCase(
         friendRepository,
-        userProfileRepository
+        userRepository
       ),
       
       acceptFriendRequestUseCase: new AcceptFriendRequestUseCase(
         friendRepository,
-        userProfileRepository
+        userRepository
       ),
       
       rejectFriendRequestUseCase: new RejectFriendRequestUseCase(
         friendRepository,
-        userProfileRepository
+        userRepository
       ),
       
       removeFriendUseCase: new RemoveFriendUseCase(
         friendRepository,
-        userProfileRepository
+        userRepository
       ),
       
       getFriendsUseCase: new GetFriendsUseCase(
         friendRepository,
-        userProfileRepository
+        userRepository
       ),
       
       getFriendRequestsUseCase: new GetFriendRequestsUseCase(
         friendRepository,
-        userProfileRepository
+        userRepository
       ),
 
       // Common repositories
       friendRepository,
-      userProfileRepository
+      userRepository
     };
   }
 }

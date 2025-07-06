@@ -32,10 +32,9 @@ export const updateUserProfileFunction = onCall(
 
       const result = await userUseCases.updateUserProfileUseCase.execute({
         userId,
-        username,
-        profileImage,
-        bio,
-        displayName
+        name: username,
+        profileImageUrl: profileImage,
+        memo: bio
       });
 
       if (!result.success) {

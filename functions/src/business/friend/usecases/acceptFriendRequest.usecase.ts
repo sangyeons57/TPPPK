@@ -1,7 +1,7 @@
 import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
-import {UserProfileRepository} from "../../../domain/user/repositories/userProfile.repository";
+import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {FriendEntity, UserId, FriendId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
 
 export interface AcceptFriendRequestRequest {
@@ -19,7 +19,7 @@ export interface AcceptFriendRequestResponse {
 export class AcceptFriendRequestUseCase {
   constructor(
     private readonly friendRepository: FriendRepository,
-    private readonly userRepository: UserProfileRepository
+    private readonly userRepository: UserRepository
   ) {}
 
   async execute(request: AcceptFriendRequestRequest): Promise<CustomResult<AcceptFriendRequestResponse>> {

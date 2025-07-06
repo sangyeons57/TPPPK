@@ -1,12 +1,12 @@
-import {BaseEntity, ValueObject} from "../../../core/types";
-import {ValidationError} from "../../../core/errors";
-import {VALIDATION_RULES} from "../../../core/constants";
-import {UserId} from "../../friend/entities/friend.entity";
+import { BaseEntity, ValueObject } from '../../../core/types';
+import { ValidationError } from '../../../core/errors';
+import { VALIDATION_RULES } from '../../../core/constants';
 
+// Value Objects
 export class Email implements ValueObject<string> {
   constructor(public readonly value: string) {
     if (!VALIDATION_RULES.EMAIL_REGEX.test(value)) {
-      throw new ValidationError("email", "Invalid email format");
+      throw new ValidationError('email', 'Invalid email format');
     }
   }
 
@@ -15,181 +15,339 @@ export class Email implements ValueObject<string> {
   }
 }
 
-export class Username implements ValueObject<string> {
+export class UserName implements ValueObject<string> {
   constructor(public readonly value: string) {
     if (value.length < VALIDATION_RULES.USERNAME_MIN_LENGTH) {
-      throw new ValidationError("username", `Username must be at least ${VALIDATION_RULES.USERNAME_MIN_LENGTH} characters`);
+      throw new ValidationError('name', `Username must be at least ${VALIDATION_RULES.USERNAME_MIN_LENGTH} characters`);
     }
     if (value.length > VALIDATION_RULES.USERNAME_MAX_LENGTH) {
-      throw new ValidationError("username", `Username must be at most ${VALIDATION_RULES.USERNAME_MAX_LENGTH} characters`);
+      throw new ValidationError('name', `Username must be at most ${VALIDATION_RULES.USERNAME_MAX_LENGTH} characters`);
     }
   }
 
-  equals(other: Username): boolean {
+  equals(other: UserName): boolean {
     return this.value === other.value;
   }
 }
 
-export class UserProfileImage implements ValueObject<string> {
+export class ImageUrl implements ValueObject<string> {
   constructor(public readonly value: string) {
-    if (!value.startsWith("https://")) {
-      throw new ValidationError("profileImage", "Profile image must be a valid HTTPS URL");
+    if (!value.startsWith('https://')) {
+      throw new ValidationError('profileImageUrl', 'Profile image must be a valid HTTPS URL');
     }
   }
 
-  equals(other: UserProfileImage): boolean {
+  equals(other: ImageUrl): boolean {
     return this.value === other.value;
   }
 }
 
-export interface UserProfile extends BaseEntity {
-  userId: string;
-  username: Username;
-  email: Email;
-  profileImage?: UserProfileImage;
-  bio?: string;
-  displayName?: string;
-  isActive: boolean;
-  friendCount?: number;
-  canReceiveFriendRequests?: boolean;
+export class UserMemo implements ValueObject<string> {
+  constructor(public readonly value: string) {
+    if (value.length > 500) {
+      throw new ValidationError('memo', 'User memo must be at most 500 characters');
+    }
+  }
+
+  equals(other: UserMemo): boolean {
+    return this.value === other.value;
+  }
 }
 
-export interface UserSearchProfile {
+export class UserFcmToken implements ValueObject<string> {
+  constructor(public readonly value: string) {
+    if (value.trim().length === 0) {
+      throw new ValidationError('fcmToken', 'FCM token cannot be empty');
+    }
+  }
+
+  equals(other: UserFcmToken): boolean {
+    return this.value === other.value;
+  }
+}
+
+// Enums (matching Android exactly)
+export enum UserStatus {
+  ONLINE = 'online',
+  OFFLINE = 'offline',
+  AWAY = 'away',
+  DO_NOT_DISTURB = 'do_not_disturb',
+  UNKNOWN = 'unknown'
+}
+
+export enum UserAccountStatus {
+  ACTIVE = 'active',
+  SUSPENDED = 'suspended',
+  DELETED = 'deleted',
+  WITHDRAWN = 'withdrawn',
+  UNKNOWN = 'unknown'
+}
+
+// User Data Interface (for Firestore mapping)
+export interface UserData {
   id: string;
-  userId: string;
-  username: string;
-  displayName?: string;
-  profileImage?: string;
-  isActive: boolean;
-  isFriend?: boolean;
-  hasPendingRequest?: boolean;
+  email: string;
+  name: string;
+  consentTimeStamp: Date;
+  profileImageUrl?: string;
+  memo?: string;
+  userStatus: UserStatus;
+  fcmToken?: string;
+  accountStatus: UserAccountStatus;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export class UserProfileEntity implements UserProfile {
+// User Entity (matching Android User.kt structure exactly)
+export class UserEntity implements BaseEntity {
   constructor(
     public readonly id: string,
-    public readonly userId: string,
-    public readonly username: Username,
     public readonly email: Email,
-    public readonly createdAt: Date,
-    public readonly updatedAt: Date,
-    public readonly isActive: boolean = true,
-    public readonly profileImage?: UserProfileImage,
-    public readonly bio?: string,
-    public readonly displayName?: string,
-    public readonly friendCount?: number,
-    public readonly canReceiveFriendRequests: boolean = true
+    public readonly name: UserName,
+    public readonly consentTimeStamp: Date,
+    public readonly profileImageUrl?: ImageUrl,
+    public readonly memo?: UserMemo,
+    public readonly userStatus: UserStatus = UserStatus.OFFLINE,
+    public readonly fcmToken?: UserFcmToken,
+    public readonly accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE,
+    public readonly createdAt: Date = new Date(),
+    public readonly updatedAt: Date = new Date()
   ) {}
 
+  // Business logic methods
+  
+  /**
+   * Updates the user's profile information.
+   */
   updateProfile(updates: {
-    username?: Username;
-    profileImage?: UserProfileImage;
-    bio?: string;
-    displayName?: string;
-    canReceiveFriendRequests?: boolean;
-  }): UserProfileEntity {
-    return new UserProfileEntity(
+    name?: UserName;
+    profileImageUrl?: ImageUrl;
+    memo?: UserMemo;
+  }): UserEntity {
+    return new UserEntity(
       this.id,
-      this.userId,
-      updates.username || this.username,
       this.email,
+      updates.name || this.name,
+      this.consentTimeStamp,
+      updates.profileImageUrl !== undefined ? updates.profileImageUrl : this.profileImageUrl,
+      updates.memo !== undefined ? updates.memo : this.memo,
+      this.userStatus,
+      this.fcmToken,
+      this.accountStatus,
       this.createdAt,
-      new Date(),
-      this.isActive,
-      updates.profileImage || this.profileImage,
-      updates.bio !== undefined ? updates.bio : this.bio,
-      updates.displayName !== undefined ? updates.displayName : this.displayName,
-      this.friendCount,
-      updates.canReceiveFriendRequests !== undefined ? updates.canReceiveFriendRequests : this.canReceiveFriendRequests
+      new Date()
     );
   }
 
-  deactivate(): UserProfileEntity {
-    return new UserProfileEntity(
+  /**
+   * Updates the user's online status.
+   */
+  updateUserStatus(newStatus: UserStatus): UserEntity {
+    if (this.isWithdrawn()) return this;
+
+    return new UserEntity(
       this.id,
-      this.userId,
-      this.username,
       this.email,
+      this.name,
+      this.consentTimeStamp,
+      this.profileImageUrl,
+      this.memo,
+      newStatus,
+      this.fcmToken,
+      this.accountStatus,
       this.createdAt,
-      new Date(),
-      false,
-      this.profileImage,
-      this.bio,
-      this.displayName,
-      this.friendCount,
-      this.canReceiveFriendRequests
+      new Date()
     );
   }
 
-  activate(): UserProfileEntity {
-    return new UserProfileEntity(
+  /**
+   * Updates the FCM token for push notifications.
+   */
+  updateFcmToken(newToken?: UserFcmToken): UserEntity {
+    if (this.isWithdrawn()) return this;
+
+    return new UserEntity(
       this.id,
-      this.userId,
-      this.username,
       this.email,
+      this.name,
+      this.consentTimeStamp,
+      this.profileImageUrl,
+      this.memo,
+      this.userStatus,
+      newToken,
+      this.accountStatus,
       this.createdAt,
-      new Date(),
-      true,
-      this.profileImage,
-      this.bio,
-      this.displayName,
-      this.friendCount,
-      this.canReceiveFriendRequests
+      new Date()
     );
   }
 
-  updateFriendCount(count: number): UserProfileEntity {
-    return new UserProfileEntity(
+  /**
+   * Suspends the user's account.
+   */
+  suspendAccount(): UserEntity {
+    if (this.isWithdrawn()) return this;
+
+    return new UserEntity(
       this.id,
-      this.userId,
-      this.username,
       this.email,
+      this.name,
+      this.consentTimeStamp,
+      this.profileImageUrl,
+      this.memo,
+      this.userStatus,
+      this.fcmToken,
+      UserAccountStatus.SUSPENDED,
       this.createdAt,
-      new Date(),
-      this.isActive,
-      this.profileImage,
-      this.bio,
-      this.displayName,
-      count,
-      this.canReceiveFriendRequests
+      new Date()
     );
   }
 
-  toggleFriendRequestsReceiving(): UserProfileEntity {
-    return new UserProfileEntity(
+  /**
+   * Activates a previously suspended user's account.
+   */
+  activateAccount(): UserEntity {
+    if (this.isWithdrawn()) return this;
+
+    return new UserEntity(
       this.id,
-      this.userId,
-      this.username,
       this.email,
+      this.name,
+      this.consentTimeStamp,
+      this.profileImageUrl,
+      this.memo,
+      this.userStatus,
+      this.fcmToken,
+      UserAccountStatus.ACTIVE,
       this.createdAt,
-      new Date(),
-      this.isActive,
-      this.profileImage,
-      this.bio,
-      this.displayName,
-      this.friendCount,
-      !this.canReceiveFriendRequests
+      new Date()
     );
   }
 
+  /**
+   * Marks the user's account as withdrawn.
+   */
+  markAsWithdrawn(): UserEntity {
+    if (this.isWithdrawn()) return this;
+
+    return new UserEntity(
+      this.id,
+      this.email,
+      this.name,
+      this.consentTimeStamp,
+      this.profileImageUrl,
+      this.memo,
+      UserStatus.OFFLINE, // Ensure offline status on withdrawal
+      undefined, // Clear FCM token on withdrawal
+      UserAccountStatus.WITHDRAWN,
+      this.createdAt,
+      new Date()
+    );
+  }
+
+  /**
+   * Removes the user's profile image.
+   */
+  removeProfileImage(): UserEntity {
+    if (this.isWithdrawn()) return this;
+
+    return new UserEntity(
+      this.id,
+      this.email,
+      this.name,
+      this.consentTimeStamp,
+      undefined, // Remove profile image
+      this.memo,
+      this.userStatus,
+      this.fcmToken,
+      this.accountStatus,
+      this.createdAt,
+      new Date()
+    );
+  }
+
+  /**
+   * Checks if the account is in a withdrawn state.
+   */
+  isWithdrawn(): boolean {
+    return this.accountStatus === UserAccountStatus.WITHDRAWN;
+  }
+
+  /**
+   * Checks if the account is active.
+   */
+  isActive(): boolean {
+    return this.accountStatus === UserAccountStatus.ACTIVE;
+  }
+
+  /**
+   * Checks if the user can receive friend requests.
+   */
   canReceiveRequests(): boolean {
-    return this.isActive && this.canReceiveFriendRequests;
+    return this.isActive() && this.userStatus !== UserStatus.UNKNOWN;
   }
 
-  toUserId(): UserId {
-    return new UserId(this.userId);
-  }
-
-  toSearchProfile(isFriend?: boolean, hasPendingRequest?: boolean): UserSearchProfile {
+  /**
+   * Converts to data object for Firestore storage.
+   */
+  toData(): UserData {
     return {
       id: this.id,
-      userId: this.userId,
-      username: this.username.value,
-      displayName: this.displayName,
-      profileImage: this.profileImage?.value,
-      isActive: this.isActive,
-      isFriend,
-      hasPendingRequest,
+      email: this.email.value,
+      name: this.name.value,
+      consentTimeStamp: this.consentTimeStamp,
+      profileImageUrl: this.profileImageUrl?.value,
+      memo: this.memo?.value,
+      userStatus: this.userStatus,
+      fcmToken: this.fcmToken?.value,
+      accountStatus: this.accountStatus,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
     };
+  }
+
+  /**
+   * Creates a UserEntity from Firestore data.
+   */
+  static fromData(data: UserData): UserEntity {
+    return new UserEntity(
+      data.id,
+      new Email(data.email),
+      new UserName(data.name),
+      data.consentTimeStamp,
+      data.profileImageUrl ? new ImageUrl(data.profileImageUrl) : undefined,
+      data.memo ? new UserMemo(data.memo) : undefined,
+      data.userStatus,
+      data.fcmToken ? new UserFcmToken(data.fcmToken) : undefined,
+      data.accountStatus,
+      data.createdAt,
+      data.updatedAt
+    );
+  }
+
+  /**
+   * Creates a new User instance for registration.
+   */
+  static create(
+    id: string,
+    email: Email,
+    name: UserName,
+    consentTimeStamp: Date,
+    profileImageUrl?: ImageUrl,
+    memo?: UserMemo,
+    initialFcmToken?: UserFcmToken
+  ): UserEntity {
+    return new UserEntity(
+      id,
+      email,
+      name,
+      consentTimeStamp,
+      profileImageUrl,
+      memo,
+      UserStatus.OFFLINE, // Default to offline
+      initialFcmToken,
+      UserAccountStatus.ACTIVE, // Default to active
+      new Date(),
+      new Date()
+    );
   }
 }

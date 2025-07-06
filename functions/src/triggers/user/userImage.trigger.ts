@@ -43,7 +43,7 @@ export const onUserProfileImageUpload = onObjectFinalized(
 
       const processUseCase = new ProcessUserImageUseCase(
         userUseCases.imageProcessingService,
-        userUseCases.userProfileRepository
+        userUseCases.userRepository
       );
 
       const result = await processUseCase.execute({

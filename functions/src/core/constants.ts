@@ -1,9 +1,8 @@
-// Firestore Collections
+// Firestore Collections  
 export const FIRESTORE_COLLECTIONS = {
   USERS: "users",
   PROJECTS: "projects",
   SESSIONS: "sessions",
-  USER_PROFILES: "userProfiles",
   PROJECT_MEMBERS: "projectMembers",
 } as const;
 

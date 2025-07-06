@@ -1,18 +1,18 @@
 import { RepositoryFactory } from '../../../shared/RepositoryFactory';
 import { UserRepositoryFactoryContext } from './UserRepositoryFactoryContext';
-import { UserProfileRepository } from '../userProfile.repository';
-import { FirestoreUserProfileDataSource } from '../../../../infrastructure/datasources/firestore/userProfile.datasource';
+import { UserRepository } from '../user.repository';
+import { FirestoreUserDataSource } from '../../../../infrastructure/datasources/firestore/user.datasource';
 
 /**
- * Factory for creating user profile repositories
+ * Factory for creating user repositories
  */
-export class UserRepositoryFactory implements RepositoryFactory<UserProfileRepository, UserRepositoryFactoryContext> {
+export class UserRepositoryFactory implements RepositoryFactory<UserRepository, UserRepositoryFactoryContext> {
   /**
-   * Creates a user profile repository instance
+   * Creates a user repository instance
    * @param context - Optional context for user repository creation
-   * @returns UserProfileRepository instance
+   * @returns UserRepository instance
    */
-  create(context?: UserRepositoryFactoryContext): UserProfileRepository {
-    return new FirestoreUserProfileDataSource();
+  create(context?: UserRepositoryFactoryContext): UserRepository {
+    return new FirestoreUserDataSource();
   }
 }
