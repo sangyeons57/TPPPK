@@ -2,7 +2,8 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {UserId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {UserId} from "../../../core/validation";
 import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendsRequest {
@@ -40,7 +41,7 @@ export class GetFriendsUseCase {
         return Result.failure(new ValidationError("userId", "User ID is required"));
       }
 
-      const userId = new UserId(request.userId);
+      const userId = request.userId;
       const limit = request.limit || 50;
       const offset = request.offset || 0;
 

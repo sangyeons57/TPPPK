@@ -1,44 +1,7 @@
-import {BaseEntity, ValueObject} from "../../../core/types";
+import {BaseEntity} from "../../../core/types";
 import {ValidationError} from "../../../core/errors";
+import {validateProjectName, validateProjectDescription, validateImageUrl, ProjectId} from "../../../core/validation";
 
-export class ProjectName implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (value.length < 3) {
-      throw new ValidationError("projectName", "Project name must be at least 3 characters");
-    }
-    if (value.length > 100) {
-      throw new ValidationError("projectName", "Project name must be at most 100 characters");
-    }
-  }
-
-  equals(other: ProjectName): boolean {
-    return this.value === other.value;
-  }
-}
-
-export class ProjectDescription implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (value.length > 1000) {
-      throw new ValidationError("projectDescription", "Project description must be at most 1000 characters");
-    }
-  }
-
-  equals(other: ProjectDescription): boolean {
-    return this.value === other.value;
-  }
-}
-
-export class ProjectImage implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (!value.startsWith("https://")) {
-      throw new ValidationError("projectImage", "Project image must be a valid HTTPS URL");
-    }
-  }
-
-  equals(other: ProjectImage): boolean {
-    return this.value === other.value;
-  }
-}
 
 export enum ProjectStatus {
   ACTIVE = "active",
@@ -56,10 +19,10 @@ export interface ProjectData {
 }
 
 export interface Project extends BaseEntity {
-  name: ProjectName;
-  description?: ProjectDescription;
+  name: string;
+  description?: string;
   ownerId: string;
-  image?: ProjectImage;
+  image?: string;
   status: ProjectStatus;
   memberCount: number;
 }
@@ -74,20 +37,29 @@ export class ProjectEntity implements Project {
 
   constructor(
     public readonly id: string,
-    public readonly name: ProjectName,
+    public readonly name: string,
     public readonly ownerId: string,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
     public readonly status: ProjectStatus = ProjectStatus.ACTIVE,
     public readonly memberCount: number = 1,
-    public readonly description?: ProjectDescription,
-    public readonly image?: ProjectImage
-  ) {}
+    public readonly description?: string,
+    public readonly image?: string
+  ) {
+    // Validate inputs
+    validateProjectName(name);
+    if (description) {
+      validateProjectDescription(description);
+    }
+    if (image) {
+      validateImageUrl(image);
+    }
+  }
 
   updateProject(updates: {
-    name?: ProjectName;
-    description?: ProjectDescription;
-    image?: ProjectImage;
+    name?: string;
+    description?: string;
+    image?: string;
   }): ProjectEntity {
     return new ProjectEntity(
       this.id,
@@ -162,8 +134,9 @@ export class ProjectEntity implements Project {
     );
   }
 
-  changeName(newName: ProjectName): ProjectEntity {
-    if (this.name.equals(newName)) return this;
+  changeName(newName: string): ProjectEntity {
+    validateProjectName(newName);
+    if (this.name === newName) return this;
 
     return new ProjectEntity(
       this.id,
@@ -178,8 +151,11 @@ export class ProjectEntity implements Project {
     );
   }
 
-  changeImageUrl(newImageUrl?: ProjectImage): ProjectEntity {
-    if (this.image?.equals(newImageUrl || new ProjectImage("https://placeholder.com"))) return this;
+  changeImageUrl(newImageUrl?: string): ProjectEntity {
+    if (newImageUrl) {
+      validateImageUrl(newImageUrl);
+    }
+    if (this.image === newImageUrl) return this;
 
     return new ProjectEntity(
       this.id,
@@ -197,8 +173,8 @@ export class ProjectEntity implements Project {
   toData(): ProjectData {
     return {
       id: this.id,
-      name: this.name.value,
-      imageUrl: this.image?.value,
+      name: this.name,
+      imageUrl: this.image,
       ownerId: this.ownerId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
@@ -208,21 +184,21 @@ export class ProjectEntity implements Project {
   static fromData(data: ProjectData): ProjectEntity {
     return new ProjectEntity(
       data.id,
-      new ProjectName(data.name),
+      data.name,
       data.ownerId,
       data.createdAt,
       data.updatedAt,
       ProjectStatus.ACTIVE,
       1,
       undefined,
-      data.imageUrl ? new ProjectImage(data.imageUrl) : undefined
+      data.imageUrl
     );
   }
 
   static create(
-    name: ProjectName,
+    name: string,
     ownerId: string,
-    imageUrl?: ProjectImage
+    imageUrl?: string
   ): ProjectEntity {
     return new ProjectEntity(
       "", // ID will be set by repository
@@ -239,11 +215,11 @@ export class ProjectEntity implements Project {
 
   static fromDataSource(
     id: string,
-    name: ProjectName,
+    name: string,
     ownerId: string,
     createdAt?: Date,
     updatedAt?: Date,
-    imageUrl?: ProjectImage
+    imageUrl?: string
   ): ProjectEntity {
     return new ProjectEntity(
       id,

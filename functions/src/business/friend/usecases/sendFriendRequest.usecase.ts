@@ -2,7 +2,8 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {FriendEntity, FriendId, UserId, UserName} from "../../../domain/friend/entities/friend.entity";
+import {FriendEntity} from "../../../domain/friend/entities/friend.entity";
+import {FriendId, UserId} from "../../../core/validation";
 
 export interface SendFriendRequestRequest {
   requesterId: string;
@@ -32,8 +33,8 @@ export class SendFriendRequestUseCase {
         return Result.failure(new ValidationError("receiverUserId", "Cannot send friend request to yourself"));
       }
 
-      const requesterId = new UserId(request.requesterId);
-      const receiverId = new UserId(request.receiverUserId);
+      const requesterId = request.requesterId;
+      const receiverId = request.receiverUserId;
 
       // 요청자 존재 확인
       const requesterResult = await this.userRepository.findByUserId(request.requesterId);
@@ -90,16 +91,16 @@ export class SendFriendRequestUseCase {
 
       // 요청자 관점: 상대방을 REQUESTED 상태로 추가
       const requesterFriend = FriendEntity.newRequest(
-        new FriendId(friendRequestId),
-        new UserName(receiverResult.data.name.value),
+        friendRequestId,
+        receiverResult.data.name,
         receiverResult.data.profileImageUrl,
         now
       );
 
       // 수신자 관점: 상대방을 PENDING 상태로 추가  
       const receiverFriend = FriendEntity.receivedRequest(
-        new FriendId(friendRequestId),
-        new UserName(requesterResult.data.name.value),
+        friendRequestId,
+        requesterResult.data.name,
         requesterResult.data.profileImageUrl,
         now
       );
@@ -114,7 +115,7 @@ export class SendFriendRequestUseCase {
       const saveReceiverResult = await this.friendRepository.save(receiverFriend);
       if (!saveReceiverResult.success) {
         // 롤백을 위해 요청자 쪽 데이터 삭제 시도
-        await this.friendRepository.delete(new FriendId(friendRequestId));
+        await this.friendRepository.delete(friendRequestId);
         return Result.failure(saveReceiverResult.error);
       }
 

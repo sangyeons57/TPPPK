@@ -7,11 +7,10 @@ import {
 } from "../interfaces/friend.datasource";
 import {
   FriendEntity,
-  FriendId,
-  UserId,
   FriendStatus,
   FriendData,
 } from "../../../domain/friend/entities/friend.entity";
+import {FriendId, UserId} from "../../../core/validation";
 import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export class FirestoreFriendDataSource implements FriendDatasource {
@@ -28,7 +27,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       .collection(FriendEntity.COLLECTION_NAME);
   }
 
-  async findById(id: FriendId): Promise<CustomResult<FriendEntity | null>> {
+  async findById(id: string): Promise<CustomResult<FriendEntity | null>> {
     try {
       // friendId는 단순 문서 ID이므로 모든 사용자의 subcollection에서 검색해야 함
       // 현재는 첫 번째 사용자에서만 검색 (개선 필요)
@@ -39,7 +38,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       }
 
       const userId = usersSnapshot.docs[0].id;
-      const doc = await this.getUserFriendsCollection(userId).doc(id.value).get();
+      const doc = await this.getUserFriendsCollection(userId).doc(id).get();
 
       if (!doc.exists) {
         return Result.success(null);
@@ -63,10 +62,10 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findByUserIds(userId: UserId, friendUserId: UserId): Promise<CustomResult<FriendEntity | null>> {
+  async findByUserIds(userId: string, friendUserId: string): Promise<CustomResult<FriendEntity | null>> {
     try {
-      const query = this.getUserFriendsCollection(userId.value)
-        .where("name", "==", friendUserId.value) // name 필드에 친구의 userId를 저장한다고 가정
+      const query = this.getUserFriendsCollection(userId)
+        .where("name", "==", friendUserId) // name 필드에 친구의 userId를 저장한다고 가정
         .limit(1);
 
       const snapshot = await query.get();
@@ -95,9 +94,9 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findFriendsByUserId(userId: UserId, status?: FriendStatus): Promise<CustomResult<FriendEntity[]>> {
+  async findFriendsByUserId(userId: string, status?: FriendStatus): Promise<CustomResult<FriendEntity[]>> {
     try {
-      let query: FirebaseFirestore.Query = this.getUserFriendsCollection(userId.value);
+      let query: FirebaseFirestore.Query = this.getUserFriendsCollection(userId);
 
       if (status) {
         query = query.where(FriendEntity.KEY_STATUS, "==", status);
@@ -130,9 +129,9 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findReceivedFriendRequests(userId: UserId): Promise<CustomResult<FriendEntity[]>> {
+  async findReceivedFriendRequests(userId: string): Promise<CustomResult<FriendEntity[]>> {
     try {
-      const query = this.getUserFriendsCollection(userId.value)
+      const query = this.getUserFriendsCollection(userId)
         .where(FriendEntity.KEY_STATUS, "==", FriendStatus.PENDING)
         .orderBy(FriendEntity.KEY_REQUESTED_AT, "desc");
 
@@ -163,9 +162,9 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findSentFriendRequests(userId: UserId): Promise<CustomResult<FriendEntity[]>> {
+  async findSentFriendRequests(userId: string): Promise<CustomResult<FriendEntity[]>> {
     try {
-      const query = this.getUserFriendsCollection(userId.value)
+      const query = this.getUserFriendsCollection(userId)
         .where(FriendEntity.KEY_STATUS, "==", FriendStatus.REQUESTED)
         .orderBy(FriendEntity.KEY_REQUESTED_AT, "desc");
 
@@ -196,10 +195,10 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async areUsersFriends(userId: UserId, friendUserId: UserId): Promise<CustomResult<boolean>> {
+  async areUsersFriends(userId: string, friendUserId: string): Promise<CustomResult<boolean>> {
     try {
-      const query = this.getUserFriendsCollection(userId.value)
-        .where(FriendEntity.KEY_NAME, "==", friendUserId.value) // name 필드에 친구의 userId 저장
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_NAME, "==", friendUserId) // name 필드에 친구의 userId 저장
         .where(FriendEntity.KEY_STATUS, "==", FriendStatus.ACCEPTED)
         .limit(1);
 
@@ -212,11 +211,11 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async friendRequestExists(requesterId: UserId, receiverId: UserId): Promise<CustomResult<boolean>> {
+  async friendRequestExists(requesterId: string, receiverId: string): Promise<CustomResult<boolean>> {
     try {
       // 요청자의 subcollection에서 확인
       const requesterQuery = this.getUserFriendsCollection(requesterId.value)
-        .where(FriendEntity.KEY_NAME, "==", receiverId.value)
+        .where(FriendEntity.KEY_NAME, "==", receiverId)
         .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
         .limit(1);
 
@@ -228,7 +227,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
 
       // 수신자의 subcollection에서도 확인
       const receiverQuery = this.getUserFriendsCollection(receiverId.value)
-        .where(FriendEntity.KEY_NAME, "==", requesterId.value)
+        .where(FriendEntity.KEY_NAME, "==", requesterId)
         .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
         .limit(1);
 
@@ -297,7 +296,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async delete(id: FriendId): Promise<CustomResult<void>> {
+  async delete(id: string): Promise<CustomResult<void>> {
     try {
       // 모든 사용자의 subcollection에서 해당 ID를 찾아 삭제해야 함
       // 현재는 간단히 구현 (개선 필요)
@@ -305,7 +304,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       const batch = this.db.batch();
 
       for (const userDoc of usersSnapshot.docs) {
-        const friendRef = this.getUserFriendsCollection(userDoc.id).doc(id.value);
+        const friendRef = this.getUserFriendsCollection(userDoc.id).doc(id);
         batch.delete(friendRef);
       }
 
@@ -318,10 +317,10 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async deleteByUserIds(userId: UserId, friendUserId: UserId): Promise<CustomResult<void>> {
+  async deleteByUserIds(userId: string, friendUserId: string): Promise<CustomResult<void>> {
     try {
-      const query = this.getUserFriendsCollection(userId.value)
-        .where(FriendEntity.KEY_NAME, "==", friendUserId.value);
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_NAME, "==", friendUserId);
 
       const snapshot = await query.get();
       const batch = this.db.batch();
@@ -339,9 +338,9 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async deleteAllByUserId(userId: UserId): Promise<CustomResult<void>> {
+  async deleteAllByUserId(userId: string): Promise<CustomResult<void>> {
     try {
-      const snapshot = await this.getUserFriendsCollection(userId.value).get();
+      const snapshot = await this.getUserFriendsCollection(userId).get();
       const batch = this.db.batch();
 
       snapshot.docs.forEach((doc) => {
@@ -410,9 +409,9 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async countFriendsByUserId(userId: UserId): Promise<CustomResult<number>> {
+  async countFriendsByUserId(userId: string): Promise<CustomResult<number>> {
     try {
-      const query = this.getUserFriendsCollection(userId.value)
+      const query = this.getUserFriendsCollection(userId)
         .where(FriendEntity.KEY_STATUS, "==", FriendStatus.ACCEPTED);
 
       const snapshot = await query.get();
@@ -424,9 +423,9 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async countPendingRequestsByUserId(userId: UserId): Promise<CustomResult<number>> {
+  async countPendingRequestsByUserId(userId: string): Promise<CustomResult<number>> {
     try {
-      const query = this.getUserFriendsCollection(userId.value)
+      const query = this.getUserFriendsCollection(userId)
         .where(FriendEntity.KEY_STATUS, "==", FriendStatus.PENDING);
 
       const snapshot = await query.get();

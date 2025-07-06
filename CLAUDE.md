@@ -419,3 +419,129 @@ Important Notes
 - No need for --yolo flag for read-only analysis
 - Gemini's context window can handle entire codebases that would overflow Claude's context
 - When checking implementations, be specific about what you're looking for to get accurate results
+
+## Firebase Functions Architecture Guidelines
+
+This project includes Firebase Functions (located in `/functions/`) that follow a simplified, pragmatic architecture approach distinct from the Android client architecture.
+
+### Core Principles
+
+**Simplicity Over Abstraction**
+- Prioritize direct, readable code over complex architectural patterns
+- Avoid over-engineering for TypeScript/JavaScript server-side environment
+- Focus on Firestore integration efficiency and Firebase ecosystem compatibility
+
+**Forbidden Patterns**
+- **Domain Events**: Do NOT implement domain event systems in Firebase Functions
+  - Events add complexity without business value in stateless cloud functions
+  - No event handlers or processing infrastructure exists
+  - Use direct method calls for side effects instead
+- **ValueObject Pattern**: Do NOT use ValueObject wrapper classes
+  - Creates unnecessary complexity for simple validation
+  - Poor integration with Firestore's JSON-based storage model
+  - Use validation functions and primitive types instead
+
+### Recommended Patterns
+
+**Validation Strategy**
+```typescript
+// ❌ DON'T: ValueObject wrappers
+export class Email {
+  constructor(public readonly value: string) {
+    if (!isValidEmail(value)) throw new Error('Invalid email');
+  }
+}
+
+// ✅ DO: Direct validation functions
+export function validateEmail(email: string): void {
+  if (!isValidEmail(email)) {
+    throw new ValidationError('email', 'Invalid email format');
+  }
+}
+
+// ✅ DO: Type aliases for better type safety
+export type UserId = string;
+export type ProjectId = string;
+```
+
+**Entity Design**
+```typescript
+// ✅ DO: Simple entities with primitive types
+export class UserEntity {
+  constructor(
+    public readonly id: string,
+    public readonly email: string,    // Direct primitive
+    public readonly name: string,     // Direct primitive
+    // ... other fields
+  ) {
+    // Validate in constructor
+    validateEmail(email);
+    validateUsername(name);
+  }
+
+  toData(): UserData {
+    return {
+      id: this.id,
+      email: this.email,  // Direct access, no .value unwrapping
+      name: this.name,    // Direct access, no .value unwrapping
+      // ...
+    };
+  }
+}
+```
+
+**Repository Pattern**
+- Keep repositories simple with direct CRUD operations
+- Avoid complex factory patterns for basic operations
+- Use constructor injection instead of factory contexts where possible
+
+### Firebase-Specific Considerations
+
+**Firestore Integration**
+- Design entities to work seamlessly with Firestore's document model
+- Minimize data transformation between entities and Firestore documents
+- Use Firestore Timestamps appropriately for date fields
+- Leverage Firestore's offline caching instead of implementing separate local storage
+
+**Cloud Function Environment**
+- Remember functions are stateless - no persistent event handling needed
+- Optimize for cold start performance (avoid heavy initialization)
+- Use Firebase Admin SDK efficiently
+- Handle authentication via Firebase Auth context
+
+### Validation Guidelines
+
+**Input Validation**
+- Validate at entity construction time
+- Use shared validation utilities from `core/validation.ts`
+- Throw appropriate error types (`ValidationError`, `ConflictError`, etc.)
+- Keep validation logic simple and focused
+
+**Error Handling**
+- Use `CustomResult<T, E>` pattern for operation results
+- Provide clear, actionable error messages
+- Handle Firebase-specific errors appropriately
+- Don't over-abstract error handling
+
+### Testing Strategy
+
+**Focus Areas**
+- Test business logic, not architectural abstractions
+- Validate Firestore integration correctness
+- Test error handling and edge cases
+- Mock Firebase services for unit tests
+
+**Avoid Testing**
+- ValueObject wrapper functionality (eliminated)
+- Domain event generation/handling (eliminated)
+- Over-complex factory patterns
+
+### Migration Notes
+
+When working with existing code that violates these principles:
+1. Remove domain event systems completely
+2. Replace ValueObjects with validation functions and primitive types
+3. Simplify repository factories to direct injection
+4. Update tests to focus on actual business logic
+
+This approach ensures Firebase Functions remain maintainable, performant, and focused on their primary responsibility: providing efficient server-side functionality for the mobile application.

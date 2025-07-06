@@ -1,70 +1,6 @@
-import {BaseEntity, ValueObject} from "../../../core/types";
-import {ValidationError} from "../../../core/errors";
-import {VALIDATION_RULES} from "../../../core/constants";
+import {BaseEntity} from "../../../core/types";
+import {validateEmail, validateUsername, validateImageUrl, validateUserMemo, validateFcmToken} from "../../../core/validation";
 
-// Value Objects
-export class Email implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (!VALIDATION_RULES.EMAIL_REGEX.test(value)) {
-      throw new ValidationError("email", "Invalid email format");
-    }
-  }
-
-  equals(other: Email): boolean {
-    return this.value === other.value;
-  }
-}
-
-export class UserName implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (value.length < VALIDATION_RULES.USERNAME_MIN_LENGTH) {
-      throw new ValidationError("name", `Username must be at least ${VALIDATION_RULES.USERNAME_MIN_LENGTH} characters`);
-    }
-    if (value.length > VALIDATION_RULES.USERNAME_MAX_LENGTH) {
-      throw new ValidationError("name", `Username must be at most ${VALIDATION_RULES.USERNAME_MAX_LENGTH} characters`);
-    }
-  }
-
-  equals(other: UserName): boolean {
-    return this.value === other.value;
-  }
-}
-
-export class ImageUrl implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (!value.startsWith("https://")) {
-      throw new ValidationError("profileImageUrl", "Profile image must be a valid HTTPS URL");
-    }
-  }
-
-  equals(other: ImageUrl): boolean {
-    return this.value === other.value;
-  }
-}
-
-export class UserMemo implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (value.length > 500) {
-      throw new ValidationError("memo", "User memo must be at most 500 characters");
-    }
-  }
-
-  equals(other: UserMemo): boolean {
-    return this.value === other.value;
-  }
-}
-
-export class UserFcmToken implements ValueObject<string> {
-  constructor(public readonly value: string) {
-    if (value.trim().length === 0) {
-      throw new ValidationError("fcmToken", "FCM token cannot be empty");
-    }
-  }
-
-  equals(other: UserFcmToken): boolean {
-    return this.value === other.value;
-  }
-}
 
 // Enums (matching Android exactly)
 export enum UserStatus {
@@ -116,23 +52,36 @@ export class UserEntity implements BaseEntity {
 
   constructor(
     public readonly id: string,
-    public readonly email: Email,
-    public readonly name: UserName,
+    public readonly email: string,
+    public readonly name: string,
     public readonly consentTimeStamp: Date,
-    public readonly profileImageUrl?: ImageUrl,
-    public readonly memo?: UserMemo,
+    public readonly profileImageUrl?: string,
+    public readonly memo?: string,
     public readonly userStatus: UserStatus = UserStatus.OFFLINE,
-    public readonly fcmToken?: UserFcmToken,
+    public readonly fcmToken?: string,
     public readonly accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE,
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date()
-  ) {}
+  ) {
+    // Validate inputs
+    validateEmail(email);
+    validateUsername(name);
+    if (profileImageUrl) {
+      validateImageUrl(profileImageUrl);
+    }
+    if (memo) {
+      validateUserMemo(memo);
+    }
+    if (fcmToken) {
+      validateFcmToken(fcmToken);
+    }
+  }
 
   // Business logic methods
   updateProfile(updates: {
-    name?: UserName;
-    profileImageUrl?: ImageUrl;
-    memo?: UserMemo;
+    name?: string;
+    profileImageUrl?: string;
+    memo?: string;
   }): UserEntity {
     return new UserEntity(
       this.id,
@@ -272,13 +221,13 @@ export class UserEntity implements BaseEntity {
   toData(): UserData {
     return {
       id: this.id,
-      email: this.email.value,
-      name: this.name.value,
+      email: this.email,
+      name: this.name,
       consentTimeStamp: this.consentTimeStamp,
-      profileImageUrl: this.profileImageUrl?.value,
-      memo: this.memo?.value,
+      profileImageUrl: this.profileImageUrl,
+      memo: this.memo,
       userStatus: this.userStatus,
-      fcmToken: this.fcmToken?.value,
+      fcmToken: this.fcmToken,
       accountStatus: this.accountStatus,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
@@ -288,13 +237,13 @@ export class UserEntity implements BaseEntity {
   static fromData(data: UserData): UserEntity {
     return new UserEntity(
       data.id,
-      new Email(data.email),
-      new UserName(data.name),
+      data.email,
+      data.name,
       data.consentTimeStamp,
-      data.profileImageUrl ? new ImageUrl(data.profileImageUrl) : undefined,
-      data.memo ? new UserMemo(data.memo) : undefined,
+      data.profileImageUrl,
+      data.memo,
       data.userStatus,
-      data.fcmToken ? new UserFcmToken(data.fcmToken) : undefined,
+      data.fcmToken,
       data.accountStatus,
       data.createdAt,
       data.updatedAt
@@ -318,12 +267,12 @@ export class UserEntity implements BaseEntity {
 
   static create(
     id: string,
-    email: Email,
-    name: UserName,
+    email: string,
+    name: string,
     consentTimeStamp: Date,
-    profileImageUrl?: ImageUrl,
-    memo?: UserMemo,
-    initialFcmToken?: UserFcmToken
+    profileImageUrl?: string,
+    memo?: string,
+    initialFcmToken?: string
   ): UserEntity {
     return new UserEntity(
       id,

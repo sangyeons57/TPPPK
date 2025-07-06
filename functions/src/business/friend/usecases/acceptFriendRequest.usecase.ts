@@ -2,7 +2,8 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {FriendEntity, UserId, FriendId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {FriendEntity, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {UserId, FriendId} from "../../../core/validation";
 
 export interface AcceptFriendRequestRequest {
   requesterId: string; // 요청자 ID (Friend ID로 사용됨)
@@ -28,8 +29,8 @@ export class AcceptFriendRequestUseCase {
         return Result.failure(new ValidationError("request", "Requester ID and receiver ID are required"));
       }
 
-      const requesterId = new UserId(request.requesterId);
-      const receiverId = new UserId(request.receiverId);
+      const requesterId = request.requesterId;
+      const receiverId = request.receiverId;
 
       // 수신자의 friends subcollection에서 요청자의 Friend 조회
       const friendRequestResult = await this.friendRepository.findByUserIds(receiverId, requesterId);
@@ -74,7 +75,7 @@ export class AcceptFriendRequestUseCase {
 
       // 요청자의 friends subcollection에 수신자의 Friend 생성 (양방향 관계)
       const reciprocalFriend = FriendEntity.fromDataSource(
-        new FriendId(request.receiverId), // 수신자의 ID가 Friend ID가 됨
+        request.receiverId, // 수신자의 ID가 Friend ID가 됨
         receiverResult.data.name,
         receiverResult.data.profileImageUrl,
         FriendStatus.ACCEPTED,
@@ -94,7 +95,7 @@ export class AcceptFriendRequestUseCase {
       this.updateFriendCounts(request.requesterId, request.receiverId);
 
       return Result.success({
-        friendId: acceptedFriend.id.value,
+        friendId: acceptedFriend.id,
         status: acceptedFriend.status,
         acceptedAt: acceptedFriend.acceptedAt!.toISOString(),
       });

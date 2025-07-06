@@ -1,5 +1,6 @@
 import {CustomResult, Result} from "../../../core/types";
 import {ValidationError} from "../../../core/errors";
+import {FriendId, UserId, validateId, validateUsername, validateImageUrl} from "../../../core/validation";
 
 export enum FriendStatus {
   PENDING = "PENDING", // 수신자 입장에서 응답 대기
@@ -10,69 +11,6 @@ export enum FriendStatus {
   REMOVED = "REMOVED", // 친구 관계 해제
 }
 
-export class FriendId {
-  constructor(public readonly value: string) {
-    if (!value || value.trim().length === 0) {
-      throw new ValidationError("friendId", "Friend ID cannot be empty");
-    }
-  }
-
-  equals(other: FriendId): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-}
-
-export class UserId {
-  constructor(public readonly value: string) {
-    if (!value || value.trim().length === 0) {
-      throw new ValidationError("userId", "User ID cannot be empty");
-    }
-  }
-
-  equals(other: UserId): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-}
-
-export class UserName {
-  constructor(public readonly value: string) {
-    if (!value || value.trim().length === 0) {
-      throw new ValidationError("name", "Name cannot be empty");
-    }
-  }
-
-  equals(other: UserName): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-}
-
-export class ImageUrl {
-  constructor(public readonly value: string) {
-    if (!value.startsWith("https://")) {
-      throw new ValidationError("profileImageUrl", "Profile image must be a valid HTTPS URL");
-    }
-  }
-
-  equals(other: ImageUrl): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-}
 
 export interface FriendData {
   id: string;
@@ -85,81 +23,7 @@ export interface FriendData {
   updatedAt: Date;
 }
 
-// Domain Events
-export abstract class DomainEvent {
-  public readonly occurredAt: Date;
 
-  constructor(public readonly aggregateId: string) {
-    this.occurredAt = new Date();
-  }
-}
-
-export class FriendRequestSentEvent extends DomainEvent {
-  constructor(
-    friendId: string,
-    public readonly requesterId: string,
-    public readonly receiverId: string
-  ) {
-    super(friendId);
-  }
-}
-
-export class FriendRequestAcceptedEvent extends DomainEvent {
-  constructor(
-    friendId: string,
-    public readonly requesterId: string,
-    public readonly receiverId: string
-  ) {
-    super(friendId);
-  }
-}
-
-export class FriendRequestRejectedEvent extends DomainEvent {
-  constructor(
-    friendId: string,
-    public readonly requesterId: string,
-    public readonly receiverId: string
-  ) {
-    super(friendId);
-  }
-}
-
-export class FriendRemovedEvent extends DomainEvent {
-  constructor(
-    friendId: string,
-    public readonly userId: string,
-    public readonly friendUserId: string
-  ) {
-    super(friendId);
-  }
-}
-
-export class FriendStatusChangedEvent extends DomainEvent {
-  constructor(
-    friendId: string,
-    public readonly newStatus: FriendStatus
-  ) {
-    super(friendId);
-  }
-}
-
-export class FriendNameChangedEvent extends DomainEvent {
-  constructor(
-    friendId: string,
-    public readonly newName: UserName
-  ) {
-    super(friendId);
-  }
-}
-
-export class FriendProfileImageChangedEvent extends DomainEvent {
-  constructor(
-    friendId: string,
-    public readonly newProfileImageUrl?: ImageUrl
-  ) {
-    super(friendId);
-  }
-}
 
 export class FriendEntity {
   public static readonly COLLECTION_NAME = "friends";
@@ -171,18 +35,23 @@ export class FriendEntity {
   public static readonly KEY_NAME = "name";
   public static readonly KEY_PROFILE_IMAGE_URL = "profileImageUrl";
 
-  private domainEvents: DomainEvent[] = [];
 
   constructor(
     private readonly _id: FriendId,
-    private _name: UserName,
-    private _profileImageUrl: ImageUrl | undefined,
+    private _name: string,
+    private _profileImageUrl: string | undefined,
     private _status: FriendStatus,
     private readonly _requestedAt: Date | undefined,
     private _acceptedAt: Date | undefined,
     private readonly _createdAt: Date = new Date(),
     private _updatedAt: Date = new Date()
   ) {
+    // Validate inputs
+    validateId(_id, "friendId");
+    validateUsername(_name);
+    if (_profileImageUrl) {
+      validateImageUrl(_profileImageUrl);
+    }
     this.validateInvariant();
   }
 
@@ -191,11 +60,11 @@ export class FriendEntity {
     return this._id;
   }
 
-  get name(): UserName {
+  get name(): string {
     return this._name;
   }
 
-  get profileImageUrl(): ImageUrl | undefined {
+  get profileImageUrl(): string | undefined {
     return this._profileImageUrl;
   }
 
@@ -219,24 +88,23 @@ export class FriendEntity {
     return this._updatedAt;
   }
 
-  get domainEventsSnapshot(): DomainEvent[] {
-    return [...this.domainEvents];
-  }
 
   // Business Logic Methods (matching Android Friend.kt)
 
-  changeName(newName: UserName): void {
-    if (this._name.equals(newName)) return;
+  changeName(newName: string): void {
+    validateUsername(newName);
+    if (this._name === newName) return;
     this._name = newName;
     this._updatedAt = new Date();
-    this.addDomainEvent(new FriendNameChangedEvent(this._id.value, newName));
   }
 
-  changeProfileImage(newProfileImageUrl?: ImageUrl): void {
-    if (this._profileImageUrl?.equals(newProfileImageUrl || new ImageUrl("https://placeholder.com"))) return;
+  changeProfileImage(newProfileImageUrl?: string): void {
+    if (newProfileImageUrl) {
+      validateImageUrl(newProfileImageUrl);
+    }
+    if (this._profileImageUrl === newProfileImageUrl) return;
     this._profileImageUrl = newProfileImageUrl;
     this._updatedAt = new Date();
-    this.addDomainEvent(new FriendProfileImageChangedEvent(this._id.value, newProfileImageUrl));
   }
 
   acceptRequest(): void {
@@ -244,36 +112,31 @@ export class FriendEntity {
       this._status = FriendStatus.ACCEPTED;
       this._acceptedAt = new Date();
       this._updatedAt = new Date();
-      this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
-    }
+      }
   }
 
   blockUser(): void {
     if (this._status === FriendStatus.BLOCKED) return;
     this._status = FriendStatus.BLOCKED;
     this._updatedAt = new Date();
-    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
   removeFriend(): void {
     if (this._status === FriendStatus.REMOVED) return;
     this._status = FriendStatus.REMOVED;
     this._updatedAt = new Date();
-    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
   markAsPending(): void {
     if (this._status === FriendStatus.PENDING) return;
     this._status = FriendStatus.PENDING;
     this._updatedAt = new Date();
-    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
   markAsRequested(): void {
     if (this._status === FriendStatus.REQUESTED) return;
     this._status = FriendStatus.REQUESTED;
     this._updatedAt = new Date();
-    this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
   }
 
   isActive(): boolean {
@@ -291,8 +154,7 @@ export class FriendEntity {
         this._status = FriendStatus.ACCEPTED;
         this._acceptedAt = new Date();
         this._updatedAt = new Date();
-        this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
-        return Result.success(this);
+            return Result.success(this);
       }
       return Result.failure(new ValidationError("status", "Cannot accept friend request with current status"));
     } catch (error) {
@@ -305,8 +167,7 @@ export class FriendEntity {
       if (this._status === FriendStatus.PENDING || this._status === FriendStatus.REQUESTED) {
         this._status = FriendStatus.REJECTED;
         this._updatedAt = new Date();
-        this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
-        return Result.success(this);
+            return Result.success(this);
       }
       return Result.failure(new ValidationError("status", "Cannot reject friend request with current status"));
     } catch (error) {
@@ -319,8 +180,7 @@ export class FriendEntity {
       if (this._status === FriendStatus.ACCEPTED) {
         this._status = FriendStatus.REMOVED;
         this._updatedAt = new Date();
-        this.addDomainEvent(new FriendStatusChangedEvent(this._id.value, this._status));
-        return Result.success(this);
+            return Result.success(this);
       }
       return Result.failure(new ValidationError("status", "Cannot remove friend with current status"));
     } catch (error) {
@@ -328,13 +188,6 @@ export class FriendEntity {
     }
   }
 
-  private addDomainEvent(event: DomainEvent): void {
-    this.domainEvents.push(event);
-  }
-
-  clearDomainEvents(): void {
-    this.domainEvents = [];
-  }
 
   private validateInvariant(): void {
     if (!Object.values(FriendStatus).includes(this._status)) {
@@ -352,9 +205,9 @@ export class FriendEntity {
 
   toData(): FriendData {
     return {
-      id: this._id.value,
-      name: this._name.value,
-      profileImageUrl: this._profileImageUrl?.value,
+      id: this._id,
+      name: this._name,
+      profileImageUrl: this._profileImageUrl,
       status: this._status,
       requestedAt: this._requestedAt,
       acceptedAt: this._acceptedAt,
@@ -366,9 +219,9 @@ export class FriendEntity {
   static fromData(data: FriendData): CustomResult<FriendEntity> {
     try {
       const friend = new FriendEntity(
-        new FriendId(data.id),
-        new UserName(data.name),
-        data.profileImageUrl ? new ImageUrl(data.profileImageUrl) : undefined,
+        data.id,
+        data.name,
+        data.profileImageUrl,
         data.status,
         data.requestedAt,
         data.acceptedAt,
@@ -387,11 +240,11 @@ export class FriendEntity {
   // Factory methods matching Android Friend.kt
   static newRequest(
     id: FriendId,
-    name: UserName,
-    profileImageUrl?: ImageUrl,
+    name: string,
+    profileImageUrl?: string,
     requestedAt?: Date
   ): FriendEntity {
-    const friend = new FriendEntity(
+    return new FriendEntity(
       id,
       name,
       profileImageUrl,
@@ -401,21 +254,15 @@ export class FriendEntity {
       new Date(),
       new Date()
     );
-
-    friend.addDomainEvent(
-      new FriendRequestSentEvent(id.value, "currentUserId", "friendUserId")
-    );
-
-    return friend;
   }
 
   static receivedRequest(
     id: FriendId,
-    name: UserName,
-    profileImageUrl?: ImageUrl,
+    name: string,
+    profileImageUrl?: string,
     requestedAt?: Date
   ): FriendEntity {
-    const friend = new FriendEntity(
+    return new FriendEntity(
       id,
       name,
       profileImageUrl,
@@ -425,14 +272,12 @@ export class FriendEntity {
       new Date(),
       new Date()
     );
-
-    return friend;
   }
 
   static fromDataSource(
     id: FriendId,
-    name: UserName,
-    profileImageUrl: ImageUrl | undefined,
+    name: string,
+    profileImageUrl: string | undefined,
     status: FriendStatus,
     requestedAt?: Date,
     acceptedAt?: Date,

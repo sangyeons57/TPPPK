@@ -1,5 +1,6 @@
 import {CustomResult} from "../../../core/types";
-import {FriendEntity, UserId, FriendId, FriendStatus} from "../entities/friend.entity";
+import {FriendEntity, FriendStatus} from "../entities/friend.entity";
+import {UserId, FriendId} from "../../../core/validation";
 
 export interface FriendSearchCriteria {
   userId?: string;
