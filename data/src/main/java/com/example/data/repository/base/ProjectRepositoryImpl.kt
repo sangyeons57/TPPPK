@@ -30,8 +30,6 @@ import javax.inject.Inject
 
 class ProjectRepositoryImpl @Inject constructor(
     private val projectRemoteDataSource: ProjectRemoteDataSource,
-    private val categoryRemoteDataSource: CategoryRemoteDataSource, // ProjectStructure 관리용
-    private val memberRemoteDataSource: MemberRemoteDataSource,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource,
     override val factoryContext: ProjectRepositoryFactoryContext, // 멤버 관리용
 ) : DefaultRepositoryImpl(projectRemoteDataSource, factoryContext), ProjectRepository {

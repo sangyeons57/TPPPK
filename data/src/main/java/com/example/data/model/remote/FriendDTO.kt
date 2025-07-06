@@ -9,6 +9,7 @@ import com.example.data.model.DTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.user.UserName
 
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
@@ -54,7 +55,7 @@ data class FriendDTO(
             status = status,
             requestedAt = requestedAt?.toInstant(),
             acceptedAt = acceptedAt?.toInstant(),
-            name = Name(name),
+            name = UserName(name),
             profileImageUrl = profileImageUrl?.let{ ImageUrl(it) },
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant()

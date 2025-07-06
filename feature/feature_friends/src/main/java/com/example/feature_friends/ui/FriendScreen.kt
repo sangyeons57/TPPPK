@@ -164,7 +164,7 @@ fun FriendsScreen(
             sheetState = sheetState
         ) {
             FriendManagementDialog(
-                friend = uiState.selectedFriend,
+                friend = uiState.selectedFriend!!,
                 onRemoveFriend = viewModel::removeFriend,
                 onBlockUser = viewModel::blockUser,
                 onDismiss = viewModel::dismissFriendManagementDialog

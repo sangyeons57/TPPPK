@@ -7,6 +7,7 @@ import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.FriendRepository
 import com.example.domain.repository.factory.context.DefaultRepositoryFactoryContext
 import com.google.firebase.firestore.Source
@@ -161,7 +162,7 @@ class FakeFriendRepository : FriendRepository {
         val friendId = DocumentId("friend_${requesterId.value}_${recipientId.value}")
         val friend = Friend.newRequest(
             id = friendId,
-            name = Name(""),
+            name = UserName.EMPTY,
             profileImageUrl = null,
             requestedAt = Instant.now()
         )

@@ -78,7 +78,7 @@ class AddMemberViewModel @Inject constructor(
                             val friendItems = friends.map { friend ->
                                 FriendItem(
                                     userId = UserId(friend.id.value), // DocumentId를 UserId로 변환
-                                    userName = UserName.from(friend.name), // Friend 모델의 Name 타입
+                                    userName = friend.name, // Friend 모델의 Name 타입
                                     userEmail = null, // 이메일은 추가 조회 필요 (나중에 개선)
                                     profileImageUrl = friend.profileImageUrl?.value,
                                     isOnline = false // 온라인 상태는 나중에 추가

@@ -12,6 +12,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import java.time.Instant
 
 class Friend private constructor(
@@ -20,7 +21,7 @@ class Friend private constructor(
     initialAcceptedAt: Instant?,  // This could be when the friend request was accepted
 
     // Mutable properties
-    initialName: Name,
+    initialName: UserName,
     initialProfileImageUrl: ImageUrl?,
     initialStatus: FriendStatus,
     override val id :DocumentId,
@@ -35,7 +36,7 @@ class Friend private constructor(
         private set
 
 
-    var name: Name = initialName
+    var name: UserName = initialName
         private set
 
     var profileImageUrl: ImageUrl? = initialProfileImageUrl
@@ -62,7 +63,7 @@ class Friend private constructor(
 
     // --- Business Methods ---
 
-    fun changeName(newName: Name) {
+    fun changeName(newName: UserName) {
         if (this.name == newName) return
         this.name = newName
         this.pushDomainEvent(FriendNameChangedEvent(this.id, newName))
@@ -119,7 +120,7 @@ class Friend private constructor(
 
         fun newRequest(
             id: DocumentId,
-            name: Name,
+            name: UserName,
             profileImageUrl: ImageUrl?,
             requestedAt: Instant // Time the request is made
         ): Friend {
@@ -141,7 +142,7 @@ class Friend private constructor(
 
         fun receivedRequest(
             id: DocumentId,
-            name: Name,
+            name: UserName,
             profileImageUrl: ImageUrl?,
             requestedAt: Instant // Time the request was received
         ): Friend {
@@ -163,7 +164,7 @@ class Friend private constructor(
         // Factory method for reconstructing from data source
         fun fromDataSource(
             id: DocumentId,
-            name: Name,
+            name: UserName,
             profileImageUrl: ImageUrl?,
             status: FriendStatus,
             requestedAt: Instant?,
