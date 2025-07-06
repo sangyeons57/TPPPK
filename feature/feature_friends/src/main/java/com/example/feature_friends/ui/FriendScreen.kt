@@ -75,7 +75,6 @@ fun FriendsScreen(
     val scope = rememberCoroutineScope() // Scope for launching coroutines
 
     // State for ModalBottomSheet
-    var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true // Ensures the sheet is fully expanded or hidden
     )
@@ -149,11 +148,8 @@ fun FriendsScreen(
                         FriendsListContent(
                             modifier = Modifier.padding(paddingValues),
                             friends = uiState.friends,
-                            onItemClick = { friendId ->
-                                scope.launch {
-                                    showBottomSheet = true
-                                    sheetState.show() // Show the bottom sheet
-                                }
+                            onItemClick = { friend ->
+                                viewModel.onFriendItemClick(friend)
                             },
                             onDmChannelClick = viewModel::onFriendClick // Navigate to DM
                         )
@@ -161,22 +157,18 @@ fun FriendsScreen(
                 }
     }
 
-    // Conditionally display ModalBottomSheet (M3)
-    if (showBottomSheet) {
+    // Friend Management Bottom Sheet
+    if (uiState.showFriendManagementDialog && uiState.selectedFriend != null) {
         ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
+            onDismissRequest = viewModel::dismissFriendManagementDialog,
             sheetState = sheetState
         ) {
-            // Actual content for the bottom sheet
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Bottom Sheet Dialog Content")
-            }
+            FriendManagementDialog(
+                friend = uiState.selectedFriend,
+                onRemoveFriend = viewModel::removeFriend,
+                onBlockUser = viewModel::blockUser,
+                onDismiss = viewModel::dismissFriendManagementDialog
+            )
         }
     }
 
@@ -195,7 +187,7 @@ fun FriendsScreen(
 fun FriendsListContent(
     modifier: Modifier = Modifier,
     friends: List<FriendItem>,
-    onItemClick: (UserId) -> Unit,    // For item click (show bottom sheet)
+    onItemClick: (FriendItem) -> Unit,    // For item click (show friend management)
     onDmChannelClick: (UserId) -> Unit // For DM button
 ) {
     LazyColumn(
@@ -206,11 +198,11 @@ fun FriendsListContent(
     ) {
         items(
             items = friends,
-            key = { it.friendId } // 변경
+            key = { it.friendId.value } // 변경
         ) { friend ->
             FriendListItem(
                 friend = friend,
-                onItemClick = { onItemClick(friend.friendId) },
+                onItemClick = { onItemClick(friend) },
                 onDmChannelClick = { onDmChannelClick(friend.friendId) }
             )
             HorizontalDivider()

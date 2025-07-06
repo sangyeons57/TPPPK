@@ -25,7 +25,8 @@ import javax.inject.Inject
 
 // UI 모델 (Friend 도메인 모델 기반으로 변경)
 data class FriendRequestItem(
-    val userId: UserId,
+    val friendRequestId: UserId, // 친구 요청 ID (accept/reject에 사용)
+    val requesterId: UserId, // 요청을 보낸 사용자 ID
     val userName: UserName,
     val profileImageUrl: ImageUrl? = null,
     val requestDate: Instant? = null
@@ -95,8 +96,9 @@ class AcceptFriendsViewModel @Inject constructor(
                             val requests = friends.map { friend ->
                                 Log.d("AcceptFriendsViewModel", "5")
                                 FriendRequestItem(
-                                    userId = UserId.from(friend.id),
-                                    userName = UserName.from(friend.name),
+                                    friendRequestId = UserId.from(friend.id.value), // 친구 요청 문서 ID
+                                    requesterId = UserId.from(friend.id.value), // TODO: 실제 요청자 ID로 수정 필요
+                                    userName = friend.name,
                                     profileImageUrl = friend.profileImageUrl,
                                     requestDate = friend.requestedAt
                                 )
@@ -143,19 +145,20 @@ class AcceptFriendsViewModel @Inject constructor(
     /**
      * 특정 사용자의 친구 요청을 수락합니다.
      * 
-     * @param userId 수락할 사용자 ID
+     * @param userId 수락할 사용자 ID (실제로는 friendRequestId)
      */
     fun acceptFriendRequest(userId: UserId) {
         viewModelScope.launch {
             try {
                 authUtil.getCurrentUserId()
+                // userId는 실제로 friendRequestId를 의미함
                 val result = friendUseCases.acceptFriendRequestUseCase(userId.value)
                 when (result) {
                     is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)
                         _uiState.update { currentState ->
                             currentState.copy(
-                                friendRequests = currentState.friendRequests.filter { it.userId != userId }
+                                friendRequests = currentState.friendRequests.filter { it.friendRequestId != userId }
                             )
                         }
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 수락했습니다."))
@@ -177,18 +180,19 @@ class AcceptFriendsViewModel @Inject constructor(
     /**
      * 특정 사용자의 친구 요청을 거절합니다.
      * 
-     * @param userId 거절할 사용자 ID
+     * @param userId 거절할 사용자 ID (실제로는 friendRequestId)
      */
     fun denyFriendRequest(userId: UserId) {
         viewModelScope.launch {
             try {
-                val result = friendUseCases.removeOrDenyFriendUseCase(userId.value)
+                // userId는 실제로 friendRequestId를 의미함
+                val result = friendUseCases.rejectFriendRequestUseCase(userId.value)
                 when (result) {
                     is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)
                         _uiState.update { currentState ->
                             currentState.copy(
-                                friendRequests = currentState.friendRequests.filter { it.userId != userId }
+                                friendRequests = currentState.friendRequests.filter { it.friendRequestId != userId }
                             )
                         }
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 거절했습니다."))

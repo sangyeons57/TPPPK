@@ -9,7 +9,7 @@ import javax.inject.Inject
 import android.util.Log
 
 interface SendFriendRequestUseCase {
-    suspend operator fun invoke(targetUsername: String): CustomResult<Unit, Exception>
+    suspend operator fun invoke(targetUserId: String): CustomResult<Unit, Exception>
 }
 /**
  * 친구 요청을 보내는 UseCase
@@ -25,11 +25,11 @@ class SendFriendRequestUseCaseImpl @Inject constructor(
     /**
      * 특정 사용자에게 친구 요청을 보냅니다.
      *
-     * @param targetUsername 친구 요청을 보낼 대상 사용자의 이름.
+     * @param targetUserId 친구 요청을 보낼 대상 사용자의 ID.
      * @return 성공 시 Unit이 포함된 Result, 실패 시 에러 정보가 포함된 Result.
      */
-    override suspend operator fun invoke(targetUsername: String): CustomResult<Unit, Exception> {
-        Log.d(TAG, "invoke called: targetUsername=$targetUsername")
+    override suspend operator fun invoke(targetUserId: String): CustomResult<Unit, Exception> {
+        Log.d(TAG, "invoke called: targetUserId=$targetUserId")
         return try {
             val currentUserResult = authRepository.getCurrentUserSession()
             Log.d(TAG, "currentUserResult=$currentUserResult")
@@ -45,7 +45,7 @@ class SendFriendRequestUseCaseImpl @Inject constructor(
             }
             
             Log.d(TAG, "Calling friendRepository.sendFriendRequest fromUserId=${currentUser.userId.value}")
-            val result = friendRepository.sendFriendRequest(currentUser.userId.value, targetUsername)
+            val result = friendRepository.sendFriendRequest(currentUser.userId.value, targetUserId)
             Log.d(TAG, "friendRepository.sendFriendRequest result=$result")
             result
         } catch (e: Exception) {

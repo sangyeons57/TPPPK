@@ -13,6 +13,8 @@ import com.example.domain.usecase.friend.AcceptFriendRequestUseCase
 import com.example.domain.usecase.friend.GetFriendsListStreamUseCase
 import com.example.domain.usecase.friend.GetPendingFriendRequestsUseCase
 import com.example.domain.usecase.friend.RemoveOrDenyFriendUseCase
+import com.example.domain.usecase.friend.RemoveFriendUseCase
+import com.example.domain.usecase.friend.RejectFriendRequestUseCase
 import com.example.domain.usecase.friend.SendFriendRequestUseCaseImpl
 import com.example.domain.usecase.friend.ValidateSearchQueryUseCase
 import javax.inject.Inject
@@ -69,6 +71,16 @@ class FriendUseCaseProvider @Inject constructor(
             ),
             
             removeOrDenyFriendUseCase = RemoveOrDenyFriendUseCase(
+                friendRepository = friendRepository,
+                authRepository = authRepository
+            ),
+            
+            removeFriendUseCase = RemoveFriendUseCase(
+                friendRepository = friendRepository,
+                authRepository = authRepository
+            ),
+            
+            rejectFriendRequestUseCase = RejectFriendRequestUseCase(
                 friendRepository = friendRepository,
                 authRepository = authRepository
             ),
@@ -136,6 +148,16 @@ class FriendUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
             
+            removeFriendUseCase = RemoveFriendUseCase(
+                friendRepository = friendRepository,
+                authRepository = authRepository
+            ),
+            
+            rejectFriendRequestUseCase = RejectFriendRequestUseCase(
+                friendRepository = friendRepository,
+                authRepository = authRepository
+            ),
+            
             getFriendsListStreamUseCase = GetFriendsListStreamUseCase(
                 friendRepository = friendRepository
             ),
@@ -163,6 +185,8 @@ data class FriendUseCases(
     val sendFriendRequestUseCase: SendFriendRequestUseCaseImpl,
     val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
     val removeOrDenyFriendUseCase: RemoveOrDenyFriendUseCase,
+    val removeFriendUseCase: RemoveFriendUseCase,
+    val rejectFriendRequestUseCase: RejectFriendRequestUseCase,
     val getFriendsListStreamUseCase: GetFriendsListStreamUseCase,
     val getPendingFriendRequestsUseCase: GetPendingFriendRequestsUseCase,
     val validateSearchQueryUseCase: ValidateSearchQueryUseCase,

@@ -114,8 +114,9 @@ class AddFriendViewModel @Inject constructor(
                                 return@collect
                             }
 
-                            val requestResult = friendUseCases.sendFriendRequestUseCase(user.name.value)
-                            Log.d(TAG, "Sending friend request to ${user.name.value}")
+                            // Firebase Functions의 sendFriendRequest는 userId를 사용
+                            val requestResult = friendUseCases.sendFriendRequestUseCase(user.id.value)
+                            Log.d(TAG, "Sending friend request to userId: ${user.id.value}")
                             
                             handleFriendRequestResult(requestResult, user.name.value)
                         }

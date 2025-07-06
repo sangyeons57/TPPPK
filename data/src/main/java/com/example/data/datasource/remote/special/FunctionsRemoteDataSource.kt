@@ -85,6 +85,66 @@ interface FunctionsRemoteDataSource {
         name: String? = null,
         memo: String? = null
     ): CustomResult<Unit, Exception>
+
+    /**
+     * 친구 요청을 보냅니다.
+     *
+     * @param targetUserId 친구 요청을 보낼 대상 사용자 ID
+     * @return 성공 시 친구 요청 정보, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun sendFriendRequest(targetUserId: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 친구 요청을 수락합니다.
+     *
+     * @param friendRequestId 수락할 친구 요청 ID
+     * @return 성공 시 수락 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun acceptFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 친구 요청을 거절합니다.
+     *
+     * @param friendRequestId 거절할 친구 요청 ID
+     * @return 성공 시 거절 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun rejectFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 친구를 제거합니다.
+     *
+     * @param friendUserId 제거할 친구의 사용자 ID
+     * @return 성공 시 제거 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun removeFriend(friendUserId: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 친구 목록을 조회합니다.
+     *
+     * @param status 조회할 친구 상태 (nullable)
+     * @param limit 조회할 최대 개수 (nullable)
+     * @param offset 조회 시작 위치 (nullable)
+     * @return 성공 시 친구 목록, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun getFriends(
+        status: String? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 친구 요청 목록을 조회합니다.
+     *
+     * @param type 조회할 요청 타입 ("received" 또는 "sent")
+     * @param limit 조회할 최대 개수 (nullable)
+     * @param offset 조회 시작 위치 (nullable)
+     * @return 성공 시 친구 요청 목록, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun getFriendRequests(
+        type: String,
+        limit: Int? = null,
+        offset: Int? = null
+    ): CustomResult<Map<String, Any?>, Exception>
 }
 
 @Singleton
@@ -318,6 +378,184 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 }
             } else {
                 CustomResult.Failure(Exception("Update user profile function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun sendFriendRequest(targetUserId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                "requesterId" to currentUser.uid,
+                "receiverUserId" to targetUserId
+            )
+
+            val callable = functions.getHttpsCallable("sendFriendRequest")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Send friend request function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun acceptFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                "friendRequestId" to friendRequestId,
+                "userId" to currentUser.uid
+            )
+
+            val callable = functions.getHttpsCallable("acceptFriendRequest")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Accept friend request function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun rejectFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                "friendRequestId" to friendRequestId,
+                "userId" to currentUser.uid
+            )
+
+            val callable = functions.getHttpsCallable("rejectFriendRequest")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Reject friend request function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun removeFriend(friendUserId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                "userId" to currentUser.uid,
+                "friendUserId" to friendUserId
+            )
+
+            val callable = functions.getHttpsCallable("removeFriend")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Remove friend function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun getFriends(
+        status: String?,
+        limit: Int?,
+        offset: Int?
+    ): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mutableMapOf<String, Any?>("userId" to currentUser.uid)
+            status?.let { requestData["status"] = it }
+            limit?.let { requestData["limit"] = it }
+            offset?.let { requestData["offset"] = it }
+
+            val callable = functions.getHttpsCallable("getFriends")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Get friends function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun getFriendRequests(
+        type: String,
+        limit: Int?,
+        offset: Int?
+    ): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mutableMapOf<String, Any?>(
+                "userId" to currentUser.uid,
+                "type" to type
+            )
+            limit?.let { requestData["limit"] = it }
+            offset?.let { requestData["offset"] = it }
+
+            val callable = functions.getHttpsCallable("getFriendRequests")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Get friend requests function call timed out"))
             }
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e

@@ -91,18 +91,8 @@ class Friend private constructor(
     }
 
     fun removeFriend() {
-        // This is a conceptual removal. Depending on the system,
-        // it might mean setting status to BLOCKED, or a new "REMOVED" status,
-        // or even actual deletion which is a repository concern.
-        // For now, let's assume it means blocking or changing to a non-interactive status.
-        // If actual deletion is implied, this method might not belong here, or should trigger a specific event.
-        if (this.status == FriendStatus.BLOCKED && this.name.value == "Unknown") return // Example: already in a removed-like state
-
-        // For this example, let's change status to BLOCKED and clear personal info
-        // This is a placeholder for a more defined "removed" state or process
-        this.status = FriendStatus.BLOCKED // Or a new FriendStatus.REMOVED
-        // this.name = FriendName("Unknown") // Masking name might be a policy
-        // this.profileImageUrl = null
+        if (this.status == FriendStatus.REMOVED) return
+        this.status = FriendStatus.REMOVED
         this.pushDomainEvent(FriendStatusChangedEvent(this.id, this.status))
     }
 

@@ -45,7 +45,9 @@ data class FriendsListUiState(
     val friends: List<FriendItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val showAddFriendDialog: Boolean = false
+    val showAddFriendDialog: Boolean = false,
+    val selectedFriend: FriendItem? = null, // 선택된 친구 (관리 다이얼로그용)
+    val showFriendManagementDialog: Boolean = false
 )
 
 // --- 이벤트 ---
@@ -220,6 +222,81 @@ class FriendViewModel @Inject constructor(
         _uiState.update { it.copy(showAddFriendDialog= !uiState.value.showAddFriendDialog) }
     }
 
-    // TODO: 친구 추가 다이얼로그에서 친구 추가 요청 처리 함수
-    // fun addFriend(username: String) { ... }
+    /**
+     * 친구 아이템 클릭 시 호출 (친구 관리 다이얼로그 표시)
+     */
+    fun onFriendItemClick(friend: FriendItem) {
+        _uiState.update { 
+            it.copy(
+                selectedFriend = friend,
+                showFriendManagementDialog = true
+            ) 
+        }
+    }
+
+    /**
+     * 친구 관리 다이얼로그 닫기
+     */
+    fun dismissFriendManagementDialog() {
+        _uiState.update { 
+            it.copy(
+                selectedFriend = null,
+                showFriendManagementDialog = false
+            ) 
+        }
+    }
+
+    /**
+     * 친구 제거
+     */
+    fun removeFriend(friendId: UserId) {
+        viewModelScope.launch {
+            try {
+                val result = friendUseCases.removeFriendUseCase(friendId.value)
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(FriendsEvent.ShowSnackbar("친구를 삭제했습니다."))
+                        dismissFriendManagementDialog()
+                    }
+                    is CustomResult.Failure -> {
+                        val error = result.error
+                        _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 삭제 실패: ${error.message ?: "알 수 없는 오류"}"))
+                    }
+                    else -> {
+                        // 다른 상태 처리 (필요 시)
+                    }
+                }
+            } catch (e: Exception) {
+                _eventFlow.emit(FriendsEvent.ShowSnackbar("오류: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * 사용자 차단 (임시 구현 - 실제로는 별도 기능 필요)
+     */
+    fun blockUser(friendId: UserId) {
+        viewModelScope.launch {
+            try {
+                // 현재는 친구 제거와 동일하게 처리
+                // 실제 구현에서는 별도의 차단 기능이 필요
+                val result = friendUseCases.removeFriendUseCase(friendId.value)
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(FriendsEvent.ShowSnackbar("사용자를 차단했습니다."))
+                        dismissFriendManagementDialog()
+                    }
+                    is CustomResult.Failure -> {
+                        val error = result.error
+                        _eventFlow.emit(FriendsEvent.ShowSnackbar("사용자 차단 실패: ${error.message ?: "알 수 없는 오류"}"))
+                    }
+                    else -> {
+                        // 다른 상태 처리 (필요 시)
+                    }
+                }
+            } catch (e: Exception) {
+                _eventFlow.emit(FriendsEvent.ShowSnackbar("오류: ${e.message}"))
+            }
+        }
+    }
 }
