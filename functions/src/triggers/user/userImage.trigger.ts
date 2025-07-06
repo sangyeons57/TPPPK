@@ -1,8 +1,8 @@
-import { onObjectFinalized } from 'firebase-functions/v2/storage';
-import { UpdateUserImageUseCase } from '../../business/user/usecases/updateUserImage.usecase';
-import { RUNTIME_CONFIG } from '../../core/constants';
-import { STORAGE_BUCKETS } from '../../core/constants';
-import { Providers } from '../../config/dependencies';
+import {onObjectFinalized} from "firebase-functions/v2/storage";
+import {UpdateUserImageUseCase} from "../../business/user/usecases/updateUserImage.usecase";
+import {RUNTIME_CONFIG} from "../../core/constants";
+import {STORAGE_BUCKETS} from "../../core/constants";
+import {Providers} from "../../config/dependencies";
 
 /**
  * Simplified Storage trigger for user profile images
@@ -17,29 +17,29 @@ export const onUserProfileImageUpload = onObjectFinalized(
   },
   async (event) => {
     try {
-      const { bucket, name, contentType } = event.data;
-      
+      const {bucket, name, contentType} = event.data;
+
       if (!name || !contentType) {
-        console.log('Missing file name or content type');
+        console.log("Missing file name or content type");
         return;
       }
 
       // Only process image files
-      if (!contentType.startsWith('image/')) {
+      if (!contentType.startsWith("image/")) {
         console.log(`Skipping non-image file: ${contentType}`);
         return;
       }
 
       // Extract userId from file path (e.g., "users/{userId}/profile.jpg")
-      const pathParts = name.split('/');
-      if (pathParts.length < 2 || pathParts[0] !== 'users') {
+      const pathParts = name.split("/");
+      if (pathParts.length < 2 || pathParts[0] !== "users") {
         console.log(`Invalid file path structure: ${name}`);
         return;
       }
 
       const userId = pathParts[1];
       if (!userId) {
-        console.log('Could not extract userId from file path');
+        console.log("Could not extract userId from file path");
         return;
       }
 
@@ -52,7 +52,7 @@ export const onUserProfileImageUpload = onObjectFinalized(
 
       const result = await updateImageUseCase.execute({
         userId: userId,
-        imageUrl: publicUrl
+        imageUrl: publicUrl,
       });
 
       if (result.success) {
@@ -60,9 +60,8 @@ export const onUserProfileImageUpload = onObjectFinalized(
       } else {
         console.error(`Failed to update user ${userId} profile image:`, result.error);
       }
-
     } catch (error) {
-      console.error('Error processing user profile image upload:', error);
+      console.error("Error processing user profile image upload:", error);
     }
   }
 );

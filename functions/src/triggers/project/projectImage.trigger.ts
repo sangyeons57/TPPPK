@@ -1,8 +1,8 @@
-import { onObjectFinalized } from 'firebase-functions/v2/storage';
-import { UpdateProjectImageUseCase } from '../../business/project/usecases/updateProjectImage.usecase';
-import { RUNTIME_CONFIG } from '../../core/constants';
-import { STORAGE_BUCKETS } from '../../core/constants';
-import { Providers } from '../../config/dependencies';
+import {onObjectFinalized} from "firebase-functions/v2/storage";
+import {UpdateProjectImageUseCase} from "../../business/project/usecases/updateProjectImage.usecase";
+import {RUNTIME_CONFIG} from "../../core/constants";
+import {STORAGE_BUCKETS} from "../../core/constants";
+import {Providers} from "../../config/dependencies";
 
 /**
  * Simplified Storage trigger for project images
@@ -17,29 +17,29 @@ export const onProjectImageUpload = onObjectFinalized(
   },
   async (event) => {
     try {
-      const { bucket, name, contentType } = event.data;
-      
+      const {bucket, name, contentType} = event.data;
+
       if (!name || !contentType) {
-        console.log('Missing file name or content type');
+        console.log("Missing file name or content type");
         return;
       }
 
       // Only process image files
-      if (!contentType.startsWith('image/')) {
+      if (!contentType.startsWith("image/")) {
         console.log(`Skipping non-image file: ${contentType}`);
         return;
       }
 
       // Extract projectId from file path (e.g., "projects/{projectId}/image.jpg")
-      const pathParts = name.split('/');
-      if (pathParts.length < 2 || pathParts[0] !== 'projects') {
+      const pathParts = name.split("/");
+      if (pathParts.length < 2 || pathParts[0] !== "projects") {
         console.log(`Invalid file path structure: ${name}`);
         return;
       }
 
       const projectId = pathParts[1];
       if (!projectId) {
-        console.log('Could not extract projectId from file path');
+        console.log("Could not extract projectId from file path");
         return;
       }
 
@@ -52,7 +52,7 @@ export const onProjectImageUpload = onObjectFinalized(
 
       const result = await updateImageUseCase.execute({
         projectId: projectId,
-        imageUrl: publicUrl
+        imageUrl: publicUrl,
       });
 
       if (result.success) {
@@ -60,9 +60,8 @@ export const onProjectImageUpload = onObjectFinalized(
       } else {
         console.error(`Failed to update project ${projectId} image:`, result.error);
       }
-
     } catch (error) {
-      console.error('Error processing project image upload:', error);
+      console.error("Error processing project image upload:", error);
     }
   }
 );
