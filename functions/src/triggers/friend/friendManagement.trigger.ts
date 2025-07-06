@@ -101,8 +101,8 @@ export const acceptFriendRequestFunction = onCall(
 
 // Reject Friend Request Function
 interface RejectFriendRequestRequest {
-  requesterId: string;
-  receiverId: string;
+  friendRequestId: string;
+  userId: string;
 }
 
 export const rejectFriendRequestFunction = onCall(
@@ -113,17 +113,17 @@ export const rejectFriendRequestFunction = onCall(
   },
   async (request) => {
     try {
-      const {requesterId, receiverId} = request.data as RejectFriendRequestRequest;
+      const {friendRequestId, userId} = request.data as RejectFriendRequestRequest;
 
-      if (!requesterId || !receiverId) {
-        throw new HttpsError("invalid-argument", "Requester ID and receiver ID are required");
+      if (!friendRequestId || !userId) {
+        throw new HttpsError("invalid-argument", "Friend request ID and user ID are required");
       }
 
       const friendUseCases = Providers.getFriendProvider().create();
 
       const result = await friendUseCases.rejectFriendRequestUseCase.execute({
-        requesterId: requesterId,
-        receiverId: receiverId,
+        requesterId: friendRequestId,
+        receiverId: userId,
       });
 
       if (!result.success) {
