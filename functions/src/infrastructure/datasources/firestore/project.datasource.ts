@@ -104,23 +104,13 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
         updatedAt: admin.firestore.Timestamp.fromDate(projectData.updatedAt),
       };
 
-      if (project.id) {
-        // Update existing project
-        await this.collection.doc(project.id).set(docData);
-        return Result.success(project);
-      } else {
-        // Create new project
-        const docRef = await this.collection.add(docData);
-        const newProject = ProjectEntity.fromDataSource(
-          docRef.id,
-          project.name,
-          project.ownerId,
-          projectData.createdAt,
-          projectData.updatedAt,
-          project.image
-        );
-        return Result.success(newProject);
+      // Always use project.id as document ID to ensure consistency with Android
+      if (!project.id) {
+        return Result.failure(new InternalError("Project ID is required for save operation"));
       }
+
+      await this.collection.doc(project.id).set(docData);
+      return Result.success(project);
     } catch (error) {
       return Result.failure(new InternalError(`Failed to save project: ${error instanceof Error ? error.message : "Unknown error"}`));
     }
