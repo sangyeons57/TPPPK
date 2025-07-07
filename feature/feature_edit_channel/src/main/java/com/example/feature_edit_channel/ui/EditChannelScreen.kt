@@ -7,13 +7,16 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -22,13 +25,15 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.base.Category
 import com.example.feature_edit_channel.viewmodel.EditChannelEvent
 import com.example.feature_edit_channel.viewmodel.EditChannelUiState
 import com.example.feature_edit_channel.viewmodel.EditChannelViewModel
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.text.KeyboardOptions
 
 /**
- * EditChannelScreen: 프로젝트 내 채널 이름 및 유형 수정/삭제 화면 (Stateful)
+ * EditChannelScreen: 프로젝트 내 채널 이름, 카테고리, 순서 수정/삭제 화면 (Stateful)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -96,6 +101,8 @@ fun EditChannelScreen(
                 uiState = uiState,
                 onChannelNameChange = viewModel::onChannelNameChange,
                 onChannelTypeSelected = viewModel::onChannelTypeSelected,
+                onCategorySelected = viewModel::onCategorySelected,
+                onOrderChange = viewModel::onOrderChange,
                 onUpdateClick = viewModel::updateChannel
             )
         }
@@ -130,12 +137,15 @@ fun EditChannelScreen(
 /**
  * EditChannelContent: 채널 편집 UI 요소 (Stateless)
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditChannelContent(
     modifier: Modifier = Modifier,
     uiState: EditChannelUiState,
     onChannelNameChange: (String) -> Unit,
     onChannelTypeSelected: (ProjectChannelType) -> Unit,
+    onCategorySelected: (String) -> Unit,
+    onOrderChange: (String) -> Unit,
     onUpdateClick: () -> Unit
 ) {
     Column(
@@ -153,7 +163,28 @@ fun EditChannelContent(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("채널 이름") },
             singleLine = true,
-            isError = uiState.error != null // 이름 관련 에러만 표시하도록 개선 가능
+            isError = uiState.error?.contains("이름") == true
+        )
+
+        // 카테고리 선택 드롭다운
+        CategoryDropdown(
+            selectedCategoryId = uiState.currentCategoryId,
+            categories = uiState.availableCategories,
+            onCategorySelected = onCategorySelected,
+            isLoading = uiState.isLoadingCategories,
+            isError = uiState.error?.contains("카테고리") == true
+        )
+
+        // 순서 입력 필드
+        OutlinedTextField(
+            value = uiState.currentOrder.toString(),
+            onValueChange = onOrderChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("순서") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = uiState.error?.contains("숫자") == true,
+            supportingText = { Text("숫자로 입력하세요. 낮은 숫자일수록 위에 표시됩니다.") }
         )
 
         // 채널 타입 선택 라디오 버튼 그룹
@@ -205,7 +236,9 @@ fun EditChannelContent(
         Button(
             onClick = onUpdateClick,
             modifier = Modifier.fillMaxWidth(),
-            enabled = uiState.currentChannelName.isNotBlank() && !uiState.isLoading
+            enabled = uiState.currentChannelName.isNotBlank() && 
+                     uiState.currentCategoryId.isNotBlank() && 
+                     !uiState.isLoading
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -216,6 +249,64 @@ fun EditChannelContent(
     }
 }
 
+/**
+ * 카테고리 선택 드롭다운 컴포넌트
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryDropdown(
+    selectedCategoryId: String,
+    categories: List<Category>,
+    onCategorySelected: (String) -> Unit,
+    isLoading: Boolean,
+    isError: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedCategory = categories.find { it.id.value == selectedCategoryId }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedCategory?.name?.value ?: if (isLoading) "로딩 중..." else "카테고리 선택",
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = !isLoading && categories.isNotEmpty()),
+            label = { Text("카테고리") },
+            trailingIcon = {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                } else {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
+            },
+            isError = isError,
+            enabled = !isLoading && categories.isNotEmpty()
+        )
+
+        if (!isLoading && categories.isNotEmpty()) {
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                categories.forEach { category ->
+                    DropdownMenuItem(
+                        text = { Text(category.name.value) },
+                        onClick = {
+                            onCategorySelected(category.id.value)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
 
 // --- Preview ---
 @Preview(showBackground = true)
@@ -228,10 +319,15 @@ private fun EditChannelContentPreview() {
                 currentChannelName = "기존-채팅방",
                 originalChannelName = "기존-채팅방",
                 currentChannelMode = ProjectChannelType.MESSAGES,
-                originalChannelMode = ProjectChannelType.MESSAGES
+                originalChannelMode = ProjectChannelType.MESSAGES,
+                currentCategoryId = "category1",
+                currentOrder = 1.0,
+                availableCategories = emptyList()
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
+            onCategorySelected = {},
+            onOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -245,10 +341,13 @@ private fun EditChannelContentLoadingPreview() {
             uiState = EditChannelUiState(
                 channelId = "1",
                 currentChannelName = "수정 중...",
-                isLoading = true
+                isLoading = true,
+                currentOrder = 2.0
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
+            onCategorySelected = {},
+            onOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -262,25 +361,13 @@ private fun EditChannelContentErrorPreview() {
             uiState = EditChannelUiState(
                 channelId = "1",
                 currentChannelName = "",
-                error = "이름은 필수입니다."
+                error = "이름은 필수입니다.",
+                currentOrder = 0.0
             ),
             onChannelNameChange = {},
             onChannelTypeSelected = {},
-            onUpdateClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "Edit Channel Voice Selected")
-@Composable
-private fun EditChannelContentVoicePreview() {
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        EditChannelContent(
-            uiState = EditChannelUiState(
-                currentChannelName = "음성 채널 편집",
-            ),
-            onChannelNameChange = {},
-            onChannelTypeSelected = {},
+            onCategorySelected = {},
+            onOrderChange = {},
             onUpdateClick = {}
         )
     }
