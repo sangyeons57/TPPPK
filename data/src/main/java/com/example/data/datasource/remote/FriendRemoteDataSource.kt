@@ -92,6 +92,18 @@ class FriendRemoteDataSourceImpl @Inject constructor(
 
     private val TAG = "FriendRemoteDS"
 
+    /**
+     * 올바른 Firestore 친구 컬렉션 경로 설정
+     * users/{userId}/friends 경로를 사용해야 보안 규칙과 일치함
+     */
+    override fun setCollection(vararg ids: String): DefaultDatasource {
+        require(ids.size == 1) { "FriendRemoteDataSource requires exactly one userId parameter" }
+        val userId = ids[0]
+        collection = firestore.collection("users/$userId/friends")
+        Log.d(TAG, "Set collection path to: users/$userId/friends")
+        return this
+    }
+
     override fun observeFriendRequests(): Flow<CustomResult<List<FriendDTO>, Exception>> {
         return callbackFlow {
             val listener = collection
