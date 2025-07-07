@@ -14,7 +14,8 @@ import javax.inject.Inject
  * @property friendRepository 친구 관련 기능을 제공하는 Repository
  */
 class GetFriendsListStreamUseCase @Inject constructor(
-    private val friendRepository: FriendRepository
+    private val friendRepository: FriendRepository,
+    private val authRepository: AuthRepository
 ) {
     /**
      * 친구 목록 정보를 실시간 스트림으로 가져옵니다.
@@ -23,11 +24,15 @@ class GetFriendsListStreamUseCase @Inject constructor(
      * @return Flow<CustomResult<List<Friend>, Exception>> 친구 목록 정보 Flow
      */
     operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> {
-        // userFriends 컬렉션 경로에서 userId 추출
-        val collectionPath = friendRepository.factoryContext.collectionPath.value
-        val userId = collectionPath.split("/")[1] // "users/{userId}/friends"에서 userId 추출
-        
-        return friendRepository.observeFriendsList(userId)
+        val session = when (val result = authRepository.getCurrentUserSession()) {
+            is CustomResult.Success -> result.data
+            is CustomResult.Failure -> return flowOf(CustomResult.Failure(Exception("로그인 상태를 확인할 수 없습니다.")))
+            is CustomResult.Loading -> return flowOf(CustomResult.Loading)
+            is CustomResult.Initial -> return flowOf(CustomResult.Initial)
+            is CustomResult.Progress -> return flowOf(CustomResult.Progress(result.progress))
+        }
+
+        return friendRepository.observeFriendsList(session.userId)
             .map { result ->
                 when (result) {
                     is CustomResult.Success -> CustomResult.Success(result.data)
