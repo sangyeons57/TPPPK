@@ -23,7 +23,7 @@ interface Datasource {
 }
 
 interface DefaultDatasource : Datasource {
-    fun setCollection(vararg ids: String) : DefaultDatasource
+    fun setCollection(collectionPath: CollectionPath) : DefaultDatasource
 
     fun observe(id: DocumentId): Flow<CustomResult<DTO, Exception>>
     fun observeAll(): Flow<CustomResult<List<DTO>, Exception>>
@@ -63,9 +63,8 @@ abstract class DefaultDatasourceImpl <Dto> (
      * Default implementation: treat the passed segments as a single collection path.
      * Most concrete datasources will **override** this to build nested paths.
      */
-    override fun setCollection(vararg ids: String): DefaultDatasource {
-        require(ids.isNotEmpty()) { "At least one path segment must be provided to setCollection()." }
-        collection = firestore.collection(ids.joinToString("/"))
+    override fun setCollection(collectionPath: CollectionPath): DefaultDatasource {
+        collection = firestore.collection(collectionPath.value)
         Log.d("DefaultDatasourceImpl", collection.path)
         return this
     }

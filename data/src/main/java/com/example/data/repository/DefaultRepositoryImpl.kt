@@ -23,12 +23,12 @@ abstract class DefaultRepositoryImpl  (
      * 각 public API 호출 시마다 현재 값을 다시 반영해 준다.
      */
     fun ensureCollection() {
-        defaultDatasource.setCollection(factoryContext.collectionPath.value)
+        defaultDatasource.setCollection(factoryContext.collectionPath)
         Log.d("DefaultRepositoryImpl", "ensureCollection: ${factoryContext.collectionPath.value}")
     }
 
     fun ensureCollection(collectionPath: CollectionPath) {
-        defaultDatasource.setCollection(collectionPath.value)
+        defaultDatasource.setCollection(collectionPath)
         Log.d("DefaultRepositoryImpl", "ensureCollection(Temp): ${collectionPath.value}")
 
     }
