@@ -114,4 +114,16 @@ export class UserRepositoryImpl implements UserRepository {
       return Result.failure(new DatabaseError("Failed to find active users", error instanceof Error ? error.message : String(error)));
     }
   }
+
+  async removeProjectWrapper(userId: string, projectId: string): Promise<CustomResult<void>> {
+    try {
+      const result = await this.dataSource.removeProjectWrapper(userId, projectId);
+      if (!result.success) {
+        return Result.failure(result.error);
+      }
+      return Result.success(undefined);
+    } catch (error) {
+      return Result.failure(new DatabaseError("Failed to remove project wrapper", error instanceof Error ? error.message : String(error)));
+    }
+  }
 }

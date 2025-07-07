@@ -49,4 +49,9 @@ export interface UserDataSource {
    * Find active users with optional limit
    */
   findActiveUsers(limit?: number): Promise<CustomResult<UserEntity[]>>;
+
+  /**
+   * Remove a project wrapper from a user's collection
+   */
+  removeProjectWrapper(userId: string, projectId: string): Promise<CustomResult<void>>;
 }

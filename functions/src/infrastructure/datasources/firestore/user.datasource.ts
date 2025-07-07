@@ -253,6 +253,18 @@ export class FirestoreUserDataSource implements UserDataSource {
     }
   }
 
+  async removeProjectWrapper(userId: string, projectId: string): Promise<CustomResult<void>> {
+    try {
+      // Remove the project wrapper from the user's projects_wrapper subcollection
+      const projectWrapperPath = `${this.collectionName}/${userId}/projects_wrapper/${projectId}`;
+      await this.db.doc(projectWrapperPath).delete();
+
+      return Result.success(undefined);
+    } catch (error) {
+      return Result.failure(new DatabaseError("Failed to remove project wrapper", error instanceof Error ? error.message : String(error)));
+    }
+  }
+
   /**
    * Maps Firestore document data to a UserEntity.
    * @param {string} docId Firestore document ID
