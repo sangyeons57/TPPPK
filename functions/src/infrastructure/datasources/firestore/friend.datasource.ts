@@ -161,13 +161,19 @@ export class FirestoreFriendDataSource implements FriendDatasource {
 
   async areUsersFriends(userId: string, friendUserId: string): Promise<CustomResult<boolean>> {
     try {
-      const query = this.getUserFriendsCollection(userId)
-        .where(FriendEntity.KEY_NAME, "==", friendUserId) // name 필드에 친구의 userId 저장
-        .where(FriendEntity.KEY_STATUS, "==", FriendStatus.ACCEPTED)
-        .limit(1);
+      // Use friendUserId as document ID to check if friendship exists
+      const doc = await this.getUserFriendsCollection(userId).doc(friendUserId).get();
+      
+      if (!doc.exists) {
+        return Result.success(false);
+      }
 
-      const snapshot = await query.get();
-      return Result.success(!snapshot.empty);
+      const friendEntityResult = this.createFriendEntity(doc);
+      if (!friendEntityResult.success) {
+        return Result.success(false);
+      }
+
+      return Result.success(friendEntityResult.data.status === FriendStatus.ACCEPTED);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to check if users are friends: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -177,26 +183,31 @@ export class FirestoreFriendDataSource implements FriendDatasource {
 
   async friendRequestExists(requesterId: string, receiverId: string): Promise<CustomResult<boolean>> {
     try {
-      // 요청자의 subcollection에서 확인
-      const requesterQuery = this.getUserFriendsCollection(requesterId)
-        .where(FriendEntity.KEY_NAME, "==", receiverId)
-        .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
-        .limit(1);
-
-      const requesterSnapshot = await requesterQuery.get();
- 
-      if (!requesterSnapshot.empty) {
-        return Result.success(true);
+      // Check requester's subcollection using receiverId as document ID
+      const requesterDoc = await this.getUserFriendsCollection(requesterId).doc(receiverId).get();
+      if (requesterDoc.exists) {
+        const friendEntityResult = this.createFriendEntity(requesterDoc);
+        if (friendEntityResult.success) {
+          const status = friendEntityResult.data.status;
+          if (status === FriendStatus.PENDING || status === FriendStatus.REQUESTED) {
+            return Result.success(true);
+          }
+        }
       }
 
-      // 수신자의 subcollection에서도 확인
-      const receiverQuery = this.getUserFriendsCollection(receiverId)
-        .where(FriendEntity.KEY_NAME, "==", requesterId)
-        .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
-        .limit(1);
+      // Check receiver's subcollection using requesterId as document ID
+      const receiverDoc = await this.getUserFriendsCollection(receiverId).doc(requesterId).get();
+      if (receiverDoc.exists) {
+        const friendEntityResult = this.createFriendEntity(receiverDoc);
+        if (friendEntityResult.success) {
+          const status = friendEntityResult.data.status;
+          if (status === FriendStatus.PENDING || status === FriendStatus.REQUESTED) {
+            return Result.success(true);
+          }
+        }
+      }
 
-      const receiverSnapshot = await receiverQuery.get();
-      return Result.success(!receiverSnapshot.empty);
+      return Result.success(false);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to check if friend request exists: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -280,17 +291,9 @@ export class FirestoreFriendDataSource implements FriendDatasource {
 
   async deleteByUserIds(userId: string, friendUserId: string): Promise<CustomResult<void>> {
     try {
-      const query = this.getUserFriendsCollection(userId)
-        .where(FriendEntity.KEY_NAME, "==", friendUserId);
-
-      const snapshot = await query.get();
-      const batch = this.db.batch();
-
-      snapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      await batch.commit();
+      // Use friendUserId as document ID for direct deletion
+      const docRef = this.getUserFriendsCollection(userId).doc(friendUserId);
+      await docRef.delete();
       return Result.success(undefined);
     } catch (error) {
       return Result.failure(
@@ -323,11 +326,28 @@ export class FirestoreFriendDataSource implements FriendDatasource {
         return Result.failure(new InternalError("userId is required for subcollection query"));
       }
 
-      let query: FirebaseFirestore.Query = this.getUserFriendsCollection(criteria.userId);
-
+      // If searching for specific friendUserId, use document ID for direct access
       if (criteria.friendUserId) {
-        query = query.where(FriendEntity.KEY_NAME, "==", criteria.friendUserId);
+        const doc = await this.getUserFriendsCollection(criteria.userId).doc(criteria.friendUserId).get();
+        if (!doc.exists) {
+          return Result.success([]);
+        }
+        
+        const entityResult = this.createFriendEntity(doc);
+        if (!entityResult.success) {
+          return Result.success([]);
+        }
+        
+        // Check status filter if provided
+        if (criteria.status && entityResult.data.status !== criteria.status) {
+          return Result.success([]);
+        }
+        
+        return Result.success([entityResult.data]);
       }
+
+      // General query for all friends with optional status filter
+      let query: FirebaseFirestore.Query = this.getUserFriendsCollection(criteria.userId);
 
       if (criteria.status) {
         query = query.where(FriendEntity.KEY_STATUS, "==", criteria.status);

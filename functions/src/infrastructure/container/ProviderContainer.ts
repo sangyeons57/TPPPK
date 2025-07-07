@@ -116,11 +116,13 @@ export class ProviderContainer {
 export const ProviderKeys = {
   // Repository Factories
   FRIEND_REPOSITORY_FACTORY: 'friendRepositoryFactory',
+  MEMBER_REPOSITORY_FACTORY: 'memberRepositoryFactory',
   USER_REPOSITORY_FACTORY: 'userRepositoryFactory',
   PROJECT_REPOSITORY_FACTORY: 'projectRepositoryFactory',
 
   // UseCase Providers
   FRIEND_USECASE_PROVIDER: 'friendUseCaseProvider',
+  MEMBER_USECASE_PROVIDER: 'memberUseCaseProvider',
   USER_USECASE_PROVIDER: 'userUseCaseProvider',
   PROJECT_USECASE_PROVIDER: 'projectUseCaseProvider',
 } as const;

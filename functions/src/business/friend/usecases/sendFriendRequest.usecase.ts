@@ -86,19 +86,20 @@ export class SendFriendRequestUseCase {
 
       // Android Friend.kt 구조에 따라 양방향으로 친구 요청 생성
       const now = new Date();
-      const friendRequestId = `${request.requesterId}_${request.receiverUserId}_${now.getTime()}`;
 
       // 요청자 관점: 상대방을 REQUESTED 상태로 추가 (요청자의 subcollection에 저장)
+      // receiverId를 document ID로 사용
       const requesterFriend = FriendEntity.newRequest(
-        friendRequestId,
+        receiverId,
         receiverResult.data.name,
         receiverResult.data.profileImageUrl,
         now
       );
 
       // 수신자 관점: 상대방을 PENDING 상태로 추가 (수신자의 subcollection에 저장)
+      // requesterId를 document ID로 사용
       const receiverFriend = FriendEntity.receivedRequest(
-        friendRequestId,
+        requesterId,
         requesterResult.data.name,
         requesterResult.data.profileImageUrl,
         now
@@ -114,12 +115,12 @@ export class SendFriendRequestUseCase {
       const saveReceiverResult = await this.friendRepository.save(receiverId, receiverFriend);
       if (!saveReceiverResult.success) {
         // 롤백을 위해 요청자 쪽 데이터 삭제 시도
-        await this.friendRepository.delete(friendRequestId);
+        await this.friendRepository.deleteByUserIds(requesterId, receiverId);
         return Result.failure(saveReceiverResult.error);
       }
 
       return Result.success({
-        friendRequestId: friendRequestId,
+        friendRequestId: receiverId, // Document ID is the other user's ID
         status: "REQUESTED",
         requestedAt: now.toISOString(),
       });

@@ -72,22 +72,35 @@ export class AcceptFriendRequestUseCase {
         return Result.failure(saveResult.error);
       }
 
-      // 요청자의 friends subcollection에 수신자의 Friend 생성 (양방향 관계)
-      const reciprocalFriend = FriendEntity.fromDataSource(
-        request.receiverId, // Friend ID (수신자의 ID)
-        receiverResult.data.name,
-        receiverResult.data.profileImageUrl,
-        FriendStatus.ACCEPTED,
-        friendRequest.requestedAt,
-        new Date(), // acceptedAt
-        new Date(), // createdAt
-        new Date() // updatedAt
-      );
+      // 요청자의 기존 friend 문서를 ACCEPTED 상태로 업데이트
+      const requesterFriendResult = await this.friendRepository.findByUserIds(request.requesterId, request.receiverId);
+      if (requesterFriendResult.success && requesterFriendResult.data) {
+        const requesterFriend = requesterFriendResult.data;
+        const acceptResult = requesterFriend.accept();
+        if (acceptResult.success) {
+          const updateRequesterResult = await this.friendRepository.update(request.requesterId, acceptResult.data);
+          if (!updateRequesterResult.success) {
+            console.error("Failed to update requester friend status:", updateRequesterResult.error);
+          }
+        }
+      } else {
+        // 요청자에게 기존 friend 문서가 없으면 새로 생성
+        const reciprocalFriend = FriendEntity.fromDataSource(
+          request.receiverId, // Friend ID (수신자의 ID)
+          receiverResult.data.name,
+          receiverResult.data.profileImageUrl,
+          FriendStatus.ACCEPTED,
+          friendRequest.requestedAt,
+          new Date(), // acceptedAt
+          new Date(), // createdAt
+          new Date() // updatedAt
+        );
 
-      // 요청자의 subcollection에 저장
-      const saveReciprocalResult = await this.friendRepository.save(request.requesterId, reciprocalFriend);
-      if (!saveReciprocalResult.success) {
-        return Result.failure(new Error("Failed to save reciprocal friend relationship"));
+        // 요청자의 subcollection에 저장
+        const saveReciprocalResult = await this.friendRepository.save(request.requesterId, reciprocalFriend);
+        if (!saveReciprocalResult.success) {
+          console.error("Failed to save reciprocal friend relationship:", saveReciprocalResult.error);
+        }
       }
 
       // 양쪽 사용자의 친구 수 업데이트 (백그라운드에서 수행)

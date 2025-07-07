@@ -1,8 +1,10 @@
 import {FriendRepositoryFactory} from "../domain/friend/repositories/factory/FriendRepositoryFactory";
+import {MemberRepositoryFactoryImpl} from "../domain/member/repositories/factory/MemberRepositoryFactoryImpl";
 import {UserRepositoryFactory} from "../domain/user/repositories/factory/UserRepositoryFactory";
 import {ProjectRepositoryFactory} from "../domain/project/repositories/factory/ProjectRepositoryFactory";
 import {
   FriendUseCaseProvider,
+  MemberUseCaseProvider,
   UserUseCaseProvider,
   ProjectUseCaseProvider,
 } from "../business";
@@ -66,6 +68,11 @@ export class DependencyConfig {
     );
 
     container.register(
+      ProviderKeys.MEMBER_REPOSITORY_FACTORY,
+      new MemberRepositoryFactoryImpl()
+    );
+
+    container.register(
       ProviderKeys.USER_REPOSITORY_FACTORY,
       new UserRepositoryFactory()
     );
@@ -93,6 +100,16 @@ export class DependencyConfig {
       ProviderKeys.FRIEND_USECASE_PROVIDER,
       new FriendUseCaseProvider(
         container.get(ProviderKeys.FRIEND_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.USER_REPOSITORY_FACTORY)
+      )
+    );
+
+    // Member Use Case Provider
+    container.register(
+      ProviderKeys.MEMBER_USECASE_PROVIDER,
+      new MemberUseCaseProvider(
+        container.get(ProviderKeys.MEMBER_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY),
         container.get(ProviderKeys.USER_REPOSITORY_FACTORY)
       )
     );
@@ -161,6 +178,7 @@ export function getProvider<T>(key: string): T {
  */
 export const Providers = {
   getFriendProvider: () => getProvider<FriendUseCaseProvider>(ProviderKeys.FRIEND_USECASE_PROVIDER),
+  getMemberProvider: () => getProvider<MemberUseCaseProvider>(ProviderKeys.MEMBER_USECASE_PROVIDER),
   getUserProvider: () => getProvider<UserUseCaseProvider>(ProviderKeys.USER_USECASE_PROVIDER),
   getProjectProvider: () => getProvider<ProjectUseCaseProvider>(ProviderKeys.PROJECT_USECASE_PROVIDER),
 } as const;

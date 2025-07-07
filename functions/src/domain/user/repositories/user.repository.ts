@@ -11,4 +11,5 @@ export interface UserRepository {
   delete(id: string): Promise<CustomResult<void>>;
   exists(userId: string): Promise<CustomResult<boolean>>;
   findActiveUsers(limit?: number): Promise<CustomResult<UserEntity[]>>;
+  removeProjectWrapper(userId: string, projectId: string): Promise<CustomResult<void>>;
 }
