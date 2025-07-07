@@ -72,7 +72,7 @@ export class GetFriendsUseCase {
       const friendInfos: FriendInfo[] = [];
 
       for (const relation of paginatedRelations) {
-        // Friend ID가 상대방의 userId
+        // Document ID가 상대방의 userId
         const friendUserId = relation.id;
 
         // 친구 사용자 정보 조회
@@ -81,8 +81,8 @@ export class GetFriendsUseCase {
           const friendUser = friendUserResult.data;
 
           friendInfos.push({
-            friendId: relation.id,
-            userId: friendUserId,
+            friendId: relation.id, // Document ID (otherUserId)
+            userId: friendUserId,  // Same as friendId now
             user: {
               id: friendUser.id,
               name: friendUser.name,
