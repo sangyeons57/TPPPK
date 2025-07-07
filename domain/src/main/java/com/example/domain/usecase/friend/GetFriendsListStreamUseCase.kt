@@ -19,18 +19,18 @@ class GetFriendsListStreamUseCase @Inject constructor(
 ) {
     /**
      * 친구 목록 정보를 실시간 스트림으로 가져옵니다.
+     * Repository는 이미 특정 사용자의 컨텍스트로 생성되었으므로 별도의 userId가 필요하지 않습니다.
      *
-     * @param currentUserId 현재 사용자 ID
      * @return Flow<CustomResult<List<Friend>, Exception>> 친구 목록 정보 Flow
      */
     operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> = flow{
-        when (val result = friendRepository.observeAll().first()) {
+        // userFriends 컬렉션 경로에서 userId 추출
+        val collectionPath = friendRepository.factoryContext.collectionPath.value
+        val userId = collectionPath.split("/")[1] // "users/{userId}/friends"에서 userId 추출
+        
+        when (val result = friendRepository.observeFriendsList(userId).first()) {
             is CustomResult.Success -> {
-                if( result.data.all { it is Friend } ) {
-                    emit(CustomResult.Success(result.data as List<Friend>))
-                } else {
-                    emit(CustomResult.Failure(Exception("친구 목록을 가져오는 데 실패했습니다.")))
-                }
+                emit(CustomResult.Success(result.data))
             }
             is CustomResult.Failure ->{
                 emit(CustomResult.Failure(Exception("친구 목록을 가져오는 데 실패했습니다.")))

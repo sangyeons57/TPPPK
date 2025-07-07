@@ -70,6 +70,21 @@ export class RejectFriendRequestUseCase {
         return Result.failure(saveResult.error);
       }
 
+      // 요청자의 기존 friend 문서도 REJECTED 상태로 업데이트
+      const requesterFriendResult = await this.friendRepository.findByUserIds(requesterId, receiverId);
+      if (requesterFriendResult.success && requesterFriendResult.data) {
+        const requesterFriend = requesterFriendResult.data;
+        const rejectRequesterResult = requesterFriend.reject();
+        if (rejectRequesterResult.success) {
+          const updateRequesterResult = await this.friendRepository.update(requesterId, rejectRequesterResult.data);
+          if (!updateRequesterResult.success) {
+            console.error("Failed to update requester friend status to REJECTED:", updateRequesterResult.error);
+          }
+        }
+      } else {
+        console.warn("Requester friend document not found for bilateral rejection:", requesterId, receiverId);
+      }
+
       return Result.success({
         friendId: rejectedFriend.id,
         status: rejectedFriend.status,
