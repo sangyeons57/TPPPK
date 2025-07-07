@@ -7,8 +7,10 @@ export enum FriendStatus {
   REQUESTED = "REQUESTED", // 요청자 입장에서 대기중
   ACCEPTED = "ACCEPTED", // 친구 관계 성립
   REJECTED = "REJECTED", // 거절됨
+  DECLINED = "DECLINED", // 거절됨 (Android 호환)
   BLOCKED = "BLOCKED", // 차단됨
   REMOVED = "REMOVED", // 친구 관계 해제
+  UNKNOWN = "UNKNOWN", // 알 수 없는 상태 (Android 호환)
 }
 
 

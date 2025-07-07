@@ -10,40 +10,42 @@ enum class FriendStatus(val value: String) {
     /**
      * 친구 요청을 보냈거나 받은 상태 (상대방의 수락 대기 중)
      */
-    @PropertyName("pending")
-    PENDING("pending"),
-    @PropertyName("requested")
-    REQUESTED("requested"),
+    @PropertyName("PENDING")
+    PENDING("PENDING"),
+    @PropertyName("REQUESTED")
+    REQUESTED("REQUESTED"),
 
     /**
      * 친구 관계가 수락된 상태
      */
-    @PropertyName("accepted")
-    ACCEPTED("accepted"),
+    @PropertyName("ACCEPTED")
+    ACCEPTED("ACCEPTED"),
 
     /**
      * 친구 요청이 거절된 상태 (선택적)
      */
-    @PropertyName("declined")
-    DECLINED("declined"),
+    @PropertyName("DECLINED")
+    DECLINED("DECLINED"),
+    @PropertyName("REJECTED")
+    REJECTED("REJECTED"),
 
     /**
      * 해당 사용자를 차단한 상태 (선택적)
      */
-    @PropertyName("blocked")
-    BLOCKED("blocked"),
+    @PropertyName("BLOCKED")
+    BLOCKED("BLOCKED"),
 
     /**
      * 친구 관계가 해제된 상태
      */
-    @PropertyName("removed")
-    REMOVED("removed"),
+    @PropertyName("REMOVED")
+    REMOVED("REMOVED"),
 
     /**
      * 알 수 없거나 정의되지 않은 상태
      */
-    @PropertyName("unknown")
-    UNKNOWN("unknown");
+    @PropertyName("UNKNOWN")
+    UNKNOWN("UNKNOWN");
 
     companion object {
         /**

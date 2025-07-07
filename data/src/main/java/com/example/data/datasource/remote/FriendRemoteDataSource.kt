@@ -96,7 +96,7 @@ class FriendRemoteDataSourceImpl @Inject constructor(
     override fun observeFriendRequests(): Flow<CustomResult<List<FriendDTO>, Exception>> {
         return callbackFlow {
             val listener = collection
-                .whereEqualTo(FriendDTO.STATUS, FriendStatus.PENDING.name)
+                .whereEqualTo(FriendDTO.STATUS, FriendStatus.PENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) { trySend(CustomResult.Failure(error)); close(error); return@addSnapshotListener }
                     val list = snapshot?.documents?.mapNotNull { it.toObject(FriendDTO::class.java) } ?: emptyList()
@@ -111,8 +111,12 @@ class FriendRemoteDataSourceImpl @Inject constructor(
             val listener = collection
                 .whereEqualTo(FriendDTO.STATUS, FriendStatus.ACCEPTED)
                 .addSnapshotListener { snapshot, error ->
-                    if (error != null) { trySend(CustomResult.Failure(error)); close(error); return@addSnapshotListener }
+                    if (error != null) { 
+                        Log.e(TAG, "observeFriendsList error: ${error.message}")
+                        trySend(CustomResult.Failure(error)); close(error); return@addSnapshotListener 
+                    }
                     val list = snapshot?.documents?.mapNotNull { it.toObject(FriendDTO::class.java) } ?: emptyList()
+                    Log.d(TAG, "observeFriendsList: Found ${list.size} accepted friends")
                     trySend(CustomResult.Success(list))
                 }
             awaitClose { listener.remove() }

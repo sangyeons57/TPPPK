@@ -2,7 +2,7 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {FriendEntity} from "../../../domain/friend/entities/friend.entity";
+import {FriendEntity, FriendStatus} from "../../../domain/friend/entities/friend.entity";
 
 export interface SendFriendRequestRequest {
   requesterId: string;
@@ -121,7 +121,7 @@ export class SendFriendRequestUseCase {
 
       return Result.success({
         friendRequestId: receiverId, // Document ID is the other user's ID
-        status: "REQUESTED",
+        status: FriendStatus.REQUESTED,
         requestedAt: now.toISOString(),
       });
     } catch (error) {
