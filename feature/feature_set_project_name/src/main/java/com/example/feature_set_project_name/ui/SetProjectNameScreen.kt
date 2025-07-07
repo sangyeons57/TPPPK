@@ -1,4 +1,4 @@
-package com.example.feature_project.ui
+package com.example.feature_project_detail.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,10 +20,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.*
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.feature_project.viewmodel.SetProjectNameEvent
-import com.example.feature_project.viewmodel.SetProjectNameNavigationEvent
-import com.example.feature_project.viewmodel.SetProjectNameUiState
-import com.example.feature_project.viewmodel.SetProjectNameViewModel
+import com.example.feature_project_detail.viewmodel.SetProjectNameEvent
+import com.example.feature_project_detail.viewmodel.SetProjectNameNavigationEvent
+import com.example.feature_project_detail.viewmodel.SetProjectNameUiState
+import com.example.feature_project_detail.viewmodel.SetProjectNameViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**

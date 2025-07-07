@@ -51,7 +51,7 @@ import com.example.feature_schedule_detail.ui.ScheduleDetailScreen
 import com.example.feature_settings.ui.SettingsScreen
 import com.example.feature_signup.ui.SignUpScreen
 import com.example.feature_terms_of_service.ui.TermsOfServiceScreen
-import com.example.feature_member.ui.MemberListScreen
+import com.example.feature_member_list.ui.MemberListScreen
 import com.example.feature_role_list.ui.RoleListScreen
 import com.example.feature_add_role.ui.AddRoleScreen
 import com.example.feature_edit_role.ui.EditRoleScreen
@@ -387,7 +387,7 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
             route = AddScheduleRoute.ROUTE_PATTERN,
             arguments = AddScheduleRoute.arguments
         ) {
-            com.example.feature_schedule.ui.AddScheduleScreen(
+            com.example.feature_add_schedule.ui.AddScheduleScreen(
                 navigationManger = navigationManger
             )
         }

@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 android {
-    namespace = "com.example.feature_member"
+    namespace = "com.example.feature_member_list"
     compileSdk = 36
 
     defaultConfig {

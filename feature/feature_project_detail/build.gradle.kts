@@ -10,7 +10,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.feature_project"
+    namespace = "com.example.feature_project_detail"
     compileSdk = 36
 
     defaultConfig {

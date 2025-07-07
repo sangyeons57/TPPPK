@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.feature_schedule"
+    namespace = "com.example.feature_add_schedule"
     compileSdk = 36
 
     defaultConfig {
