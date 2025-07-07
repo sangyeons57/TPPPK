@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import java.time.Instant
 import javax.inject.Inject
 
@@ -127,31 +129,33 @@ class FriendViewModel @Inject constructor(
                         is CustomResult.Success -> {
                             Log.d("FriendViewModel", "6")
                             val friends = result.data
-                            val friendItems = mutableListOf<FriendItem>()
-                            
-                            // 각 친구에 대해 사용자 정보 조회
-                            for (friend in friends) {
-                                Log.d("FriendViewModel", "6.5")
-                                val userResult =
-                                    userUseCases.getUserStreamUseCase(friend.id).first()
-                                val user = when (userResult) {
-                                    is CustomResult.Success -> userResult.data
-                                    else -> null
-                                }
+                            // 병렬로 각 친구에 대해 사용자 정보 조회
+                            val friendItems = friends.map { friend ->
+                                async {
+                                    Log.d("FriendViewModel", "Loading user data for friend: ${friend.id}")
+                                    val userResult =
+                                        userUseCases.getUserStreamUseCase(friend.id).first()
+                                    val user = when (userResult) {
+                                        is CustomResult.Success -> userResult.data
+                                        else -> {
+                                            Log.w("FriendViewModel", "Failed to load user data for friend: ${friend.id}")
+                                            null
+                                        }
+                                    }
 
-                                if (user != null) {
-                                    friendItems.add(FriendItem(
-                                        user = user,
-                                        friendId = UserId.from(friend.id),
-                                        status = friend.status,
-                                        profileImageUrl = friend.profileImageUrl,
-                                        requestedAt = friend.requestedAt,
-                                        acceptedAt = friend.acceptedAt,
-                                        displayName = user.name
-                                    )
-                                    )
+                                    if (user != null) {
+                                        FriendItem(
+                                            user = user,
+                                            friendId = UserId.from(friend.id),
+                                            status = friend.status,
+                                            profileImageUrl = friend.profileImageUrl,
+                                            requestedAt = friend.requestedAt,
+                                            acceptedAt = friend.acceptedAt,
+                                            displayName = user.name
+                                        )
+                                    } else null
                                 }
-                            }
+                            }.awaitAll().filterNotNull()
                             
                             _uiState.update {
                                 it.copy(
@@ -167,9 +171,17 @@ class FriendViewModel @Inject constructor(
                             _uiState.update { it.copy(error = errorMessage, isLoading = false) }
                             _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 목록 업데이트 실패: $errorMessage"))
                         }
-                        else -> {
-                            Log.d("FriendViewModel", "8")
-                            // Loading, Initial, Progress 등의 상태 처리 (필요 시)
+                        is CustomResult.Loading -> {
+                            Log.d("FriendViewModel", "Loading friend relationships...")
+                            _uiState.update { it.copy(isLoading = true, error = null) }
+                        }
+                        is CustomResult.Initial -> {
+                            Log.d("FriendViewModel", "Initializing friend relationships...")
+                            _uiState.update { it.copy(isLoading = true, error = null) }
+                        }
+                        is CustomResult.Progress -> {
+                            Log.d("FriendViewModel", "Friend relationships progress: ${result.progress}")
+                            _uiState.update { it.copy(isLoading = true, error = null) }
                         }
                     }
                 }

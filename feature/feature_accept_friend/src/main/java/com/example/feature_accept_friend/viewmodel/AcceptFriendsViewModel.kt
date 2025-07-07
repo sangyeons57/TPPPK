@@ -123,10 +123,20 @@ class AcceptFriendsViewModel @Inject constructor(
                             _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 불러오는데 실패했습니다."))
                             Log.d("AcceptFriendsViewModel", "8")
                         }
-                        else -> {
-                            // Loading, Initial, Progress 등의 상태 처리 (필요 시)
-                            Log.d("AcceptFriendsViewModel", "9")
-                            Log.d("AcceptFriendsViewModel", result.toString())
+                        is CustomResult.Loading -> {
+                            // Loading 상태 유지
+                            _uiState.update { it.copy(isLoading = true, error = null) }
+                            Log.d("AcceptFriendsViewModel", "Loading friend requests...")
+                        }
+                        is CustomResult.Initial -> {
+                            // Initial 상태 유지 (로딩 표시)
+                            _uiState.update { it.copy(isLoading = true, error = null) }
+                            Log.d("AcceptFriendsViewModel", "Initializing friend requests...")
+                        }
+                        is CustomResult.Progress -> {
+                            // Progress 상태 처리
+                            _uiState.update { it.copy(isLoading = true, error = null) }
+                            Log.d("AcceptFriendsViewModel", "Progress: ${result.progress}")
                         }
                     }
                 }
@@ -167,8 +177,17 @@ class AcceptFriendsViewModel @Inject constructor(
                         val error = result.error
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청 수락 실패: ${error.message ?: "알 수 없는 오류"}"))
                     }
-                    else -> {
-                        // 다른 상태 처리 (필요 시)
+                    is CustomResult.Loading -> {
+                        // 수락 처리 중 상태 (UI에 로딩 피드백 제공)
+                        Log.d("AcceptFriendsViewModel", "Processing friend request acceptance...")
+                    }
+                    is CustomResult.Initial -> {
+                        // Initial 상태 처리 (보통 아무 작업 안함)
+                        Log.d("AcceptFriendsViewModel", "Initial state during acceptance")
+                    }
+                    is CustomResult.Progress -> {
+                        // Progress 상태 처리
+                        Log.d("AcceptFriendsViewModel", "Acceptance progress: ${result.progress}")
                     }
                 }
             } catch (e: Exception) {
@@ -201,8 +220,17 @@ class AcceptFriendsViewModel @Inject constructor(
                         val error = result.error
                         _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청 거절 실패: ${error.message ?: "알 수 없는 오류"}"))
                     }
-                    else -> {
-                        // 다른 상태 처리 (필요 시)
+                    is CustomResult.Loading -> {
+                        // 거절 처리 중 상태 (UI에 로딩 피드백 제공)
+                        Log.d("AcceptFriendsViewModel", "Processing friend request denial...")
+                    }
+                    is CustomResult.Initial -> {
+                        // Initial 상태 처리 (보통 아무 작업 안함)
+                        Log.d("AcceptFriendsViewModel", "Initial state during denial")
+                    }
+                    is CustomResult.Progress -> {
+                        // Progress 상태 처리
+                        Log.d("AcceptFriendsViewModel", "Denial progress: ${result.progress}")
                     }
                 }
             } catch (e: Exception) {

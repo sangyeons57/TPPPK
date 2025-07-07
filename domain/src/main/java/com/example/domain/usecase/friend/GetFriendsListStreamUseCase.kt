@@ -5,8 +5,7 @@ import com.example.domain.model.base.Friend
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.FriendRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -23,22 +22,20 @@ class GetFriendsListStreamUseCase @Inject constructor(
      *
      * @return Flow<CustomResult<List<Friend>, Exception>> 친구 목록 정보 Flow
      */
-    operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> = flow{
+    operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> {
         // userFriends 컬렉션 경로에서 userId 추출
         val collectionPath = friendRepository.factoryContext.collectionPath.value
         val userId = collectionPath.split("/")[1] // "users/{userId}/friends"에서 userId 추출
         
-        when (val result = friendRepository.observeFriendsList(userId).first()) {
-            is CustomResult.Success -> {
-                emit(CustomResult.Success(result.data))
+        return friendRepository.observeFriendsList(userId)
+            .map { result ->
+                when (result) {
+                    is CustomResult.Success -> CustomResult.Success(result.data)
+                    is CustomResult.Failure -> CustomResult.Failure(Exception("친구 목록을 가져오는 데 실패했습니다."))
+                    is CustomResult.Loading -> CustomResult.Loading
+                    is CustomResult.Initial -> CustomResult.Initial
+                    is CustomResult.Progress -> CustomResult.Progress(result.progress)
+                }
             }
-            is CustomResult.Failure ->{
-                emit(CustomResult.Failure(Exception("친구 목록을 가져오는 데 실패했습니다.")))
-                return@flow
-            }
-            is CustomResult.Loading -> emit(CustomResult.Loading)
-            is CustomResult.Initial -> emit(CustomResult.Initial)
-            is CustomResult.Progress -> emit(CustomResult.Progress(result.progress))
-        }
     }
 }

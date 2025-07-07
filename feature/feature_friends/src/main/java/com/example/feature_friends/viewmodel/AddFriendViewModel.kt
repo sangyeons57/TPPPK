@@ -127,12 +127,20 @@ class AddFriendViewModel @Inject constructor(
                                 error = "사용자를 찾을 수 없습니다: $usernameToSearch"
                             )}
                         }
-                        else -> {
-                            Log.d(TAG, "Unhandled user search result: $userResult")
-                            _uiState.update { it.copy(
-                                isLoading = false,
-                                error = "처리 중 오류가 발생했습니다."
-                            )}
+                        is CustomResult.Loading -> {
+                            // 사용자 검색 중 로딩 상태 유지
+                            Log.d(TAG, "Searching for user: $usernameToSearch")
+                            _uiState.update { it.copy(isLoading = true, error = null) }
+                        }
+                        is CustomResult.Initial -> {
+                            // Initial 상태 유지 (로딩 표시)
+                            Log.d(TAG, "Initializing user search for: $usernameToSearch")
+                            _uiState.update { it.copy(isLoading = true, error = null) }
+                        }
+                        is CustomResult.Progress -> {
+                            // Progress 상태 처리
+                            Log.d(TAG, "User search progress: ${userResult.progress}")
+                            _uiState.update { it.copy(isLoading = true, error = null) }
                         }
                     }
                 }
@@ -167,12 +175,20 @@ class AddFriendViewModel @Inject constructor(
                     error = requestResult.error.message ?: "친구 요청 실패"
                 )}
             }
-            else -> {
-                Log.d(TAG, "Unhandled friend request result")
-                _uiState.update { it.copy(
-                    isLoading = false,
-                    error = "처리 중 오류가 발생했습니다."
-                )}
+            is CustomResult.Loading -> {
+                // 친구 요청 처리 중 로딩 상태 유지
+                Log.d(TAG, "Processing friend request to $targetUsername")
+                _uiState.update { it.copy(isLoading = true, error = null) }
+            }
+            is CustomResult.Initial -> {
+                // Initial 상태 처리 (보통 아무 작업 안함)
+                Log.d(TAG, "Initial state during friend request to $targetUsername")
+                _uiState.update { it.copy(isLoading = true, error = null) }
+            }
+            is CustomResult.Progress -> {
+                // Progress 상태 처리
+                Log.d(TAG, "Friend request progress to $targetUsername: ${requestResult.progress}")
+                _uiState.update { it.copy(isLoading = true, error = null) }
             }
         }
     }
