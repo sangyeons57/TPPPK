@@ -3,6 +3,7 @@ package com.example.data.repository.base
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.DMChannelRemoteDataSource
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
+import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
@@ -15,6 +16,7 @@ import javax.inject.Inject
 class DMChannelRepositoryImpl @Inject constructor(
     private val dmChannelRemoteDataSource: DMChannelRemoteDataSource,
     private val authRemoteDataSource: AuthRemoteDataSource,
+    private val functionsRemoteDataSource: FunctionsRemoteDataSource,
     override val factoryContext: DMChannelRepositoryFactoryContext
 ) : DefaultRepositoryImpl(dmChannelRemoteDataSource, factoryContext), DMChannelRepository {
 
@@ -50,5 +52,9 @@ class DMChannelRepositoryImpl @Inject constructor(
         } else {
             return dmChannelRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
+    }
+    
+    override suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.createDMChannel(targetUserName)
     }
 }

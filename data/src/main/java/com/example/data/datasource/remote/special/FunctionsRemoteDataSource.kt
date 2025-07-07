@@ -145,6 +145,14 @@ interface FunctionsRemoteDataSource {
         limit: Int? = null,
         offset: Int? = null
     ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 사용자 이름을 통해 DM 채널을 생성합니다.
+     *
+     * @param targetUserName 대상 사용자 이름
+     * @return 성공 시 DM 채널 정보, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
 }
 
 @Singleton
@@ -556,6 +564,34 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 CustomResult.Success(resultData)
             } else {
                 CustomResult.Failure(Exception("Get friend requests function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                "currentUserId" to currentUser.uid,
+                "targetUserName" to targetUserName
+            )
+
+            val callable = functions.getHttpsCallable("createDMChannel")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Create DM channel function call timed out"))
             }
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e

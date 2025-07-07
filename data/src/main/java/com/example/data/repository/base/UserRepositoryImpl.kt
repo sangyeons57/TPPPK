@@ -81,4 +81,23 @@ class UserRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.updateUserProfile(name, memo)
     }
 
+    override suspend fun callFunction(
+        functionName: String,
+        data: Map<String, Any?>?
+    ): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.callFunction(functionName, data)
+    }
+
+    override suspend fun getHelloWorld(): CustomResult<String, Exception> {
+        return functionsRemoteDataSource.getHelloWorld()
+    }
+
+    override suspend fun callFunctionWithUserData(
+        functionName: String,
+        userId: String,
+        customData: Map<String, Any?>?
+    ): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.callFunctionWithUserData(functionName, userId, customData)
+    }
+
 }

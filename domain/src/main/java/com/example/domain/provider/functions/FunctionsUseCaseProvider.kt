@@ -1,6 +1,6 @@
 package com.example.domain.provider.functions
 
-import com.example.domain.repository.base.SystemRepository
+import com.example.domain.repository.base.UserRepository
 import com.example.domain.usecase.functions.HelloWorldUseCase
 import com.example.domain.usecase.functions.HelloWorldUseCaseImpl
 import javax.inject.Inject
@@ -13,12 +13,12 @@ import kotlin.jvm.JvmSuppressWildcards
  */
 data class FunctionsUseCases(
     val helloWorldUseCase: HelloWorldUseCase,
-    val systemRepository: SystemRepository
+    val userRepository: UserRepository
 )
 
 @Singleton
 class FunctionsUseCaseProvider @Inject constructor(
-    private val systemRepository: SystemRepository
+    private val userRepository: UserRepository
 ) {
     
     /**
@@ -28,8 +28,8 @@ class FunctionsUseCaseProvider @Inject constructor(
      */
     fun create(): FunctionsUseCases {
         return FunctionsUseCases(
-            helloWorldUseCase = HelloWorldUseCaseImpl(systemRepository),
-            systemRepository = systemRepository
+            helloWorldUseCase = HelloWorldUseCaseImpl(userRepository),
+            userRepository = userRepository
         )
     }
 }

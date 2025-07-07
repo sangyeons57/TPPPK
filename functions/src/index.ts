@@ -37,3 +37,6 @@ export {rejectFriendRequestFunction as rejectFriendRequest} from "./triggers/fri
 export {removeFriendFunction as removeFriend} from "./triggers/friend/friendManagement.trigger";
 export {getFriendsFunction as getFriends} from "./triggers/friend/friendManagement.trigger";
 export {getFriendRequestsFunction as getFriendRequests} from "./triggers/friend/friendManagement.trigger";
+
+// DM management functions
+export {createDMChannelFunction as createDMChannel} from "./triggers/dm/dmManagement.trigger";

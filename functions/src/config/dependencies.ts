@@ -3,12 +3,15 @@ import {MemberRepositoryFactoryImpl} from "../domain/member/repositories/factory
 import {UserRepositoryFactory} from "../domain/user/repositories/factory/UserRepositoryFactory";
 import {ProjectRepositoryFactory} from "../domain/project/repositories/factory/ProjectRepositoryFactory";
 import {ProjectWrapperRepositoryFactoryImpl} from "../domain/projectwrapper/repositories/factory/ProjectWrapperRepositoryFactoryImpl";
+import {DMChannelRepositoryFactory} from "../domain/dmchannel/repositories/factory/DMChannelRepositoryFactory";
+import {DMWrapperRepositoryFactory} from "../domain/dmwrapper/repositories/factory/DMWrapperRepositoryFactory";
 import {
   FriendUseCaseProvider,
   MemberUseCaseProvider,
   UserUseCaseProvider,
   ProjectUseCaseProvider,
   ProjectWrapperUseCaseProvider,
+  DMUseCaseProvider,
 } from "../business";
 import { ProviderContainer, ProviderKeys } from "../infrastructure/container/ProviderContainer";
 
@@ -89,6 +92,16 @@ export class DependencyConfig {
       new ProjectWrapperRepositoryFactoryImpl()
     );
 
+    container.register(
+      ProviderKeys.DM_CHANNEL_REPOSITORY_FACTORY,
+      new DMChannelRepositoryFactory()
+    );
+
+    container.register(
+      ProviderKeys.DM_WRAPPER_REPOSITORY_FACTORY,
+      new DMWrapperRepositoryFactory()
+    );
+
     console.log("Repository factories and services registered");
   }
 
@@ -146,6 +159,16 @@ export class DependencyConfig {
       )
     );
 
+    // DM Use Case Provider
+    container.register(
+      ProviderKeys.DM_USECASE_PROVIDER,
+      new DMUseCaseProvider(
+        container.get(ProviderKeys.DM_CHANNEL_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.DM_WRAPPER_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.USER_REPOSITORY_FACTORY)
+      )
+    );
+
     console.log("Use case providers registered");
   }
 
@@ -198,4 +221,5 @@ export const Providers = {
   getUserProvider: () => getProvider<UserUseCaseProvider>(ProviderKeys.USER_USECASE_PROVIDER),
   getProjectProvider: () => getProvider<ProjectUseCaseProvider>(ProviderKeys.PROJECT_USECASE_PROVIDER),
   getProjectWrapperProvider: () => getProvider<ProjectWrapperUseCaseProvider>(ProviderKeys.PROJECT_WRAPPER_USECASE_PROVIDER),
+  getDmProvider: () => getProvider<DMUseCaseProvider>(ProviderKeys.DM_USECASE_PROVIDER),
 } as const;

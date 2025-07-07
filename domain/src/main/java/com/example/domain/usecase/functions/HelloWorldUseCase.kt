@@ -1,7 +1,7 @@
 package com.example.domain.usecase.functions
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.SystemRepository
+import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject
 
 /**
@@ -27,20 +27,20 @@ interface HelloWorldUseCase {
 
 /**
  * HelloWorldUseCase의 구현체
- * SystemRepository를 사용하여 Firebase Functions과 통신합니다.
+ * UserRepository를 사용하여 Firebase Functions과 통신합니다.
  */
 class HelloWorldUseCaseImpl @Inject constructor(
-    private val systemRepository: SystemRepository
+    private val userRepository: UserRepository
 ) : HelloWorldUseCase {
 
     override suspend fun invoke(): CustomResult<String, Exception> {
-        return systemRepository.getHelloWorld()
+        return userRepository.getHelloWorld()
     }
 
     override suspend fun callWithCustomMessage(customMessage: String): CustomResult<String, Exception> {
         return try {
             val data = mapOf("message" to customMessage)
-            val result = systemRepository.callFunction("customHelloWorld", data)
+            val result = userRepository.callFunction("customHelloWorld", data)
             
             when (result) {
                 is CustomResult.Success -> {

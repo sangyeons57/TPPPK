@@ -71,9 +71,7 @@ class DMUseCaseProvider @Inject constructor(
             
             addDmChannelUseCase = AddDmChannelUseCase(
                 dmChannelRepository = dmChannelRepository,
-                dmWrapperRepository = dmWrapperRepository,
-                authRepository = authRepository,
-                userRepository = userRepository
+                authRepository = authRepository
             ),
             
             getDmChannelUseCase = GetDmChannelUseCase(

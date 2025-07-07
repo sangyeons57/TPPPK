@@ -120,6 +120,8 @@ export const ProviderKeys = {
   USER_REPOSITORY_FACTORY: "userRepositoryFactory",
   PROJECT_REPOSITORY_FACTORY: "projectRepositoryFactory",
   PROJECT_WRAPPER_REPOSITORY_FACTORY: "projectWrapperRepositoryFactory",
+  DM_CHANNEL_REPOSITORY_FACTORY: "dmChannelRepositoryFactory",
+  DM_WRAPPER_REPOSITORY_FACTORY: "dmWrapperRepositoryFactory",
 
   // UseCase Providers
   FRIEND_USECASE_PROVIDER: "friendUseCaseProvider",
@@ -127,6 +129,7 @@ export const ProviderKeys = {
   USER_USECASE_PROVIDER: "userUseCaseProvider",
   PROJECT_USECASE_PROVIDER: "projectUseCaseProvider",
   PROJECT_WRAPPER_USECASE_PROVIDER: "projectWrapperUseCaseProvider",
+  DM_USECASE_PROVIDER: "dmUseCaseProvider",
 } as const;
 
 /**
