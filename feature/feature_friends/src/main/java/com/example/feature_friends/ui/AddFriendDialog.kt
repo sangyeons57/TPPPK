@@ -69,12 +69,7 @@ fun AddFriendDialog(
         }
     }
 
-    // 친구 추가 성공 시 다이얼로그 닫기
-    LaunchedEffect(uiState.addFriendSuccess) {
-        if (uiState.addFriendSuccess) {
-            onDismissRequest()
-        }
-    }
+    // 친구 추가 성공 시 다이얼로그는 유지 (입력 필드만 클리어됨)
 
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(shape = MaterialTheme.shapes.large) {

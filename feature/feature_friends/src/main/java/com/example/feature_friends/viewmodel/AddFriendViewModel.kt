@@ -24,8 +24,7 @@ data class AddFriendUiState(
     val username: UserName = UserName.EMPTY, // 친구 요청 보낼 사용자 이름
     val isLoading: Boolean = false,
     val error: String? = null, // 서버 응답 에러 메시지
-    val infoMessage: String? = null, // 성공 또는 정보 메시지
-    val addFriendSuccess: Boolean = false // 요청 성공 시 다이얼로그 닫기 트리거
+    val infoMessage: String? = null // 성공 또는 정보 메시지
 )
 
 // --- 이벤트 ---
@@ -66,8 +65,7 @@ class AddFriendViewModel @Inject constructor(
             it.copy(
                 username = UserName(name),
                 error = null,
-                infoMessage = null,
-                addFriendSuccess = false
+                infoMessage = null
             )
         }
     }
@@ -162,9 +160,9 @@ class AddFriendViewModel @Inject constructor(
             is CustomResult.Success -> {
                 Log.d(TAG, "Friend request success to $targetUsername")
                 _uiState.update { it.copy(
+                    username = UserName.EMPTY, // 입력 필드 클리어
                     isLoading = false,
-                    infoMessage = "${targetUsername}님에게 친구 요청을 보냈습니다.",
-                    addFriendSuccess = true
+                    infoMessage = "${targetUsername}님에게 친구 요청을 보냈습니다."
                 )}
                 _eventFlow.emit(AddFriendEvent.ShowSnackbar("친구 요청을 보냈습니다."))
             }
