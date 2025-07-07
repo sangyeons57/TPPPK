@@ -2,15 +2,15 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {UserId, FriendId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {FriendStatus} from "../../../domain/friend/entities/friend.entity";
 
 export interface RejectFriendRequestRequest {
-  friendRequestId: string;
-  userId: string; // 거절하는 사용자 (수신자)
+  requesterId: string; // 요청자 ID (Friend ID로 사용됨)
+  receiverId: string; // 거절하는 사용자 (수신자)
 }
 
 export interface RejectFriendRequestResponse {
-  friendRequestId: string;
+  friendId: string;
   status: string;
   rejectedAt: string;
 }
@@ -24,53 +24,36 @@ export class RejectFriendRequestUseCase {
   async execute(request: RejectFriendRequestRequest): Promise<CustomResult<RejectFriendRequestResponse>> {
     try {
       // 입력 검증
-      if (!request.friendRequestId || !request.userId) {
-        return Result.failure(
-          new ValidationError("request", "Friend request ID and user ID are required")
-        );
+      if (!request.requesterId || !request.receiverId) {
+        return Result.failure(new ValidationError("request", "Requester ID and receiver ID are required"));
       }
 
-      const friendId = new FriendId(request.friendRequestId);
-      const userId = new UserId(request.userId);
+      const requesterId = request.requesterId;
+      const receiverId = request.receiverId;
 
-      // 친구 요청 조회
-      const friendRequestResult = await this.friendRepository.findById(friendId);
+      // 수신자의 friends subcollection에서 요청자의 Friend 조회
+      const friendRequestResult = await this.friendRepository.findByUserIds(receiverId, requesterId);
       if (!friendRequestResult.success) {
         return Result.failure(friendRequestResult.error);
       }
       if (!friendRequestResult.data) {
-        return Result.failure(
-          new NotFoundError("Friend request not found", "friendRequestResult")
-        );
+        return Result.failure(new NotFoundError("Friend request not found", request.requesterId));
       }
 
       const friendRequest = friendRequestResult.data;
 
-      // 요청 수신자가 맞는지 확인
-      if (!friendRequest.isReceiver(userId)) {
-        return Result.failure(
-          new ValidationError("userId", "Only the request receiver can reject this friend request")
-        );
-      }
-
-      // 요청 상태 확인
-      if (friendRequest.status !== FriendStatus.REQUESTED) {
-        return Result.failure(
-          new ConflictError(
-            `Cannot reject friend request. Current status: ${friendRequest.status}`,
-            "friendRequest.status",
-            "friendRequestResult"
-          )
-        );
+      // 요청 상태 확인 (PENDING 상태여야 함)
+      if (friendRequest.status !== FriendStatus.PENDING) {
+        return Result.failure(new ConflictError("friendRequest", "status", friendRequest.status));
       }
 
       // 사용자 존재 확인
-      const userResult = await this.userRepository.findByUserId(request.userId);
+      const userResult = await this.userRepository.findByUserId(request.receiverId);
       if (!userResult.success) {
         return Result.failure(userResult.error);
       }
       if (!userResult.data) {
-        return Result.failure(new NotFoundError("User not found", "userResult"));
+        return Result.failure(new NotFoundError("User not found", request.receiverId));
       }
 
       // 친구 요청 거절
@@ -81,21 +64,19 @@ export class RejectFriendRequestUseCase {
 
       const rejectedFriend = rejectResult.data;
 
-      // 거절된 친구 요청 저장
-      const saveResult = await this.friendRepository.update(rejectedFriend);
+      // 거절된 친구 요청 저장 (수신자의 subcollection에)
+      const saveResult = await this.friendRepository.update(receiverId, rejectedFriend);
       if (!saveResult.success) {
         return Result.failure(saveResult.error);
       }
 
       return Result.success({
-        friendRequestId: rejectedFriend.id.value,
+        friendId: rejectedFriend.id,
         status: rejectedFriend.status,
-        rejectedAt: rejectedFriend.respondedAt!.toISOString(),
+        rejectedAt: rejectedFriend.updatedAt.toISOString(),
       });
     } catch (error) {
-      return Result.failure(
-        error instanceof Error ? error : new Error("Failed to reject friend request")
-      );
+      return Result.failure(error instanceof Error ? error : new Error("Failed to reject friend request"));
     }
   }
 }

@@ -1,5 +1,5 @@
 import { UserRepository } from '../../../domain/user/repositories/user.repository';
-import { UserEntity, UserName, ImageUrl, UserMemo } from '../../../domain/user/entities/user.entity';
+import { UserEntity } from '../../../domain/user/entities/user.entity';
 import { CustomResult, Result } from '../../../core/types';
 import { NotFoundError, ValidationError } from '../../../core/errors';
 
@@ -32,9 +32,9 @@ export class UpdateUserProfileUseCase {
       }
 
       const updates: {
-        name?: UserName;
-        profileImageUrl?: ImageUrl;
-        memo?: UserMemo;
+        name?: string;
+        profileImageUrl?: string;
+        memo?: string;
       } = {};
 
       if (request.name) {
@@ -42,15 +42,15 @@ export class UpdateUserProfileUseCase {
         if (!nameValidation.success) {
           return Result.failure(nameValidation.error);
         }
-        updates.name = new UserName(request.name);
+        updates.name = request.name;
       }
 
       if (request.profileImageUrl) {
-        updates.profileImageUrl = new ImageUrl(request.profileImageUrl);
+        updates.profileImageUrl = request.profileImageUrl;
       }
 
       if (request.memo !== undefined) {
-        updates.memo = request.memo ? new UserMemo(request.memo) : undefined;
+        updates.memo = request.memo;
       }
 
       const updatedUser = existingUser.updateProfile(updates);
@@ -70,7 +70,7 @@ export class UpdateUserProfileUseCase {
 
   private async validateUserName(name: string, currentUserId: string): Promise<CustomResult<void>> {
     try {
-      const existingUser = await this.userRepository.findByName(new UserName(name));
+      const existingUser = await this.userRepository.findByName(name);
       if (!existingUser.success) {
         return Result.failure(existingUser.error);
       }

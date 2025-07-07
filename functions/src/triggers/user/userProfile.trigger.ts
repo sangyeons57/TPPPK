@@ -1,11 +1,10 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { RUNTIME_CONFIG } from '../../core/constants';
-import { Providers } from '../../config/dependencies';
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {RUNTIME_CONFIG} from "../../core/constants";
+import {Providers} from "../../config/dependencies";
 
 interface UpdateUserProfileRequest {
   userId: string;
   username?: string;
-  profileImage?: string;
   bio?: string;
   displayName?: string;
 }
@@ -22,10 +21,10 @@ export const updateUserProfileFunction = onCall(
   },
   async (request): Promise<UpdateUserProfileResponse> => {
     try {
-      const { userId, username, profileImage, bio } = request.data as UpdateUserProfileRequest;
+      const {userId, username, bio} = request.data as UpdateUserProfileRequest;
 
       if (!userId) {
-        throw new HttpsError('invalid-argument', 'User ID is required');
+        throw new HttpsError("invalid-argument", "User ID is required");
       }
 
       const userUseCases = Providers.getUserProvider().create();
@@ -33,28 +32,27 @@ export const updateUserProfileFunction = onCall(
       const result = await userUseCases.updateUserProfileUseCase.execute({
         userId,
         name: username,
-        profileImageUrl: profileImage,
-        memo: bio
+        memo: bio,
       });
 
       if (!result.success) {
-        if (result.error.name === 'NOT_FOUND') {
-          throw new HttpsError('not-found', result.error.message);
+        if (result.error.name === "NOT_FOUND") {
+          throw new HttpsError("not-found", result.error.message);
         }
-        if (result.error.name === 'VALIDATION_ERROR') {
-          throw new HttpsError('invalid-argument', result.error.message);
+        if (result.error.name === "VALIDATION_ERROR") {
+          throw new HttpsError("invalid-argument", result.error.message);
         }
-        throw new HttpsError('internal', result.error.message);
+        throw new HttpsError("internal", result.error.message);
       }
 
       return {
-        userProfile: result.data.userProfile
+        userProfile: result.data.userProfile,
       };
     } catch (error) {
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError('internal', `Update profile failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new HttpsError("internal", `Update profile failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 );

@@ -1,6 +1,6 @@
 import {FriendRepository} from "../../domain/friend/repositories/friend.repository";
 import {FriendDatasource, FriendSearchCriteria} from "../datasources/interfaces/friend.datasource";
-import {FriendEntity, UserId, FriendId, FriendStatus} from "../../domain/friend/entities/friend.entity";
+import {FriendEntity, FriendStatus} from "../../domain/friend/entities/friend.entity";
 import {CustomResult} from "../../core/types";
 
 /**
@@ -10,51 +10,51 @@ import {CustomResult} from "../../core/types";
 export class FriendRepositoryImpl implements FriendRepository {
   constructor(private readonly datasource: FriendDatasource) {}
 
-  async findById(id: FriendId): Promise<CustomResult<FriendEntity | null>> {
+  async findById(id: string): Promise<CustomResult<FriendEntity | null>> {
     return this.datasource.findById(id);
   }
 
-  async findByUserIds(userId: UserId, friendUserId: UserId): Promise<CustomResult<FriendEntity | null>> {
+  async findByUserIds(userId: string, friendUserId: string): Promise<CustomResult<FriendEntity | null>> {
     return this.datasource.findByUserIds(userId, friendUserId);
   }
 
-  async findFriendsByUserId(userId: UserId, status?: FriendStatus): Promise<CustomResult<FriendEntity[]>> {
+  async findFriendsByUserId(userId: string, status?: FriendStatus): Promise<CustomResult<FriendEntity[]>> {
     return this.datasource.findFriendsByUserId(userId, status);
   }
 
-  async findReceivedFriendRequests(userId: UserId): Promise<CustomResult<FriendEntity[]>> {
+  async findReceivedFriendRequests(userId: string): Promise<CustomResult<FriendEntity[]>> {
     return this.datasource.findReceivedFriendRequests(userId);
   }
 
-  async findSentFriendRequests(userId: UserId): Promise<CustomResult<FriendEntity[]>> {
+  async findSentFriendRequests(userId: string): Promise<CustomResult<FriendEntity[]>> {
     return this.datasource.findSentFriendRequests(userId);
   }
 
-  async areUsersFriends(userId: UserId, friendUserId: UserId): Promise<CustomResult<boolean>> {
+  async areUsersFriends(userId: string, friendUserId: string): Promise<CustomResult<boolean>> {
     return this.datasource.areUsersFriends(userId, friendUserId);
   }
 
-  async friendRequestExists(requesterId: UserId, receiverId: UserId): Promise<CustomResult<boolean>> {
+  async friendRequestExists(requesterId: string, receiverId: string): Promise<CustomResult<boolean>> {
     return this.datasource.friendRequestExists(requesterId, receiverId);
   }
 
-  async save(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
-    return this.datasource.save(friend);
+  async save(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+    return this.datasource.save(userId, friend);
   }
 
-  async update(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
-    return this.datasource.update(friend);
+  async update(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+    return this.datasource.update(userId, friend);
   }
 
-  async delete(id: FriendId): Promise<CustomResult<void>> {
+  async delete(id: string): Promise<CustomResult<void>> {
     return this.datasource.delete(id);
   }
 
-  async deleteByUserIds(userId: UserId, friendUserId: UserId): Promise<CustomResult<void>> {
+  async deleteByUserIds(userId: string, friendUserId: string): Promise<CustomResult<void>> {
     return this.datasource.deleteByUserIds(userId, friendUserId);
   }
 
-  async deleteAllByUserId(userId: UserId): Promise<CustomResult<void>> {
+  async deleteAllByUserId(userId: string): Promise<CustomResult<void>> {
     return this.datasource.deleteAllByUserId(userId);
   }
 
@@ -62,11 +62,11 @@ export class FriendRepositoryImpl implements FriendRepository {
     return this.datasource.findByCriteria(criteria);
   }
 
-  async countFriendsByUserId(userId: UserId): Promise<CustomResult<number>> {
+  async countFriendsByUserId(userId: string): Promise<CustomResult<number>> {
     return this.datasource.countFriendsByUserId(userId);
   }
 
-  async countPendingRequestsByUserId(userId: UserId): Promise<CustomResult<number>> {
+  async countPendingRequestsByUserId(userId: string): Promise<CustomResult<number>> {
     return this.datasource.countPendingRequestsByUserId(userId);
   }
 }

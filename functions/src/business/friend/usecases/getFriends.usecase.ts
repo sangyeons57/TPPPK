@@ -2,7 +2,7 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {UserId, FriendStatus} from "../../../domain/friend/entities/friend.entity";
+import {FriendStatus} from "../../../domain/friend/entities/friend.entity";
 import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendsRequest {
@@ -40,7 +40,7 @@ export class GetFriendsUseCase {
         return Result.failure(new ValidationError("userId", "User ID is required"));
       }
 
-      const userId = new UserId(request.userId);
+      const userId = request.userId;
       const limit = request.limit || 50;
       const offset = request.offset || 0;
 
@@ -72,8 +72,8 @@ export class GetFriendsUseCase {
       const friendInfos: FriendInfo[] = [];
 
       for (const relation of paginatedRelations) {
-        // 친구의 UserId 결정 (현재 사용자가 아닌 상대방)
-        const friendUserId = relation.isRequester(userId) ? relation.friendUserId.value : relation.userId.value;
+        // Friend ID가 상대방의 userId
+        const friendUserId = relation.id;
 
         // 친구 사용자 정보 조회
         const friendUserResult = await this.userRepository.findByUserId(friendUserId);
@@ -81,19 +81,18 @@ export class GetFriendsUseCase {
           const friendUser = friendUserResult.data;
 
           friendInfos.push({
-            friendId: relation.id.value,
+            friendId: relation.id,
             userId: friendUserId,
             user: {
               id: friendUser.id,
               name: friendUser.name,
               profileImageUrl: friendUser.profileImageUrl,
-              userStatus: friendUser.userStatus
+              userStatus: friendUser.userStatus,
             },
             status: relation.status,
             friendsSince:
-              relation.status === FriendStatus.ACCEPTED &&
-              relation.respondedAt ? relation.respondedAt.toISOString() : undefined,
-            requestedAt: relation.requestedAt.toISOString(),
+              relation.status === FriendStatus.ACCEPTED && relation.acceptedAt ? relation.acceptedAt.toISOString() : undefined,
+            requestedAt: relation.requestedAt?.toISOString() || new Date().toISOString(),
           });
         }
       }

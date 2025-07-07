@@ -1,11 +1,13 @@
 import {onObjectFinalized} from "firebase-functions/v2/storage";
 import {UpdateProjectImageUseCase} from "../../business/project/usecases/updateProjectImage.usecase";
-// import {ImageProcessingService} from "../../core/services/imageProcessing.service";
-// import {FirebaseStorageService} from "../../infrastructure/datasources/firestore/image.datasource";
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {STORAGE_BUCKETS} from "../../core/constants";
 import {Providers} from "../../config/dependencies";
 
+/**
+ * Simplified Storage trigger for project images
+ * Updates Project entity's imageUrl when image is uploaded
+ */
 export const onProjectImageUpload = onObjectFinalized(
   {
     region: RUNTIME_CONFIG.REGION,
@@ -22,58 +24,44 @@ export const onProjectImageUpload = onObjectFinalized(
         return;
       }
 
+      // Only process image files
       if (!contentType.startsWith("image/")) {
-        console.log("File is not an image");
+        console.log(`Skipping non-image file: ${contentType}`);
         return;
       }
 
-      const {projectId, userId} = extractInfoFromPath(name);
-      if (!projectId || !userId) {
-        console.log("Cannot extract project ID or user ID from file path");
+      // Extract projectId from file path (e.g., "projects/{projectId}/image.jpg")
+      const pathParts = name.split("/");
+      if (pathParts.length < 2 || pathParts[0] !== "projects") {
+        console.log(`Invalid file path structure: ${name}`);
         return;
       }
 
-      const {getStorage} = await import("firebase-admin/storage");
-      const storage = getStorage();
-      const file = storage.bucket(bucket).file(name);
+      const projectId = pathParts[1];
+      if (!projectId) {
+        console.log("Could not extract projectId from file path");
+        return;
+      }
 
-      const [fileBuffer] = await file.download();
+      // Generate public URL
+      const publicUrl = `https://storage.googleapis.com/${bucket}/${name}`;
 
+      // Get use case and update project
       const projectUseCases = Providers.getProjectProvider().create();
+      const updateImageUseCase = new UpdateProjectImageUseCase(projectUseCases.projectRepository);
 
-      const updateUseCase = new UpdateProjectImageUseCase(
-        projectUseCases.imageProcessingService,
-        projectUseCases.projectRepository
-      );
-
-      const result = await updateUseCase.execute({
-        projectId,
-        userId,
-        imageBuffer: fileBuffer,
-        contentType,
+      const result = await updateImageUseCase.execute({
+        projectId: projectId,
+        imageUrl: publicUrl,
       });
 
-      if (!result.success) {
-        console.error("Failed to update project image:", result.error);
-        return;
+      if (result.success) {
+        console.log(`Successfully updated project ${projectId} image: ${publicUrl}`);
+      } else {
+        console.error(`Failed to update project ${projectId} image:`, result.error);
       }
-
-      console.log("Project image updated successfully:", result.data);
     } catch (error) {
-      console.error("Error processing project image:", error);
+      console.error("Error processing project image upload:", error);
     }
   }
 );
-
-function extractInfoFromPath(filePath: string): { projectId: string | null; userId: string | null } {
-  const parts = filePath.split("/");
-
-  if (parts.length < 2) {
-    return {projectId: null, userId: null};
-  }
-
-  return {
-    projectId: parts[0],
-    userId: parts[1],
-  };
-}

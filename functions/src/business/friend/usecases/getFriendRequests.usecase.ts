@@ -2,7 +2,6 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {UserId} from "../../../domain/friend/entities/friend.entity";
 import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export interface GetFriendRequestsRequest {
@@ -46,17 +45,17 @@ export class GetFriendRequestsUseCase {
         return Result.failure(new ValidationError("type", "Type must be either 'received' or 'sent'"));
       }
 
-      const userId = new UserId(request.userId);
+      const userId = request.userId;
       const limit = request.limit || 50;
       const offset = request.offset || 0;
 
       // 사용자 존재 확인
-      const userResult = await this.userRepository.findByUserId(request.userId);
+      const userResult = await this.userRepository.findByUserId(userId);
       if (!userResult.success) {
         return Result.failure(userResult.error);
       }
       if (!userResult.data) {
-        return Result.failure(new NotFoundError("User not found", request.userId));
+        return Result.failure(new NotFoundError("User not found", userId));
       }
 
       // 친구 요청 조회
@@ -81,35 +80,52 @@ export class GetFriendRequestsUseCase {
       const requestInfos: FriendRequestInfo[] = [];
 
       for (const friendRequest of paginatedRequests) {
+        // 필수 필드들이 존재하는지 확인
+        if (!friendRequest.requestedAt) {
+          continue; // 불완전한 데이터는 건너뛰기
+        }
+
         const requestInfo: FriendRequestInfo = {
-          requestId: friendRequest.id.value,
-          requesterUserId: friendRequest.userId.value,
-          receiverUserId: friendRequest.friendUserId.value,
+          requestId: friendRequest.id,
+          requesterUserId: request.type === "received" ? friendRequest.id : request.userId, // Friend ID가 상대방 ID
+          receiverUserId: request.type === "received" ? request.userId : friendRequest.id,
           status: friendRequest.status,
           requestedAt: friendRequest.requestedAt.toISOString(),
-          respondedAt: friendRequest.respondedAt?.toISOString(),
+          respondedAt: friendRequest.acceptedAt?.toISOString(), // acceptedAt을 respondedAt으로 사용
         };
 
-        // 요청자 정보 조회 (received 타입일 때 또는 sent 타입에서 상대방 정보)
-        if (request.type === "received" || request.type === "sent") {
-          const requesterResult = await this.userRepository.findByUserId(friendRequest.userId.value);
-          if (requesterResult.success && requesterResult.data) {
-            requestInfo.requester = {
-              id: requesterResult.data.id,
-              name: requesterResult.data.name,
-              profileImageUrl: requesterResult.data.profileImageUrl,
-              userStatus: requesterResult.data.userStatus
-            };
-          }
+        // 상대방 정보 조회 (Friend ID가 상대방의 userId)
+        const otherUserId = friendRequest.id;
+        const otherUserResult = await this.userRepository.findByUserId(otherUserId);
+        if (otherUserResult.success && otherUserResult.data) {
+          const otherUserInfo = {
+            id: otherUserResult.data.id,
+            name: otherUserResult.data.name,
+            profileImageUrl: otherUserResult.data.profileImageUrl,
+            userStatus: otherUserResult.data.userStatus,
+          };
 
-          const receiverResult = await this.userRepository.findByUserId(friendRequest.friendUserId.value);
-          if (receiverResult.success && receiverResult.data) {
-            requestInfo.receiver = {
-              id: receiverResult.data.id,
-              name: receiverResult.data.name,
-              profileImageUrl: receiverResult.data.profileImageUrl,
-              userStatus: receiverResult.data.userStatus
-            };
+          if (request.type === "received") {
+            requestInfo.requester = otherUserInfo; // 상대방이 요청자
+          } else {
+            requestInfo.receiver = otherUserInfo; // 상대방이 수신자
+          }
+        }
+
+        // 현재 사용자 정보 조회
+        const currentUserResult = await this.userRepository.findByUserId(request.userId);
+        if (currentUserResult.success && currentUserResult.data) {
+          const currentUserInfo = {
+            id: currentUserResult.data.id,
+            name: currentUserResult.data.name,
+            profileImageUrl: currentUserResult.data.profileImageUrl,
+            userStatus: currentUserResult.data.userStatus,
+          };
+
+          if (request.type === "received") {
+            requestInfo.receiver = currentUserInfo; // 현재 사용자가 수신자
+          } else {
+            requestInfo.requester = currentUserInfo; // 현재 사용자가 요청자
           }
         }
 

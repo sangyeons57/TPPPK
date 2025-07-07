@@ -1,9 +1,8 @@
+import * as admin from "firebase-admin";
 import {ProjectDatasource} from "../interfaces/project.datasource";
-import {ProjectEntity, ProjectName, ProjectDescription, ProjectImage, ProjectStatus} from "../../../domain/project/entities/project.entity";
+import {ProjectEntity, ProjectStatus} from "../../../domain/project/entities/project.entity";
 import {CustomResult, Result} from "../../../core/types";
 import {InternalError} from "../../../core/errors";
-import {FIRESTORE_COLLECTIONS} from "../../../core/constants";
-import {getFirestore, FieldValue} from "firebase-admin/firestore";
 
 interface ProjectData {
   id: string;
@@ -18,20 +17,37 @@ interface ProjectData {
 }
 
 export class FirestoreProjectDataSource implements ProjectDatasource {
-  private readonly db = getFirestore();
-  private readonly collection = this.db.collection(FIRESTORE_COLLECTIONS.PROJECTS);
+  private readonly db = admin.firestore();
+  private readonly collection = this.db.collection(ProjectEntity.COLLECTION_NAME);
 
   async findById(id: string): Promise<CustomResult<ProjectEntity | null>> {
     try {
       const doc = await this.collection.doc(id).get();
+
       if (!doc.exists) {
         return Result.success(null);
       }
 
-      const data = doc.data() as ProjectData;
-      return Result.success(this.mapToEntity(data));
+      const data = doc.data();
+      if (!data) {
+        return Result.success(null);
+      }
+
+      // Create ProjectEntity from Firestore data
+      const project = ProjectEntity.fromDataSource(
+        doc.id,
+        data.name,
+        data.ownerId,
+        data.createdAt?.toDate(),
+        data.updatedAt?.toDate(),
+        data.image
+      );
+
+      return Result.success(project);
     } catch (error) {
-      return Result.failure(new InternalError(`Failed to find project by id: ${error instanceof Error ? error.message : "Unknown error"}`));
+      return Result.failure(
+        new InternalError(`Failed to find project by ID: ${error instanceof Error ? error.message : "Unknown error"}`)
+      );
     }
   }
 
@@ -42,22 +58,22 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
         .orderBy("createdAt", "desc")
         .get();
 
-      const projects = query.docs.map((doc) => this.mapToEntity(doc.data() as ProjectData));
+      const projects = query.docs.map((doc) => this.mapToEntity(doc.id, doc.data() as ProjectData));
       return Result.success(projects);
     } catch (error) {
       return Result.failure(new InternalError(`Failed to find projects by owner: ${error instanceof Error ? error.message : "Unknown error"}`));
     }
   }
 
-  async findByName(name: ProjectName): Promise<CustomResult<ProjectEntity | null>> {
+  async findByName(name: string): Promise<CustomResult<ProjectEntity | null>> {
     try {
-      const query = await this.collection.where("name", "==", name.value).limit(1).get();
+      const query = await this.collection.where("name", "==", name).limit(1).get();
       if (query.empty) {
         return Result.success(null);
       }
 
       const data = query.docs[0].data() as ProjectData;
-      return Result.success(this.mapToEntity(data));
+      return Result.success(this.mapToEntity(data.id, data));
     } catch (error) {
       return Result.failure(new InternalError(`Failed to find project by name: ${error instanceof Error ? error.message : "Unknown error"}`));
     }
@@ -70,7 +86,7 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
         .orderBy("createdAt", "desc")
         .get();
 
-      const projects = query.docs.map((doc) => this.mapToEntity(doc.data() as ProjectData));
+      const projects = query.docs.map((doc) => this.mapToEntity(doc.id, doc.data() as ProjectData));
       return Result.success(projects);
     } catch (error) {
       return Result.failure(new InternalError(`Failed to find projects by status: ${error instanceof Error ? error.message : "Unknown error"}`));
@@ -79,8 +95,21 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
 
   async save(project: ProjectEntity): Promise<CustomResult<ProjectEntity>> {
     try {
-      const data = this.mapToData(project);
-      await this.collection.doc(project.id).set(data);
+      const projectData = project.toData();
+      const docData = {
+        name: projectData.name,
+        imageUrl: projectData.imageUrl || null,
+        ownerId: projectData.ownerId,
+        createdAt: admin.firestore.Timestamp.fromDate(projectData.createdAt),
+        updatedAt: admin.firestore.Timestamp.fromDate(projectData.updatedAt),
+      };
+
+      // Always use project.id as document ID to ensure consistency with Android
+      if (!project.id) {
+        return Result.failure(new InternalError("Project ID is required for save operation"));
+      }
+
+      await this.collection.doc(project.id).set(docData);
       return Result.success(project);
     } catch (error) {
       return Result.failure(new InternalError(`Failed to save project: ${error instanceof Error ? error.message : "Unknown error"}`));
@@ -89,9 +118,16 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
 
   async update(project: ProjectEntity): Promise<CustomResult<ProjectEntity>> {
     try {
-      const data = this.mapToData(project);
-      data.updatedAt = FieldValue.serverTimestamp() as any;
-      await this.collection.doc(project.id).update(data as any);
+      const projectData = project.toData();
+      const docData = {
+        name: projectData.name,
+        imageUrl: projectData.imageUrl || null,
+        ownerId: projectData.ownerId,
+        createdAt: admin.firestore.Timestamp.fromDate(projectData.createdAt),
+        updatedAt: admin.firestore.Timestamp.fromDate(projectData.updatedAt),
+      };
+
+      await this.collection.doc(project.id).update(docData);
       return Result.success(project);
     } catch (error) {
       return Result.failure(
@@ -130,7 +166,7 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
         .limit(limit)
         .get();
 
-      const projects = query.docs.map((doc) => this.mapToEntity(doc.data() as ProjectData));
+      const projects = query.docs.map((doc) => this.mapToEntity(doc.id, doc.data() as ProjectData));
       return Result.success(projects);
     } catch (error) {
       return Result.failure(
@@ -139,40 +175,11 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
     }
   }
 
-  async findProjectsByMemberId(memberId: string): Promise<CustomResult<ProjectEntity[]>> {
-    try {
-      const memberQuery = await this.db
-        .collection(FIRESTORE_COLLECTIONS.PROJECT_MEMBERS)
-        .where("userId", "==", memberId)
-        .get();
-
-      if (memberQuery.empty) {
-        return Result.success([]);
-      }
-
-      const projectIds = memberQuery.docs.map((doc) => doc.data().projectId);
-      const projects: ProjectEntity[] = [];
-
-      for (const projectId of projectIds) {
-        const projectResult = await this.findById(projectId);
-        if (projectResult.success && projectResult.data) {
-          projects.push(projectResult.data);
-        }
-      }
-
-      return Result.success(projects);
-    } catch (error) {
-      return Result.failure(
-        new InternalError(`Failed to find projects by member: ${error instanceof Error ? error.message : "Unknown error"}`)
-      );
-    }
-  }
-
   async updateMemberCount(projectId: string, count: number): Promise<CustomResult<void>> {
     try {
       await this.collection.doc(projectId).update({
         memberCount: count,
-        updatedAt: FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       return Result.success(undefined);
     } catch (error) {
@@ -182,31 +189,17 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
     }
   }
 
-  private mapToEntity(data: ProjectData): ProjectEntity {
+  private mapToEntity(id: string, data: ProjectData): ProjectEntity {
     return new ProjectEntity(
-      data.id,
-      new ProjectName(data.name),
+      id,
+      data.name,
       data.ownerId,
       data.createdAt.toDate(),
       data.updatedAt.toDate(),
-      data.status,
-      data.memberCount,
-      data.description ? new ProjectDescription(data.description) : undefined,
-      data.image ? new ProjectImage(data.image) : undefined
+      data.status || ProjectStatus.ACTIVE,
+      data.memberCount || 1,
+      data.description,
+      data.image
     );
-  }
-
-  private mapToData(entity: ProjectEntity): ProjectData {
-    return {
-      id: entity.id,
-      name: entity.name.value,
-      description: entity.description?.value,
-      ownerId: entity.ownerId,
-      image: entity.image?.value,
-      status: entity.status,
-      memberCount: entity.memberCount,
-      createdAt: entity.createdAt as any,
-      updatedAt: entity.updatedAt as any,
-    };
   }
 }

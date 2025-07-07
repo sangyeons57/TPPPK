@@ -1,2 +1,2 @@
-export * from './firestore';
-export * from './interfaces';
+export * from "./firestore";
+export * from "./interfaces";

@@ -1,5 +1,5 @@
 import {UserRepository} from "../../domain/user/repositories/user.repository";
-import {UserEntity, Email, UserName} from "../../domain/user/entities/user.entity";
+import {UserEntity} from "../../domain/user/entities/user.entity";
 import {CustomResult, Result} from "../../core/types";
 import {DatabaseError} from "../../core/errors";
 import {FirestoreUserDataSource} from "../datasources/firestore/user.datasource";
@@ -31,9 +31,9 @@ export class UserRepositoryImpl implements UserRepository {
     }
   }
 
-  async findByEmail(email: Email): Promise<CustomResult<UserEntity | null>> {
+  async findByEmail(email: string): Promise<CustomResult<UserEntity | null>> {
     try {
-      const result = await this.dataSource.findByEmail(email.value);
+      const result = await this.dataSource.findByEmail(email);
       if (!result.success) {
         return Result.failure(result.error);
       }
@@ -43,9 +43,9 @@ export class UserRepositoryImpl implements UserRepository {
     }
   }
 
-  async findByName(name: UserName): Promise<CustomResult<UserEntity | null>> {
+  async findByName(name: string): Promise<CustomResult<UserEntity | null>> {
     try {
-      const result = await this.dataSource.findByName(name.value);
+      const result = await this.dataSource.findByName(name);
       if (!result.success) {
         return Result.failure(result.error);
       }

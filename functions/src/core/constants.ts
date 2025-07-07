@@ -1,21 +1,3 @@
-// Firestore Collections  
-export const FIRESTORE_COLLECTIONS = {
-  USERS: "users",
-  PROJECTS: "projects",
-  SESSIONS: "sessions",
-  PROJECT_MEMBERS: "projectMembers",
-} as const;
-
-// Legacy Collections (merged from old constants)
-export const COLLECTIONS = {
-  USERS: "users",
-  PROJECTS: "projects",
-  MEMBERS: "members",
-  MESSAGES: "messages",
-  FRIENDS: "friends",
-  DM_CHANNELS: "dmChannels",
-} as const;
-
 export const DATABASE_ID = "(default)" as const;
 
 // Storage Configuration

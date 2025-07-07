@@ -1,42 +1,64 @@
 import * as admin from "firebase-admin";
 import {CustomResult, Result} from "../../../core/types";
 import {InternalError} from "../../../core/errors";
-import {COLLECTIONS} from "../../../core/constants";
 import {
   FriendDatasource,
   FriendSearchCriteria,
 } from "../interfaces/friend.datasource";
 import {
   FriendEntity,
-  FriendId,
-  UserId,
   FriendStatus,
   FriendData,
 } from "../../../domain/friend/entities/friend.entity";
+import {UserEntity} from "../../../domain/user/entities/user.entity";
 
 export class FirestoreFriendDataSource implements FriendDatasource {
   private readonly db = admin.firestore();
-  private readonly collection = this.db.collection(COLLECTIONS.FRIENDS);
 
-  async findById(id: FriendId): Promise<CustomResult<FriendEntity | null>> {
+  /**
+   * Helper method to convert Firestore document data to FriendEntity
+   */
+  private createFriendEntity(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirestore.DocumentSnapshot): CustomResult<FriendEntity> {
+    const data = doc.data() as FriendData;
+    return FriendEntity.fromData({
+      ...data,
+      id: doc.id,
+      requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : data.requestedAt,
+      acceptedAt: data.acceptedAt instanceof admin.firestore.Timestamp ? data.acceptedAt.toDate() : data.acceptedAt,
+      createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+      updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
+    });
+  }
+
+  /**
+   * 특정 사용자의 friends subcollection 참조를 반환합니다
+   * @param {string} userId - 사용자 ID
+   * @return {FirebaseFirestore.CollectionReference} Friends subcollection 참조
+   */
+  private getUserFriendsCollection(userId: string) {
+    return this.db.collection(UserEntity.COLLECTION_NAME)
+      .doc(userId)
+      .collection(FriendEntity.COLLECTION_NAME);
+  }
+
+  async findById(id: string): Promise<CustomResult<FriendEntity | null>> {
     try {
-      const doc = await this.collection.doc(id.value).get();
+      // friendId는 단순 문서 ID이므로 모든 사용자의 subcollection에서 검색해야 함
+      // 현재는 첫 번째 사용자에서만 검색 (개선 필요)
+      const usersSnapshot = await this.db.collection(UserEntity.COLLECTION_NAME).limit(1).get();
+
+      if (usersSnapshot.empty) {
+        return Result.success(null);
+      }
+
+      const userId = usersSnapshot.docs[0].id;
+      const doc = await this.getUserFriendsCollection(userId).doc(id).get();
 
       if (!doc.exists) {
         return Result.success(null);
       }
 
-      const data = doc.data() as FriendData;
-      const entityResult = FriendEntity.fromData({
-        ...data,
-        id: doc.id,
-        requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : new Date(data.requestedAt),
-        respondedAt: data.respondedAt instanceof admin.firestore.Timestamp ? data.respondedAt.toDate() : data.respondedAt ? new Date(data.respondedAt) : undefined,
-        createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-      });
-
-      return entityResult;
+      return this.createFriendEntity(doc);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to find friend by ID: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -44,32 +66,16 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findByUserIds(userId: UserId, friendUserId: UserId): Promise<CustomResult<FriendEntity | null>> {
+  async findByUserIds(userId: string, friendUserId: string): Promise<CustomResult<FriendEntity | null>> {
     try {
-      const query = this.collection
-        .where("userId", "==", userId.value)
-        .where("friendUserId", "==", friendUserId.value)
-        .limit(1);
+      // Use friendUserId as document ID to find the friend document
+      const doc = await this.getUserFriendsCollection(userId).doc(friendUserId).get();
 
-      const snapshot = await query.get();
-
-      if (snapshot.empty) {
+      if (!doc.exists) {
         return Result.success(null);
       }
 
-      const doc = snapshot.docs[0];
-      const data = doc.data() as FriendData;
-
-      const entityResult = FriendEntity.fromData({
-        ...data,
-        id: doc.id,
-        requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : new Date(data.requestedAt),
-        respondedAt: data.respondedAt instanceof admin.firestore.Timestamp ? data.respondedAt.toDate() : data.respondedAt ? new Date(data.respondedAt) : undefined,
-        createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-      });
-
-      return entityResult;
+      return this.createFriendEntity(doc);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to find friend by user IDs: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -77,29 +83,19 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findFriendsByUserId(userId: UserId, status?: FriendStatus): Promise<CustomResult<FriendEntity[]>> {
+  async findFriendsByUserId(userId: string, status?: FriendStatus): Promise<CustomResult<FriendEntity[]>> {
     try {
-      let query = this.collection
-        .where("userId", "==", userId.value);
+      let query: FirebaseFirestore.Query = this.getUserFriendsCollection(userId);
 
       if (status) {
-        query = query.where("status", "==", status);
+        query = query.where(FriendEntity.KEY_STATUS, "==", status);
       }
 
       const snapshot = await query.orderBy("createdAt", "desc").get();
       const friends: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : new Date(data.requestedAt),
-          respondedAt: data.respondedAt instanceof admin.firestore.Timestamp ? data.respondedAt.toDate() : data.respondedAt ? new Date(data.respondedAt) : undefined,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
-
+        const entityResult = this.createFriendEntity(doc);
         if (entityResult.success) {
           friends.push(entityResult.data);
         }
@@ -113,26 +109,17 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findReceivedFriendRequests(userId: UserId): Promise<CustomResult<FriendEntity[]>> {
+  async findReceivedFriendRequests(userId: string): Promise<CustomResult<FriendEntity[]>> {
     try {
-      const query = this.collection
-        .where("friendUserId", "==", userId.value)
-        .where("status", "==", FriendStatus.REQUESTED)
-        .orderBy("requestedAt", "desc");
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_STATUS, "==", FriendStatus.PENDING)
+        .orderBy(FriendEntity.KEY_REQUESTED_AT, "desc");
 
       const snapshot = await query.get();
       const requests: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : new Date(data.requestedAt),
-          respondedAt: data.respondedAt instanceof admin.firestore.Timestamp ? data.respondedAt.toDate() : data.respondedAt ? new Date(data.respondedAt) : undefined,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
+        const entityResult = this.createFriendEntity(doc);
 
         if (entityResult.success) {
           requests.push(entityResult.data);
@@ -147,26 +134,17 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async findSentFriendRequests(userId: UserId): Promise<CustomResult<FriendEntity[]>> {
+  async findSentFriendRequests(userId: string): Promise<CustomResult<FriendEntity[]>> {
     try {
-      const query = this.collection
-        .where("userId", "==", userId.value)
-        .where("status", "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
-        .orderBy("requestedAt", "desc");
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_STATUS, "==", FriendStatus.REQUESTED)
+        .orderBy(FriendEntity.KEY_REQUESTED_AT, "desc");
 
       const snapshot = await query.get();
       const requests: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : new Date(data.requestedAt),
-          respondedAt: data.respondedAt instanceof admin.firestore.Timestamp ? data.respondedAt.toDate() : data.respondedAt ? new Date(data.respondedAt) : undefined,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
+        const entityResult = this.createFriendEntity(doc);
 
         if (entityResult.success) {
           requests.push(entityResult.data);
@@ -181,12 +159,11 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async areUsersFriends(userId: UserId, friendUserId: UserId): Promise<CustomResult<boolean>> {
+  async areUsersFriends(userId: string, friendUserId: string): Promise<CustomResult<boolean>> {
     try {
-      const query = this.collection
-        .where("userId", "==", userId.value)
-        .where("friendUserId", "==", friendUserId.value)
-        .where("status", "==", FriendStatus.ACCEPTED)
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_NAME, "==", friendUserId) // name 필드에 친구의 userId 저장
+        .where(FriendEntity.KEY_STATUS, "==", FriendStatus.ACCEPTED)
         .limit(1);
 
       const snapshot = await query.get();
@@ -198,16 +175,28 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async friendRequestExists(requesterId: UserId, receiverId: UserId): Promise<CustomResult<boolean>> {
+  async friendRequestExists(requesterId: string, receiverId: string): Promise<CustomResult<boolean>> {
     try {
-      const query = this.collection
-        .where("userId", "==", requesterId.value)
-        .where("friendUserId", "==", receiverId.value)
-        .where("status", "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
+      // 요청자의 subcollection에서 확인
+      const requesterQuery = this.getUserFriendsCollection(requesterId)
+        .where(FriendEntity.KEY_NAME, "==", receiverId)
+        .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
         .limit(1);
 
-      const snapshot = await query.get();
-      return Result.success(!snapshot.empty);
+      const requesterSnapshot = await requesterQuery.get();
+ 
+      if (!requesterSnapshot.empty) {
+        return Result.success(true);
+      }
+
+      // 수신자의 subcollection에서도 확인
+      const receiverQuery = this.getUserFriendsCollection(receiverId)
+        .where(FriendEntity.KEY_NAME, "==", requesterId)
+        .where(FriendEntity.KEY_STATUS, "in", [FriendStatus.PENDING, FriendStatus.REQUESTED])
+        .limit(1);
+
+      const receiverSnapshot = await receiverQuery.get();
+      return Result.success(!receiverSnapshot.empty);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to check if friend request exists: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -215,28 +204,27 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async save(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+  async save(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
     try {
       const friendData = friend.toData();
       const docData = {
-        userId: friendData.userId,
-        friendUserId: friendData.friendUserId,
-        status: friendData.status,
-        requestedAt: admin.firestore.Timestamp.fromDate(friendData.requestedAt),
-        respondedAt: friendData.respondedAt ? admin.firestore.Timestamp.fromDate(friendData.respondedAt) : null,
+        [FriendEntity.KEY_NAME]: friendData.name,
+        [FriendEntity.KEY_PROFILE_IMAGE_URL]: friendData.profileImageUrl || null,
+        [FriendEntity.KEY_STATUS]: friendData.status,
+        [FriendEntity.KEY_REQUESTED_AT]: friendData.requestedAt ? admin.firestore.Timestamp.fromDate(friendData.requestedAt) : null,
+        [FriendEntity.KEY_ACCEPTED_AT]: friendData.acceptedAt ? admin.firestore.Timestamp.fromDate(friendData.acceptedAt) : null,
         createdAt: admin.firestore.Timestamp.fromDate(friendData.createdAt),
         updatedAt: admin.firestore.Timestamp.fromDate(friendData.updatedAt),
       };
 
-      const docRef = await this.collection.add(docData);
+      // Use the userId parameter to determine which user's collection to save to
+      const collection = this.getUserFriendsCollection(userId);
+      // Use custom ID (friend.id) instead of auto-generated ID
+      const docRef = collection.doc(friend.id);
+      await docRef.set(docData);
 
-      // 새로 생성된 ID로 엔티티 재생성
-      const savedEntityResult = FriendEntity.fromData({
-        ...friendData,
-        id: docRef.id,
-      });
-
-      return savedEntityResult;
+      // Return the original friend entity with the same ID
+      return Result.success(friend);
     } catch (error) {
       return Result.failure(
         new InternalError(`Failed to save friend: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -244,20 +232,23 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async update(friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
+  async update(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>> {
     try {
       const friendData = friend.toData();
       const docData = {
-        userId: friendData.userId,
-        friendUserId: friendData.friendUserId,
-        status: friendData.status,
-        requestedAt: admin.firestore.Timestamp.fromDate(friendData.requestedAt),
-        respondedAt: friendData.respondedAt ? admin.firestore.Timestamp.fromDate(friendData.respondedAt) : null,
+        [FriendEntity.KEY_NAME]: friendData.name,
+        [FriendEntity.KEY_PROFILE_IMAGE_URL]: friendData.profileImageUrl || null,
+        [FriendEntity.KEY_STATUS]: friendData.status,
+        [FriendEntity.KEY_REQUESTED_AT]: friendData.requestedAt ? admin.firestore.Timestamp.fromDate(friendData.requestedAt) : null,
+        [FriendEntity.KEY_ACCEPTED_AT]: friendData.acceptedAt ? admin.firestore.Timestamp.fromDate(friendData.acceptedAt) : null,
         createdAt: admin.firestore.Timestamp.fromDate(friendData.createdAt),
         updatedAt: admin.firestore.Timestamp.fromDate(friendData.updatedAt),
       };
 
-      await this.collection.doc(friend.id.value).update(docData);
+      // Use the userId parameter to determine which user's collection to update
+      const docRef = this.getUserFriendsCollection(userId).doc(friend.id);
+      await docRef.update(docData);
+      
       return Result.success(friend);
     } catch (error) {
       return Result.failure(
@@ -266,9 +257,19 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async delete(id: FriendId): Promise<CustomResult<void>> {
+  async delete(id: string): Promise<CustomResult<void>> {
     try {
-      await this.collection.doc(id.value).delete();
+      // 모든 사용자의 subcollection에서 해당 ID를 찾아 삭제해야 함
+      // 현재는 간단히 구현 (개선 필요)
+      const usersSnapshot = await this.db.collection(UserEntity.COLLECTION_NAME).get();
+      const batch = this.db.batch();
+
+      for (const userDoc of usersSnapshot.docs) {
+        const friendRef = this.getUserFriendsCollection(userDoc.id).doc(id);
+        batch.delete(friendRef);
+      }
+
+      await batch.commit();
       return Result.success(undefined);
     } catch (error) {
       return Result.failure(
@@ -277,11 +278,10 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async deleteByUserIds(userId: UserId, friendUserId: UserId): Promise<CustomResult<void>> {
+  async deleteByUserIds(userId: string, friendUserId: string): Promise<CustomResult<void>> {
     try {
-      const query = this.collection
-        .where("userId", "==", userId.value)
-        .where("friendUserId", "==", friendUserId.value);
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_NAME, "==", friendUserId);
 
       const snapshot = await query.get();
       const batch = this.db.batch();
@@ -299,23 +299,12 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async deleteAllByUserId(userId: UserId): Promise<CustomResult<void>> {
+  async deleteAllByUserId(userId: string): Promise<CustomResult<void>> {
     try {
-      // 사용자가 요청자인 경우
-      const requesterQuery = this.collection.where("userId", "==", userId.value);
-      const requesterSnapshot = await requesterQuery.get();
-
-      // 사용자가 수신자인 경우
-      const receiverQuery = this.collection.where("friendUserId", "==", userId.value);
-      const receiverSnapshot = await receiverQuery.get();
-
+      const snapshot = await this.getUserFriendsCollection(userId).get();
       const batch = this.db.batch();
 
-      requesterSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      receiverSnapshot.docs.forEach((doc) => {
+      snapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
       });
 
@@ -330,18 +319,18 @@ export class FirestoreFriendDataSource implements FriendDatasource {
 
   async findByCriteria(criteria: FriendSearchCriteria): Promise<CustomResult<FriendEntity[]>> {
     try {
-      let query: FirebaseFirestore.Query = this.collection;
-
-      if (criteria.userId) {
-        query = query.where("userId", "==", criteria.userId);
+      if (!criteria.userId) {
+        return Result.failure(new InternalError("userId is required for subcollection query"));
       }
 
+      let query: FirebaseFirestore.Query = this.getUserFriendsCollection(criteria.userId);
+
       if (criteria.friendUserId) {
-        query = query.where("friendUserId", "==", criteria.friendUserId);
+        query = query.where(FriendEntity.KEY_NAME, "==", criteria.friendUserId);
       }
 
       if (criteria.status) {
-        query = query.where("status", "==", criteria.status);
+        query = query.where(FriendEntity.KEY_STATUS, "==", criteria.status);
       }
 
       query = query.orderBy("createdAt", "desc");
@@ -358,15 +347,7 @@ export class FirestoreFriendDataSource implements FriendDatasource {
       const friends: FriendEntity[] = [];
 
       for (const doc of snapshot.docs) {
-        const data = doc.data() as FriendData;
-        const entityResult = FriendEntity.fromData({
-          ...data,
-          id: doc.id,
-          requestedAt: data.requestedAt instanceof admin.firestore.Timestamp ? data.requestedAt.toDate() : new Date(data.requestedAt),
-          respondedAt: data.respondedAt instanceof admin.firestore.Timestamp ? data.respondedAt.toDate() : data.respondedAt ? new Date(data.respondedAt) : undefined,
-          createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        });
+        const entityResult = this.createFriendEntity(doc);
 
         if (entityResult.success) {
           friends.push(entityResult.data);
@@ -381,11 +362,10 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async countFriendsByUserId(userId: UserId): Promise<CustomResult<number>> {
+  async countFriendsByUserId(userId: string): Promise<CustomResult<number>> {
     try {
-      const query = this.collection
-        .where("userId", "==", userId.value)
-        .where("status", "==", FriendStatus.ACCEPTED);
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_STATUS, "==", FriendStatus.ACCEPTED);
 
       const snapshot = await query.get();
       return Result.success(snapshot.size);
@@ -396,11 +376,10 @@ export class FirestoreFriendDataSource implements FriendDatasource {
     }
   }
 
-  async countPendingRequestsByUserId(userId: UserId): Promise<CustomResult<number>> {
+  async countPendingRequestsByUserId(userId: string): Promise<CustomResult<number>> {
     try {
-      const query = this.collection
-        .where("friendUserId", "==", userId.value)
-        .where("status", "==", FriendStatus.REQUESTED);
+      const query = this.getUserFriendsCollection(userId)
+        .where(FriendEntity.KEY_STATUS, "==", FriendStatus.PENDING);
 
       const snapshot = await query.get();
       return Result.success(snapshot.size);

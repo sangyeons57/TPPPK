@@ -71,7 +71,10 @@ export const acceptFriendRequestFunction = onCall(
 
       const friendUseCases = Providers.getFriendProvider().create();
 
-      const result = await friendUseCases.acceptFriendRequestUseCase.execute({friendRequestId, userId});
+      const result = await friendUseCases.acceptFriendRequestUseCase.execute({
+        requesterId: friendRequestId,
+        receiverId: userId,
+      });
 
       if (!result.success) {
         if (result.error.message.includes("not found")) {
@@ -118,7 +121,10 @@ export const rejectFriendRequestFunction = onCall(
 
       const friendUseCases = Providers.getFriendProvider().create();
 
-      const result = await friendUseCases.rejectFriendRequestUseCase.execute({friendRequestId, userId});
+      const result = await friendUseCases.rejectFriendRequestUseCase.execute({
+        requesterId: friendRequestId,
+        receiverId: userId,
+      });
 
       if (!result.success) {
         if (result.error.message.includes("not found")) {

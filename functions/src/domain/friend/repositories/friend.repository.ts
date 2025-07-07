@@ -1,5 +1,6 @@
-import { CustomResult } from '../../../core/types';
-import { FriendEntity, UserId, FriendId, FriendStatus } from '../entities/friend.entity';
+import {CustomResult} from "../../../core/types";
+import {FriendEntity, FriendStatus} from "../entities/friend.entity";
+import {UserId, FriendId} from "../../../core/validation";
 
 export interface FriendSearchCriteria {
   userId?: string;
@@ -47,13 +48,17 @@ export interface FriendRepository {
 
   /**
    * 친구 관계를 저장합니다.
+   * @param userId 친구 관계를 저장할 사용자의 ID (collection owner)
+   * @param friend 저장할 친구 엔티티
    */
-  save(friend: FriendEntity): Promise<CustomResult<FriendEntity>>;
+  save(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>>;
 
   /**
    * 친구 관계를 업데이트합니다.
+   * @param userId 친구 관계를 업데이트할 사용자의 ID (collection owner)
+   * @param friend 업데이트할 친구 엔티티
    */
-  update(friend: FriendEntity): Promise<CustomResult<FriendEntity>>;
+  update(userId: string, friend: FriendEntity): Promise<CustomResult<FriendEntity>>;
 
   /**
    * 친구 관계를 삭제합니다.

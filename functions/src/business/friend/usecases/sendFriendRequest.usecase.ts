@@ -2,7 +2,7 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, ConflictError, NotFoundError} from "../../../core/errors";
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
-import {FriendEntity, UserId} from "../../../domain/friend/entities/friend.entity";
+import {FriendEntity} from "../../../domain/friend/entities/friend.entity";
 
 export interface SendFriendRequestRequest {
   requesterId: string;
@@ -32,8 +32,8 @@ export class SendFriendRequestUseCase {
         return Result.failure(new ValidationError("receiverUserId", "Cannot send friend request to yourself"));
       }
 
-      const requesterId = new UserId(request.requesterId);
-      const receiverId = new UserId(request.receiverUserId);
+      const requesterId = request.requesterId;
+      const receiverId = request.receiverUserId;
 
       // 요청자 존재 확인
       const requesterResult = await this.userRepository.findByUserId(request.requesterId);
@@ -73,45 +73,55 @@ export class SendFriendRequestUseCase {
         );
       }
 
-      // 기존 친구 요청 확인 (양방향)
+      // 기존 친구 요청 확인
       const existingRequestResult = await this.friendRepository.friendRequestExists(requesterId, receiverId);
       if (!existingRequestResult.success) {
         return Result.failure(existingRequestResult.error);
       }
       if (existingRequestResult.data) {
         return Result.failure(
-          new ConflictError("Friend request already exists", "friendRequestExists", "reverseRequestResult")
+          new ConflictError("Friend request already exists", "friendRequestExists", "existingRequestResult")
         );
       }
 
-      const reverseRequestResult = await this.friendRepository.friendRequestExists(receiverId, requesterId);
-      if (!reverseRequestResult.success) {
-        return Result.failure(reverseRequestResult.error);
-      }
-      if (reverseRequestResult.data) {
-        return Result.failure(
-          new ConflictError("Friend request already exists", "friendRequestExists", "reverseRequestResult")
-        );
+      // Android Friend.kt 구조에 따라 양방향으로 친구 요청 생성
+      const now = new Date();
+      const friendRequestId = `${request.requesterId}_${request.receiverUserId}_${now.getTime()}`;
+
+      // 요청자 관점: 상대방을 REQUESTED 상태로 추가 (요청자의 subcollection에 저장)
+      const requesterFriend = FriendEntity.newRequest(
+        friendRequestId,
+        receiverResult.data.name,
+        receiverResult.data.profileImageUrl,
+        now
+      );
+
+      // 수신자 관점: 상대방을 PENDING 상태로 추가 (수신자의 subcollection에 저장)
+      const receiverFriend = FriendEntity.receivedRequest(
+        friendRequestId,
+        requesterResult.data.name,
+        requesterResult.data.profileImageUrl,
+        now
+      );
+
+      // 요청자의 friends subcollection에 저장
+      const saveRequesterResult = await this.friendRepository.save(requesterId, requesterFriend);
+      if (!saveRequesterResult.success) {
+        return Result.failure(saveRequesterResult.error);
       }
 
-      // 친구 요청 생성
-      const friendRequestResult = FriendEntity.createFriendRequest(requesterId, receiverId);
-      if (!friendRequestResult.success) {
-        return Result.failure(friendRequestResult.error);
+      // 수신자의 friends subcollection에 저장
+      const saveReceiverResult = await this.friendRepository.save(receiverId, receiverFriend);
+      if (!saveReceiverResult.success) {
+        // 롤백을 위해 요청자 쪽 데이터 삭제 시도
+        await this.friendRepository.delete(friendRequestId);
+        return Result.failure(saveReceiverResult.error);
       }
-
-      // 친구 요청 저장
-      const saveResult = await this.friendRepository.save(friendRequestResult.data);
-      if (!saveResult.success) {
-        return Result.failure(saveResult.error);
-      }
-
-      const savedFriend = saveResult.data;
 
       return Result.success({
-        friendRequestId: savedFriend.id.value,
-        status: savedFriend.status,
-        requestedAt: savedFriend.requestedAt.toISOString(),
+        friendRequestId: friendRequestId,
+        status: "REQUESTED",
+        requestedAt: now.toISOString(),
       });
     } catch (error) {
       return Result.failure(

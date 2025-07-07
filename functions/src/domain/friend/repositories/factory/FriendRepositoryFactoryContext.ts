@@ -1,4 +1,4 @@
-import { RepositoryFactoryContext } from '../../../shared/RepositoryFactory';
+import {RepositoryFactoryContext} from "../../../shared/RepositoryFactory";
 
 /**
  * Context for friend-related repository creation

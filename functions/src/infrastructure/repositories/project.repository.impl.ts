@@ -1,7 +1,7 @@
-import { ProjectRepository } from '../../domain/project/repositories/project.repository';
-import { ProjectDatasource } from '../datasources/interfaces/project.datasource';
-import { ProjectEntity, ProjectStatus, ProjectName } from '../../domain/project/entities/project.entity';
-import { CustomResult } from '../../core/types';
+import {ProjectRepository} from "../../domain/project/repositories/project.repository";
+import {ProjectDatasource} from "../datasources/interfaces/project.datasource";
+import {ProjectEntity, ProjectStatus} from "../../domain/project/entities/project.entity";
+import {CustomResult} from "../../core/types";
 
 /**
  * Project Repository 구현체
@@ -18,7 +18,7 @@ export class ProjectRepositoryImpl implements ProjectRepository {
     return this.datasource.findByOwnerId(ownerId);
   }
 
-  async findByName(name: ProjectName): Promise<CustomResult<ProjectEntity | null>> {
+  async findByName(name: string): Promise<CustomResult<ProjectEntity | null>> {
     return this.datasource.findByName(name);
   }
 
@@ -44,10 +44,6 @@ export class ProjectRepositoryImpl implements ProjectRepository {
 
   async findActiveProjects(limit?: number): Promise<CustomResult<ProjectEntity[]>> {
     return this.datasource.findActiveProjects(limit);
-  }
-
-  async findProjectsByMemberId(memberId: string): Promise<CustomResult<ProjectEntity[]>> {
-    return this.datasource.findProjectsByMemberId(memberId);
   }
 
   async updateMemberCount(projectId: string, count: number): Promise<CustomResult<void>> {
