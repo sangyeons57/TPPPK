@@ -86,7 +86,8 @@ class FriendUseCaseProvider @Inject constructor(
             ),
             
             getFriendsListStreamUseCase = GetFriendsListStreamUseCase(
-                friendRepository = friendRepository
+                friendRepository = friendRepository,
+                authRepository = authRepository
             ),
             
             getPendingFriendRequestsUseCase = GetPendingFriendRequestsUseCase(
@@ -159,7 +160,8 @@ class FriendUseCaseProvider @Inject constructor(
             ),
             
             getFriendsListStreamUseCase = GetFriendsListStreamUseCase(
-                friendRepository = friendRepository
+                friendRepository = friendRepository,
+                authRepository = authRepository
             ),
             
             getPendingFriendRequestsUseCase = GetPendingFriendRequestsUseCase(

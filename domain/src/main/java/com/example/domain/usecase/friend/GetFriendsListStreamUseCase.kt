@@ -3,8 +3,10 @@ package com.example.domain.usecase.friend
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Friend
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.FriendRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -32,7 +34,7 @@ class GetFriendsListStreamUseCase @Inject constructor(
             is CustomResult.Progress -> return flowOf(CustomResult.Progress(result.progress))
         }
 
-        return friendRepository.observeFriendsList(session.userId)
+        return friendRepository.observeFriendsList(session.userId.value)
             .map { result ->
                 when (result) {
                     is CustomResult.Success -> CustomResult.Success(result.data)

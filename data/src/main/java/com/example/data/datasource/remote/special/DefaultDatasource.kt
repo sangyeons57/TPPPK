@@ -5,6 +5,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.model.DTO
 import com.example.domain.model.AggregateRoot
+import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentSnapshot
