@@ -14,7 +14,7 @@ export class ProviderContainer {
 
   /**
    * Gets the singleton instance of ProviderContainer
-   * @returns ProviderContainer singleton instance
+   * @return {ProviderContainer} ProviderContainer singleton instance
    */
   public static getInstance(): ProviderContainer {
     if (!ProviderContainer.instance) {
@@ -25,8 +25,8 @@ export class ProviderContainer {
 
   /**
    * Registers a provider instance with a unique key
-   * @param key - Unique identifier for the provider
-   * @param provider - Provider instance to register
+   * @param {string} key - Unique identifier for the provider
+   * @param {T} provider - Provider instance to register
    */
   public register<T>(key: string, provider: T): void {
     if (this.providers.has(key)) {
@@ -37,8 +37,8 @@ export class ProviderContainer {
 
   /**
    * Retrieves a provider instance by key
-   * @param key - Unique identifier for the provider
-   * @returns Provider instance
+   * @param {string} key - Unique identifier for the provider
+   * @return {T} Provider instance
    * @throws Error if provider is not found
    */
   public get<T>(key: string): T {
@@ -51,8 +51,8 @@ export class ProviderContainer {
 
   /**
    * Checks if a provider is registered
-   * @param key - Unique identifier for the provider
-   * @returns True if provider is registered, false otherwise
+   * @param {string} key - Unique identifier for the provider
+   * @return {boolean} True if provider is registered, false otherwise
    */
   public has(key: string): boolean {
     return this.providers.has(key);
@@ -60,8 +60,8 @@ export class ProviderContainer {
 
   /**
    * Removes a provider from the container
-   * @param key - Unique identifier for the provider
-   * @returns True if provider was removed, false if not found
+   * @param {string} key - Unique identifier for the provider
+   * @return {boolean} True if provider was removed, false if not found
    */
   public remove(key: string): boolean {
     return this.providers.delete(key);
@@ -77,7 +77,7 @@ export class ProviderContainer {
 
   /**
    * Gets all registered provider keys
-   * @returns Array of all registered provider keys
+   * @return {string[]} Array of all registered provider keys
    */
   public getRegisteredKeys(): string[] {
     return Array.from(this.providers.keys());
@@ -93,7 +93,7 @@ export class ProviderContainer {
 
   /**
    * Checks if the container is initialized
-   * @returns True if initialized, false otherwise
+   * @return {boolean} True if initialized, false otherwise
    */
   public isInitialized(): boolean {
     return this.initialized;
@@ -101,7 +101,7 @@ export class ProviderContainer {
 
   /**
    * Registers multiple providers at once
-   * @param providers - Object containing key-provider pairs
+   * @param {Record<string, any>} providers - Object containing key-provider pairs
    */
   public registerMultiple(providers: Record<string, any>): void {
     for (const [key, provider] of Object.entries(providers)) {
@@ -115,16 +115,18 @@ export class ProviderContainer {
  */
 export const ProviderKeys = {
   // Repository Factories
-  FRIEND_REPOSITORY_FACTORY: 'friendRepositoryFactory',
-  MEMBER_REPOSITORY_FACTORY: 'memberRepositoryFactory',
-  USER_REPOSITORY_FACTORY: 'userRepositoryFactory',
-  PROJECT_REPOSITORY_FACTORY: 'projectRepositoryFactory',
+  FRIEND_REPOSITORY_FACTORY: "friendRepositoryFactory",
+  MEMBER_REPOSITORY_FACTORY: "memberRepositoryFactory",
+  USER_REPOSITORY_FACTORY: "userRepositoryFactory",
+  PROJECT_REPOSITORY_FACTORY: "projectRepositoryFactory",
+  PROJECT_WRAPPER_REPOSITORY_FACTORY: "projectWrapperRepositoryFactory",
 
   // UseCase Providers
-  FRIEND_USECASE_PROVIDER: 'friendUseCaseProvider',
-  MEMBER_USECASE_PROVIDER: 'memberUseCaseProvider',
-  USER_USECASE_PROVIDER: 'userUseCaseProvider',
-  PROJECT_USECASE_PROVIDER: 'projectUseCaseProvider',
+  FRIEND_USECASE_PROVIDER: "friendUseCaseProvider",
+  MEMBER_USECASE_PROVIDER: "memberUseCaseProvider",
+  USER_USECASE_PROVIDER: "userUseCaseProvider",
+  PROJECT_USECASE_PROVIDER: "projectUseCaseProvider",
+  PROJECT_WRAPPER_USECASE_PROVIDER: "projectWrapperUseCaseProvider",
 } as const;
 
 /**

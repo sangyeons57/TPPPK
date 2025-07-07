@@ -2,11 +2,13 @@ import {FriendRepositoryFactory} from "../domain/friend/repositories/factory/Fri
 import {MemberRepositoryFactoryImpl} from "../domain/member/repositories/factory/MemberRepositoryFactoryImpl";
 import {UserRepositoryFactory} from "../domain/user/repositories/factory/UserRepositoryFactory";
 import {ProjectRepositoryFactory} from "../domain/project/repositories/factory/ProjectRepositoryFactory";
+import {ProjectWrapperRepositoryFactoryImpl} from "../domain/projectwrapper/repositories/factory/ProjectWrapperRepositoryFactoryImpl";
 import {
   FriendUseCaseProvider,
   MemberUseCaseProvider,
   UserUseCaseProvider,
   ProjectUseCaseProvider,
+  ProjectWrapperUseCaseProvider,
 } from "../business";
 import { ProviderContainer, ProviderKeys } from "../infrastructure/container/ProviderContainer";
 
@@ -43,7 +45,7 @@ export class DependencyConfig {
 
   /**
    * Gets the provider container instance
-   * @return ProviderContainer instance
+   * @return {ProviderContainer} instance
    * @throws Error if dependencies are not initialized
    */
   public static getContainer(): ProviderContainer {
@@ -81,7 +83,11 @@ export class DependencyConfig {
       ProviderKeys.PROJECT_REPOSITORY_FACTORY,
       new ProjectRepositoryFactory()
     );
-    
+
+    container.register(
+      ProviderKeys.PROJECT_WRAPPER_REPOSITORY_FACTORY,
+      new ProjectWrapperRepositoryFactoryImpl()
+    );
 
     console.log("Repository factories and services registered");
   }
@@ -130,6 +136,16 @@ export class DependencyConfig {
       )
     );
 
+    // ProjectWrapper Use Case Provider
+    container.register(
+      ProviderKeys.PROJECT_WRAPPER_USECASE_PROVIDER,
+      new ProjectWrapperUseCaseProvider(
+        container.get(ProviderKeys.PROJECT_WRAPPER_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.MEMBER_REPOSITORY_FACTORY)
+      )
+    );
+
     console.log("Use case providers registered");
   }
 
@@ -148,7 +164,7 @@ export class DependencyConfig {
 
   /**
    * Gets status information about the dependency injection system
-   * @returns Object containing initialization status and registered providers
+   * @return {Object} containing initialization status and registered providers
    */
   public static getStatus(): {
     isInitialized: boolean;
@@ -165,8 +181,8 @@ export class DependencyConfig {
 
 /**
  * Helper function to get a provider from the container
- * @param key - Provider key
- * @returns Provider instance
+ * @param {string} key - Provider key
+ * @return {T} Provider instance
  */
 export function getProvider<T>(key: string): T {
   const container = DependencyConfig.getContainer();
@@ -181,4 +197,5 @@ export const Providers = {
   getMemberProvider: () => getProvider<MemberUseCaseProvider>(ProviderKeys.MEMBER_USECASE_PROVIDER),
   getUserProvider: () => getProvider<UserUseCaseProvider>(ProviderKeys.USER_USECASE_PROVIDER),
   getProjectProvider: () => getProvider<ProjectUseCaseProvider>(ProviderKeys.PROJECT_USECASE_PROVIDER),
+  getProjectWrapperProvider: () => getProvider<ProjectWrapperUseCaseProvider>(ProviderKeys.PROJECT_WRAPPER_USECASE_PROVIDER),
 } as const;

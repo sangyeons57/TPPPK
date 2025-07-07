@@ -25,6 +25,7 @@ export {onUserProfileImageUpload} from "./triggers/user/userImage.trigger";
 
 // Project management functions
 export {onProjectImageUpload} from "./triggers/project/projectImage.trigger";
+export {onProjectChange, onProjectDelete} from "./triggers/project/projectSync.trigger";
 
 // System functions
 export {helloWorldFunction as helloWorld} from "./triggers/system/helloWorld.trigger";
