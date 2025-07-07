@@ -5,6 +5,7 @@ import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.InviteDTO
+import com.example.domain.model.vo.CollectionPath
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -38,7 +39,7 @@ class InviteRemoteDataSourceImpl @Inject constructor(
 
 
     override suspend fun findByCode(projectId: String, inviteCode: String): CustomResult<InviteDTO?, Exception> {
-        setCollection(projectId)
+        setCollection(CollectionPath.projectInvites(projectId))
         return resultTry {
             val querySnapshot = collection
                 .whereEqualTo(InviteDTO.INVITE_LINK, inviteCode)

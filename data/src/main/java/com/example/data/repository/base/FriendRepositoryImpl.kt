@@ -80,7 +80,7 @@ class FriendRepositoryImpl @Inject constructor(
     }
     
     override fun observeFriendRequests(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        friendRemoteDataSource.setCollection(userId)
+        friendRemoteDataSource.setCollection(CollectionPath.userFriends(userId))
         return friendRemoteDataSource.observeFriendRequests()
             .map { result ->
                 when(result) {
@@ -94,7 +94,7 @@ class FriendRepositoryImpl @Inject constructor(
     }
     
     override fun observeFriendsList(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        friendRemoteDataSource.setCollection(userId)
+        friendRemoteDataSource.setCollection(CollectionPath.userFriends(userId))
         return friendRemoteDataSource.observeFriendsList()
             .map { result ->
                 when(result) {
