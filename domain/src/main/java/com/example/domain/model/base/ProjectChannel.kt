@@ -2,6 +2,7 @@ package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.enum.ProjectChannelStatus
 import java.time.Instant
 
 import com.example.domain.model.AggregateRoot
@@ -17,6 +18,7 @@ class ProjectChannel private constructor(
     initialChannelName: Name,
     initialOrder: ProjectChannelOrder,
     initialChannelType: ProjectChannelType,
+    initialStatus: ProjectChannelStatus,
     initialCategoryId: DocumentId?,
     override val id: DocumentId,
     override val isNew: Boolean,
@@ -30,6 +32,8 @@ class ProjectChannel private constructor(
         private set
     var order: ProjectChannelOrder = initialOrder
         private set
+    var status: ProjectChannelStatus = initialStatus
+        private set
     var categoryId: DocumentId? = initialCategoryId
         private set
 
@@ -42,6 +46,7 @@ class ProjectChannel private constructor(
             KEY_CHANNEL_NAME to this.channelName.value,
             KEY_CHANNEL_TYPE to this.channelType.value,
             KEY_ORDER to this.order.value,
+            KEY_STATUS to this.status.value,
             KEY_CATEGORY_ID to this.categoryId?.value,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_CREATED_AT to this.createdAt
@@ -92,11 +97,108 @@ class ProjectChannel private constructor(
         // Note: We could add a domain event here if needed for tracking category moves
     }
 
+    /**
+     * Archives the project channel, hiding it from the main channel list.
+     */
+    fun archive(): ProjectChannel {
+        if (this.status == ProjectChannelStatus.ARCHIVED) return this
+        
+        return ProjectChannel(
+            initialChannelName = this.channelName,
+            initialOrder = this.order,
+            initialChannelType = this.channelType,
+            initialStatus = ProjectChannelStatus.ARCHIVED,
+            initialCategoryId = this.categoryId,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Activates the project channel, making it visible in the main channel list.
+     */
+    fun activate(): ProjectChannel {
+        if (this.status == ProjectChannelStatus.ACTIVE) return this
+        
+        return ProjectChannel(
+            initialChannelName = this.channelName,
+            initialOrder = this.order,
+            initialChannelType = this.channelType,
+            initialStatus = ProjectChannelStatus.ACTIVE,
+            initialCategoryId = this.categoryId,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Disables the project channel temporarily.
+     */
+    fun disable(): ProjectChannel {
+        if (this.status == ProjectChannelStatus.DISABLED) return this
+        
+        return ProjectChannel(
+            initialChannelName = this.channelName,
+            initialOrder = this.order,
+            initialChannelType = this.channelType,
+            initialStatus = ProjectChannelStatus.DISABLED,
+            initialCategoryId = this.categoryId,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Marks the project channel as deleted (soft delete).
+     */
+    fun markDeleted(): ProjectChannel {
+        if (this.status == ProjectChannelStatus.DELETED) return this
+        
+        return ProjectChannel(
+            initialChannelName = this.channelName,
+            initialOrder = this.order,
+            initialChannelType = this.channelType,
+            initialStatus = ProjectChannelStatus.DELETED,
+            initialCategoryId = this.categoryId,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Checks if the channel is in an active state.
+     */
+    fun isActive(): Boolean = status == ProjectChannelStatus.ACTIVE
+
+    /**
+     * Checks if the channel is archived.
+     */
+    fun isArchived(): Boolean = status == ProjectChannelStatus.ARCHIVED
+
+    /**
+     * Checks if the channel is disabled.
+     */
+    fun isDisabled(): Boolean = status == ProjectChannelStatus.DISABLED
+
+    /**
+     * Checks if the channel is deleted.
+     */
+    fun isDeleted(): Boolean = status == ProjectChannelStatus.DELETED
+
     companion object {
         const val COLLECTION_NAME = "project_channels"
         const val KEY_CHANNEL_NAME = "channelName"
         const val KEY_CHANNEL_TYPE = "channelType"
         const val KEY_ORDER = "order"
+        const val KEY_STATUS = "status"
         const val KEY_CATEGORY_ID = "categoryId"
 
         /**
@@ -106,6 +208,7 @@ class ProjectChannel private constructor(
             channelName: Name,
             channelType: ProjectChannelType,
             order: ProjectChannelOrder,
+            status: ProjectChannelStatus = ProjectChannelStatus.ACTIVE,
             categoryId: DocumentId? = null
         ): ProjectChannel {
             val channel = ProjectChannel(
@@ -113,6 +216,7 @@ class ProjectChannel private constructor(
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
+                initialStatus = status,
                 initialCategoryId = categoryId,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
@@ -129,6 +233,7 @@ class ProjectChannel private constructor(
             channelName: Name,
             order: ProjectChannelOrder,
             channelType: ProjectChannelType,
+            status: ProjectChannelStatus = ProjectChannelStatus.ACTIVE,
             categoryId: DocumentId? = null,
             createdAt: Instant?,
             updatedAt: Instant?
@@ -138,6 +243,7 @@ class ProjectChannel private constructor(
                 initialChannelName = channelName,
                 initialOrder = order,
                 initialChannelType = channelType,
+                initialStatus = status,
                 initialCategoryId = categoryId,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),

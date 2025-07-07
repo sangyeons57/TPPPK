@@ -1,6 +1,7 @@
 package com.example.data.model.remote
 
 import com.example.domain.model.base.DMChannel
+import com.example.domain.model.enum.DMChannelStatus
 import com.google.firebase.firestore.DocumentId
 import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.ServerTimestamp
@@ -21,6 +22,8 @@ data class DMChannelDTO(
     // userId1, userId2 대신 참여자 목록으로 관리하면 확장성 및 쿼리에 유리합니다.
     @get:PropertyName(PARTICIPANTS)
     val participants: List<String> = emptyList(),
+    @get:PropertyName(STATUS)
+    val status: DMChannelStatus = DMChannelStatus.ACTIVE,
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp override val createdAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
@@ -30,6 +33,7 @@ data class DMChannelDTO(
     companion object {
         const val COLLECTION_NAME = DMChannel.COLLECTION_NAME
         const val PARTICIPANTS = DMChannel.KEY_PARTICIPANTS
+        const val STATUS = DMChannel.KEY_STATUS
     }
     /**
      * DTO를 도메인 모델로 변환
@@ -39,6 +43,7 @@ data class DMChannelDTO(
         return DMChannel.fromDataSource(
             id = VODocumentId(id),
             participants = participants.map { UserId(it) },
+            status = status,
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant()
         )
@@ -52,6 +57,7 @@ data class DMChannelDTO(
 fun DMChannel.toDto(): DMChannelDTO {
     return DMChannelDTO(
         id = id.value,
-        participants = participants.map { it.value } // createdAt/updatedAt omitted for ServerTimestamp
+        participants = participants.map { it.value },
+        status = status // createdAt/updatedAt omitted for ServerTimestamp
     )
 }

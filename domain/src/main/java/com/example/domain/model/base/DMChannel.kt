@@ -5,6 +5,7 @@ import com.example.domain.event.dmchannel.DMChannelLastMessageUpdatedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
+import com.example.domain.model.enum.DMChannelStatus
 import java.time.Instant
 import com.example.core_common.util.DateTimeUtil
 
@@ -16,11 +17,13 @@ import com.example.core_common.util.DateTimeUtil
  *
  * @property id The unique identifier of the DM channel.
  * @property participants The list of user IDs participating in this DM channel.
+ * @property status The current status of the DM channel.
  * @property createdAt The timestamp when the channel was created.
  * @property updatedAt The timestamp when the channel was last updated.
  */
 class DMChannel private constructor(
     initialParticipants: List<UserId>,
+    initialStatus: DMChannelStatus,
     override val id: DocumentId,
     override val isNew: Boolean,
     override val createdAt: Instant,
@@ -29,6 +32,10 @@ class DMChannel private constructor(
 
     /** List of user document IDs participating in this DM channel. */
     var participants: List<UserId> = initialParticipants
+        private set
+
+    /** Current status of the DM channel. */
+    var status: DMChannelStatus = initialStatus
         private set
 
     init {
@@ -50,9 +57,94 @@ class DMChannel private constructor(
         this.pushDomainEvent(DMChannelLastMessageUpdatedEvent(this.id))
     }
 
+    /**
+     * Archives the DM channel, hiding it from the main channel list.
+     */
+    fun archive(): DMChannel {
+        if (this.status == DMChannelStatus.ARCHIVED) return this
+        
+        return DMChannel(
+            initialParticipants = this.participants,
+            initialStatus = DMChannelStatus.ARCHIVED,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Activates the DM channel, making it visible in the main channel list.
+     */
+    fun activate(): DMChannel {
+        if (this.status == DMChannelStatus.ACTIVE) return this
+        
+        return DMChannel(
+            initialParticipants = this.participants,
+            initialStatus = DMChannelStatus.ACTIVE,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Blocks the DM channel when one user blocks the other.
+     */
+    fun block(): DMChannel {
+        if (this.status == DMChannelStatus.BLOCKED) return this
+        
+        return DMChannel(
+            initialParticipants = this.participants,
+            initialStatus = DMChannelStatus.BLOCKED,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Marks the DM channel as deleted (soft delete).
+     */
+    fun markDeleted(): DMChannel {
+        if (this.status == DMChannelStatus.DELETED) return this
+        
+        return DMChannel(
+            initialParticipants = this.participants,
+            initialStatus = DMChannelStatus.DELETED,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Checks if the channel is in an active state.
+     */
+    fun isActive(): Boolean = status == DMChannelStatus.ACTIVE
+
+    /**
+     * Checks if the channel is archived.
+     */
+    fun isArchived(): Boolean = status == DMChannelStatus.ARCHIVED
+
+    /**
+     * Checks if the channel is blocked.
+     */
+    fun isBlocked(): Boolean = status == DMChannelStatus.BLOCKED
+
+    /**
+     * Checks if the channel is deleted.
+     */
+    fun isDeleted(): Boolean = status == DMChannelStatus.DELETED
+
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_PARTICIPANTS to participants.map { it.value },
+            KEY_STATUS to status.value,
             KEY_CREATED_AT to createdAt,
             KEY_UPDATED_AT to updatedAt,
         )
@@ -76,17 +168,18 @@ class DMChannel private constructor(
     companion object {
         const val COLLECTION_NAME = "dm_channels"
         const val KEY_PARTICIPANTS = "participants" // List<String> = "userId1"
+        const val KEY_STATUS = "status"
         /**
          * Creates a new DMChannel instance.
          *
-         * @param id The unique identifier for the new channel.
          * @param initialParticipants The initial list of participants in the channel. Must contain at least two participants.
-         * @param currentTime The current time, used to set creation and update timestamps.
+         * @param initialStatus The initial status of the channel. Defaults to ACTIVE.
          * @return A new DMChannel instance.
          * @throws IllegalArgumentException if `initialParticipants` has less than two participants.
          */
         fun create(
             initialParticipants: List<UserId>,
+            initialStatus: DMChannelStatus = DMChannelStatus.ACTIVE
         ): DMChannel {
             require(initialParticipants.size >= 2) { "DMChannel must have at least two participants." }
             // Ensure participants are distinct, if not already handled or guaranteed by caller
@@ -98,6 +191,7 @@ class DMChannel private constructor(
             val channel = DMChannel(
                 id = DocumentId.EMPTY,
                 initialParticipants = distinctParticipants, // Use distinct participants
+                initialStatus = initialStatus,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
@@ -112,6 +206,7 @@ class DMChannel private constructor(
          *
          * @param id The unique identifier of the channel.
          * @param participants The list of participants in the channel.
+         * @param status The status of the channel. Defaults to ACTIVE for backward compatibility.
          * @param createdAt The timestamp when the channel was created.
          * @param updatedAt The timestamp when the channel was last updated.
          * @return A DMChannel instance reconstructed from the provided data.
@@ -119,12 +214,14 @@ class DMChannel private constructor(
         fun fromDataSource(
             id: DocumentId,
             participants: List<UserId>,
+            status: DMChannelStatus = DMChannelStatus.ACTIVE,
             createdAt: Instant?,
             updatedAt: Instant?
         ): DMChannel {
             val channel = DMChannel(
                 id = id,
                 initialParticipants = participants,
+                initialStatus = status,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false,
