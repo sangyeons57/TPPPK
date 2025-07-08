@@ -230,6 +230,12 @@ fun HomeScreen(
                 is HomeEvent.NavigateToEditChannel -> TODO()
                 is HomeEvent.NavigateToReorderCategory -> TODO()
                 is HomeEvent.NavigateToReorderChannel -> TODO()
+                
+                is HomeEvent.ProjectDeleted -> {
+                    // 삭제된 프로젝트에 대한 사용자 친화적인 메시지 표시
+                    val message = "프로젝트 '${event.projectName}'이(가) 삭제되어 목록에서 제거되었습니다."
+                    snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Long)
+                }
             }
         }
     }

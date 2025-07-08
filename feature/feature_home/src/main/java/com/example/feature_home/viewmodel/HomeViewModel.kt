@@ -123,6 +123,9 @@ sealed class HomeEvent {
     ) : HomeEvent()
     data class NavigateToReorderCategory(val projectId: String) : HomeEvent()
     data class NavigateToReorderChannel(val projectId: String, val categoryId: String) : HomeEvent()
+    
+    // --- Project deletion event ---
+    data class ProjectDeleted(val projectId: DocumentId, val projectName: String) : HomeEvent()
 }
 
 
@@ -493,19 +496,83 @@ class HomeViewModel @Inject constructor(
             // 프로젝트 ID가 이미 선택되어 있으면 무시
             if (_uiState.value.selectedProjectId == projectId) return@launch
             
-            // 상태 업데이트
-            _uiState.update { it.copy(
-                selectedProjectId = projectId,
-                selectedTopSection = TopSection.PROJECTS, // 프로젝트 탭으로 전환
-                isLoading = true, // 로딩 상태로 설정
-                projectStructure = ProjectStructureUiState(isLoading = true) // 프로젝트 구조 로딩 상태로 설정
-            )}
+            Log.d("HomeViewModel", "onProjectClick called for projectId: $projectId")
             
-            // 프로젝트 상세 정보 로드
-            loadProjectDetails(projectId)
-            
-            // 프로젝트 구조 (카테고리 및 채널) 로드
-            loadProjectStructure(projectId)
+            // 먼저 프로젝트가 삭제되었는지 확인
+            if (::coreProjectUseCases.isInitialized) {
+                try {
+                    val projectDetailsResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()
+                    
+                    when (projectDetailsResult) {
+                        is CustomResult.Success -> {
+                            val project = projectDetailsResult.data
+                            Log.d("HomeViewModel", "Project found: ${project.name.value}")
+                            
+                            // 상태 업데이트
+                            _uiState.update { it.copy(
+                                selectedProjectId = projectId,
+                                selectedTopSection = TopSection.PROJECTS, // 프로젝트 탭으로 전환
+                                isLoading = true, // 로딩 상태로 설정
+                                projectStructure = ProjectStructureUiState(isLoading = true) // 프로젝트 구조 로딩 상태로 설정
+                            )}
+                            
+                            // 프로젝트 상세 정보 로드
+                            loadProjectDetails(projectId)
+                            
+                            // 프로젝트 구조 (카테고리 및 채널) 로드
+                            loadProjectStructure(projectId)
+                        }
+                        is CustomResult.Failure -> {
+                            // 프로젝트 로딩 실패 - 삭제된 프로젝트일 가능성
+                            Log.w("HomeViewModel", "Failed to load project details for $projectId: ${projectDetailsResult.error.message}")
+                            
+                            // 프로젝트 이름 찾기 (UI 상태에서)
+                            val projectName = _uiState.value.projects.find { it.id == projectId }?.name?.value ?: "알 수 없는 프로젝트"
+                            
+                            // 삭제된 프로젝트 처리
+                            removeDeletedProject(projectId, projectName)
+                        }
+                        else -> {
+                            Log.d("HomeViewModel", "Project details result is not Success or Failure: $projectDetailsResult")
+                            // 다른 상태의 경우 기본 동작 수행
+                            _uiState.update { it.copy(
+                                selectedProjectId = projectId,
+                                selectedTopSection = TopSection.PROJECTS,
+                                isLoading = true,
+                                projectStructure = ProjectStructureUiState(isLoading = true)
+                            )}
+                            
+                            loadProjectDetails(projectId)
+                            loadProjectStructure(projectId)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("HomeViewModel", "Error checking project details for $projectId", e)
+                    
+                    // 예외 발생 시 기본 동작 수행
+                    _uiState.update { it.copy(
+                        selectedProjectId = projectId,
+                        selectedTopSection = TopSection.PROJECTS,
+                        isLoading = true,
+                        projectStructure = ProjectStructureUiState(isLoading = true)
+                    )}
+                    
+                    loadProjectDetails(projectId)
+                    loadProjectStructure(projectId)
+                }
+            } else {
+                Log.w("HomeViewModel", "coreProjectUseCases not initialized yet")
+                // UseCases가 초기화되지 않은 경우 기본 동작 수행
+                _uiState.update { it.copy(
+                    selectedProjectId = projectId,
+                    selectedTopSection = TopSection.PROJECTS,
+                    isLoading = true,
+                    projectStructure = ProjectStructureUiState(isLoading = true)
+                )}
+                
+                loadProjectDetails(projectId)
+                loadProjectStructure(projectId)
+            }
         }
     }
 
@@ -1068,6 +1135,57 @@ class HomeViewModel @Inject constructor(
     
     fun navigateToCalendar(year: Int, month: Int, day: Int) {
         navigationManger.navigateToCalendar(year, month, day)
+    }
+    
+    /**
+     * 삭제된 프로젝트를 처리합니다.
+     * ProjectWrapper를 제거하고 사용자에게 알림을 표시합니다.
+     */
+    private fun removeDeletedProject(projectId: DocumentId, projectName: String) {
+        viewModelScope.launch {
+            Log.d("HomeViewModel", "Removing deleted project: $projectId ($projectName)")
+            
+            if (::coreProjectUseCases.isInitialized) {
+                try {
+                    // ProjectWrapper 삭제
+                    val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(listOf(projectId))
+                    
+                    when (deleteResult) {
+                        is CustomResult.Success -> {
+                            Log.d("HomeViewModel", "Successfully removed ProjectWrapper for $projectId")
+                            
+                            // 프로젝트 삭제 이벤트 발생
+                            _eventFlow.emit(HomeEvent.ProjectDeleted(projectId, projectName))
+                            
+                            // 선택된 프로젝트가 삭제된 프로젝트인 경우 선택 해제
+                            if (_uiState.value.selectedProjectId == projectId) {
+                                _uiState.update { it.copy(
+                                    selectedProjectId = null,
+                                    selectedTopSection = TopSection.DMS,
+                                    projectName = "",
+                                    projectDescription = null,
+                                    projectStructure = ProjectStructureUiState()
+                                )}
+                            }
+                        }
+                        is CustomResult.Failure -> {
+                            Log.e("HomeViewModel", "Failed to remove ProjectWrapper for $projectId", deleteResult.error)
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트 제거 중 오류가 발생했습니다."))
+                        }
+                        else -> {
+                            Log.w("HomeViewModel", "Unexpected result from deleteProjectsWrapperUseCase: $deleteResult")
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트 제거 중 문제가 발생했습니다."))
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("HomeViewModel", "Exception while removing deleted project $projectId", e)
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트 제거 중 오류가 발생했습니다."))
+                }
+            } else {
+                Log.w("HomeViewModel", "coreProjectUseCases not initialized, cannot remove ProjectWrapper")
+                _eventFlow.emit(HomeEvent.ShowSnackbar("잠시 후 다시 시도해주세요."))
+            }
+        }
     }
     
     override fun onCleared() {
