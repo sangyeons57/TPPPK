@@ -3,7 +3,6 @@ import {ValidationError, ConflictError, NotFoundError} from "../../../core/error
 import {FriendRepository} from "../../../domain/friend/repositories/friend.repository";
 import {UserRepository} from "../../../domain/user/repositories/user.repository";
 import {FriendEntity, FriendStatus} from "../../../domain/friend/entities/friend.entity";
-import {CreateDMChannelUseCase} from "../../dm/usecases/createDMChannel.usecase";
 
 export interface AcceptFriendRequestRequest {
   requesterId: string; // 요청자 ID (Friend ID로 사용됨)
@@ -19,8 +18,7 @@ export interface AcceptFriendRequestResponse {
 export class AcceptFriendRequestUseCase {
   constructor(
     private readonly friendRepository: FriendRepository,
-    private readonly userRepository: UserRepository,
-    private readonly createDMChannelUseCase?: CreateDMChannelUseCase
+    private readonly userRepository: UserRepository
   ) {}
 
   async execute(request: AcceptFriendRequestRequest): Promise<CustomResult<AcceptFriendRequestResponse>> {
@@ -108,9 +106,6 @@ export class AcceptFriendRequestUseCase {
       // 양쪽 사용자의 친구 수 업데이트 (백그라운드에서 수행)
       this.updateFriendCounts(request.requesterId, request.receiverId);
 
-      // DM Channel 및 Wrapper 생성 (백그라운드에서 수행, 실패해도 친구 수락은 성공)
-      this.createDMChannelForFriends(request.requesterId, request.receiverId, requesterResult.data, receiverResult.data);
-
       return Result.success({
         friendId: acceptedFriend.id,
         status: acceptedFriend.status,
@@ -145,42 +140,6 @@ export class AcceptFriendRequestUseCase {
     } catch (error) {
       // 친구 수 업데이트 실패는 주요 기능에 영향을 주지 않으므로 로그만 남김
       console.error("Failed to update friend counts:", error);
-    }
-  }
-
-  private async createDMChannelForFriends(userId1: string, userId2: string, user1: any, user2: any): Promise<void> {
-    try {
-      // CreateDMChannelUseCase가 주입되지 않은 경우 생략
-      if (!this.createDMChannelUseCase) {
-        console.log("CreateDMChannelUseCase not available, skipping DM channel creation");
-        return;
-      }
-
-      // CreateDMChannelUseCase를 사용하여 DM 채널 생성
-      // 참고: CreateDMChannelUseCase는 사용자 이름으로 검색하지만, 
-      // 친구 수락의 경우 이미 사용자 정보를 가지고 있으므로 직접 생성 로직을 호출할 수 있음
-      // 하지만 일관성을 위해 UseCase를 통해 처리
-      
-      // 첫 번째 사용자 관점에서 두 번째 사용자와 DM 생성
-      const result1 = await this.createDMChannelUseCase.execute({
-        currentUserId: userId1,
-        targetUserName: user2.name
-      });
-
-      if (result1.success) {
-        console.log(`Successfully created DM channel for user ${userId1} with ${user2.name}`);
-      } else {
-        // 이미 존재하는 DM 채널인 경우는 정상적인 상황
-        if (result1.error.message.includes("already exists")) {
-          console.log(`DM channel already exists between ${userId1} and ${userId2}`);
-        } else {
-          console.error(`Failed to create DM channel for user ${userId1}:`, result1.error);
-        }
-      }
-
-    } catch (error) {
-      // DM 생성 실패는 주요 기능에 영향을 주지 않으므로 로그만 남김
-      console.error("Failed to create DM channel for friends:", error);
     }
   }
 }

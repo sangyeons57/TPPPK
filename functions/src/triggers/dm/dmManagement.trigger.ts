@@ -16,7 +16,10 @@ export const createDMChannelFunction = onCall(
   },
   async (request) => {
     try {
-      const {currentUserId, targetUserName} = request.data as CreateDMChannelRequest;
+      const {
+        currentUserId,
+        targetUserName,
+      } = request.data as CreateDMChannelRequest;
 
       if (!currentUserId || !targetUserName) {
         throw new HttpsError("invalid-argument", "Current user ID and target user name are required");
@@ -42,12 +45,13 @@ export const createDMChannelFunction = onCall(
         throw new HttpsError("internal", result.error.message);
       }
 
-      return result.data;
+      return {success: true, data: result.data};
     } catch (error) {
+      console.error("Error in createDMChannel:", error);
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError("internal", `Failed to create DM channel: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new HttpsError("internal", "Internal server error");
     }
   }
 );

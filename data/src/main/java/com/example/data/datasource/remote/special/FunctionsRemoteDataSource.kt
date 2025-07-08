@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.core_common.constants.FirebaseFunctionParameters
 
 interface FunctionsRemoteDataSource {
 
@@ -82,9 +83,9 @@ interface FunctionsRemoteDataSource {
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun updateUserProfile(
-        name: String? = null,
-        memo: String? = null
-    ): CustomResult<Unit, Exception>
+        name: String?,
+        memo: String?
+    ): CustomResult<Map<String, Any?>, Exception>
 
     /**
      * 친구 요청을 보냅니다.
@@ -226,7 +227,7 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun getHelloWorld(): CustomResult<String, Exception> = withContext(Dispatchers.IO) {
         try {
-            val callable = functions.getHttpsCallable("helloWorld")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.HELLO_WORLD)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call().await()
@@ -385,19 +386,18 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
     override suspend fun updateUserProfile(
         name: String?,
         memo: String?
-    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+    ): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
         try {
-            // 업데이트할 데이터가 없으면 에러
-            if (name == null && memo == null) {
-                return@withContext CustomResult.Failure(Exception("No data to update"))
-            }
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mutableMapOf<String, Any?>(
+                FirebaseFunctionParameters.User.USER_ID to currentUser.uid
+            )
+            
+            name?.let { requestData[FirebaseFunctionParameters.User.NAME] = it }
+            memo?.let { requestData[FirebaseFunctionParameters.User.MEMO] = it }
 
-            // 요청 데이터 구성
-            val requestData = mutableMapOf<String, Any?>()
-            name?.let { requestData["name"] = it }
-            memo?.let { requestData["memo"] = it }
-
-            val callable = functions.getHttpsCallable("updateUserProfile")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.UPDATE_USER_PROFILE)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -405,15 +405,8 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
 
             if (result != null) {
                 @Suppress("UNCHECKED_CAST")
-                val responseData = result.data as? Map<String, Any?>
-                val success = responseData?.get("success") as? Boolean ?: false
-                
-                if (success) {
-                    CustomResult.Success(Unit)
-                } else {
-                    val message = responseData?.get("message") as? String ?: "Profile update failed"
-                    CustomResult.Failure(Exception(message))
-                }
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
             } else {
                 CustomResult.Failure(Exception("Update user profile function call timed out"))
             }
@@ -428,11 +421,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                "requesterId" to currentUser.uid,
-                "receiverUserId" to targetUserId
+                FirebaseFunctionParameters.Friend.REQUESTER_ID to currentUser.uid,
+                FirebaseFunctionParameters.Friend.RECEIVER_USER_ID to targetUserId
             )
 
-            val callable = functions.getHttpsCallable("sendFriendRequest")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.SEND_FRIEND_REQUEST)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -456,11 +449,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                "friendRequestId" to friendRequestId,
-                "userId" to currentUser.uid
+                FirebaseFunctionParameters.Friend.FRIEND_REQUEST_ID to friendRequestId,
+                FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid
             )
 
-            val callable = functions.getHttpsCallable("acceptFriendRequest")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.ACCEPT_FRIEND_REQUEST)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -484,11 +477,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                "friendRequestId" to friendRequestId,
-                "userId" to currentUser.uid
+                FirebaseFunctionParameters.Friend.FRIEND_REQUEST_ID to friendRequestId,
+                FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid
             )
 
-            val callable = functions.getHttpsCallable("rejectFriendRequest")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.REJECT_FRIEND_REQUEST)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -512,11 +505,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                "userId" to currentUser.uid,
-                "friendUserId" to friendUserId
+                FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid,
+                FirebaseFunctionParameters.Friend.FRIEND_USER_ID to friendUserId
             )
 
-            val callable = functions.getHttpsCallable("removeFriend")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.REMOVE_FRIEND)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -543,12 +536,12 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
-            val requestData = mutableMapOf<String, Any?>("userId" to currentUser.uid)
-            status?.let { requestData["status"] = it }
-            limit?.let { requestData["limit"] = it }
-            offset?.let { requestData["offset"] = it }
+            val requestData = mutableMapOf<String, Any?>(FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid)
+            status?.let { requestData[FirebaseFunctionParameters.Friend.STATUS] = it }
+            limit?.let { requestData[FirebaseFunctionParameters.Friend.LIMIT] = it }
+            offset?.let { requestData[FirebaseFunctionParameters.Friend.OFFSET] = it }
 
-            val callable = functions.getHttpsCallable("getFriends")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.GET_FRIENDS)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -576,13 +569,13 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mutableMapOf<String, Any?>(
-                "userId" to currentUser.uid,
-                "type" to type
+                FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid,
+                FirebaseFunctionParameters.Friend.TYPE to type
             )
-            limit?.let { requestData["limit"] = it }
-            offset?.let { requestData["offset"] = it }
+            limit?.let { requestData[FirebaseFunctionParameters.Friend.LIMIT] = it }
+            offset?.let { requestData[FirebaseFunctionParameters.Friend.OFFSET] = it }
 
-            val callable = functions.getHttpsCallable("getFriendRequests")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.GET_FRIEND_REQUESTS)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -606,11 +599,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                "currentUserId" to currentUser.uid,
-                "targetUserName" to targetUserName
+                FirebaseFunctionParameters.DM.CURRENT_USER_ID to currentUser.uid,
+                FirebaseFunctionParameters.DM.TARGET_USER_NAME to targetUserName
             )
 
-            val callable = functions.getHttpsCallable("createDMChannel")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.CREATE_DM_CHANNEL)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -638,13 +631,13 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mutableMapOf<String, Any?>(
-                "projectId" to projectId,
-                "inviterId" to currentUser.uid,
-                "expiresInHours" to expiresInHours
+                FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
+                FirebaseFunctionParameters.Project.INVITER_ID to currentUser.uid,
+                FirebaseFunctionParameters.Project.EXPIRES_IN_HOURS to expiresInHours
             )
-            maxUses?.let { requestData["maxUses"] = it }
+            maxUses?.let { requestData[FirebaseFunctionParameters.Project.MAX_USES] = it }
 
-            val callable = functions.getHttpsCallable("generateInviteLink")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.GENERATE_INVITE_LINK)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -665,12 +658,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun validateInviteCode(inviteCode: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
         try {
+            val requestData = mutableMapOf<String, Any?>(FirebaseFunctionParameters.Project.INVITE_CODE to inviteCode)
             val currentUser = auth.currentUser
-            
-            val requestData = mutableMapOf<String, Any?>("inviteCode" to inviteCode)
-            currentUser?.let { requestData["userId"] = it.uid }
+            currentUser?.let { requestData[FirebaseFunctionParameters.User.USER_ID] = it.uid }
 
-            val callable = functions.getHttpsCallable("validateInviteCode")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.VALIDATE_INVITE_CODE)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
@@ -694,11 +686,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                "inviteCode" to inviteCode,
-                "userId" to currentUser.uid
+                FirebaseFunctionParameters.Project.INVITE_CODE to inviteCode,
+                FirebaseFunctionParameters.User.USER_ID to currentUser.uid
             )
 
-            val callable = functions.getHttpsCallable("joinProjectWithInvite")
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.JOIN_PROJECT_WITH_INVITE)
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()

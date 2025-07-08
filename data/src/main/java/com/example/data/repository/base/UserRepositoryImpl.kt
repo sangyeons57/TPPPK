@@ -78,7 +78,13 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateProfile(name: String?, memo: String?): CustomResult<Unit, Exception> {
-        return functionsRemoteDataSource.updateUserProfile(name, memo)
+        return when (val result = functionsRemoteDataSource.updateUserProfile(name, memo)) {
+            is CustomResult.Success -> CustomResult.Success(Unit)
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Progress -> CustomResult.Progress(result.progress)
+        }
     }
 
     override suspend fun callFunction(

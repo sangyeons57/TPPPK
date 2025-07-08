@@ -4,9 +4,8 @@ import {Providers} from "../../config/dependencies";
 
 interface UpdateUserProfileRequest {
   userId: string;
-  username?: string;
-  bio?: string;
-  displayName?: string;
+  name?: string;
+  memo?: string;
 }
 
 interface UpdateUserProfileResponse {
@@ -21,7 +20,11 @@ export const updateUserProfileFunction = onCall(
   },
   async (request): Promise<UpdateUserProfileResponse> => {
     try {
-      const {userId, username, bio} = request.data as UpdateUserProfileRequest;
+      const {
+        userId,
+        name,
+        memo,
+      } = request.data as UpdateUserProfileRequest;
 
       if (!userId) {
         throw new HttpsError("invalid-argument", "User ID is required");
@@ -31,8 +34,8 @@ export const updateUserProfileFunction = onCall(
 
       const result = await userUseCases.updateUserProfileUseCase.execute({
         userId,
-        name: username,
-        memo: bio,
+        name,
+        memo,
       });
 
       if (!result.success) {
@@ -49,10 +52,11 @@ export const updateUserProfileFunction = onCall(
         userProfile: result.data.userProfile,
       };
     } catch (error) {
+      console.error("Error in updateUserProfile:", error);
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError("internal", `Update profile failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new HttpsError("internal", "Internal server error");
     }
   }
 );
