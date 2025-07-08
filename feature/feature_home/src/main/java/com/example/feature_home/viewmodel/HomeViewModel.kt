@@ -40,8 +40,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -504,42 +507,55 @@ class HomeViewModel @Inject constructor(
             
             Log.d("HomeViewModel", "onProjectClick called for projectId: $projectId")
             
-            // 먼저 프로젝트가 삭제되었는지 확인
+            // 먼저 프로젝트가 삭제되었는지 실시간으로 확인
             if (::coreProjectUseCases.isInitialized) {
                 try {
-                    val projectDetailsResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()
-                    
-                    when (projectDetailsResult) {
-                        is CustomResult.Success -> {
-                            val project = projectDetailsResult.data
-                            Log.d("HomeViewModel", "Project found: ${project.name.value}, status: ${project.status}")
-                            
-                            // 프로젝트 상태 확인 - DELETED 상태인 경우 처리
-                            if (project.status == ProjectStatus.DELETED) {
-                                Log.w("HomeViewModel", "Project $projectId is marked as DELETED")
-                                removeDeletedProject(projectId, project.name.value)
-                                return@launch
+                    // 스냅샷 리스너를 통해 실시간으로 프로젝트 상태 확인
+                    coreProjectUseCases.getProjectDetailsStreamUseCase(projectId)
+                        .filter { it !is CustomResult.Loading && it !is CustomResult.Initial }
+                        .take(1) // Loading/Initial 제외하고 첫 번째 실제 값만 받음
+                        .collect { result ->
+                            when (result) {
+                                is CustomResult.Success -> {
+                                    val project = result.data
+                                    Log.d("HomeViewModel", "Project found: ${project.name.value}, status: ${project.status}")
+                                    
+                                    // 프로젝트 상태 확인 - DELETED 상태인 경우 처리
+                                    if (project.status == ProjectStatus.DELETED) {
+                                        Log.w("HomeViewModel", "Project $projectId is marked as DELETED")
+                                        removeDeletedProject(projectId, project.name.value)
+                                        return@collect
+                                    }
+                                    
+                                    // 정상 프로젝트인 경우 기존 로직 실행
+                                    proceedWithProjectSelection(projectId)
+                                }
+                                is CustomResult.Failure -> {
+                                    // 프로젝트 로딩 실패 - 삭제된 프로젝트일 가능성
+                                    Log.w("HomeViewModel", "Failed to load project details for $projectId: ${result.error.message}")
+                                    
+                                    // 프로젝트 이름 찾기 (UI 상태에서)
+                                    val projectName = _uiState.value.projects.find { it.id == projectId }?.name?.value ?: "알 수 없는 프로젝트"
+                                    
+                                    // 특정 에러 메시지들은 삭제된 프로젝트로 간주
+                                    val errorMessage = result.error.message?.lowercase() ?: ""
+                                    if (errorMessage.contains("not found") || 
+                                        errorMessage.contains("permission") || 
+                                        errorMessage.contains("failed to deserialize")) {
+                                        Log.w("HomeViewModel", "Project appears to be deleted, removing wrapper")
+                                        removeDeletedProject(projectId, projectName)
+                                    } else {
+                                        // 다른 에러의 경우 기본 동작 수행
+                                        proceedWithProjectSelection(projectId)
+                                    }
+                                }
+                                else -> {
+                                    Log.d("HomeViewModel", "Unexpected result type: $result")
+                                    // 예상치 못한 상태의 경우 기본 동작 수행
+                                    proceedWithProjectSelection(projectId)
+                                }
                             }
-                            
-                            // 정상 프로젝트인 경우 기존 로직 실행
-                            proceedWithProjectSelection(projectId)
                         }
-                        is CustomResult.Failure -> {
-                            // 프로젝트 로딩 실패 - 삭제된 프로젝트일 가능성
-                            Log.w("HomeViewModel", "Failed to load project details for $projectId: ${projectDetailsResult.error.message}")
-                            
-                            // 프로젝트 이름 찾기 (UI 상태에서)
-                            val projectName = _uiState.value.projects.find { it.id == projectId }?.name?.value ?: "알 수 없는 프로젝트"
-                            
-                            // 삭제된 프로젝트 처리
-                            removeDeletedProject(projectId, projectName)
-                        }
-                        else -> {
-                            Log.d("HomeViewModel", "Project details result is not Success or Failure: $projectDetailsResult")
-                            // 다른 상태의 경우 기본 동작 수행
-                            proceedWithProjectSelection(projectId)
-                        }
-                    }
                 } catch (e: Exception) {
                     Log.e("HomeViewModel", "Error checking project details for $projectId", e)
                     
