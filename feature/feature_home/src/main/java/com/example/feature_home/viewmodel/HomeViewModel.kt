@@ -1145,7 +1145,7 @@ class HomeViewModel @Inject constructor(
             if (::coreProjectUseCases.isInitialized) {
                 try {
                     // ProjectWrapper 삭제
-                    val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(listOf(projectId))
+                    val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(projectId)
                     
                     when (deleteResult) {
                         is CustomResult.Success -> {
