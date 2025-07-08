@@ -26,6 +26,8 @@ import com.example.domain.usecase.project.JoinProjectWithTokenUseCase
 import com.example.domain.usecase.project.core.CreateProjectUseCase
 import com.example.domain.usecase.project.core.DeleteProjectUseCase
 import com.example.domain.usecase.project.core.DeleteProjectUseCaseImpl
+import com.example.domain.usecase.project.core.DeleteProjectsWrapperUseCase
+import com.example.domain.usecase.project.core.DeleteProjectsWrapperUseCaseImpl
 import com.example.domain.usecase.project.core.GenerateInviteLinkUseCase
 import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
 import com.example.domain.usecase.project.core.GetUserParticipatingProjectsUseCaseImpl
@@ -141,6 +143,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository
             ),
             
+            deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
+                projectsWrapperRepository = projectsWrapperRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             projectRepository = projectRepository
@@ -237,6 +243,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository
             ),
             
+            deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
+                projectsWrapperRepository = projectsWrapperRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             projectRepository = projectRepository
@@ -257,6 +267,7 @@ data class CoreProjectUseCases(
     val joinProjectWithTokenUseCase: JoinProjectWithTokenUseCase,
     val generateInviteLinkUseCase: GenerateInviteLinkUseCase,
     val validateInviteCodeUseCase: ValidateInviteCodeUseCase,
+    val deleteProjectsWrapperUseCase: DeleteProjectsWrapperUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

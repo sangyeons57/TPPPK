@@ -1,1 +1,1 @@
-export * from "./syncProjectWrapper.usecase"; 
+export * from "./syncProjectWrapper.usecase";

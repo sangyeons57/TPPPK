@@ -1,9 +1,8 @@
-import { MemberRepository } from '../../../domain/member/repositories/member.repository';
-import { ProjectRepository } from '../../../domain/project/repositories/project.repository';
-import { UserRepository } from '../../../domain/user/repositories/user.repository';
-import { CustomResult, Result } from '../../../core/types';
-import { validateId } from '../../../core/validation';
-import { ValidationError, NotFoundError } from '../../../core/errors';
+import {ProjectRepository} from "../../../domain/project/repositories/project.repository";
+import {CustomResult, Result} from "../../../core/types";
+import {validateId} from "../../../core/validation";
+import {ValidationError, NotFoundError} from "../../../core/errors";
+import {logger} from "firebase-functions/v2";
 
 export interface DeleteProjectRequest {
   projectId: string;
@@ -14,22 +13,21 @@ export interface DeleteProjectResponse {
   success: boolean;
   deletedProjectId: string;
   deletedAt: string;
-  membersRemoved: number;
-  projectWrappersCleaned: number;
   projectDeactivated: boolean;
 }
 
 export class DeleteProjectUseCase {
   constructor(
-    private readonly memberRepository: MemberRepository,
-    private readonly projectRepository: ProjectRepository,
-    private readonly userRepository: UserRepository
+    private readonly projectRepository: ProjectRepository
   ) {}
 
   async execute(request: DeleteProjectRequest): Promise<CustomResult<DeleteProjectResponse>> {
     try {
+      logger.info(`🎯 DeleteProjectUseCase starting: projectId=${request.projectId}, deletedBy=${request.deletedBy}`);
+
       // Input validation
       if (!request.projectId || !request.deletedBy) {
+        logger.error("❌ Missing required fields in request");
         return Result.failure(
           new ValidationError("request", "Project ID and deleted by are required")
         );
@@ -37,25 +35,18 @@ export class DeleteProjectUseCase {
 
       validateId(request.projectId, "project ID");
       validateId(request.deletedBy, "deleted by");
+      logger.info("✅ Input validation passed");
 
       // Check if the project exists
+      logger.info(`🔍 Checking if project exists: ${request.projectId}`);
       const projectResult = await this.projectRepository.findById(request.projectId);
       if (!projectResult.success) {
+        logger.error(`❌ Project not found: ${request.projectId}, error: ${projectResult.error?.message}`);
         return Result.failure(
           new NotFoundError("project", `Project not found: ${request.projectId}`)
         );
       }
-
-      // Check if the user performing the deletion has permission (is a member)
-      const deleterMemberResult = await this.memberRepository.findByUserId(request.deletedBy);
-      if (!deleterMemberResult.success) {
-        return Result.failure(
-          new ValidationError("deletedBy", "Only project members can delete the project")
-        );
-      }
-
-      // TODO: Add role-based permission check here
-      // For now, any member can delete the project, but you might want to restrict this to owners/admins
+      logger.info(`✅ Project found: ${request.projectId}`);
 
       const project = projectResult.data;
       if (!project) {
@@ -64,62 +55,39 @@ export class DeleteProjectUseCase {
         );
       }
 
-      // Step 1: Get all members before deletion
-      const allMembersResult = await this.memberRepository.findAll();
-      let memberCount = 0;
-      let memberUserIds: string[] = [];
-      
-      if (allMembersResult.success) {
-        memberCount = allMembersResult.data.length;
-        memberUserIds = allMembersResult.data.map(member => member.userId);
+      // Check if the user performing the deletion is the project owner
+      logger.info(`🔍 Checking if user is project owner: userId=${request.deletedBy}, projectOwnerId=${project.ownerId}`);
+      if (project.ownerId !== request.deletedBy) {
+        logger.error(`❌ Permission denied: Only project owner can delete the project. userId=${request.deletedBy}, ownerId=${project.ownerId}`);
+        return Result.failure(
+          new ValidationError("deletedBy", "Only project owner can delete the project")
+        );
       }
+      logger.info(`✅ User is project owner: ${request.deletedBy}`);
 
-      // Step 2: Delete all members from the project
-      const deleteMembersResult = await this.memberRepository.deleteAll();
-      if (!deleteMembersResult.success) {
-        return Result.failure(deleteMembersResult.error);
-      }
-
-      // Step 3: Remove project wrappers from all users
-      let projectWrappersCleaned = 0;
-      for (const userId of memberUserIds) {
-        try {
-          const removeWrapperResult = await this.userRepository.removeProjectWrapper(
-            userId, 
-            request.projectId
-          );
-          
-          if (removeWrapperResult.success) {
-            projectWrappersCleaned++;
-          } else {
-            console.warn(`Failed to remove project wrapper for user ${userId}:`, removeWrapperResult.error);
-          }
-        } catch (error) {
-          console.warn(`Error removing project wrapper for user ${userId}:`, error);
-        }
-      }
-
-      // Step 4: Mark the project as deleted (rather than actually deleting)
-      // This preserves data integrity and allows for potential recovery
+      // Mark the project as deleted
+      // ProjectWrapper cleanup will be handled when users try to access the project
+      logger.info(`🗑️ Marking project as deleted: ${request.projectId}`);
       const deletedProject = project.delete();
       const saveProjectResult = await this.projectRepository.save(deletedProject);
-      
+
       if (!saveProjectResult.success) {
-        console.warn(`Failed to mark project as deleted ${request.projectId}:`, saveProjectResult.error);
+        logger.error(`❌ Failed to mark project as deleted ${request.projectId}: ${saveProjectResult.error?.message}`);
+        return Result.failure(saveProjectResult.error);
       }
 
       const deletedAt = new Date().toISOString();
+
+      logger.info(`✅ Project deletion completed successfully: projectId=${request.projectId}`);
 
       return Result.success({
         success: true,
         deletedProjectId: request.projectId,
         deletedAt,
-        membersRemoved: memberCount,
-        projectWrappersCleaned,
-        projectDeactivated: saveProjectResult.success
+        projectDeactivated: saveProjectResult.success,
       });
-
     } catch (error) {
+      logger.error(`❌ Error in DeleteProjectUseCase: ${error instanceof Error ? error.message : "Unknown error"}`);
       return Result.failure(
         error instanceof Error ? error : new Error("Failed to delete project")
       );

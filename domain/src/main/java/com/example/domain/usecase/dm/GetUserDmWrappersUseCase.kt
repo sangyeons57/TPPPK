@@ -51,7 +51,7 @@ class GetUserDmWrappersUseCase @Inject constructor(
                 }
 
                 is CustomResult.Success -> {
-                    val wrappers = dmWrappersResult.data
+                    val wrappers = dmWrappersResult.data.map { it as DMWrapper }
                     Log.d("GetUserDmWrappersUseCase", "Successfully retrieved ${wrappers.size} DM wrappers")
                     emit(CustomResult.Success(wrappers))
                 }

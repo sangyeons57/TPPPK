@@ -719,27 +719,35 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun deleteProject(projectId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
         try {
+            Log.d("FunctionsRemoteDataSource", "Starting deleteProject for projectId: $projectId")
+            
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FunctionsRemoteDataSource", "Current user: ${currentUser.uid}")
             
             val requestData = mapOf(
                 FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
                 FirebaseFunctionParameters.Project.DELETED_BY to currentUser.uid
             )
+            Log.d("FunctionsRemoteDataSource", "Request data: $requestData")
 
             val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.DELETE_PROJECT)
+            Log.d("FunctionsRemoteDataSource", "Calling Firebase Function: ${FirebaseFunctionParameters.Functions.DELETE_PROJECT}")
             
             val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
                 callable.call(requestData).await()
             }
 
             if (result != null) {
+                Log.d("FunctionsRemoteDataSource", "Firebase Function call successful, result: ${result.data}")
                 @Suppress("UNCHECKED_CAST")
                 val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
                 CustomResult.Success(resultData)
             } else {
+                Log.e("FunctionsRemoteDataSource", "Firebase Function call timed out after ${DEFAULT_TIMEOUT_MS}ms")
                 CustomResult.Failure(Exception("Delete project function call timed out"))
             }
         } catch (e: Exception) {
+            Log.e("FunctionsRemoteDataSource", "Exception in deleteProject", e)
             if (e is java.util.concurrent.CancellationException) throw e
             CustomResult.Failure(e)
         }

@@ -19,6 +19,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserName
+import com.example.domain.model.vo.project.ProjectStatus
 import com.example.domain.provider.dm.DMUseCaseProvider
 import com.example.domain.provider.dm.DMUseCases
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
@@ -492,9 +493,14 @@ class HomeViewModel @Inject constructor(
 
     // 프로젝트 아이템 클릭 시
     fun onProjectClick(projectId: DocumentId) {
+        Log.d("HomeViewModel", "=== onProjectClick START === projectId=${projectId.value}")
+        
         viewModelScope.launch {
             // 프로젝트 ID가 이미 선택되어 있으면 무시
-            if (_uiState.value.selectedProjectId == projectId) return@launch
+            if (_uiState.value.selectedProjectId == projectId) {
+                Log.d("HomeViewModel", "Project already selected, returning")
+                return@launch
+            }
             
             Log.d("HomeViewModel", "onProjectClick called for projectId: $projectId")
             
@@ -506,21 +512,17 @@ class HomeViewModel @Inject constructor(
                     when (projectDetailsResult) {
                         is CustomResult.Success -> {
                             val project = projectDetailsResult.data
-                            Log.d("HomeViewModel", "Project found: ${project.name.value}")
+                            Log.d("HomeViewModel", "Project found: ${project.name.value}, status: ${project.status}")
                             
-                            // 상태 업데이트
-                            _uiState.update { it.copy(
-                                selectedProjectId = projectId,
-                                selectedTopSection = TopSection.PROJECTS, // 프로젝트 탭으로 전환
-                                isLoading = true, // 로딩 상태로 설정
-                                projectStructure = ProjectStructureUiState(isLoading = true) // 프로젝트 구조 로딩 상태로 설정
-                            )}
+                            // 프로젝트 상태 확인 - DELETED 상태인 경우 처리
+                            if (project.status == ProjectStatus.DELETED) {
+                                Log.w("HomeViewModel", "Project $projectId is marked as DELETED")
+                                removeDeletedProject(projectId, project.name.value)
+                                return@launch
+                            }
                             
-                            // 프로젝트 상세 정보 로드
-                            loadProjectDetails(projectId)
-                            
-                            // 프로젝트 구조 (카테고리 및 채널) 로드
-                            loadProjectStructure(projectId)
+                            // 정상 프로젝트인 경우 기존 로직 실행
+                            proceedWithProjectSelection(projectId)
                         }
                         is CustomResult.Failure -> {
                             // 프로젝트 로딩 실패 - 삭제된 프로젝트일 가능성
@@ -535,45 +537,40 @@ class HomeViewModel @Inject constructor(
                         else -> {
                             Log.d("HomeViewModel", "Project details result is not Success or Failure: $projectDetailsResult")
                             // 다른 상태의 경우 기본 동작 수행
-                            _uiState.update { it.copy(
-                                selectedProjectId = projectId,
-                                selectedTopSection = TopSection.PROJECTS,
-                                isLoading = true,
-                                projectStructure = ProjectStructureUiState(isLoading = true)
-                            )}
-                            
-                            loadProjectDetails(projectId)
-                            loadProjectStructure(projectId)
+                            proceedWithProjectSelection(projectId)
                         }
                     }
                 } catch (e: Exception) {
                     Log.e("HomeViewModel", "Error checking project details for $projectId", e)
                     
                     // 예외 발생 시 기본 동작 수행
-                    _uiState.update { it.copy(
-                        selectedProjectId = projectId,
-                        selectedTopSection = TopSection.PROJECTS,
-                        isLoading = true,
-                        projectStructure = ProjectStructureUiState(isLoading = true)
-                    )}
-                    
-                    loadProjectDetails(projectId)
-                    loadProjectStructure(projectId)
+                    proceedWithProjectSelection(projectId)
                 }
             } else {
                 Log.w("HomeViewModel", "coreProjectUseCases not initialized yet")
                 // UseCases가 초기화되지 않은 경우 기본 동작 수행
-                _uiState.update { it.copy(
-                    selectedProjectId = projectId,
-                    selectedTopSection = TopSection.PROJECTS,
-                    isLoading = true,
-                    projectStructure = ProjectStructureUiState(isLoading = true)
-                )}
-                
-                loadProjectDetails(projectId)
-                loadProjectStructure(projectId)
+                proceedWithProjectSelection(projectId)
             }
         }
+    }
+    
+    // 유효한 프로젝트 선택 시 기존 로직 실행
+    private fun proceedWithProjectSelection(projectId: DocumentId) {
+        Log.d("HomeViewModel", "Proceeding with project selection: ${projectId.value}")
+        
+        // 상태 업데이트
+        _uiState.update { it.copy(
+            selectedProjectId = projectId,
+            selectedTopSection = TopSection.PROJECTS, // 프로젝트 탭으로 전환
+            isLoading = true, // 로딩 상태로 설정
+            projectStructure = ProjectStructureUiState(isLoading = true) // 프로젝트 구조 로딩 상태로 설정
+        )}
+        
+        // 프로젝트 상세 정보 로드
+        loadProjectDetails(projectId)
+        
+        // 프로젝트 구조 (카테고리 및 채널) 로드
+        loadProjectStructure(projectId)
     }
 
     // 프로젝트 상세 정보 로드
