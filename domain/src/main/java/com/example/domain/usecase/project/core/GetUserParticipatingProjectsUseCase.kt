@@ -60,12 +60,12 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
 
                     for (wrapper in wrappers) {
                         Log.d("GetUserParticipatingProjectsUseCase", "Fetching project id=${wrapper.id.value}")
-                        
-                        val projectResult = projectRepository.findById(wrapper.id)
-                        when (projectResult) {
+
+
+                        when (val projectResult = projectRepository.findById(wrapper.id)) {
                             is CustomResult.Success -> {
                                 val project = projectResult.data as Project
-                                
+
                                 // 프로젝트가 삭제된 상태인지 확인
                                 if (project.status == ProjectStatus.DELETED) {
                                     Log.d("GetUserParticipatingProjectsUseCase", "Project ${wrapper.id.value} is DELETED, marking wrapper for cleanup")
@@ -73,7 +73,7 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
                                 } else {
                                     // 유효한 프로젝트 - 결과에 포함
                                     validProjects.add(project)
-                                    projectResultsMap[wrapper.id] = projectResult
+                                    projectResultsMap[wrapper.id] = CustomResult.Success(project)
                                 }
                             }
                             is CustomResult.Failure -> {
@@ -81,10 +81,9 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
                                 Log.d("GetUserParticipatingProjectsUseCase", "Project ${wrapper.id.value} not found, marking wrapper for cleanup: ${projectResult.error}")
                                 wrappersToDelete.add(wrapper.id)
                             }
-                            else -> {
-                                // Loading, Progress, Initial 상태는 그대로 유지
-                                projectResultsMap[wrapper.id] = projectResult
-                            }
+                            is CustomResult.Loading -> projectResultsMap[wrapper.id] = projectResult
+                            is CustomResult.Progress -> projectResultsMap[wrapper.id] = projectResult
+                            is CustomResult.Initial -> projectResultsMap[wrapper.id] = projectResult
                         }
                     }
 
@@ -141,7 +140,7 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
                                 "GetUserParticipatingProjectsUseCase",
                                 "Valid projects returned: size=${validProjects.size}, cleaned=${wrappersToDelete.size}"
                             )
-                            CustomResult.Success(validProjects)
+                            CustomResult.Success(validProjects.toList())
                         }
                     }
                 }
