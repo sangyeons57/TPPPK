@@ -14,7 +14,7 @@ export interface DMWrapperDatasource {
 
 export class FirestoreDMWrapperDataSource implements DMWrapperDatasource {
   private readonly db = admin.firestore();
-  private readonly collectionName = "dmwrappers";
+  private readonly collectionName = "dm_wrapper";
 
   /**
    * Helper method to convert Firestore document data to DMWrapperEntity
