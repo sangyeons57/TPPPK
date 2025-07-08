@@ -8,10 +8,9 @@ export enum InviteStatus {
 }
 
 export interface InviteData {
-  id: string;
+  id: string; // This IS the invite code (document ID)
   projectId: string;
   inviterId: string;
-  inviteCode: string;
   expiresAt: Date;
   maxUses?: number;
   currentUses: number;
@@ -26,7 +25,6 @@ export class InviteEntity implements BaseEntity {
   // Static keys for Firestore field names
   public static readonly KEY_PROJECT_ID = "projectId";
   public static readonly KEY_INVITER_ID = "inviterId";
-  public static readonly KEY_INVITE_CODE = "inviteCode";
   public static readonly KEY_EXPIRES_AT = "expiresAt";
   public static readonly KEY_MAX_USES = "maxUses";
   public static readonly KEY_CURRENT_USES = "currentUses";
@@ -35,10 +33,9 @@ export class InviteEntity implements BaseEntity {
   public static readonly KEY_UPDATED_AT = "updatedAt";
 
   constructor(
-    public readonly id: string,
+    public readonly id: string, // This IS the invite code (document ID)
     public readonly projectId: string,
     public readonly inviterId: string,
-    public readonly inviteCode: string,
     public readonly expiresAt: Date,
     public readonly currentUses: number,
     public readonly status: InviteStatus,
@@ -47,12 +44,11 @@ export class InviteEntity implements BaseEntity {
     public readonly maxUses?: number
   ) {
     // Validation
-    validateId(id, 'invite id');
     validateId(projectId, 'project id');
     validateId(inviterId, 'inviter id');
     
-    if (!inviteCode || inviteCode.length < 6) {
-      throw new Error('Invite code must be at least 6 characters long');
+    if (!id || id.length < 6) {
+      throw new Error('Invite code (id) must be at least 6 characters long');
     }
     
     if (maxUses !== undefined && maxUses < 1) {
@@ -66,6 +62,13 @@ export class InviteEntity implements BaseEntity {
     if (maxUses !== undefined && currentUses > maxUses) {
       throw new Error('Current uses cannot exceed max uses');
     }
+  }
+
+  /**
+   * Gets the invite code (which is the same as the document ID)
+   */
+  get inviteCode(): string {
+    return this.id;
   }
 
   /**
@@ -93,7 +96,6 @@ export class InviteEntity implements BaseEntity {
       this.id,
       this.projectId,
       this.inviterId,
-      this.inviteCode,
       this.expiresAt,
       newUses,
       newStatus,
@@ -115,7 +117,6 @@ export class InviteEntity implements BaseEntity {
       this.id,
       this.projectId,
       this.inviterId,
-      this.inviteCode,
       this.expiresAt,
       this.currentUses,
       InviteStatus.REVOKED,
@@ -159,10 +160,9 @@ export class InviteEntity implements BaseEntity {
    */
   toData(): InviteData {
     return {
-      id: this.id,
+      id: this.id, // This is the invite code
       projectId: this.projectId,
       inviterId: this.inviterId,
-      inviteCode: this.inviteCode,
       expiresAt: this.expiresAt,
       maxUses: this.maxUses,
       currentUses: this.currentUses,
@@ -174,22 +174,25 @@ export class InviteEntity implements BaseEntity {
 
   /**
    * Factory method for creating a new invite.
+   * @param inviteCode The custom invite code that will be used as document ID
+   * @param projectId The project ID
+   * @param inviterId The user who created the invite
+   * @param expiresAt When the invite expires
+   * @param maxUses Maximum number of times the invite can be used
    */
   static create(
-    id: string,
+    inviteCode: string,
     projectId: string,
     inviterId: string,
-    inviteCode: string,
     expiresAt: Date,
     maxUses?: number
   ): InviteEntity {
     const now = new Date();
     
     return new InviteEntity(
-      id,
+      inviteCode, // id = inviteCode
       projectId,
       inviterId,
-      inviteCode,
       expiresAt,
       0, // currentUses starts at 0
       InviteStatus.ACTIVE,
@@ -204,10 +207,9 @@ export class InviteEntity implements BaseEntity {
    */
   static fromData(data: InviteData): InviteEntity {
     return new InviteEntity(
-      data.id,
+      data.id, // This is the invite code
       data.projectId,
       data.inviterId,
-      data.inviteCode,
       data.expiresAt,
       data.currentUses,
       data.status,
@@ -218,12 +220,26 @@ export class InviteEntity implements BaseEntity {
   }
 
   /**
-   * Generates a random invite code.
+   * Generates a custom invite code optimized for user-friendliness.
+   * Uses a mix of uppercase letters and numbers, avoiding confusing characters.
    */
   static generateInviteCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    // Exclude confusing characters: 0, O, 1, I, l
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let result = '';
     for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
+   * Generates a shorter invite code for specific use cases.
+   */
+  static generateShortInviteCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;

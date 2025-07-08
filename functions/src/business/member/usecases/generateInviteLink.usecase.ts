@@ -64,41 +64,42 @@ export class GenerateInviteLinkUseCase {
         );
       }
 
-      // Generate unique invite code
+      // ✅ Generate invite code with collision handling
+      // Try up to 3 attempts for collision resolution (extremely rare with 8-char codes)
       let inviteCode: string;
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 3;
 
       do {
         inviteCode = InviteEntity.generateInviteCode();
         attempts++;
         
-        if (attempts > maxAttempts) {
-          return Result.failure(
-            new Error('Failed to generate unique invite code after maximum attempts')
-          );
-        }
-        
+        // Check if this exact document ID already exists
         const existsResult = await this.inviteRepository.existsByCode(inviteCode);
         if (!existsResult.success) {
           return Result.failure(existsResult.error);
         }
         
         if (!existsResult.data) {
-          break; // Code is unique
+          break; // Code is unique, we can use it
         }
-      } while (attempts <= maxAttempts);
+        
+        if (attempts >= maxAttempts) {
+          return Result.failure(
+            new Error('Failed to generate unique invite code after maximum attempts')
+          );
+        }
+      } while (attempts < maxAttempts);
 
       // Calculate expiration time
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
-      // Create invite entity
+      // Create invite entity with custom invite code as ID
       const invite = InviteEntity.create(
-        '', // ID will be set by repository
+        inviteCode, // Custom invite code will be used as document ID
         projectId,
         inviterId,
-        inviteCode,
         expiresAt,
         maxUses
       );
@@ -112,11 +113,11 @@ export class GenerateInviteLinkUseCase {
       const savedInvite = saveResult.data;
 
       // Generate invite link
-      const baseUrl = process.env.APP_BASE_URL || 'https://your-app.com';
+      const baseUrl = process.env.APP_BASE_URL || 'https://tpppk.app';
       const inviteLink = `${baseUrl}/invite/${savedInvite.inviteCode}`;
 
       return Result.success({
-        inviteCode: savedInvite.inviteCode,
+        inviteCode: savedInvite.inviteCode, // Same as savedInvite.id
         inviteLink,
         expiresAt: savedInvite.expiresAt,
         maxUses: savedInvite.maxUses

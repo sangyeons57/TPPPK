@@ -12,11 +12,11 @@ export class FirestoreInviteDataSource implements InviteDataSource {
   }
 
   async create(invite: InviteData): Promise<InviteData> {
-    const docRef = this.collection.doc();
-    const inviteWithId = { ...invite, id: docRef.id };
+    // Use the invite ID as the document ID directly
+    const docRef = this.collection.doc(invite.id);
     
     await docRef.set({
-      ...inviteWithId,
+      ...invite,
       createdAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp()
     });
@@ -26,16 +26,15 @@ export class FirestoreInviteDataSource implements InviteDataSource {
   }
 
   async findByCode(inviteCode: string): Promise<InviteData | null> {
-    const querySnapshot = await this.collection
-      .where(InviteEntity.KEY_INVITE_CODE, '==', inviteCode)
-      .limit(1)
-      .get();
-
-    if (querySnapshot.empty) {
+    // ✅ O(1) direct document lookup instead of O(n) collection scan
+    // Since invite code IS the document ID, we can fetch directly
+    const doc = await this.collection.doc(inviteCode).get();
+    
+    if (!doc.exists) {
       return null;
     }
 
-    return this.mapDocumentToData(querySnapshot.docs[0]);
+    return this.mapDocumentToData(doc);
   }
 
   async findById(id: string): Promise<InviteData | null> {
@@ -74,12 +73,10 @@ export class FirestoreInviteDataSource implements InviteDataSource {
   }
 
   async existsByCode(inviteCode: string): Promise<boolean> {
-    const querySnapshot = await this.collection
-      .where(InviteEntity.KEY_INVITE_CODE, '==', inviteCode)
-      .limit(1)
-      .get();
-
-    return !querySnapshot.empty;
+    // ✅ O(1) direct document existence check instead of O(n) collection scan
+    // Since invite code IS the document ID, we can check existence directly
+    const doc = await this.collection.doc(inviteCode).get();
+    return doc.exists;
   }
 
   private mapDocumentToData(doc: firestore.QueryDocumentSnapshot | firestore.DocumentSnapshot): InviteData {
@@ -89,10 +86,9 @@ export class FirestoreInviteDataSource implements InviteDataSource {
     }
 
     return {
-      id: doc.id,
+      id: doc.id, // This IS the invite code
       projectId: data.projectId,
       inviterId: data.inviterId,
-      inviteCode: data.inviteCode,
       expiresAt: data.expiresAt?.toDate() || new Date(),
       maxUses: data.maxUses,
       currentUses: data.currentUses || 0,

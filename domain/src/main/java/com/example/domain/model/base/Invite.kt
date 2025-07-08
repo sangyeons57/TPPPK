@@ -15,18 +15,16 @@ import java.time.Instant
 import java.util.Date
 
 class Invite private constructor(
-    initialInviteCode: InviteCode,
     initialStatus: InviteStatus,
     initialCreatedBy: OwnerId,
     initialExpiresAt: Instant?,
-    override val id: DocumentId,
+    override val id: DocumentId, // This IS the invite code
     override var isNew: Boolean,
     override val createdAt: Instant,
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
     // Immutable properties
-    val inviteCode: InviteCode = initialInviteCode
     val createdBy: OwnerId = initialCreatedBy
 
     // Mutable properties
@@ -38,6 +36,12 @@ class Invite private constructor(
     init {
         setOriginalState()
     }
+
+    /**
+     * Gets the invite code (which is the same as the document ID)
+     */
+    val inviteCode: InviteCode
+        get() = InviteCode(id.value)
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
@@ -84,8 +88,7 @@ class Invite private constructor(
         const val KEY_EXPIRES_AT = "expiresAt"
 
         fun create(
-            id: DocumentId,
-            inviteCode: InviteCode,
+            inviteCodeId: DocumentId, // The invite code that will be used as document ID
             createdBy: OwnerId,
             expiresAt: Instant? // Optional expiration
         ): Invite {
@@ -95,13 +98,12 @@ class Invite private constructor(
             }
 
             val invite = Invite(
-                initialInviteCode = inviteCode,
                 initialStatus = initialStatus,
                 initialCreatedBy = createdBy,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 initialExpiresAt = expiresAt,
-                id = id,
+                id = inviteCodeId, // ID is the invite code
                 isNew = true
             )
             return invite
@@ -109,8 +111,7 @@ class Invite private constructor(
 
         // Factory method for reconstituting from data source
         fun fromDataSource(
-            id: DocumentId,
-            inviteCode: InviteCode,
+            id: DocumentId, // This IS the invite code
             status: InviteStatus,
             createdBy: OwnerId,
             createdAt: Instant?,
@@ -118,13 +119,12 @@ class Invite private constructor(
             expiresAt: Instant?
         ): Invite {
             return Invite(
-                initialInviteCode = inviteCode,
                 initialStatus = status,
                 initialCreatedBy = createdBy,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 initialExpiresAt = expiresAt,
-                id = id,
+                id = id, // ID is the invite code
                 isNew = false
             )
         }

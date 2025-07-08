@@ -76,7 +76,7 @@ class GenerateInviteLinkUseCase @Inject constructor(
  * 초대 링크 데이터 클래스
  */
 data class InviteLinkData(
-    val inviteCode: String,
+    val inviteCode: String, // This is the same as the document ID
     val inviteLink: String,
     val expiresAt: Any?,
     val maxUses: Int?
