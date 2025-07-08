@@ -490,28 +490,63 @@ class HomeViewModel @Inject constructor(
 
     // 프로젝트 아이템 클릭 시
     fun onProjectClick(projectId: DocumentId) {
+        Log.d("HomeViewModel", "=== onProjectClick START === projectId=${projectId.value}")
+        
         viewModelScope.launch {
             // 프로젝트 ID가 이미 선택되어 있으면 무시
-            if (_uiState.value.selectedProjectId == projectId) return@launch
+            if (_uiState.value.selectedProjectId == projectId) {
+                Log.d("HomeViewModel", "Project already selected, returning")
+                return@launch
+            }
             
             Log.d("HomeViewModel", "onProjectClick: Checking project status for projectId=$projectId")
             
-            // 먼저 프로젝트 상태를 확인
-            if (::coreProjectUseCases.isInitialized) {
-                when (val projectResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
+            // coreProjectUseCases 초기화 상태 확인
+            if (!::coreProjectUseCases.isInitialized) {
+                Log.w("HomeViewModel", "coreProjectUseCases not initialized, waiting for initialization...")
+                
+                // 최대 3초간 기다리면서 초기화를 확인
+                var retryCount = 0
+                while (!::coreProjectUseCases.isInitialized && retryCount < 30) {
+                    kotlinx.coroutines.delay(100) // 100ms 대기
+                    retryCount++
+                }
+                
+                if (!::coreProjectUseCases.isInitialized) {
+                    Log.e("HomeViewModel", "coreProjectUseCases still not initialized after waiting, cannot proceed")
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("잠시 후 다시 시도해주세요."))
+                    return@launch
+                }
+                
+                Log.d("HomeViewModel", "coreProjectUseCases initialized after waiting")
+            }
+            
+            Log.d("HomeViewModel", "coreProjectUseCases is initialized, proceeding with project status check")
+            
+            try {
+                // 먼저 프로젝트 상태를 확인
+                val projectResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()
+                Log.d("HomeViewModel", "Project details result: $projectResult")
+                
+                when (projectResult) {
                     is CustomResult.Success -> {
                         val project = projectResult.data
+                        Log.d("HomeViewModel", "Project found: name=${project.name.value}, status=${project.status}")
                         
                         // 프로젝트가 삭제된 상태인지 확인
                         if (project.status == ProjectStatus.DELETED) {
                             Log.d("HomeViewModel", "Project $projectId is DELETED, cleaning up ProjectWrapper")
                             
                             // 스낵바 표시
+                            Log.d("HomeViewModel", "Emitting ShowSnackbar event")
                             _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
                             
                             // ProjectWrapper 삭제 - UseCase 사용
                             try {
+                                Log.d("HomeViewModel", "Calling deleteProjectsWrapperUseCase")
                                 val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(projectId)
+                                Log.d("HomeViewModel", "DeleteProjectsWrapper result: $deleteResult")
+                                
                                 when (deleteResult) {
                                     is CustomResult.Success -> {
                                         Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for deleted project: $projectId")
@@ -527,6 +562,7 @@ class HomeViewModel @Inject constructor(
                                 Log.w("HomeViewModel", "Error cleaning up ProjectWrapper $projectId: ${e.message}")
                             }
                             
+                            Log.d("HomeViewModel", "=== onProjectClick END (DELETED project) ===")
                             return@launch // 삭제된 프로젝트는 더 이상 처리하지 않음
                         }
                         
@@ -538,11 +574,15 @@ class HomeViewModel @Inject constructor(
                         Log.d("HomeViewModel", "Project $projectId not found, cleaning up ProjectWrapper: ${projectResult.error}")
                         
                         // 스낵바 표시
+                        Log.d("HomeViewModel", "Emitting ShowSnackbar event for missing project")
                         _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트를 찾을 수 없습니다."))
                         
                         // ProjectWrapper 삭제 - UseCase 사용
                         try {
+                            Log.d("HomeViewModel", "Calling deleteProjectsWrapperUseCase for missing project")
                             val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(projectId)
+                            Log.d("HomeViewModel", "DeleteProjectsWrapper result for missing project: $deleteResult")
+                            
                             when (deleteResult) {
                                 is CustomResult.Success -> {
                                     Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for missing project: $projectId")
@@ -558,18 +598,22 @@ class HomeViewModel @Inject constructor(
                             Log.w("HomeViewModel", "Error cleaning up ProjectWrapper $projectId: ${e.message}")
                         }
                         
+                        Log.d("HomeViewModel", "=== onProjectClick END (missing project) ===")
                         return@launch // 존재하지 않는 프로젝트는 더 이상 처리하지 않음
                     }
                     else -> {
                         // Loading, Progress, Initial 상태는 무시하고 기존 로직 실행
-                        Log.d("HomeViewModel", "Project $projectId in intermediate state, proceeding with normal flow")
+                        Log.d("HomeViewModel", "Project $projectId in intermediate state: $projectResult, proceeding with normal flow")
                         proceedWithProjectSelection(projectId)
                     }
                 }
-            } else {
-                Log.w("HomeViewModel", "coreProjectUseCases not initialized, proceeding with normal flow")
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Exception during project status check for $projectId", e)
+                // 예외 발생 시에도 기존 로직 실행
                 proceedWithProjectSelection(projectId)
             }
+            
+            Log.d("HomeViewModel", "=== onProjectClick END ===")
         }
     }
     

@@ -28,27 +28,36 @@ class DeleteProjectsWrapperUseCaseImpl @Inject constructor(
 
     override suspend fun invoke(projectId: DocumentId): CustomResult<Unit, Exception> {
         return try {
-            Log.d("DeleteProjectsWrapperUseCase", "Deleting ProjectsWrapper for projectId: ${projectId.value}")
+            Log.d("DeleteProjectsWrapperUseCase", "=== INVOKE START === projectId: ${projectId.value}")
+            Log.d("DeleteProjectsWrapperUseCase", "Calling projectsWrapperRepository.delete() for projectId: ${projectId.value}")
             
             val result = projectsWrapperRepository.delete(projectId)
+            Log.d("DeleteProjectsWrapperUseCase", "Repository delete result: $result")
             
             when (result) {
                 is CustomResult.Success -> {
-                    Log.d("DeleteProjectsWrapperUseCase", "Successfully deleted ProjectsWrapper for projectId: ${projectId.value}")
+                    Log.d("DeleteProjectsWrapperUseCase", "✅ Successfully deleted ProjectsWrapper for projectId: ${projectId.value}")
+                    Log.d("DeleteProjectsWrapperUseCase", "=== INVOKE END (SUCCESS) ===")
                     CustomResult.Success(Unit)
                 }
                 is CustomResult.Failure -> {
-                    Log.w("DeleteProjectsWrapperUseCase", "Failed to delete ProjectsWrapper for projectId: ${projectId.value}, error: ${result.error}")
+                    Log.w("DeleteProjectsWrapperUseCase", "❌ Failed to delete ProjectsWrapper for projectId: ${projectId.value}, error: ${result.error}")
+                    Log.w("DeleteProjectsWrapperUseCase", "Error details: ${result.error.message}")
+                    Log.d("DeleteProjectsWrapperUseCase", "=== INVOKE END (FAILURE) ===")
                     result
                 }
                 else -> {
                     val error = Exception("Unexpected result type: $result")
-                    Log.e("DeleteProjectsWrapperUseCase", "Unexpected result when deleting ProjectsWrapper for projectId: ${projectId.value}", error)
+                    Log.e("DeleteProjectsWrapperUseCase", "⚠️ Unexpected result when deleting ProjectsWrapper for projectId: ${projectId.value}, result: $result", error)
+                    Log.d("DeleteProjectsWrapperUseCase", "=== INVOKE END (UNEXPECTED) ===")
                     CustomResult.Failure(error)
                 }
             }
         } catch (e: Exception) {
-            Log.e("DeleteProjectsWrapperUseCase", "Exception when deleting ProjectsWrapper for projectId: ${projectId.value}", e)
+            Log.e("DeleteProjectsWrapperUseCase", "💥 Exception when deleting ProjectsWrapper for projectId: ${projectId.value}", e)
+            Log.e("DeleteProjectsWrapperUseCase", "Exception type: ${e.javaClass.simpleName}")
+            Log.e("DeleteProjectsWrapperUseCase", "Exception message: ${e.message}")
+            Log.d("DeleteProjectsWrapperUseCase", "=== INVOKE END (EXCEPTION) ===")
             CustomResult.Failure(e)
         }
     }
