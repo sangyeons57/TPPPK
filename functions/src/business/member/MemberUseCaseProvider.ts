@@ -70,9 +70,7 @@ export class MemberUseCaseProvider {
         userRepository
       ),
       deleteProjectUseCase: new DeleteProjectUseCase(
-        memberRepository,
-        projectRepository,
-        userRepository
+        projectRepository
       ),
       generateInviteLinkUseCase: new GenerateInviteLinkUseCase(
         inviteRepository,
