@@ -303,22 +303,47 @@ class ProjectSettingViewModel @Inject constructor(
         dismiss() // 다이얼로그 닫기
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // Show loading
-            println("Deleting Project $projectId (UseCase)")
-            val result = coreProjectUseCases.deleteProjectUseCase(projectId)
-            when (result) {
-                is CustomResult.Success -> {
-                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
-                    navigationManger.navigateBack() // Navigate back on success
-                    // No need to turn off loading as we are navigating away
+            Log.d("ProjectSettingViewModel", "Deleting Project $projectId (UseCase)")
+            
+            try {
+                val result = coreProjectUseCases.deleteProjectUseCase(projectId)
+                Log.d("ProjectSettingViewModel", "Delete result: $result")
+                
+                when (result) {
+                    is CustomResult.Success -> {
+                        Log.d("ProjectSettingViewModel", "Project deletion successful")
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
+                        navigationManger.navigateBack() // Navigate back on success
+                        // No need to turn off loading as we are navigating away
+                    }
+                    is CustomResult.Failure -> {
+                        Log.e("ProjectSettingViewModel", "Project deletion failed: ${result.error.message}", result.error)
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: ${result.error.message}"))
+                        _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                    }
+                    is CustomResult.Loading -> {
+                        Log.d("ProjectSettingViewModel", "Project deletion is loading...")
+                        // Keep loading state
+                    }
+                    is CustomResult.Initial -> {
+                        Log.w("ProjectSettingViewModel", "Project deletion returned Initial state")
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: 초기 상태"))
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
+                    is CustomResult.Progress -> {
+                        Log.d("ProjectSettingViewModel", "Project deletion progress: ${result.progress}")
+                        // Keep loading state and show progress if needed
+                    }
+                    else -> {
+                        Log.e("ProjectSettingViewModel", "Project deletion returned unknown result type: $result")
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: 알 수 없는 오류"))
+                        _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                    }
                 }
-                is CustomResult.Failure -> {
-                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: ${result.error.message}"))
-                    _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
-                }
-                else -> {
-                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: 알 수 없는 오류"))
-                    _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
-                }
+            } catch (e: Exception) {
+                Log.e("ProjectSettingViewModel", "Exception during project deletion", e)
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: ${e.message}"))
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
