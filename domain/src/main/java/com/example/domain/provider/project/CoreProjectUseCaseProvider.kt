@@ -21,7 +21,7 @@ import com.example.domain.repository.factory.context.MemberRepositoryFactoryCont
 import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
-import com.example.domain.usecase.project.core.JoinProjectWithCodeUseCase
+import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import com.example.domain.usecase.project.core.JoinProjectWithTokenUseCase
 import com.example.domain.usecase.project.core.CreateProjectUseCase
 import com.example.domain.usecase.project.core.DeleteProjectUseCase
