@@ -93,26 +93,6 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Firebase Functions Test
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { viewModel.testFirebaseFunctions() }
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Firebase Functions 테스트",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "Firebase Functions 테스트",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -147,9 +147,9 @@ class MainActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this, callback)
     }
     
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent?.let { handleIntent(it) }
+        intent.let { handleIntent(it) }
     }
     
     /**

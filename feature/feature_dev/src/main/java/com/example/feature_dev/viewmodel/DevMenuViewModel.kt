@@ -32,7 +32,6 @@ class DevMenuViewModel @Inject constructor(
      * 결과를 초기화합니다.
      */
     fun clearResult() {
-        _helloWorldResult.value = ""
         _cacheClearResult.value = ""
     }
 
