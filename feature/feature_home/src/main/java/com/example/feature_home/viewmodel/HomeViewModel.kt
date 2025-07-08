@@ -27,7 +27,6 @@ import com.example.domain.provider.project.CoreProjectUseCases
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCases
 import com.example.domain.provider.user.UserUseCaseProvider
-import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
@@ -134,7 +133,6 @@ class HomeViewModel @Inject constructor(
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val dmUseCaseProvider: DMUseCaseProvider,
-    private val projectsWrapperRepository: ProjectsWrapperRepository,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -500,7 +498,6 @@ class HomeViewModel @Inject constructor(
             
             // 먼저 프로젝트 상태를 확인
             if (::coreProjectUseCases.isInitialized) {
-                
                 when (val projectResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
                     is CustomResult.Success -> {
                         val project = projectResult.data
@@ -512,13 +509,19 @@ class HomeViewModel @Inject constructor(
                             // 스낵바 표시
                             _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
                             
-                            // ProjectWrapper 삭제
+                            // ProjectWrapper 삭제 - UseCase 사용
                             try {
-                                val deleteResult = projectsWrapperRepository.delete(projectId)
-                                if (deleteResult is CustomResult.Success) {
-                                    Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for deleted project: $projectId")
-                                } else {
-                                    Log.w("HomeViewModel", "Failed to clean up ProjectWrapper $projectId: ${(deleteResult as? CustomResult.Failure)?.error}")
+                                val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(projectId)
+                                when (deleteResult) {
+                                    is CustomResult.Success -> {
+                                        Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for deleted project: $projectId")
+                                    }
+                                    is CustomResult.Failure -> {
+                                        Log.w("HomeViewModel", "Failed to clean up ProjectWrapper $projectId: ${deleteResult.error}")
+                                    }
+                                    else -> {
+                                        Log.w("HomeViewModel", "Unexpected result when cleaning up ProjectWrapper $projectId: $deleteResult")
+                                    }
                                 }
                             } catch (e: Exception) {
                                 Log.w("HomeViewModel", "Error cleaning up ProjectWrapper $projectId: ${e.message}")
@@ -537,13 +540,19 @@ class HomeViewModel @Inject constructor(
                         // 스낵바 표시
                         _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트를 찾을 수 없습니다."))
                         
-                        // ProjectWrapper 삭제
+                        // ProjectWrapper 삭제 - UseCase 사용
                         try {
-                            val deleteResult = projectsWrapperRepository.delete(projectId)
-                            if (deleteResult is CustomResult.Success) {
-                                Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for missing project: $projectId")
-                            } else {
-                                Log.w("HomeViewModel", "Failed to clean up ProjectWrapper $projectId: ${(deleteResult as? CustomResult.Failure)?.error}")
+                            val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(projectId)
+                            when (deleteResult) {
+                                is CustomResult.Success -> {
+                                    Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for missing project: $projectId")
+                                }
+                                is CustomResult.Failure -> {
+                                    Log.w("HomeViewModel", "Failed to clean up ProjectWrapper $projectId: ${deleteResult.error}")
+                                }
+                                else -> {
+                                    Log.w("HomeViewModel", "Unexpected result when cleaning up ProjectWrapper $projectId: $deleteResult")
+                                }
                             }
                         } catch (e: Exception) {
                             Log.w("HomeViewModel", "Error cleaning up ProjectWrapper $projectId: ${e.message}")
