@@ -15,6 +15,7 @@ import com.example.domain.usecase.dm.AddDmChannelUseCase
 import com.example.domain.usecase.dm.GetCurrentUserDmChannelsUseCase
 import com.example.domain.usecase.dm.GetDmChannelUseCase
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
+import com.example.domain.usecase.dm.GetUserDmWrappersUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -78,6 +79,11 @@ class DMUseCaseProvider @Inject constructor(
                 dmRepository = dmChannelRepository
             ),
             
+            getUserDmWrappersUseCase = GetUserDmWrappersUseCase(
+                authRepository = authRepository,
+                dmWrapperRepository = dmWrapperRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             dmChannelRepository = dmChannelRepository,
@@ -124,6 +130,7 @@ data class DMUseCases(
     val getCurrentUserDmChannelsUseCase: GetCurrentUserDmChannelsUseCase,
     val addDmChannelUseCase: AddDmChannelUseCase,
     val getDmChannelUseCase: GetDmChannelUseCase,
+    val getUserDmWrappersUseCase: GetUserDmWrappersUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

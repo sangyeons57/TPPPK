@@ -99,7 +99,7 @@ export class CreateDMChannelUseCase {
 
       // 첫 번째 사용자의 DM Wrapper 생성 (상대방을 가리킴)
       const dmWrapper1 = DMWrapperEntity.createForUsers(
-        userId2, // wrapperId는 상대방 ID
+        channelId, // wrapperId는 dmChannel ID
         userId2, // otherUserId
         user2.name, // otherUserName
         user2.profileImageUrl || undefined // otherUserImageUrl (null-safe)
@@ -112,7 +112,7 @@ export class CreateDMChannelUseCase {
 
       // 두 번째 사용자의 DM Wrapper 생성 (상대방을 가리킴)
       const dmWrapper2 = DMWrapperEntity.createForUsers(
-        userId1, // wrapperId는 상대방 ID
+        channelId, // wrapperId는 dmChannel ID
         userId1, // otherUserId
         user1.name, // otherUserName
         user1.profileImageUrl || undefined // otherUserImageUrl (null-safe)
