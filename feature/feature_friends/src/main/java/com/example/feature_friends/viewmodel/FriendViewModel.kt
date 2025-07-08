@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import java.time.Instant
 import javax.inject.Inject
 
@@ -200,18 +201,66 @@ class FriendViewModel @Inject constructor(
 
     /**
      * 친구 아이템 클릭 시 호출 (DM 채팅방으로 이동)
+     * DMWrapper를 사용하여 기존 DM이 있으면 바로 이동, 없으면 새로 생성하고 이동
      */
     fun onFriendClick(friendId: UserId) {
         viewModelScope.launch {
-            val result = dmUseCases.getDmChannelUseCase(friendId.value)
+            try {
+                // 1. 현재 DMWrapper 목록에서 해당 친구와의 DM 찾기
+                val dmWrappersResult = dmUseCases.getUserDmWrappersUseCase().first()
+                when (dmWrappersResult) {
+                    is CustomResult.Success -> {
+                        val dmWrappers = dmWrappersResult.data
+                        val existingDmWrapper = dmWrappers.find { dmWrapper ->
+                            dmWrapper.otherUserId.value == friendId.value
+                        }
+                        
+                        if (existingDmWrapper != null) {
+                            // 기존 DM 채널로 이동
+                            navigationManger.navigateToChat(existingDmWrapper.id.value)
+                        } else {
+                            // 새로운 DM 채널 생성
+                            createNewDmChannelAndNavigate(friendId)
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        // DMWrapper 목록을 가져올 수 없으면 새로 생성 시도
+                        createNewDmChannelAndNavigate(friendId)
+                    }
+                    else -> {
+                        _eventFlow.emit(FriendsEvent.ShowSnackbar("DM 정보를 확인 중입니다..."))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FriendViewModel", "Error in onFriendClick", e)
+                _eventFlow.emit(FriendsEvent.ShowSnackbar("DM 이동 중 오류가 발생했습니다: ${e.localizedMessage}"))
+            }
+        }
+    }
+    
+    /**
+     * 새로운 DM 채널을 생성하고 이동
+     */
+    private suspend fun createNewDmChannelAndNavigate(friendId: UserId) {
+        // 현재 친구 목록에서 해당 친구의 이름 찾기
+        val friend = _uiState.value.friends.find { it.friendId == friendId }
+        if (friend == null) {
+            _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 정보를 찾을 수 없습니다."))
+            return
+        }
+        
+        dmUseCases.addDmChannelUseCase(friend.displayName).collect { result ->
             when (result) {
+                is CustomResult.Loading -> {
+                    _eventFlow.emit(FriendsEvent.ShowSnackbar("DM 채널을 생성하는 중..."))
+                }
                 is CustomResult.Success -> {
-                    val dmChannel = result.data
-                    navigationManger.navigateToChat(dmChannel.id.value)
+                    val channelId = result.data
+                    navigationManger.navigateToChat(channelId.value)
                 }
                 is CustomResult.Failure -> {
                     val error = result.error
-                    _eventFlow.emit(FriendsEvent.ShowSnackbar("채팅방 정보를 가져올 수 없습니다: $error"))
+                    _eventFlow.emit(FriendsEvent.ShowSnackbar("DM 채널 생성 실패: ${error.localizedMessage}"))
                 }
                 else -> {
                     // 다른 상태 처리 (필요 시)
