@@ -55,4 +55,12 @@ interface ProjectRepository : DefaultRepository {
      */
     suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
 
+    /**
+     * 프로젝트를 삭제합니다 (soft delete).
+     *
+     * @param projectId 삭제할 프로젝트 ID
+     * @return 성공 시 삭제 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun deleteProject(projectId: DocumentId): CustomResult<Map<String, Any?>, Exception>
+
 }

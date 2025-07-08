@@ -31,6 +31,7 @@ object FirebaseFunctionParameters {
         const val GENERATE_INVITE_LINK = "generateInviteLink"
         const val VALIDATE_INVITE_CODE = "validateInviteCode"
         const val JOIN_PROJECT_WITH_INVITE = "joinProjectWithInvite"
+        const val DELETE_PROJECT = "deleteProject"
     }
     
     /**
@@ -80,5 +81,6 @@ object FirebaseFunctionParameters {
         const val INVITER_ID = "inviterId"
         const val EXPIRES_IN_HOURS = "expiresInHours"
         const val MAX_USES = "maxUses"
+        const val DELETED_BY = "deletedBy"
     }
 } 

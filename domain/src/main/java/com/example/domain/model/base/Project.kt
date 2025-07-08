@@ -7,15 +7,18 @@ import com.example.domain.model.AggregateRoot
 import com.example.domain.event.project.ProjectCreatedEvent
 import com.example.domain.event.project.ProjectImageUrlChangedEvent
 import com.example.domain.event.project.ProjectNameChangedEvent
+import com.example.domain.event.project.ProjectStatusChangedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.model.vo.project.ProjectStatus
 
 class Project private constructor(
     initialName: ProjectName,
     initialImageUrl: ImageUrl?,
     initialOwnerId: OwnerId,
+    initialStatus: ProjectStatus,
     override val isNew: Boolean,
     override val id: DocumentId,
     override val createdAt: Instant,
@@ -30,6 +33,8 @@ class Project private constructor(
         private set
     var imageUrl: ImageUrl? = initialImageUrl
         private set
+    var status: ProjectStatus = initialStatus
+        private set
 
     init {
         setOriginalState()
@@ -40,6 +45,7 @@ class Project private constructor(
         return mapOf(
             KEY_NAME to this.name.value,
             KEY_IMAGE_URL to this.imageUrl?.value,
+            KEY_STATUS to this.status.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_OWNER_ID to this.ownerId.value
@@ -67,10 +73,44 @@ class Project private constructor(
         pushDomainEvent(ProjectImageUrlChangedEvent(this.id, newImageUrl, DateTimeUtil.nowInstant()))
     }
 
+    /**
+     * Marks the project as deleted (soft delete).
+     */
+    fun delete() {
+        if (this.status == ProjectStatus.DELETED) return
+
+        val oldStatus = this.status
+        this.status = ProjectStatus.DELETED
+        pushDomainEvent(ProjectStatusChangedEvent(this.id, oldStatus, ProjectStatus.DELETED, DateTimeUtil.nowInstant()))
+    }
+
+    /**
+     * Archives the project.
+     */
+    fun archive() {
+        if (this.status == ProjectStatus.ARCHIVED) return
+
+        val oldStatus = this.status
+        this.status = ProjectStatus.ARCHIVED
+        pushDomainEvent(ProjectStatusChangedEvent(this.id, oldStatus, ProjectStatus.ARCHIVED, DateTimeUtil.nowInstant()))
+    }
+
+    /**
+     * Activates the project.
+     */
+    fun activate() {
+        if (this.status == ProjectStatus.ACTIVE) return
+
+        val oldStatus = this.status
+        this.status = ProjectStatus.ACTIVE
+        pushDomainEvent(ProjectStatusChangedEvent(this.id, oldStatus, ProjectStatus.ACTIVE, DateTimeUtil.nowInstant()))
+    }
+
     companion object {
         const val COLLECTION_NAME = "projects"
         const val KEY_NAME = "name"
         const val KEY_IMAGE_URL = "imageUrl"
+        const val KEY_STATUS = "status"
         const val KEY_OWNER_ID = "ownerId"
         /**
          * Factory method to create a new Project.
@@ -84,6 +124,7 @@ class Project private constructor(
                 initialName = name,
                 initialImageUrl = imageUrl,
                 initialOwnerId = ownerId,
+                initialStatus = ProjectStatus.ACTIVE,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
@@ -100,6 +141,7 @@ class Project private constructor(
             name: ProjectName,
             imageUrl: ImageUrl?,
             ownerId: OwnerId,
+            status: ProjectStatus?,
             createdAt: Instant?,
             updatedAt: Instant?
         ): Project {
@@ -107,6 +149,7 @@ class Project private constructor(
                 initialName = name,
                 initialImageUrl = imageUrl,
                 initialOwnerId = ownerId,
+                initialStatus = status ?: ProjectStatus.ACTIVE,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,

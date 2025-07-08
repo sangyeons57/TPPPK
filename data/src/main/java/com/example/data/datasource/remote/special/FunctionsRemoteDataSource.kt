@@ -184,6 +184,14 @@ interface FunctionsRemoteDataSource {
      * @return 성공 시 참여 결과, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 프로젝트를 삭제합니다 (soft delete).
+     *
+     * @param projectId 삭제할 프로젝트 ID
+     * @return 성공 시 삭제 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun deleteProject(projectId: String): CustomResult<Map<String, Any?>, Exception>
 }
 
 @Singleton
@@ -702,6 +710,34 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 CustomResult.Success(resultData)
             } else {
                 CustomResult.Failure(Exception("Join project with invite function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun deleteProject(projectId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
+                FirebaseFunctionParameters.Project.DELETED_BY to currentUser.uid
+            )
+
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.DELETE_PROJECT)
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Delete project function call timed out"))
             }
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e

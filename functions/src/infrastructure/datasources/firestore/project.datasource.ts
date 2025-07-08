@@ -40,6 +40,7 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
         data.ownerId,
         data.createdAt?.toDate(),
         data.updatedAt?.toDate(),
+        data.status || ProjectStatus.ACTIVE,
         data.image
       );
 
@@ -99,6 +100,7 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
       const docData = {
         name: projectData.name,
         imageUrl: projectData.imageUrl || null,
+        status: projectData.status,
         ownerId: projectData.ownerId,
         createdAt: admin.firestore.Timestamp.fromDate(projectData.createdAt),
         updatedAt: admin.firestore.Timestamp.fromDate(projectData.updatedAt),
@@ -122,6 +124,7 @@ export class FirestoreProjectDataSource implements ProjectDatasource {
       const docData = {
         name: projectData.name,
         imageUrl: projectData.imageUrl || null,
+        status: projectData.status,
         ownerId: projectData.ownerId,
         createdAt: admin.firestore.Timestamp.fromDate(projectData.createdAt),
         updatedAt: admin.firestore.Timestamp.fromDate(projectData.updatedAt),

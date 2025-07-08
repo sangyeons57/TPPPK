@@ -66,4 +66,8 @@ class ProjectRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.joinProjectWithInvite(inviteCode)
     }
 
+    override suspend fun deleteProject(projectId: DocumentId): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.deleteProject(projectId.value)
+    }
+
 }

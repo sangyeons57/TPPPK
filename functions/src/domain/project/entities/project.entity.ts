@@ -13,6 +13,7 @@ export interface ProjectData {
   id: string;
   name: string;
   imageUrl?: string;
+  status: string;
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -33,6 +34,7 @@ export class ProjectEntity implements Project {
   // Keys matching Android Project.kt
   public static readonly KEY_NAME = "name";
   public static readonly KEY_IMAGE_URL = "imageUrl";
+  public static readonly KEY_STATUS = "status";
   public static readonly KEY_OWNER_ID = "ownerId";
 
   constructor(
@@ -175,6 +177,7 @@ export class ProjectEntity implements Project {
       id: this.id,
       name: this.name,
       imageUrl: this.image,
+      status: this.status,
       ownerId: this.ownerId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
@@ -188,7 +191,7 @@ export class ProjectEntity implements Project {
       data.ownerId,
       data.createdAt,
       data.updatedAt,
-      ProjectStatus.ACTIVE,
+      (data.status as ProjectStatus) || ProjectStatus.ACTIVE,
       1,
       undefined,
       data.imageUrl
@@ -219,6 +222,7 @@ export class ProjectEntity implements Project {
     ownerId: string,
     createdAt?: Date,
     updatedAt?: Date,
+    status?: ProjectStatus,
     imageUrl?: string
   ): ProjectEntity {
     return new ProjectEntity(
@@ -227,7 +231,7 @@ export class ProjectEntity implements Project {
       ownerId,
       createdAt || new Date(),
       updatedAt || new Date(),
-      ProjectStatus.ACTIVE,
+      status || ProjectStatus.ACTIVE,
       1,
       undefined,
       imageUrl

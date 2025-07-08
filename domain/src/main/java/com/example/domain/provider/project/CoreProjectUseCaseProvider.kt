@@ -24,6 +24,7 @@ import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFa
 import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import com.example.domain.usecase.project.JoinProjectWithTokenUseCase
 import com.example.domain.usecase.project.core.CreateProjectUseCase
+import com.example.domain.usecase.project.core.DeleteProjectUseCase
 import com.example.domain.usecase.project.core.DeleteProjectUseCaseImpl
 import com.example.domain.usecase.project.core.GenerateInviteLinkUseCase
 import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
@@ -248,7 +249,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
  */
 data class CoreProjectUseCases(
     val createProjectUseCase: CreateProjectUseCase,
-    val deleteProjectUseCase: DeleteProjectUseCaseImpl,
+    val deleteProjectUseCase: DeleteProjectUseCase,
     val renameProjectUseCase: RenameProjectUseCaseImpl,
     val getProjectDetailsStreamUseCase: GetProjectDetailsStreamUseCase,
     val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCaseImpl,
