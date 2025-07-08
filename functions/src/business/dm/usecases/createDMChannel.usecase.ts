@@ -102,7 +102,7 @@ export class CreateDMChannelUseCase {
         userId2, // wrapperId는 상대방 ID
         userId2, // otherUserId
         user2.name, // otherUserName
-        user2.profileImageUrl // otherUserImageUrl
+        user2.profileImageUrl || undefined // otherUserImageUrl (null-safe)
       );
 
       const saveWrapper1Result = await this.dmWrapperRepository.save(userId1, dmWrapper1);
@@ -115,7 +115,7 @@ export class CreateDMChannelUseCase {
         userId1, // wrapperId는 상대방 ID
         userId1, // otherUserId
         user1.name, // otherUserName
-        user1.profileImageUrl // otherUserImageUrl
+        user1.profileImageUrl || undefined // otherUserImageUrl (null-safe)
       );
 
       const saveWrapper2Result = await this.dmWrapperRepository.save(userId2, dmWrapper2);

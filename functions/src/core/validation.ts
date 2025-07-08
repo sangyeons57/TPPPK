@@ -48,12 +48,22 @@ export function isValidProjectName(name: string): boolean {
 
 // Image URL validation
 export function validateImageUrl(url: string): void {
+  // Allow empty string or null/undefined (optional image)
+  if (!url || url.trim() === "") {
+    return;
+  }
+  
   if (!url.startsWith("https://")) {
     throw new ValidationError("imageUrl", "Image must be a valid HTTPS URL");
   }
 }
 
 export function isValidImageUrl(url: string): boolean {
+  // Allow empty string or null/undefined (optional image)
+  if (!url || url.trim() === "") {
+    return true;
+  }
+  
   return url.startsWith("https://");
 }
 

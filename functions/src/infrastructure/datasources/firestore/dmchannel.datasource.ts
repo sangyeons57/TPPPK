@@ -12,7 +12,7 @@ export interface DMChannelDatasource {
 
 export class FirestoreDMChannelDataSource implements DMChannelDatasource {
   private readonly db = admin.firestore();
-  private readonly collectionName = "dmchannels";
+  private readonly collectionName = "dm_channels";
 
   /**
    * Helper method to convert Firestore document data to DMChannelEntity
