@@ -1,5 +1,7 @@
 package com.example.teamnovapersonalprojectprojectingkotlin
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -40,12 +42,18 @@ class MainActivity : ComponentActivity() {
 
     private var backPressedTime: Long = 0
     private var backToast: Toast? = null
+    
+    // 딥링크로부터 추출된 초대 코드를 저장
+    private var pendingInviteCode: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 앱 시작 성능 측정 시작
         super.onCreate(savedInstanceState)
         enableEdgeToEdge() // Edge-to-edge 디스플레이 활성화 (선택적)
 
+        // 초기 Intent 처리 (앱이 처음 시작될 때)
+        handleIntent(intent)
+        
         setupBackPressHandler()
         
         // Sentry 초기화 확인 (테스트 예외 제거됨 - 프로덕션 안정성을 위해)
@@ -71,7 +79,8 @@ class MainActivity : ComponentActivity() {
                     AppNavigationGraph(
                         navController = navController,
                         navigationManger = navigationManger,
-                        startDestination = decideStartDestination()
+                        startDestination = decideStartDestination(),
+                        pendingInviteCode = pendingInviteCode
                     )
                 }
             }
@@ -136,6 +145,66 @@ class MainActivity : ComponentActivity() {
             }
         }
         onBackPressedDispatcher.addCallback(this, callback)
+    }
+    
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { handleIntent(it) }
+    }
+    
+    /**
+     * Intent를 처리하여 딥링크에서 초대 코드를 추출합니다.
+     */
+    private fun handleIntent(intent: Intent) {
+        if (intent.action == Intent.ACTION_VIEW) {
+            intent.data?.let { uri ->
+                val inviteCode = extractInviteCodeFromUri(uri)
+                if (inviteCode != null) {
+                    pendingInviteCode = inviteCode
+                    // NavigationManger가 초기화된 후 네비게이션 수행
+                    if (::navigationManger.isInitialized) {
+                        navigateToJoinProject(inviteCode)
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * URI에서 초대 코드를 추출합니다.
+     * 
+     * 지원하는 URI 형식:
+     * - https://tpppk.app/invite/{code}
+     * - tpppk://invite/{code}
+     */
+    private fun extractInviteCodeFromUri(uri: Uri): String? {
+        return when {
+            // HTTPS 딥링크: https://tpppk.app/invite/{code}
+            uri.scheme == "https" && uri.host == "tpppk.app" -> {
+                val pathSegments = uri.pathSegments
+                if (pathSegments.size >= 2 && pathSegments[0] == "invite") {
+                    pathSegments[1]
+                } else null
+            }
+            // 커스텀 스킴: tpppk://invite/{code}
+            uri.scheme == "tpppk" && uri.host == "invite" -> {
+                val pathSegments = uri.pathSegments
+                if (pathSegments.isNotEmpty()) {
+                    pathSegments[0]
+                } else {
+                    // Query parameter로 전달된 경우: tpppk://invite?code={code}
+                    uri.getQueryParameter("code")
+                }
+            }
+            else -> null
+        }
+    }
+    
+    /**
+     * 초대 코드를 사용하여 프로젝트 참여 화면으로 네비게이션합니다.
+     */
+    private fun navigateToJoinProject(inviteCode: String) {
+        navigationManger.navigateToJoinProjectWithInviteCode(inviteCode)
     }
     
     /**

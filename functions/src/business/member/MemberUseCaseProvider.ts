@@ -2,14 +2,22 @@ import { MemberRepositoryFactory } from '../../domain/member/repositories/factor
 import { MemberRepositoryFactoryContext } from '../../domain/member/repositories/factory/MemberRepositoryFactoryContext';
 import { ProjectRepositoryFactory } from '../../domain/project/repositories/factory/ProjectRepositoryFactory';
 import { UserRepositoryFactory } from '../../domain/user/repositories/factory/UserRepositoryFactory';
+import { ProjectWrapperRepositoryFactory } from '../../domain/projectwrapper/repositories/factory/ProjectWrapperRepositoryFactory';
+import { InviteRepositoryFactory } from '../../domain/invite/repositories/factory/InviteRepositoryFactory';
+import { InviteRepositoryFactoryImpl } from '../../domain/invite/repositories/factory/InviteRepositoryFactoryImpl';
 import { MemberRepository } from '../../domain/member/repositories/member.repository';
 import { ProjectRepository } from '../../domain/project/repositories/project.repository';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
+import { ProjectWrapperRepository } from '../../domain/projectwrapper/repositories/projectwrapper.repository';
+import { InviteRepository } from '../../domain/invite/repositories/invite.repository';
 import {
   RemoveMemberUseCase,
   BlockMemberUseCase,
   LeaveMemberUseCase,
-  DeleteProjectUseCase
+  DeleteProjectUseCase,
+  GenerateInviteLinkUseCase,
+  JoinProjectWithInviteUseCase,
+  ValidateInviteCodeUseCase
 } from './usecases';
 
 export interface MemberUseCases {
@@ -17,18 +25,25 @@ export interface MemberUseCases {
   blockMemberUseCase: BlockMemberUseCase;
   leaveMemberUseCase: LeaveMemberUseCase;
   deleteProjectUseCase: DeleteProjectUseCase;
+  generateInviteLinkUseCase: GenerateInviteLinkUseCase;
+  joinProjectWithInviteUseCase: JoinProjectWithInviteUseCase;
+  validateInviteCodeUseCase: ValidateInviteCodeUseCase;
   
   // Common repositories for advanced use cases
   memberRepository: MemberRepository;
   projectRepository: ProjectRepository;
   userRepository: UserRepository;
+  projectWrapperRepository: ProjectWrapperRepository;
+  inviteRepository: InviteRepository;
 }
 
 export class MemberUseCaseProvider {
   constructor(
     private readonly memberRepositoryFactory: MemberRepositoryFactory,
     private readonly projectRepositoryFactory: ProjectRepositoryFactory,
-    private readonly userRepositoryFactory: UserRepositoryFactory
+    private readonly userRepositoryFactory: UserRepositoryFactory,
+    private readonly projectWrapperRepositoryFactory: ProjectWrapperRepositoryFactory,
+    private readonly inviteRepositoryFactory: InviteRepositoryFactory = new InviteRepositoryFactoryImpl()
   ) {}
 
   create(context?: MemberRepositoryFactoryContext): MemberUseCases {
@@ -36,6 +51,8 @@ export class MemberUseCaseProvider {
     const memberRepository = this.memberRepositoryFactory.create(context);
     const projectRepository = this.projectRepositoryFactory.create();
     const userRepository = this.userRepositoryFactory.create();
+    const projectWrapperRepository = this.projectWrapperRepositoryFactory.create();
+    const inviteRepository = this.inviteRepositoryFactory.create();
 
     return {
       removeMemberUseCase: new RemoveMemberUseCase(
@@ -57,11 +74,30 @@ export class MemberUseCaseProvider {
         projectRepository,
         userRepository
       ),
+      generateInviteLinkUseCase: new GenerateInviteLinkUseCase(
+        inviteRepository,
+        projectRepository,
+        memberRepository
+      ),
+      joinProjectWithInviteUseCase: new JoinProjectWithInviteUseCase(
+        inviteRepository,
+        projectRepository,
+        memberRepository,
+        projectWrapperRepository,
+        userRepository
+      ),
+      validateInviteCodeUseCase: new ValidateInviteCodeUseCase(
+        inviteRepository,
+        projectRepository,
+        memberRepository
+      ),
       
       // Common repositories
       memberRepository,
       projectRepository,
-      userRepository
+      userRepository,
+      projectWrapperRepository,
+      inviteRepository
     };
   }
 }

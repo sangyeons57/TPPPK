@@ -44,6 +44,18 @@ class JoinProjectViewModel @Inject constructor(
 
     private val _eventFlow = MutableSharedFlow<JoinProjectEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
+    
+    init {
+        // 딥링크로부터 전달된 초대 코드가 있는지 확인
+        val pendingInviteCode = navigationManger.getResult<String>("pending_invite_code")
+        pendingInviteCode?.let { inviteCode ->
+            onCodeOrLinkChange(inviteCode)
+            // 초대 코드를 자동으로 설정했음을 사용자에게 알림 (선택적)
+            viewModelScope.launch {
+                _eventFlow.emit(JoinProjectEvent.ShowSnackbar("초대 링크가 자동으로 입력되었습니다."))
+            }
+        }
+    }
 
     /**
      * 초대 코드 또는 링크 입력 변경 시 호출

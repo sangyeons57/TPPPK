@@ -153,6 +153,36 @@ interface FunctionsRemoteDataSource {
      * @return 성공 시 DM 채널 정보, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 프로젝트 초대 링크를 생성합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param expiresInHours 만료 시간 (시간 단위, 기본 24시간)
+     * @param maxUses 최대 사용 횟수 (nullable)
+     * @return 성공 시 초대 링크 정보, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun generateInviteLink(
+        projectId: String,
+        expiresInHours: Int = 24,
+        maxUses: Int? = null
+    ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 초대 코드를 검증합니다.
+     *
+     * @param inviteCode 초대 코드
+     * @return 성공 시 초대 정보, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun validateInviteCode(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 초대 코드를 사용하여 프로젝트에 참여합니다.
+     *
+     * @param inviteCode 초대 코드
+     * @return 성공 시 참여 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
 }
 
 @Singleton
@@ -592,6 +622,94 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 CustomResult.Success(resultData)
             } else {
                 CustomResult.Failure(Exception("Create DM channel function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun generateInviteLink(
+        projectId: String,
+        expiresInHours: Int,
+        maxUses: Int?
+    ): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mutableMapOf<String, Any?>(
+                "projectId" to projectId,
+                "inviterId" to currentUser.uid,
+                "expiresInHours" to expiresInHours
+            )
+            maxUses?.let { requestData["maxUses"] = it }
+
+            val callable = functions.getHttpsCallable("generateInviteLink")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Generate invite link function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun validateInviteCode(inviteCode: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser
+            
+            val requestData = mutableMapOf<String, Any?>("inviteCode" to inviteCode)
+            currentUser?.let { requestData["userId"] = it.uid }
+
+            val callable = functions.getHttpsCallable("validateInviteCode")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Validate invite code function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                "inviteCode" to inviteCode,
+                "userId" to currentUser.uid
+            )
+
+            val callable = functions.getHttpsCallable("joinProjectWithInvite")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Join project with invite function call timed out"))
             }
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e

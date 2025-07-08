@@ -6,6 +6,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.friend.FriendUseCaseProvider
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.feature_member_list.dialog.ui.FriendItem
@@ -38,11 +39,13 @@ sealed class AddMemberDialogEvent {
 @HiltViewModel
 class AddMemberViewModel @Inject constructor(
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
     private val friendUseCaseProvider: FriendUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
 ) : ViewModel() {
 
     private var projectMemberUseCases: com.example.domain.provider.project.ProjectMemberUseCases? = null
+    private var coreProjectUseCases: com.example.domain.provider.project.CoreProjectUseCases? = null
     private var friendUseCases: com.example.domain.provider.friend.FriendUseCases? = null
     private var authSessionUseCases: com.example.domain.provider.auth.AuthSessionUseCases? = null
 
@@ -120,54 +123,94 @@ class AddMemberViewModel @Inject constructor(
      * 프로젝트 초대 링크를 로드합니다.
      */
     fun loadProjectInviteLink(projectId: DocumentId) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingLink = true) }
-            
-            // TODO: 실제 프로젝트 초대 링크 조회 UseCase 구현
-            // 임시로 기본 링크 생성
-            try {
-                kotlinx.coroutines.delay(1000) // 시뮬레이션
-                val mockLink = "https://projecting.app/join/${projectId.value}"
-                _uiState.update { 
-                    it.copy(
-                        projectInviteLink = mockLink, 
-                        isLoadingLink = false
-                    ) 
-                }
-            } catch (e: Exception) {
-                _uiState.update { 
-                    it.copy(
-                        isLoadingLink = false, 
-                        error = "초대 링크 로딩 실패: ${e.message}"
-                    ) 
-                }
-            }
-        }
+        // 기존 초대 링크가 있다면 생성하지 않고 바로 새로운 링크 생성을 권장
+        generateProjectInviteLink(projectId)
     }
 
     /**
      * 새로운 프로젝트 초대 링크를 생성합니다.
      */
     fun generateProjectInviteLink(projectId: DocumentId) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingLink = true) }
-            
-            // TODO: 실제 프로젝트 초대 링크 생성 UseCase 구현
-            try {
-                kotlinx.coroutines.delay(1000) // 시뮬레이션
-                val newLink = "https://projecting.app/join/${projectId.value}_${System.currentTimeMillis()}"
-                _uiState.update { 
-                    it.copy(
-                        projectInviteLink = newLink, 
-                        isLoadingLink = false
-                    ) 
+        // CoreProjectUseCases 초기화
+        if (coreProjectUseCases == null && authSessionUseCases != null) {
+            val currentUser = authSessionUseCases!!.authRepository.getCurrentUserSession()
+            when (currentUser) {
+                is CustomResult.Success -> {
+                    coreProjectUseCases = coreProjectUseCaseProvider.createForProject(
+                        projectId = projectId,
+                        userId = currentUser.data.userId
+                    )
                 }
-                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("새로운 초대 링크가 생성되었습니다."))
+                else -> {
+                    viewModelScope.launch {
+                        _uiState.update { 
+                            it.copy(
+                                isLoadingLink = false, 
+                                error = "사용자 인증 정보를 가져올 수 없습니다."
+                            ) 
+                        }
+                    }
+                    return
+                }
+            }
+        }
+
+        val useCases = coreProjectUseCases ?: return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingLink = true, error = null) }
+            
+            try {
+                val currentUser = authSessionUseCases!!.authRepository.getCurrentUserSession()
+                when (currentUser) {
+                    is CustomResult.Success -> {
+                        val result = useCases.generateInviteLinkUseCase(
+                            projectId = projectId,
+                            expiresInHours = 24, // 기본 24시간
+                            maxUses = null // 무제한 사용
+                        )
+                        
+                        when (result) {
+                            is CustomResult.Success -> {
+                                _uiState.update { 
+                                    it.copy(
+                                        projectInviteLink = result.data.inviteLink,
+                                        isLoadingLink = false,
+                                        error = null
+                                    ) 
+                                }
+                                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("새로운 초대 링크가 생성되었습니다."))
+                            }
+                            is CustomResult.Failure -> {
+                                _uiState.update { 
+                                    it.copy(
+                                        isLoadingLink = false, 
+                                        error = "초대 링크 생성 실패: ${result.error.message}"
+                                    ) 
+                                }
+                            }
+                            else -> {
+                                _uiState.update { it.copy(isLoadingLink = true) }
+                            }
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { 
+                            it.copy(
+                                isLoadingLink = false, 
+                                error = "사용자 인증 실패: ${currentUser.error.message}"
+                            ) 
+                        }
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoadingLink = true) }
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.update { 
                     it.copy(
                         isLoadingLink = false, 
-                        error = "초대 링크 생성 실패: ${e.message}"
+                        error = "초대 링크 생성 중 오류 발생: ${e.message}"
                     ) 
                 }
             }

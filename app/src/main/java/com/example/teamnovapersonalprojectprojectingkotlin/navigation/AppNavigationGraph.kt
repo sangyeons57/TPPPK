@@ -103,7 +103,8 @@ import kotlinx.coroutines.launch
 fun AppNavigationGraph(
     navController: NavHostController,
     navigationManger: NavigationManger,
-    startDestination: String = "auth"
+    startDestination: String = "auth",
+    pendingInviteCode: String? = null
 ) {
 
     val activity = (LocalContext.current as? Activity)
@@ -111,6 +112,15 @@ fun AppNavigationGraph(
     val snackbarHostState = remember { SnackbarHostState() } // 스낵바 사용 시
     var backPressedTime by remember { mutableStateOf(0L) }
     LocalContext.current // Toast 사용 시
+
+    // 딥링크로부터 초대 코드가 있을 경우 자동으로 프로젝트 참여 화면으로 이동
+    LaunchedEffect(pendingInviteCode) {
+        pendingInviteCode?.let { inviteCode ->
+            // 약간의 지연을 주어 네비게이션이 초기화되도록 함
+            delay(500)
+            navigationManger.navigateToJoinProjectWithInviteCode(inviteCode)
+        }
+    }
 
     BackHandler(enabled = navController.previousBackStackEntry == null) {
         if ((System.currentTimeMillis() - backPressedTime) < 2000L) { // 2초 안에 다시 누르면

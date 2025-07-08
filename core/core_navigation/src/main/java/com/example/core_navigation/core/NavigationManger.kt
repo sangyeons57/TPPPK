@@ -118,6 +118,11 @@ interface NavigationManger {
     fun navigateToJoinProject(navOptions: NavOptions? = null)
     
     /**
+     * Navigates to join project screen with a pre-filled invite code.
+     */
+    fun navigateToJoinProjectWithInviteCode(inviteCode: String, navOptions: NavOptions? = null)
+    
+    /**
      * Navigates to calendar screen with specific date.
      */
     fun navigateToCalendar(year: Int, month: Int, day: Int, navOptions: NavOptions? = null)

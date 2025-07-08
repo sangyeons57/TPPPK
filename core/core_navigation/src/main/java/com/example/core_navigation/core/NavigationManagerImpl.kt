@@ -248,6 +248,12 @@ class NavigationManagerImpl @Inject constructor(
     override fun navigateToJoinProject(navOptions: NavOptions?) {
         executeNavigationOnParent(JoinProjectRoute.toAppRoutePath(), navOptions)
     }
+    
+    override fun navigateToJoinProjectWithInviteCode(inviteCode: String, navOptions: NavOptions?) {
+        // Navigate to JoinProject and set the invite code as a result that can be consumed
+        setResult("pending_invite_code", inviteCode)
+        executeNavigationOnParent(JoinProjectRoute.toAppRoutePath(), navOptions)
+    }
 
     override fun navigateToCalendar(year: Int, month: Int, day: Int, navOptions: NavOptions?) {
         executeNavigationOnParent(Calendar24HourRoute(year, month, day).toAppRoutePath(), navOptions)

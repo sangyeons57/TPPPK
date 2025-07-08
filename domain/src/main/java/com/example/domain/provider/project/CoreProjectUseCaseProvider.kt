@@ -25,9 +25,11 @@ import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import com.example.domain.usecase.project.JoinProjectWithTokenUseCase
 import com.example.domain.usecase.project.core.CreateProjectUseCase
 import com.example.domain.usecase.project.core.DeleteProjectUseCaseImpl
+import com.example.domain.usecase.project.core.GenerateInviteLinkUseCase
 import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
 import com.example.domain.usecase.project.core.GetUserParticipatingProjectsUseCaseImpl
 import com.example.domain.usecase.project.core.RenameProjectUseCaseImpl
+import com.example.domain.usecase.project.core.ValidateInviteCodeUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.round
@@ -130,6 +132,14 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository
             ),
             
+            generateInviteLinkUseCase = GenerateInviteLinkUseCase(
+                projectRepository = projectRepository
+            ),
+            
+            validateInviteCodeUseCase = ValidateInviteCodeUseCase(
+                projectRepository = projectRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             projectRepository = projectRepository
@@ -218,6 +228,14 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository
             ),
             
+            generateInviteLinkUseCase = GenerateInviteLinkUseCase(
+                projectRepository = projectRepository
+            ),
+            
+            validateInviteCodeUseCase = ValidateInviteCodeUseCase(
+                projectRepository = projectRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             projectRepository = projectRepository
@@ -236,6 +254,8 @@ data class CoreProjectUseCases(
     val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCaseImpl,
     val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase,
     val joinProjectWithTokenUseCase: JoinProjectWithTokenUseCase,
+    val generateInviteLinkUseCase: GenerateInviteLinkUseCase,
+    val validateInviteCodeUseCase: ValidateInviteCodeUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

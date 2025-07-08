@@ -50,4 +50,20 @@ class ProjectRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.uploadProjectProfileImage(projectId, uri)
     }
 
+    override suspend fun generateInviteLink(
+        projectId: DocumentId,
+        expiresInHours: Int,
+        maxUses: Int?
+    ): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.generateInviteLink(projectId.value, expiresInHours, maxUses)
+    }
+
+    override suspend fun validateInviteCode(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.validateInviteCode(inviteCode)
+    }
+
+    override suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.joinProjectWithInvite(inviteCode)
+    }
+
 }

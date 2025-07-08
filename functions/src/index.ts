@@ -40,3 +40,14 @@ export {getFriendRequestsFunction as getFriendRequests} from "./triggers/friend/
 
 // DM management functions
 export {createDMChannelFunction as createDMChannel} from "./triggers/dm/dmManagement.trigger";
+
+// Member management functions
+export {removeMemberFunction as removeMember} from "./triggers/member/memberManagement.trigger";
+export {blockMemberFunction as blockMember} from "./triggers/member/memberManagement.trigger";
+export {leaveMemberFunction as leaveMember} from "./triggers/member/memberManagement.trigger";
+export {deleteProjectFunction as deleteProject} from "./triggers/member/memberManagement.trigger";
+
+// Invite management functions
+export {generateInviteLinkFunction as generateInviteLink} from "./triggers/member/memberManagement.trigger";
+export {validateInviteCodeFunction as validateInviteCode} from "./triggers/member/memberManagement.trigger";
+export {joinProjectWithInviteFunction as joinProjectWithInvite} from "./triggers/member/memberManagement.trigger";

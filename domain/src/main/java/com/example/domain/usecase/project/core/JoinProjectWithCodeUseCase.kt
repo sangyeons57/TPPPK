@@ -19,6 +19,31 @@ class JoinProjectWithCodeUseCase @Inject constructor(
      * @return 성공 시 프로젝트 ID가 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
     suspend operator fun invoke(code: String): CustomResult<String, Exception> {
-        return CustomResult.Failure(Exception("미구현 사용할지 고민중"))
+        if (code.isBlank()) {
+            return CustomResult.Failure(Exception("초대 코드가 비어있습니다."))
+        }
+
+        return when (val result = projectRepository.joinProjectWithInvite(code)) {
+            is CustomResult.Success -> {
+                val projectId = result.data["projectId"] as? String
+                if (projectId != null) {
+                    CustomResult.Success(projectId)
+                } else {
+                    CustomResult.Failure(Exception("프로젝트 참여 응답에서 프로젝트 ID를 찾을 수 없습니다."))
+                }
+            }
+            is CustomResult.Failure -> {
+                CustomResult.Failure(result.error)
+            }
+            is CustomResult.Loading -> {
+                CustomResult.Loading
+            }
+            is CustomResult.Initial -> {
+                CustomResult.Initial
+            }
+            is CustomResult.Progress -> {
+                CustomResult.Loading
+            }
+        }
     }
 } 

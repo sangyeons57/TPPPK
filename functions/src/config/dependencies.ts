@@ -129,7 +129,8 @@ export class DependencyConfig {
       new MemberUseCaseProvider(
         container.get(ProviderKeys.MEMBER_REPOSITORY_FACTORY),
         container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY),
-        container.get(ProviderKeys.USER_REPOSITORY_FACTORY)
+        container.get(ProviderKeys.USER_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.PROJECT_WRAPPER_REPOSITORY_FACTORY)
       )
     );
 
