@@ -188,6 +188,22 @@ class HomeViewModel @Inject constructor(
         startUserStream()
     }
     
+    /**
+     * 선택 상태를 초기화합니다.
+     * 필요시 외부에서 호출하여 상태를 리셋할 수 있습니다.
+     */
+    fun resetSelectionState() {
+        Log.d("HomeViewModel", "Resetting selection state")
+        _uiState.update { it.copy(
+            selectedProjectId = null,
+            selectedDmId = null,
+            selectedTopSection = TopSection.DMS,
+            projectName = "",
+            projectDescription = null,
+            projectStructure = ProjectStructureUiState()
+        )}
+    }
+    
     private fun startUserStream() {
         userStreamJob?.cancel()
         userStreamJob = viewModelScope.launch {
@@ -499,74 +515,26 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "=== onProjectClick START === projectId=${projectId.value}")
         
         viewModelScope.launch {
-            // 프로젝트 ID가 이미 선택되어 있으면 무시
+            // 먼저 항상 프로젝트 삭제 상태를 확인 (선택 여부와 무관)
+            if (::coreProjectUseCases.isInitialized) {
+                Log.d("HomeViewModel", "Checking if project is deleted: $projectId")
+                
+                if (isProjectDeleted(projectId)) {
+                    Log.w("HomeViewModel", "Project $projectId is deleted, removing wrapper")
+                    return@launch // isProjectDeleted에서 이미 removeDeletedProject 호출
+                }
+            }
+            
+            // 프로젝트 ID가 이미 선택되어 있으면 무시 (삭제되지 않은 프로젝트인 경우에만)
             if (_uiState.value.selectedProjectId == projectId) {
                 Log.d("HomeViewModel", "Project already selected, returning")
                 return@launch
             }
             
-            Log.d("HomeViewModel", "onProjectClick called for projectId: $projectId")
+            Log.d("HomeViewModel", "Proceeding with project selection for projectId: $projectId")
             
-            // 먼저 프로젝트가 삭제되었는지 실시간으로 확인
-            if (::coreProjectUseCases.isInitialized) {
-                try {
-                    // 스냅샷 리스너를 통해 실시간으로 프로젝트 상태 확인
-                    coreProjectUseCases.getProjectDetailsStreamUseCase(projectId)
-                        .filter { it !is CustomResult.Loading && it !is CustomResult.Initial }
-                        .take(1) // Loading/Initial 제외하고 첫 번째 실제 값만 받음
-                        .collect { result ->
-                            when (result) {
-                                is CustomResult.Success -> {
-                                    val project = result.data
-                                    Log.d("HomeViewModel", "Project found: ${project.name.value}, status: ${project.status}")
-                                    
-                                    // 프로젝트 상태 확인 - DELETED 상태인 경우 처리
-                                    if (project.status == ProjectStatus.DELETED) {
-                                        Log.w("HomeViewModel", "Project $projectId is marked as DELETED")
-                                        removeDeletedProject(projectId, project.name.value)
-                                        return@collect
-                                    }
-                                    
-                                    // 정상 프로젝트인 경우 기존 로직 실행
-                                    proceedWithProjectSelection(projectId)
-                                }
-                                is CustomResult.Failure -> {
-                                    // 프로젝트 로딩 실패 - 삭제된 프로젝트일 가능성
-                                    Log.w("HomeViewModel", "Failed to load project details for $projectId: ${result.error.message}")
-                                    
-                                    // 프로젝트 이름 찾기 (UI 상태에서)
-                                    val projectName = _uiState.value.projects.find { it.id == projectId }?.name?.value ?: "알 수 없는 프로젝트"
-                                    
-                                    // 특정 에러 메시지들은 삭제된 프로젝트로 간주
-                                    val errorMessage = result.error.message?.lowercase() ?: ""
-                                    if (errorMessage.contains("not found") || 
-                                        errorMessage.contains("permission") || 
-                                        errorMessage.contains("failed to deserialize")) {
-                                        Log.w("HomeViewModel", "Project appears to be deleted, removing wrapper")
-                                        removeDeletedProject(projectId, projectName)
-                                    } else {
-                                        // 다른 에러의 경우 기본 동작 수행
-                                        proceedWithProjectSelection(projectId)
-                                    }
-                                }
-                                else -> {
-                                    Log.d("HomeViewModel", "Unexpected result type: $result")
-                                    // 예상치 못한 상태의 경우 기본 동작 수행
-                                    proceedWithProjectSelection(projectId)
-                                }
-                            }
-                        }
-                } catch (e: Exception) {
-                    Log.e("HomeViewModel", "Error checking project details for $projectId", e)
-                    
-                    // 예외 발생 시 기본 동작 수행
-                    proceedWithProjectSelection(projectId)
-                }
-            } else {
-                Log.w("HomeViewModel", "coreProjectUseCases not initialized yet")
-                // UseCases가 초기화되지 않은 경우 기본 동작 수행
-                proceedWithProjectSelection(projectId)
-            }
+            // 정상 프로젝트인 경우 기존 로직 실행
+            proceedWithProjectSelection(projectId)
         }
     }
     
@@ -1148,6 +1116,64 @@ class HomeViewModel @Inject constructor(
     
     fun navigateToCalendar(year: Int, month: Int, day: Int) {
         navigationManger.navigateToCalendar(year, month, day)
+    }
+    
+    /**
+     * 프로젝트가 삭제되었는지 확인합니다.
+     * 삭제된 프로젝트인 경우 자동으로 제거 처리를 수행합니다.
+     *
+     * @param projectId 확인할 프로젝트 ID
+     * @return true if project is deleted and removed, false otherwise
+     */
+    private suspend fun isProjectDeleted(projectId: DocumentId): Boolean {
+        return try {
+            var isDeleted = false
+            
+            // 스냅샷 리스너를 통해 실시간으로 프로젝트 상태 확인
+            coreProjectUseCases.getProjectDetailsStreamUseCase(projectId)
+                .filter { it !is CustomResult.Loading && it !is CustomResult.Initial }
+                .take(1) // Loading/Initial 제외하고 첫 번째 실제 값만 받음
+                .collect { result ->
+                    when (result) {
+                        is CustomResult.Success -> {
+                            val project = result.data
+                            Log.d("HomeViewModel", "Project found: ${project.name.value}, status: ${project.status}")
+                            
+                            // 프로젝트 상태 확인 - DELETED 상태인 경우 처리
+                            if (project.status == ProjectStatus.DELETED) {
+                                Log.w("HomeViewModel", "Project $projectId is marked as DELETED")
+                                removeDeletedProject(projectId, project.name.value)
+                                isDeleted = true
+                            }
+                        }
+                        is CustomResult.Failure -> {
+                            // 프로젝트 로딩 실패 - 삭제된 프로젝트일 가능성
+                            Log.w("HomeViewModel", "Failed to load project details for $projectId: ${result.error.message}")
+                            
+                            // 프로젝트 이름 찾기 (UI 상태에서)
+                            val projectName = _uiState.value.projects.find { it.id == projectId }?.name?.value ?: "알 수 없는 프로젝트"
+                            
+                            // 특정 에러 메시지들은 삭제된 프로젝트로 간주
+                            val errorMessage = result.error.message?.lowercase() ?: ""
+                            if (errorMessage.contains("not found") || 
+                                errorMessage.contains("permission") || 
+                                errorMessage.contains("failed to deserialize")) {
+                                Log.w("HomeViewModel", "Project appears to be deleted, removing wrapper")
+                                removeDeletedProject(projectId, projectName)
+                                isDeleted = true
+                            }
+                        }
+                        else -> {
+                            Log.d("HomeViewModel", "Unexpected result type: $result")
+                        }
+                    }
+                }
+            
+            isDeleted
+        } catch (e: Exception) {
+            Log.e("HomeViewModel", "Error checking project deletion status for $projectId", e)
+            false // 예외 발생 시 정상 프로젝트로 간주
+        }
     }
     
     /**
