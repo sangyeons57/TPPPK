@@ -12,7 +12,6 @@ import com.example.data.model.DTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.InviteStatus
 import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.invite.InviteCode
 import com.google.firebase.firestore.PropertyName
 import java.util.Date
 
@@ -22,8 +21,6 @@ import java.util.Date
 data class InviteDTO(
     @DocumentId 
     override val id: String = "",
-    @get:PropertyName(INVITE_LINK)
-     val inviteCode: String = "", // 고유한 초대 코드, 상수명은 INVITE_LINK
     @get:PropertyName(STATUS)
      val status: InviteStatus = InviteStatus.ACTIVE, // "ACTIVE", "INACTIVE", "EXPIRED"
     @get:PropertyName(CREATED_BY)
@@ -50,7 +47,6 @@ data class InviteDTO(
     override fun toDomain(): Invite  {
         return Invite.fromDataSource (
             id = VODocumentId(id),
-            inviteCode = InviteCode(inviteCode),
             status = status,
             createdBy = OwnerId(createdBy),
             createdAt = createdAt?.toInstant(),
@@ -67,7 +63,6 @@ data class InviteDTO(
 fun Invite.toDto(): InviteDTO {
     return InviteDTO(
         id = id.value,
-        inviteCode = inviteCode.value,
         status = status,
         createdBy = createdBy.value,
         expiresAt = expiresAt?.let{DateTimeUtil.instantToFirebaseTimestamp(it)},
