@@ -296,21 +296,29 @@ class ProjectSettingViewModel @Inject constructor(
 
     // --- 프로젝트 삭제 ---
     fun requestDeleteProject() {
-        _uiState.update { it.copy(showRenameProjectDialog = true, showDeleteProjectDialog = true) }
+        _uiState.update { it.copy(showDeleteProjectDialog = true) }
     }
 
     fun confirmDeleteProject() {
+        dismiss() // 다이얼로그 닫기
         viewModelScope.launch {
-             _uiState.update { it.copy(isLoading = true) } // Show loading
+            _uiState.update { it.copy(isLoading = true) } // Show loading
             println("Deleting Project $projectId (UseCase)")
             val result = coreProjectUseCases.deleteProjectUseCase(projectId)
-            if (result.isSuccess) {
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
-                 navigationManger.navigateBack() // Navigate back on success
-                 // No need to turn off loading as we are navigating away
-            } else {
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: ${result.exceptionOrNull()?.message}"))
-                 _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
+                    navigationManger.navigateBack() // Navigate back on success
+                    // No need to turn off loading as we are navigating away
+                }
+                is CustomResult.Failure -> {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: ${result.error.message}"))
+                    _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                }
+                else -> {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: 알 수 없는 오류"))
+                    _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                }
             }
         }
     }

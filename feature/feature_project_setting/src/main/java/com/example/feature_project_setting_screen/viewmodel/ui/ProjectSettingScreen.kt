@@ -93,7 +93,6 @@ fun ProjectSettingScreen(
     // 다이얼로그 상태
     var showDeleteCategoryDialog by remember { mutableStateOf<CategoryUiModel?>(null) } // Changed type
     var showDeleteChannelDialog by remember { mutableStateOf<ChannelUiModel?>(null) } // Changed type
-    var showDeleteProjectDialog by remember { mutableStateOf(false) } // 프로젝트 삭제 확인 다이얼로그
 
     // 이벤트 처리
     LaunchedEffect(Unit) {
@@ -203,21 +202,20 @@ fun ProjectSettingScreen(
     }
 
     // 프로젝트 삭제 확인 다이얼로그
-    if (showDeleteProjectDialog) {
+    if (uiState.showDeleteProjectDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteProjectDialog = false },
+            onDismissRequest = { viewModel.dismiss() },
             title = { Text("프로젝트 삭제") },
             text = { Text("정말로 '${uiState.projectName}' 프로젝트를 삭제하시겠습니까? 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.confirmDeleteProject()
-                        showDeleteProjectDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("삭제") }
             },
-            dismissButton = { TextButton(onClick = { showDeleteProjectDialog = false }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { viewModel.dismiss() }) { Text("취소") } }
         )
     }
 }
