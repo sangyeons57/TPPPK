@@ -1,4 +1,5 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {logger} from "firebase-functions/v2";
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {Providers} from "../../config/dependencies";
 
@@ -181,33 +182,73 @@ export const deleteProjectFunction = onCall(
   },
   async (request) => {
     try {
+      logger.info("🚀 Starting deleteProject function");
+
       const {
         projectId,
         deletedBy,
       } = request.data as DeleteProjectRequest;
 
+      logger.info(`📝 Request data: projectId=${projectId}, deletedBy=${deletedBy}`);
+
       if (!projectId || !deletedBy) {
+        logger.error(`❌ Missing required parameters: projectId=${projectId}, deletedBy=${deletedBy}`);
         throw new HttpsError("invalid-argument", "Project ID and deletedBy are required");
       }
 
-      const memberUseCases = Providers.getMemberProvider().create();
+      logger.info(`🔧 Creating member use cases provider for projectId=${projectId}`);
+      const memberUseCases = Providers.getMemberProvider().create({
+        projectId: projectId,
+      });
 
+      logger.info(`🔍 Checking member existence before deletion for user=${deletedBy} in project=${projectId}, expectedPath=projects/${projectId}/members`);
+
+      // 먼저 멤버가 존재하는지 확인
+      const memberCheckResult = await memberUseCases.memberRepository.findByUserId(deletedBy);
+
+      logger.info(`👤 Member existence check result: success=${memberCheckResult?.success}, error=${!memberCheckResult.success ? memberCheckResult.error?.message : "none"}, projectId=${projectId}, userId=${deletedBy}`);
+
+      logger.info("⚙️ Executing deleteProjectUseCase");
       const result = await memberUseCases.deleteProjectUseCase.execute({
         projectId,
         deletedBy,
       });
 
+      logger.info(`📊 UseCase result: success=${result.success}`);
+
       if (!result.success) {
-        throw new HttpsError("internal", result.error.message);
+        // Check for specific error types to provide better error messages
+        const errorMessage = result.error?.message || "Unknown error";
+        const errorName = result.error?.name || "UnknownError";
+        logger.error(`💥 UseCase error details: name=${errorName}, message=${errorMessage}`);
+        logger.error(`❌ Delete project failed: ${errorMessage}`);
+
+        // Map specific error types to appropriate HTTP errors
+        if (errorMessage.includes("not found")) {
+          throw new HttpsError("not-found", errorMessage);
+        }
+        if (errorMessage.includes("permission") || errorMessage.includes("Only project members")) {
+          throw new HttpsError("permission-denied", errorMessage);
+        }
+        if (errorMessage.includes("validation") || errorMessage.includes("required")) {
+          throw new HttpsError("invalid-argument", errorMessage);
+        }
+
+        throw new HttpsError("internal", `Delete project failed: ${errorMessage}`);
       }
 
+      logger.info("✅ Delete project completed successfully");
       return {success: true, data: result.data};
     } catch (error) {
-      console.error("Error in deleteProject:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown internal error";
+      const errorName = error instanceof Error ? error.name : "UnknownError";
+      logger.error(`💥 Error in deleteProject function: name=${errorName}, message=${errorMessage}`);
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError("internal", "Internal server error");
+      // Provide more specific error information
+      logger.error(`🔥 Unhandled error: ${errorMessage}`);
+      throw new HttpsError("internal", `Internal server error: ${errorMessage}`);
     }
   }
 );
