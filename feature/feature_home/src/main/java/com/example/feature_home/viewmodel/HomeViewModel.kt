@@ -1177,6 +1177,44 @@ class HomeViewModel @Inject constructor(
     }
     
     /**
+     * 삭제된 프로젝트로 인한 상태 정리를 처리합니다.
+     * 현재 선택된 프로젝트가 삭제된 경우 DM 상태로 자동 전환합니다.
+     */
+    private fun handleDeletedProjectStateCleanup(deletedProjectId: DocumentId) {
+        val currentState = _uiState.value
+        
+        // 1. 선택된 프로젝트가 삭제된 프로젝트인 경우 DM으로 전환
+        if (currentState.selectedProjectId == deletedProjectId) {
+            Log.d("HomeViewModel", "Selected project $deletedProjectId was deleted, switching to DM")
+            _uiState.update { it.copy(
+                selectedProjectId = null,
+                selectedTopSection = TopSection.DMS,
+                projectName = "",
+                projectDescription = null,
+                projectStructure = ProjectStructureUiState()
+            )}
+        }
+        // 2. 현재 프로젝트 탭이 선택되어 있지만 선택된 프로젝트가 없는 경우도 DM으로 전환
+        else if (currentState.selectedTopSection == TopSection.PROJECTS && currentState.selectedProjectId == null) {
+            Log.d("HomeViewModel", "Project tab selected but no project available, switching to DM")
+            _uiState.update { it.copy(
+                selectedTopSection = TopSection.DMS
+            )}
+        }
+        // 3. 프로젝트 목록에서 삭제된 프로젝트가 마지막 프로젝트였는지 확인
+        else if (currentState.selectedTopSection == TopSection.PROJECTS && currentState.projects.size <= 1) {
+            Log.d("HomeViewModel", "No more projects available, switching to DM")
+            _uiState.update { it.copy(
+                selectedProjectId = null,
+                selectedTopSection = TopSection.DMS,
+                projectName = "",
+                projectDescription = null,
+                projectStructure = ProjectStructureUiState()
+            )}
+        }
+    }
+    
+    /**
      * 삭제된 프로젝트를 처리합니다.
      * ProjectWrapper를 제거하고 사용자에게 알림을 표시합니다.
      */
@@ -1196,24 +1234,22 @@ class HomeViewModel @Inject constructor(
                             // 프로젝트 삭제 이벤트 발생
                             _eventFlow.emit(HomeEvent.ProjectDeleted(projectId, projectName))
                             
-                            // 선택된 프로젝트가 삭제된 프로젝트인 경우 선택 해제
-                            if (_uiState.value.selectedProjectId == projectId) {
-                                _uiState.update { it.copy(
-                                    selectedProjectId = null,
-                                    selectedTopSection = TopSection.DMS,
-                                    projectName = "",
-                                    projectDescription = null,
-                                    projectStructure = ProjectStructureUiState()
-                                )}
-                            }
+                            // 삭제된 프로젝트 처리 및 상태 정리
+                            handleDeletedProjectStateCleanup(projectId)
                         }
                         is CustomResult.Failure -> {
                             Log.e("HomeViewModel", "Failed to remove ProjectWrapper for $projectId", deleteResult.error)
                             _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트 제거 중 오류가 발생했습니다."))
+                            
+                            // 실패한 경우에도 상태 정리는 수행 (UI 일관성 유지)
+                            handleDeletedProjectStateCleanup(projectId)
                         }
                         else -> {
                             Log.w("HomeViewModel", "Unexpected result from deleteProjectsWrapperUseCase: $deleteResult")
                             _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트 제거 중 문제가 발생했습니다."))
+                            
+                            // 예상치 못한 결과인 경우에도 상태 정리 수행
+                            handleDeletedProjectStateCleanup(projectId)
                         }
                     }
                 } catch (e: Exception) {
