@@ -12,7 +12,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogBuilder
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
 import com.example.domain.model.base.Category
-import com.example.domain.model.base.DMChannel
+import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
@@ -33,8 +33,6 @@ import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.ProjectUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -224,37 +222,13 @@ class HomeViewModel @Inject constructor(
         loadDms()
     }
 
-    // Mapper function DMChannel -> DmUiModel
-    // DMChannel 객체에서 DmUiModel에 필요한 정보를 추출합니다.
-    private suspend fun toDmUiModel(dmChannel: DMChannel, currentUserId: String): DmUiModel {
-        val partnerId = dmChannel.participants.firstOrNull { it.value != currentUserId }
-        var partnerName = UserName.EMPTY
-        var partnerProfileImageUrl: ImageUrl? = null
-
-        if (partnerId != null && partnerId.value.isNotEmpty()) {
-            // GetUserInfoUseCase returns Flow<CustomResult<User, Exception>>
-            // We take the first result from this flow.
-            when (val userInfoResult =
-                userUseCases.getUserStreamUseCase(DocumentId.from(partnerId)).first()) {
-                is CustomResult.Success -> {
-                    partnerName = userInfoResult.data.name // Assuming User model has 'name'
-                    partnerProfileImageUrl =
-                        userInfoResult.data.profileImageUrl // Assuming User model has 'profileImageUrl'
-                    Log.d("HomeViewModel", "Partner info success for $partnerId: Name=$partnerName")
-                }
-                is CustomResult.Failure -> {
-                    Log.e("HomeViewModel", "Failed to get partner info for $partnerId", userInfoResult.error)
-                }
-                else -> {
-                    Log.d("HomeViewModel", "Fetching partner info for $partnerId resulted in: $userInfoResult (e.g. Loading/Initial)")
-                }
-            }
-        }
-
+    // Mapper function DMWrapper -> DmUiModel
+    // DMWrapper 객체에서 DmUiModel에 필요한 정보를 직접 추출합니다.
+    private fun toDmUiModel(dmWrapper: DMWrapper): DmUiModel {
         return DmUiModel(
-            channelId = dmChannel.id,
-            partnerName = partnerName,
-            partnerProfileImageUrl = partnerProfileImageUrl,
+            channelId = dmWrapper.id,
+            partnerName = dmWrapper.otherUserName,
+            partnerProfileImageUrl = dmWrapper.otherUserImageUrl,
         )
     }
 
@@ -395,9 +369,10 @@ class HomeViewModel @Inject constructor(
                         }
 
                         if (::dmUseCases.isInitialized) {
-                            dmUseCases.getUserDmChannelsUseCase()
-                                .collectLatest { result: CustomResult<List<DMChannel>, Exception> ->
-                                    Log.d("HomeViewModel", "Received DM channels result: $result")
+                            // 새로운 GetUserDmWrappersUseCase를 사용하여 실시간 업데이트 구현
+                            dmUseCases.getUserDmWrappersUseCase()
+                                .collectLatest { result: CustomResult<List<DMWrapper>, Exception> ->
+                                    Log.d("HomeViewModel", "Received DM wrappers result: $result")
                                     when (result) {
                                         is CustomResult.Loading -> {
                                             _uiState.update {
@@ -411,17 +386,12 @@ class HomeViewModel @Inject constructor(
                                         is CustomResult.Success -> {
                                             Log.d(
                                                 "HomeViewModel",
-                                                "Successfully fetched DM channels: ${result.data.size} channels."
+                                                "Successfully fetched DM wrappers: ${result.data.size} wrappers."
                                             )
-                                            // Map DMChannel domain models to DmUiModel, fetching partner info
-                                            val dmUiModels = result.data.map { dmChannel ->
-                                                async {
-                                                    toDmUiModel(
-                                                        dmChannel,
-                                                        currentUser.id.value
-                                                    )
-                                                } // Launch async mapping for each
-                                            }.awaitAll() // Wait for all mappings to complete
+                                            // DMWrapper에서 DmUiModel로 직접 변환 (실시간 업데이트)
+                                            val dmUiModels = result.data.map { dmWrapper ->
+                                                toDmUiModel(dmWrapper)
+                                            }
                                             _uiState.update { state ->
                                                 state.copy(
                                                     dms = dmUiModels,
@@ -431,7 +401,7 @@ class HomeViewModel @Inject constructor(
                                             }
                                             Log.d(
                                                 "HomeViewModel",
-                                                "DMs loaded and UI updated: ${dmUiModels.size}"
+                                                "DMs loaded and UI updated (real-time): ${dmUiModels.size}"
                                             )
                                         }
 
