@@ -16,18 +16,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.catch
 import javax.inject.Inject
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.project.ProjectStatus
 import com.google.firebase.firestore.FirebaseFirestoreException
 
 /**
  * 사용자가 참여하고 있는 프로젝트 목록을 가져오는 UseCase
  * 개인 일정을 추가할 때 선택 가능한 프로젝트 목록을 표시하는 등의 용도로 사용됩니다.
- * 삭제된 프로젝트의 ProjectWrapper는 자동으로 정리됩니다.
  */
 interface GetUserParticipatingProjectsUseCase {
     /**
      * 현재 로그인한 사용자가 참여 중인 모든 프로젝트 목록을 가져옵니다.
-     * 삭제된 프로젝트의 ProjectWrapper는 자동으로 정리됩니다.
      * @return Flow<CustomResult<List<Project>, Exception>> 프로젝트 목록을 포함한 결과
      */
     suspend operator fun invoke(): Flow<CustomResult<List<Project>, Exception>>
@@ -36,7 +33,6 @@ interface GetUserParticipatingProjectsUseCase {
 /**
  * GetUserParticipatingProjectsUseCase 구현체
  * ProjectsWrapperRepository에서 사용자의 프로젝트 래퍼를 가져와 Project 정보로 변환합니다.
- * 삭제된 프로젝트의 ProjectWrapper는 자동으로 정리됩니다.
  */
 class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
     private val projectsWrapperRepository: ProjectsWrapperRepository,
@@ -53,53 +49,10 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
                     val wrappers: List<ProjectsWrapper> = result.data.map { it as ProjectsWrapper }
                     Log.d("GetUserParticipatingProjectsUseCase", "Wrapper ids: ${wrappers.map { it.id }}")
 
-                    // id -> 조회 결과 매핑하면서 삭제된 프로젝트의 Wrapper 정리
-                    val projectResultsMap: MutableMap<DocumentId, CustomResult<Project, Exception>> = mutableMapOf()
-                    val validProjects: MutableList<Project> = mutableListOf()
-                    val wrappersToDelete: MutableList<DocumentId> = mutableListOf()
-
-                    for (wrapper in wrappers) {
+                    // id -> 조회 결과 매핑
+                    val projectResultsMap: Map<DocumentId, CustomResult<Project, Exception>> = wrappers.associate { wrapper ->
                         Log.d("GetUserParticipatingProjectsUseCase", "Fetching project id=${wrapper.id.value}")
-
-
-                        when (val projectResult = projectRepository.findById(wrapper.id)) {
-                            is CustomResult.Success -> {
-                                val project = projectResult.data as Project
-
-                                // 프로젝트가 삭제된 상태인지 확인
-                                if (project.status == ProjectStatus.DELETED) {
-                                    Log.d("GetUserParticipatingProjectsUseCase", "Project ${wrapper.id.value} is DELETED, marking wrapper for cleanup")
-                                    wrappersToDelete.add(wrapper.id)
-                                } else {
-                                    // 유효한 프로젝트 - 결과에 포함
-                                    validProjects.add(project)
-                                    projectResultsMap[wrapper.id] = CustomResult.Success(project)
-                                }
-                            }
-                            is CustomResult.Failure -> {
-                                // 프로젝트를 찾을 수 없음 - Wrapper 삭제 대상
-                                Log.d("GetUserParticipatingProjectsUseCase", "Project ${wrapper.id.value} not found, marking wrapper for cleanup: ${projectResult.error}")
-                                wrappersToDelete.add(wrapper.id)
-                            }
-                            is CustomResult.Loading -> projectResultsMap[wrapper.id] = projectResult
-                            is CustomResult.Progress -> projectResultsMap[wrapper.id] = projectResult
-                            is CustomResult.Initial -> projectResultsMap[wrapper.id] = projectResult
-                        }
-                    }
-
-                    // 삭제 대상 ProjectWrapper들을 비동기로 정리
-                    for (wrapperId in wrappersToDelete) {
-                        try {
-                            Log.d("GetUserParticipatingProjectsUseCase", "Cleaning up wrapper for deleted/missing project: ${wrapperId.value}")
-                            val deleteResult = projectsWrapperRepository.delete(wrapperId)
-                            if (deleteResult is CustomResult.Success) {
-                                Log.d("GetUserParticipatingProjectsUseCase", "Successfully cleaned up wrapper: ${wrapperId.value}")
-                            } else {
-                                Log.w("GetUserParticipatingProjectsUseCase", "Failed to clean up wrapper ${wrapperId.value}: ${(deleteResult as? CustomResult.Failure)?.error}")
-                            }
-                        } catch (e: Exception) {
-                            Log.w("GetUserParticipatingProjectsUseCase", "Error cleaning up wrapper ${wrapperId.value}: ${e.message}")
-                        }
+                        (wrapper.id to projectRepository.findById(wrapper.id)) as Pair<DocumentId, CustomResult<Project, Exception>>
                     }
 
                     // ----- 결과 집계 -----
@@ -134,13 +87,14 @@ class GetUserParticipatingProjectsUseCaseImpl @Inject constructor(
                             CustomResult.Initial
                         }
 
-                        // 전부 성공한 경우 또는 삭제된 프로젝트만 있는 경우 유효한 프로젝트들만 반환
+                        // 전부 성공한 경우 Map → List 변환 후 Success 반환
                         else -> {
+                            val projects: List<Project> = projectResultsMap.values.map { (it as CustomResult.Success).data }
                             Log.d(
                                 "GetUserParticipatingProjectsUseCase",
-                                "Valid projects returned: size=${validProjects.size}, cleaned=${wrappersToDelete.size}"
+                                "All projects fetched successfully: size=${projects.size}"
                             )
-                            CustomResult.Success(validProjects.toList())
+                            CustomResult.Success(projects)
                         }
                     }
                 }

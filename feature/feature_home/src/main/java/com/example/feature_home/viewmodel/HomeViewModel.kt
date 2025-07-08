@@ -19,6 +19,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserName
+import com.example.domain.model.vo.project.ProjectStatus
 import com.example.domain.provider.dm.DMUseCaseProvider
 import com.example.domain.provider.dm.DMUseCases
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
@@ -26,6 +27,7 @@ import com.example.domain.provider.project.CoreProjectUseCases
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCases
 import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
@@ -132,6 +134,7 @@ class HomeViewModel @Inject constructor(
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val dmUseCaseProvider: DMUseCaseProvider,
+    private val projectsWrapperRepository: ProjectsWrapperRepository,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -493,20 +496,89 @@ class HomeViewModel @Inject constructor(
             // 프로젝트 ID가 이미 선택되어 있으면 무시
             if (_uiState.value.selectedProjectId == projectId) return@launch
             
-            // 상태 업데이트
-            _uiState.update { it.copy(
-                selectedProjectId = projectId,
-                selectedTopSection = TopSection.PROJECTS, // 프로젝트 탭으로 전환
-                isLoading = true, // 로딩 상태로 설정
-                projectStructure = ProjectStructureUiState(isLoading = true) // 프로젝트 구조 로딩 상태로 설정
-            )}
+            Log.d("HomeViewModel", "onProjectClick: Checking project status for projectId=$projectId")
             
-            // 프로젝트 상세 정보 로드
-            loadProjectDetails(projectId)
-            
-            // 프로젝트 구조 (카테고리 및 채널) 로드
-            loadProjectStructure(projectId)
+            // 먼저 프로젝트 상태를 확인
+            if (::coreProjectUseCases.isInitialized) {
+                
+                when (val projectResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
+                    is CustomResult.Success -> {
+                        val project = projectResult.data
+                        
+                        // 프로젝트가 삭제된 상태인지 확인
+                        if (project.status == ProjectStatus.DELETED) {
+                            Log.d("HomeViewModel", "Project $projectId is DELETED, cleaning up ProjectWrapper")
+                            
+                            // 스낵바 표시
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
+                            
+                            // ProjectWrapper 삭제
+                            try {
+                                val deleteResult = projectsWrapperRepository.delete(projectId)
+                                if (deleteResult is CustomResult.Success) {
+                                    Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for deleted project: $projectId")
+                                } else {
+                                    Log.w("HomeViewModel", "Failed to clean up ProjectWrapper $projectId: ${(deleteResult as? CustomResult.Failure)?.error}")
+                                }
+                            } catch (e: Exception) {
+                                Log.w("HomeViewModel", "Error cleaning up ProjectWrapper $projectId: ${e.message}")
+                            }
+                            
+                            return@launch // 삭제된 프로젝트는 더 이상 처리하지 않음
+                        }
+                        
+                        // 유효한 프로젝트 - 기존 로직 실행
+                        Log.d("HomeViewModel", "Project $projectId is valid, proceeding with normal flow")
+                        proceedWithProjectSelection(projectId)
+                    }
+                    is CustomResult.Failure -> {
+                        Log.d("HomeViewModel", "Project $projectId not found, cleaning up ProjectWrapper: ${projectResult.error}")
+                        
+                        // 스낵바 표시
+                        _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트를 찾을 수 없습니다."))
+                        
+                        // ProjectWrapper 삭제
+                        try {
+                            val deleteResult = projectsWrapperRepository.delete(projectId)
+                            if (deleteResult is CustomResult.Success) {
+                                Log.d("HomeViewModel", "Successfully cleaned up ProjectWrapper for missing project: $projectId")
+                            } else {
+                                Log.w("HomeViewModel", "Failed to clean up ProjectWrapper $projectId: ${(deleteResult as? CustomResult.Failure)?.error}")
+                            }
+                        } catch (e: Exception) {
+                            Log.w("HomeViewModel", "Error cleaning up ProjectWrapper $projectId: ${e.message}")
+                        }
+                        
+                        return@launch // 존재하지 않는 프로젝트는 더 이상 처리하지 않음
+                    }
+                    else -> {
+                        // Loading, Progress, Initial 상태는 무시하고 기존 로직 실행
+                        Log.d("HomeViewModel", "Project $projectId in intermediate state, proceeding with normal flow")
+                        proceedWithProjectSelection(projectId)
+                    }
+                }
+            } else {
+                Log.w("HomeViewModel", "coreProjectUseCases not initialized, proceeding with normal flow")
+                proceedWithProjectSelection(projectId)
+            }
         }
+    }
+    
+    // 유효한 프로젝트 선택 시 기존 로직 실행
+    private fun proceedWithProjectSelection(projectId: DocumentId) {
+        // 상태 업데이트
+        _uiState.update { it.copy(
+            selectedProjectId = projectId,
+            selectedTopSection = TopSection.PROJECTS, // 프로젝트 탭으로 전환
+            isLoading = true, // 로딩 상태로 설정
+            projectStructure = ProjectStructureUiState(isLoading = true) // 프로젝트 구조 로딩 상태로 설정
+        )}
+        
+        // 프로젝트 상세 정보 로드
+        loadProjectDetails(projectId)
+        
+        // 프로젝트 구조 (카테고리 및 채널) 로드
+        loadProjectStructure(projectId)
     }
 
     // 프로젝트 상세 정보 로드
