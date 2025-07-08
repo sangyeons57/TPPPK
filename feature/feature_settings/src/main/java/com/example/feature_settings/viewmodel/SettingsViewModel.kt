@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.auth.AuthAccountUseCaseProvider
-import com.example.domain.repository.base.SystemRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +18,6 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authAccountUseCaseProvider: AuthAccountUseCaseProvider,
-    private val systemRepository: SystemRepository,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -59,32 +57,6 @@ class SettingsViewModel @Inject constructor(
                 else -> {
                     Log.e("SettingsViewModel", "Unknown result: $result")
                     _uiEvent.send(WithdrawalUiEvent.Error("알 수 없는 오류가 발생했습니다."))
-                }
-            }
-        }
-    }
-
-    fun testFirebaseFunctions() {
-        viewModelScope.launch {
-            Log.d("SettingsViewModel", "Testing Firebase Functions HelloWorld...")
-
-            when (val result = systemRepository.getHelloWorld()) {
-                is CustomResult.Success -> {
-                    val message = "✅ Firebase Functions 연결 성공!\n결과: ${result.data}"
-                    Log.d("SettingsViewModel", "HelloWorld success: ${result.data}")
-                    _uiEvent.send(WithdrawalUiEvent.FunctionsTestSuccess(message))
-                }
-
-                is CustomResult.Failure -> {
-                    val message = "❌ Firebase Functions 연결 실패\n오류: ${result.error.message}"
-                    Log.e("SettingsViewModel", "HelloWorld failed", result.error)
-                    _uiEvent.send(WithdrawalUiEvent.FunctionsTestError(message))
-                }
-
-                else -> {
-                    val message = "🔄 예상치 못한 상태: $result"
-                    Log.w("SettingsViewModel", "HelloWorld unexpected result: $result")
-                    _uiEvent.send(WithdrawalUiEvent.FunctionsTestError(message))
                 }
             }
         }

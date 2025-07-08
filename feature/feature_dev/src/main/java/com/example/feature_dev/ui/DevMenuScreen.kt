@@ -66,7 +66,6 @@ fun DevMenuScreen(
     viewModel: DevMenuViewModel = hiltViewModel()
 ) {
     rememberCoroutineScope()
-    val helloWorldResult by viewModel.helloWorldResult.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val cacheClearResult by viewModel.cacheClearResult.collectAsState()
     val isCacheClearing by viewModel.isCacheClearing.collectAsState()
@@ -234,45 +233,6 @@ fun DevMenuScreen(
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("호출 중...")
-                }
-            } else {
-                DevMenuButton(text = "Hello World 호출") {
-                    viewModel.callHelloWorld()
-                }
-            }
-
-            // 결과 표시
-            if (helloWorldResult.isNotEmpty()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (helloWorldResult.startsWith("성공"))
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(
-                            text = "결과:",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Text(
-                            text = helloWorldResult,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = { viewModel.clearResult() },
-                            modifier = Modifier.align(Alignment.End)
-                        ) {
-                            Text("지우기")
-                        }
-                    }
                 }
             }
 
