@@ -310,7 +310,7 @@ fun UserResultItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = userResult.profileImageUrl,
+            userId = userResult.userId,
             contentDescription = "${userResult.userName} 프로필",
             modifier = Modifier
                 .size(40.dp)

@@ -41,27 +41,9 @@ class RemoveProfileImageUseCaseImpl @Inject constructor(
      * @return 성공 시 Unit이 포함된 CustomResult.Success, 실패 시 Exception이 포함된 CustomResult.Failure
      */
     override suspend operator fun invoke(): CustomResult<String, Exception> {
-        TODO("not implemented yet [Firebase 에서 구현 해야함 제거된거 다른곳에서 적용해야함]")
-        val userId = when (val sessionResult = authRepository.getCurrentUserSession()) {
-            is CustomResult.Success -> sessionResult.data.userId
-            is CustomResult.Failure -> return CustomResult.Failure(sessionResult.error ?: Exception("User not logged in"))
-            is CustomResult.Initial -> return CustomResult.Initial
-            is CustomResult.Loading -> return CustomResult.Loading
-            is CustomResult.Progress -> return CustomResult.Progress(sessionResult.progress)
-        }
-
-        // Fetch the user object using its ID.
-        val user = when (val userFetchResult = userRepository.findById(DocumentId.from(userId))) {
-            is CustomResult.Success -> userFetchResult.data  as User
-            is CustomResult.Failure -> return CustomResult.Failure(userFetchResult.error)
-            is CustomResult.Loading -> return CustomResult.Loading
-            is CustomResult.Initial -> return CustomResult.Initial
-            is CustomResult.Progress -> return CustomResult.Progress(userFetchResult.progress)
-        }
-        user.removeProfileImage()
-        return userRepository.save(user).suspendSuccessProcess {
-            EventDispatcher.publish(user)
-            CustomResult.Success(it.value)
-        }
+        // The profile image removal flow has been deprecated after we switched to fixed
+        // storage paths that are resolved client-side. Returning a failure until a new
+        // behaviour is defined.
+        return CustomResult.Failure(Exception("RemoveProfileImageUseCase is deprecated"))
     }
 }

@@ -143,7 +143,7 @@ fun FriendRequestItemComposable(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = request.profileImageUrl?.value,
+            userId = request.requesterId.value,
             contentDescription = "${request.userName.value} 프로필",
             modifier = Modifier
                 .size(48.dp)

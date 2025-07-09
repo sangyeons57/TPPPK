@@ -10,7 +10,6 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
-import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserFcmToken
 import com.example.domain.model.vo.user.UserMemo
@@ -31,8 +30,6 @@ data class UserDTO(
     val name: String = "",
     @get:PropertyName(CONSENT_TIMESTAMP)
     @ServerTimestamp val consentTimeStamp: Date? = null,
-    @get:PropertyName(PROFILE_IMAGE_URL)
-    val profileImageUrl: String? = null,
     @get:PropertyName(MEMO)
     val memo: String? = null,
     @get:PropertyName(USER_STATUS)
@@ -53,7 +50,6 @@ data class UserDTO(
         const val EMAIL = User.KEY_EMAIL
         const val NAME = User.KEY_NAME
         const val CONSENT_TIMESTAMP = User.KEY_CONSENT_TIMESTAMP
-        const val PROFILE_IMAGE_URL = User.KEY_PROFILE_IMAGE_URL
         const val MEMO = User.KEY_MEMO
         const val USER_STATUS = User.KEY_USER_STATUS // User's online/offline status
         const val FCM_TOKEN = User.KEY_FCM_TOKEN
@@ -70,7 +66,6 @@ data class UserDTO(
             email = UserEmail(email), // Wrap in Value Object
             name = UserName(name),   // Wrap in Value Object
             consentTimeStamp = consentTimeStamp?.toInstant() ?: Instant.EPOCH, // Convert Date to Instant
-            profileImageUrl = profileImageUrl.takeIf { !it.isNullOrBlank() }?.let { ImageUrl(it) }, // Wrap in Value Object.ImageUrl(profileImageUrl),
             memo = memo?.let { UserMemo(it) }, // Wrap in Value Object
             userStatus = status ,
             createdAt = createdAt?.toInstant(),
@@ -91,7 +86,6 @@ fun User.toDto(): UserDTO {
         email = email.value, // Extract primitive value
         name = name.value,   // Extract primitive value
         consentTimeStamp = Date.from(consentTimeStamp), // Convert Instant to Date
-        profileImageUrl = profileImageUrl?.value,
         memo = memo?.value,  // Extract primitive value if memo is not null
         status = userStatus, // Corrected from 'status' to 'userStatus'
         fcmToken = fcmToken?.value,

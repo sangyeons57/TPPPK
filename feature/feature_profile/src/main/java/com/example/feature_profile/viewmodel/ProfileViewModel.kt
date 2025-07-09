@@ -24,25 +24,19 @@ data class UserProfileData(
     val uid: String,
     val name: String,
     val email: String?,
-    val profileImageUrl: String?,
     val memo: String?, // Mapped from User.memo
     val userStatus: UserStatus
 )
 
 fun User.toUserProfileData(): UserProfileData {
-    val imageUrl = this.profileImageUrl?.value
-    Log.d("ProfileViewModel", "��️ ProfileViewModel: Converting User to UserProfileData")
+    Log.d("ProfileViewModel", "️ ProfileViewModel: Converting User to UserProfileData")
     Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User ID = ${this.id.value}")
-    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User profile image URL = '$imageUrl'")
-    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: URL length = ${imageUrl?.length}")
-    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: URL contains timestamp = ${imageUrl?.contains("?v=")}")
-    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: URL starts with https = ${imageUrl?.startsWith("https://")}")
-    
+    // profile image url logging removed
+
     return UserProfileData(
         uid = this.id.value,
         name = this.name.value,
         email = this.email.value.ifEmpty { null },
-        profileImageUrl = imageUrl,
         memo = this.memo?.value, // Mapping 'memo' to 'statusMessage'
         userStatus = this.userStatus
     )
@@ -117,16 +111,9 @@ class ProfileViewModel @Inject constructor(
                     when (customResult) {
                         is CustomResult.Success -> {
                             val user = customResult.data
-                            Log.d("ProfileViewModel", "✅ ProfileViewModel: 프로필 로드 성공")
-                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User ID = ${user.id.value}")
-                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User name = ${user.name.value}")
-                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User email = ${user.email.value}")
-                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User profileImageUrl = ${user.profileImageUrl?.value}")
-                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User profileImageUrl type = ${user.profileImageUrl?.javaClass?.simpleName}")
                             
                             val userProfileData = user.toUserProfileData()
                             Log.d("ProfileViewModel", "✅ ProfileViewModel: Converted to UserProfileData")
-                            Log.d("ProfileViewModel", "✅ ProfileViewModel: UserProfileData profileImageUrl = ${userProfileData.profileImageUrl}")
                             
                             _uiState.update { it.copy(isLoading = false, userProfile = userProfileData) }
                             Log.d("ProfileViewModel", "✅ ProfileViewModel: UI State updated with new profile data")

@@ -18,6 +18,5 @@ data class UserSession(
     // Token field removed. Use AuthRepository.fetchIdToken() when an ID token is required.
     val email: UserEmail? = null,
     val displayName: UserName? = null,
-    val photoUrl: ImageUrl? = null
     // Add other relevant session/user data as needed
 )

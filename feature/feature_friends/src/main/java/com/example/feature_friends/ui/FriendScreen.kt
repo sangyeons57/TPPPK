@@ -227,7 +227,7 @@ fun FriendListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = friend.profileImageUrl?.value, // Use the actual profile image URL
+            userId = friend.friendId.value, // Use friend's user ID
             contentDescription = "${friend.displayName} 프로필",
             modifier = Modifier
                 .size(48.dp)
