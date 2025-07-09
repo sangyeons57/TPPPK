@@ -41,6 +41,7 @@ export class FirestoreDMChannelDataSource implements DMChannelDatasource {
       const docData = {
         participants: dmChannelData.participants,
         status: dmChannelData.status,
+        blockedByMap: dmChannelData.blockedByMap || {},
         createdAt: admin.firestore.Timestamp.fromDate(dmChannelData.createdAt),
         updatedAt: admin.firestore.Timestamp.fromDate(dmChannelData.updatedAt),
       };

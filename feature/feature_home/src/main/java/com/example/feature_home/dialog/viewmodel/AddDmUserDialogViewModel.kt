@@ -188,12 +188,11 @@ class AddDmUserDialogViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = null,
-                            isUserBlocked = false
+                            username = UserName.EMPTY // Clear username on success
                         )
                     }
-                    // After unblocking, try to create DM channel again
-                    createDmChannelWithUser(username)
+                    // 차단 해제 성공 시 다이얼로그 닫기
+                    _eventFlow.emit(AddDmUserEvent.DismissDialog)
                 }
                 is CustomResult.Failure -> {
                     _uiState.update {
