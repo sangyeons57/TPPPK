@@ -3,6 +3,7 @@ import {UpdateUserImageUseCase} from "../../business/user/usecases/updateUserIma
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {STORAGE_BUCKETS} from "../../core/constants";
 import {Providers} from "../../config/dependencies";
+import * as admin from "firebase-admin";
 
 /**
  * Simplified Storage trigger for user profile images
@@ -43,20 +44,29 @@ export const onUserProfileImageUpload = onObjectFinalized(
         return;
       }
 
-      // Import admin SDK for Storage operations
-      const admin = require("firebase-admin");
+      // Get Firebase Storage instance
       const storage = admin.storage();
 
       try {
         // Get the original file
         const originalFile = storage.bucket(bucket).file(name);
-        
-        // Create processed file path in user_profiles directory
-        const filename = pathParts[pathParts.length - 1]; // Get the filename
-        const processedFilePath = `user_profiles/${userId}/${filename}`;
+
+        // Create fixed file path in user_profiles directory (always use profile.webp)
+        const processedFilePath = `user_profiles/${userId}/profile.webp`;
         const processedFile = storage.bucket(bucket).file(processedFilePath);
 
-        // Copy the original file to the processed location
+        // Check if the processed file already exists and delete it first
+        try {
+          const [exists] = await processedFile.exists();
+          if (exists) {
+            await processedFile.delete();
+            console.log(`Deleted existing profile image: ${processedFilePath}`);
+          }
+        } catch (deleteError) {
+          console.log(`No existing file to delete or delete failed: ${(deleteError as Error).message}`);
+        }
+
+        // Copy the original file to the processed location (with fixed filename)
         await originalFile.copy(processedFile);
         console.log(`Copied ${name} to ${processedFilePath}`);
 
@@ -74,11 +84,19 @@ export const onUserProfileImageUpload = onObjectFinalized(
 
         if (result.success) {
           console.log(`Successfully updated user ${userId} profile image: ${processedPublicUrl}`);
+
+          // Clean up the original file in user_profile_images after successful processing
+          try {
+            await originalFile.delete();
+            console.log(`Cleaned up original file: ${name}`);
+          } catch (cleanupError) {
+            console.log(`Failed to cleanup original file: ${(cleanupError as Error).message}`);
+          }
         } else {
           console.error(`Failed to update user ${userId} profile image:`, result.error);
         }
       } catch (copyError) {
-        console.error(`Error copying file from ${name} to user_profiles:`, copyError);
+        console.error(`Error processing file from ${name} to user_profiles:`, copyError);
       }
     } catch (error) {
       console.error("Error processing user profile image upload:", error);

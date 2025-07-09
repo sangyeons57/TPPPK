@@ -301,9 +301,10 @@ class ProfileViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 프로필 이미지 변경 시도 (UseCase 사용) - $imageUri")
             
+            // UploadProfileImageUseCase를 사용하여 Firebase Storage에 업로드
             when (val result = userUseCases.uploadProfileImageUseCase(imageUri)) {
                 is CustomResult.Success -> {
-                    // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
+                    // 업로드 성공 시, 프로필을 다시 로드하여 최신 상태 반영
                     loadUserProfile()
                     _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨"))
                 }
@@ -311,17 +312,9 @@ class ProfileViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
                     _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 실패: ${result.error.message}"))
                 }
-                is CustomResult.Loading -> {
-                    _uiState.update { it.copy(isLoading = true) }
-                    println("ViewModel: 프로필 이미지 업로드 로딩 중...")
-                }
-                is CustomResult.Initial -> {
+                else -> {
                     _uiState.update { it.copy(isLoading = false) }
-                    println("ViewModel: 프로필 이미지 업로드 초기 상태 - $result")
-                }
-                is CustomResult.Progress -> {
-                    _uiState.update { it.copy(isLoading = true) }
-                    println("ViewModel: 프로필 이미지 업로드 진행 중 (${result.progress}%) - $result")
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 중 알 수 없는 오류가 발생했습니다."))
                 }
             }
         }
