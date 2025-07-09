@@ -225,6 +225,114 @@ interface FunctionsRemoteDataSource {
      */
     suspend fun leaveProject(projectId: String): CustomResult<Unit, Exception>
 
+    // ================== 프로젝트 초대 관련 메서드 ==================
+
+    /**
+     * 프로젝트 초대를 보냅니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param inviteeId 초대받을 사용자 ID
+     * @param message 초대 메시지 (선택사항)
+     * @param expiresInHours 만료 시간 (시간 단위, 기본 72시간)
+     * @return 성공 시 생성된 초대 객체, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun sendProjectInvitation(
+        projectId: String,
+        inviteeId: String,
+        message: String? = null,
+        expiresInHours: Long = 72L
+    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
+
+    /**
+     * 프로젝트 초대를 수락합니다.
+     *
+     * @param invitationId 초대 ID
+     * @return 성공 시 수락된 초대 객체, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun acceptProjectInvitation(
+        invitationId: String
+    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
+
+    /**
+     * 프로젝트 초대를 거절합니다.
+     *
+     * @param invitationId 초대 ID
+     * @return 성공 시 거절된 초대 객체, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun rejectProjectInvitation(
+        invitationId: String
+    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
+
+    /**
+     * 프로젝트 초대를 취소합니다.
+     *
+     * @param invitationId 초대 ID
+     * @return 성공 시 취소된 초대 객체, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun cancelProjectInvitation(
+        invitationId: String
+    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
+
+    /**
+     * 받은 초대 목록을 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @param status 조회할 상태 (null이면 모든 상태)
+     * @return 성공 시 초대 목록 Flow, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun getReceivedInvitations(
+        userId: String,
+        status: String? = null
+    ): kotlinx.coroutines.flow.Flow<CustomResult<List<com.example.domain.model.base.ProjectInvitation>, Exception>>
+
+    /**
+     * 보낸 초대 목록을 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @param projectId 프로젝트 ID (null이면 모든 프로젝트)
+     * @param status 조회할 상태 (null이면 모든 상태)
+     * @return 성공 시 초대 목록 Flow, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun getSentInvitations(
+        userId: String,
+        projectId: String? = null,
+        status: String? = null
+    ): kotlinx.coroutines.flow.Flow<CustomResult<List<com.example.domain.model.base.ProjectInvitation>, Exception>>
+
+    /**
+     * 특정 프로젝트의 초대 목록을 조회합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param status 조회할 상태 (null이면 모든 상태)
+     * @return 성공 시 초대 목록 Flow, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun getProjectInvitations(
+        projectId: String,
+        status: String? = null
+    ): kotlinx.coroutines.flow.Flow<CustomResult<List<com.example.domain.model.base.ProjectInvitation>, Exception>>
+
+    /**
+     * 특정 초대를 조회합니다.
+     *
+     * @param invitationId 초대 ID
+     * @return 성공 시 초대 객체, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun getProjectInvitation(
+        invitationId: String
+    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
+
+    /**
+     * 중복 초대 확인 (같은 프로젝트에 같은 사용자가 이미 초대받았는지)
+     *
+     * @param projectId 프로젝트 ID
+     * @param inviteeId 초대받을 사용자 ID
+     * @return 성공 시 중복 초대 여부, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun hasPendingInvitation(
+        projectId: String,
+        inviteeId: String
+    ): CustomResult<Boolean, Exception>
+
 }
 
 @Singleton

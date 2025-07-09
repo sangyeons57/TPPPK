@@ -6,7 +6,6 @@ import com.example.data.repository.factory.DMChannelRepositoryFactoryImpl
 import com.example.data.repository.factory.DMWrapperRepositoryFactoryImpl
 import com.example.data.repository.factory.FileRepositoryFactoryImpl
 import com.example.data.repository.factory.FriendRepositoryFactoryImpl
-import com.example.data.repository.factory.InviteRepositoryFactoryImpl
 import com.example.data.repository.factory.MediaRepositoryFactoryImpl
 import com.example.data.repository.factory.MemberRepositoryFactoryImpl
 import com.example.data.repository.factory.MessageAttachmentRepositoryFactoryImpl
@@ -14,6 +13,7 @@ import com.example.data.repository.factory.MessageRepositoryFactoryImpl
 import com.example.data.repository.factory.PermissionRepositoryFactoryImpl
 import com.example.data.repository.factory.ProjectChannelRepositoryFactoryImpl
 import com.example.data.repository.factory.ProjectRepositoryFactoryImpl
+import com.example.data.repository.base.ProjectInvitationRepositoryImpl
 import com.example.data.repository.factory.ProjectsWrapperRepositoryFactoryImpl
 import com.example.data.repository.factory.RoleRepositoryFactoryImpl
 import com.example.data.repository.factory.ScheduleRepositoryFactoryImpl
@@ -26,7 +26,6 @@ import com.example.domain.repository.base.DMChannelRepository
 import com.example.domain.repository.base.DMWrapperRepository
 import com.example.domain.repository.base.FileRepository
 import com.example.domain.repository.base.FriendRepository
-import com.example.domain.repository.base.InviteRepository
 import com.example.domain.repository.base.MediaRepository
 import com.example.domain.repository.base.MemberRepository
 import com.example.domain.repository.base.MessageAttachmentRepository
@@ -34,6 +33,7 @@ import com.example.domain.repository.base.MessageRepository
 import com.example.domain.repository.base.PermissionRepository
 import com.example.domain.repository.base.ProjectChannelRepository
 import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectInvitationRepository
 import com.example.domain.repository.base.ProjectRoleRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.domain.repository.base.ScheduleRepository
@@ -45,7 +45,6 @@ import com.example.domain.repository.factory.context.DMChannelRepositoryFactoryC
 import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryContext
 import com.example.domain.repository.factory.context.FileRepositoryFactoryContext
 import com.example.domain.repository.factory.context.FriendRepositoryFactoryContext
-import com.example.domain.repository.factory.context.InviteRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MediaRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MessageAttachmentRepositoryFactoryContext
@@ -96,9 +95,6 @@ abstract class RepositoryFactoryModule {
     @Singleton
         abstract fun bindFriendRepositoryFactory(impl: FriendRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<FriendRepositoryFactoryContext, FriendRepository>
 
-    @Binds
-    @Singleton
-        abstract fun bindInviteRepositoryFactory(impl: InviteRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<InviteRepositoryFactoryContext, InviteRepository>
 
     @Binds
     @Singleton
@@ -127,6 +123,10 @@ abstract class RepositoryFactoryModule {
     @Binds
     @Singleton
         abstract fun bindProjectRepositoryFactory(impl: ProjectRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>
+
+    @Binds
+    @Singleton
+        abstract fun bindProjectInvitationRepository(impl: ProjectInvitationRepositoryImpl): ProjectInvitationRepository
 
     @Binds
     @Singleton

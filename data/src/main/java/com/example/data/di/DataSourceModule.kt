@@ -6,8 +6,6 @@ import com.example.data.datasource.remote.DMWrapperRemoteDataSource
 import com.example.data.datasource.remote.DMWrapperRemoteDataSourceImpl
 import com.example.data.datasource.remote.FriendRemoteDataSource
 import com.example.data.datasource.remote.FriendRemoteDataSourceImpl
-import com.example.data.datasource.remote.InviteRemoteDataSource
-import com.example.data.datasource.remote.InviteRemoteDataSourceImpl
 import com.example.data.datasource.remote.MemberRemoteDataSource
 import com.example.data.datasource.remote.MemberRemoteDataSourceImpl
 import com.example.data.datasource.remote.MessageAttachmentRemoteDataSource
@@ -78,15 +76,6 @@ abstract class DataSourceModule {
     ): PermissionRemoteDataSource
 
 
-    /**
-     * InviteRemoteDataSource 인터페이스 요청 시
-     * InviteRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindInviteRemoteDataSource(
-        inviteRemoteDataSourceImpl: InviteRemoteDataSourceImpl
-    ): InviteRemoteDataSource
 
     /**
      * FriendRemoteDataSource 인터페이스 요청 시
