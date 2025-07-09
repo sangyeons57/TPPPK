@@ -55,3 +55,57 @@ export const createDMChannelFunction = onCall(
     }
   }
 );
+
+// Block DM Channel Function
+interface BlockDMChannelRequest {
+  currentUserId: string;
+  channelId: string;
+}
+
+export const blockDMChannelFunction = onCall(
+  {
+    region: RUNTIME_CONFIG.REGION,
+    memory: RUNTIME_CONFIG.MEMORY,
+    timeoutSeconds: RUNTIME_CONFIG.TIMEOUT_SECONDS,
+  },
+  async (request) => {
+    try {
+      const {
+        currentUserId,
+        channelId,
+      } = request.data as BlockDMChannelRequest;
+
+      if (!currentUserId || !channelId) {
+        throw new HttpsError("invalid-argument", "Current user ID and channel ID are required");
+      }
+
+      const dmUseCases = Providers.getDmProvider().create();
+
+      const result = await dmUseCases.blockDMChannelUseCase.execute({
+        currentUserId,
+        channelId,
+      });
+
+      if (!result.success) {
+        if (result.error.message.includes("not found")) {
+          throw new HttpsError("not-found", result.error.message);
+        }
+        if (result.error.message.includes("already blocked")) {
+          throw new HttpsError("already-exists", result.error.message);
+        }
+        if (result.error.message.includes("not a participant")) {
+          throw new HttpsError("permission-denied", result.error.message);
+        }
+        throw new HttpsError("internal", result.error.message);
+      }
+
+      return {success: true, data: result.data};
+    } catch (error) {
+      console.error("Error in blockDMChannel:", error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError("internal", "Internal server error");
+    }
+  }
+);

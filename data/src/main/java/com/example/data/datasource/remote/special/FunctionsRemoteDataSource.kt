@@ -156,6 +156,14 @@ interface FunctionsRemoteDataSource {
     suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
 
     /**
+     * DM 채널을 차단합니다.
+     *
+     * @param channelId 차단할 DM 채널 ID
+     * @return 성공 시 차단 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun blockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
      * 프로젝트 초대 링크를 생성합니다.
      *
      * @param projectId 프로젝트 ID
@@ -623,6 +631,34 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 CustomResult.Success(resultData)
             } else {
                 CustomResult.Failure(Exception("Create DM channel function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun blockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                FirebaseFunctionParameters.DM.CURRENT_USER_ID to currentUser.uid,
+                FirebaseFunctionParameters.DM.CHANNEL_ID to channelId
+            )
+
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.BLOCK_DM_CHANNEL)
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Block DM channel function call timed out"))
             }
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e

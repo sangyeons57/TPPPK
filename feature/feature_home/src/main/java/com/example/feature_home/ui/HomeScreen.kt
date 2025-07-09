@@ -434,6 +434,7 @@ fun HomeContent(
                         DmListComponent(
                             dms = uiState.dms,
                             onDmItemClick = onDmItemClick,
+                            onDmItemLongClick = viewModel::onDmLongPress,
                             isLoading = false,
                             modifier = Modifier.fillMaxSize()
                         )

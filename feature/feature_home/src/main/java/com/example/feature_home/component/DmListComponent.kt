@@ -2,6 +2,7 @@ package com.example.feature_home.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +36,7 @@ import com.example.feature_home.model.DmUiModel
  * 
  * @param dms 표시할 DM 목록
  * @param onDmItemClick DM 아이템 클릭 시 호출될 콜백
+ * @param onDmItemLongClick DM 아이템 길게 클릭 시 호출될 콜백
  * @param isLoading 로딩 중인지 여부
  * @param modifier Modifier
  */
@@ -43,6 +45,7 @@ fun DmListComponent(
     modifier: Modifier = Modifier,
     dms: List<DmUiModel>,
     onDmItemClick: (dm: DmUiModel) -> Unit,
+    onDmItemLongClick: (dm: DmUiModel) -> Unit,
     isLoading: Boolean = false,
 ) {
     if (isLoading && dms.isEmpty()) { // 목록이 비어있고 로딩 중인 경우에만 로더 표시
@@ -61,7 +64,11 @@ fun DmListComponent(
 
     LazyColumn(modifier = modifier.fillMaxSize()) {
         items(dms, key = { it.channelId.value }) { dmItem ->
-            DmListItem(dmItem = dmItem, onClick = { onDmItemClick(dmItem) })
+            DmListItem(
+                dmItem = dmItem, 
+                onClick = { onDmItemClick(dmItem) },
+                onLongClick = { onDmItemLongClick(dmItem) }
+            )
             HorizontalDivider()
         }
     }
@@ -71,12 +78,16 @@ fun DmListComponent(
 fun DmListItem(
     dmItem: DmUiModel,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -123,7 +134,8 @@ fun DmListItemPreview() {
                 partnerProfileImageUrl = null,
                 unreadCount = 1
             ),
-            onClick = {}
+            onClick = {},
+            onLongClick = {}
         )
     }
 }
@@ -152,7 +164,7 @@ fun DmListScreenPreview() {
                 unreadCount = 2
             )
         )
-        DmListComponent(dms = sampleDms, onDmItemClick = {}, isLoading = false)
+        DmListComponent(dms = sampleDms, onDmItemClick = {}, onDmItemLongClick = {}, isLoading = false)
     }
 }
 
@@ -160,7 +172,7 @@ fun DmListScreenPreview() {
 @Composable
 fun DmListScreenEmptyPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        DmListComponent(dms = emptyList(), onDmItemClick = {}, isLoading = false)
+        DmListComponent(dms = emptyList(), onDmItemClick = {}, onDmItemLongClick = {}, isLoading = false)
     }
 }
 
@@ -168,6 +180,6 @@ fun DmListScreenEmptyPreview() {
 @Composable
 fun DmListScreenLoadingPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        DmListComponent(dms = emptyList(), onDmItemClick = {}, isLoading = true)
+        DmListComponent(dms = emptyList(), onDmItemClick = {}, onDmItemLongClick = {}, isLoading = true)
     }
 } 

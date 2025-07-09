@@ -18,4 +18,12 @@ interface DMChannelRepository : DefaultRepository {
      * @return 성공 시 DM 채널 정보, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
+    
+    /**
+     * DM 채널을 차단합니다.
+     *
+     * @param channelId 차단할 DM 채널 ID
+     * @return 성공 시 차단 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun blockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception>
 }

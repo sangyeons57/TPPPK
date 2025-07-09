@@ -57,4 +57,8 @@ class DMChannelRepositoryImpl @Inject constructor(
     override suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.createDMChannel(targetUserName)
     }
+    
+    override suspend fun blockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.blockDMChannel(channelId)
+    }
 }

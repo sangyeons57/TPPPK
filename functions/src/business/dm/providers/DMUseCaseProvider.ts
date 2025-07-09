@@ -6,12 +6,14 @@ import {DMChannelRepositoryFactoryContext} from "../../../domain/dmchannel/repos
 import {DMWrapperRepositoryFactoryContext} from "../../../domain/dmwrapper/repositories/factory/DMWrapperRepositoryFactoryContext";
 import {UserRepositoryFactoryContext} from "../../../domain/user/repositories/factory/UserRepositoryFactoryContext";
 import {CreateDMChannelUseCase} from "../usecases/createDMChannel.usecase";
+import {BlockDMChannelUseCase} from "../usecases/blockDMChannel.usecase";
 
 /**
  * DM UseCases collection
  */
 export interface DMUseCases {
   createDMChannelUseCase: CreateDMChannelUseCase;
+  blockDMChannelUseCase: BlockDMChannelUseCase;
   dmChannelRepository: DMChannelRepository;
   dmWrapperRepository: DMWrapperRepository;
   userRepository: UserRepository;
@@ -39,6 +41,10 @@ export class DMUseCaseProvider {
     return {
       createDMChannelUseCase: new CreateDMChannelUseCase(
         userRepository,
+        dmChannelRepository,
+        dmWrapperRepository
+      ),
+      blockDMChannelUseCase: new BlockDMChannelUseCase(
         dmChannelRepository,
         dmWrapperRepository
       ),
