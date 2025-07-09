@@ -29,11 +29,14 @@ data class UserProfileData(
 )
 
 fun User.toUserProfileData(): UserProfileData {
+    val imageUrl = this.profileImageUrl?.value
+    println("🖼️ ProfileViewModel: User profile image URL = $imageUrl")
+    
     return UserProfileData(
         uid = this.id.value,
         name = this.name.value,
         email = this.email.value.ifEmpty { null },
-        profileImageUrl = this.profileImageUrl?.value,
+        profileImageUrl = imageUrl,
         memo = this.memo?.value, // Mapping 'memo' to 'statusMessage'
         userStatus = this.userStatus
     )

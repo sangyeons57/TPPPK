@@ -16,6 +16,9 @@ fun UserProfileImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop // Default to Crop, common for profile pics
 ) {
+    // URL 로깅 추가
+    println("🖼️ UserProfileImage: Loading image with URL = $profileImageUrl")
+    
     val imageRequest = if (profileImageUrl == "DEFAULT_PROFILE_IMAGE_MARKER" || profileImageUrl.isNullOrEmpty()) {
         ImageRequest.Builder(LocalContext.current)
             .data(R.drawable.ic_default_profile_placeholder)

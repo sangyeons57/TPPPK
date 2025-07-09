@@ -1,4 +1,5 @@
 import {onObjectFinalized} from "firebase-functions/v2/storage";
+import {logger} from "firebase-functions";
 import {UpdateUserImageUseCase} from "../../business/user/usecases/updateUserImage.usecase";
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {STORAGE_BUCKETS} from "../../core/constants";
@@ -21,28 +22,30 @@ export const onUserProfileImageUpload = onObjectFinalized(
       const {bucket, name, contentType} = event.data;
 
       if (!name || !contentType) {
-        console.log("Missing file name or content type");
+        logger.info("Missing file name or content type");
         return;
       }
 
       // Only process image files
       if (!contentType.startsWith("image/")) {
-        console.log(`Skipping non-image file: ${contentType}`);
+        logger.info(`Skipping non-image file: ${contentType}`);
         return;
       }
 
-      // Extract userId from file path (e.g., "user_profile_images/{userId}/filename.jpg")
+      // Only process files from user_profile_images directory (ignore processed files)
       const pathParts = name.split("/");
       if (pathParts.length < 2 || pathParts[0] !== "user_profile_images") {
-        console.log(`Invalid file path structure: ${name}`);
+        // Silently ignore files from other directories (like user_profiles)
         return;
       }
 
       const userId = pathParts[1];
       if (!userId) {
-        console.log("Could not extract userId from file path");
+        logger.error("Could not extract userId from file path");
         return;
       }
+
+      logger.info(`🚀 Processing profile image upload for user: ${userId}, file: ${name}`);
 
       // Get Firebase Storage instance
       const storage = admin.storage();
@@ -60,15 +63,15 @@ export const onUserProfileImageUpload = onObjectFinalized(
           const [exists] = await processedFile.exists();
           if (exists) {
             await processedFile.delete();
-            console.log(`Deleted existing profile image: ${processedFilePath}`);
+            logger.info(`🗑️ Deleted existing profile image: ${processedFilePath}`);
           }
         } catch (deleteError) {
-          console.log(`No existing file to delete or delete failed: ${(deleteError as Error).message}`);
+          logger.warn(`No existing file to delete or delete failed: ${(deleteError as Error).message}`);
         }
 
         // Copy the original file to the processed location (with fixed filename)
         await originalFile.copy(processedFile);
-        console.log(`Copied ${name} to ${processedFilePath}`);
+        logger.info(`📁 Copied ${name} to ${processedFilePath}`);
 
         // Generate public URL with timestamp for cache invalidation
         const timestamp = Date.now();
@@ -78,35 +81,35 @@ export const onUserProfileImageUpload = onObjectFinalized(
         const userUseCases = Providers.getUserProvider().create();
         const updateImageUseCase = new UpdateUserImageUseCase(userUseCases.userRepository);
 
-        console.log(`Executing updateImageUseCase for user ${userId} with URL: ${processedPublicUrl}`);
+        logger.info(`🔄 Executing updateImageUseCase for user ${userId} with URL: ${processedPublicUrl}`);
 
         const result = await updateImageUseCase.execute({
           userId: userId,
           imageUrl: processedPublicUrl,
         });
 
-        console.log("UpdateImageUseCase result:", JSON.stringify(result, null, 2));
+        logger.info("UpdateImageUseCase result:", result);
 
         if (result.success) {
-          console.log("✅ Successfully updated user profile image:", processedPublicUrl);
-          console.log("✅ Updated user data:", JSON.stringify(result.data, null, 2));
+          logger.info("✅ Successfully updated user profile image:", processedPublicUrl);
+          logger.info("✅ Updated user data:", result.data);
 
           // Clean up the original file in user_profile_images after successful processing
           try {
             await originalFile.delete();
-            console.log("🗑️ Cleaned up original file:", name);
+            logger.info("🗑️ Cleaned up original file:", name);
           } catch (cleanupError) {
-            console.log("⚠️ Failed to cleanup original file:", (cleanupError as Error).message);
+            logger.warn("⚠️ Failed to cleanup original file:", (cleanupError as Error).message);
           }
         } else {
-          console.error("❌ Failed to update user profile image:", result.error);
-          console.error("❌ Error details:", JSON.stringify(result.error, null, 2));
+          logger.error("❌ Failed to update user profile image:", result.error);
+          logger.error("❌ Error details:", result.error);
         }
       } catch (copyError) {
-        console.error(`Error processing file from ${name} to user_profiles:`, copyError);
+        logger.error(`Error processing file from ${name} to user_profiles:`, copyError);
       }
     } catch (error) {
-      console.error("Error processing user profile image upload:", error);
+      logger.error("Error processing user profile image upload:", error);
     }
   }
 );
