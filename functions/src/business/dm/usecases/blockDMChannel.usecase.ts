@@ -59,12 +59,8 @@ export class BlockDMChannelUseCase {
       const participants = dmChannel.participants;
       const removeWrapperResults = await Promise.all(
         participants.map(async (participantId) => {
-          // 상대방 ID 찾기
-          const otherUserId = dmChannel.getOtherParticipant(participantId);
-          if (otherUserId) {
-            return this.dmWrapperRepository.delete(participantId, otherUserId);
-          }
-          return Result.success(undefined);
+          // DMWrapper는 channelId를 document ID로 사용
+          return this.dmWrapperRepository.delete(participantId, channelId);
         })
       );
 

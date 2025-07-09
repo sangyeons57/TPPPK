@@ -6,5 +6,5 @@ export interface DMWrapperRepository {
   findByUserAndOtherUser(userId: string, otherUserId: string): Promise<CustomResult<DMWrapperEntity | null>>;
   findByUserId(userId: string): Promise<CustomResult<DMWrapperEntity[]>>;
   update(userId: string, dmWrapper: DMWrapperEntity): Promise<CustomResult<DMWrapperEntity>>;
-  delete(userId: string, otherUserId: string): Promise<CustomResult<void>>;
+  delete(userId: string, channelId: string): Promise<CustomResult<void>>;
 }

@@ -22,7 +22,7 @@ export class DMWrapperRepositoryImpl implements DMWrapperRepository {
     return this.datasource.update(userId, dmWrapper);
   }
 
-  async delete(userId: string, otherUserId: string): Promise<CustomResult<void>> {
-    return this.datasource.delete(userId, otherUserId);
+  async delete(userId: string, channelId: string): Promise<CustomResult<void>> {
+    return this.datasource.delete(userId, channelId);
   }
 }

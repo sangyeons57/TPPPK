@@ -9,7 +9,7 @@ export interface DMWrapperDatasource {
   findByUserAndOtherUser(userId: string, otherUserId: string): Promise<CustomResult<DMWrapperEntity | null>>;
   findByUserId(userId: string): Promise<CustomResult<DMWrapperEntity[]>>;
   update(userId: string, dmWrapper: DMWrapperEntity): Promise<CustomResult<DMWrapperEntity>>;
-  delete(userId: string, otherUserId: string): Promise<CustomResult<void>>;
+  delete(userId: string, channelId: string): Promise<CustomResult<void>>;
 }
 
 export class FirestoreDMWrapperDataSource implements DMWrapperDatasource {
@@ -139,10 +139,10 @@ export class FirestoreDMWrapperDataSource implements DMWrapperDatasource {
     }
   }
 
-  async delete(userId: string, otherUserId: string): Promise<CustomResult<void>> {
+  async delete(userId: string, channelId: string): Promise<CustomResult<void>> {
     try {
-      // Use otherUserId as document ID for direct deletion
-      const docRef = this.getUserDMWrappersCollection(userId).doc(otherUserId);
+      // Use channelId as document ID for direct deletion
+      const docRef = this.getUserDMWrappersCollection(userId).doc(channelId);
       await docRef.delete();
       return Result.success(undefined);
     } catch (error) {
