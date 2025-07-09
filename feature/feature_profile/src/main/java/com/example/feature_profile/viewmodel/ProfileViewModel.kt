@@ -1,6 +1,7 @@
 package com.example.feature_profile.viewmodel
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
@@ -30,7 +31,10 @@ data class UserProfileData(
 
 fun User.toUserProfileData(): UserProfileData {
     val imageUrl = this.profileImageUrl?.value
-    println("🖼️ ProfileViewModel: User profile image URL = $imageUrl")
+    Log.d("ProfileViewModel", "��️ ProfileViewModel: Converting User to UserProfileData")
+    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User ID = ${this.id.value}")
+    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User profile image URL = $imageUrl")
+    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User profile image URL type = ${this.profileImageUrl?.javaClass?.simpleName}")
     
     return UserProfileData(
         uid = this.id.value,
@@ -95,7 +99,7 @@ class ProfileViewModel @Inject constructor(
     private fun loadUserProfile() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            println("ViewModel: 사용자 프로필 로드 시도 (UseCase 사용)")
+            Log.d"UserProfileImage", ("🔄 ProfileViewModel: 사용자 프로필 로드 시도 (UseCase 사용)")
 
             // --- UseCase 호출 ---
             userUseCases.getCurrentUserStreamUseCase()
@@ -103,26 +107,40 @@ class ProfileViewModel @Inject constructor(
                     val errorMsg = "프로필 정보를 불러오지 못했습니다: ${exception.message}"
                     _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
                     _eventFlow.emit(ProfileEvent.ShowSnackbar(errorMsg))
-                    println("ViewModel: 프로필 로드 중 예외 발생 - ${exception.message}")
+                    Log.d("ProfileViewModel", "❌ ProfileViewModel: 프로필 로드 중 예외 발생 - ${exception.message}")
+                    Log.d("ProfileViewModel", "❌ ProfileViewModel: Exception stack trace: ${exception.stackTraceToString()}")
                 }
                 .collectLatest { customResult: CustomResult<User, Exception> ->
+                    Log.d("ProfileViewModel", "📦 ProfileViewModel: CustomResult received - ${customResult.javaClass.simpleName}")
                     when (customResult) {
                         is CustomResult.Success -> {
                             val user = customResult.data
-                            _uiState.update { it.copy(isLoading = false, userProfile = user.toUserProfileData()) }
-                            println("ViewModel: 프로필 로드 성공 - ${user.name}")
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: 프로필 로드 성공")
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User ID = ${user.id.value}")
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User name = ${user.name.value}")
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User email = ${user.email.value}")
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User profileImageUrl = ${user.profileImageUrl?.value}")
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: User profileImageUrl type = ${user.profileImageUrl?.javaClass?.simpleName}")
+                            
+                            val userProfileData = user.toUserProfileData()
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: Converted to UserProfileData")
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: UserProfileData profileImageUrl = ${userProfileData.profileImageUrl}")
+                            
+                            _uiState.update { it.copy(isLoading = false, userProfile = userProfileData) }
+                            Log.d("ProfileViewModel", "✅ ProfileViewModel: UI State updated with new profile data")
                         }
                         is CustomResult.Failure -> {
                             val errorMsg = "프로필 로드 실패: ${customResult.error.message}"
                             _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
                             _eventFlow.emit(ProfileEvent.ShowSnackbar(errorMsg))
-                            println("ViewModel: 프로필 로드 실패 - $errorMsg")
+                            Log.d("ProfileViewModel", "❌ ProfileViewModel: 프로필 로드 실패 - $errorMsg")
+                            Log.d("ProfileViewModel", "❌ ProfileViewModel: Error details: ${customResult.error.stackTraceToString()}")
                         }
                         else -> {
                             val errorMsg = "프로필 로드 실패: Unknown"
                             _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
                             _eventFlow.emit(ProfileEvent.ShowSnackbar(errorMsg))
-                            println("ViewModel: 프로필 로드 실패 - $errorMsg")
+                            Log.d("ProfileViewModel", "❌ ProfileViewModel: 프로필 로드 실패 - Unknown result type: ${customResult.javaClass.simpleName}")
                         }
                     }
                 }
