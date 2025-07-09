@@ -136,18 +136,72 @@ export class FirestoreUserDataSource implements UserDataSource {
   async update(user: UserEntity): Promise<CustomResult<UserEntity>> {
     try {
       const userData = user.toData();
+
+      // Ensure dates are valid Date objects with proper validation
+      const ensureDate = (dateValue: any): Date => {
+        console.log("ensureDate input:", typeof dateValue, dateValue);
+
+        if (dateValue instanceof Date) {
+          console.log("Date input - valid:", dateValue.getTime());
+          return dateValue;
+        }
+        if (dateValue instanceof admin.firestore.Timestamp) {
+          console.log("Timestamp input - converting:", dateValue.toDate().getTime());
+          return dateValue.toDate();
+        }
+
+        const newDate = new Date(dateValue);
+        console.log("Other input - parsed:", newDate.getTime(), "valid:", !isNaN(newDate.getTime()));
+
+        if (isNaN(newDate.getTime())) {
+          throw new Error(`Invalid date value: ${dateValue}`);
+        }
+
+        return newDate;
+      };
+
+      console.log("Raw userData dates:", {
+        consentTimeStamp: {type: typeof userData.consentTimeStamp, value: userData.consentTimeStamp},
+        createdAt: {type: typeof userData.createdAt, value: userData.createdAt},
+        updatedAt: {type: typeof userData.updatedAt, value: userData.updatedAt},
+      });
+
+      const processedDates = {
+        consentTimeStamp: ensureDate(userData.consentTimeStamp),
+        createdAt: ensureDate(userData.createdAt),
+        updatedAt: ensureDate(userData.updatedAt),
+      };
+
+      console.log("Processed dates:", {
+        consentTimeStamp: processedDates.consentTimeStamp.getTime(),
+        createdAt: processedDates.createdAt.getTime(),
+        updatedAt: processedDates.updatedAt.getTime(),
+      });
+
       const docData = {
         email: userData.email,
         name: userData.name,
-        consentTimeStamp: admin.firestore.Timestamp.fromDate(userData.consentTimeStamp),
+        consentTimeStamp: admin.firestore.Timestamp.fromDate(processedDates.consentTimeStamp),
         profileImageUrl: userData.profileImageUrl || null,
         memo: userData.memo || null,
         userStatus: userData.userStatus,
         fcmToken: userData.fcmToken || null,
         accountStatus: userData.accountStatus,
-        createdAt: admin.firestore.Timestamp.fromDate(userData.createdAt),
-        updatedAt: admin.firestore.Timestamp.fromDate(userData.updatedAt),
+        createdAt: admin.firestore.Timestamp.fromDate(processedDates.createdAt),
+        updatedAt: admin.firestore.Timestamp.fromDate(processedDates.updatedAt),
       };
+
+      console.log("Final Firestore timestamps:", {
+        consentTimeStamp: docData.consentTimeStamp.seconds + "." + docData.consentTimeStamp.nanoseconds,
+        createdAt: docData.createdAt.seconds + "." + docData.createdAt.nanoseconds,
+        updatedAt: docData.updatedAt.seconds + "." + docData.updatedAt.nanoseconds,
+      });
+
+      console.log("Updating user with docData:", JSON.stringify({
+        userId: user.id,
+        profileImageUrl: docData.profileImageUrl,
+        updatedAt: docData.updatedAt.toDate().toISOString(),
+      }, null, 2));
 
       const docRef = this.db.collection(this.collectionName).doc(user.id);
       await docRef.update(docData);

@@ -22,12 +22,20 @@ fun UserProfileImage(
             .crossfade(true)
             .build()
     } else {
+        // 캐시 무효화를 위해 timestamp 추가
+        val urlWithTimestamp = if (profileImageUrl.contains("?")) {
+            "$profileImageUrl&t=${System.currentTimeMillis()}"
+        } else {
+            "$profileImageUrl?t=${System.currentTimeMillis()}"
+        }
+        
         ImageRequest.Builder(LocalContext.current)
-            .data(profileImageUrl)
+            .data(urlWithTimestamp)
             .placeholder(R.drawable.ic_default_profile_placeholder)
             .error(R.drawable.ic_default_profile_placeholder)
             .crossfade(true)
             .memoryCachePolicy(CachePolicy.DISABLED) // 프로필 이미지 메모리 캐시 비활성화
+            .diskCachePolicy(CachePolicy.DISABLED) // 디스크 캐시도 비활성화
             .build()
     }
     AsyncImage(

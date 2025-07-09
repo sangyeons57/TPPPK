@@ -70,31 +70,36 @@ export const onUserProfileImageUpload = onObjectFinalized(
         await originalFile.copy(processedFile);
         console.log(`Copied ${name} to ${processedFilePath}`);
 
-        // Generate public URL for the processed file with timestamp to prevent caching
-        const timestamp = Date.now();
-        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}?v=${timestamp}`;
+        // Generate clean public URL for database storage (without timestamp)
+        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}`;
 
-        // Get use case and update user with processed image URL
+        // Get use case and update user with clean image URL
         const userUseCases = Providers.getUserProvider().create();
         const updateImageUseCase = new UpdateUserImageUseCase(userUseCases.userRepository);
+
+        console.log(`Executing updateImageUseCase for user ${userId} with URL: ${processedPublicUrl}`);
 
         const result = await updateImageUseCase.execute({
           userId: userId,
           imageUrl: processedPublicUrl,
         });
 
+        console.log("UpdateImageUseCase result:", JSON.stringify(result, null, 2));
+
         if (result.success) {
-          console.log(`Successfully updated user ${userId} profile image: ${processedPublicUrl}`);
+          console.log("✅ Successfully updated user profile image:", processedPublicUrl);
+          console.log("✅ Updated user data:", JSON.stringify(result.data, null, 2));
 
           // Clean up the original file in user_profile_images after successful processing
           try {
             await originalFile.delete();
-            console.log(`Cleaned up original file: ${name}`);
+            console.log("🗑️ Cleaned up original file:", name);
           } catch (cleanupError) {
-            console.log(`Failed to cleanup original file: ${(cleanupError as Error).message}`);
+            console.log("⚠️ Failed to cleanup original file:", (cleanupError as Error).message);
           }
         } else {
-          console.error(`Failed to update user ${userId} profile image:`, result.error);
+          console.error("❌ Failed to update user profile image:", result.error);
+          console.error("❌ Error details:", JSON.stringify(result.error, null, 2));
         }
       } catch (copyError) {
         console.error(`Error processing file from ${name} to user_profiles:`, copyError);
