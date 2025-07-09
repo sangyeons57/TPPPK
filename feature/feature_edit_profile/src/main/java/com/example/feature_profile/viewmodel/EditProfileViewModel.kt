@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 /**
@@ -194,12 +195,16 @@ class EditProfileViewModel @Inject constructor(
                     }
                     when (imageResult) {
                         is CustomResult.Success -> {
+                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지 업로드 완료"))
+                            
+                            // Firebase Functions가 이미지를 처리할 시간을 주기 위해 잠시 대기
+                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지 처리 중..."))
+                            delay(1500)
+                            
                             // 전역 이벤트 발생으로 모든 화면들에 알림
                             currentUser.id.value.let { userId ->
                                 profileImageUpdateEventManager.notifyProfileImageUpdated(userId)
                             }
-                            
-                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지 업로드 완료"))
                         }
                         is CustomResult.Failure -> {
                             _uiState.update { it.copy(isLoading = false) }
@@ -251,6 +256,11 @@ class EditProfileViewModel @Inject constructor(
                     _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지가 업데이트되었습니다"))
                 } else if (hasNameChanged) {
                     _eventFlow.emit(EditProfileEvent.ShowSnackbar("이름이 업데이트되었습니다"))
+                }
+                
+                // 이미지 업로드가 있었다면 추가 지연 후 화면 이동
+                if (selectedImageUri != null) {
+                    delay(500) // 이벤트 전파 시간 확보
                 }
                 
                 navigateBack()
