@@ -38,7 +38,7 @@ fun FriendManagementDialog(
     ) {
         // 친구 정보 표시
         UserProfileImage(
-            profileImageUrl = friend.profileImageUrl?.value,
+            userId = friend.friendId.value,
             contentDescription = "${friend.displayName.value} 프로필",
             modifier = Modifier
                 .size(80.dp)

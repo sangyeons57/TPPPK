@@ -7,7 +7,6 @@ import com.example.data.datasource.remote.special.AuthRemoteDataSource
 import com.example.data.service.CacheService
 import com.example.data.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Token
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserEmail
@@ -267,7 +266,6 @@ class AuthRepositoryImpl @Inject constructor(
                     userId = UserId(firebaseUser.uid),
                     email = firebaseUser.email?.let { value -> UserEmail(value) },
                     displayName = firebaseUser.displayName?.let { value -> UserName.from(value) },
-                    photoUrl = firebaseUser.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                 )
 
                 CustomResult.Success(userSession)
@@ -292,7 +290,6 @@ class AuthRepositoryImpl @Inject constructor(
                         userId = UserId(firebaseUser.data.uid),
                         email = firebaseUser.data.email?.let { value -> UserEmail(value) },
                         displayName = firebaseUser.data.displayName?.let { value -> UserName.from(value) },
-                        photoUrl = firebaseUser.data.photoUrl?.let { value -> ImageUrl.toImageUrl(value) }
                     )
 
                     return@map CustomResult.Success(userSession)

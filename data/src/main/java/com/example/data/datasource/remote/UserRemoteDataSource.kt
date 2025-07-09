@@ -76,7 +76,6 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 email = data["email"] as? String ?: "",
                 name = data["name"] as? String ?: "",
                 consentTimeStamp = convertTimestampSafely(data["consentTimeStamp"]),
-                profileImageUrl = data["profileImageUrl"] as? String,
                 memo = data["memo"] as? String,
                 status = (data["status"] as? String)?.let { 
                     try { UserStatus.valueOf(it) } catch (e: Exception) { UserStatus.OFFLINE }

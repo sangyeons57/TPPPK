@@ -221,11 +221,10 @@ class HomeViewModel @Inject constructor(
                             Log.d("HomeViewModel", "User received from UseCase: ${user.id}")
                             currentUserId = UserId.from(user.id)
 
-                            // 사용자 이니셜과 프로필 이미지 URL 업데이트
+                            // 사용자 이니셜 업데이트 (프로필 이미지는 고정 경로로 로딩)
                             _uiState.update { state ->
                                 state.copy(
-                                    userInitial = user.name.value.firstOrNull()?.toString() ?: "U",
-                                    userProfileImageUrl = user.profileImageUrl?.value
+                                    userInitial = user.name.value.firstOrNull()?.toString() ?: "U"
                                 )
                             }
                         },

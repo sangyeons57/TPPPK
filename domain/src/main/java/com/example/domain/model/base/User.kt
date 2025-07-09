@@ -9,13 +9,11 @@ import com.example.domain.event.user.UserAccountWithdrawnEvent
 import com.example.domain.event.user.UserFcmTokenUpdatedEvent
 import com.example.domain.event.user.UserMemoChangedEvent
 import com.example.domain.event.user.UserNameChangedEvent
-import com.example.domain.event.user.UserProfileImageChangedEvent
 import com.example.domain.event.user.UserProfileUpdatedEvent
 import com.example.domain.event.user.UserStatusChangedEvent
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserFcmToken
 import com.example.domain.model.vo.user.UserMemo
@@ -30,7 +28,6 @@ class User private constructor(
     initialEmail: UserEmail,
     initialName: UserName,
     initialConsentTimeStamp: Instant,
-    initialProfileImageUrl: ImageUrl?,
     initialMemo: UserMemo?,
     initialUserStatus: UserStatus,
     initialFcmToken: UserFcmToken?,
@@ -47,8 +44,6 @@ class User private constructor(
 
     // Mutable properties
     var name: UserName = initialName
-        private set
-    var profileImageUrl: ImageUrl? = initialProfileImageUrl
         private set
     var memo: UserMemo? = initialMemo
         private set
@@ -72,7 +67,6 @@ class User private constructor(
             KEY_EMAIL to email.value,
             KEY_NAME to name.value,
             KEY_CONSENT_TIMESTAMP to consentTimeStamp,
-            KEY_PROFILE_IMAGE_URL to profileImageUrl?.value,
             KEY_MEMO to memo?.value,
             KEY_USER_STATUS to userStatus,
             KEY_CREATED_AT to createdAt,
@@ -88,18 +82,17 @@ class User private constructor(
 
     /**
      * Updates the user's profile information.
-     * Name and profile image URL can be changed.
+     * Name can be changed.
      * The operation is ignored if the account is withdrawn.
      *
      * @param newName The new name for the user.
      * @param newProfileImageUrl The new profile image URL (can be null).
      */
-    @Deprecated("Use changeName() and/or changeProfileImage() instead")
-    fun updateProfile(newName: UserName, newProfileImageUrl: ImageUrl?) {
+    @Deprecated("Use changeName() instead")
+    fun updateProfile(newName: UserName) {
         if (isWithdrawn()) return
 
         this.name = newName
-        this.profileImageUrl = newProfileImageUrl
         pushDomainEvent(UserProfileUpdatedEvent(id.value))
     }
 
@@ -111,16 +104,6 @@ class User private constructor(
         if (this.name == newName) return
         this.name = newName
         pushDomainEvent(UserNameChangedEvent(id.value))
-    }
-
-    /**
-     * Changes only the user's profile image URL (nullable). Pass null to remove image.
-     */
-    fun changeProfileImage(newProfileImageUrl: ImageUrl?) {
-        if (isWithdrawn()) return
-        if (this.profileImageUrl == newProfileImageUrl) return
-        this.profileImageUrl = newProfileImageUrl
-        pushDomainEvent(UserProfileImageChangedEvent(id.value))
     }
 
     /**
@@ -161,18 +144,6 @@ class User private constructor(
 
         this.fcmToken = newToken
         pushDomainEvent(UserFcmTokenUpdatedEvent(id.value))
-    }
-
-    /**
-     * Removes the user's profile image (sets it to null).
-     * Generates [UserProfileImageChangedEvent] if an image was present.
-     */
-    fun removeProfileImage() {
-        if (isWithdrawn()) return
-        if (profileImageUrl == null) return
-
-        profileImageUrl = null
-        pushDomainEvent(UserProfileImageChangedEvent(id.value))
     }
 
     /**
@@ -248,7 +219,6 @@ class User private constructor(
         const val KEY_EMAIL = "email"
         const val KEY_NAME = "name"
         const val KEY_CONSENT_TIMESTAMP = "consentTimeStamp"
-        const val KEY_PROFILE_IMAGE_URL = "profileImageUrl"
         const val KEY_MEMO = "memo"
         const val KEY_USER_STATUS = "userStatus"
         const val KEY_FCM_TOKEN = "fcmToken"
@@ -261,7 +231,6 @@ class User private constructor(
          * @param email User's email address.
          * @param name User's display name.
          * @param consentTimeStamp Timestamp of user's consent.
-         * @param profileImageUrl Optional initial profile image URL.
          * @param initialFcmToken Optional initial FCM token.
          * @return A new User instance.
          */
@@ -270,7 +239,6 @@ class User private constructor(
             email: UserEmail,
             name: UserName,
             consentTimeStamp: Instant,
-            profileImageUrl: ImageUrl? = null,
             memo: UserMemo? = null,
             initialFcmToken: UserFcmToken? = null
         ): User {
@@ -279,7 +247,6 @@ class User private constructor(
                 initialEmail = email,
                 initialName = name,
                 initialConsentTimeStamp = consentTimeStamp,
-                initialProfileImageUrl = profileImageUrl,
                 initialMemo = memo,
                 initialUserStatus = UserStatus.OFFLINE, // Default to offline
                 initialFcmToken = initialFcmToken,
@@ -301,7 +268,6 @@ class User private constructor(
             email: UserEmail,
             name: UserName,
             consentTimeStamp: Instant,
-            profileImageUrl: ImageUrl?,
             memo: UserMemo?,
             userStatus: UserStatus,
             createdAt: Instant?,
@@ -314,7 +280,6 @@ class User private constructor(
                 initialEmail = email,
                 initialName = name,
                 initialConsentTimeStamp = consentTimeStamp,
-                initialProfileImageUrl = profileImageUrl,
                 initialMemo = memo,
                 initialUserStatus = userStatus,
                 initialFcmToken = fcmToken,

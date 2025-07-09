@@ -161,11 +161,11 @@ class MemberListViewModel @Inject constructor(
                                     try {
                                         // 사용자 정보 가져오기 - UseCase 사용
                                         val userResult = userUseCases.getUserByIdUseCase(domainMember.id)
-                                        val (userName, profileImageUrl) = when (userResult) {
+                                        val userName = when (userResult) {
                                             is CustomResult.Success -> {
-                                                Pair(userResult.data.name, userResult.data.profileImageUrl)
+                                                userResult.data.name
                                             }
-                                            else -> Pair(UserName("사용자 ${domainMember.id.value.take(4)}"), null) // 백업값
+                                            else -> UserName("사용자 ${domainMember.id.value.take(4)}") // 백업값
                                         }
 
                                         // 역할 정보들 가져오기
@@ -180,7 +180,6 @@ class MemberListViewModel @Inject constructor(
                                         MemberUiModel(
                                             userId = UserId.from(domainMember.id),
                                             userName = userName,
-                                            profileImageUrl = profileImageUrl,
                                             roleNames = roleNames,
                                             joinedAt = domainMember.createdAt
                                         )
@@ -189,7 +188,6 @@ class MemberListViewModel @Inject constructor(
                                         MemberUiModel(
                                             userId = UserId.from(domainMember.id),
                                             userName = UserName("사용자 ${domainMember.id.value.take(4)}"),
-                                            profileImageUrl = null,
                                             roleNames = listOf(Name("역할 로딩 실패")),
                                             joinedAt = domainMember.createdAt
                                         )

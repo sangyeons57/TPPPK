@@ -83,33 +83,16 @@ export const onUserProfileImageUpload = onObjectFinalized(
         const timestamp = Date.now();
         const processedPublicUrl = `${signedUrl}&v=${timestamp}`;
 
-        // Get use case and update user with timestamped image URL
-        const userUseCases = Providers.getUserProvider().create();
-        const updateImageUseCase = new UpdateUserImageUseCase(userUseCases.userRepository);
+        // No Firestore update needed; client loads image directly via Storage path.
 
-        logger.info(`🔄 Executing updateImageUseCase for user ${userId} with URL: ${processedPublicUrl}`);
+        logger.info(`✅ Processed profile image stored at ${processedFilePath}`);
 
-        const result = await updateImageUseCase.execute({
-          userId: userId,
-          imageUrl: processedPublicUrl,
-        });
-
-        logger.info("UpdateImageUseCase result:", result);
-
-        if (result.success) {
-          logger.info("✅ Successfully updated user profile image:", processedPublicUrl);
-          logger.info("✅ Updated user data:", result.data);
-
-          // Clean up the original file in user_profile_images after successful processing
-          try {
-            await originalFile.delete();
-            logger.info("🗑️ Cleaned up original file:", name);
-          } catch (cleanupError) {
-            logger.warn("⚠️ Failed to cleanup original file:", (cleanupError as Error).message);
-          }
-        } else {
-          logger.error("❌ Failed to update user profile image:", result.error);
-          logger.error("❌ Error details:", result.error);
+        // Clean up the original file in user_profile_images after successful processing
+        try {
+          await originalFile.delete();
+          logger.info("🗑️ Cleaned up original file:", name);
+        } catch (cleanupError) {
+          logger.warn("⚠️ Failed to cleanup original file:", (cleanupError as Error).message);
         }
       } catch (copyError) {
         logger.error(`Error processing file from ${name} to user_profiles:`, copyError);

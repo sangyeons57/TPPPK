@@ -222,7 +222,7 @@ fun MemberOptionsBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 UserProfileImage(
-                    profileImageUrl = member.profileImageUrl?.value,
+                    userId = member.userId.value,
                     contentDescription = "${member.userName.value}님의 프로필",
                     modifier = Modifier
                         .size(48.dp)
@@ -415,7 +415,7 @@ fun ProjectMemberListItemComposable(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = member.profileImageUrl?.value,
+            userId = member.userId.value,
             contentDescription = "${member.userName.value}님의 프로필 사진",
             modifier = Modifier
                 .size(40.dp)

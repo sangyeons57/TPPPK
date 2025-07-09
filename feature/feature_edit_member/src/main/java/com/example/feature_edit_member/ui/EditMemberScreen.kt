@@ -163,8 +163,8 @@ fun EditMemberContent(
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Temporary placeholders:
             UserProfileImage(
-                profileImageUrl = null, // Placeholder
-                contentDescription = "프로필 이미지", // Placeholder
+                userId = memberInfo.id.value, // Member ID used as User ID
+                contentDescription = "프로필 이미지",
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)

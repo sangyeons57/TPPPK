@@ -355,7 +355,7 @@ private fun FriendInviteItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         UserProfileImage(
-            profileImageUrl = friend.profileImageUrl,
+            userId = friend.userId.value,
             contentDescription = "${friend.userName.value} 프로필",
             modifier = Modifier
                 .size(40.dp)
