@@ -35,6 +35,7 @@ object FirebaseFunctionParameters {
         const val VALIDATE_INVITE_CODE = "validateInviteCode"
         const val JOIN_PROJECT_WITH_INVITE = "joinProjectWithInvite"
         const val DELETE_PROJECT = "deleteProject"
+        const val LEAVE_PROJECT = "leaveProject"
     }
     
     /**

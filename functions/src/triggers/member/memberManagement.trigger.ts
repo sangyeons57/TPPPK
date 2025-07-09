@@ -393,3 +393,52 @@ export const joinProjectWithInviteFunction = onCall(
     }
   }
 );
+
+// Leave Project Function
+interface LeaveProjectRequest {
+  projectId: string;
+  userId: string;
+}
+
+export const leaveProjectFunction = onCall(
+  {
+    region: RUNTIME_CONFIG.REGION,
+    memory: RUNTIME_CONFIG.MEMORY,
+    timeoutSeconds: RUNTIME_CONFIG.TIMEOUT_SECONDS,
+  },
+  async (request) => {
+    try {
+      const {
+        projectId,
+        userId,
+      } = request.data as LeaveProjectRequest;
+
+      if (!projectId || !userId) {
+        throw new HttpsError("invalid-argument", "Project ID and user ID are required");
+      }
+
+      const memberUseCases = Providers.getMemberProvider().create();
+
+      const result = await memberUseCases.leaveMemberUseCase.execute(projectId, userId);
+
+      if (!result.success) {
+        if (result.error.message.includes("not found")) {
+          throw new HttpsError("not-found", result.error.message);
+        }
+        if (result.error.message.includes("소유자는 나갈 수 없습니다")) {
+          throw new HttpsError("failed-precondition", result.error.message);
+        }
+        throw new HttpsError("internal", result.error.message);
+      }
+
+      return {success: true};
+    } catch (error) {
+      console.error("Error in leaveProject:", error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError("internal", "Internal server error");
+    }
+  }
+);
+

@@ -348,4 +348,80 @@ class MemberListViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
         }
     }
+
+    /**
+     * 프로젝트 나가기 처리 함수
+     */
+    fun leaveProject() {
+        viewModelScope.launch {
+            val currentUserId = _uiState.value.currentUserId
+            if (currentUserId == null) {
+                _eventFlow.emit(MemberListEvent.ShowSnackbar("사용자 정보를 확인할 수 없습니다."))
+                return@launch
+            }
+
+            _uiState.update { it.copy(isLoading = true) }
+            val result = projectMemberUseCases.leaveProjectUseCase(projectId)
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("프로젝트에서 나갔습니다."))
+                    navigationManger.navigateBack()
+                }
+                is CustomResult.Failure -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("프로젝트 나가기 실패: ${result.error}"))
+                }
+                else -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("프로젝트 나가기 실패: 알 수 없는 오류"))
+                }
+            }
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    /**
+     * 소유권 전달 처리 함수
+     */
+    fun transferOwnership(newOwnerId: String) {
+        viewModelScope.launch {
+            val currentUserId = _uiState.value.currentUserId
+            if (currentUserId == null) {
+                _eventFlow.emit(MemberListEvent.ShowSnackbar("사용자 정보를 확인할 수 없습니다."))
+                return@launch
+            }
+
+            _uiState.update { it.copy(isLoading = true) }
+            val result = projectMemberUseCases.transferOwnershipUseCase(projectId, newOwnerId)
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("소유권이 전달되었습니다."))
+                }
+                is CustomResult.Failure -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("소유권 전달 실패: ${result.error}"))
+                }
+                else -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("소유권 전달 실패: 알 수 없는 오류"))
+                }
+            }
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    /**
+     * 현재 사용자가 OWNER인지 확인하는 함수
+     */
+    fun isCurrentUserOwner(): Boolean {
+        val currentUserId = _uiState.value.currentUserId
+        return currentUserId != null && _uiState.value.members.any { member ->
+            member.userId.value == currentUserId.value && 
+            member.roleNames.any { it.value == "OWNER" }
+        }
+    }
+
+    /**
+     * 현재 사용자가 자기 자신인지 확인하는 함수
+     */
+    fun isCurrentUser(userId: String): Boolean {
+        val currentUserId = _uiState.value.currentUserId
+        return currentUserId != null && currentUserId.value == userId
+    }
 } 

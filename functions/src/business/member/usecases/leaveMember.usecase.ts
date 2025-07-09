@@ -1,104 +1,76 @@
-import { MemberRepository } from '../../../domain/member/repositories/member.repository';
-import { ProjectRepository } from '../../../domain/project/repositories/project.repository';
-import { UserRepository } from '../../../domain/user/repositories/user.repository';
-import { CustomResult, Result } from '../../../core/types';
-import { validateId } from '../../../core/validation';
-import { ValidationError, NotFoundError } from '../../../core/errors';
+import { MemberRepository } from "../../../infrastructure/repositories/member.repository";
+import { ProjectRepository } from "../../../infrastructure/repositories/project.repository";
+import { ProjectWrapperRepository } from "../../../infrastructure/repositories/projectWrapper.repository";
+import { CustomResult } from "../../../core/result/customResult";
+import { ConflictError } from "../../../core/errors/conflictError";
+import { NotFoundError } from "../../../core/errors/notFoundError";
+import { ValidationError } from "../../../core/errors/validationError";
+import { injectable } from "inversify";
 
-export interface LeaveMemberRequest {
-  projectId: string;
-  userId: string; // User ID of who is leaving
-}
-
-export interface LeaveMemberResponse {
-  success: boolean;
-  leftUserId: string;
-  leftAt: string;
-  memberRemoved: boolean;
-  projectWrapperRemoved: boolean;
-}
-
+/**
+ * 프로젝트 나가기 UseCase
+ * 
+ * 현재 사용자가 프로젝트에서 나가는 기능을 제공합니다.
+ */
+@injectable()
 export class LeaveMemberUseCase {
-  constructor(
-    private readonly memberRepository: MemberRepository,
-    private readonly projectRepository: ProjectRepository,
-    private readonly userRepository: UserRepository
-  ) {}
+    constructor(
+        private memberRepository: MemberRepository,
+        private projectRepository: ProjectRepository,
+        private projectWrapperRepository: ProjectWrapperRepository
+    ) {}
 
-  async execute(request: LeaveMemberRequest): Promise<CustomResult<LeaveMemberResponse>> {
-    try {
-      // Input validation
-      if (!request.projectId || !request.userId) {
-        return Result.failure(
-          new ValidationError("request", "Project ID and user ID are required")
-        );
-      }
+    /**
+     * 프로젝트에서 나갑니다.
+     * 
+     * @param projectId 프로젝트 ID
+     * @param userId 나갈 사용자 ID
+     * @returns 나가기 결과
+     */
+    async execute(projectId: string, userId: string): Promise<CustomResult<void, Error>> {
+        try {
+            // 1. 프로젝트 존재 확인
+            const projectResult = await this.projectRepository.findById(projectId);
+            if (!projectResult) {
+                return CustomResult.failure(new NotFoundError("프로젝트를 찾을 수 없습니다."));
+            }
 
-      validateId(request.projectId, "project ID");
-      validateId(request.userId, "user ID");
+            // 2. 멤버 존재 확인
+            const memberResult = await this.memberRepository.findByUserIdAndProjectId(userId, projectId);
+            if (!memberResult) {
+                return CustomResult.failure(new NotFoundError("프로젝트 멤버를 찾을 수 없습니다."));
+            }
 
-      // Check if the project exists
-      const projectResult = await this.projectRepository.findById(request.projectId);
-      if (!projectResult.success) {
-        return Result.failure(
-          new NotFoundError("project", `Project not found: ${request.projectId}`)
-        );
-      }
+            const member = memberResult;
 
-      // Check if the user is actually a member
-      const memberResult = await this.memberRepository.findByUserId(request.userId);
-      if (!memberResult.success) {
-        return Result.failure(
-          new NotFoundError("member", `User is not a member of this project: ${request.userId}`)
-        );
-      }
+            // 3. OWNER 역할인지 확인 (OWNER는 나갈 수 없음)
+            if (member.roles.includes("OWNER")) {
+                return CustomResult.failure(new ConflictError("프로젝트 소유자는 나갈 수 없습니다. 소유권을 다른 멤버에게 전달한 후 나가세요."));
+            }
 
-      // Check if this is the last member - might need special handling
-      const memberCountResult = await this.memberRepository.countActive();
-      if (memberCountResult.success && memberCountResult.data === 1) {
-        // This is the last member leaving - you might want to handle this differently
-        // For now, we'll allow it, but you could implement project archival logic here
-        console.warn(`Last member leaving project ${request.projectId}`);
-      }
+            // 4. 멤버 삭제
+            const deleteMemberResult = await this.memberRepository.delete(member.id);
+            if (!deleteMemberResult) {
+                return CustomResult.failure(new Error("멤버 삭제에 실패했습니다."));
+            }
 
-      // Remove the member from the project
-      const deleteMemberResult = await this.memberRepository.deleteByUserId(request.userId);
-      if (!deleteMemberResult.success) {
-        return Result.failure(deleteMemberResult.error);
-      }
+            // 5. 프로젝트 래퍼 삭제
+            const deleteWrapperResult = await this.projectWrapperRepository.deleteByUserIdAndProjectId(userId, projectId);
+            if (!deleteWrapperResult) {
+                // 프로젝트 래퍼 삭제 실패는 치명적이지 않으므로 로그만 남김
+                console.warn(`프로젝트 래퍼 삭제 실패: userId=${userId}, projectId=${projectId}`);
+            }
 
-      // Remove the project wrapper from the user's collection
-      // This ensures the project no longer appears in the user's project list
-      let projectWrapperRemoved = false;
-      try {
-        const removeWrapperResult = await this.userRepository.removeProjectWrapper(
-          request.userId, 
-          request.projectId
-        );
-        projectWrapperRemoved = removeWrapperResult.success;
-        
-        // Log but don't fail the operation if wrapper removal fails
-        if (!removeWrapperResult.success) {
-          console.warn(`Failed to remove project wrapper for user ${request.userId}:`, removeWrapperResult.error);
+            // 6. 프로젝트 멤버 수 업데이트
+            const project = projectResult;
+            const updatedMemberCount = Math.max(0, project.memberCount - 1);
+            await this.projectRepository.updateMemberCount(projectId, updatedMemberCount);
+
+            return CustomResult.success(undefined);
+
+        } catch (error) {
+            console.error("LeaveMemberUseCase error:", error);
+            return CustomResult.failure(error as Error);
         }
-      } catch (error) {
-        console.warn(`Error removing project wrapper for user ${request.userId}:`, error);
-      }
-
-      const leftAt = new Date().toISOString();
-
-      return Result.success({
-        success: true,
-        leftUserId: request.userId,
-        leftAt,
-        memberRemoved: true,
-        projectWrapperRemoved
-      });
-
-    } catch (error) {
-      return Result.failure(
-        error instanceof Error ? error : new Error("Failed to leave project")
-      );
     }
-  }
 }

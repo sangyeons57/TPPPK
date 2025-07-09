@@ -216,6 +216,15 @@ interface FunctionsRemoteDataSource {
      * @return 성공 시 삭제 결과, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun deleteProject(projectId: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 프로젝트에서 나갑니다.
+     *
+     * @param projectId 나갈 프로젝트 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun leaveProject(projectId: String): CustomResult<Unit, Exception>
+
 }
 
 @Singleton
@@ -860,4 +869,39 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             CustomResult.Failure(e)
         }
     }
+
+    override suspend fun leaveProject(projectId: String): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        try {
+            Log.d("FunctionsRemoteDataSource", "Starting leaveProject for projectId: $projectId")
+            
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FunctionsRemoteDataSource", "Current user: ${currentUser.uid}")
+            
+            val requestData = mapOf(
+                FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
+                FirebaseFunctionParameters.User.USER_ID to currentUser.uid
+            )
+            Log.d("FunctionsRemoteDataSource", "Request data: $requestData")
+
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.LEAVE_PROJECT)
+            Log.d("FunctionsRemoteDataSource", "Calling Firebase Function: ${FirebaseFunctionParameters.Functions.LEAVE_PROJECT}")
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                Log.d("FunctionsRemoteDataSource", "Leave project function call successful")
+                CustomResult.Success(Unit)
+            } else {
+                Log.e("FunctionsRemoteDataSource", "Leave project function call timed out after ${DEFAULT_TIMEOUT_MS}ms")
+                CustomResult.Failure(Exception("Leave project function call timed out"))
+            }
+        } catch (e: Exception) {
+            Log.e("FunctionsRemoteDataSource", "Exception in leaveProject", e)
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
 }

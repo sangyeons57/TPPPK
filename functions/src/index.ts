@@ -54,3 +54,6 @@ export {deleteProjectFunction as deleteProject} from "./triggers/member/memberMa
 export {generateInviteLinkFunction as generateInviteLink} from "./triggers/member/memberManagement.trigger";
 export {validateInviteCodeFunction as validateInviteCode} from "./triggers/member/memberManagement.trigger";
 export {joinProjectWithInviteFunction as joinProjectWithInvite} from "./triggers/member/memberManagement.trigger";
+
+// Project member management functions
+export {leaveProjectFunction as leaveProject} from "./triggers/member/memberManagement.trigger";

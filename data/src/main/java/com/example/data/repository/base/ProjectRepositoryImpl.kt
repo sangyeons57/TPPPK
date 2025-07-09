@@ -31,7 +31,7 @@ import javax.inject.Inject
 class ProjectRepositoryImpl @Inject constructor(
     private val projectRemoteDataSource: ProjectRemoteDataSource,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource,
-    override val factoryContext: ProjectRepositoryFactoryContext, // 멤버 관리용
+    override val factoryContext: ProjectRepositoryFactoryContext,
 ) : DefaultRepositoryImpl(projectRemoteDataSource, factoryContext), ProjectRepository {
 
 
@@ -68,6 +68,23 @@ class ProjectRepositoryImpl @Inject constructor(
 
     override suspend fun deleteProject(projectId: DocumentId): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.deleteProject(projectId.value)
+    }
+
+    override suspend fun leaveProject(projectId: DocumentId): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.leaveProject(projectId.value)
+    }
+
+    override suspend fun transferOwnership(projectId: DocumentId, newOwnerId: String): CustomResult<Unit, Exception> {
+        return resultTry {
+            // 프로젝트 소유자 필드만 업데이트 (멤버 역할은 UseCase에서 처리)
+            val projectDoc = projectRemoteDataSource.getById(projectId)
+            if (projectDoc == null) {
+                throw Exception("프로젝트를 찾을 수 없습니다.")
+            }
+            
+            val updateData = mapOf("ownerId" to newOwnerId)
+            projectRemoteDataSource.update(projectId, updateData)
+        }
     }
 
 }

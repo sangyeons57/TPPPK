@@ -5,8 +5,10 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.DeleteProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
@@ -21,6 +23,10 @@ import com.example.domain.usecase.project.member.RemoveProjectMemberUseCase
 import com.example.domain.usecase.project.member.RemoveProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.member.UpdateMemberRolesUseCase
 import com.example.domain.usecase.project.member.UpdateMemberRolesUseCaseImpl
+import com.example.domain.usecase.project.member.LeaveProjectUseCase
+import com.example.domain.usecase.project.member.LeaveProjectUseCaseImpl
+import com.example.domain.usecase.project.member.TransferOwnershipUseCase
+import com.example.domain.usecase.project.member.TransferOwnershipUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,7 +38,8 @@ import javax.inject.Singleton
 @Singleton
 class ProjectMemberUseCaseProvider @Inject constructor(
     private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val projectRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>
 ) {
 
     /**
@@ -50,6 +57,10 @@ class ProjectMemberUseCaseProvider @Inject constructor(
 
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
+        )
+
+        val projectRepository = projectRepositoryFactory.create(
+            ProjectRepositoryFactoryContext()
         )
 
         return ProjectMemberUseCases(
@@ -84,9 +95,19 @@ class ProjectMemberUseCaseProvider @Inject constructor(
                 memberRepository = memberRepository
             ),
             
+            // 프로젝트 나가기 및 소유권 전달
+            leaveProjectUseCase = LeaveProjectUseCaseImpl(
+                projectRepository = projectRepository
+            ),
+            
+            transferOwnershipUseCase = TransferOwnershipUseCaseImpl(
+                projectRepository = projectRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
-            memberRepository = memberRepository
+            memberRepository = memberRepository,
+            projectRepository = projectRepository
         )
     }
 
@@ -129,7 +150,12 @@ data class ProjectMemberUseCases(
     // 멤버 역할 관리
     val updateMemberRolesUseCase: UpdateMemberRolesUseCase,
     
+    // 프로젝트 나가기 및 소유권 전달
+    val leaveProjectUseCase: LeaveProjectUseCase,
+    val transferOwnershipUseCase: TransferOwnershipUseCase,
+    
     // 공통 Repository
     val authRepository: AuthRepository,
-    val memberRepository: MemberRepository
+    val memberRepository: MemberRepository,
+    val projectRepository: ProjectRepository
 )

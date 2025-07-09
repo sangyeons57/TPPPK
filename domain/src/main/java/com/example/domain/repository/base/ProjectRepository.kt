@@ -63,4 +63,21 @@ interface ProjectRepository : DefaultRepository {
      */
     suspend fun deleteProject(projectId: DocumentId): CustomResult<Map<String, Any?>, Exception>
 
+    /**
+     * 프로젝트에서 나갑니다.
+     *
+     * @param projectId 나갈 프로젝트 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun leaveProject(projectId: DocumentId): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트 소유권을 다른 멤버에게 전달합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param newOwnerId 새로운 소유자 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun transferOwnership(projectId: DocumentId, newOwnerId: String): CustomResult<Unit, Exception>
+
 }
