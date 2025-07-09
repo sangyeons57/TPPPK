@@ -6,6 +6,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.CachePolicy
 import com.example.core_ui.R // Ensure this R is correct
 
 @Composable
@@ -26,6 +27,7 @@ fun UserProfileImage(
             .placeholder(R.drawable.ic_default_profile_placeholder)
             .error(R.drawable.ic_default_profile_placeholder)
             .crossfade(true)
+            .memoryCachePolicy(CachePolicy.DISABLED) // 프로필 이미지 메모리 캐시 비활성화
             .build()
     }
     AsyncImage(
