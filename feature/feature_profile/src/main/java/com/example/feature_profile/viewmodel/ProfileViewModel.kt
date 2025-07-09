@@ -300,22 +300,30 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 프로필 이미지 변경 시도 (UseCase 사용) - $imageUri")
-            // --- UseCase 호출 ---
-            // val result = userRepository.updateProfileImage(imageUri) // Remove direct repository call
-            val result = userUseCases.updateUserImageUseCase(imageUri) // Call UseCase
-            result.onSuccess { newImageUrl ->
-                // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
-                loadUserProfile()
-                _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨"))
-            }.onFailure { exception ->
-                 _uiState.update { it.copy(isLoading = false) }
-                _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 실패: ${exception.message}"))
+            
+            when (val result = userUseCases.uploadProfileImageUseCase(imageUri)) {
+                is CustomResult.Success -> {
+                    // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
+                    loadUserProfile()
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨"))
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 실패: ${result.error.message}"))
+                }
+                is CustomResult.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                    println("ViewModel: 프로필 이미지 업로드 로딩 중...")
+                }
+                is CustomResult.Initial -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    println("ViewModel: 프로필 이미지 업로드 초기 상태 - $result")
+                }
+                is CustomResult.Progress -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                    println("ViewModel: 프로필 이미지 업로드 진행 중 (${result.progress}%) - $result")
+                }
             }
-            // ----------------------------------------------
-            // delay(1000) // Remove temporary delay
-            // val newImageUrl = "https://picsum.photos/seed/${System.currentTimeMillis()}/100" // Remove temporary URL generation
-            // _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(profileImageUrl = newImageUrl)) } // Remove temporary UI update
-            // _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨 (임시)")) // Remove temporary snackbar
         }
     }
     // -----------------------------------------------------

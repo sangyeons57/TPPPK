@@ -18,7 +18,7 @@ classDiagram
                 -checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase
                 -uploadProfileImageUseCase: UploadProfileImageUseCase
                 -removeProfileImageUseCase: RemoveProfileImageUseCase
-                -updateUserImageUseCase: UpdateUserImageUseCase
+
                 +loadProfile()
                 +updateProfile(name: String, nickname: String, bio: String)
                 +checkNickname(nickname: String)
@@ -72,11 +72,7 @@ classDiagram
                 -storageRepository: StorageRepository
                 +invoke(): CustomResult<Unit, Exception>
             }
-            class UpdateUserImageUseCase {
-                -userRepository: UserRepository
-                -authRepository: AuthRepository
-                +invoke(imageUrl: String): CustomResult<Unit, Exception>
-            }
+
             class GetCurrentStatusUseCase {
                 -userRepository: UserRepository
                 -authRepository: AuthRepository
@@ -162,7 +158,7 @@ classDiagram
     EditProfileViewModel ..> CheckNicknameAvailabilityUseCase : uses
     EditProfileViewModel ..> UploadProfileImageUseCase : uses
     EditProfileViewModel ..> RemoveProfileImageUseCase : uses
-    EditProfileViewModel ..> UpdateUserImageUseCase : uses
+
     %% EditProfileViewModel might also use UpdateNicknameUseCase if it's separate
 
     ChangeStatusViewModel ..> GetCurrentStatusUseCase : uses
@@ -175,7 +171,7 @@ classDiagram
     CheckNicknameAvailabilityUseCase ..> UserRepository : accesses
     UploadProfileImageUseCase ..> UserRepository : accesses
     RemoveProfileImageUseCase ..> UserRepository : accesses
-    UpdateUserImageUseCase ..> UserRepository : accesses
+
     GetCurrentStatusUseCase ..> UserRepository : accesses
     UpdateUserStatusUseCase ..> UserRepository : accesses
 

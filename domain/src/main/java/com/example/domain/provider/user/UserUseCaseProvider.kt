@@ -20,8 +20,7 @@ import com.example.domain.usecase.user.RemoveProfileImageUseCaseImpl
 import com.example.domain.usecase.user.SearchUserByNameUseCase
 import com.example.domain.usecase.user.SearchUserByNameUseCaseImpl
 import com.example.domain.usecase.user.UpdateNameUseCase
-import com.example.domain.usecase.user.UpdateUserImageUseCase
-import com.example.domain.usecase.user.UpdateUserImageUseCaseImpl
+
 import com.example.domain.usecase.user.UpdateUserMemoUseCase
 import com.example.domain.usecase.user.UpdateUserMemoUseCaseImpl
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
@@ -92,9 +91,7 @@ class UserUseCaseProvider @Inject constructor(
                 userRepository = userRepository,
                 authRepository = authRepository
             ),
-            updateUserImageUseCase = UpdateUserImageUseCaseImpl(
-                userRepository = userRepository,
-            ),
+
 
             checkNicknameAvailabilityUseCase = CheckNicknameAvailabilityUseCaseImpl(
                 userRepository = userRepository
@@ -132,7 +129,7 @@ data class UserUseCases(
     val updateUserStatusUseCase: UpdateUserStatusUseCase,
     val updateUserMemoUseCase: UpdateUserMemoUseCase,
     val updateNameUseCase: UpdateNameUseCase,
-    val updateUserImageUseCase: UpdateUserImageUseCase,
+
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
     val removeProfileImageUseCase: RemoveProfileImageUseCase,
     val uploadProfileImageUseCase: UploadProfileImageUseCase,

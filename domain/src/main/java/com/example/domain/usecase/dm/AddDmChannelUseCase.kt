@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import android.util.Log
 
 /**
  * 새로운 DM 채널을 생성하거나 기존 DM 채널을 가져오는 UseCase입니다.
@@ -45,7 +46,16 @@ class AddDmChannelUseCase @Inject constructor(
                     is CustomResult.Success -> {
                         // Firebase Function으로부터 받은 결과에서 channelId 추출
                         val resultData = createDMResult.data
-                        val channelId = resultData["channelId"] as? String
+                        
+                        // 디버깅을 위한 로그 추가
+                        Log.d("AddDmChannelUseCase", "Response data structure: $resultData")
+                        
+                        // Firebase Function 응답 구조: {success: true, data: {channelId: "...", ...}}
+                        // 먼저 data 객체를 가져온 후 channelId 추출
+                        val dataObject = resultData["data"] as? Map<String, Any?>
+                        val channelId = dataObject?.get(FirebaseFunctionParameters.DM.CHANNEL_ID) as? String
+                        
+                        Log.d("AddDmChannelUseCase", "Extracted channelId: $channelId")
                         
                         if (channelId != null) {
                             emit(CustomResult.Success(DocumentId.from(channelId)))
