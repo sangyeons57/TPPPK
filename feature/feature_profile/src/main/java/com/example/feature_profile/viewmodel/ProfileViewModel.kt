@@ -99,7 +99,7 @@ class ProfileViewModel @Inject constructor(
     private fun loadUserProfile() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            Log.d"UserProfileImage", ("🔄 ProfileViewModel: 사용자 프로필 로드 시도 (UseCase 사용)")
+            Log.d("ProfileViewModel", "🔄 ProfileViewModel: 사용자 프로필 로드 시도 (UseCase 사용)")
 
             // --- UseCase 호출 ---
             userUseCases.getCurrentUserStreamUseCase()
