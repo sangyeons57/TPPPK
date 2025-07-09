@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.core_common.result.CustomResult
+import com.example.core_ui.components.user.ProfileImageUpdateEventManager
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
@@ -31,8 +32,7 @@ data class EditProfileUiState(
     val selectedImageUri: Uri? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val hasChanges: Boolean = false,
-    val profileImageRefreshTrigger: Long = 0L // 프로필 이미지 새로고침 트리거
+    val hasChanges: Boolean = false
 )
 
 /**
@@ -50,7 +50,8 @@ sealed interface EditProfileEvent {
 class EditProfileViewModel @Inject constructor(
     private val userUseCaseProvider: UserUseCaseProvider,
     private val dispatcherProvider: DispatcherProvider,
-    private val navigationManger: NavigationManger
+    private val navigationManger: NavigationManger,
+    private val profileImageUpdateEventManager: ProfileImageUpdateEventManager
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
@@ -193,8 +194,11 @@ class EditProfileViewModel @Inject constructor(
                     }
                     when (imageResult) {
                         is CustomResult.Success -> {
-                            // 이미지 업로드 성공 시 프로필 이미지 새로고침 트리거
-                            _uiState.update { it.copy(profileImageRefreshTrigger = System.currentTimeMillis()) }
+                            // 전역 이벤트 발생으로 모든 화면들에 알림
+                            currentUser.id.value.let { userId ->
+                                profileImageUpdateEventManager.notifyProfileImageUpdated(userId)
+                            }
+                            
                             _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지 업로드 완료"))
                         }
                         is CustomResult.Failure -> {

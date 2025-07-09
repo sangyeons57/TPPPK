@@ -12,6 +12,77 @@ import com.example.core_common.constants.FirebaseStorageConstants
 import com.example.core_ui.R
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+/**
+ * 프로필 이미지 업로드 완료 이벤트
+ */
+data class ProfileImageUpdateEvent(
+    val userId: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * 전역 프로필 이미지 업데이트 이벤트 매니저
+ * 프로필 이미지 업로드 완료 시 모든 화면에 알림을 전달합니다.
+ */
+@Singleton
+class ProfileImageUpdateEventManager @Inject constructor() {
+    
+    private val _profileImageUpdateEvents = MutableSharedFlow<ProfileImageUpdateEvent>()
+    val profileImageUpdateEvents: SharedFlow<ProfileImageUpdateEvent> = _profileImageUpdateEvents.asSharedFlow()
+    
+    /**
+     * 프로필 이미지 업로드 완료 이벤트 발생
+     */
+    suspend fun notifyProfileImageUpdated(userId: String) {
+        _profileImageUpdateEvents.emit(ProfileImageUpdateEvent(userId))
+    }
+}
+
+/**
+ * UserProfileImage 컴포넌트를 위한 ViewModel
+ * 프로필 이미지 업데이트 이벤트를 자동으로 감지합니다.
+ */
+@HiltViewModel
+class UserProfileImageViewModel @Inject constructor(
+    private val profileImageUpdateEventManager: ProfileImageUpdateEventManager
+) : ViewModel() {
+    
+    private val _refreshTrigger = MutableStateFlow(0L)
+    val refreshTrigger: StateFlow<Long> = _refreshTrigger.asStateFlow()
+    
+    init {
+        observeProfileImageUpdates()
+    }
+    
+    private fun observeProfileImageUpdates() {
+        viewModelScope.launch {
+            profileImageUpdateEventManager.profileImageUpdateEvents.collect { event ->
+                _refreshTrigger.value = event.timestamp
+            }
+        }
+    }
+    
+    fun getRefreshKey(userId: String?, forceRefresh: Boolean): Long {
+        return when {
+            forceRefresh -> System.currentTimeMillis()
+            userId != null -> _refreshTrigger.value
+            else -> 0L
+        }
+    }
+}
 
 @Composable
 fun UserProfileImage(
@@ -21,8 +92,12 @@ fun UserProfileImage(
     contentScale: ContentScale = ContentScale.Crop,
     forceRefresh: Boolean = false
 ) {
-    val refreshKey = remember(userId, forceRefresh) { 
-        if (forceRefresh) System.currentTimeMillis() else 0L 
+    val viewModel: UserProfileImageViewModel = hiltViewModel()
+    val globalRefreshTrigger by viewModel.refreshTrigger.collectAsState()
+    
+    // forceRefresh가 true이거나 전역 이벤트가 발생했을 때 새로고침
+    val refreshKey = remember(userId, forceRefresh, globalRefreshTrigger) { 
+        viewModel.getRefreshKey(userId, forceRefresh)
     }
     
     var imageUrl by remember(userId, refreshKey) { mutableStateOf<String?>(null) }

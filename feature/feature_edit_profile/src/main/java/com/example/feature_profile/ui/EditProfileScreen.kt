@@ -218,8 +218,7 @@ fun EditProfileContent(
                     .clip(CircleShape)
                     .clickable { onProfileImageClicked() }
                     .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                contentScale = ContentScale.Crop,
-                forceRefresh = uiState.profileImageRefreshTrigger > 0L
+                contentScale = ContentScale.Crop
             )
         }
         
