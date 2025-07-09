@@ -33,8 +33,10 @@ fun User.toUserProfileData(): UserProfileData {
     val imageUrl = this.profileImageUrl?.value
     Log.d("ProfileViewModel", "��️ ProfileViewModel: Converting User to UserProfileData")
     Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User ID = ${this.id.value}")
-    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User profile image URL = $imageUrl")
-    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User profile image URL type = ${this.profileImageUrl?.javaClass?.simpleName}")
+    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: User profile image URL = '$imageUrl'")
+    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: URL length = ${imageUrl?.length}")
+    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: URL contains timestamp = ${imageUrl?.contains("?v=")}")
+    Log.d("ProfileViewModel", "🖼️ ProfileViewModel: URL starts with https = ${imageUrl?.startsWith("https://")}")
     
     return UserProfileData(
         uid = this.id.value,
