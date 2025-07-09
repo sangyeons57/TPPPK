@@ -18,14 +18,19 @@ fun UserProfileImage(
     userId: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.Crop,
+    forceRefresh: Boolean = false
 ) {
-    var imageUrl by remember(userId) { mutableStateOf<String?>(null) }
-    var isLoading by remember(userId) { mutableStateOf(true) }
-    var hasError by remember(userId) { mutableStateOf(false) }
+    val refreshKey = remember(userId, forceRefresh) { 
+        if (forceRefresh) System.currentTimeMillis() else 0L 
+    }
+    
+    var imageUrl by remember(userId, refreshKey) { mutableStateOf<String?>(null) }
+    var isLoading by remember(userId, refreshKey) { mutableStateOf(true) }
+    var hasError by remember(userId, refreshKey) { mutableStateOf(false) }
 
     // Firebase Storage에서 다운로드 URL 가져오기
-    LaunchedEffect(userId) {
+    LaunchedEffect(userId, refreshKey) {
         if (userId.isNullOrEmpty()) {
             Log.d("UserProfileImage", "🖼️ UserProfileImage: No userId provided, using default image")
             isLoading = false
@@ -53,7 +58,14 @@ fun UserProfileImage(
                 Log.d("UserProfileImage", "✅ UserProfileImage: Successfully got download URL")
                 Log.d("UserProfileImage", "✅ UserProfileImage: URL = $downloadUrl")
                 
-                imageUrl = downloadUrl
+                // Cache busting을 위해 timestamp 추가
+                val cacheBustingUrl = if (forceRefresh) {
+                    "$downloadUrl&v=${System.currentTimeMillis()}"
+                } else {
+                    downloadUrl
+                }
+                
+                imageUrl = cacheBustingUrl
                 isLoading = false
                 hasError = false
                 
@@ -97,8 +109,8 @@ fun UserProfileImage(
                 .placeholder(R.drawable.ic_default_profile_placeholder)
                 .error(R.drawable.ic_default_profile_placeholder)
                 .crossfade(true)
-                .memoryCachePolicy(CachePolicy.ENABLED) // 성공적으로 받은 URL은 캐시 사용
-                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(if (forceRefresh) CachePolicy.DISABLED else CachePolicy.ENABLED)
+                .diskCachePolicy(if (forceRefresh) CachePolicy.DISABLED else CachePolicy.ENABLED)
                 .listener(
                     onStart = { 
                         Log.d("UserProfileImage", "🖼️ UserProfileImage: Started loading image from Firebase URL")

@@ -31,7 +31,8 @@ data class EditProfileUiState(
     val selectedImageUri: Uri? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val hasChanges: Boolean = false
+    val hasChanges: Boolean = false,
+    val profileImageRefreshTrigger: Long = 0L // 프로필 이미지 새로고침 트리거
 )
 
 /**
@@ -192,6 +193,8 @@ class EditProfileViewModel @Inject constructor(
                     }
                     when (imageResult) {
                         is CustomResult.Success -> {
+                            // 이미지 업로드 성공 시 프로필 이미지 새로고침 트리거
+                            _uiState.update { it.copy(profileImageRefreshTrigger = System.currentTimeMillis()) }
                             _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지 업로드 완료"))
                         }
                         is CustomResult.Failure -> {
