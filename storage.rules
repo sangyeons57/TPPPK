@@ -93,9 +93,10 @@ service firebase.storage {
 
     // === Default Deny Rule ===
     // Deny all access by default to paths not explicitly matched.
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
+    // 임시로 주석처리하여 테스트
+    // match /{allPaths=**} {
+    //   allow read, write: if false;
+    // }
 
     // === Rules based on firebase-storage.md ===
 

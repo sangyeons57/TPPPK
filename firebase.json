@@ -24,7 +24,10 @@
       ]
     }
   ],
-  "storage": {
-    "rules": "storage.rules"
-  }
+  "storage": [
+    {
+      "bucket": "teamnovaprojectprojecting.firebasestorage.app",
+      "rules": "storage.rules"
+    }
+  ]
 }
