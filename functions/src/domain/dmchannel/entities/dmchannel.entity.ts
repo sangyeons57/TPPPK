@@ -38,22 +38,22 @@ export class DMChannelEntity implements BaseEntity {
   ) {
     // Validate inputs
     validateId(id, "dmChannelId");
-    
+
     if (!participants || participants.length < 2) {
       throw new Error("DMChannel must have at least two participants");
     }
-    
+
     // Validate each participant ID
     participants.forEach((participantId, index) => {
       validateId(participantId, `participant[${index}]`);
     });
-    
+
     // Ensure participants are unique
     const uniqueParticipants = [...new Set(participants)];
     if (uniqueParticipants.length !== participants.length) {
       throw new Error("Participant IDs must be unique");
     }
-    
+
     if (uniqueParticipants.length < 2) {
       throw new Error("DMChannel must have at least two distinct participants");
     }
@@ -72,7 +72,7 @@ export class DMChannelEntity implements BaseEntity {
 
   archive(): DMChannelEntity {
     if (this.status === DMChannelStatus.ARCHIVED) return this;
-    
+
     return new DMChannelEntity(
       this.id,
       this.participants,
@@ -84,7 +84,7 @@ export class DMChannelEntity implements BaseEntity {
 
   activate(): DMChannelEntity {
     if (this.status === DMChannelStatus.ACTIVE) return this;
-    
+
     return new DMChannelEntity(
       this.id,
       this.participants,
@@ -96,7 +96,7 @@ export class DMChannelEntity implements BaseEntity {
 
   block(): DMChannelEntity {
     if (this.status === DMChannelStatus.BLOCKED) return this;
-    
+
     return new DMChannelEntity(
       this.id,
       this.participants,
@@ -108,7 +108,7 @@ export class DMChannelEntity implements BaseEntity {
 
   markDeleted(): DMChannelEntity {
     if (this.status === DMChannelStatus.DELETED) return this;
-    
+
     return new DMChannelEntity(
       this.id,
       this.participants,
@@ -139,7 +139,7 @@ export class DMChannelEntity implements BaseEntity {
   }
 
   getOtherParticipant(userId: string): string | undefined {
-    return this.participants.find(participantId => participantId !== userId);
+    return this.participants.find((participantId) => participantId !== userId);
   }
 
   toData(): DMChannelData {
@@ -169,7 +169,7 @@ export class DMChannelEntity implements BaseEntity {
   ): DMChannelEntity {
     // Ensure participants are distinct
     const distinctParticipants = [...new Set(participants)];
-    
+
     return new DMChannelEntity(
       id,
       distinctParticipants,
@@ -187,11 +187,11 @@ export class DMChannelEntity implements BaseEntity {
   ): DMChannelEntity {
     validateId(userId1, "userId1");
     validateId(userId2, "userId2");
-    
+
     if (userId1 === userId2) {
       throw new Error("Cannot create DM channel with the same user");
     }
-    
+
     return DMChannelEntity.create(channelId, [userId1, userId2], status);
   }
 }

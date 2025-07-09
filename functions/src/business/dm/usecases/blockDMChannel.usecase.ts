@@ -2,7 +2,6 @@ import {CustomResult, Result} from "../../../core/types";
 import {ValidationError, NotFoundError, ConflictError} from "../../../core/errors";
 import {DMChannelRepository} from "../../../domain/dmchannel/repositories/dmchannel.repository";
 import {DMWrapperRepository} from "../../../domain/dmwrapper/repositories/dmwrapper.repository";
-import {DMChannelStatus} from "../../../domain/dmchannel/entities/dmchannel.entity";
 
 export interface BlockDMChannelRequest {
   currentUserId: string;
@@ -70,7 +69,7 @@ export class BlockDMChannelUseCase {
       );
 
       // DMWrapper 제거 결과 확인
-      const failedRemovals = removeWrapperResults.filter(result => !result.success);
+      const failedRemovals = removeWrapperResults.filter((result) => !result.success);
       if (failedRemovals.length > 0) {
         // 일부 DMWrapper 제거 실패 시 경고하지만 차단은 성공으로 처리
         console.warn(`Failed to remove some DM wrappers for channel ${channelId}:`, failedRemovals);
@@ -79,9 +78,8 @@ export class BlockDMChannelUseCase {
       return Result.success({
         channelId,
         success: true,
-        message: "DM channel has been blocked successfully"
+        message: "DM channel has been blocked successfully",
       });
-
     } catch (error) {
       return Result.failure(error instanceof Error ? error : new Error("Failed to block DM channel"));
     }
