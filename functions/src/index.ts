@@ -24,7 +24,7 @@ export {updateUserProfileFunction as updateUserProfile} from "./triggers/user/us
 export {onUserProfileImageUpload} from "./triggers/user/userImage.trigger";
 
 // Project management functions
-export {onProjectImageUpload} from "./triggers/project/projectImage.trigger";
+export {onProjectProfileImageUpload} from "./triggers/project/projectImage.trigger";
 export {onProjectChange, onProjectDelete} from "./triggers/project/projectSync.trigger";
 
 // System functions

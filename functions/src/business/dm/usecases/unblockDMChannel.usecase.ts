@@ -176,7 +176,7 @@ export class UnblockDMChannelUseCase {
         channelId,
         otherUserId,
         otherUser.name,
-        otherUser.profileImageUrl || undefined
+        undefined // Fixed path system: user_profiles/{userId}/profile.webp
       );
 
       const saveResult = await this.dmWrapperRepository.save(userId, dmWrapper);

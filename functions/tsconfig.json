@@ -17,7 +17,9 @@
   ],
   "exclude": [
     "node_modules",
-    "lib"
+    "lib",
+    "**/*.bak/**",
+    "**/*.bak"
   ],
   "parserOptions": {
     "project": "./tsconfig.json"

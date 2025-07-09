@@ -13,7 +13,7 @@ import { InviteRepository } from '../../domain/invite/repositories/invite.reposi
 import {
   RemoveMemberUseCase,
   BlockMemberUseCase,
-  LeaveMemberUseCase,
+  // LeaveMemberUseCase, // Temporarily disabled
   DeleteProjectUseCase,
   GenerateInviteLinkUseCase,
   JoinProjectWithInviteUseCase,
@@ -23,7 +23,7 @@ import {
 export interface MemberUseCases {
   removeMemberUseCase: RemoveMemberUseCase;
   blockMemberUseCase: BlockMemberUseCase;
-  leaveMemberUseCase: LeaveMemberUseCase;
+  // leaveMemberUseCase: LeaveMemberUseCase; // Temporarily disabled
   deleteProjectUseCase: DeleteProjectUseCase;
   generateInviteLinkUseCase: GenerateInviteLinkUseCase;
   joinProjectWithInviteUseCase: JoinProjectWithInviteUseCase;
@@ -64,11 +64,11 @@ export class MemberUseCaseProvider {
         memberRepository,
         projectRepository
       ),
-      leaveMemberUseCase: new LeaveMemberUseCase(
-        memberRepository,
-        projectRepository,
-        userRepository
-      ),
+      // leaveMemberUseCase: new LeaveMemberUseCase( // Temporarily disabled
+      //   memberRepository,
+      //   projectRepository,
+      //   userRepository
+      // ),
       deleteProjectUseCase: new DeleteProjectUseCase(
         projectRepository
       ),

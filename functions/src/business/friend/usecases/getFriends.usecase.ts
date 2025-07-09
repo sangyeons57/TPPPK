@@ -86,7 +86,6 @@ export class GetFriendsUseCase {
             user: {
               id: friendUser.id,
               name: friendUser.name,
-              profileImageUrl: friendUser.profileImageUrl,
               userStatus: friendUser.userStatus,
             },
             status: relation.status,

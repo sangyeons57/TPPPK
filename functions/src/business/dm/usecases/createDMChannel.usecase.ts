@@ -78,7 +78,7 @@ export class CreateDMChannelUseCase {
         channelId: channelResult.data.channelId,
         otherUserId: targetUser.id,
         otherUserName: targetUser.name,
-        otherUserImageUrl: targetUser.profileImageUrl || "",
+        otherUserImageUrl: "", // Fixed path system: user_profiles/{userId}/profile.webp
         createdAt: new Date().toISOString(),
       });
     } catch (error) {

@@ -88,7 +88,7 @@ export class AcceptFriendRequestUseCase {
         const reciprocalFriend = FriendEntity.fromDataSource(
           request.receiverId, // Friend ID (수신자의 ID)
           receiverResult.data.name,
-          receiverResult.data.profileImageUrl,
+          undefined, // Fixed path system: user_profiles/{userId}/profile.webp
           FriendStatus.ACCEPTED,
           friendRequest.requestedAt,
           new Date(), // acceptedAt

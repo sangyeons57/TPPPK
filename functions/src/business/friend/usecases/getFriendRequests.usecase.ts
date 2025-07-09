@@ -101,7 +101,7 @@ export class GetFriendRequestsUseCase {
           const otherUserInfo = {
             id: otherUserResult.data.id,
             name: otherUserResult.data.name,
-            profileImageUrl: otherUserResult.data.profileImageUrl,
+            profileImageUrl: undefined, // Fixed path system: user_profiles/{userId}/profile.webp
             userStatus: otherUserResult.data.userStatus,
           };
 
@@ -118,7 +118,7 @@ export class GetFriendRequestsUseCase {
           const currentUserInfo = {
             id: currentUserResult.data.id,
             name: currentUserResult.data.name,
-            profileImageUrl: currentUserResult.data.profileImageUrl,
+            profileImageUrl: undefined, // Fixed path system: user_profiles/{userId}/profile.webp
             userStatus: currentUserResult.data.userStatus,
           };
 

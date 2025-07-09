@@ -19,6 +19,7 @@ export class ProjectInvitationUseCaseProvider {
 
   /**
    * 프로젝트 초대 보내기 UseCase
+   * @return {SendProjectInvitationUseCase}
    */
   getSendProjectInvitationUseCase(): SendProjectInvitationUseCase {
     return new SendProjectInvitationUseCase(this.repositoryFactory);
@@ -26,6 +27,7 @@ export class ProjectInvitationUseCaseProvider {
 
   /**
    * 프로젝트 초대 수락 UseCase
+   * @return {AcceptProjectInvitationUseCase}
    */
   getAcceptProjectInvitationUseCase(): AcceptProjectInvitationUseCase {
     return new AcceptProjectInvitationUseCase(this.repositoryFactory);
@@ -33,6 +35,7 @@ export class ProjectInvitationUseCaseProvider {
 
   /**
    * 프로젝트 초대 거절 UseCase
+   * @return {RejectProjectInvitationUseCase}
    */
   getRejectProjectInvitationUseCase(): RejectProjectInvitationUseCase {
     return new RejectProjectInvitationUseCase(this.repositoryFactory);
@@ -40,6 +43,7 @@ export class ProjectInvitationUseCaseProvider {
 
   /**
    * 프로젝트 초대 취소 UseCase
+   * @return {CancelProjectInvitationUseCase}
    */
   getCancelProjectInvitationUseCase(): CancelProjectInvitationUseCase {
     return new CancelProjectInvitationUseCase(this.repositoryFactory);
@@ -47,6 +51,7 @@ export class ProjectInvitationUseCaseProvider {
 
   /**
    * 프로젝트 초대 목록 조회 UseCase
+   * @return {GetProjectInvitationsUseCase}
    */
   getGetProjectInvitationsUseCase(): GetProjectInvitationsUseCase {
     return new GetProjectInvitationsUseCase(this.repositoryFactory);
@@ -54,6 +59,7 @@ export class ProjectInvitationUseCaseProvider {
 
   /**
    * 받은 초대 목록 조회 UseCase
+   * @return {GetProjectInvitationsUseCase}
    */
   getGetReceivedInvitationsUseCase(): GetReceivedInvitationsUseCase {
     return new GetReceivedInvitationsUseCase(this.repositoryFactory);

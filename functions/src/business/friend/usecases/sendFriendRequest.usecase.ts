@@ -92,7 +92,7 @@ export class SendFriendRequestUseCase {
       const requesterFriend = FriendEntity.newRequest(
         receiverId,
         receiverResult.data.name,
-        receiverResult.data.profileImageUrl,
+        undefined, // Fixed path system: user_profiles/{userId}/profile.webp
         now
       );
 
@@ -101,7 +101,7 @@ export class SendFriendRequestUseCase {
       const receiverFriend = FriendEntity.receivedRequest(
         requesterId,
         requesterResult.data.name,
-        requesterResult.data.profileImageUrl,
+        undefined, // Fixed path system: user_profiles/{userId}/profile.webp
         now
       );
 
