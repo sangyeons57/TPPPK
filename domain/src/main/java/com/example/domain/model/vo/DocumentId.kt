@@ -55,4 +55,8 @@ value class DocumentId(val value: String) {
     fun isEmpty(): Boolean {
         return value == EMPTY_VALUE
     }
+
+    fun isBlank(): Boolean {
+        return value == ""
+    }
 }
