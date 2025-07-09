@@ -1,87 +1,94 @@
 import {onObjectFinalized} from "firebase-functions/v2/storage";
-import {UpdateProjectImageUseCase} from "../../business/project/usecases/updateProjectImage.usecase";
+import {logger} from "firebase-functions";
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {STORAGE_BUCKETS} from "../../core/constants";
-import {Providers} from "../../config/dependencies";
+import * as admin from "firebase-admin";
 
 /**
- * Simplified Storage trigger for project images
- * Updates Project entity's imageUrl when image is uploaded
+ * Storage trigger for project profile images
+ * Processes uploaded images and stores them at fixed paths (project_profiles/{projectId}/profile.webp)
+ * No Firestore updates needed - client loads images directly via fixed paths
  */
-export const onProjectImageUpload = onObjectFinalized(
+export const onProjectProfileImageUpload = onObjectFinalized(
   {
     region: RUNTIME_CONFIG.REGION,
     memory: RUNTIME_CONFIG.MEMORY,
     timeoutSeconds: RUNTIME_CONFIG.TIMEOUT_SECONDS,
-    bucket: STORAGE_BUCKETS.PROJECT_IMAGES,
+    bucket: STORAGE_BUCKETS.USER_PROFILES, // Same bucket as user profiles
   },
   async (event) => {
     try {
       const {bucket, name, contentType} = event.data;
 
       if (!name || !contentType) {
-        console.log("Missing file name or content type");
+        logger.info("Missing file name or content type");
         return;
       }
 
       // Only process image files
       if (!contentType.startsWith("image/")) {
-        console.log(`Skipping non-image file: ${contentType}`);
+        logger.info(`Skipping non-image file: ${contentType}`);
         return;
       }
 
-      // Extract projectId from file path (e.g., "project_profile_images/{projectId}/filename.jpg")
+      // Only process files from project_profile_images directory (ignore processed files)
       const pathParts = name.split("/");
       if (pathParts.length < 2 || pathParts[0] !== "project_profile_images") {
-        console.log(`Invalid file path structure: ${name}`);
+        // Silently ignore files from other directories (like project_profiles)
         return;
       }
 
       const projectId = pathParts[1];
       if (!projectId) {
-        console.log("Could not extract projectId from file path");
+        logger.error("Could not extract projectId from file path");
         return;
       }
 
-      // Import admin SDK for Storage operations
-      const admin = require("firebase-admin");
+      logger.info(`🚀 Processing project profile image upload for project: ${projectId}, file: ${name}`);
+
+      // Get Firebase Storage instance
       const storage = admin.storage();
 
       try {
         // Get the original file
         const originalFile = storage.bucket(bucket).file(name);
 
-        // Create processed file path in project_profiles directory
-        const filename = pathParts[pathParts.length - 1]; // Get the filename
-        const processedFilePath = `project_profiles/${projectId}/${filename}`;
+        // Create fixed file path in project_profiles directory (always use profile.webp)
+        const processedFilePath = `project_profiles/${projectId}/profile.webp`;
         const processedFile = storage.bucket(bucket).file(processedFilePath);
 
-        // Copy the original file to the processed location
+        // Check if the processed file already exists and delete it first
+        try {
+          const [exists] = await processedFile.exists();
+          if (exists) {
+            await processedFile.delete();
+            logger.info(`🗑️ Deleted existing project profile image: ${processedFilePath}`);
+          }
+        } catch (deleteError) {
+          logger.warn(`No existing file to delete or delete failed: ${(deleteError as Error).message}`);
+        }
+
+        // Copy the original file to the processed location (with fixed filename)
         await originalFile.copy(processedFile);
-        console.log(`Copied ${name} to ${processedFilePath}`);
+        logger.info(`📁 Copied ${name} to ${processedFilePath}`);
 
-        // Generate public URL for the processed file
-        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}`;
+        // No Firestore update needed; client loads image directly via Storage path.
+        // The fixed path system eliminates the need for URL storage in Firestore.
 
-        // Get use case and update project with processed image URL
-        const projectUseCases = Providers.getProjectProvider().create();
-        const updateImageUseCase = new UpdateProjectImageUseCase(projectUseCases.projectRepository);
+        logger.info(`✅ Processed project profile image stored at ${processedFilePath}`);
 
-        const result = await updateImageUseCase.execute({
-          projectId: projectId,
-          imageUrl: processedPublicUrl,
-        });
-
-        if (result.success) {
-          console.log(`Successfully updated project ${projectId} image: ${processedPublicUrl}`);
-        } else {
-          console.error(`Failed to update project ${projectId} image:`, result.error);
+        // Clean up the original file in project_profile_images after successful processing
+        try {
+          await originalFile.delete();
+          logger.info("🗑️ Cleaned up original file:", name);
+        } catch (cleanupError) {
+          logger.warn("⚠️ Failed to cleanup original file:", (cleanupError as Error).message);
         }
       } catch (copyError) {
-        console.error(`Error copying file from ${name} to project_profiles:`, copyError);
+        logger.error(`Error processing file from ${name} to project_profiles:`, copyError);
       }
     } catch (error) {
-      console.error("Error processing project image upload:", error);
+      logger.error("Error processing project profile image upload:", error);
     }
   }
 );

@@ -1,14 +1,13 @@
 import {onObjectFinalized} from "firebase-functions/v2/storage";
 import {logger} from "firebase-functions";
-import {UpdateUserImageUseCase} from "../../business/user/usecases/updateUserImage.usecase";
 import {RUNTIME_CONFIG} from "../../core/constants";
 import {STORAGE_BUCKETS} from "../../core/constants";
-import {Providers} from "../../config/dependencies";
 import * as admin from "firebase-admin";
 
 /**
- * Simplified Storage trigger for user profile images
- * Updates User entity's profileImageUrl when image is uploaded
+ * Storage trigger for user profile images
+ * Processes uploaded images and stores them at fixed paths (user_profiles/{userId}/profile.webp)
+ * No Firestore updates needed - client loads images directly via fixed paths
  */
 export const onUserProfileImageUpload = onObjectFinalized(
   {
@@ -73,17 +72,8 @@ export const onUserProfileImageUpload = onObjectFinalized(
         await originalFile.copy(processedFile);
         logger.info(`📁 Copied ${name} to ${processedFilePath}`);
 
-        // Generate signed URL for secure access (expires in 10 years)
-        const [signedUrl] = await processedFile.getSignedUrl({
-          action: "read",
-          expires: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10년 후 만료
-        });
-
-        // Add cache buster to signed URL
-        const timestamp = Date.now();
-        const processedPublicUrl = `${signedUrl}&v=${timestamp}`;
-
         // No Firestore update needed; client loads image directly via Storage path.
+        // The fixed path system eliminates the need for URL storage in Firestore.
 
         logger.info(`✅ Processed profile image stored at ${processedFilePath}`);
 

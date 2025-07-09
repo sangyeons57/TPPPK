@@ -31,6 +31,7 @@ class Project private constructor(
     // Mutable properties with private setters
     var name: ProjectName = initialName
         private set
+    @Deprecated("Use fixed path system with project_profiles/{projectId}/profile.webp instead")
     var imageUrl: ImageUrl? = initialImageUrl
         private set
     var status: ProjectStatus = initialStatus
@@ -65,7 +66,11 @@ class Project private constructor(
 
     /**
      * Changes the image URL of the project, firing a domain event.
+     * 
+     * @deprecated Use fixed path system with project_profiles/{projectId}/profile.webp instead.
+     * This method is kept for backward compatibility but should not be used for new implementations.
      */
+    @Deprecated("Use fixed path system with project_profiles/{projectId}/profile.webp instead")
     fun changeImageUrl(newImageUrl: ImageUrl?) {
         if (this.imageUrl == newImageUrl) return
 
