@@ -24,6 +24,7 @@ import com.example.core_common.util.DateTimeUtil
 class DMChannel private constructor(
     initialParticipants: List<UserId>,
     initialStatus: DMChannelStatus,
+    initialBlockedByMap: Map<UserId, UserId>,
     override val id: DocumentId,
     override val isNew: Boolean,
     override val createdAt: Instant,
@@ -36,6 +37,10 @@ class DMChannel private constructor(
 
     /** Current status of the DM channel. */
     var status: DMChannelStatus = initialStatus
+        private set
+
+    /** Map of blocked users: key = userId who blocked, value = userId who was blocked */
+    var blockedByMap: Map<UserId, UserId> = initialBlockedByMap
         private set
 
     init {
@@ -66,6 +71,7 @@ class DMChannel private constructor(
         return DMChannel(
             initialParticipants = this.participants,
             initialStatus = DMChannelStatus.ARCHIVED,
+            initialBlockedByMap = this.blockedByMap,
             id = this.id,
             isNew = false,
             createdAt = this.createdAt,
@@ -82,6 +88,50 @@ class DMChannel private constructor(
         return DMChannel(
             initialParticipants = this.participants,
             initialStatus = DMChannelStatus.ACTIVE,
+            initialBlockedByMap = this.blockedByMap,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Blocks the DM channel when one user blocks the other.
+     */
+    fun blockByUser(blockerUserId: UserId): DMChannel {
+        val newBlockedByMap = this.blockedByMap.toMutableMap()
+        val otherUserId = getOtherParticipant(blockerUserId)
+        
+        if (otherUserId != null) {
+            newBlockedByMap[blockerUserId] = otherUserId
+        }
+        
+        return DMChannel(
+            initialParticipants = this.participants,
+            initialStatus = DMChannelStatus.BLOCKED,
+            initialBlockedByMap = newBlockedByMap,
+            id = this.id,
+            isNew = false,
+            createdAt = this.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+    }
+
+    /**
+     * Unblocks the DM channel when one user unblocks the other.
+     */
+    fun unblockByUser(unblockerUserId: UserId): DMChannel {
+        val newBlockedByMap = this.blockedByMap.toMutableMap()
+        newBlockedByMap.remove(unblockerUserId)
+        
+        // If no one is blocking anyone, activate the channel
+        val newStatus = if (newBlockedByMap.isEmpty()) DMChannelStatus.ACTIVE else DMChannelStatus.BLOCKED
+        
+        return DMChannel(
+            initialParticipants = this.participants,
+            initialStatus = newStatus,
+            initialBlockedByMap = newBlockedByMap,
             id = this.id,
             isNew = false,
             createdAt = this.createdAt,
@@ -98,6 +148,7 @@ class DMChannel private constructor(
         return DMChannel(
             initialParticipants = this.participants,
             initialStatus = DMChannelStatus.BLOCKED,
+            initialBlockedByMap = this.blockedByMap,
             id = this.id,
             isNew = false,
             createdAt = this.createdAt,
@@ -114,6 +165,7 @@ class DMChannel private constructor(
         return DMChannel(
             initialParticipants = this.participants,
             initialStatus = DMChannelStatus.DELETED,
+            initialBlockedByMap = this.blockedByMap,
             id = this.id,
             isNew = false,
             createdAt = this.createdAt,
@@ -141,10 +193,38 @@ class DMChannel private constructor(
      */
     fun isDeleted(): Boolean = status == DMChannelStatus.DELETED
 
+    /**
+     * Checks if a user has blocked another user.
+     */
+    fun isBlockedByUser(userId: UserId): Boolean = blockedByMap.containsKey(userId)
+
+    /**
+     * Checks if a user is blocked by another user.
+     */
+    fun isUserBlocked(userId: UserId): Boolean = blockedByMap.containsValue(userId)
+
+    /**
+     * Gets the other participant in this DM channel.
+     */
+    fun getOtherParticipant(userId: UserId): UserId? {
+        return participants.find { it != userId }
+    }
+
+    /**
+     * Gets the list of users who have been blocked.
+     */
+    fun getBlockedUsers(): List<UserId> = blockedByMap.values.toList()
+
+    /**
+     * Gets the list of users who have blocked others.
+     */
+    fun getBlockerUsers(): List<UserId> = blockedByMap.keys.toList()
+
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_PARTICIPANTS to participants.map { it.value },
             KEY_STATUS to status.value,
+            KEY_BLOCKED_BY_MAP to blockedByMap.mapKeys { it.key.value }.mapValues { it.value.value },
             KEY_CREATED_AT to createdAt,
             KEY_UPDATED_AT to updatedAt,
         )
@@ -169,6 +249,7 @@ class DMChannel private constructor(
         const val COLLECTION_NAME = "dm_channels"
         const val KEY_PARTICIPANTS = "participants" // List<String> = "userId1"
         const val KEY_STATUS = "status"
+        const val KEY_BLOCKED_BY_MAP = "blockedByMap"
         /**
          * Creates a new DMChannel instance.
          *
@@ -192,6 +273,7 @@ class DMChannel private constructor(
                 id = DocumentId.EMPTY,
                 initialParticipants = distinctParticipants, // Use distinct participants
                 initialStatus = initialStatus,
+                initialBlockedByMap = emptyMap(),
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
@@ -207,6 +289,7 @@ class DMChannel private constructor(
          * @param id The unique identifier of the channel.
          * @param participants The list of participants in the channel.
          * @param status The status of the channel. Defaults to ACTIVE for backward compatibility.
+         * @param blockedByMap The map of blocked users. Defaults to empty map.
          * @param createdAt The timestamp when the channel was created.
          * @param updatedAt The timestamp when the channel was last updated.
          * @return A DMChannel instance reconstructed from the provided data.
@@ -215,6 +298,7 @@ class DMChannel private constructor(
             id: DocumentId,
             participants: List<UserId>,
             status: DMChannelStatus = DMChannelStatus.ACTIVE,
+            blockedByMap: Map<UserId, UserId> = emptyMap(),
             createdAt: Instant?,
             updatedAt: Instant?
         ): DMChannel {
@@ -222,6 +306,7 @@ class DMChannel private constructor(
                 id = id,
                 initialParticipants = participants,
                 initialStatus = status,
+                initialBlockedByMap = blockedByMap,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false,

@@ -25,6 +25,7 @@ data class AddDmUserUiState(
     val username: UserName = UserName.EMPTY,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val isUserBlocked: Boolean = false,
     // val searchResults: List<User> = emptyList() // 검색 기능 구현 시 필요
 )
 
@@ -72,12 +73,9 @@ class AddDmUserDialogViewModel @Inject constructor(
     }
 
     fun onUsernameChange(username: UserName) {
-        _uiState.update { it.copy(username = username, errorMessage = null) }
+        _uiState.update { it.copy(username = username, errorMessage = null, isUserBlocked = false) }
     }
 
-    // 현재 searchUser는 바로 createDmChannelWithUser를 호출합니다.
-    // 실제로는 사용자 검색 -> 선택 -> DM 생성 순서가 될 것입니다.
-    // 지금은 createDmChannelWithUser가 Flow를 잘 처리하는 데 집중합니다.
     fun searchUser() {
         viewModelScope.launch {
             val currentUsername = _uiState.value.username
@@ -85,8 +83,14 @@ class AddDmUserDialogViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = "Please enter a username to search.") }
                 return@launch
             }
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) } // Set loading before calling use case
-            createDmChannelWithUser(currentUsername)
+            
+            // Check if user is blocked, if so, call unblock instead
+            if (_uiState.value.isUserBlocked) {
+                unblockUser(currentUsername)
+            } else {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                createDmChannelWithUser(currentUsername)
+            }
         }
     }
 
@@ -128,10 +132,13 @@ class AddDmUserDialogViewModel @Inject constructor(
                     _eventFlow.emit(AddDmUserEvent.NavigateToDmChat(result.data))
                 }
                 is CustomResult.Failure -> {
+                    val errorMessage = result.error.message ?: "Failed to create DM channel with '$username'."
+                    val isBlocked = errorMessage.contains("차단된 사용자입니다.")
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = result.error.message ?: "Failed to create DM channel with '$username'."
+                            errorMessage = errorMessage,
+                            isUserBlocked = isBlocked
                         )
                     }
                 }
@@ -140,7 +147,7 @@ class AddDmUserDialogViewModel @Inject constructor(
                 // would not be passed here unless they satisfied the predicate (which they don't).
                 // An else branch can handle unexpected CustomResult types if the predicate were different.
                 else -> { // Should ideally not be reached if predicate is strict
-                     _uiState.update {
+                    _uiState.update {
                         it.copy(
                             isLoading = false,
                             errorMessage = "An unexpected result type was received for '$username'."
@@ -151,11 +158,67 @@ class AddDmUserDialogViewModel @Inject constructor(
         }
     }
     
+    /**
+     * 사용자 차단 해제
+     */
+    fun unblockUser(username: UserName) {
+        viewModelScope.launch {
+            val currentDmUseCases = dmUseCases
+            if (currentDmUseCases == null) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "User not initialized"
+                    )
+                }
+                return@launch
+            }
+            
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            
+            val result = try {
+                currentDmUseCases.unblockDMChannelUseCase(username)
+                    .first { it is CustomResult.Success || it is CustomResult.Failure }
+            } catch (e: Exception) {
+                CustomResult.Failure(Exception("Failed to unblock user '$username': ${e.message}", e))
+            }
+            
+            when (result) {
+                is CustomResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = null,
+                            isUserBlocked = false
+                        )
+                    }
+                    // After unblocking, try to create DM channel again
+                    createDmChannelWithUser(username)
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = result.error.message ?: "Failed to unblock user '$username'."
+                        )
+                    }
+                }
+                else -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "An unexpected result occurred while unblocking '$username'."
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
     fun dismiss() {
         viewModelScope.launch {
-            // Optional: Reset parts of the UI state when the dialog is explicitly dismissed by the user,
-            // though Hilt ViewModel scoping might mean a new instance or this state is fine on reopen.
-            // _uiState.update { it.copy(username = "", errorMessage = null, isLoading = false) } 
+            // Reset UI state when dialog is dismissed
+            _uiState.update { it.copy(username = UserName.EMPTY, errorMessage = null, isLoading = false, isUserBlocked = false) }
             _eventFlow.emit(AddDmUserEvent.DismissDialog)
         }
     }

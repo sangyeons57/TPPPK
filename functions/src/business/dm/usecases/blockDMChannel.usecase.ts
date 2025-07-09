@@ -48,8 +48,8 @@ export class BlockDMChannelUseCase {
         return Result.failure(new ConflictError("dmChannel", "blocked", "DM channel is already blocked"));
       }
 
-      // 채널 차단 처리
-      const blockedChannel = dmChannel.block();
+      // 채널 차단 처리 - 특정 사용자에 의한 차단
+      const blockedChannel = dmChannel.blockByUser(currentUserId);
       const updateResult = await this.dmChannelRepository.save(blockedChannel);
       if (!updateResult.success) {
         return Result.failure(updateResult.error);

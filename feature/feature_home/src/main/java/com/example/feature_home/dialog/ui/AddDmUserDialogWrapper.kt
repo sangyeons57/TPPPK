@@ -51,6 +51,7 @@ fun AddDmUserDialogWrapper(
         username = uiState.username,
         onUsernameChange = { viewModel.onUsernameChange(UserName(it)) },
         isLoading = uiState.isLoading,
-        errorMessage = uiState.errorMessage
+        errorMessage = uiState.errorMessage,
+        isUserBlocked = uiState.isUserBlocked
     )
 } 

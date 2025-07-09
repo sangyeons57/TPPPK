@@ -15,6 +15,7 @@ export interface DMChannelData {
   id: string;
   participants: string[];
   status: DMChannelStatus;
+  blockedByMap: Record<string, string>; // key: userId who blocked, value: userId who was blocked
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +27,7 @@ export class DMChannelEntity implements BaseEntity {
   // Keys matching Android DMChannel.kt
   public static readonly KEY_PARTICIPANTS = "participants";
   public static readonly KEY_STATUS = "status";
+  public static readonly KEY_BLOCKED_BY_MAP = "blockedByMap";
   public static readonly KEY_CREATED_AT = "createdAt";
   public static readonly KEY_UPDATED_AT = "updatedAt";
 
@@ -33,6 +35,7 @@ export class DMChannelEntity implements BaseEntity {
     public readonly id: string,
     public readonly participants: string[],
     public readonly status: DMChannelStatus = DMChannelStatus.ACTIVE,
+    public readonly blockedByMap: Record<string, string> = {},
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date()
   ) {
@@ -65,6 +68,7 @@ export class DMChannelEntity implements BaseEntity {
       this.id,
       this.participants,
       this.status,
+      this.blockedByMap,
       this.createdAt,
       new Date()
     );
@@ -77,6 +81,7 @@ export class DMChannelEntity implements BaseEntity {
       this.id,
       this.participants,
       DMChannelStatus.ARCHIVED,
+      this.blockedByMap,
       this.createdAt,
       new Date()
     );
@@ -89,6 +94,42 @@ export class DMChannelEntity implements BaseEntity {
       this.id,
       this.participants,
       DMChannelStatus.ACTIVE,
+      this.blockedByMap,
+      this.createdAt,
+      new Date()
+    );
+  }
+
+  blockByUser(blockerUserId: string): DMChannelEntity {
+    const newBlockedByMap = { ...this.blockedByMap };
+    const otherUserId = this.getOtherParticipant(blockerUserId);
+
+    if (otherUserId) {
+      newBlockedByMap[blockerUserId] = otherUserId;
+    }
+
+    return new DMChannelEntity(
+      this.id,
+      this.participants,
+      DMChannelStatus.BLOCKED,
+      newBlockedByMap,
+      this.createdAt,
+      new Date()
+    );
+  }
+
+  unblockByUser(unblockerUserId: string): DMChannelEntity {
+    const newBlockedByMap = { ...this.blockedByMap };
+    delete newBlockedByMap[unblockerUserId];
+
+    // If no one is blocking anyone, activate the channel
+    const newStatus = Object.keys(newBlockedByMap).length === 0 ? DMChannelStatus.ACTIVE : DMChannelStatus.BLOCKED;
+
+    return new DMChannelEntity(
+      this.id,
+      this.participants,
+      newStatus,
+      newBlockedByMap,
       this.createdAt,
       new Date()
     );
@@ -101,6 +142,7 @@ export class DMChannelEntity implements BaseEntity {
       this.id,
       this.participants,
       DMChannelStatus.BLOCKED,
+      this.blockedByMap,
       this.createdAt,
       new Date()
     );
@@ -113,6 +155,7 @@ export class DMChannelEntity implements BaseEntity {
       this.id,
       this.participants,
       DMChannelStatus.DELETED,
+      this.blockedByMap,
       this.createdAt,
       new Date()
     );
@@ -142,11 +185,28 @@ export class DMChannelEntity implements BaseEntity {
     return this.participants.find((participantId) => participantId !== userId);
   }
 
+  isBlockedByUser(userId: string): boolean {
+    return this.blockedByMap[userId] !== undefined;
+  }
+
+  isUserBlocked(userId: string): boolean {
+    return Object.values(this.blockedByMap).includes(userId);
+  }
+
+  getBlockedUsers(): string[] {
+    return Object.values(this.blockedByMap);
+  }
+
+  getBlockerUsers(): string[] {
+    return Object.keys(this.blockedByMap);
+  }
+
   toData(): DMChannelData {
     return {
       id: this.id,
       participants: this.participants,
       status: this.status,
+      blockedByMap: this.blockedByMap,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
@@ -157,6 +217,7 @@ export class DMChannelEntity implements BaseEntity {
       data.id,
       data.participants,
       data.status || DMChannelStatus.ACTIVE,
+      data.blockedByMap || {},
       data.createdAt,
       data.updatedAt
     );
@@ -174,6 +235,7 @@ export class DMChannelEntity implements BaseEntity {
       id,
       distinctParticipants,
       status,
+      {},
       new Date(),
       new Date()
     );

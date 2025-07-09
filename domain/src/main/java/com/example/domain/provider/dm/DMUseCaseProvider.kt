@@ -13,6 +13,7 @@ import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryC
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import com.example.domain.usecase.dm.AddDmChannelUseCase
 import com.example.domain.usecase.dm.BlockDMChannelUseCase
+import com.example.domain.usecase.dm.UnblockDMChannelUseCase
 import com.example.domain.usecase.dm.GetCurrentUserDmChannelsUseCase
 import com.example.domain.usecase.dm.GetDmChannelUseCase
 import com.example.domain.usecase.dm.GetUserDmChannelsUseCase
@@ -81,6 +82,11 @@ class DMUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
             
+            unblockDMChannelUseCase = UnblockDMChannelUseCase(
+                dmChannelRepository = dmChannelRepository,
+                authRepository = authRepository
+            ),
+            
             getDmChannelUseCase = GetDmChannelUseCase(
                 dmRepository = dmChannelRepository
             ),
@@ -136,6 +142,7 @@ data class DMUseCases(
     val getCurrentUserDmChannelsUseCase: GetCurrentUserDmChannelsUseCase,
     val addDmChannelUseCase: AddDmChannelUseCase,
     val blockDMChannelUseCase: BlockDMChannelUseCase,
+    val unblockDMChannelUseCase: UnblockDMChannelUseCase,
     val getDmChannelUseCase: GetDmChannelUseCase,
     val getUserDmWrappersUseCase: GetUserDmWrappersUseCase,
     

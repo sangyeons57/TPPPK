@@ -166,7 +166,6 @@ fun FriendsScreen(
             FriendManagementDialog(
                 friend = uiState.selectedFriend!!,
                 onRemoveFriend = viewModel::removeFriend,
-                onBlockUser = viewModel::blockUser,
                 onDismiss = viewModel::dismissFriendManagementDialog
             )
         }

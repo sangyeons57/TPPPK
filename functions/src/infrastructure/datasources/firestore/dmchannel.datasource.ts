@@ -14,9 +14,6 @@ export class FirestoreDMChannelDataSource implements DMChannelDatasource {
   private readonly db = admin.firestore();
   private readonly collectionName = "dm_channels";
 
-  /**
-   * Helper method to convert Firestore document data to DMChannelEntity
-   */
   private createDMChannelEntity(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirestore.DocumentSnapshot): CustomResult<DMChannelEntity> {
     const data = doc.data();
     if (!data) {
@@ -28,6 +25,7 @@ export class FirestoreDMChannelDataSource implements DMChannelDatasource {
         id: doc.id,
         participants: data.participants || [],
         status: data.status,
+        blockedByMap: data.blockedByMap || {},
         createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
         updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
       });

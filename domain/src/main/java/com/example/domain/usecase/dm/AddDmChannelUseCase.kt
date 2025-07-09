@@ -54,7 +54,12 @@ class AddDmChannelUseCase @Inject constructor(
                         }
                     }
                     is CustomResult.Failure -> {
-                        emit(CustomResult.Failure(createDMResult.error))
+                        // 차단된 사용자인지 확인
+                        if (createDMResult.error.message?.contains("차단된 사용자입니다") == true) {
+                            emit(CustomResult.Failure(Exception("차단된 사용자입니다.")))
+                        } else {
+                            emit(CustomResult.Failure(createDMResult.error))
+                        }
                     }
                     else -> {
                         emit(CustomResult.Failure(Exception("Unexpected result type from createDMChannel")))

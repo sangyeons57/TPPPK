@@ -333,31 +333,4 @@ class FriendViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 사용자 차단 (임시 구현 - 실제로는 별도 기능 필요)
-     */
-    fun blockUser(friendId: UserId) {
-        viewModelScope.launch {
-            try {
-                // 현재는 친구 제거와 동일하게 처리
-                // 실제 구현에서는 별도의 차단 기능이 필요
-                val result = friendUseCases.removeFriendUseCase(friendId.value)
-                when (result) {
-                    is CustomResult.Success -> {
-                        _eventFlow.emit(FriendsEvent.ShowSnackbar("사용자를 차단했습니다."))
-                        dismissFriendManagementDialog()
-                    }
-                    is CustomResult.Failure -> {
-                        val error = result.error
-                        _eventFlow.emit(FriendsEvent.ShowSnackbar("사용자 차단 실패: ${error.message ?: "알 수 없는 오류"}"))
-                    }
-                    else -> {
-                        // 다른 상태 처리 (필요 시)
-                    }
-                }
-            } catch (e: Exception) {
-                _eventFlow.emit(FriendsEvent.ShowSnackbar("오류: ${e.message}"))
-            }
-        }
-    }
 }

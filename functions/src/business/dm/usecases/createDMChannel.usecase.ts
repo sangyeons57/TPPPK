@@ -58,6 +58,13 @@ export class CreateDMChannelUseCase {
       // 기존 DM Channel이 있는지 확인
       const existingChannelResult = await this.dmChannelRepository.findByParticipants(currentUserId, targetUser.id);
       if (existingChannelResult.success && existingChannelResult.data) {
+        const existingChannel = existingChannelResult.data;
+
+        // 채널이 차단된 상태인지 확인
+        if (existingChannel.isBlocked()) {
+          return Result.failure(new ConflictError("dmChannel", "blocked", "차단된 사용자입니다."));
+        }
+
         return Result.failure(new ConflictError("dmChannel", "exists", "DM channel already exists between these users"));
       }
 

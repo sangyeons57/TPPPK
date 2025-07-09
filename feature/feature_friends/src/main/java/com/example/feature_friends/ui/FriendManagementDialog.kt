@@ -3,7 +3,6 @@ package com.example.feature_friends.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,12 +25,10 @@ import com.example.feature_friends.viewmodel.FriendItem
 fun FriendManagementDialog(
     friend: FriendItem,
     onRemoveFriend: (UserId) -> Unit,
-    onBlockUser: (UserId) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showRemoveConfirmation by remember { mutableStateOf(false) }
-    var showBlockConfirmation by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -81,24 +78,6 @@ fun FriendManagementDialog(
             Text("친구 삭제")
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        OutlinedButton(
-            onClick = { showBlockConfirmation = true },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.error
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Default.Block,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("사용자 차단")
-        }
-        
         Spacer(modifier = Modifier.height(16.dp))
         
         TextButton(
@@ -140,33 +119,6 @@ fun FriendManagementDialog(
         )
     }
 
-    // 사용자 차단 확인 다이얼로그
-    if (showBlockConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showBlockConfirmation = false },
-            title = { Text("사용자 차단") },
-            text = { Text("${friend.displayName.value}님을 차단하시겠습니까? 차단된 사용자는 친구 요청을 보낼 수 없습니다.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onBlockUser(friend.friendId)
-                        showBlockConfirmation = false
-                        onDismiss()
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("차단")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBlockConfirmation = false }) {
-                    Text("취소")
-                }
-            }
-        )
-    }
 }
 
 @Preview(showBackground = true)
@@ -185,7 +137,6 @@ private fun FriendManagementDialogPreview() {
                     displayName = UserName.from("친구이름")
                 ),
                 onRemoveFriend = {},
-                onBlockUser = {},
                 onDismiss = {}
             )
         }

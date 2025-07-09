@@ -37,7 +37,8 @@ fun AddDmUserDialog(
     username: UserName,
     onUsernameChange: (String) -> Unit,
     isLoading: Boolean = false,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    isUserBlocked: Boolean = false
 ) {
     rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
@@ -145,7 +146,7 @@ fun AddDmUserDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("DM 추가")
+                        Text(if (isUserBlocked) "차단 해제" else "DM 추가")
                     }
                 }
             }
@@ -159,6 +160,7 @@ fun AddDmUserDialogPreview() {
     var username by remember { mutableStateOf(UserName.EMPTY) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isUserBlocked by remember { mutableStateOf(false) }
 
     AddDmUserDialog(
         onDismiss = { /*TODO*/ },
@@ -166,6 +168,7 @@ fun AddDmUserDialogPreview() {
         username = username,
         onUsernameChange = { username = UserName(it) },
         isLoading = isLoading,
-        errorMessage = errorMessage
+        errorMessage = errorMessage,
+        isUserBlocked = isUserBlocked
     )
 }
