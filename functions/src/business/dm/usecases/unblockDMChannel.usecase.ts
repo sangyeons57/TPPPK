@@ -64,13 +64,19 @@ export class UnblockDMChannelUseCase {
         return Result.failure(updateResult.error);
       }
 
-      // 현재 사용자의 DMWrapper 재생성
+      // 양쪽 모두 DMWrapper 재생성
       const otherUserId = dmChannel.getOtherParticipant(currentUserId);
       if (otherUserId) {
-        const createWrapperResult = await this.createDMWrapperForUser(currentUserId, otherUserId, channelId);
-        if (!createWrapperResult.success) {
-          // DMWrapper 생성 실패 시 경고하지만 차단 해제는 성공으로 처리
-          console.warn(`Failed to create DM wrapper for user ${currentUserId}:`, createWrapperResult.error);
+        // 1. 차단 해제한 사용자의 DMWrapper 재생성
+        const createWrapperResult1 = await this.createDMWrapperForUser(currentUserId, otherUserId, channelId);
+        if (!createWrapperResult1.success) {
+          console.warn(`Failed to create DM wrapper for user ${currentUserId}:`, createWrapperResult1.error);
+        }
+
+        // 2. 상대방 사용자의 DMWrapper도 재생성
+        const createWrapperResult2 = await this.createDMWrapperForUser(otherUserId, currentUserId, channelId);
+        if (!createWrapperResult2.success) {
+          console.warn(`Failed to create DM wrapper for user ${otherUserId}:`, createWrapperResult2.error);
         }
       }
 
@@ -125,11 +131,17 @@ export class UnblockDMChannelUseCase {
         return Result.failure(updateResult.error);
       }
 
-      // 현재 사용자의 DMWrapper 재생성
-      const createWrapperResult = await this.createDMWrapperForUser(currentUserId, targetUser.id, dmChannel.id);
-      if (!createWrapperResult.success) {
-        // DMWrapper 생성 실패 시 경고하지만 차단 해제는 성공으로 처리
-        console.warn(`Failed to create DM wrapper for user ${currentUserId}:`, createWrapperResult.error);
+      // 양쪽 모두 DMWrapper 재생성
+      // 1. 차단 해제한 사용자의 DMWrapper 재생성
+      const createWrapperResult1 = await this.createDMWrapperForUser(currentUserId, targetUser.id, dmChannel.id);
+      if (!createWrapperResult1.success) {
+        console.warn(`Failed to create DM wrapper for user ${currentUserId}:`, createWrapperResult1.error);
+      }
+
+      // 2. 상대방 사용자의 DMWrapper도 재생성
+      const createWrapperResult2 = await this.createDMWrapperForUser(targetUser.id, currentUserId, dmChannel.id);
+      if (!createWrapperResult2.success) {
+        console.warn(`Failed to create DM wrapper for user ${targetUser.id}:`, createWrapperResult2.error);
       }
 
       const isFullyUnblocked = unblockedChannel.isActive();
