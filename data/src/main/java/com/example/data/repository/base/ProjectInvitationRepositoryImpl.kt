@@ -1,7 +1,6 @@
 package com.example.data.repository.base
 
 import com.example.core_common.result.CustomResult
-import com.example.core_common.result.map
 import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.enum.ProjectInvitationStatus
@@ -66,7 +65,7 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
             inviteeId = inviteeId.value,
             message = message,
             expiresInHours = expiresInHours
-        ).map { mapToProjectInvitation(it) }
+        )
     }
 
     /**
@@ -79,7 +78,6 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         invitationId: DocumentId
     ): CustomResult<ProjectInvitation, Exception> {
         return functionsRemoteDataSource.acceptProjectInvitation(invitationId.value)
-            .map { mapToProjectInvitation(it) }
     }
 
     /**
@@ -92,7 +90,6 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         invitationId: DocumentId
     ): CustomResult<ProjectInvitation, Exception> {
         return functionsRemoteDataSource.rejectProjectInvitation(invitationId.value)
-            .map { mapToProjectInvitation(it) }
     }
 
     /**
@@ -105,7 +102,6 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         invitationId: DocumentId
     ): CustomResult<ProjectInvitation, Exception> {
         return functionsRemoteDataSource.cancelProjectInvitation(invitationId.value)
-            .map { mapToProjectInvitation(it) }
     }
 
     /**
@@ -122,9 +118,7 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.getReceivedInvitations(
             userId = userId.value,
             status = status?.name
-        ).map { result ->
-            result.map { mapToProjectInvitationList(it) }
-        }
+        )
     }
 
     /**
@@ -144,9 +138,7 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
             userId = userId.value,
             projectId = projectId?.value,
             status = status?.name
-        ).map { result ->
-            result.map { mapToProjectInvitationList(it) }
-        }
+        )
     }
 
     /**
@@ -163,9 +155,7 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.getProjectInvitations(
             projectId = projectId.value,
             status = status?.name
-        ).map { result ->
-            result.map { mapToProjectInvitationList(it) }
-        }
+        )
     }
 
     /**
@@ -178,7 +168,6 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         invitationId: DocumentId
     ): CustomResult<ProjectInvitation, Exception> {
         return functionsRemoteDataSource.getProjectInvitation(invitationId.value)
-            .map { mapToProjectInvitation(it) }
     }
 
     /**

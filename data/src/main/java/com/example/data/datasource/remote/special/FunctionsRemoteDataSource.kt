@@ -16,6 +16,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.example.core_common.constants.FirebaseFunctionParameters
+import com.example.domain.model.base.ProjectInvitation
+import kotlinx.coroutines.flow.Flow
 
 interface FunctionsRemoteDataSource {
 
@@ -1010,6 +1012,60 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             if (e is java.util.concurrent.CancellationException) throw e
             CustomResult.Failure(e)
         }
+    }
+
+    override suspend fun sendProjectInvitation(
+        projectId: String,
+        inviteeId: String,
+        message: String?,
+        expiresInHours: Long
+    ): CustomResult<ProjectInvitation, Exception> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun acceptProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun rejectProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun cancelProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getReceivedInvitations(
+        userId: String,
+        status: String?
+    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getSentInvitations(
+        userId: String,
+        projectId: String?,
+        status: String?
+    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getProjectInvitations(
+        projectId: String,
+        status: String?
+    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun hasPendingInvitation(
+        projectId: String,
+        inviteeId: String
+    ): CustomResult<Boolean, Exception> {
+        TODO("Not yet implemented")
     }
 
 }

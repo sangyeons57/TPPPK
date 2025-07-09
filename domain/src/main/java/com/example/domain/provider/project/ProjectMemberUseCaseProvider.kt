@@ -60,7 +60,9 @@ class ProjectMemberUseCaseProvider @Inject constructor(
         )
 
         val projectRepository = projectRepositoryFactory.create(
-            ProjectRepositoryFactoryContext()
+            ProjectRepositoryFactoryContext(
+                CollectionPath.project(projectId.value)
+            )
         )
 
         return ProjectMemberUseCases(
@@ -101,7 +103,9 @@ class ProjectMemberUseCaseProvider @Inject constructor(
             ),
             
             transferOwnershipUseCase = TransferOwnershipUseCaseImpl(
-                projectRepository = projectRepository
+                projectRepository = projectRepository,
+                memberRepository= memberRepository,
+                authRepository= authRepository,
             ),
             
             // 공통 Repository

@@ -72,7 +72,7 @@ value class CollectionPath(val value: String) {
             CollectionPath("${projectRolePermissions(projectId, roleId).value}/$permissionName")
         
         fun projectInvites(projectId: String): CollectionPath = 
-            CollectionPath("${project(projectId).value}/${Invite.COLLECTION_NAME}")
+            CollectionPath("${project(projectId).value}/${ProjectInvitation.COLLECTION_NAME}")
         fun projectInvite(projectId: String, inviteId: String): CollectionPath = 
             CollectionPath("${projectInvites(projectId).value}/$inviteId")
         

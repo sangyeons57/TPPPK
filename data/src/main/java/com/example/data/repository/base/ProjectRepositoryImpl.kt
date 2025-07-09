@@ -77,7 +77,7 @@ class ProjectRepositoryImpl @Inject constructor(
     override suspend fun transferOwnership(projectId: DocumentId, newOwnerId: String): CustomResult<Unit, Exception> {
         return resultTry {
             // 프로젝트 소유자 필드만 업데이트 (멤버 역할은 UseCase에서 처리)
-            val projectDoc = projectRemoteDataSource.getById(projectId)
+            val projectDoc = projectRemoteDataSource.findById(projectId)
             if (projectDoc == null) {
                 throw Exception("프로젝트를 찾을 수 없습니다.")
             }

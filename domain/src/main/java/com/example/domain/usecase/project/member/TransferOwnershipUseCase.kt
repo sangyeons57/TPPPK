@@ -1,7 +1,8 @@
 package com.example.domain.usecase.project.member
 
-import com.example.core_common.util.CustomResult
+import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.MemberRepository
@@ -33,8 +34,8 @@ interface TransferOwnershipUseCase {
  */
 class TransferOwnershipUseCaseImpl @Inject constructor(
     private val projectRepository: ProjectRepository,
-    private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val memberRepository: MemberRepository,
+    private val authRepository: AuthRepository,
 ) : TransferOwnershipUseCase {
 
     /**
@@ -47,24 +48,17 @@ class TransferOwnershipUseCaseImpl @Inject constructor(
     override suspend operator fun invoke(projectId: DocumentId, newOwnerId: String): CustomResult<Unit, Exception> {
         return resultTry {
             // 1. 현재 사용자 세션 확인
-            val authRepository = authRepositoryFactory.create(AuthRepositoryFactoryContext())
-            val currentSessionResult = authRepository.getCurrentSession()
+            val currentSessionResult = authRepository.getCurrentUserSession()
             val currentUserId = when (currentSessionResult) {
                 is CustomResult.Success -> currentSessionResult.data.userId
                 else -> throw Exception("사용자 인증 정보를 확인할 수 없습니다.")
             }
-            
-            // 2. 멤버 레포지토리 생성
-            val memberRepository = memberRepositoryFactory.create(
-                MemberRepositoryFactoryContext(
-                    collectionPath = CollectionPath.projectMembers(projectId.value)
-                )
-            )
+
             
             // 3. 현재 사용자 멤버 정보 조회
-            val currentUserMemberResult = memberRepository.getById(currentUserId)
+            val currentUserMemberResult = memberRepository.findById(DocumentId.from(currentUserId))
             val currentUserMember = when (currentUserMemberResult) {
-                is CustomResult.Success -> currentUserMemberResult.data
+                is CustomResult.Success -> currentUserMemberResult.data as Member
                 else -> throw Exception("프로젝트 멤버가 아닙니다.")
             }
             
@@ -78,9 +72,9 @@ class TransferOwnershipUseCaseImpl @Inject constructor(
             }
             
             // 5. 새로운 소유자 멤버 정보 조회
-            val newOwnerMemberResult = memberRepository.getById(DocumentId.from(newOwnerId))
+            val newOwnerMemberResult = memberRepository.findById(DocumentId.from(newOwnerId))
             val newOwnerMember = when (newOwnerMemberResult) {
-                is CustomResult.Success -> newOwnerMemberResult.data
+                is CustomResult.Success -> newOwnerMemberResult.data as Member
                 else -> throw Exception("새로운 소유자가 프로젝트 멤버가 아닙니다.")
             }
             
@@ -93,8 +87,8 @@ class TransferOwnershipUseCaseImpl @Inject constructor(
             val updatedCurrentUserRoleIds = currentUserMember.roleIds.toMutableList()
             updatedCurrentUserRoleIds.removeAll { it.value == "OWNER" }
             
-            val updatedCurrentUser = currentUserMember.copy(roleIds = updatedCurrentUserRoleIds)
-            memberRepository.save(updatedCurrentUser)
+            currentUserMember.updateRoles(updatedCurrentUserRoleIds)
+            memberRepository.save(currentUserMember)
             
             // 8. 새로운 소유자에게 OWNER 역할 추가
             val updatedNewOwnerRoleIds = newOwnerMember.roleIds.toMutableList()
@@ -102,8 +96,8 @@ class TransferOwnershipUseCaseImpl @Inject constructor(
                 updatedNewOwnerRoleIds.add(DocumentId.from("OWNER"))
             }
             
-            val updatedNewOwner = newOwnerMember.copy(roleIds = updatedNewOwnerRoleIds)
-            memberRepository.save(updatedNewOwner)
+            newOwnerMember.updateRoles(updatedNewOwnerRoleIds)
+            memberRepository.save(newOwnerMember)
             
             // 9. 프로젝트 소유자 정보 업데이트 (ownerId 변경)
             projectRepository.transferOwnership(projectId, newOwnerId)
