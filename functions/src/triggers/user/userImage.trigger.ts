@@ -70,8 +70,9 @@ export const onUserProfileImageUpload = onObjectFinalized(
         await originalFile.copy(processedFile);
         console.log(`Copied ${name} to ${processedFilePath}`);
 
-        // Generate public URL for the processed file
-        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}`;
+        // Generate public URL for the processed file with timestamp to prevent caching
+        const timestamp = Date.now();
+        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}?v=${timestamp}`;
 
         // Get use case and update user with processed image URL
         const userUseCases = Providers.getUserProvider().create();
