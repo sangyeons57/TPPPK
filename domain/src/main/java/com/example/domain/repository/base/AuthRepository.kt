@@ -17,7 +17,8 @@ interface AuthRepository : Repository {
     suspend fun login(email: UserEmail, password: String): CustomResult<UserSession, Exception>
     suspend fun isLoggedIn(): Boolean // 로그인 상태 확인 (Splash)
 
-    suspend fun logout(): CustomResult<Unit, Exception> // 로그아웃
+    suspend fun logout(): CustomResult<Unit, Exception> // 기본 로그아웃
+    suspend fun logoutCompletely(): CustomResult<Unit, Exception> // 완전 로그아웃 (캐시 포함)
 
     suspend fun signup(email: String, password: String): CustomResult<String, Exception> //회원가입
 

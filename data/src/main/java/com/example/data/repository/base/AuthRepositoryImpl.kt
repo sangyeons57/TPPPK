@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Initial.getOrThrow
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
+import com.example.data.service.CacheService
 import com.example.data.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.ImageUrl
@@ -25,6 +26,7 @@ import javax.inject.Inject
 class AuthRepositoryImpl @Inject constructor(
     private val authWrapper: FirebaseAuthWrapper, // 추가: FirebaseAuthWrapper 주입
     private val authRemoteDataSource: AuthRemoteDataSource,
+    private val cacheService: CacheService, // 캐시 정리를 위한 서비스
 ): AuthRepository {
 
 
@@ -84,6 +86,51 @@ class AuthRepositoryImpl @Inject constructor(
      */
     override suspend fun logout(): CustomResult<Unit, Exception> {
         return authRemoteDataSource.signOut()
+    }
+
+    /**
+     * 완전 로그아웃합니다.
+     * Firebase Auth 로그아웃 + 모든 캐시 정리를 수행합니다.
+     * 권한 문제나 인증 만료로 인한 로그아웃 시 사용하면 좋습니다.
+     * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
+     */
+    override suspend fun logoutCompletely(): CustomResult<Unit, Exception> {
+        return try {
+            // 1. Firebase Auth 로그아웃
+            val authLogoutResult = authRemoteDataSource.signOut()
+            
+            when (authLogoutResult) {
+                is CustomResult.Success -> {
+                    // 2. 모든 캐시 정리
+                    when (val cacheResult = cacheService.clearAllCache()) {
+                        is CustomResult.Success -> {
+                            Log.d("AuthRepositoryImpl", "Complete logout successful: Auth + Cache cleared")
+                            CustomResult.Success(Unit)
+                        }
+                        is CustomResult.Failure -> {
+                            Log.w("AuthRepositoryImpl", "Auth logout successful but cache clearing failed", cacheResult.error)
+                            // Auth 로그아웃은 성공했으므로 Success로 반환하되 로그만 남김
+                            CustomResult.Success(Unit)
+                        }
+                        else -> {
+                            Log.w("AuthRepositoryImpl", "Unexpected cache clearing result: $cacheResult")
+                            CustomResult.Success(Unit)
+                        }
+                    }
+                }
+                is CustomResult.Failure -> {
+                    Log.e("AuthRepositoryImpl", "Auth logout failed during complete logout", authLogoutResult.error)
+                    authLogoutResult
+                }
+                else -> {
+                    Log.e("AuthRepositoryImpl", "Unexpected auth logout result: $authLogoutResult")
+                    CustomResult.Failure(Exception("Unknown error occurred during complete logout"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepositoryImpl", "Exception during complete logout", e)
+            CustomResult.Failure(e)
+        }
     }
 
     /**

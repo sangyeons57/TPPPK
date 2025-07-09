@@ -57,7 +57,7 @@ class LoginUseCase @Inject constructor(
                         //(TAG, "Fetched User (possibly from cache): ${user}")
                         if (user.accountStatus == UserAccountStatus.WITHDRAWN) {
                             //(TAG, "Cached status=WITHDRAWN, verifying against server...")
-                            authRepository.logout()
+                            authRepository.logoutCompletely()
                             CustomResult.Failure(WithdrawnAccountException("탈퇴한 계정입니다. (서버 확인)"))
                         } else {
                             // Account is active, return the original success result with session
@@ -66,7 +66,7 @@ class LoginUseCase @Inject constructor(
                     }
                     is CustomResult.Failure -> {
                         // Failed to fetch user details – sign out to avoid stale session and propagate failure
-                        authRepository.logout()
+                        authRepository.logoutCompletely()
                         CustomResult.Failure(userResult.error)
                     }
                     else -> {
