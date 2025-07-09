@@ -10,6 +10,11 @@ export interface UnblockDMChannelRequest {
   channelId: string;
 }
 
+export interface UnblockDMChannelByUserNameRequest {
+  currentUserId: string;
+  targetUserName: string;
+}
+
 export interface UnblockDMChannelResponse {
   channelId: string;
   success: boolean;
@@ -79,6 +84,64 @@ export class UnblockDMChannelUseCase {
       });
     } catch (error) {
       return Result.failure(error instanceof Error ? error : new Error("Failed to unblock DM channel"));
+    }
+  }
+
+  async executeByUserName(request: UnblockDMChannelByUserNameRequest): Promise<CustomResult<UnblockDMChannelResponse>> {
+    try {
+      // 입력 검증
+      if (!request.currentUserId || !request.targetUserName) {
+        return Result.failure(new ValidationError("request", "Current user ID and target user name are required"));
+      }
+
+      const currentUserId = request.currentUserId;
+      const targetUserName = request.targetUserName;
+
+      // 대상 사용자 조회
+      const targetUserResult = await this.userRepository.findByName(targetUserName);
+      if (!targetUserResult.success || !targetUserResult.data) {
+        return Result.failure(new NotFoundError("Target user not found", targetUserName));
+      }
+
+      const targetUser = targetUserResult.data;
+
+      // 기존 DM 채널 조회
+      const channelResult = await this.dmChannelRepository.findByParticipants(currentUserId, targetUser.id);
+      if (!channelResult.success || !channelResult.data) {
+        return Result.failure(new NotFoundError("DM channel not found between users", `${currentUserId} and ${targetUser.id}`));
+      }
+
+      const dmChannel = channelResult.data;
+
+      // 현재 사용자가 차단을 했는지 확인
+      if (!dmChannel.isBlockedByUser(currentUserId)) {
+        return Result.failure(new ConflictError("dmChannel", "not_blocked", "You have not blocked this DM channel"));
+      }
+
+      // 채널 차단 해제 처리
+      const unblockedChannel = dmChannel.unblockByUser(currentUserId);
+      const updateResult = await this.dmChannelRepository.save(unblockedChannel);
+      if (!updateResult.success) {
+        return Result.failure(updateResult.error);
+      }
+
+      // 현재 사용자의 DMWrapper 재생성
+      const createWrapperResult = await this.createDMWrapperForUser(currentUserId, targetUser.id, dmChannel.id);
+      if (!createWrapperResult.success) {
+        // DMWrapper 생성 실패 시 경고하지만 차단 해제는 성공으로 처리
+        console.warn(`Failed to create DM wrapper for user ${currentUserId}:`, createWrapperResult.error);
+      }
+
+      const isFullyUnblocked = unblockedChannel.isActive();
+
+      return Result.success({
+        channelId: dmChannel.id,
+        success: true,
+        message: isFullyUnblocked ? "DM channel has been fully unblocked and is now active" : "You have unblocked this DM channel, but it remains blocked by the other user",
+        isFullyUnblocked,
+      });
+    } catch (error) {
+      return Result.failure(error instanceof Error ? error : new Error("Failed to unblock DM channel by user name"));
     }
   }
 

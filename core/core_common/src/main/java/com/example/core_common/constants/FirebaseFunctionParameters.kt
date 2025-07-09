@@ -28,6 +28,7 @@ object FirebaseFunctionParameters {
         const val CREATE_DM_CHANNEL = "createDMChannel"
         const val BLOCK_DM_CHANNEL = "blockDMChannel"
         const val UNBLOCK_DM_CHANNEL = "unblockDMChannel"
+        const val UNBLOCK_DM_CHANNEL_BY_USER_NAME = "unblockDMChannelByUserName"
         
         // Project Management
         const val GENERATE_INVITE_LINK = "generateInviteLink"

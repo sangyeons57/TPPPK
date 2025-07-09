@@ -65,4 +65,8 @@ class DMChannelRepositoryImpl @Inject constructor(
     override suspend fun unblockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.unblockDMChannel(channelId)
     }
+    
+    override suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.unblockDMChannelByUserName(targetUserName)
+    }
 }

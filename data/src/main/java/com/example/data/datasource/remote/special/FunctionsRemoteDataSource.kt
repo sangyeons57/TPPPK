@@ -170,6 +170,14 @@ interface FunctionsRemoteDataSource {
      * @return 성공 시 차단 해제 결과, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun unblockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception>
+    
+    /**
+     * 사용자 이름을 통해 DM 채널 차단을 해제합니다.
+     *
+     * @param targetUserName 차단 해제할 대상 사용자 이름
+     * @return 성공 시 차단 해제 결과, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
 
     /**
      * 프로젝트 초대 링크를 생성합니다.
@@ -695,6 +703,34 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 CustomResult.Success(resultData)
             } else {
                 CustomResult.Failure(Exception("Unblock DM channel function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                FirebaseFunctionParameters.DM.CURRENT_USER_ID to currentUser.uid,
+                FirebaseFunctionParameters.DM.TARGET_USER_NAME to targetUserName
+            )
+
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.UNBLOCK_DM_CHANNEL_BY_USER_NAME)
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                CustomResult.Success(resultData)
+            } else {
+                CustomResult.Failure(Exception("Unblock DM channel by user name function call timed out"))
             }
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e

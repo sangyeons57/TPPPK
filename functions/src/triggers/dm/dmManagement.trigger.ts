@@ -68,6 +68,12 @@ interface UnblockDMChannelRequest {
   channelId: string;
 }
 
+// Unblock DM Channel By User Name Function
+interface UnblockDMChannelByUserNameRequest {
+  currentUserId: string;
+  targetUserName: string;
+}
+
 export const blockDMChannelFunction = onCall(
   {
     region: RUNTIME_CONFIG.REGION,
@@ -156,6 +162,54 @@ export const unblockDMChannelFunction = onCall(
       return {success: true, data: result.data};
     } catch (error) {
       console.error("Error in unblockDMChannel:", error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError("internal", "Internal server error");
+    }
+  }
+);
+
+export const unblockDMChannelByUserNameFunction = onCall(
+  {
+    region: RUNTIME_CONFIG.REGION,
+    memory: RUNTIME_CONFIG.MEMORY,
+    timeoutSeconds: RUNTIME_CONFIG.TIMEOUT_SECONDS,
+  },
+  async (request) => {
+    try {
+      const {
+        currentUserId,
+        targetUserName,
+      } = request.data as UnblockDMChannelByUserNameRequest;
+
+      if (!currentUserId || !targetUserName) {
+        throw new HttpsError("invalid-argument", "Current user ID and target user name are required");
+      }
+
+      const dmUseCases = Providers.getDmProvider().create();
+
+      const result = await dmUseCases.unblockDMChannelUseCase.executeByUserName({
+        currentUserId,
+        targetUserName,
+      });
+
+      if (!result.success) {
+        if (result.error.message.includes("not found")) {
+          throw new HttpsError("not-found", result.error.message);
+        }
+        if (result.error.message.includes("not_blocked")) {
+          throw new HttpsError("failed-precondition", result.error.message);
+        }
+        if (result.error.message.includes("not a participant")) {
+          throw new HttpsError("permission-denied", result.error.message);
+        }
+        throw new HttpsError("internal", result.error.message);
+      }
+
+      return {success: true, data: result.data};
+    } catch (error) {
+      console.error("Error in unblockDMChannelByUserName:", error);
       if (error instanceof HttpsError) {
         throw error;
       }

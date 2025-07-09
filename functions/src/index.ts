@@ -42,6 +42,7 @@ export {getFriendRequestsFunction as getFriendRequests} from "./triggers/friend/
 export {createDMChannelFunction as createDMChannel} from "./triggers/dm/dmManagement.trigger";
 export {blockDMChannelFunction as blockDMChannel} from "./triggers/dm/dmManagement.trigger";
 export {unblockDMChannelFunction as unblockDMChannel} from "./triggers/dm/dmManagement.trigger";
+export {unblockDMChannelByUserNameFunction as unblockDMChannelByUserName} from "./triggers/dm/dmManagement.trigger";
 
 // Member management functions
 export {removeMemberFunction as removeMember} from "./triggers/member/memberManagement.trigger";
