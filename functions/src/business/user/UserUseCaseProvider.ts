@@ -2,14 +2,13 @@ import {RepositoryFactory} from "../../domain/shared/RepositoryFactory";
 import {UserRepositoryFactoryContext} from "../../domain/user/repositories/factory/UserRepositoryFactoryContext";
 import {UserRepository} from "../../domain/user/repositories/user.repository";
 import {UpdateUserProfileUseCase} from "./usecases/updateUserProfile.usecase";
-import {UpdateUserImageUseCase} from "./usecases/updateUserImage.usecase";
 
 /**
  * Interface for user management use cases
  */
 export interface UserUseCases {
   updateUserProfileUseCase: UpdateUserProfileUseCase;
-  updateUserImageUseCase: UpdateUserImageUseCase;
+  // updateUserImageUseCase removed - now using fixed path system
 
   // Common repositories for advanced use cases
   userRepository: UserRepository;
@@ -29,10 +28,6 @@ export class UserUseCaseProvider {
 
     return {
       updateUserProfileUseCase: new UpdateUserProfileUseCase(
-        userRepository
-      ),
-      
-      updateUserImageUseCase: new UpdateUserImageUseCase(
         userRepository
       ),
 

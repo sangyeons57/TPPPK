@@ -6,7 +6,6 @@ import { NotFoundError, ValidationError } from '../../../core/errors';
 export interface UpdateUserProfileRequest {
   userId: string;
   name?: string;
-  profileImageUrl?: string;
   memo?: string;
 }
 
@@ -33,7 +32,6 @@ export class UpdateUserProfileUseCase {
 
       const updates: {
         name?: string;
-        profileImageUrl?: string;
         memo?: string;
       } = {};
 
@@ -43,10 +41,6 @@ export class UpdateUserProfileUseCase {
           return Result.failure(nameValidation.error);
         }
         updates.name = request.name;
-      }
-
-      if (request.profileImageUrl) {
-        updates.profileImageUrl = request.profileImageUrl;
       }
 
       if (request.memo !== undefined) {

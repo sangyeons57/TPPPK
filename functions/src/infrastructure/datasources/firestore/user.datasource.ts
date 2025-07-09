@@ -113,7 +113,6 @@ export class FirestoreUserDataSource implements UserDataSource {
         email: userData.email,
         name: userData.name,
         consentTimeStamp: admin.firestore.Timestamp.fromDate(userData.consentTimeStamp),
-        profileImageUrl: userData.profileImageUrl || null,
         memo: userData.memo || null,
         userStatus: userData.userStatus,
         fcmToken: userData.fcmToken || null,
@@ -182,7 +181,6 @@ export class FirestoreUserDataSource implements UserDataSource {
         email: userData.email,
         name: userData.name,
         consentTimeStamp: admin.firestore.Timestamp.fromDate(processedDates.consentTimeStamp),
-        profileImageUrl: userData.profileImageUrl || null,
         memo: userData.memo || null,
         userStatus: userData.userStatus,
         fcmToken: userData.fcmToken || null,
@@ -199,7 +197,6 @@ export class FirestoreUserDataSource implements UserDataSource {
 
       console.log("Updating user with docData:", JSON.stringify({
         userId: user.id,
-        profileImageUrl: docData.profileImageUrl,
         updatedAt: docData.updatedAt.toDate().toISOString(),
       }, null, 2));
 
