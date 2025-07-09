@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import android.util.Log
+import com.example.core_common.constants.FirebaseFunctionParameters
 
 /**
  * 새로운 DM 채널을 생성하거나 기존 DM 채널을 가져오는 UseCase입니다.
