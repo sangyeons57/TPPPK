@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Block
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.constants.Constants
@@ -1021,8 +1022,21 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onDmLongPress(dmUiModel: DmUiModel) {
-        // DM 롱프레스 기능 비활성화 - 차단/차단해제는 DM 추가 다이얼로그에서 처리
-        // 필요시 다른 기능(예: 삭제, 알림 설정 등)을 여기에 추가 가능
+        _uiState.update {
+            it.copy(
+                showBottomSheetItems = BottomSheetDialogBuilder()
+                    .button(
+                        label = "차단",
+                        icon = Icons.Default.Block,
+                        onClick = { blockDMChannel(dmUiModel) }
+                    ).build(),
+                showBottomSheet = true,
+
+                targetDMChannelForSheet = dmUiModel,
+                targetCategoryForSheet = null,
+                targetChannelForSheet = null
+            )
+        }
     }
 
     fun onProjectItemActionSheetDismiss() {
@@ -1034,6 +1048,48 @@ class HomeViewModel @Inject constructor(
                 targetCategoryForSheet = null,
                 targetChannelForSheet = null
             )
+        }
+    }
+
+    private fun blockDMChannel(dmUiModel: DmUiModel) {
+        viewModelScope.launch {
+            try {
+                // 바텀시트 닫기
+                onProjectItemActionSheetDismiss()
+                
+                // 로딩 상태 표시
+                _uiState.update { it.copy(isLoading = true) }
+                
+                // DM 채널 차단
+                dmUseCases.blockDMChannelUseCase(dmUiModel.channelId).collect { result ->
+                    when (result) {
+                        is CustomResult.Loading -> {
+                            // 로딩 중 - 이미 isLoading = true 설정함
+                        }
+                        is CustomResult.Success -> {
+                            _uiState.update { it.copy(isLoading = false) }
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("DM 채널이 차단되었습니다."))
+                        }
+                        is CustomResult.Failure -> {
+                            _uiState.update { it.copy(isLoading = false) }
+                            val errorMessage = when {
+                                result.error.message?.contains("not found") == true -> "DM 채널을 찾을 수 없습니다."
+                                result.error.message?.contains("already blocked") == true -> "이미 차단된 DM 채널입니다."
+                                result.error.message?.contains("not a participant") == true -> "이 DM 채널에 대한 권한이 없습니다."
+                                else -> "DM 채널 차단에 실패했습니다: ${result.error.message}"
+                            }
+                            _eventFlow.emit(HomeEvent.ShowSnackbar(errorMessage))
+                        }
+                        else -> {
+                            _uiState.update { it.copy(isLoading = false) }
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("예상치 못한 오류가 발생했습니다."))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
+                _eventFlow.emit(HomeEvent.ShowSnackbar("DM 채널 차단 중 오류가 발생했습니다: ${e.message}"))
+            }
         }
     }
 
