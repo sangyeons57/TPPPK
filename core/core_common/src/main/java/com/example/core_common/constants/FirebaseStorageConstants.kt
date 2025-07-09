@@ -4,6 +4,7 @@ object FirebaseStorageConstants {
 
     // Base Paths
     private const val USER_PROFILE_IMAGES = "user_profile_images"
+    private const val USER_PROFILES = "user_profiles" // 처리된 프로필 이미지 경로
     private const val PROJECT_PROFILE_IMAGES = "project_profile_images"
     private const val DM_CHANNEL_FILES = "dm_channel_files"
     private const val PROJECT_CHANNEL_FILES = "project_channel_files"
@@ -11,11 +12,20 @@ object FirebaseStorageConstants {
     // Path Builder Functions
 
     /**
-     * Generates the Firebase Storage path for a user's profile image.
+     * Generates the Firebase Storage path for a user's profile image upload.
      * Example: user_profile_images/{userId}/{fileName}
      */
     fun getUserProfileImagePath(userId: String, fileName: String): String {
         return "$USER_PROFILE_IMAGES/$userId/$fileName"
+    }
+
+    /**
+     * Generates the Firebase Storage path for a processed user's profile image.
+     * Firebase Functions processes uploaded images and saves them here.
+     * Example: user_profiles/{userId}/{fileName}
+     */
+    fun getProcessedUserProfileImagePath(userId: String, fileName: String): String {
+        return "$USER_PROFILES/$userId/$fileName"
     }
 
     /**

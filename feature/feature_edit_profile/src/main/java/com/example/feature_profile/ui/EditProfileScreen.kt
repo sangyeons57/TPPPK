@@ -211,7 +211,7 @@ fun EditProfileContent(
         } else {
             // 기존 프로필 이미지
             UserProfileImage(
-                profileImageUrl = uiState.user?.profileImageUrl?.value,
+                userId = uiState.user?.id?.value,
                 contentDescription = "Profile Image",
                 modifier = Modifier
                     .size(120.dp)

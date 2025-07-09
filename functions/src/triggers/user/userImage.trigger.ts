@@ -73,9 +73,15 @@ export const onUserProfileImageUpload = onObjectFinalized(
         await originalFile.copy(processedFile);
         logger.info(`📁 Copied ${name} to ${processedFilePath}`);
 
-        // Generate public URL with timestamp for cache invalidation
+        // Generate signed URL for secure access (expires in 10 years)
+        const [signedUrl] = await processedFile.getSignedUrl({
+          action: "read",
+          expires: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10년 후 만료
+        });
+
+        // Add cache buster to signed URL
         const timestamp = Date.now();
-        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}?v=${timestamp}`;
+        const processedPublicUrl = `${signedUrl}&v=${timestamp}`;
 
         // Get use case and update user with timestamped image URL
         const userUseCases = Providers.getUserProvider().create();

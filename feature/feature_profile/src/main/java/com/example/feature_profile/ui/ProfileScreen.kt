@@ -228,7 +228,7 @@ fun ProfileContent(
         // 프로필 이미지 영역
         Box(contentAlignment = Alignment.BottomEnd) {
             UserProfileImage(
-                profileImageUrl = profile?.profileImageUrl,
+                userId = profile?.uid,
                 contentDescription = "프로필 이미지",
                 modifier = Modifier
                     .size(120.dp)
