@@ -102,7 +102,7 @@ service firebase.storage {
     // 1. User Profile Images
     // Path: user_profiles/{userId}/{fileName} - 실제 업로드 경로에 맞춤
     match /user_profiles/{userId}/{fileName} {
-      allow read: if isAuthenticated(); // As per markdown: (로그인)인증된 모두
+      allow read: if true; // 누구나 프로필 이미지 읽기 가능
       allow write: if isCurrentUser(userId) &&
                       request.resource.size < 1 * 1024 * 1024 && // Max 1MB
                       request.resource.contentType.matches('image/.*'); // Only images
@@ -110,7 +110,7 @@ service firebase.storage {
     
     // Legacy path support (기존 경로도 지원)
     match /user_profile_images/{userId}/{fileName} {
-      allow read: if isAuthenticated();
+      allow read: if true; // 누구나 프로필 이미지 읽기 가능
       allow write: if isCurrentUser(userId) &&
                       request.resource.size < 1 * 1024 * 1024 && // Max 1MB
                       request.resource.contentType.matches('image/.*'); // Only images
