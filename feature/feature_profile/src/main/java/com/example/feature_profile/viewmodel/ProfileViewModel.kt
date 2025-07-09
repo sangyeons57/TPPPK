@@ -300,22 +300,23 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 프로필 이미지 변경 시도 (UseCase 사용) - $imageUri")
-            // --- UseCase 호출 ---
-            // val result = userRepository.updateProfileImage(imageUri) // Remove direct repository call
-            val result = userUseCases.updateUserImageUseCase(imageUri) // Call UseCase
-            result.onSuccess { newImageUrl ->
-                // UseCase 성공 시, 프로필을 다시 로드하여 최신 상태 반영
-                loadUserProfile()
-                _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨"))
-            }.onFailure { exception ->
-                 _uiState.update { it.copy(isLoading = false) }
-                _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 실패: ${exception.message}"))
+            
+            // UploadProfileImageUseCase를 사용하여 Firebase Storage에 업로드
+            when (val result = userUseCases.uploadProfileImageUseCase(imageUri)) {
+                is com.example.core_common.result.CustomResult.Success -> {
+                    // 업로드 성공 시, 프로필을 다시 로드하여 최신 상태 반영
+                    loadUserProfile()
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨"))
+                }
+                is com.example.core_common.result.CustomResult.Failure -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 실패: ${result.error.message}"))
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경 중 알 수 없는 오류가 발생했습니다."))
+                }
             }
-            // ----------------------------------------------
-            // delay(1000) // Remove temporary delay
-            // val newImageUrl = "https://picsum.photos/seed/${System.currentTimeMillis()}/100" // Remove temporary URL generation
-            // _uiState.update { it.copy(isLoading = false, userProfile = it.userProfile?.copy(profileImageUrl = newImageUrl)) } // Remove temporary UI update
-            // _eventFlow.emit(ProfileEvent.ShowSnackbar("프로필 이미지 변경됨 (임시)")) // Remove temporary snackbar
         }
     }
     // -----------------------------------------------------

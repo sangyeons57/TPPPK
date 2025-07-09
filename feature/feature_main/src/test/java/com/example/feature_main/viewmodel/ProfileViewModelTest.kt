@@ -6,7 +6,7 @@ import com.example.data.util.CoroutinesTestRule
 import com.example.domain.model.User
 import com.example.domain.usecase.auth.LogoutUseCase
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
-import com.example.domain.usecase.user.UpdateUserImageUseCase
+import com.example.domain.usecase.user.UploadProfileImageUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -44,7 +44,7 @@ class ProfileViewModelTest {
     private lateinit var getCurrentUserStreamUseCase: GetCurrentUserStreamUseCase
     private lateinit var logoutUseCase: LogoutUseCase
     private lateinit var updateUserStatusUseCase: UpdateUserStatusUseCase // For status message
-    private lateinit var updateUserProfileImageUseCase: UpdateUserImageUseCase
+    private lateinit var uploadProfileImageUseCase: UploadProfileImageUseCase
 
     // 테스트 데이터
     private val testUser = User(
@@ -63,7 +63,7 @@ class ProfileViewModelTest {
         getCurrentUserStreamUseCase = mockk()
         logoutUseCase = mockk()
         updateUserStatusUseCase = mockk() // For status message
-        updateUserProfileImageUseCase = mockk()
+        uploadProfileImageUseCase = mockk()
         mockUri = mockk<Uri>()
 
         // Default success scenario for user profile loading
@@ -73,7 +73,7 @@ class ProfileViewModelTest {
             getCurrentUserStreamUseCase,
             logoutUseCase,
             updateUserStatusUseCase,
-            updateUserProfileImageUseCase
+            uploadProfileImageUseCase
         )
     }
 
@@ -101,7 +101,7 @@ class ProfileViewModelTest {
             getCurrentUserStreamUseCase,
             logoutUseCase,
             updateUserStatusUseCase,
-            updateUserProfileImageUseCase
+            uploadProfileImageUseCase
         )
         runCurrent()
 
@@ -137,7 +137,7 @@ class ProfileViewModelTest {
                 getCurrentUserStreamUseCase,
                 logoutUseCase,
                 updateUserStatusUseCase,
-                updateUserProfileImageUseCase
+                uploadProfileImageUseCase
             )
         runCurrent() // Initial load
 
@@ -225,7 +225,7 @@ class ProfileViewModelTest {
             getCurrentUserStreamUseCase,
             logoutUseCase,
             updateUserStatusUseCase,
-            updateUserProfileImageUseCase
+            uploadProfileImageUseCase
         )
         // Manually set dialog to be open for the test context
         viewModel.onChangeStatusClick()

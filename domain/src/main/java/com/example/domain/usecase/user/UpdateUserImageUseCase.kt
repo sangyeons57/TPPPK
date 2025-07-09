@@ -25,14 +25,22 @@ class UpdateUserImageUseCaseImpl @Inject constructor(
      * @return Result<String> 업데이트 처리 결과 (성공 시 새로운 이미지 URL, 실패 시 Exception)
      */
     override suspend fun invoke(imageUri: Uri): Result<String> {
-        // TODO: UserRepository에 updateProfileImage(imageUri) 함수 구현 필요 (이미지 업로드 및 URL 반환)
-        // TODO: Firebaes Fuction 에서 구현 필요
-        // return userRepository.updateProfileImage(imageUri)
-        
-        // 임시 구현 (성공 및 임시 URL 반환)
-        // kotlin.coroutines.delay(1000) // Remove delay
-        val newImageUrl = "https://picsum.photos/seed/${System.currentTimeMillis()}/100" // 임시 URL
-        println("UseCase: UpdateUserImageUseCase - $newImageUrl (TODO: Implement actual logic)")
-        return Result.success(newImageUrl)
+        return try {
+            // Firebase Storage에 이미지 업로드 (Firebase Functions가 자동으로 Firestore 업데이트)
+            when (val result = userRepository.uploadProfileImage(imageUri)) {
+                is com.example.core_common.result.CustomResult.Success -> {
+                    // 업로드 성공 시 임시 URL 반환 (실제 URL은 Firebase Functions에서 처리)
+                    Result.success("Profile image uploaded successfully")
+                }
+                is com.example.core_common.result.CustomResult.Failure -> {
+                    Result.failure(result.error)
+                }
+                else -> {
+                    Result.failure(Exception("Unknown error occurred during image upload"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 } 
