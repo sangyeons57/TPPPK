@@ -305,7 +305,8 @@ fun HomeScreen(
                 onCategoryLongPress = viewModel::onCategoryLongPress,
                 onChannelClick = viewModel::onChannelClick,
                 onChannelLongPress = viewModel::onChannelLongPress,
-                onDmItemClick = viewModel::onDmItemClick
+                onDmItemClick = viewModel::onDmItemClick,
+                viewModel = viewModel
             )
             
             // 배경 오버레이 (다이얼로그 또는 메뉴가 열렸을 때 표시)
@@ -372,7 +373,8 @@ fun HomeContent(
     onCategoryLongPress: (category: CategoryUiModel) -> Unit = {},
     onChannelClick: (channel: ChannelUiModel) -> Unit,
     onChannelLongPress: (channel: ChannelUiModel) -> Unit = {},
-    onDmItemClick: (dm: DmUiModel) -> Unit
+    onDmItemClick: (dm: DmUiModel) -> Unit,
+    viewModel: HomeViewModel
 ) {
     Row(modifier = modifier.fillMaxSize()) {
         // 1. 왼쪽 사이드바: 프로필과 프로젝트 목록
@@ -521,7 +523,8 @@ fun HomeContentProjectsPreview() {
             onChannelLongPress = {},
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
             modifier = TODO(),
-            onClickTopSection = TODO()
+            onClickTopSection = TODO(),
+            viewModel = TODO()
         )
     }
 }
@@ -552,7 +555,8 @@ fun HomeContentDmsPreview() {
             onChannelLongPress = {},
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
             modifier = TODO(),
-            onClickTopSection = TODO()
+            onClickTopSection = TODO(),
+            viewModel = TODO()
         )
     }
 }
@@ -575,7 +579,8 @@ fun HomeContentLoadingPreview() {
             onChannelLongPress = {},
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
             modifier = TODO(),
-            onClickTopSection = TODO()
+            onClickTopSection = TODO(),
+            viewModel = TODO()
         )
     }
 }
@@ -684,7 +689,8 @@ fun HomeScreenPreview_WithData() {
                          "DM clicked in HomeContent: ${dm.partnerName}"
                      )
                  },
-                 onClickTopSection = TODO()
+                 onClickTopSection = TODO(),
+                 viewModel = TODO()
              )
         }
     }
