@@ -197,8 +197,9 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             println("ViewModel: 로그아웃 시도 (UseCase 사용)")
-            // val result = authRepository.logout() // Remove direct repository call
-            when (val result = authUseCases.logoutUseCase()) { // Assign to val for smart casting
+            
+            // LogoutUseCase는 suspend 함수이므로 invoke()를 호출해야 함
+            when (val result = authUseCases.logoutUseCase.invoke()) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(ProfileEvent.LogoutCompleted)
                     // isLoading state will be managed by the screen navigating away or resetting.
