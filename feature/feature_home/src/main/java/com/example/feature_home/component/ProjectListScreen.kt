@@ -131,7 +131,6 @@ fun ProjectListItem(
             // 프로젝트 아이콘 (원형)
             ProjectIcon(
                 projectId = project.id.value,
-                projectImageUrl = project.imageUrl?.value, // Deprecated: 호환성을 위해 유지
                 projectName = project.name.value,
                 size = size,
                 contentDescription = "프로젝트 이미지"

@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
  * 이미지가 없으면 프로젝트 이름의 첫 글자를 표시합니다.
  *
  * @param projectId 프로젝트 ID (고정 경로에서 이미지를 로드하는데 사용)
- * @param projectImageUrl 프로젝트 이미지 URL (Deprecated: 고정 경로 방식으로 대체됨)
  * @param projectName 프로젝트 이름 (첫 글자 표시용)
  * @param size 아이콘 크기
  * @param modifier 추가 Modifier
@@ -29,8 +28,6 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ProjectIcon(
     projectId: String? = null,
-    @Deprecated("Use fixed path system with projectId instead")
-    projectImageUrl: String? = null,
     projectName: String,
     size: Dp = 48.dp,
     modifier: Modifier = Modifier,
