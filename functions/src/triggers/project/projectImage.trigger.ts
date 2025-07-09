@@ -30,9 +30,9 @@ export const onProjectImageUpload = onObjectFinalized(
         return;
       }
 
-      // Extract projectId from file path (e.g., "projects/{projectId}/image.jpg")
+      // Extract projectId from file path (e.g., "project_profile_images/{projectId}/filename.jpg")
       const pathParts = name.split("/");
-      if (pathParts.length < 2 || pathParts[0] !== "projects") {
+      if (pathParts.length < 2 || pathParts[0] !== "project_profile_images") {
         console.log(`Invalid file path structure: ${name}`);
         return;
       }
@@ -43,22 +43,42 @@ export const onProjectImageUpload = onObjectFinalized(
         return;
       }
 
-      // Generate public URL
-      const publicUrl = `https://storage.googleapis.com/${bucket}/${name}`;
+      // Import admin SDK for Storage operations
+      const admin = require("firebase-admin");
+      const storage = admin.storage();
 
-      // Get use case and update project
-      const projectUseCases = Providers.getProjectProvider().create();
-      const updateImageUseCase = new UpdateProjectImageUseCase(projectUseCases.projectRepository);
+      try {
+        // Get the original file
+        const originalFile = storage.bucket(bucket).file(name);
 
-      const result = await updateImageUseCase.execute({
-        projectId: projectId,
-        imageUrl: publicUrl,
-      });
+        // Create processed file path in project_profiles directory
+        const filename = pathParts[pathParts.length - 1]; // Get the filename
+        const processedFilePath = `project_profiles/${projectId}/${filename}`;
+        const processedFile = storage.bucket(bucket).file(processedFilePath);
 
-      if (result.success) {
-        console.log(`Successfully updated project ${projectId} image: ${publicUrl}`);
-      } else {
-        console.error(`Failed to update project ${projectId} image:`, result.error);
+        // Copy the original file to the processed location
+        await originalFile.copy(processedFile);
+        console.log(`Copied ${name} to ${processedFilePath}`);
+
+        // Generate public URL for the processed file
+        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}`;
+
+        // Get use case and update project with processed image URL
+        const projectUseCases = Providers.getProjectProvider().create();
+        const updateImageUseCase = new UpdateProjectImageUseCase(projectUseCases.projectRepository);
+
+        const result = await updateImageUseCase.execute({
+          projectId: projectId,
+          imageUrl: processedPublicUrl,
+        });
+
+        if (result.success) {
+          console.log(`Successfully updated project ${projectId} image: ${processedPublicUrl}`);
+        } else {
+          console.error(`Failed to update project ${projectId} image:`, result.error);
+        }
+      } catch (copyError) {
+        console.error(`Error copying file from ${name} to project_profiles:`, copyError);
       }
     } catch (error) {
       console.error("Error processing project image upload:", error);

@@ -30,9 +30,9 @@ export const onUserProfileImageUpload = onObjectFinalized(
         return;
       }
 
-      // Extract userId from file path (e.g., "users/{userId}/profile.jpg")
+      // Extract userId from file path (e.g., "user_profile_images/{userId}/filename.jpg")
       const pathParts = name.split("/");
-      if (pathParts.length < 2 || pathParts[0] !== "users") {
+      if (pathParts.length < 2 || pathParts[0] !== "user_profile_images") {
         console.log(`Invalid file path structure: ${name}`);
         return;
       }
@@ -43,22 +43,42 @@ export const onUserProfileImageUpload = onObjectFinalized(
         return;
       }
 
-      // Generate public URL
-      const publicUrl = `https://storage.googleapis.com/${bucket}/${name}`;
+      // Import admin SDK for Storage operations
+      const admin = require("firebase-admin");
+      const storage = admin.storage();
 
-      // Get use case and update user
-      const userUseCases = Providers.getUserProvider().create();
-      const updateImageUseCase = new UpdateUserImageUseCase(userUseCases.userRepository);
+      try {
+        // Get the original file
+        const originalFile = storage.bucket(bucket).file(name);
+        
+        // Create processed file path in user_profiles directory
+        const filename = pathParts[pathParts.length - 1]; // Get the filename
+        const processedFilePath = `user_profiles/${userId}/${filename}`;
+        const processedFile = storage.bucket(bucket).file(processedFilePath);
 
-      const result = await updateImageUseCase.execute({
-        userId: userId,
-        imageUrl: publicUrl,
-      });
+        // Copy the original file to the processed location
+        await originalFile.copy(processedFile);
+        console.log(`Copied ${name} to ${processedFilePath}`);
 
-      if (result.success) {
-        console.log(`Successfully updated user ${userId} profile image: ${publicUrl}`);
-      } else {
-        console.error(`Failed to update user ${userId} profile image:`, result.error);
+        // Generate public URL for the processed file
+        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}`;
+
+        // Get use case and update user with processed image URL
+        const userUseCases = Providers.getUserProvider().create();
+        const updateImageUseCase = new UpdateUserImageUseCase(userUseCases.userRepository);
+
+        const result = await updateImageUseCase.execute({
+          userId: userId,
+          imageUrl: processedPublicUrl,
+        });
+
+        if (result.success) {
+          console.log(`Successfully updated user ${userId} profile image: ${processedPublicUrl}`);
+        } else {
+          console.error(`Failed to update user ${userId} profile image:`, result.error);
+        }
+      } catch (copyError) {
+        console.error(`Error copying file from ${name} to user_profiles:`, copyError);
       }
     } catch (error) {
       console.error("Error processing user profile image upload:", error);
