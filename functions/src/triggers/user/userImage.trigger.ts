@@ -70,10 +70,11 @@ export const onUserProfileImageUpload = onObjectFinalized(
         await originalFile.copy(processedFile);
         console.log(`Copied ${name} to ${processedFilePath}`);
 
-        // Generate clean public URL for database storage (without timestamp)
-        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}`;
+        // Generate public URL with timestamp for cache invalidation
+        const timestamp = Date.now();
+        const processedPublicUrl = `https://storage.googleapis.com/${bucket}/${processedFilePath}?v=${timestamp}`;
 
-        // Get use case and update user with clean image URL
+        // Get use case and update user with timestamped image URL
         const userUseCases = Providers.getUserProvider().create();
         const updateImageUseCase = new UpdateUserImageUseCase(userUseCases.userRepository);
 
