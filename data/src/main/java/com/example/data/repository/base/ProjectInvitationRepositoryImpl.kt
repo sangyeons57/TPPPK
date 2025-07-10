@@ -2,7 +2,7 @@ package com.example.data.repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.ProjectInvitationRemoteDataSource
-import com.example.data.model.remote.toDto
+import com.example.data.model.remote.ProjectInvitationDTO
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectInvitation
@@ -14,7 +14,6 @@ import com.example.domain.repository.base.ProjectInvitationRepository
 import com.example.domain.repository.factory.context.ProjectInvitationRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -46,16 +45,27 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
                 hoursUntilExpiry.toInt().coerceAtLeast(1) // 최소 1시간
             } ?: 24 // 기본 24시간
             
-            projectInvitationRemoteDataSource.generateInviteLinkViaFunction(
+            when (val result = projectInvitationRemoteDataSource.generateInviteLinkViaFunction(
                 entity.projectId.value,
                 expiresInHours
-            ).map { data ->
-                // Firebase Functions에서 반환된 ID 사용
-                DocumentId(data["id"] as? String ?: entity.id.value)
+            )) {
+                is CustomResult.Success -> {
+                    val inviteCode = result.data["id"] as? String ?: entity.id.value
+                    CustomResult.Success(DocumentId(inviteCode))
+                }
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                else -> result as CustomResult<DocumentId, Exception>
             }
         } else {
             // 기존 초대 링크 업데이트 - Firestore 직접 업데이트
-            projectInvitationRemoteDataSource.update(entity.id, entity.getChangedFields())
+            when (val result = projectInvitationRemoteDataSource.update(
+                entity.id,
+                entity.getChangedFields()
+            )) {
+                is CustomResult.Success -> CustomResult.Success(entity.id)
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                else -> result as CustomResult<DocumentId, Exception>
+            }
         }
     }
 
@@ -65,10 +75,18 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
     override suspend fun getInvitationByCode(
         inviteCode: InviteCode
     ): CustomResult<ProjectInvitation, Exception> {
-        return projectInvitationRemoteDataSource.validateInviteCodeViaFunction(inviteCode.value)
-            .map { data ->
-                mapToProjectInvitation(data)
+        return when (val result = projectInvitationRemoteDataSource.validateInviteCodeViaFunction(inviteCode.value)) {
+            is CustomResult.Success -> {
+                try {
+                    val invitation = mapToProjectInvitation(result.data)
+                    CustomResult.Success(invitation)
+                } catch (e: Exception) {
+                    CustomResult.Failure(e)
+                }
             }
+            is CustomResult.Failure -> CustomResult.Failure(result.error)
+            else -> result as CustomResult<ProjectInvitation, Exception>
+        }
     }
 
     /**

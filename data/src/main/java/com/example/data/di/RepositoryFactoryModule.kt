@@ -13,6 +13,7 @@ import com.example.data.repository.factory.MessageRepositoryFactoryImpl
 import com.example.data.repository.factory.PermissionRepositoryFactoryImpl
 import com.example.data.repository.factory.ProjectChannelRepositoryFactoryImpl
 import com.example.data.repository.factory.ProjectRepositoryFactoryImpl
+import com.example.data.repository.factory.ProjectInvitationRepositoryFactoryImpl
 import com.example.data.repository.base.ProjectInvitationRepositoryImpl
 import com.example.data.repository.factory.ProjectsWrapperRepositoryFactoryImpl
 import com.example.data.repository.factory.RoleRepositoryFactoryImpl
@@ -52,6 +53,7 @@ import com.example.domain.repository.factory.context.MessageRepositoryFactoryCon
 import com.example.domain.repository.factory.context.PermissionRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectInvitationRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ScheduleRepositoryFactoryContext
@@ -123,6 +125,10 @@ abstract class RepositoryFactoryModule {
     @Binds
     @Singleton
         abstract fun bindProjectRepositoryFactory(impl: ProjectRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>
+
+    @Binds
+    @Singleton
+        abstract fun bindProjectInvitationRepositoryFactory(impl: ProjectInvitationRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ProjectInvitationRepositoryFactoryContext, ProjectInvitationRepository>
 
     @Binds
     @Singleton

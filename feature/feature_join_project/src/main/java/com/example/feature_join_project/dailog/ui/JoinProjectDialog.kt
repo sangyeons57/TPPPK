@@ -112,7 +112,7 @@ fun JoinProjectDialogContent(
                 )
                 // TODO: 멤버 수 등 추가 정보 표시 (XML에는 있었음)
                 Text(
-                    text = "멤버 ${project.memberCount}명", // 예시
+                    text = "프로젝트 초대", // memberCount가 없으므로 일반적인 텍스트로 변경
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center
@@ -155,7 +155,10 @@ private fun JoinProjectDialogPreview_Success() {
         Surface(modifier = Modifier.padding(16.dp)) {
             JoinProjectDialogContent(
                 uiState = JoinProjectDialogUiState(
-                    projectInfo = JoinProjectDialogUiState.ProjectInfo("멋진 새 프로젝트", 15)
+                    projectInfo = JoinProjectDialogUiState.ProjectInfo(
+                        projectId = "project123",
+                        projectName = "멋진 새 프로젝트"
+                    )
                 ),
                 onJoinClick = {},
                 onDismiss = {}
@@ -199,7 +202,10 @@ private fun JoinProjectDialogPreview_Joining() {
         Surface(modifier = Modifier.padding(16.dp)) {
             JoinProjectDialogContent(
                 uiState = JoinProjectDialogUiState(
-                    projectInfo = JoinProjectDialogUiState.ProjectInfo("참여 중인 프로젝트", 10),
+                    projectInfo = JoinProjectDialogUiState.ProjectInfo(
+                        projectId = "project456",
+                        projectName = "참여 중인 프로젝트"
+                    ),
                     isJoining = true
                 ),
                 onJoinClick = {},

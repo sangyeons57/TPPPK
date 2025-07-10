@@ -1,17 +1,16 @@
 package com.example.domain.usecase.project.core
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectInvitationRepository
 import javax.inject.Inject
-import kotlin.text.get
 
 /**
  * 참여 코드를 사용하여 프로젝트에 참여하는 UseCase
  * 
- * @property projectRepository 프로젝트 관련 기능을 제공하는 Repository
+ * @property projectInvitationRepository 프로젝트 초대 관련 기능을 제공하는 Repository
  */
 class JoinProjectWithCodeUseCase @Inject constructor(
-    private val projectRepository: ProjectRepository
+    private val projectInvitationRepository: ProjectInvitationRepository
 ) {
     /**
      * 주어진 참여 코드를 사용하여 프로젝트에 참여합니다.
@@ -24,7 +23,7 @@ class JoinProjectWithCodeUseCase @Inject constructor(
             return CustomResult.Failure(Exception("초대 코드가 비어있습니다."))
         }
 
-        return when (val result = projectRepository.joinProjectWithInvite(code)) {
+        return when (val result = projectInvitationRepository.joinProjectWithInvite(code)) {
             is CustomResult.Success -> {
                 val projectId = result.data["projectId"] as? String
                 if (projectId != null) {

@@ -18,6 +18,8 @@ import com.example.data.datasource.remote.ProjectChannelRemoteDataSource
 import com.example.data.datasource.remote.ProjectChannelRemoteDataSourceImpl
 import com.example.data.datasource.remote.ProjectRemoteDataSource
 import com.example.data.datasource.remote.ProjectRemoteDataSourceImpl
+import com.example.data.datasource.remote.ProjectInvitationRemoteDataSource
+import com.example.data.datasource.remote.ProjectInvitationRemoteDataSourceImpl
 import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.datasource.remote.RoleRemoteDataSourceImpl
 import com.example.data.datasource.remote.ScheduleRemoteDataSource
@@ -106,6 +108,16 @@ abstract class DataSourceModule {
     abstract fun bindProjectRemoteDataSource(
         projectRemoteDataSourceImpl: ProjectRemoteDataSourceImpl
     ): ProjectRemoteDataSource
+
+    /**
+     * ProjectInvitationRemoteDataSource 인터페이스 요청 시
+     * ProjectInvitationRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindProjectInvitationRemoteDataSource(
+        projectInvitationRemoteDataSourceImpl: ProjectInvitationRemoteDataSourceImpl
+    ): ProjectInvitationRemoteDataSource
 
     /**
      * ChannelRemoteDataSource 인터페이스 요청 시

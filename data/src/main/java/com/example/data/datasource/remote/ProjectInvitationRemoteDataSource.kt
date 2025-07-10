@@ -58,10 +58,7 @@ interface ProjectInvitationRemoteDataSource : DefaultDatasource {
 class ProjectInvitationRemoteDataSourceImpl @Inject constructor(
     firestore: FirebaseFirestore,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource
-) : DefaultDatasourceImpl<ProjectInvitationDTO>(
-    firestore, 
-    ProjectInvitationDTO::class.java
-), ProjectInvitationRemoteDataSource {
+) : DefaultDatasourceImpl<ProjectInvitationDTO>( firestore, ProjectInvitationDTO::class.java), ProjectInvitationRemoteDataSource {
 
     override suspend fun validateInviteCodeViaFunction(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.validateInviteCode(inviteCode)
@@ -80,22 +77,5 @@ class ProjectInvitationRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun revokeInviteLinkViaFunction(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.revokeInviteLink(inviteCode)
-    }
-
-    /**
-     * ProjectInvitationDTO의 기본값을 생성합니다.
-     * Firestore 역직렬화 실패 시 사용됩니다.
-     */
-    override fun createDefaultDto(documentId: String?, data: Map<String, Any?>?): ProjectInvitationDTO? {
-        return if (documentId != null) {
-            ProjectInvitationDTO(
-                id = documentId,
-                inviterId = data?.get("inviterId") as? String ?: "",
-                projectId = data?.get("projectId") as? String ?: "",
-                status = data?.get("status") as? String ?: "active"
-            )
-        } else {
-            null
-        }
     }
 }

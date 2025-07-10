@@ -92,8 +92,8 @@ class JoinProjectDialogViewModel @Inject constructor(
                                 projectId = inviteData.projectId ?: "",
                                 projectName = inviteData.projectName ?: "알 수 없는 프로젝트",
                                 projectImage = inviteData.projectImage,
-                                inviterName = inviteData.inviterName,
-                                expiresAt = inviteData.expiresAt,
+                                inviterName = null, // inviterName은 현재 InviteValidationData에 없음
+                                expiresAt = inviteData.expiresAt?.toString(),
                                 maxUses = inviteData.maxUses,
                                 currentUses = inviteData.currentUses,
                                 isAlreadyMember = inviteData.isAlreadyMember
