@@ -1,7 +1,7 @@
 package com.example.domain.usecase.project.core
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectInvitationRepository
 import javax.inject.Inject
 
 /**
@@ -10,7 +10,7 @@ import javax.inject.Inject
  * @property projectRepository 프로젝트 관련 기능을 제공하는 Repository
  */
 class ValidateInviteCodeUseCase @Inject constructor(
-    private val projectRepository: ProjectRepository
+    private val projectInvitationRepository: ProjectInvitationRepository
 ) {
     /**
      * 초대 코드의 유효성을 검증합니다.
@@ -23,7 +23,10 @@ class ValidateInviteCodeUseCase @Inject constructor(
             return CustomResult.Failure(Exception("초대 코드가 비어있습니다."))
         }
 
-        return when (val result = projectRepository.validateInviteCode(inviteCode)) {
+        return when (val result = projectInvitationRepository.validateInviteCode(
+            com.example.domain.model.vo.invite.InviteCode(inviteCode),
+            null,
+        )) {
             is CustomResult.Success -> {
                 val valid = result.data["valid"] as? Boolean ?: false
                 val projectId = result.data["projectId"] as? String

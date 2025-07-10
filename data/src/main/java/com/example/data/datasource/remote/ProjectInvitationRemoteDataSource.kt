@@ -34,6 +34,11 @@ interface ProjectInvitationRemoteDataSource : DefaultDatasource {
         projectId: String, 
         expiresInHours: Int
     ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * Firebase Functions를 통해 초대 코드를 사용해 프로젝트에 참여합니다.
+     */
+    suspend fun joinProjectWithInviteViaFunction(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
     
     /**
      * Firebase Functions를 통해 초대 링크를 무효화합니다.
@@ -67,6 +72,10 @@ class ProjectInvitationRemoteDataSourceImpl @Inject constructor(
         expiresInHours: Int
     ): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.generateInviteLink(projectId, expiresInHours)
+    }
+
+    override suspend fun joinProjectWithInviteViaFunction(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.joinProjectWithInvite(inviteCode)
     }
 
     override suspend fun revokeInviteLinkViaFunction(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {

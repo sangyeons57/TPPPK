@@ -76,12 +76,9 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
      */
     override suspend fun validateInviteCode(
         inviteCode: InviteCode,
-        userId: UserId?
-    ): CustomResult<Boolean, Exception> {
+        userId: UserId?,
+    ): CustomResult<Map<String, Any?>, Exception> {
         return projectInvitationRemoteDataSource.validateInviteCodeViaFunction(inviteCode.value)
-            .map { data ->
-                data["isValid"] as? Boolean ?: false
-            }
     }
 
     /**
@@ -119,6 +116,26 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         // 실제 구현에서는 Firestore 쿼리를 사용해야 합니다.
         // 현재는 placeholder로 TODO 처리
         return CustomResult.Failure(Exception("Not yet implemented - 활성 초대 링크 존재 확인"))
+    }
+
+    /**
+     * Firebase Functions를 통해 초대 링크를 생성합니다.
+     */
+    override suspend fun generateInviteLink(
+        projectId: DocumentId,
+        expiresInHours: Int
+    ): CustomResult<Map<String, Any?>, Exception> {
+        return projectInvitationRemoteDataSource.generateInviteLinkViaFunction(
+            projectId.value,
+            expiresInHours,
+        )
+    }
+
+    /**
+     * Firebase Functions를 통해 초대 코드로 프로젝트 참여를 수행합니다.
+     */
+    override suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
+        return projectInvitationRemoteDataSource.joinProjectWithInviteViaFunction(inviteCode)
     }
 
     /**

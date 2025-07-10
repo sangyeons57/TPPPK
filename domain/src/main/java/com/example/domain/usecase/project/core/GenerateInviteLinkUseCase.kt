@@ -1,73 +1,65 @@
 package com.example.domain.usecase.project.core
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.base.ProjectInvitationRepository
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
+import com.example.domain.model.base.ProjectInvitation
 import javax.inject.Inject
 
 /**
  * 프로젝트 초대 링크를 생성하는 UseCase
+ * DDD 패턴에 따라 ProjectInvitation 도메인 모델을 생성하고 저장합니다.
  * 
- * @property projectRepository 프로젝트 관련 기능을 제공하는 Repository
+ * @property projectInvitationRepository 프로젝트 초대 관련 기능을 제공하는 Repository
  */
 class GenerateInviteLinkUseCase @Inject constructor(
-    private val projectRepository: ProjectRepository
+    private val projectInvitationRepository: ProjectInvitationRepository
 ) {
     /**
      * 프로젝트 초대 링크를 생성합니다.
      *
+     * @param inviterId 초대를 생성하는 사용자 ID
      * @param projectId 프로젝트 ID
      * @param expiresInHours 만료 시간 (시간 단위, 기본 24시간)
-     * @param maxUses 최대 사용 횟수 (nullable)
      * @return 성공 시 초대 링크 정보, 실패 시 에러 정보가 포함된 Result
      */
     suspend operator fun invoke(
+        inviterId: UserId,
         projectId: DocumentId,
-        expiresInHours: Int = 24,
-        maxUses: Int? = null
+        expiresInHours: Int = 24
     ): CustomResult<InviteLinkData, Exception> {
+        // 입력 값 검증
         if (expiresInHours <= 0) {
             return CustomResult.Failure(Exception("만료 시간은 0보다 커야 합니다."))
         }
 
-        maxUses?.let { uses ->
-            if (uses <= 0) {
-                return CustomResult.Failure(Exception("최대 사용 횟수는 0보다 커야 합니다."))
-            }
-        }
+        // DDD 패턴: 도메인 모델 생성
+        val projectInvitation = ProjectInvitation.createNew(
+            inviterId = inviterId,
+            projectId = projectId,
+            expiresInHours = expiresInHours.toLong()
+        )
 
-        return when (val result = projectRepository.generateInviteLink(projectId, expiresInHours, maxUses)) {
+        // 도메인 모델 저장
+        return when (val saveResult = projectInvitationRepository.save(projectInvitation)) {
             is CustomResult.Success -> {
-                val inviteCode = result.data["inviteCode"] as? String
-                val inviteLink = result.data["inviteLink"] as? String
-                val expiresAt = result.data["expiresAt"] as? Any
-                val maxUsesResult = result.data["maxUses"] as? Int
-
-                if (inviteCode != null && inviteLink != null) {
-                    CustomResult.Success(
-                        InviteLinkData(
-                            inviteCode = inviteCode,
-                            inviteLink = inviteLink,
-                            expiresAt = expiresAt,
-                            maxUses = maxUsesResult
-                        )
+                // 저장 성공 시 실제 할당된 DocumentId로 초대 링크 데이터 생성
+                val savedInvitationId = saveResult.data
+                val inviteLink = "https://projecting.com/invite/${savedInvitationId.value}"
+                
+                CustomResult.Success(
+                    InviteLinkData(
+                        inviteCode = savedInvitationId.value,
+                        inviteLink = inviteLink,
+                        expiresAt = projectInvitation.expiresAt,
                     )
-                } else {
-                    CustomResult.Failure(Exception("초대 링크 생성 응답에서 필수 정보를 찾을 수 없습니다."))
-                }
+                )
             }
-            is CustomResult.Failure -> {
-                CustomResult.Failure(result.error)
-            }
-            is CustomResult.Loading -> {
-                CustomResult.Loading
-            }
-            is CustomResult.Initial -> {
-                CustomResult.Initial
-            }
-            is CustomResult.Progress -> {
-                CustomResult.Loading
-            }
+            is CustomResult.Failure -> CustomResult.Failure(saveResult.error)
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Progress -> CustomResult.Loading
         }
     }
 }
@@ -76,8 +68,7 @@ class GenerateInviteLinkUseCase @Inject constructor(
  * 초대 링크 데이터 클래스
  */
 data class InviteLinkData(
-    val inviteCode: String, // This is the same as the document ID
-    val inviteLink: String,
-    val expiresAt: Any?,
-    val maxUses: Int?
+    val inviteCode: String, // Document ID와 동일한 초대 코드
+    val inviteLink: String, // 완전한 초대 링크 URL
+    val expiresAt: Any?, // 만료 시간
 )

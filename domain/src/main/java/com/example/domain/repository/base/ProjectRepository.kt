@@ -34,35 +34,7 @@ interface ProjectRepository : DefaultRepository {
      */
     suspend fun removeProfileImage(projectId: DocumentId): CustomResult<Unit, Exception>
 
-    /**
-     * 프로젝트 초대 링크를 생성합니다.
-     *
-     * @param projectId 프로젝트 ID
-     * @param expiresInHours 만료 시간 (시간 단위, 기본 24시간)
-     * @param maxUses 최대 사용 횟수 (nullable)
-     * @return 성공 시 초대 링크 정보, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun generateInviteLink(
-        projectId: DocumentId,
-        expiresInHours: Int = 24,
-        maxUses: Int? = null
-    ): CustomResult<Map<String, Any?>, Exception>
-
-    /**
-     * 초대 코드를 검증합니다.
-     *
-     * @param inviteCode 초대 코드
-     * @return 성공 시 초대 정보, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun validateInviteCode(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
-
-    /**
-     * 초대 코드를 사용하여 프로젝트에 참여합니다.
-     *
-     * @param inviteCode 초대 코드
-     * @return 성공 시 참여 결과, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
+    // Invite-related operations have been moved to ProjectInvitationRepository
 
     /**
      * 프로젝트를 삭제합니다 (soft delete).

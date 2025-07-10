@@ -42,8 +42,8 @@ interface ProjectInvitationRepository : DefaultRepository {
      */
     suspend fun validateInviteCode(
         inviteCode: InviteCode,
-        userId: UserId? = null
-    ): CustomResult<Boolean, Exception>
+        userId: UserId? = null,
+    ): CustomResult<Map<String, Any?>, Exception>
     
     
     /**
@@ -84,4 +84,24 @@ interface ProjectInvitationRepository : DefaultRepository {
         projectId: DocumentId,
         inviterId: UserId? = null
     ): CustomResult<Boolean, Exception>
+
+    /**
+     * 프로젝트 초대 링크를 생성합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param expiresInHours 만료 시간 (시간 단위, 기본 24시간)
+     * @return 생성된 초대 링크 데이터 맵
+     */
+    suspend fun generateInviteLink(
+        projectId: DocumentId,
+        expiresInHours: Int = 24,
+    ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 초대 코드를 사용하여 프로젝트에 참여합니다.
+     *
+     * @param inviteCode 초대 코드
+     * @return 참여 결과 데이터 맵
+     */
+    suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
 }
