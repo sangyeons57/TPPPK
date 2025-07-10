@@ -117,6 +117,7 @@ class ProjectProfileImageViewModel @Inject constructor(
     
     /**
      * Firebase Storage에서 프로젝트 프로필 이미지 URL을 가져옵니다.
+     * 파일 존재 여부를 먼저 확인하여 404 ERROR 로그를 방지합니다.
      */
     fun loadProjectProfileImageUrl(projectId: String) {
         viewModelScope.launch {
@@ -125,6 +126,10 @@ class ProjectProfileImageViewModel @Inject constructor(
                 val pathString = "project_profiles/$projectId/profile.webp"
                 val imageRef = storage.reference.child(pathString)
                 
+                // 파일 존재 여부를 먼저 확인 (404 ERROR 로그 방지)
+                val metadata = imageRef.metadata.await()
+                
+                // 파일이 존재하면 URL 요청
                 val uri = imageRef.downloadUrl.await()
                 _imageUrl.value = uri.toString()
                 
