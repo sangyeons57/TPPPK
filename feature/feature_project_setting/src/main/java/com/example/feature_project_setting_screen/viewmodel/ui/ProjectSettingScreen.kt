@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,6 +54,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.project.ProjectProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
@@ -368,7 +370,7 @@ fun ProjectProfileSection(
                 // 프로젝트 이미지 표시 - 선택된 이미지가 있으면 미리보기, 없으면 기존 이미지
                 if (uiState.selectedImageUri != null) {
                     // 선택된 이미지 미리보기
-                    coil.compose.AsyncImage(
+                    AsyncImage(
                         model = uiState.selectedImageUri,
                         contentDescription = "Selected Project Image",
                         modifier = Modifier
@@ -441,13 +443,13 @@ fun ProjectProfileSection(
         
         // 기본 프로젝트 프로필 사용 버튼
         Spacer(modifier = Modifier.height(12.dp))
-        androidx.compose.material3.Button(
+        Button(
             onClick = onSetDefaultProjectProfileClick,
             enabled = !uiState.isRemovingImage && !uiState.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+            colors = ButtonDefaults.outlinedButtonColors()
         ) {
             if (uiState.isRemovingImage) {
                 CircularProgressIndicator(
