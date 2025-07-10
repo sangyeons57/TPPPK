@@ -14,7 +14,7 @@ export const onUserProfileImageUpload = onObjectFinalized(
     region: RUNTIME_CONFIG.REGION,
     memory: RUNTIME_CONFIG.MEMORY,
     timeoutSeconds: RUNTIME_CONFIG.TIMEOUT_SECONDS,
-    bucket: STORAGE_BUCKETS.USER_PROFILES,
+    bucket: STORAGE_BUCKETS,
   },
   async (event) => {
     try {
