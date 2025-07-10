@@ -56,7 +56,6 @@ sealed class ProfileEvent {
     object NavigateToSettings : ProfileEvent() // 설정 화면으로 이동
     // NavigateToStatus is now handled by showChangeStatusDialog in UiState
     object NavigateToFriends: ProfileEvent()
-    object NavigateToEditProfile : ProfileEvent() // 프로필 수정 화면으로 이동
     object PickProfileImage : ProfileEvent() // 이미지 선택기 실행 요청
     object LogoutCompleted : ProfileEvent() // 로그아웃 완료 알림 -> 화면 전환용
     data class ShowSnackbar(val message: String) : ProfileEvent()
@@ -86,9 +85,7 @@ class ProfileViewModel @Inject constructor(
 
     // 프로필 수정 버튼 클릭
     fun onEditProfileClicked() {
-        viewModelScope.launch {
-            _eventFlow.emit(ProfileEvent.NavigateToEditProfile)
-        }
+        navigationManger.navigateToEditProfile()
     }
 
     // 프로필 정보 로드

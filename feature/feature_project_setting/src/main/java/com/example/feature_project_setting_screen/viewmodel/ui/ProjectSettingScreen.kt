@@ -632,7 +632,8 @@ private fun ProjectSettingContentLoadingPreview() {
             onRenameProjectClick = {},
             onDeleteProjectClick = {},
             onProjectImageClick = {},
-            onSaveProjectImageClick = {}
+            onSaveProjectImageClick = {},
+            onSetDefaultProjectProfileClick = {}
         )
     }
 }
@@ -662,7 +663,8 @@ private fun ProjectSettingContentErrorPreview() {
             onRenameProjectClick = {},
             onDeleteProjectClick = {},
             onProjectImageClick = {},
-            onSaveProjectImageClick = {}
+            onSaveProjectImageClick = {},
+            onSetDefaultProjectProfileClick = {}
         )
     }
 }

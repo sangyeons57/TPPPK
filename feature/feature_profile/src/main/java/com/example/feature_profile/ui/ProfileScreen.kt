@@ -112,7 +112,6 @@ fun ProfileScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is ProfileEvent.NavigateToSettings -> navigationManger.navigateTo(AppSettingsRoute)
-                is ProfileEvent.NavigateToEditProfile -> navigationManger.navigateToEditProfile()
                 is ProfileEvent.NavigateToFriends -> navigationManger.navigateToFriends()
                 is ProfileEvent.PickProfileImage -> imagePickerLauncher.launch("image/*")
                 is ProfileEvent.LogoutCompleted -> navigationManger.navigateToClearingBackStack(
