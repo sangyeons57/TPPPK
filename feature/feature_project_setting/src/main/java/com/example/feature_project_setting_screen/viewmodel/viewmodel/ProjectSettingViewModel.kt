@@ -433,10 +433,12 @@ class ProjectSettingViewModel @Inject constructor(
                     is CustomResult.Success -> {
                         _uiState.update { 
                             it.copy(
-                                isLoading = false, 
-                                selectedImageUri = null,
-                                hasImageChanges = false
-                            ) 
+                                isLoading = false,
+                                // 이미지 업로드는 완료되었지만, Functions 가 Storage -> Firestore 업데이트를
+                            // 완료하기 전까지는 기존 Storage 이미지를 그대로 보여줄 수 있다.
+                            // 따라서 로컬에서 선택한 이미지 URI를 유지하여 사용자에게 즉시 적용된 것처럼 보여준다.
+                            hasImageChanges = false // 더 이상 저장 버튼은 필요 없음
+                        )
                         }
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지가 성공적으로 업데이트되었습니다."))
                         
