@@ -54,6 +54,9 @@ data object AddProjectRoute : TypeSafeRoute
 data object JoinProjectRoute : TypeSafeRoute
 
 @Serializable
+data object JoinProjectDialogRoute : TypeSafeRoute
+
+@Serializable
 data object SetProjectNameRoute : TypeSafeRoute
 
 @Serializable
@@ -339,6 +342,7 @@ object TypeSafeRouteCompat {
         // Project routes
         is AddProjectRoute -> "project/add"
         is JoinProjectRoute -> "project/join"
+        is JoinProjectDialogRoute -> "project/join_dialog"
         is SetProjectNameRoute -> "project/set_name"
         is SelectProjectTypeRoute -> "project/select_type"
         is ProjectDetailRoute -> "project/$projectId"

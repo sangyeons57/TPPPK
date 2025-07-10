@@ -3,8 +3,11 @@ package com.example.feature_join_project.dailog.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
+import com.example.domain.model.base.InviteValidationData
+import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -17,11 +20,16 @@ data class JoinProjectDialogUiState(
     val projectInfo: ProjectInfo? = null, // 프로젝트 정보
     val error: String? = null
 ) {
-    // 프로젝트 정보 데이터 클래스
+    // 프로젝트 정보 데이터 클래스 (InviteValidationData 기반)
     data class ProjectInfo(
+        val projectId: String,
         val projectName: String,
-        val memberCount: Int // 예시 정보
-        // TODO: 프로젝트 ID 등 필요한 정보 추가
+        val projectImage: String? = null,
+        val inviterName: String? = null,
+        val expiresAt: String? = null,
+        val maxUses: Int? = null,
+        val currentUses: Int? = null,
+        val isAlreadyMember: Boolean = false
     )
 }
 
@@ -35,7 +43,8 @@ sealed class JoinProjectDialogEvent {
 @HiltViewModel
 class JoinProjectDialogViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle, // 필요 시 사용
-    // TODO: private val repository: ProjectRepository
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(JoinProjectDialogUiState())
@@ -43,6 +52,14 @@ class JoinProjectDialogViewModel @Inject constructor(
 
     private val _eventFlow = MutableSharedFlow<JoinProjectDialogEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
+    
+    init {
+        // Check if there's a pending invite code from navigation
+        val pendingInviteCode = navigationManger.getResult<String>("dialog_invite_code")
+        pendingInviteCode?.let { inviteCode ->
+            setToken(inviteCode)
+        }
+    }
 
     /**
      * 외부에서 토큰 설정 및 프로젝트 정보 로드 시작
@@ -61,25 +78,49 @@ class JoinProjectDialogViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             println("ViewModel: Loading project info for token: $token")
 
-            // --- TODO: 실제 프로젝트 정보 로드 (repository.getProjectInfoFromToken) ---
-            delay(800) // 임시 딜레이
-            val success = !token.contains("invalid") // 임시 성공 조건
-            // val result = repository.getProjectInfoFromToken(token)
-            // ----------------------------------------------------------------------
+            try {
+                // 실제 프로젝트 정보 로드 - ValidateInviteCodeUseCase 사용
+                val projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+                val result = projectUseCases.validateInviteCodeUseCase(token)
 
-            if (success /*result.isSuccess*/) {
-                // 임시 데이터
-                val projectInfo = JoinProjectDialogUiState.ProjectInfo(
-                    projectName = "초대된 프로젝트 (${token.takeLast(4)})",
-                    memberCount = (token.length * 3) % 50 + 5 // 임의의 멤버 수
-                )
-                // val projectInfo = result.getOrThrow()
-                _uiState.update { it.copy(isLoading = false, projectInfo = projectInfo) }
-            } else {
+                when (result) {
+                    is CustomResult.Success -> {
+                        val inviteData = result.data
+                        if (inviteData.isValid) {
+                            val projectInfo = JoinProjectDialogUiState.ProjectInfo(
+                                projectId = inviteData.projectId ?: "",
+                                projectName = inviteData.projectName ?: "알 수 없는 프로젝트",
+                                projectImage = inviteData.projectImage,
+                                inviterName = inviteData.inviterName,
+                                expiresAt = inviteData.expiresAt,
+                                maxUses = inviteData.maxUses,
+                                currentUses = inviteData.currentUses,
+                                isAlreadyMember = inviteData.isAlreadyMember
+                            )
+                            _uiState.update { it.copy(isLoading = false, projectInfo = projectInfo) }
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = inviteData.errorMessage ?: "유효하지 않은 초대입니다."
+                                )
+                            }
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = result.error.message ?: "초대 정보를 불러오는데 실패했습니다."
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "유효하지 않은 초대입니다." // result.exceptionOrNull()?.message ?: "정보 로드 실패"
+                        error = "초대 정보를 불러오는데 실패했습니다: ${e.message}"
                     )
                 }
             }
@@ -91,31 +132,50 @@ class JoinProjectDialogViewModel @Inject constructor(
      */
     fun joinProject() {
         val token = _uiState.value.token
-        if (token == null || _uiState.value.isJoining || _uiState.value.isLoading || _uiState.value.projectInfo == null) {
+        val projectInfo = _uiState.value.projectInfo
+        if (token == null || _uiState.value.isJoining || _uiState.value.isLoading || projectInfo == null) {
             return // 토큰 없거나, 이미 참여 중이거나, 로딩 중이거나, 프로젝트 정보 없으면 무시
+        }
+
+        // 이미 멤버인 경우 처리
+        if (projectInfo.isAlreadyMember) {
+            viewModelScope.launch {
+                _eventFlow.emit(JoinProjectDialogEvent.ShowSnackbar("이미 프로젝트에 참여하고 있습니다."))
+                _eventFlow.emit(JoinProjectDialogEvent.JoinSuccess(projectInfo.projectId))
+            }
+            return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isJoining = true, error = null) }
             println("ViewModel: Joining project with token: $token")
 
-            // --- TODO: 실제 프로젝트 참여 로직 (repository.joinProjectWithToken) ---
-            delay(1000)
-            val success = true
-            val joinedProjectId = "joined_${token.takeLast(4)}" // 임시 ID
-            // val result = repository.joinProjectWithToken(token)
-            // -----------------------------------------------------------------
+            try {
+                // 실제 프로젝트 참여 로직 - JoinProjectWithCodeUseCase 사용
+                val projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+                val result = projectUseCases.joinProjectWithCodeUseCase(token)
 
-            if (success /*result.isSuccess*/) {
-                // val joinedProjectId = result.getOrThrow()
-                _eventFlow.emit(JoinProjectDialogEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
-                _eventFlow.emit(JoinProjectDialogEvent.JoinSuccess(joinedProjectId)) // 성공 이벤트 (UI 닫기 및 후속 처리용)
-                _uiState.update { it.copy(isJoining = false) } // 로딩 해제
-            } else {
+                when (result) {
+                    is CustomResult.Success -> {
+                        val joinData = result.data
+                        _eventFlow.emit(JoinProjectDialogEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
+                        _eventFlow.emit(JoinProjectDialogEvent.JoinSuccess(joinData.projectId))
+                        _uiState.update { it.copy(isJoining = false) }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update {
+                            it.copy(
+                                isJoining = false,
+                                error = result.error.message ?: "프로젝트 참여에 실패했습니다."
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isJoining = false,
-                        error = "프로젝트 참여에 실패했습니다." // result.exceptionOrNull()?.message ?: "참여 실패"
+                        error = "프로젝트 참여에 실패했습니다: ${e.message}"
                     )
                 }
             }

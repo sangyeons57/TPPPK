@@ -46,6 +46,14 @@ export class MemberUseCaseProvider {
     private readonly inviteRepositoryFactory: InviteRepositoryFactory = new InviteRepositoryFactoryImpl()
   ) {}
 
+  /**
+   * Creates an invite repository without requiring member context
+   * Used for invite code validation before knowing the projectId
+   */
+  createInviteRepository(): InviteRepository {
+    return this.inviteRepositoryFactory.create();
+  }
+
   create(context?: MemberRepositoryFactoryContext): MemberUseCases {
     // Create repositories with appropriate contexts
     const memberRepository = this.memberRepositoryFactory.create(context);

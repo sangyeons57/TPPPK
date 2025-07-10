@@ -28,7 +28,9 @@ export const removeMemberFunction = onCall(
         throw new HttpsError("invalid-argument", "Project ID, user ID, and removedBy are required");
       }
 
-      const memberUseCases = Providers.getMemberProvider().create();
+      const memberUseCases = Providers.getMemberProvider().create({
+        projectId: projectId,
+      });
 
       const result = await memberUseCases.removeMemberUseCase.execute({
         projectId,
@@ -85,7 +87,9 @@ export const blockMemberFunction = onCall(
         throw new HttpsError("invalid-argument", "Project ID, user ID, and blockedBy are required");
       }
 
-      const memberUseCases = Providers.getMemberProvider().create();
+      const memberUseCases = Providers.getMemberProvider().create({
+        projectId: projectId,
+      });
 
       const result = await memberUseCases.blockMemberUseCase.execute({
         projectId,
@@ -283,7 +287,9 @@ export const generateInviteLinkFunction = onCall(
         throw new HttpsError("invalid-argument", "Project ID and inviter ID are required");
       }
 
-      const memberUseCases = Providers.getMemberProvider().create();
+      const memberUseCases = Providers.getMemberProvider().create({
+        projectId: projectId,
+      });
 
       const result = await memberUseCases.generateInviteLinkUseCase.execute({
         projectId,
@@ -330,7 +336,20 @@ export const validateInviteCodeFunction = onCall(
         throw new HttpsError("invalid-argument", "Invite code is required");
       }
 
-      const memberUseCases = Providers.getMemberProvider().create();
+      // First, get the projectId from the invite code using invite repository directly
+      const inviteRepository = Providers.getMemberProvider().createInviteRepository();
+      const inviteResult = await inviteRepository.findByCode(inviteCode);
+      
+      if (!inviteResult.success || !inviteResult.data) {
+        throw new HttpsError("not-found", "Invite code not found");
+      }
+      
+      const projectId = inviteResult.data.projectId;
+      
+      // Now create the member use cases with the correct projectId context
+      const memberUseCases = Providers.getMemberProvider().create({
+        projectId: projectId,
+      });
 
       const result = await memberUseCases.validateInviteCodeUseCase.execute({
         inviteCode,
@@ -375,7 +394,20 @@ export const joinProjectWithInviteFunction = onCall(
         throw new HttpsError("invalid-argument", "Invite code and user ID are required");
       }
 
-      const memberUseCases = Providers.getMemberProvider().create();
+      // First, get the projectId from the invite code using invite repository directly
+      const inviteRepository = Providers.getMemberProvider().createInviteRepository();
+      const inviteResult = await inviteRepository.findByCode(inviteCode);
+      
+      if (!inviteResult.success || !inviteResult.data) {
+        throw new HttpsError("not-found", "Invite code not found");
+      }
+      
+      const projectId = inviteResult.data.projectId;
+      
+      // Now create the member use cases with the correct projectId context
+      const memberUseCases = Providers.getMemberProvider().create({
+        projectId: projectId,
+      });
 
       const result = await memberUseCases.joinProjectWithInviteUseCase.execute({
         inviteCode,
@@ -433,7 +465,7 @@ export const leaveProjectFunction = onCall(
       //   }
       //   throw new HttpsError("internal", result.error.message);
       // }
-      
+
       // Temporary: just return success
       logger.info("Member leave operation temporarily disabled");
 

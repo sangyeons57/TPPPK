@@ -249,6 +249,14 @@ class NavigationManagerImpl @Inject constructor(
         executeNavigationOnParent(JoinProjectRoute.toAppRoutePath(), navOptions)
     }
     
+    override fun navigateToJoinProjectDialog(inviteCode: String?, navOptions: NavOptions?) {
+        // Set the invite code as a result if provided
+        inviteCode?.let { 
+            setResult("dialog_invite_code", it)
+        }
+        executeNavigationOnParent(JoinProjectDialogRoute.toAppRoutePath(), navOptions)
+    }
+    
     override fun navigateToJoinProjectWithInviteCode(inviteCode: String, navOptions: NavOptions?) {
         // Navigate to JoinProject and set the invite code as a result that can be consumed
         setResult("pending_invite_code", inviteCode)

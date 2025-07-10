@@ -118,6 +118,11 @@ interface NavigationManger {
     fun navigateToJoinProject(navOptions: NavOptions? = null)
     
     /**
+     * Navigates to join project dialog.
+     */
+    fun navigateToJoinProjectDialog(inviteCode: String? = null, navOptions: NavOptions? = null)
+    
+    /**
      * Navigates to join project screen with a pre-filled invite code.
      */
     fun navigateToJoinProjectWithInviteCode(inviteCode: String, navOptions: NavOptions? = null)

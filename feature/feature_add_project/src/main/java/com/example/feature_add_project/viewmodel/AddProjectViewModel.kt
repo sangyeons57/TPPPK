@@ -103,46 +103,15 @@ class AddProjectViewModel @Inject constructor(
             return
         }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-
-            // 프로젝트 참여 로직 - Provider를 통한 UseCase 사용
-            val userId = currentUserId
-            if (userId == null) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "사용자 인증이 필요합니다.") }
-                return@launch
-            }
-            
-            // 프로젝트 참여를 위한 UseCases 생성
-            val projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
-            val result = projectUseCases.joinProjectWithCodeUseCase(joinCode)
-
-            when (result) {
-                is CustomResult.Success -> {
-                    _eventFlow.emit(AddProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
-                    _uiState.update { it.copy(isLoading = false, projectAddedSuccessfully = true) }
-                    
-                    // 성공 시 이전 화면으로 돌아가기
-                    navigationManger.navigateBack()
-                }
-                is CustomResult.Failure -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "참여 코드 확인 또는 참여 실패: ${result.error.message ?: ""}"
-                        )
-                    }
-                }
-                else -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "참여 코드 확인 또는 참여 실패: 알수없는 에러"
-                        )
-                    }
-                }
-            }
+        // 사용자 인증 확인
+        val userId = currentUserId
+        if (userId == null) {
+            _uiState.update { it.copy(errorMessage = "사용자 인증이 필요합니다.") }
+            return
         }
+
+        // 초대 코드 입력 시 JoinProjectDialog 열기
+        navigationManger.navigateToJoinProjectDialog(joinCode)
     }
 
     // "프로젝트 생성" 버튼 클릭
