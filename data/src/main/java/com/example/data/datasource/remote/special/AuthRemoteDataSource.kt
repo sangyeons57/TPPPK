@@ -1,5 +1,6 @@
 package com.example.data.datasource.remote.special
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.user.UserEmail
 import com.google.firebase.auth.FirebaseAuth
@@ -157,7 +158,8 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         android.util.Log.d("AuthRemoteDataSource", "Attempting Firebase signOut")
         resultTry {
             auth.signOut()
-            android.util.Log.d("AuthRemoteDataSource", "Firebase signOut successful")
+            Log.d("AuthRemoteDataSource", "Firebase signOut successful")
+            Unit
         }
     }
 
