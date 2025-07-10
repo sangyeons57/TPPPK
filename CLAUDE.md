@@ -138,6 +138,150 @@ This is a **Clean Architecture multi-module Android project** built with Kotlin,
 - Convert to user timezone (`ZoneId.systemDefault()`) for display
 - Use `DateTimeUtil.kt` for date and time formatting
 
+## DDD DefaultRepository Pattern
+
+This project implements Domain-Driven Design (DDD) principles through a unified DefaultRepository pattern that separates write and read operations for consistency and maintainability.
+
+### Core Pattern Principles
+
+**Unified Write Operations:**
+- `save(entity: AggregateRoot)` - Handles both create and update operations based on `entity.isNew` flag
+- `delete(id: DocumentId)` - Delete operation
+- All write operations go through a single, consistent interface
+
+**Separated Read Operations:**
+- **Basic reads**: `findById(id)`, `findAll()`, `observe(id)`, `observeAll()` (from DefaultRepository)
+- **Domain-specific reads**: Custom query methods per repository (e.g., `getInvitationByCode()`, `validateInviteCode()`)
+
+### Architecture Layers
+
+**DefaultRepository Interface**
+```kotlin
+interface DefaultRepository : Repository {
+    val factoryContext: DefaultRepositoryFactoryContext
+    
+    suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception>
+    suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
+    suspend fun findById(id: DocumentId, source: Source = Source.DEFAULT): CustomResult<AggregateRoot, Exception>
+    suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<AggregateRoot>, Exception>
+    fun observe(id: DocumentId): Flow<CustomResult<AggregateRoot, Exception>>
+    fun observeAll(): Flow<CustomResult<List<AggregateRoot>, Exception>>
+}
+```
+
+**DefaultRepositoryImpl Base Class**
+- Extends `DefaultRepository` with common CRUD implementation
+- Handles DTO ↔ Domain conversion automatically
+- Manages collection path via `ensureCollection()`
+- Delegates to `DefaultDatasource` for actual Firestore operations
+
+**DefaultDatasource Pattern**
+```kotlin
+interface DefaultDatasource : Datasource {
+    fun setCollection(collectionPath: CollectionPath): DefaultDatasource
+    suspend fun create(dto: DTO): CustomResult<DocumentId, Exception>
+    suspend fun update(id: DocumentId, data: Map<String, Any?>): CustomResult<DocumentId, Exception>
+    suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
+    suspend fun findById(id: DocumentId, source: Source): CustomResult<DTO, Exception>
+    // ... observe methods
+}
+```
+
+### Factory Context Pattern
+
+**DefaultRepositoryFactoryContext**
+```kotlin
+interface DefaultRepositoryFactoryContext: RepositoryFactoryContext {
+    val collectionPath: CollectionPath
+}
+
+class ProjectInvitationRepositoryFactoryContext(
+    override val collectionPath: CollectionPath = CollectionPath.projectInvitations()
+) : DefaultRepositoryFactoryContext
+```
+
+### Implementation Example
+
+**Domain Repository Interface**
+```kotlin
+interface ProjectInvitationRepository : DefaultRepository {
+    override val factoryContext: ProjectInvitationRepositoryFactoryContext
+    
+    // Domain-specific read operations only
+    suspend fun getInvitationByCode(inviteCode: InviteCode): CustomResult<ProjectInvitation, Exception>
+    suspend fun validateInviteCode(inviteCode: InviteCode, userId: UserId?): CustomResult<Boolean, Exception>
+    suspend fun getInviteLinksByInviter(inviterId: UserId, projectId: DocumentId?, status: InviteStatus?): Flow<CustomResult<List<ProjectInvitation>, Exception>>
+}
+```
+
+**Repository Implementation**
+```kotlin
+class ProjectInvitationRepositoryImpl @Inject constructor(
+    private val projectInvitationRemoteDataSource: ProjectInvitationRemoteDataSource,
+    override val factoryContext: ProjectInvitationRepositoryFactoryContext,
+) : DefaultRepositoryImpl(projectInvitationRemoteDataSource, factoryContext), ProjectInvitationRepository {
+
+    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is ProjectInvitation) 
+            return CustomResult.Failure(IllegalArgumentException("Entity must be ProjectInvitation"))
+        
+        ensureCollection()
+        return if (entity.isNew) {
+            // Create via Firebase Functions
+            projectInvitationRemoteDataSource.generateInviteLinkViaFunction(...)
+        } else {
+            // Update via Firestore
+            projectInvitationRemoteDataSource.update(entity.id, entity.getChangedFields())
+        }
+    }
+    
+    // Implement domain-specific read methods...
+}
+```
+
+### Usage Patterns
+
+**Creating New Entities**
+```kotlin
+// Before (old approach)
+repository.createInviteLink(projectId, inviterId, expiresInHours)
+
+// After (DDD approach)
+val invitation = ProjectInvitation.createNew(inviterId, projectId, expiresInHours)
+repository.save(invitation)
+```
+
+**Updating Entities**
+```kotlin
+// Before (old approach)
+repository.revokeInvitation(inviteCode, inviterId)
+
+// After (DDD approach)
+val invitation = repository.findById(inviteId).getOrThrow()
+invitation.revoke()
+repository.save(invitation)
+```
+
+**Reading Entities**
+```kotlin
+// Basic reads (from DefaultRepository)
+repository.findById(invitationId)
+repository.findAll()
+repository.observe(invitationId)
+
+// Domain-specific reads
+repository.getInvitationByCode(inviteCode)
+repository.validateInviteCode(inviteCode)
+```
+
+### Benefits
+
+1. **Consistency**: All repositories follow the same CRUD patterns
+2. **Separation of Concerns**: Write operations unified, read operations domain-specific
+3. **DDD Compliance**: Aggregate lifecycle managed through domain entities
+4. **Maintainability**: Common logic in base classes, specific logic in implementations
+5. **Testability**: Clear interfaces and dependency injection throughout
+
 ## UseCase Provider Pattern
 
 This project uses a Provider Pattern for organizing and managing UseCases, promoting better maintainability and consistent dependency injection.

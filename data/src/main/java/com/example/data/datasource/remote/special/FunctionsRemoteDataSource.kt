@@ -205,13 +205,11 @@ interface FunctionsRemoteDataSource {
      *
      * @param projectId 프로젝트 ID
      * @param expiresInHours 만료 시간 (시간 단위, 기본 24시간)
-     * @param maxUses 최대 사용 횟수 (nullable)
      * @return 성공 시 초대 링크 정보, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun generateInviteLink(
         projectId: String,
-        expiresInHours: Int = 24,
-        maxUses: Int? = null
+        expiresInHours: Int = 24
     ): CustomResult<Map<String, Any?>, Exception>
 
     /**
@@ -246,112 +244,64 @@ interface FunctionsRemoteDataSource {
      */
     suspend fun leaveProject(projectId: String): CustomResult<Unit, Exception>
 
-    // ================== 프로젝트 초대 관련 메서드 ==================
+    // ================== 프로젝트 초대 링크 관련 메서드 ==================
 
     /**
-     * 프로젝트 초대를 보냅니다.
+     * 초대 링크를 무효화(revoke)합니다.
      *
-     * @param projectId 프로젝트 ID
-     * @param inviteeId 초대받을 사용자 ID
-     * @param message 초대 메시지 (선택사항)
-     * @param expiresInHours 만료 시간 (시간 단위, 기본 72시간)
-     * @return 성공 시 생성된 초대 객체, 실패 시 Exception을 담은 CustomResult
+     * @param inviteCode 초대 코드
+     * @return 성공 시 무효화된 초대 정보, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun sendProjectInvitation(
-        projectId: String,
-        inviteeId: String,
-        message: String? = null,
-        expiresInHours: Long = 72L
-    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
+    suspend fun revokeInviteLink(
+        inviteCode: String
+    ): CustomResult<Map<String, Any?>, Exception>
 
     /**
-     * 프로젝트 초대를 수락합니다.
+     * 특정 사용자가 생성한 초대 링크 목록을 조회합니다.
      *
-     * @param invitationId 초대 ID
-     * @return 성공 시 수락된 초대 객체, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun acceptProjectInvitation(
-        invitationId: String
-    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
-
-    /**
-     * 프로젝트 초대를 거절합니다.
-     *
-     * @param invitationId 초대 ID
-     * @return 성공 시 거절된 초대 객체, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun rejectProjectInvitation(
-        invitationId: String
-    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
-
-    /**
-     * 프로젝트 초대를 취소합니다.
-     *
-     * @param invitationId 초대 ID
-     * @return 성공 시 취소된 초대 객체, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun cancelProjectInvitation(
-        invitationId: String
-    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
-
-    /**
-     * 받은 초대 목록을 조회합니다.
-     *
-     * @param userId 사용자 ID
-     * @param status 조회할 상태 (null이면 모든 상태)
-     * @return 성공 시 초대 목록 Flow, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun getReceivedInvitations(
-        userId: String,
-        status: String? = null
-    ): kotlinx.coroutines.flow.Flow<CustomResult<List<com.example.domain.model.base.ProjectInvitation>, Exception>>
-
-    /**
-     * 보낸 초대 목록을 조회합니다.
-     *
-     * @param userId 사용자 ID
+     * @param inviterId 초대를 생성한 사용자 ID
      * @param projectId 프로젝트 ID (null이면 모든 프로젝트)
      * @param status 조회할 상태 (null이면 모든 상태)
-     * @return 성공 시 초대 목록 Flow, 실패 시 Exception을 담은 CustomResult
+     * @return 성공 시 초대 링크 목록, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun getSentInvitations(
-        userId: String,
+    suspend fun getInviteLinksByInviter(
+        inviterId: String,
         projectId: String? = null,
         status: String? = null
-    ): kotlinx.coroutines.flow.Flow<CustomResult<List<com.example.domain.model.base.ProjectInvitation>, Exception>>
+    ): CustomResult<List<Map<String, Any?>>, Exception>
 
     /**
-     * 특정 프로젝트의 초대 목록을 조회합니다.
+     * 특정 프로젝트의 모든 초대 링크를 조회합니다.
      *
      * @param projectId 프로젝트 ID
      * @param status 조회할 상태 (null이면 모든 상태)
-     * @return 성공 시 초대 목록 Flow, 실패 시 Exception을 담은 CustomResult
+     * @return 성공 시 초대 링크 목록, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun getProjectInvitations(
+    suspend fun getProjectInviteLinks(
         projectId: String,
         status: String? = null
-    ): kotlinx.coroutines.flow.Flow<CustomResult<List<com.example.domain.model.base.ProjectInvitation>, Exception>>
+    ): CustomResult<List<Map<String, Any?>>, Exception>
 
     /**
-     * 특정 초대를 조회합니다.
+     * 특정 초대 링크를 ID로 조회합니다.
      *
      * @param invitationId 초대 ID
-     * @return 성공 시 초대 객체, 실패 시 Exception을 담은 CustomResult
+     * @return 성공 시 초대 링크 정보, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun getProjectInvitation(
+    suspend fun getInviteLinkById(
         invitationId: String
-    ): CustomResult<com.example.domain.model.base.ProjectInvitation, Exception>
+    ): CustomResult<Map<String, Any?>, Exception>
 
     /**
-     * 중복 초대 확인 (같은 프로젝트에 같은 사용자가 이미 초대받았는지)
+     * 프로젝트에 활성 상태의 초대 링크가 있는지 확인합니다.
      *
      * @param projectId 프로젝트 ID
-     * @param inviteeId 초대받을 사용자 ID
-     * @return 성공 시 중복 초대 여부, 실패 시 Exception을 담은 CustomResult
+     * @param inviterId 초대를 생성한 사용자 ID (선택사항)
+     * @return 성공 시 활성 초대 링크 존재 여부, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun hasPendingInvitation(
+    suspend fun hasActiveInviteLink(
         projectId: String,
-        inviteeId: String
+        inviterId: String? = null
     ): CustomResult<Boolean, Exception>
 
 }
@@ -930,8 +880,7 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun generateInviteLink(
         projectId: String,
-        expiresInHours: Int,
-        maxUses: Int?
+        expiresInHours: Int
     ): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
@@ -941,7 +890,7 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                 FirebaseFunctionParameters.Project.INVITER_ID to currentUser.uid,
                 FirebaseFunctionParameters.Project.EXPIRES_IN_HOURS to expiresInHours
             )
-            maxUses?.let { requestData[FirebaseFunctionParameters.Project.MAX_USES] = it }
+            // maxUses 파라미터는 제거됨 (글로벌 초대 링크에서는 사용하지 않음)
 
             val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.GENERATE_INVITE_LINK)
             
@@ -1085,58 +1034,34 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun sendProjectInvitation(
-        projectId: String,
-        inviteeId: String,
-        message: String?,
-        expiresInHours: Long
-    ): CustomResult<ProjectInvitation, Exception> {
-        TODO("Not yet implemented")
+    override suspend fun revokeInviteLink(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
+        TODO("Not yet implemented - 초대 링크 무효화 기능")
     }
 
-    override suspend fun acceptProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun rejectProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun cancelProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun getReceivedInvitations(
-        userId: String,
-        status: String?
-    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun getSentInvitations(
-        userId: String,
+    override suspend fun getInviteLinksByInviter(
+        inviterId: String,
         projectId: String?,
         status: String?
-    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
-        TODO("Not yet implemented")
+    ): CustomResult<List<Map<String, Any?>>, Exception> {
+        TODO("Not yet implemented - 사용자별 초대 링크 목록 조회")
     }
 
-    override suspend fun getProjectInvitations(
+    override suspend fun getProjectInviteLinks(
         projectId: String,
         status: String?
-    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
-        TODO("Not yet implemented")
+    ): CustomResult<List<Map<String, Any?>>, Exception> {
+        TODO("Not yet implemented - 프로젝트별 초대 링크 목록 조회")
     }
 
-    override suspend fun getProjectInvitation(invitationId: String): CustomResult<ProjectInvitation, Exception> {
-        TODO("Not yet implemented")
+    override suspend fun getInviteLinkById(invitationId: String): CustomResult<Map<String, Any?>, Exception> {
+        TODO("Not yet implemented - ID로 초대 링크 조회")
     }
 
-    override suspend fun hasPendingInvitation(
+    override suspend fun hasActiveInviteLink(
         projectId: String,
-        inviteeId: String
+        inviterId: String?
     ): CustomResult<Boolean, Exception> {
-        TODO("Not yet implemented")
+        TODO("Not yet implemented - 활성 초대 링크 존재 확인")
     }
 
 }

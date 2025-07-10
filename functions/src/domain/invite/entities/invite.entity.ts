@@ -12,22 +12,19 @@ export interface InviteData {
   projectId: string;
   inviterId: string;
   expiresAt: Date;
-  maxUses?: number;
-  currentUses: number;
   status: InviteStatus;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export class InviteEntity implements BaseEntity {
-  public static readonly COLLECTION_NAME = "invites";
+  public static readonly COLLECTION_NAME = "project_invitations";
   
   // Static keys for Firestore field names
+  public static readonly KEY_INVITE_CODE = "inviteCode";
   public static readonly KEY_PROJECT_ID = "projectId";
   public static readonly KEY_INVITER_ID = "inviterId";
   public static readonly KEY_EXPIRES_AT = "expiresAt";
-  public static readonly KEY_MAX_USES = "maxUses";
-  public static readonly KEY_CURRENT_USES = "currentUses";
   public static readonly KEY_STATUS = "status";
   public static readonly KEY_CREATED_AT = "createdAt";
   public static readonly KEY_UPDATED_AT = "updatedAt";
@@ -37,11 +34,9 @@ export class InviteEntity implements BaseEntity {
     public readonly projectId: string,
     public readonly inviterId: string,
     public readonly expiresAt: Date,
-    public readonly currentUses: number,
     public readonly status: InviteStatus,
     public readonly createdAt: Date,
-    public readonly updatedAt: Date,
-    public readonly maxUses?: number
+    public readonly updatedAt: Date
   ) {
     // Validation
     validateId(projectId, 'project id');
@@ -50,18 +45,6 @@ export class InviteEntity implements BaseEntity {
     if (!id || id.length < 6) {
       throw new Error('Invite code (id) must be at least 6 characters long');
     }
-    
-    if (maxUses !== undefined && maxUses < 1) {
-      throw new Error('Max uses must be at least 1');
-    }
-    
-    if (currentUses < 0) {
-      throw new Error('Current uses cannot be negative');
-    }
-    
-    if (maxUses !== undefined && currentUses > maxUses) {
-      throw new Error('Current uses cannot exceed max uses');
-    }
   }
 
   /**
@@ -69,40 +52,6 @@ export class InviteEntity implements BaseEntity {
    */
   get inviteCode(): string {
     return this.id;
-  }
-
-  /**
-   * Increments the current uses count.
-   */
-  incrementUses(): InviteEntity {
-    if (this.isExpired()) {
-      throw new Error('Cannot use expired invite');
-    }
-    
-    if (this.isRevoked()) {
-      throw new Error('Cannot use revoked invite');
-    }
-    
-    if (this.maxUses !== undefined && this.currentUses >= this.maxUses) {
-      throw new Error('Invite has reached maximum uses');
-    }
-    
-    const newUses = this.currentUses + 1;
-    const newStatus = this.maxUses !== undefined && newUses >= this.maxUses 
-      ? InviteStatus.EXPIRED 
-      : this.status;
-
-    return new InviteEntity(
-      this.id,
-      this.projectId,
-      this.inviterId,
-      this.expiresAt,
-      newUses,
-      newStatus,
-      this.createdAt,
-      new Date(),
-      this.maxUses
-    );
   }
 
   /**
@@ -118,11 +67,9 @@ export class InviteEntity implements BaseEntity {
       this.projectId,
       this.inviterId,
       this.expiresAt,
-      this.currentUses,
       InviteStatus.REVOKED,
       this.createdAt,
-      new Date(),
-      this.maxUses
+      new Date()
     );
   }
 
@@ -144,8 +91,7 @@ export class InviteEntity implements BaseEntity {
    * Checks if the invite is active and usable.
    */
   isActive(): boolean {
-    return this.status === InviteStatus.ACTIVE && !this.isExpired() && 
-           (this.maxUses === undefined || this.currentUses < this.maxUses);
+    return this.status === InviteStatus.ACTIVE && !this.isExpired();
   }
 
   /**
@@ -164,8 +110,6 @@ export class InviteEntity implements BaseEntity {
       projectId: this.projectId,
       inviterId: this.inviterId,
       expiresAt: this.expiresAt,
-      maxUses: this.maxUses,
-      currentUses: this.currentUses,
       status: this.status,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
@@ -178,14 +122,12 @@ export class InviteEntity implements BaseEntity {
    * @param projectId The project ID
    * @param inviterId The user who created the invite
    * @param expiresAt When the invite expires
-   * @param maxUses Maximum number of times the invite can be used
    */
   static create(
     inviteCode: string,
     projectId: string,
     inviterId: string,
-    expiresAt: Date,
-    maxUses?: number
+    expiresAt: Date
   ): InviteEntity {
     const now = new Date();
     
@@ -194,11 +136,9 @@ export class InviteEntity implements BaseEntity {
       projectId,
       inviterId,
       expiresAt,
-      0, // currentUses starts at 0
       InviteStatus.ACTIVE,
       now,
-      now,
-      maxUses
+      now
     );
   }
 
@@ -211,11 +151,9 @@ export class InviteEntity implements BaseEntity {
       data.projectId,
       data.inviterId,
       data.expiresAt,
-      data.currentUses,
       data.status,
       data.createdAt,
-      data.updatedAt,
-      data.maxUses
+      data.updatedAt
     );
   }
 

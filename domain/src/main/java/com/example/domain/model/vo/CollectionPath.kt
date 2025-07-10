@@ -71,10 +71,11 @@ value class CollectionPath(val value: String) {
         fun projectRolePermission(projectId: String, roleId: String, permissionName: String): CollectionPath =
             CollectionPath("${projectRolePermissions(projectId, roleId).value}/$permissionName")
         
-        fun projectInvites(projectId: String): CollectionPath = 
-            CollectionPath("${project(projectId).value}/${ProjectInvitation.COLLECTION_NAME}")
-        fun projectInvite(projectId: String, inviteId: String): CollectionPath = 
-            CollectionPath("${projectInvites(projectId).value}/$inviteId")
+        // Project invitations stored as root collection for global accessibility
+        fun projectInvitations(): CollectionPath = 
+            CollectionPath(ProjectInvitation.COLLECTION_NAME)
+        fun projectInvitation(inviteId: String): CollectionPath = 
+            CollectionPath("${ProjectInvitation.COLLECTION_NAME}/$inviteId")
         
         fun projectCategories(projectId: String): CollectionPath = 
             CollectionPath("${project(projectId).value}/${Category.COLLECTION_NAME}")

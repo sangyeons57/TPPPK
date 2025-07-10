@@ -86,7 +86,6 @@ object FirebaseFunctionParameters {
         const val PROJECT_NAME = "projectName"
         const val INVITER_ID = "inviterId"
         const val EXPIRES_IN_HOURS = "expiresInHours"
-        const val MAX_USES = "maxUses"
         const val DELETED_BY = "deletedBy"
     }
 } 

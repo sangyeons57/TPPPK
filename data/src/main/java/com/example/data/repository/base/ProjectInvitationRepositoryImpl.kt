@@ -1,24 +1,125 @@
 package com.example.data.repository.base
 
 import com.example.core_common.result.CustomResult
-import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
+import com.example.data.datasource.remote.ProjectInvitationRemoteDataSource
+import com.example.data.model.remote.toDto
+import com.example.data.repository.DefaultRepositoryImpl
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectInvitation
-import com.example.domain.model.enum.ProjectInvitationStatus
+import com.example.domain.model.enum.InviteStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.invite.InviteCode
 import com.example.domain.repository.base.ProjectInvitationRepository
+import com.example.domain.repository.factory.context.ProjectInvitationRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
-import java.time.Instant
 
 /**
- * 프로젝트 초대 Repository 구현체
+ * ProjectInvitation Repository 구현체
+ * DDD DefaultRepositoryImpl을 확장하여 통합된 CRUD 작업을 제공합니다.
  */
 class ProjectInvitationRepositoryImpl @Inject constructor(
-    private val functionsRemoteDataSource: FunctionsRemoteDataSource
-) : ProjectInvitationRepository {
+    private val projectInvitationRemoteDataSource: ProjectInvitationRemoteDataSource,
+    override val factoryContext: ProjectInvitationRepositoryFactoryContext,
+) : DefaultRepositoryImpl(projectInvitationRemoteDataSource, factoryContext), ProjectInvitationRepository {
+
+    /**
+     * DDD save() 메서드 - 생성/수정 통합 처리
+     * 
+     * 새로운 ProjectInvitation: Firebase Functions로 초대 링크 생성
+     * 기존 ProjectInvitation: Firestore 직접 업데이트
+     */
+    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
+        if (entity !is ProjectInvitation)
+            return CustomResult.Failure(IllegalArgumentException("Entity must be of type ProjectInvitation"))
+        
+        ensureCollection()
+        
+        return if (entity.isNew) {
+            // 새로운 초대 링크 생성 - Firebase Functions 사용
+            val expiresInHours = entity.expiresAt?.let {
+                val now = java.time.Instant.now()
+                val hoursUntilExpiry = java.time.Duration.between(now, it).toHours()
+                hoursUntilExpiry.toInt().coerceAtLeast(1) // 최소 1시간
+            } ?: 24 // 기본 24시간
+            
+            projectInvitationRemoteDataSource.generateInviteLinkViaFunction(
+                entity.projectId.value,
+                expiresInHours
+            ).map { data ->
+                // Firebase Functions에서 반환된 ID 사용
+                DocumentId(data["id"] as? String ?: entity.id.value)
+            }
+        } else {
+            // 기존 초대 링크 업데이트 - Firestore 직접 업데이트
+            projectInvitationRemoteDataSource.update(entity.id, entity.getChangedFields())
+        }
+    }
+
+    /**
+     * 초대 코드로 초대 정보를 조회합니다.
+     */
+    override suspend fun getInvitationByCode(
+        inviteCode: InviteCode
+    ): CustomResult<ProjectInvitation, Exception> {
+        return projectInvitationRemoteDataSource.validateInviteCodeViaFunction(inviteCode.value)
+            .map { data ->
+                mapToProjectInvitation(data)
+            }
+    }
+
+    /**
+     * 초대 코드의 유효성을 검증합니다.
+     */
+    override suspend fun validateInviteCode(
+        inviteCode: InviteCode,
+        userId: UserId?
+    ): CustomResult<Boolean, Exception> {
+        return projectInvitationRemoteDataSource.validateInviteCodeViaFunction(inviteCode.value)
+            .map { data ->
+                data["isValid"] as? Boolean ?: false
+            }
+    }
+
+    /**
+     * 특정 사용자가 생성한 초대 링크 목록을 조회합니다.
+     */
+    override suspend fun getInviteLinksByInviter(
+        inviterId: UserId,
+        projectId: DocumentId?,
+        status: InviteStatus?
+    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
+        // 실제 구현에서는 Firestore 쿼리를 사용해야 합니다.
+        // 현재는 placeholder로 TODO 처리
+        return flowOf(CustomResult.Failure(Exception("Not yet implemented - 사용자별 초대 링크 목록 조회")))
+    }
+
+    /**
+     * 특정 프로젝트의 모든 초대 링크를 조회합니다.
+     */
+    override suspend fun getProjectInviteLinks(
+        projectId: DocumentId,
+        status: InviteStatus?
+    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
+        // 실제 구현에서는 Firestore 쿼리를 사용해야 합니다.
+        // 현재는 placeholder로 TODO 처리
+        return flowOf(CustomResult.Failure(Exception("Not yet implemented - 프로젝트별 초대 링크 목록 조회")))
+    }
+
+    /**
+     * 프로젝트에 활성 상태의 초대 링크가 있는지 확인합니다.
+     */
+    override suspend fun hasActiveInviteLink(
+        projectId: DocumentId,
+        inviterId: UserId?
+    ): CustomResult<Boolean, Exception> {
+        // 실제 구현에서는 Firestore 쿼리를 사용해야 합니다.
+        // 현재는 placeholder로 TODO 처리
+        return CustomResult.Failure(Exception("Not yet implemented - 활성 초대 링크 존재 확인"))
+    }
 
     /**
      * Firebase Functions의 응답을 ProjectInvitation 도메인 객체로 변환합니다.
@@ -26,164 +127,12 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
     private fun mapToProjectInvitation(data: Map<String, Any?>): ProjectInvitation {
         return ProjectInvitation.fromDataSource(
             id = DocumentId(data["id"] as String),
-            status = ProjectInvitationStatus.fromString(data["status"] as String?),
+            status = InviteStatus.fromString(data["status"] as String?),
             inviterId = UserId(data["inviterId"] as String),
             projectId = DocumentId(data["projectId"] as String),
-            inviteeId = UserId(data["inviteeId"] as String),
-            message = data["message"] as String?,
-            createdAt = (data["createdAt"] as? Long)?.let { Instant.ofEpochMilli(it) },
-            updatedAt = (data["updatedAt"] as? Long)?.let { Instant.ofEpochMilli(it) },
-            expiresAt = (data["expiresAt"] as? Long)?.let { Instant.ofEpochMilli(it) }
-        )
-    }
-
-    /**
-     * Firebase Functions의 응답 목록을 ProjectInvitation 도메인 객체 목록으로 변환합니다.
-     */
-    private fun mapToProjectInvitationList(data: Map<String, Any?>): List<ProjectInvitation> {
-        val invitations = data["invitations"] as? List<Map<String, Any?>> ?: return emptyList()
-        return invitations.map { mapToProjectInvitation(it) }
-    }
-
-    /**
-     * 프로젝트 초대를 보냅니다.
-     * 
-     * @param projectId 프로젝트 ID
-     * @param inviteeId 초대받을 사용자 ID
-     * @param message 초대 메시지 (선택사항)
-     * @param expiresInHours 만료 시간 (시간 단위, 기본 72시간)
-     * @return 생성된 초대 객체
-     */
-    override suspend fun sendInvitation(
-        projectId: DocumentId,
-        inviteeId: UserId,
-        message: String?,
-        expiresInHours: Long
-    ): CustomResult<ProjectInvitation, Exception> {
-        return functionsRemoteDataSource.sendProjectInvitation(
-            projectId = projectId.value,
-            inviteeId = inviteeId.value,
-            message = message,
-            expiresInHours = expiresInHours
-        )
-    }
-
-    /**
-     * 프로젝트 초대를 수락합니다.
-     * 
-     * @param invitationId 초대 ID
-     * @return 수락된 초대 객체
-     */
-    override suspend fun acceptInvitation(
-        invitationId: DocumentId
-    ): CustomResult<ProjectInvitation, Exception> {
-        return functionsRemoteDataSource.acceptProjectInvitation(invitationId.value)
-    }
-
-    /**
-     * 프로젝트 초대를 거절합니다.
-     * 
-     * @param invitationId 초대 ID
-     * @return 거절된 초대 객체
-     */
-    override suspend fun rejectInvitation(
-        invitationId: DocumentId
-    ): CustomResult<ProjectInvitation, Exception> {
-        return functionsRemoteDataSource.rejectProjectInvitation(invitationId.value)
-    }
-
-    /**
-     * 프로젝트 초대를 취소합니다.
-     * 
-     * @param invitationId 초대 ID
-     * @return 취소된 초대 객체
-     */
-    override suspend fun cancelInvitation(
-        invitationId: DocumentId
-    ): CustomResult<ProjectInvitation, Exception> {
-        return functionsRemoteDataSource.cancelProjectInvitation(invitationId.value)
-    }
-
-    /**
-     * 받은 초대 목록을 조회합니다.
-     * 
-     * @param userId 사용자 ID
-     * @param status 조회할 상태 (null이면 모든 상태)
-     * @return 초대 목록 Flow
-     */
-    override suspend fun getReceivedInvitations(
-        userId: UserId,
-        status: ProjectInvitationStatus?
-    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
-        return functionsRemoteDataSource.getReceivedInvitations(
-            userId = userId.value,
-            status = status?.name
-        )
-    }
-
-    /**
-     * 보낸 초대 목록을 조회합니다.
-     * 
-     * @param userId 사용자 ID
-     * @param projectId 프로젝트 ID (null이면 모든 프로젝트)
-     * @param status 조회할 상태 (null이면 모든 상태)
-     * @return 초대 목록 Flow
-     */
-    override suspend fun getSentInvitations(
-        userId: UserId,
-        projectId: DocumentId?,
-        status: ProjectInvitationStatus?
-    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
-        return functionsRemoteDataSource.getSentInvitations(
-            userId = userId.value,
-            projectId = projectId?.value,
-            status = status?.name
-        )
-    }
-
-    /**
-     * 특정 프로젝트의 초대 목록을 조회합니다.
-     * 
-     * @param projectId 프로젝트 ID
-     * @param status 조회할 상태 (null이면 모든 상태)
-     * @return 초대 목록 Flow
-     */
-    override suspend fun getProjectInvitations(
-        projectId: DocumentId,
-        status: ProjectInvitationStatus?
-    ): Flow<CustomResult<List<ProjectInvitation>, Exception>> {
-        return functionsRemoteDataSource.getProjectInvitations(
-            projectId = projectId.value,
-            status = status?.name
-        )
-    }
-
-    /**
-     * 특정 초대를 조회합니다.
-     * 
-     * @param invitationId 초대 ID
-     * @return 초대 객체
-     */
-    override suspend fun getInvitation(
-        invitationId: DocumentId
-    ): CustomResult<ProjectInvitation, Exception> {
-        return functionsRemoteDataSource.getProjectInvitation(invitationId.value)
-    }
-
-    /**
-     * 중복 초대 확인 (같은 프로젝트에 같은 사용자가 이미 초대받았는지)
-     * 
-     * @param projectId 프로젝트 ID
-     * @param inviteeId 초대받을 사용자 ID
-     * @return 중복 초대 여부
-     */
-    override suspend fun hasPendingInvitation(
-        projectId: DocumentId,
-        inviteeId: UserId
-    ): CustomResult<Boolean, Exception> {
-        return functionsRemoteDataSource.hasPendingInvitation(
-            projectId = projectId.value,
-            inviteeId = inviteeId.value
+            createdAt = (data["createdAt"] as? Long)?.let { java.time.Instant.ofEpochMilli(it) },
+            updatedAt = (data["updatedAt"] as? Long)?.let { java.time.Instant.ofEpochMilli(it) },
+            expiresAt = (data["expiresAt"] as? Long)?.let { java.time.Instant.ofEpochMilli(it) }
         )
     }
 }

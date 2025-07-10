@@ -162,18 +162,6 @@ service cloud.firestore {
                 }
             }
 
-            // 초대 (invites)
-            match /invites/{inviteId} {
-                // 초대 정보 읽기: 프로젝트 소유자만 (또는 특정 조건 만족 시)
-                allow read: if isProjectOwner(projectId);
-                // 초대 생성: 프로젝트 소유자이고, 생성자가 본인
-                allow create: if isProjectOwner(projectId) &&
-                              request.resource.data.createdBy == request.auth.uid;
-                // 초대 상태 업데이트 (예: 만료 처리): 프로젝트 소유자
-                allow update: if isProjectOwner(projectId);
-                // 초대 삭제: 프로젝트 소유자
-                allow delete: if isProjectOwner(projectId);
-            }
 
             // 카테고리 (categories)
             match /categories/{categoryId} {
@@ -214,6 +202,32 @@ service cloud.firestore {
                     }
                 }
             }
+        }
+
+        // === 초대 (project_invitations) - Root Collection ===
+        match /project_invitations/{inviteId} {
+            // 초대 정보 읽기: 
+            // 1. 초대자(생성자) 본인
+            // 2. 모든 사용자 (초대 코드 검증용 - read-only access needed for validation)
+            allow read: if isAuthenticated() &&
+                        (resource.data.inviterId == request.auth.uid ||
+                         true); // Allow read for invite code validation
+
+            // 초대 생성: 
+            // 1. 생성자가 본인이어야 함
+            // 2. 해당 프로젝트의 멤버여야 함 (권한 확인)
+            allow create: if isAuthenticated() &&
+                          request.resource.data.inviterId == request.auth.uid &&
+                          isProjectMember(request.resource.data.projectId);
+
+            // 초대 상태 업데이트:
+            // 1. 초대자가 취소/무효화하는 경우
+            allow update: if isAuthenticated() &&
+                          resource.data.inviterId == request.auth.uid;
+
+            // 초대 삭제: 초대자 본인만
+            allow delete: if isAuthenticated() &&
+                          resource.data.inviterId == request.auth.uid;
         }
 
         // === 일정 (schedules) ===
