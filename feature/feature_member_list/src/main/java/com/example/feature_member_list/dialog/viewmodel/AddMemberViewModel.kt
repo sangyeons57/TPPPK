@@ -164,17 +164,22 @@ class AddMemberViewModel @Inject constructor(
                 val currentUser = authSessionUseCases!!.authRepository.getCurrentUserSession()
                 when (currentUser) {
                     is CustomResult.Success -> {
-                        val result = useCases.generateInviteLinkUseCase(
+                        // 1. 초대 생성 (DocumentId 반환)
+                        val createResult = useCases.generateInviteLinkUseCase(
+                            inviterId = currentUser.data.userId,
                             projectId = projectId,
-                            expiresInHours = 24, // 기본 24시간
-                            maxUses = null // 무제한 사용
+                            expiresInHours = 24 // 기본 24시간
                         )
                         
-                        when (result) {
+                        when (createResult) {
                             is CustomResult.Success -> {
+                                // 2. 생성된 DocumentId로 링크 생성
+                                val invitationId = createResult.data
+                                val inviteLink = useCases.generateInviteLinkFromIdUseCase(invitationId)
+                                
                                 _uiState.update { 
                                     it.copy(
-                                        projectInviteLink = result.data.inviteLink,
+                                        projectInviteLink = inviteLink,
                                         isLoadingLink = false,
                                         error = null
                                     ) 
@@ -185,7 +190,7 @@ class AddMemberViewModel @Inject constructor(
                                 _uiState.update { 
                                     it.copy(
                                         isLoadingLink = false, 
-                                        error = "초대 링크 생성 실패: ${result.error.message}"
+                                        error = "초대 링크 생성 실패: ${createResult.error.message}"
                                     ) 
                                 }
                             }

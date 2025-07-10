@@ -12,12 +12,14 @@ import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.base.ProjectInvitationRepository
 import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectRoleRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectInvitationRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
@@ -29,6 +31,7 @@ import com.example.domain.usecase.project.core.DeleteProjectUseCaseImpl
 import com.example.domain.usecase.project.core.DeleteProjectsWrapperUseCase
 import com.example.domain.usecase.project.core.DeleteProjectsWrapperUseCaseImpl
 import com.example.domain.usecase.project.core.GenerateInviteLinkUseCase
+import com.example.domain.usecase.project.core.GenerateInviteLinkFromIdUseCase
 import com.example.domain.usecase.project.core.GetProjectDetailsStreamUseCase
 import com.example.domain.usecase.project.core.GetUserParticipatingProjectsUseCaseImpl
 import com.example.domain.usecase.project.core.RenameProjectUseCaseImpl
@@ -49,7 +52,8 @@ class CoreProjectUseCaseProvider @Inject constructor(
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
     private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
     private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
-    private val roleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>
+    private val roleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
+    private val projectInvitationRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectInvitationRepositoryFactoryContext, ProjectInvitationRepository>
 ) {
 
     /**
@@ -97,6 +101,9 @@ class CoreProjectUseCaseProvider @Inject constructor(
             )
         )
 
+        val projectInvitationRepository = projectInvitationRepositoryFactory.create(
+            ProjectInvitationRepositoryFactoryContext()
+        )
 
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
@@ -136,8 +143,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
             ),
             
             generateInviteLinkUseCase = GenerateInviteLinkUseCase(
-                projectRepository = projectRepository
+                projectInvitationRepository = projectInvitationRepository
             ),
+            
+            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase(),
             
             validateInviteCodeUseCase = ValidateInviteCodeUseCase(
                 projectRepository = projectRepository
@@ -198,6 +207,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
             )
         )
 
+        val projectInvitationRepository = projectInvitationRepositoryFactory.create(
+            ProjectInvitationRepositoryFactoryContext()
+        )
+
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
                 projectRepository = projectRepository,
@@ -236,8 +249,10 @@ class CoreProjectUseCaseProvider @Inject constructor(
             ),
             
             generateInviteLinkUseCase = GenerateInviteLinkUseCase(
-                projectRepository = projectRepository
+                projectInvitationRepository = projectInvitationRepository
             ),
+            
+            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase(),
             
             validateInviteCodeUseCase = ValidateInviteCodeUseCase(
                 projectRepository = projectRepository
@@ -266,6 +281,7 @@ data class CoreProjectUseCases(
     val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase,
     val joinProjectWithTokenUseCase: JoinProjectWithTokenUseCase,
     val generateInviteLinkUseCase: GenerateInviteLinkUseCase,
+    val generateInviteLinkFromIdUseCase: GenerateInviteLinkFromIdUseCase,
     val validateInviteCodeUseCase: ValidateInviteCodeUseCase,
     val deleteProjectsWrapperUseCase: DeleteProjectsWrapperUseCase,
     
