@@ -30,12 +30,13 @@ data class EditProfileUiState(
     val user: User? = null,
     val originalUser: User? = null, // 변경사항 비교를 위한 원본 사용자 정보
     val nameInput: String = "", // 이름 입력 필드를 위한 별도 상태
-    val selectedImageUri: Uri? = null,
+    val selectedImageUri: Uri? = null, // 새로 선택한 이미지 URI
+    val removeProfileSelected: Boolean = false, // 기본 프로필 사용이 선택되었는지
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val hasChanges: Boolean = false,
     val showRemoveImageDialog: Boolean = false,
-    val isRemovingImage: Boolean = false // 기본 프로필 설정 중인지 여부
+    val isRemovingImage: Boolean = false // 실제 Remove 호출 진행 중 여부 (저장 과정)
 )
 
 /**
@@ -149,14 +150,15 @@ class EditProfileViewModel @Inject constructor(
                     user.name.value != original.name.value
                 } ?: false
             } ?: false
-            
+
             currentState.copy(
                 selectedImageUri = uri,
+                removeProfileSelected = false, // 새 이미지 선택 시 기본 프로필 해제
                 hasChanges = true, // 이미지가 선택되면 변경사항이 있음
                 errorMessage = null
             )
         }
-        
+
         viewModelScope.launch {
             _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지가 선택되었습니다. 저장 버튼을 눌러 적용하세요."))
         }
@@ -190,7 +192,7 @@ class EditProfileViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             try {
-                // 1. 이미지 업로드 (선택된 이미지가 있는 경우)
+                // 1-a. 이미지 업로드 (선택된 이미지가 있는 경우)
                 if (selectedImageUri != null) {
                     val imageResult = withContext(dispatcherProvider.io) {
                         userUseCases.uploadProfileImageUseCase(selectedImageUri)
@@ -214,6 +216,27 @@ class EditProfileViewModel @Inject constructor(
                         else -> {
                             // 로딩 상태 등 무시
                         }
+                    }
+                }
+
+                // 1-b. 기본 프로필 사용이 선택된 경우 (이미지 제거)
+                if (currentState.removeProfileSelected) {
+                    _uiState.update { it.copy(isRemovingImage = true) }
+
+                    val removeResult = withContext(dispatcherProvider.io) {
+                        userUseCases.removeProfileImageUseCase()
+                    }
+
+                    when (removeResult) {
+                        is CustomResult.Success -> {
+                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필로 설정되었습니다"))
+                        }
+                        is CustomResult.Failure -> {
+                            _uiState.update { it.copy(isLoading = false, isRemovingImage = false) }
+                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필 설정 실패: ${removeResult.error.message}"))
+                            return@launch
+                        }
+                        else -> { /* no-op */ }
                     }
                 }
 
@@ -242,12 +265,14 @@ class EditProfileViewModel @Inject constructor(
                 }
 
                 // 성공 시 상태 초기화 및 뒤로가기
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
-                        isLoading = false, 
+                        isLoading = false,
+                        isRemovingImage = false,
                         selectedImageUri = null,
+                        removeProfileSelected = false,
                         hasChanges = false
-                    ) 
+                    )
                 }
                 
                 if (selectedImageUri != null && hasNameChanged) {
@@ -354,49 +379,17 @@ class EditProfileViewModel @Inject constructor(
      * 기본 프로필 사용 버튼 클릭 이벤트 처리 (프로필 이미지 제거)
      */
     fun onSetDefaultProfileClicked() {
-        viewModelScope.launch {
-            _uiState.update { 
-                it.copy(
-                    isRemovingImage = true, 
-                    errorMessage = null
-                ) 
-            }
+        _uiState.update { currentState ->
+            val hasNameChanged = currentState.originalUser?.name?.value != currentState.nameInput
 
-            try {
-                val result = withContext(dispatcherProvider.io) {
-                    userUseCases.removeProfileImageUseCase()
-                }
-                
-                when (result) {
-                    is CustomResult.Success -> {
-                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필로 설정되었습니다"))
-                        
-                        // Firebase Functions가 user의 updatedAt을 갱신하면 자동으로 프로필 이미지가 새로고침됨
-                        _uiState.update { 
-                            it.copy(
-                                isRemovingImage = false,
-                                selectedImageUri = null
-                            ) 
-                        }
-                    }
-                    is CustomResult.Failure -> {
-                        _uiState.update { it.copy(isRemovingImage = false) }
-                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필 설정 실패: ${result.error.message}"))
-                    }
-                    else -> {
-                        _uiState.update { it.copy(isRemovingImage = false) }
-                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필 설정 중 알 수 없는 오류가 발생했습니다."))
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = e.message ?: "기본 프로필 설정 중 오류가 발생했습니다",
-                        isRemovingImage = false
-                    )
-                }
-                _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필 설정 실패: ${e.message}"))
-            }
+            currentState.copy(
+                selectedImageUri = null, // 새 이미지 선택 해제
+                removeProfileSelected = true, // 기본 프로필 사용 선택
+                hasChanges = hasNameChanged || true // 이미지 변경으로 간주
+            )
+        }
+        viewModelScope.launch {
+            _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필이 선택되었습니다. 저장 버튼을 눌러 적용하세요."))
         }
     }
 

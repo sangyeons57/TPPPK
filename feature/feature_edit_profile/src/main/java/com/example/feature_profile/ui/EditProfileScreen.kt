@@ -215,7 +215,7 @@ fun EditProfileContent(
                     contentScale = ContentScale.Crop
                 )
             }
-            uiState.isRemovingImage -> {
+            uiState.removeProfileSelected -> {
                 // 기본 프로필(placeholder) 미리보기
                 UserProfileImage(
                     userId = null, // null 로 전달하여 placeholder만 표시
