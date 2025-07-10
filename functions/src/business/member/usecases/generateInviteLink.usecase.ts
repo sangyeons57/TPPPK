@@ -1,10 +1,10 @@
-import { InviteRepository } from '../../../domain/invite/repositories/invite.repository';
-import { InviteEntity } from '../../../domain/invite/entities/invite.entity';
-import { ProjectRepository } from '../../../domain/project/repositories/project.repository';
-import { MemberRepository } from '../../../domain/member/repositories/member.repository';
-import { CustomResult, Result } from '../../../core/types';
-import { validateId } from '../../../core/validation';
-import { ValidationError, NotFoundError, UnauthorizedError } from '../../../core/errors';
+import {InviteRepository} from "../../../domain/invite/repositories/invite.repository";
+import {InviteEntity} from "../../../domain/invite/entities/invite.entity";
+import {ProjectRepository} from "../../../domain/project/repositories/project.repository";
+import {MemberRepository} from "../../../domain/member/repositories/member.repository";
+import {CustomResult, Result} from "../../../core/types";
+import {validateId} from "../../../core/validation";
+import {ValidationError, NotFoundError, UnauthorizedError} from "../../../core/errors";
 
 export interface GenerateInviteLinkRequest {
   projectId: string;
@@ -33,18 +33,18 @@ export class GenerateInviteLinkUseCase {
       // Validate input
       if (!projectId || !inviterId) {
         return Result.failure(
-          new ValidationError('request', 'projectId and inviterId are required')
+          new ValidationError("request", "projectId and inviterId are required")
         );
       }
 
-      validateId(projectId, 'project ID');
-      validateId(inviterId, 'inviter ID');
+      validateId(projectId, "project ID");
+      validateId(inviterId, "inviter ID");
 
       // Check if project exists
       const projectResult = await this.projectRepository.findById(projectId);
       if (!projectResult.success) {
         return Result.failure(
-          new NotFoundError('project', 'Project not found')
+          new NotFoundError("project", "Project not found")
         );
       }
 
@@ -52,14 +52,14 @@ export class GenerateInviteLinkUseCase {
       const memberResult = await this.memberRepository.findByUserId(inviterId);
       if (!memberResult.success) {
         return Result.failure(
-          new UnauthorizedError('User is not an active member of this project')
+          new UnauthorizedError("User is not an active member of this project")
         );
       }
 
       const member = memberResult.data;
       if (!member.isActive()) {
         return Result.failure(
-          new UnauthorizedError('User is not an active member of this project')
+          new UnauthorizedError("User is not an active member of this project")
         );
       }
 
@@ -72,20 +72,20 @@ export class GenerateInviteLinkUseCase {
       do {
         inviteCode = InviteEntity.generateInviteCode();
         attempts++;
-        
+
         // Check if this exact document ID already exists
         const existsResult = await this.inviteRepository.existsByCode(inviteCode);
         if (!existsResult.success) {
           return Result.failure(existsResult.error);
         }
-        
+
         if (!existsResult.data) {
           break; // Code is unique, we can use it
         }
-        
+
         if (attempts >= maxAttempts) {
           return Result.failure(
-            new Error('Failed to generate unique invite code after maximum attempts')
+            new Error("Failed to generate unique invite code after maximum attempts")
           );
         }
       } while (attempts < maxAttempts);
@@ -107,11 +107,11 @@ export class GenerateInviteLinkUseCase {
       if (!saveResult.success) {
         return Result.failure(saveResult.error);
       }
-      
+
       const savedInvite = saveResult.data;
 
       // Generate invite link
-      const baseUrl = process.env.APP_BASE_URL || 'https://tpppk.app';
+      const baseUrl = process.env.APP_BASE_URL || "https://tpppk.app";
       const inviteLink = `${baseUrl}/invite/${savedInvite.inviteCode}`;
 
       return Result.success({
@@ -120,10 +120,9 @@ export class GenerateInviteLinkUseCase {
         expiresAt: savedInvite.expiresAt,
         status: savedInvite.status,
       });
-
     } catch (error) {
       return Result.failure(
-        error instanceof Error ? error : new Error('Failed to generate invite link')
+        error instanceof Error ? error : new Error("Failed to generate invite link")
       );
     }
   }

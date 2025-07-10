@@ -280,7 +280,6 @@ export const generateInviteLinkFunction = onCall(
         projectId,
         inviterId,
         expiresInHours = 24,
-        maxUses,
       } = request.data as GenerateInviteLinkRequest;
 
       if (!projectId || !inviterId) {
@@ -295,7 +294,6 @@ export const generateInviteLinkFunction = onCall(
         projectId,
         inviterId,
         expiresInHours,
-        maxUses,
       });
 
       if (!result.success) {
@@ -339,13 +337,13 @@ export const validateInviteCodeFunction = onCall(
       // First, get the projectId from the invite code using invite repository directly
       const inviteRepository = Providers.getMemberProvider().createInviteRepository();
       const inviteResult = await inviteRepository.findByCode(inviteCode);
-      
+
       if (!inviteResult.success || !inviteResult.data) {
         throw new HttpsError("not-found", "Invite code not found");
       }
-      
+
       const projectId = inviteResult.data.projectId;
-      
+
       // Now create the member use cases with the correct projectId context
       const memberUseCases = Providers.getMemberProvider().create({
         projectId: projectId,
@@ -397,13 +395,13 @@ export const joinProjectWithInviteFunction = onCall(
       // First, get the projectId from the invite code using invite repository directly
       const inviteRepository = Providers.getMemberProvider().createInviteRepository();
       const inviteResult = await inviteRepository.findByCode(inviteCode);
-      
+
       if (!inviteResult.success || !inviteResult.data) {
         throw new HttpsError("not-found", "Invite code not found");
       }
-      
+
       const projectId = inviteResult.data.projectId;
-      
+
       // Now create the member use cases with the correct projectId context
       const memberUseCases = Providers.getMemberProvider().create({
         projectId: projectId,
