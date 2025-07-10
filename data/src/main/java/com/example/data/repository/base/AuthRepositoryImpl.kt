@@ -141,18 +141,27 @@ class AuthRepositoryImpl @Inject constructor(
                     // 2. 모든 캐시 정리
                     when (val cacheResult = cacheService.clearAllCache()) {
                         is CustomResult.Success -> {
-                            Log.d("AuthRepositoryImpl", "Complete logout successful: Auth + Cache cleared")
-                            CustomResult.Success(Unit)
+                            Log.d("AuthRepositoryImpl", "Cache cleared successfully")
                         }
                         is CustomResult.Failure -> {
                             Log.w("AuthRepositoryImpl", "Auth logout successful but cache clearing failed", cacheResult.error)
-                            // Auth 로그아웃은 성공했으므로 Success로 반환하되 로그만 남김
-                            CustomResult.Success(Unit)
                         }
                         else -> {
                             Log.w("AuthRepositoryImpl", "Unexpected cache clearing result: $cacheResult")
-                            CustomResult.Success(Unit)
                         }
+                    }
+                    
+                    // 3. 로그아웃 완료 검증
+                    kotlinx.coroutines.delay(500) // Auth 상태 변경 전파를 위한 짧은 대기
+                    val isLogoutVerified = verifyLogoutComplete()
+                    
+                    if (isLogoutVerified) {
+                        Log.d("AuthRepositoryImpl", "Complete logout successful: Auth + Cache cleared and verified")
+                        CustomResult.Success(Unit)
+                    } else {
+                        Log.w("AuthRepositoryImpl", "Logout verification failed but auth logout was successful")
+                        // Auth 로그아웃은 성공했으므로 Success로 반환하되 경고 로그 남김
+                        CustomResult.Success(Unit)
                     }
                 }
                 is CustomResult.Failure -> {
@@ -178,12 +187,62 @@ class AuthRepositoryImpl @Inject constructor(
      */
     private suspend fun waitForAuthStateChange(maxWaitTimeMs: Long): Boolean {
         return withTimeoutOrNull(maxWaitTimeMs) {
+            var attempts = 0
+            val maxAttempts = (maxWaitTimeMs / 100).toInt()
+            
             // Auth 상태가 null이 될 때까지 대기
-            while (authWrapper.getCurrentUser() != null) {
+            while (authWrapper.getCurrentUser() != null && attempts < maxAttempts) {
+                attempts++
+                Log.d("AuthRepositoryImpl", "Waiting for auth state to clear... attempt $attempts/$maxAttempts")
                 kotlinx.coroutines.delay(100)
             }
-            true
+            
+            val isCleared = authWrapper.getCurrentUser() == null
+            Log.d("AuthRepositoryImpl", "Auth state cleared: $isCleared after $attempts attempts")
+            isCleared
         } ?: false
+    }
+    
+    /**
+     * 로그아웃 후 Firebase Auth 상태를 추가로 검증합니다.
+     * @return Firebase Auth가 완전히 로그아웃되었으면 true
+     */
+    private suspend fun verifyLogoutComplete(): Boolean {
+        return try {
+            // 1. AuthWrapper를 통한 확인
+            val currentUser = authWrapper.getCurrentUser()
+            if (currentUser != null) {
+                Log.w("AuthRepositoryImpl", "AuthWrapper still shows user: ${currentUser.uid}")
+                return false
+            }
+            
+            // 2. 현재 세션 정보 확인
+            when (val sessionResult = getCurrentUserSession()) {
+                is CustomResult.Success -> {
+                    Log.w("AuthRepositoryImpl", "Session still available after logout: ${sessionResult.data}")
+                    return false
+                }
+                is CustomResult.Failure -> {
+                    Log.d("AuthRepositoryImpl", "Session properly cleared: ${sessionResult.error.message}")
+                }
+                else -> {
+                    Log.w("AuthRepositoryImpl", "Unexpected session result after logout: $sessionResult")
+                }
+            }
+            
+            // 3. 로그인 상태 확인
+            val isLoggedIn = isLoggedIn()
+            if (isLoggedIn) {
+                Log.w("AuthRepositoryImpl", "isLoggedIn() still returns true after logout")
+                return false
+            }
+            
+            Log.d("AuthRepositoryImpl", "Logout verification completed successfully")
+            true
+        } catch (e: Exception) {
+            Log.e("AuthRepositoryImpl", "Error during logout verification", e)
+            false
+        }
     }
 
     /**

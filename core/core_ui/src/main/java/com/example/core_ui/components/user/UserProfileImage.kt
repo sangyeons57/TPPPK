@@ -148,15 +148,22 @@ class UserProfileImageViewModel @Inject constructor(
             } catch (e: Exception) {
                 when {
                     e.message?.contains("Object does not exist") == true -> {
-                        Log.d("UserProfileImage", "Profile image does not exist for user: $userId, will show default")
+                        // 프로필 이미지가 없는 것은 정상적인 상황이므로 DEBUG 레벨로 로깅
+                        Log.d("UserProfileImage", "Profile image does not exist for user: $userId, showing default placeholder")
                         _imageUrl.value = null
                     }
                     e.message?.contains("Permission denied") == true -> {
-                        Log.w("UserProfileImage", "Permission denied for profile image of user: $userId")
+                        Log.w("UserProfileImage", "Permission denied for profile image of user: $userId, showing default placeholder")
+                        _imageUrl.value = null
+                    }
+                    e.message?.contains("StorageException") == true && e.message?.contains("404") == true -> {
+                        // Firebase Storage 404 오류도 정상적인 상황 (이미지 없음)
+                        Log.d("UserProfileImage", "Profile image not found (404) for user: $userId, showing default placeholder")
                         _imageUrl.value = null
                     }
                     else -> {
-                        Log.e("UserProfileImage", "Failed to load profile image URL for user: $userId", e)
+                        // 실제 오류인 경우에만 ERROR 레벨로 로깅
+                        Log.e("UserProfileImage", "Unexpected error loading profile image for user: $userId", e)
                         _imageUrl.value = null
                     }
                 }

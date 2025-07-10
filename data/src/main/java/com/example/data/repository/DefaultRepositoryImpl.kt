@@ -40,9 +40,16 @@ abstract class DefaultRepositoryImpl  (
 
     override suspend fun findById(id: DocumentId, source: Source): CustomResult<AggregateRoot, Exception> {
         ensureCollection()
-        return when (val result = defaultDatasource.findById(id)) {
-            is CustomResult.Success -> CustomResult.Success(result.data.toDomain())
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
+        Log.d("DefaultRepositoryImpl", "findById: documentId=${id.value}, source=$source")
+        return when (val result = defaultDatasource.findById(id, source)) {
+            is CustomResult.Success -> {
+                Log.d("DefaultRepositoryImpl", "findById success: documentId=${id.value}")
+                CustomResult.Success(result.data.toDomain())
+            }
+            is CustomResult.Failure -> {
+                Log.e("DefaultRepositoryImpl", "findById failed: documentId=${id.value}, error=${result.error.message}", result.error)
+                CustomResult.Failure(result.error)
+            }
             is CustomResult.Loading -> CustomResult.Loading
             is CustomResult.Initial -> CustomResult.Initial
             is CustomResult.Progress -> CustomResult.Progress(result.progress)
