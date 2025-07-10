@@ -60,8 +60,10 @@ class ProfileImageUpdateEventManager @Inject constructor() {
  */
 @HiltViewModel
 class UserProfileImageViewModel @Inject constructor(
-    private val userRepository: com.example.domain.repository.base.UserRepository
+    private val userUseCaseProvider: com.example.domain.provider.user.UserUseCaseProvider
 ) : ViewModel() {
+    
+    private val userUseCases = userUseCaseProvider.createForUser()
     
     private val _imageUrl = MutableStateFlow<String?>(null)
     val imageUrl: StateFlow<String?> = _imageUrl.asStateFlow()
@@ -80,7 +82,7 @@ class UserProfileImageViewModel @Inject constructor(
         _currentUserId.value = userId
         
         viewModelScope.launch {
-            userRepository.observeUserUpdatedAt(userId).collect { result ->
+            userUseCases.observeUserUpdatedAtUseCase(userId).collect { result ->
                 when (result) {
                     is com.example.core_common.result.CustomResult.Success -> {
                         val newTimestamp = result.data
