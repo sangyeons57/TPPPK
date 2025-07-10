@@ -7,6 +7,7 @@ import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.DMWrapperDTO
 import com.example.data.model.remote.UserDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.google.firebase.Timestamp
