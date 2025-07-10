@@ -3,7 +3,6 @@ import {UserRepositoryFactoryContext} from "../../domain/user/repositories/facto
 import {UserRepository} from "../../domain/user/repositories/user.repository";
 import {UpdateUserProfileUseCase} from "./usecases/updateUserProfile.usecase";
 import {RemoveUserProfileImageUseCase} from "./usecases/removeUserProfileImage.usecase";
-import {FirebaseStorageService} from "../../infrastructure/storage/firebase-storage.service";
 
 /**
  * Interface for user management use cases
@@ -23,8 +22,7 @@ export interface UserUseCases {
  */
 export class UserUseCaseProvider {
   constructor(
-    private readonly userRepositoryFactory: RepositoryFactory<UserRepository, UserRepositoryFactoryContext>,
-    private readonly storageService: FirebaseStorageService
+    private readonly userRepositoryFactory: RepositoryFactory<UserRepository, UserRepositoryFactoryContext>
   ) {}
 
   create(context?: UserRepositoryFactoryContext): UserUseCases {
@@ -35,8 +33,7 @@ export class UserUseCaseProvider {
         userRepository
       ),
       removeUserProfileImageUseCase: new RemoveUserProfileImageUseCase(
-        userRepository,
-        this.storageService
+        userRepository
       ),
 
       // Common repositories

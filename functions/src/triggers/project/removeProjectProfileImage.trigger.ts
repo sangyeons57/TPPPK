@@ -33,7 +33,7 @@ export const removeProjectProfileImageFunction = onCall(
       }
 
       const userId = request.auth.uid;
-      const projectUseCases = Providers.getProjectProvider().create();
+      const projectUseCases = Providers.getProjectProvider().createForProject(projectId);
 
       const result = await projectUseCases.removeProjectProfileImageUseCase.execute({
         projectId,
