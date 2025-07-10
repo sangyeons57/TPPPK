@@ -1,7 +1,7 @@
-import { UserRepository } from '../../../domain/user/repositories/user.repository';
-import { UserEntity } from '../../../domain/user/entities/user.entity';
-import { CustomResult, Result } from '../../../core/types';
-import { NotFoundError, ValidationError } from '../../../core/errors';
+import {UserRepository} from "../../../domain/user/repositories/user.repository";
+import {UserEntity} from "../../../domain/user/entities/user.entity";
+import {CustomResult, Result} from "../../../core/types";
+import {NotFoundError, ValidationError} from "../../../core/errors";
 
 export interface UpdateUserProfileRequest {
   userId: string;
@@ -27,7 +27,7 @@ export class UpdateUserProfileUseCase {
 
       const existingUser = existingUserResult.data;
       if (!existingUser) {
-        return Result.failure(new NotFoundError('User', request.userId));
+        return Result.failure(new NotFoundError("User", request.userId));
       }
 
       const updates: {
@@ -55,10 +55,14 @@ export class UpdateUserProfileUseCase {
       }
 
       return Result.success({
-        userProfile: saveResult.data
+        userProfile: saveResult.data,
       });
     } catch (error) {
-      return Result.failure(new Error(`Failed to update user profile: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return Result.failure(
+        new Error(
+          `Failed to update user profile: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
+      );
     }
   }
 
@@ -70,12 +74,18 @@ export class UpdateUserProfileUseCase {
       }
 
       if (existingUser.data && existingUser.data.id !== currentUserId) {
-        return Result.failure(new ValidationError('name', 'Username already exists'));
+        return Result.failure(
+          new ValidationError("name", "Username already exists"),
+        );
       }
 
       return Result.success(undefined);
     } catch (error) {
-      return Result.failure(new Error(`Username validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return Result.failure(
+        new Error(
+          `Username validation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
+      );
     }
   }
 }

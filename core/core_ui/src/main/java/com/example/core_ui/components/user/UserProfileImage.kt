@@ -75,8 +75,9 @@ class UserProfileImageViewModel @Inject constructor(
     private fun observeProfileImageUpdates() {
         viewModelScope.launch {
             profileImageUpdateEventManager.profileImageUpdateEvents.collect { event ->
-                // 모든 사용자 프로필 이미지 업데이트 시 새로고침 (현재 로직 유지)
+                // 프로필 이미지 업데이트 시 새로고침 트리거
                 _refreshTrigger.value = event.timestamp
+                Log.d("UserProfileImage", "Profile image updated for user: ${event.userId}")
             }
         }
     }
@@ -156,17 +157,32 @@ fun UserProfileImage(
     forceRefresh: Boolean = false,
     private val viewModel: UserProfileImageViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val imageLoader = remember { ImageLoader(context) }
+    
     val globalRefreshTrigger by viewModel.refreshTrigger.collectAsState()
     val firebaseImageUrl by viewModel.imageUrl.collectAsState()
+    
+    // 이전 refreshTrigger 값을 기억하여 업데이트 감지
+    val previousRefreshTrigger = remember { mutableStateOf(0L) }
+    val isUpdated = globalRefreshTrigger > 0L && globalRefreshTrigger != previousRefreshTrigger.value
     
     // forceRefresh가 true이거나 전역 이벤트가 발생했을 때 새로고침
     val refreshKey = remember(userId, forceRefresh, globalRefreshTrigger) { 
         viewModel.getRefreshKey(userId, forceRefresh)
     }
     
+    // 캐시 사용 여부 결정
+    val shouldDisableCache = forceRefresh || isUpdated
+    
     // userId가 변경되거나 refreshKey가 변경될 때 Firebase Storage URL 로드
     LaunchedEffect(userId, refreshKey) {
         if (!userId.isNullOrEmpty()) {
+            // 업데이트가 감지된 경우 캐시 클리어
+            if (isUpdated) {
+                viewModel.clearImageCache(userId, imageLoader)
+                previousRefreshTrigger.value = globalRefreshTrigger
+            }
             viewModel.loadUserProfileImageUrl(userId)
         }
     }
@@ -176,12 +192,12 @@ fun UserProfileImage(
         null
     } else {
         firebaseImageUrl?.let { url ->
-            if (refreshKey > 0) {
-                // 이미 있는 쿼리 파라미터에 추가
+            if (shouldDisableCache) {
+                // 업데이트된 경우 타임스탬프 쿼리 파라미터 추가
                 if (url.contains("?")) {
-                    "$url&v=$refreshKey"
+                    "$url&v=$globalRefreshTrigger"
                 } else {
-                    "$url?v=$refreshKey"
+                    "$url?v=$globalRefreshTrigger"
                 }
             } else {
                 url
@@ -190,13 +206,13 @@ fun UserProfileImage(
     }
     
     AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
+        model = ImageRequest.Builder(context)
             .data(imageUrl)
             .placeholder(R.drawable.ic_default_profile_placeholder)
             .error(R.drawable.ic_default_profile_placeholder)
             .crossfade(true)
-            .memoryCachePolicy(if (refreshKey > 0) CachePolicy.DISABLED else CachePolicy.ENABLED)
-            .diskCachePolicy(if (refreshKey > 0) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .memoryCachePolicy(if (shouldDisableCache) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .diskCachePolicy(if (shouldDisableCache) CachePolicy.DISABLED else CachePolicy.ENABLED)
             .build(),
         contentDescription = contentDescription,
         modifier = modifier,
