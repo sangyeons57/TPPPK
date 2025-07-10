@@ -46,6 +46,14 @@ interface UserRepository : DefaultRepository {
     suspend fun uploadProfileImage(uri: Uri): CustomResult<Unit, Exception>
 
     /**
+     * 사용자 프로필 이미지를 삭제합니다.
+     * Firebase Functions를 통해 프로필 이미지를 제거합니다.
+     *
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun removeProfileImage(): CustomResult<Unit, Exception>
+
+    /**
      * 사용자 프로필을 업데이트합니다.
      * Firebase Functions를 통해 이름, 메모 등의 프로필 정보를 업데이트합니다.
      *

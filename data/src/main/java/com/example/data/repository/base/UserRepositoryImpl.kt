@@ -77,6 +77,10 @@ class UserRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.uploadUserProfileImage(uri)
     }
 
+    override suspend fun removeProfileImage(): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.removeUserProfileImage()
+    }
+
     override suspend fun updateProfile(name: String?, memo: String?): CustomResult<Unit, Exception> {
         return when (val result = functionsRemoteDataSource.updateUserProfile(name, memo)) {
             is CustomResult.Success -> CustomResult.Success(Unit)

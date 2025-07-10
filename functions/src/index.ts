@@ -21,10 +21,12 @@ DependencyConfig.initialize();
 
 // User management functions
 export {updateUserProfileFunction as updateUserProfile} from "./triggers/user/userProfile.trigger";
+export {removeUserProfileImageFunction as removeUserProfileImage} from "./triggers/user/removeUserProfileImage.trigger";
 export {onUserProfileImageUpload} from "./triggers/user/userImage.trigger";
 
 // Project management functions
 export {onProjectProfileImageUpload} from "./triggers/project/projectImage.trigger";
+export {removeProjectProfileImageFunction as removeProjectProfileImage} from "./triggers/project/removeProjectProfileImage.trigger";
 export {onProjectChange, onProjectDelete} from "./triggers/project/projectSync.trigger";
 
 // System functions

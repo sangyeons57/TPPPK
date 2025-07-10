@@ -64,6 +64,14 @@ interface FunctionsRemoteDataSource {
     suspend fun uploadUserProfileImage(uri: Uri): CustomResult<Unit, Exception>
 
     /**
+     * 사용자 프로필 이미지를 삭제합니다.
+     * Firebase Functions를 통해 프로필 이미지를 제거합니다.
+     *
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun removeUserProfileImage(): CustomResult<Unit, Exception>
+
+    /**
      * 프로젝트 프로필 이미지를 업로드합니다.
      * Firebase Storage에 업로드 후 자동으로 Firebase Functions가 처리합니다.
      *
@@ -74,6 +82,17 @@ interface FunctionsRemoteDataSource {
     suspend fun uploadProjectProfileImage(
         projectId: com.example.domain.model.vo.DocumentId,
         uri: Uri
+    ): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트 프로필 이미지를 삭제합니다.
+     * Firebase Functions를 통해 프로젝트 프로필 이미지를 제거합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun removeProjectProfileImage(
+        projectId: com.example.domain.model.vo.DocumentId
     ): CustomResult<Unit, Exception>
 
     /**
@@ -478,6 +497,31 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun removeUserProfileImage(): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                FirebaseFunctionParameters.User.USER_ID to currentUser.uid
+            )
+
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.REMOVE_USER_PROFILE_IMAGE)
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                CustomResult.Success(Unit)
+            } else {
+                CustomResult.Failure(Exception("Remove user profile image function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
     override suspend fun uploadProjectProfileImage(
         projectId: com.example.domain.model.vo.DocumentId,
         uri: Uri
@@ -531,6 +575,33 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
                     throw Exception("Image file is too large. Please choose an image smaller than 2MB.")
                 else -> throw Exception("Failed to upload project profile image: ${e.message}")
             }
+        }
+    }
+
+    override suspend fun removeProjectProfileImage(
+        projectId: com.example.domain.model.vo.DocumentId
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            
+            val requestData = mapOf(
+                FirebaseFunctionParameters.Project.PROJECT_ID to projectId.value
+            )
+
+            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.REMOVE_PROJECT_PROFILE_IMAGE)
+            
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                CustomResult.Success(Unit)
+            } else {
+                CustomResult.Failure(Exception("Remove project profile image function call timed out"))
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            CustomResult.Failure(e)
         }
     }
 

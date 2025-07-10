@@ -50,7 +50,8 @@ data class ProjectSettingUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showRenameProjectDialog: Boolean = false,
-    val showDeleteProjectDialog: Boolean = false
+    val showDeleteProjectDialog: Boolean = false,
+    val showRemoveImageDialog: Boolean = false
 )
 
 // --- 이벤트 ---
@@ -483,6 +484,68 @@ class ProjectSettingViewModel @Inject constructor(
             errorMessage.contains("quota") || errorMessage.contains("limit") -> 
                 "업로드 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
             else -> "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+        }
+    }
+
+    // --- 프로젝트 이미지 제거 관련 ---
+    fun onRemoveProjectImageClicked() {
+        _uiState.update { it.copy(showRemoveImageDialog = true) }
+    }
+
+    fun dismissRemoveImageDialog() {
+        _uiState.update { it.copy(showRemoveImageDialog = false) }
+    }
+
+    fun confirmRemoveProjectImage() {
+        viewModelScope.launch {
+            _uiState.update { 
+                it.copy(
+                    isLoading = true, 
+                    error = null,
+                    showRemoveImageDialog = false
+                ) 
+            }
+
+            try {
+                val result = projectAssetsUseCases.removeProjectProfileImageUseCase(projectId)
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지가 제거되었습니다"))
+                        
+                        // 전역 이벤트 발생으로 모든 화면들에 알림
+                        projectImageUpdateEventManager.notifyProjectImageUpdated(projectId.value)
+                        
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false,
+                                selectedImageUri = null,
+                                hasImageChanges = false,
+                                projectImageUrl = null
+                            ) 
+                        }
+                        
+                        // 프로젝트 정보 다시 로드하여 UI 갱신
+                        loadProjectStructure()
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        val errorMessage = getHumanReadableErrorMessage(result.error)
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(errorMessage))
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지 제거 중 알 수 없는 오류가 발생했습니다."))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "프로젝트 이미지 제거 중 오류가 발생했습니다",
+                        isLoading = false
+                    )
+                }
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지 제거 실패: ${e.message}"))
+            }
         }
     }
 

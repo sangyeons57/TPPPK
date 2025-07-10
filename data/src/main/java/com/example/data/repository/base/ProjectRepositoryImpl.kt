@@ -50,6 +50,10 @@ class ProjectRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.uploadProjectProfileImage(projectId, uri)
     }
 
+    override suspend fun removeProfileImage(projectId: DocumentId): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.removeProjectProfileImage(projectId)
+    }
+
     override suspend fun generateInviteLink(
         projectId: DocumentId,
         expiresInHours: Int,

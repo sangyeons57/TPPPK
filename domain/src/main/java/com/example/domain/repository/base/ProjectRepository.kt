@@ -26,6 +26,15 @@ interface ProjectRepository : DefaultRepository {
     suspend fun uploadProfileImage(projectId: DocumentId, uri: Uri): CustomResult<Unit, Exception>
 
     /**
+     * 프로젝트 프로필 이미지를 삭제합니다.
+     * Firebase Functions를 통해 프로젝트 프로필 이미지를 제거합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun removeProfileImage(projectId: DocumentId): CustomResult<Unit, Exception>
+
+    /**
      * 프로젝트 초대 링크를 생성합니다.
      *
      * @param projectId 프로젝트 ID

@@ -7,6 +7,8 @@ import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.factory.context.MediaRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
 import com.example.domain.usecase.project.assets.UploadProjectProfileImageUseCase
+import com.example.domain.usecase.project.assets.RemoveProjectProfileImageUseCase
+import com.example.domain.usecase.project.assets.RemoveProjectProfileImageUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,6 +45,9 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
             uploadProjectProfileImageUseCase = UploadProjectProfileImageUseCase(
                 projectRepository = projectRepository
             ),
+            removeProjectProfileImageUseCase = RemoveProjectProfileImageUseCaseImpl(
+                projectRepository = projectRepository
+            ),
             
             // 공통 Repository
             projectRepository = projectRepository,
@@ -67,6 +72,7 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
 data class ProjectAssetsUseCases(
     // 프로젝트 이미지/파일 관리
     val uploadProjectProfileImageUseCase: UploadProjectProfileImageUseCase,
+    val removeProjectProfileImageUseCase: RemoveProjectProfileImageUseCase,
     
     // 공통 Repository
     val projectRepository: ProjectRepository,

@@ -15,6 +15,7 @@ object FirebaseFunctionParameters {
         
         // User Management
         const val UPDATE_USER_PROFILE = "updateUserProfile"
+        const val REMOVE_USER_PROFILE_IMAGE = "removeUserProfileImage"
         
         // Friend Management
         const val SEND_FRIEND_REQUEST = "sendFriendRequest"
@@ -36,6 +37,7 @@ object FirebaseFunctionParameters {
         const val JOIN_PROJECT_WITH_INVITE = "joinProjectWithInvite"
         const val DELETE_PROJECT = "deleteProject"
         const val LEAVE_PROJECT = "leaveProject"
+        const val REMOVE_PROJECT_PROFILE_IMAGE = "removeProjectProfileImage"
     }
     
     /**

@@ -33,7 +33,8 @@ data class EditProfileUiState(
     val selectedImageUri: Uri? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val hasChanges: Boolean = false
+    val hasChanges: Boolean = false,
+    val showRemoveImageDialog: Boolean = false
 )
 
 /**
@@ -42,6 +43,7 @@ data class EditProfileUiState(
 sealed interface EditProfileEvent {
     object RequestImagePick : EditProfileEvent
     data class ShowSnackbar(val message: String) : EditProfileEvent
+    object ShowRemoveImageConfirmation : EditProfileEvent
 }
 
 /**
@@ -283,6 +285,76 @@ class EditProfileViewModel @Inject constructor(
      */
     fun errorMessageShown() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    /**
+     * 프로필 이미지 제거 버튼 클릭 이벤트 처리
+     */
+    fun onRemoveImageClicked() {
+        _uiState.update { it.copy(showRemoveImageDialog = true) }
+    }
+
+    /**
+     * 프로필 이미지 제거 확인 대화상자를 닫습니다.
+     */
+    fun dismissRemoveImageDialog() {
+        _uiState.update { it.copy(showRemoveImageDialog = false) }
+    }
+
+    /**
+     * 프로필 이미지 제거를 확인하고 실행합니다.
+     */
+    fun confirmRemoveImage() {
+        viewModelScope.launch {
+            _uiState.update { 
+                it.copy(
+                    isLoading = true, 
+                    errorMessage = null,
+                    showRemoveImageDialog = false
+                ) 
+            }
+
+            try {
+                val result = withContext(dispatcherProvider.io) {
+                    userUseCases.removeProfileImageUseCase()
+                }
+                
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지가 제거되었습니다"))
+                        
+                        // 프로필 이미지 제거 이벤트 발생으로 모든 화면들에 알림
+                        val currentUser = _uiState.value.user
+                        currentUser?.id?.value?.let { userId ->
+                            profileImageUpdateEventManager.notifyProfileImageUpdated(userId)
+                        }
+                        
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false,
+                                selectedImageUri = null
+                            ) 
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지 제거 실패: ${result.error.message}"))
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지 제거 중 알 수 없는 오류가 발생했습니다."))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorMessage = e.message ?: "프로필 이미지 제거 중 오류가 발생했습니다",
+                        isLoading = false
+                    )
+                }
+                _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지 제거 실패: ${e.message}"))
+            }
+        }
     }
 
     /**
