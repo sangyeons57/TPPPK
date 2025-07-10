@@ -102,7 +102,7 @@ export class DependencyConfig {
       new DMWrapperRepositoryFactory()
     );
 
-    console.log("Repository factories and services registered");
+    console.log("Repository factories registered");
   }
 
   /**
@@ -146,7 +146,8 @@ export class DependencyConfig {
     container.register(
       ProviderKeys.PROJECT_USECASE_PROVIDER,
       new ProjectUseCaseProvider(
-        container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY)
+        container.get(ProviderKeys.PROJECT_REPOSITORY_FACTORY),
+        container.get(ProviderKeys.MEMBER_REPOSITORY_FACTORY)
       )
     );
 

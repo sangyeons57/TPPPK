@@ -1,7 +1,7 @@
 import { UserRepository } from '../../../domain/user/repositories/user.repository';
 import { CustomResult, Result } from '../../../core/types';
-import { NotFoundError, ValidationError } from '../../../core/errors';
-import { FirebaseStorageService } from '../../../infrastructure/storage/firebase-storage.service';
+import { NotFoundError } from '../../../core/errors';
+import * as admin from 'firebase-admin';
 
 export interface RemoveUserProfileImageRequest {
   userId: string;
@@ -14,8 +14,7 @@ export interface RemoveUserProfileImageResponse {
 
 export class RemoveUserProfileImageUseCase {
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly storageService: FirebaseStorageService
+    private readonly userRepository: UserRepository
   ) {}
 
   async execute(request: RemoveUserProfileImageRequest): Promise<CustomResult<RemoveUserProfileImageResponse>> {
@@ -36,7 +35,9 @@ export class RemoveUserProfileImageUseCase {
 
       try {
         // 3. Firebase Storage에서 프로필 이미지 삭제
-        await this.storageService.deleteFile(profileImagePath);
+        const bucket = admin.storage().bucket();
+        const file = bucket.file(profileImagePath);
+        await file.delete();
         
         // 4. 성공 응답
         return Result.success({

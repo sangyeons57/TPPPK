@@ -9,6 +9,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import coil.ImageLoader
+import coil.memory.MemoryCache
 import com.example.core_ui.R
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
@@ -91,7 +92,8 @@ class UserProfileImageViewModel @Inject constructor(
                 // 현재 로드된 Firebase Storage URL이 있으면 캐시에서 제거
                 val currentUrl = _imageUrl.value
                 if (currentUrl != null) {
-                    imageLoader.memoryCache?.remove(currentUrl)
+                    val cacheKey = MemoryCache.Key(currentUrl)
+                    imageLoader.memoryCache?.remove(cacheKey)
                     imageLoader.diskCache?.remove(currentUrl)
                     Log.d("UserProfileImage", "Cache cleared for Firebase Storage URL: $currentUrl")
                 }
@@ -155,7 +157,7 @@ fun UserProfileImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     forceRefresh: Boolean = false,
-    private val viewModel: UserProfileImageViewModel = hiltViewModel()
+    viewModel: UserProfileImageViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val imageLoader = remember { ImageLoader(context) }
