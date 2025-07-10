@@ -34,38 +34,11 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
     override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
         if (entity !is ProjectInvitation)
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type ProjectInvitation"))
-        
         ensureCollection()
-        
-        return if (entity.isNew) {
-            // 새로운 초대 링크 생성 - Firebase Functions 사용
-            val expiresInHours = entity.expiresAt?.let {
-                val now = java.time.Instant.now()
-                val hoursUntilExpiry = java.time.Duration.between(now, it).toHours()
-                hoursUntilExpiry.toInt().coerceAtLeast(1) // 최소 1시간
-            } ?: 24 // 기본 24시간
-            
-            when (val result = projectInvitationRemoteDataSource.generateInviteLinkViaFunction(
-                entity.projectId.value,
-                expiresInHours
-            )) {
-                is CustomResult.Success -> {
-                    val inviteCode = result.data["id"] as? String ?: entity.id.value
-                    CustomResult.Success(DocumentId(inviteCode))
-                }
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                else -> result as CustomResult<DocumentId, Exception>
-            }
+        return if(entity.isNew) {
+            projectInvitationRemoteDataSource.create(entity.toDto())
         } else {
-            // 기존 초대 링크 업데이트 - Firestore 직접 업데이트
-            when (val result = projectInvitationRemoteDataSource.update(
-                entity.id,
-                entity.getChangedFields()
-            )) {
-                is CustomResult.Success -> CustomResult.Success(entity.id)
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                else -> result as CustomResult<DocumentId, Exception>
-            }
+            projectInvitationRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
 
