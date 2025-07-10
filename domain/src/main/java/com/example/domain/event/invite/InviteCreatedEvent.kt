@@ -9,6 +9,5 @@ data class InviteCreatedEvent(
     val inviteId: DocumentId,
     val inviterId: UserId,
     val projectId: DocumentId,
-    val inviteeId: UserId,
     override val occurredOn: Instant = Instant.now()
 ) : DomainEvent

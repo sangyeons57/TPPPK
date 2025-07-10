@@ -5,8 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
-import com.example.domain.model.base.InviteValidationData
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.feature_join_project.dailog.viewmodel.JoinProjectDialogEvent.*
+import com.example.feature_join_project.dailog.viewmodel.JoinProjectDialogUiState.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -86,8 +87,8 @@ class JoinProjectDialogViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         val inviteData = result.data
-                        if (inviteData.isValid) {
-                            val projectInfo = JoinProjectDialogUiState.ProjectInfo(
+                        if (inviteData.valid) {
+                            val projectInfo = ProjectInfo(
                                 projectId = inviteData.projectId ?: "",
                                 projectName = inviteData.projectName ?: "알 수 없는 프로젝트",
                                 projectImage = inviteData.projectImage,
@@ -115,6 +116,10 @@ class JoinProjectDialogViewModel @Inject constructor(
                             )
                         }
                     }
+
+                    is CustomResult.Initial -> TODO()
+                    is CustomResult.Loading -> TODO()
+                    is CustomResult.Progress -> TODO()
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -158,8 +163,8 @@ class JoinProjectDialogViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         val joinData = result.data
-                        _eventFlow.emit(JoinProjectDialogEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
-                        _eventFlow.emit(JoinProjectDialogEvent.JoinSuccess(joinData.projectId))
+                        _eventFlow.emit(ShowSnackbar("프로젝트에 참여했습니다!"))
+                        _eventFlow.emit(JoinSuccess(joinData))
                         _uiState.update { it.copy(isJoining = false) }
                     }
                     is CustomResult.Failure -> {
@@ -170,6 +175,10 @@ class JoinProjectDialogViewModel @Inject constructor(
                             )
                         }
                     }
+
+                    is CustomResult.Initial -> TODO()
+                    is CustomResult.Loading -> TODO()
+                    is CustomResult.Progress -> TODO()
                 }
             } catch (e: Exception) {
                 _uiState.update {

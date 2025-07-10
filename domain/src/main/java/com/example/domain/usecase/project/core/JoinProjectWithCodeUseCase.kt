@@ -1,8 +1,9 @@
-package com.example.domain.usecase.project
+package com.example.domain.usecase.project.core
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.base.ProjectRepository
 import javax.inject.Inject
+import kotlin.text.get
 
 /**
  * 참여 코드를 사용하여 프로젝트에 참여하는 UseCase

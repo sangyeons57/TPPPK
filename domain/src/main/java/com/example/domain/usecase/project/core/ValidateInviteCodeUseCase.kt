@@ -32,7 +32,7 @@ class ValidateInviteCodeUseCase @Inject constructor(
                 val projectId = result.data["projectId"] as? String
                 val projectName = result.data["projectName"] as? String
                 val projectImage = result.data["projectImage"] as? String
-                val expiresAt = result.data["expiresAt"] as? Any
+                val expiresAt = result.data["expiresAt"]
                 val maxUses = result.data["maxUses"] as? Int
                 val currentUses = result.data["currentUses"] as? Int
                 val isAlreadyMember = result.data["isAlreadyMember"] as? Boolean ?: false

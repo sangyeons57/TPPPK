@@ -135,7 +135,7 @@ class ProjectInvitation private constructor(
             )
             
             // Fire domain event for invitation creation
-            invitation.pushDomainEvent(InviteCreatedEvent(invitation.id, invitation.inviterId, invitation.projectId, DateTimeUtil.nowInstant()))
+            invitation.pushDomainEvent(InviteCreatedEvent(invitation.id, invitation.inviterId, invitation.projectId))
             
             return invitation
         }
@@ -156,7 +156,7 @@ class ProjectInvitation private constructor(
                 initialInviterId = inviterId,
                 initialProjectId = projectId,
                 initialExpiresAt = expiresAt,
-                id = DocumentId.createUnassigned(), // 임시 ID, Firebase Functions에서 실제 ID 할당
+                id = DocumentId.EMPTY,
                 isNew = true,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant()

@@ -4,6 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Initial.getOrThrow
 import com.example.core_common.result.exceptionOrNull
 import com.example.core_common.result.getOrNull
+import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
@@ -38,7 +39,6 @@ import com.example.domain.usecase.project.core.RenameProjectUseCaseImpl
 import com.example.domain.usecase.project.core.ValidateInviteCodeUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.round
 
 /**
  * 핵심 프로젝트 관리 UseCase들을 제공하는 Provider
@@ -135,7 +135,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
             ),
             
             joinProjectWithCodeUseCase = JoinProjectWithCodeUseCase(
-                projectRepository = projectRepository
+                projectInvitationRepository = projectInvitationRepository
             ),
             
             joinProjectWithTokenUseCase = JoinProjectWithTokenUseCase(
@@ -145,11 +145,11 @@ class CoreProjectUseCaseProvider @Inject constructor(
             generateInviteLinkUseCase = GenerateInviteLinkUseCase(
                 projectInvitationRepository = projectInvitationRepository
             ),
-            
+
             generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase(),
-            
+
             validateInviteCodeUseCase = ValidateInviteCodeUseCase(
-                projectRepository = projectRepository
+                projectInvitationRepository = projectInvitationRepository
             ),
             
             deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
@@ -220,51 +220,50 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 memberRepository = memberRepository,
                 roleRepository = roleRepository
             ),
-            
+
             deleteProjectUseCase = DeleteProjectUseCaseImpl(
                 projectRepository = projectRepository,
                 authRepository = authRepository,
                 projWrapperRepository = projectsWrapperRepository
             ),
-            
+
             renameProjectUseCase = RenameProjectUseCaseImpl(
                 projectRepository = projectRepository
             ),
-            
+
             getProjectDetailsStreamUseCase = GetProjectDetailsStreamUseCase(
                 projectRepository = projectRepository
             ),
-            
+
             getUserParticipatingProjectsUseCase = GetUserParticipatingProjectsUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository,
                 projectRepository = projectRepository
             ),
-            
+
             joinProjectWithCodeUseCase = JoinProjectWithCodeUseCase(
-                projectRepository = projectRepository
+                projectInvitationRepository = projectInvitationRepository
             ),
-            
+
             joinProjectWithTokenUseCase = JoinProjectWithTokenUseCase(
                 projectRepository = projectRepository
             ),
-            
+
             generateInviteLinkUseCase = GenerateInviteLinkUseCase(
                 projectInvitationRepository = projectInvitationRepository
             ),
-            
-            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase(),
-            
+
             validateInviteCodeUseCase = ValidateInviteCodeUseCase(
-                projectRepository = projectRepository
+                projectInvitationRepository = projectInvitationRepository
             ),
-            
+
             deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository
             ),
-            
+            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase(),
+
             // 공통 Repository
             authRepository = authRepository,
-            projectRepository = projectRepository
+            projectRepository = projectRepository,
         )
     }
 }
@@ -281,10 +280,9 @@ data class CoreProjectUseCases(
     val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase,
     val joinProjectWithTokenUseCase: JoinProjectWithTokenUseCase,
     val generateInviteLinkUseCase: GenerateInviteLinkUseCase,
-    val generateInviteLinkFromIdUseCase: GenerateInviteLinkFromIdUseCase,
     val validateInviteCodeUseCase: ValidateInviteCodeUseCase,
     val deleteProjectsWrapperUseCase: DeleteProjectsWrapperUseCase,
-    
+    val generateInviteLinkFromIdUseCase : GenerateInviteLinkFromIdUseCase,
     // 공통 Repository
     val authRepository: AuthRepository,
     val projectRepository: ProjectRepository
