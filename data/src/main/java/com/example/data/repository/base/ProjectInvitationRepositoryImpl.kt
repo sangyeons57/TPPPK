@@ -3,6 +3,7 @@ package com.example.data.repository.base
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.ProjectInvitationRemoteDataSource
 import com.example.data.model.remote.ProjectInvitationDTO
+import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectInvitation
