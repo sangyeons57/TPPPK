@@ -55,6 +55,13 @@ interface UserRemoteDataSource : DefaultDatasource {
      */
     fun getDmWrappersStream(userId: String): Flow<CustomResult<List<DMWrapperDTO>, Exception>>
 
+    /**
+     * 특정 사용자의 updatedAt 필드를 실시간으로 감지합니다.
+     * @param userId 감지할 사용자의 ID
+     * @return updatedAt 타임스탬프 값을 담은 Flow (updatedAt이 변경될 때마다 emit)
+     */
+    fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>>
+
 }
 
 @Singleton
@@ -242,6 +249,37 @@ class UserRemoteDataSourceImpl @Inject constructor(
                 trySend(CustomResult.Failure(Exception("DM wrappers snapshot was null.")))
             }
         }
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    override fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>> = callbackFlow {
+        if (userId.isEmpty()) {
+            trySend(CustomResult.Failure(Exception("User ID cannot be empty")))
+            awaitClose { }
+            return@callbackFlow
+        }
+
+        val userDocRef = collection.document(userId)
+        
+        val listenerRegistration = userDocRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                trySend(CustomResult.Failure(error))
+                return@addSnapshotListener
+            }
+            
+            if (snapshot != null && snapshot.exists()) {
+                val updatedAt = snapshot.get(AggregateRoot.KEY_UPDATED_AT)
+                val timestamp = when (updatedAt) {
+                    is com.google.firebase.Timestamp -> updatedAt.toDate().time
+                    is java.util.Date -> updatedAt.time
+                    else -> System.currentTimeMillis()
+                }
+                trySend(CustomResult.Success(timestamp))
+            } else {
+                trySend(CustomResult.Failure(Exception("User document not found: $userId")))
+            }
+        }
+        
         awaitClose { listenerRegistration.remove() }
     }
 

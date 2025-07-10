@@ -72,10 +72,16 @@ export const onUserProfileImageUpload = onObjectFinalized(
         await originalFile.copy(processedFile);
         logger.info(`📁 Copied ${name} to ${processedFilePath}`);
 
-        // No Firestore update needed; client loads image directly via Storage path.
-        // The fixed path system eliminates the need for URL storage in Firestore.
+        // Update user's updatedAt to notify client that image processing is complete
+        const db = admin.firestore();
+        const userDocRef = db.collection("users").doc(userId);
 
-        logger.info(`✅ Processed profile image stored at ${processedFilePath}`);
+
+        await userDocRef.update({
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        logger.info(`✅ Processed profile image stored at ${processedFilePath} and Firestore updated`);
 
         // Clean up the original file in user_profile_images after successful processing
         try {

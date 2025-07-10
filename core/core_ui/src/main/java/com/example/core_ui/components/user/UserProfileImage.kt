@@ -56,29 +56,46 @@ class ProfileImageUpdateEventManager @Inject constructor() {
 
 /**
  * UserProfileImage 컴포넌트를 위한 ViewModel
- * 프로필 이미지 업데이트 이벤트를 자동으로 감지합니다.
+ * 사용자의 updatedAt 필드 변경을 감지하여 프로필 이미지를 자동으로 새로고침합니다.
  */
 @HiltViewModel
 class UserProfileImageViewModel @Inject constructor(
-    private val profileImageUpdateEventManager: ProfileImageUpdateEventManager
+    private val userRepository: com.example.domain.repository.base.UserRepository
 ) : ViewModel() {
-    
-    private val _refreshTrigger = MutableStateFlow(0L)
-    val refreshTrigger: StateFlow<Long> = _refreshTrigger.asStateFlow()
     
     private val _imageUrl = MutableStateFlow<String?>(null)
     val imageUrl: StateFlow<String?> = _imageUrl.asStateFlow()
     
-    init {
-        observeProfileImageUpdates()
-    }
+    // 현재 관찰 중인 사용자 ID와 해당 updatedAt
+    private val _currentUserId = MutableStateFlow<String?>(null)
+    private val _userUpdatedAt = MutableStateFlow(0L)
+    val userUpdatedAt: StateFlow<Long> = _userUpdatedAt.asStateFlow()
     
-    private fun observeProfileImageUpdates() {
+    /**
+     * 특정 사용자의 updatedAt 변경 감지를 시작합니다.
+     */
+    fun observeUserUpdates(userId: String) {
+        if (_currentUserId.value == userId) return // 이미 같은 사용자를 관찰 중이면 리턴
+        
+        _currentUserId.value = userId
+        
         viewModelScope.launch {
-            profileImageUpdateEventManager.profileImageUpdateEvents.collect { event ->
-                // 프로필 이미지 업데이트 시 새로고침 트리거
-                _refreshTrigger.value = event.timestamp
-                Log.d("UserProfileImage", "Profile image updated for user: ${event.userId}")
+            userRepository.observeUserUpdatedAt(userId).collect { result ->
+                when (result) {
+                    is com.example.core_common.result.CustomResult.Success -> {
+                        val newTimestamp = result.data
+                        val previousTimestamp = _userUpdatedAt.value
+                        
+                        if (newTimestamp != previousTimestamp) {
+                            _userUpdatedAt.value = newTimestamp
+                            Log.d("UserProfileImage", "User $userId updatedAt changed: $newTimestamp")
+                        }
+                    }
+                    is com.example.core_common.result.CustomResult.Failure -> {
+                        Log.e("UserProfileImage", "Failed to observe user updates for $userId", result.error)
+                    }
+                    else -> { /* Loading, Initial, Progress states */ }
+                }
             }
         }
     }
@@ -98,9 +115,6 @@ class UserProfileImageViewModel @Inject constructor(
                     Log.d("UserProfileImage", "Cache cleared for Firebase Storage URL: $currentUrl")
                 }
                 
-                // URL 재로드 강제 (refreshTrigger를 갱신하여 자동으로 재로드됨)
-                _refreshTrigger.value = System.currentTimeMillis()
-                
                 Log.d("UserProfileImage", "Cache cleared for user: $userId")
             } catch (e: Exception) {
                 Log.e("UserProfileImage", "Failed to clear cache for user: $userId", e)
@@ -108,12 +122,11 @@ class UserProfileImageViewModel @Inject constructor(
         }
     }
     
-    fun getRefreshKey(userId: String?, forceRefresh: Boolean): Long {
-        return when {
-            forceRefresh -> System.currentTimeMillis()
-            userId != null -> _refreshTrigger.value
-            else -> 0L
-        }
+    /**
+     * 사용자 업데이트 여부를 확인합니다.
+     */
+    fun hasUserBeenUpdated(userId: String, currentTimestamp: Long): Boolean {
+        return currentTimestamp > 0L && userId == _currentUserId.value
     }
     
     /**
@@ -162,34 +175,37 @@ fun UserProfileImage(
     val context = LocalContext.current
     val imageLoader = remember { ImageLoader(context) }
     
-    val globalRefreshTrigger by viewModel.refreshTrigger.collectAsState()
+    val userUpdatedAt by viewModel.userUpdatedAt.collectAsState()
     val firebaseImageUrl by viewModel.imageUrl.collectAsState()
     
-    // 이전 refreshTrigger 값을 기억하여 업데이트 감지
-    val previousRefreshTrigger = remember { mutableStateOf(0L) }
-    val isUpdated = globalRefreshTrigger > 0L && globalRefreshTrigger != previousRefreshTrigger.value
-    
-    // forceRefresh가 true이거나 전역 이벤트가 발생했을 때 새로고침
-    val refreshKey = remember(userId, forceRefresh, globalRefreshTrigger) { 
-        viewModel.getRefreshKey(userId, forceRefresh)
-    }
+    // 이전 updatedAt 값을 기억하여 업데이트 감지
+    val previousUpdatedAt = remember { mutableStateOf(0L) }
+    val isUpdated = userUpdatedAt > 0L && userUpdatedAt != previousUpdatedAt.value
     
     // 캐시 사용 여부 결정
     val shouldDisableCache = forceRefresh || isUpdated
     
-    // userId가 변경되거나 refreshKey가 변경될 때 Firebase Storage URL 로드
-    LaunchedEffect(userId, refreshKey) {
+    // userId가 변경되거나 사용자가 업데이트될 때 처리
+    LaunchedEffect(userId) {
         if (!userId.isNullOrEmpty()) {
-            // 업데이트가 감지된 경우 캐시 클리어
-            if (isUpdated) {
-                viewModel.clearImageCache(userId, imageLoader)
-                previousRefreshTrigger.value = globalRefreshTrigger
-            }
+            // 사용자 업데이트 감지 시작
+            viewModel.observeUserUpdates(userId)
+            // 프로필 이미지 URL 로드
             viewModel.loadUserProfileImageUrl(userId)
         }
     }
     
-    // Firebase Storage에서 가져온 URL 사용, 캐시 무효화를 위해 refreshKey 추가
+    // 사용자 updatedAt이 변경될 때 캐시 클리어 및 이미지 재로드
+    LaunchedEffect(userUpdatedAt) {
+        if (!userId.isNullOrEmpty() && isUpdated) {
+            viewModel.clearImageCache(userId, imageLoader)
+            viewModel.loadUserProfileImageUrl(userId)
+            previousUpdatedAt.value = userUpdatedAt
+            Log.d("UserProfileImage", "Profile image refreshed for user: $userId due to updatedAt change")
+        }
+    }
+    
+    // Firebase Storage에서 가져온 URL 사용
     val imageUrl = if (userId.isNullOrEmpty()) {
         null
     } else {
@@ -197,9 +213,9 @@ fun UserProfileImage(
             if (shouldDisableCache) {
                 // 업데이트된 경우 타임스탬프 쿼리 파라미터 추가
                 if (url.contains("?")) {
-                    "$url&v=$globalRefreshTrigger"
+                    "$url&v=$userUpdatedAt"
                 } else {
-                    "$url?v=$globalRefreshTrigger"
+                    "$url?v=$userUpdatedAt"
                 }
             } else {
                 url

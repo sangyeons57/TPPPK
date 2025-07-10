@@ -99,4 +99,13 @@ interface UserRepository : DefaultRepository {
         customData: Map<String, Any?>? = null
     ): CustomResult<Map<String, Any?>, Exception>
 
+    /**
+     * 특정 사용자의 updatedAt 필드 변경을 실시간으로 감지합니다.
+     * 프로필 이미지 업데이트 등으로 인한 사용자 정보 변경을 감지하는 데 사용됩니다.
+     * 
+     * @param userId 감지할 사용자의 ID
+     * @return updatedAt 타임스탬프 값을 담은 Flow (updatedAt이 변경될 때마다 emit)
+     */
+    fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>>
+
 }

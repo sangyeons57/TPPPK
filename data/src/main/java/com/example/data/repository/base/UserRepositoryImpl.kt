@@ -110,4 +110,8 @@ class UserRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.callFunctionWithUserData(functionName, userId, customData)
     }
 
+    override fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>> {
+        return userRemoteDataSource.observeUserUpdatedAt(userId)
+    }
+
 }

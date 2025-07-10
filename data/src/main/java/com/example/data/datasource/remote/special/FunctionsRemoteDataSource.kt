@@ -480,11 +480,11 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             .build()
 
         try {
-            // 이미지 업로드
+            // 이미지 업로드 (Firebase Storage 직접 업로드로 비용 절약)
             profileImageRef.putFile(uri, metadata).await()
 
             // 업로드가 성공하면 Firebase Functions onUserProfileImageUpload가 자동으로 처리됨
-            // 별도의 URL 처리나 Firestore 업데이트 불필요
+            // Storage Trigger가 완료되면 Firestore의 profileImageUpdatedAt이 업데이트됨
         } catch (e: Exception) {
             // 권한 오류에 대한 더 명확한 메시지 제공
             when {

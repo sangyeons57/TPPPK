@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.core_common.result.CustomResult
-import com.example.core_ui.components.user.ProfileImageUpdateEventManager
+
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
@@ -53,8 +53,7 @@ sealed interface EditProfileEvent {
 class EditProfileViewModel @Inject constructor(
     private val userUseCaseProvider: UserUseCaseProvider,
     private val dispatcherProvider: DispatcherProvider,
-    private val navigationManger: NavigationManger,
-    private val profileImageUpdateEventManager: ProfileImageUpdateEventManager
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
@@ -197,16 +196,14 @@ class EditProfileViewModel @Inject constructor(
                     }
                     when (imageResult) {
                         is CustomResult.Success -> {
-                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지 업로드 완료"))
+                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지 업로드 완료"))
                             
-                            // Firebase Functions가 이미지를 처리할 시간을 주기 위해 잠시 대기
+                            // Firebase Functions가 이미지 처리 및 user의 updatedAt 갱신할 시간 대기
                             _eventFlow.emit(EditProfileEvent.ShowSnackbar("이미지 처리 중..."))
-                            delay(1500)
+                            delay(2000) // 2초 대기
                             
-                            // 전역 이벤트 발생으로 모든 화면들에 알림
-                            currentUser.id.value.let { userId ->
-                                profileImageUpdateEventManager.notifyProfileImageUpdated(userId)
-                            }
+                            // Firebase Functions가 user의 updatedAt을 갱신하면 자동으로 프로필 이미지가 새로고침됨
+                            _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지 업데이트 완료"))
                         }
                         is CustomResult.Failure -> {
                             _uiState.update { it.copy(isLoading = false) }
@@ -323,12 +320,7 @@ class EditProfileViewModel @Inject constructor(
                     is CustomResult.Success -> {
                         _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지가 제거되었습니다"))
                         
-                        // 프로필 이미지 제거 이벤트 발생으로 모든 화면들에 알림
-                        val currentUser = _uiState.value.user
-                        currentUser?.id?.value?.let { userId ->
-                            profileImageUpdateEventManager.notifyProfileImageUpdated(userId)
-                        }
-                        
+                        // Firebase Functions가 user의 updatedAt을 갱신하면 자동으로 프로필 이미지가 새로고침됨
                         _uiState.update { 
                             it.copy(
                                 isLoading = false,
