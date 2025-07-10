@@ -138,6 +138,8 @@ fun EditProfileScreen(
                         }
                     }
                 }
+
+                is EditProfileEvent.ShowRemoveImageConfirmation -> TODO()
             }
         }
     }
