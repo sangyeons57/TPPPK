@@ -8,8 +8,10 @@ import {DATABASE_ID} from "./core/constants";
 import {DependencyConfig} from "./config/dependencies";
 
 if (!admin.apps.length) {
+  // Initialize Firebase with the **correct** default Storage bucket
+  // Must include the ".appspot.com" suffix, otherwise Storage operations will fail
   admin.initializeApp({
-    storageBucket: "teamnovaprojectprojecting",
+    storageBucket: "teamnovaprojectprojecting.firebasestorage.app",
   });
   // Set Firestore to use the custom database ID (e.g., "default" without parentheses)
   admin.firestore().settings({databaseId: DATABASE_ID});

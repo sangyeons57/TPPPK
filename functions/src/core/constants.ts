@@ -2,8 +2,8 @@ export const DATABASE_ID = "(default)" as const;
 
 // Storage Configuration
 export const STORAGE_BUCKETS = {
-  USER_PROFILES: "teamnovaprojectprojecting.firebasestorage.app",
-  PROJECT_IMAGES: "teamnovaprojectprojecting.firebasestorage.app",
+  USER_PROFILES: "teamnovaprojectprojecting.firebasestorage.com",
+  PROJECT_IMAGES: "teamnovaprojectprojecting.firebasestorage.com",
 } as const;
 
 export const STORAGE_ROOT = {
