@@ -132,15 +132,22 @@ class ProjectProfileImageViewModel @Inject constructor(
             } catch (e: Exception) {
                 when {
                     e.message?.contains("Object does not exist") == true -> {
-                        Log.d("ProjectProfileImage", "Project image does not exist for project: $projectId, will show default")
+                        // 프로젝트 이미지가 없는 것은 정상적인 상황이므로 DEBUG 레벨로 로깅
+                        Log.d("ProjectProfileImage", "Project image does not exist for project: $projectId, showing default placeholder")
                         _imageUrl.value = null
                     }
                     e.message?.contains("Permission denied") == true -> {
-                        Log.w("ProjectProfileImage", "Permission denied for project image of project: $projectId")
+                        Log.w("ProjectProfileImage", "Permission denied for project image of project: $projectId, showing default placeholder")
+                        _imageUrl.value = null
+                    }
+                    e.message?.contains("StorageException") == true && e.message?.contains("404") == true -> {
+                        // Firebase Storage 404 오류도 정상적인 상황 (이미지 없음)
+                        Log.d("ProjectProfileImage", "Project image not found (404) for project: $projectId, showing default placeholder")
                         _imageUrl.value = null
                     }
                     else -> {
-                        Log.e("ProjectProfileImage", "Failed to load project image URL for project: $projectId", e)
+                        // 실제 오류인 경우에만 ERROR 레벨로 로깅
+                        Log.e("ProjectProfileImage", "Unexpected error loading project image for project: $projectId", e)
                         _imageUrl.value = null
                     }
                 }
