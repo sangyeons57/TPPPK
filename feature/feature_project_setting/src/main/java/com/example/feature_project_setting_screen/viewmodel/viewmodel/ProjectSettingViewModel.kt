@@ -27,6 +27,7 @@ import com.example.core_navigation.core.EditChannelRoute
 import com.example.core_navigation.core.CreateChannelRoute
 import com.example.core_navigation.core.MemberListRoute
 import com.example.core_navigation.core.RoleListRoute
+import com.example.core_ui.components.project.ProjectImageUpdateEventManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,6 +69,7 @@ class ProjectSettingViewModel @Inject constructor(
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
     private val projectAssetsUseCaseProvider: ProjectAssetsUseCaseProvider,
+    private val projectImageUpdateEventManager: ProjectImageUpdateEventManager
 ) : ViewModel() {
 
     val projectId: DocumentId = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
@@ -435,6 +437,9 @@ class ProjectSettingViewModel @Inject constructor(
                             ) 
                         }
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지가 성공적으로 업데이트되었습니다."))
+                        
+                        // 전역 이벤트 발생으로 모든 화면들에 알림
+                        projectImageUpdateEventManager.notifyProjectImageUpdated(projectId.value)
                         
                         // 프로젝트 정보 다시 로드하여 새 이미지 URL 가져오기
                         loadProjectStructure()

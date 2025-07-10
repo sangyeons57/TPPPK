@@ -8,9 +8,11 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.CachePolicy
+import coil.ImageLoader
 import com.example.core_ui.R
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.tasks.await
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +65,9 @@ class UserProfileImageViewModel @Inject constructor(
     private val _refreshTrigger = MutableStateFlow(0L)
     val refreshTrigger: StateFlow<Long> = _refreshTrigger.asStateFlow()
     
+    private val _imageUrl = MutableStateFlow<String?>(null)
+    val imageUrl: StateFlow<String?> = _imageUrl.asStateFlow()
+    
     init {
         observeProfileImageUpdates()
     }
@@ -70,7 +75,32 @@ class UserProfileImageViewModel @Inject constructor(
     private fun observeProfileImageUpdates() {
         viewModelScope.launch {
             profileImageUpdateEventManager.profileImageUpdateEvents.collect { event ->
+                // 모든 사용자 프로필 이미지 업데이트 시 새로고침 (현재 로직 유지)
                 _refreshTrigger.value = event.timestamp
+            }
+        }
+    }
+    
+    /**
+     * 특정 사용자의 프로필 이미지 캐시를 지웁니다.
+     */
+    fun clearImageCache(userId: String, imageLoader: ImageLoader) {
+        viewModelScope.launch {
+            try {
+                // 현재 로드된 Firebase Storage URL이 있으면 캐시에서 제거
+                val currentUrl = _imageUrl.value
+                if (currentUrl != null) {
+                    imageLoader.memoryCache?.remove(currentUrl)
+                    imageLoader.diskCache?.remove(currentUrl)
+                    Log.d("UserProfileImage", "Cache cleared for Firebase Storage URL: $currentUrl")
+                }
+                
+                // URL 재로드 강제 (refreshTrigger를 갱신하여 자동으로 재로드됨)
+                _refreshTrigger.value = System.currentTimeMillis()
+                
+                Log.d("UserProfileImage", "Cache cleared for user: $userId")
+            } catch (e: Exception) {
+                Log.e("UserProfileImage", "Failed to clear cache for user: $userId", e)
             }
         }
     }
@@ -82,6 +112,39 @@ class UserProfileImageViewModel @Inject constructor(
             else -> 0L
         }
     }
+    
+    /**
+     * Firebase Storage에서 사용자 프로필 이미지 URL을 가져옵니다.
+     */
+    fun loadUserProfileImageUrl(userId: String) {
+        viewModelScope.launch {
+            try {
+                val storage = Firebase.storage
+                val pathString = "user_profiles/$userId/profile.webp"
+                val imageRef = storage.reference.child(pathString)
+                
+                val uri = imageRef.downloadUrl.await()
+                _imageUrl.value = uri.toString()
+                
+                Log.d("UserProfileImage", "Profile image URL loaded for user: $userId")
+            } catch (e: Exception) {
+                when {
+                    e.message?.contains("Object does not exist") == true -> {
+                        Log.d("UserProfileImage", "Profile image does not exist for user: $userId, will show default")
+                        _imageUrl.value = null
+                    }
+                    e.message?.contains("Permission denied") == true -> {
+                        Log.w("UserProfileImage", "Permission denied for profile image of user: $userId")
+                        _imageUrl.value = null
+                    }
+                    else -> {
+                        Log.e("UserProfileImage", "Failed to load profile image URL for user: $userId", e)
+                        _imageUrl.value = null
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -90,26 +153,39 @@ fun UserProfileImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    forceRefresh: Boolean = false
+    forceRefresh: Boolean = false,
+    private val viewModel: UserProfileImageViewModel = hiltViewModel()
 ) {
-    val viewModel: UserProfileImageViewModel = hiltViewModel()
     val globalRefreshTrigger by viewModel.refreshTrigger.collectAsState()
+    val firebaseImageUrl by viewModel.imageUrl.collectAsState()
     
     // forceRefresh가 true이거나 전역 이벤트가 발생했을 때 새로고침
     val refreshKey = remember(userId, forceRefresh, globalRefreshTrigger) { 
         viewModel.getRefreshKey(userId, forceRefresh)
     }
     
-    // 고정 경로 사용 - 간단하고 직접적
+    // userId가 변경되거나 refreshKey가 변경될 때 Firebase Storage URL 로드
+    LaunchedEffect(userId, refreshKey) {
+        if (!userId.isNullOrEmpty()) {
+            viewModel.loadUserProfileImageUrl(userId)
+        }
+    }
+    
+    // Firebase Storage에서 가져온 URL 사용, 캐시 무효화를 위해 refreshKey 추가
     val imageUrl = if (userId.isNullOrEmpty()) {
         null
     } else {
-        val storagePath = "user_profiles/$userId/profile.webp"
-        val baseUrl = "https://firebasestorage.googleapis.com/v0/b/${Firebase.storage.reference.bucket}/o/${storagePath.replace("/", "%2F")}"
-        if (forceRefresh) {
-            "$baseUrl?alt=media&token=${System.currentTimeMillis()}"
-        } else {
-            "$baseUrl?alt=media"
+        firebaseImageUrl?.let { url ->
+            if (refreshKey > 0) {
+                // 이미 있는 쿼리 파라미터에 추가
+                if (url.contains("?")) {
+                    "$url&v=$refreshKey"
+                } else {
+                    "$url?v=$refreshKey"
+                }
+            } else {
+                url
+            }
         }
     }
     
@@ -119,8 +195,8 @@ fun UserProfileImage(
             .placeholder(R.drawable.ic_default_profile_placeholder)
             .error(R.drawable.ic_default_profile_placeholder)
             .crossfade(true)
-            .memoryCachePolicy(if (forceRefresh) CachePolicy.DISABLED else CachePolicy.ENABLED)
-            .diskCachePolicy(if (forceRefresh) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .memoryCachePolicy(if (refreshKey > 0) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .diskCachePolicy(if (refreshKey > 0) CachePolicy.DISABLED else CachePolicy.ENABLED)
             .build(),
         contentDescription = contentDescription,
         modifier = modifier,
