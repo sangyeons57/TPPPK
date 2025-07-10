@@ -51,7 +51,8 @@ data class ProjectSettingUiState(
     val error: String? = null,
     val showRenameProjectDialog: Boolean = false,
     val showDeleteProjectDialog: Boolean = false,
-    val showRemoveImageDialog: Boolean = false
+    val showRemoveImageDialog: Boolean = false,
+    val isRemovingImage: Boolean = false // 기본 프로젝트 프로필 설정 중인지 여부
 )
 
 // --- 이벤트 ---
@@ -545,6 +546,61 @@ class ProjectSettingViewModel @Inject constructor(
                     )
                 }
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지 제거 실패: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * 기본 프로젝트 프로필 사용 버튼 클릭 이벤트 처리 (프로젝트 이미지 제거)
+     */
+    fun onSetDefaultProjectProfileClicked() {
+        viewModelScope.launch {
+            _uiState.update { 
+                it.copy(
+                    isRemovingImage = true, 
+                    error = null
+                ) 
+            }
+
+            try {
+                val result = projectAssetsUseCases.removeProjectProfileImageUseCase(projectId)
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("기본 프로젝트 프로필로 설정되었습니다"))
+                        
+                        // 전역 이벤트 발생으로 모든 화면들에 알림
+                        projectImageUpdateEventManager.notifyProjectImageUpdated(projectId.value)
+                        
+                        _uiState.update { 
+                            it.copy(
+                                isRemovingImage = false,
+                                selectedImageUri = null,
+                                hasImageChanges = false,
+                                projectImageUrl = null
+                            ) 
+                        }
+                        
+                        // 프로젝트 정보 다시 로드하여 UI 갱신
+                        loadProjectStructure()
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isRemovingImage = false) }
+                        val errorMessage = getHumanReadableErrorMessage(result.error)
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("기본 프로젝트 프로필 설정 실패: $errorMessage"))
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isRemovingImage = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("기본 프로젝트 프로필 설정 중 알 수 없는 오류가 발생했습니다."))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "기본 프로젝트 프로필 설정 중 오류가 발생했습니다",
+                        isRemovingImage = false
+                    )
+                }
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("기본 프로젝트 프로필 설정 실패: ${e.message}"))
             }
         }
     }

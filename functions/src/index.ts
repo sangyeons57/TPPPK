@@ -31,6 +31,7 @@ export {onProjectChange, onProjectDelete} from "./triggers/project/projectSync.t
 
 // System functions
 export {helloWorldFunction as helloWorld} from "./triggers/system/helloWorld.trigger";
+export {cleanupTempFiles, cleanupTempFilesNow} from "./triggers/system/cleanupTempFiles.trigger";
 
 // Friend management functions
 export {sendFriendRequestFunction as sendFriendRequest} from "./triggers/friend/friendManagement.trigger";

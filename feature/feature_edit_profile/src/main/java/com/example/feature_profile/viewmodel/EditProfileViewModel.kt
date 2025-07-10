@@ -34,7 +34,8 @@ data class EditProfileUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val hasChanges: Boolean = false,
-    val showRemoveImageDialog: Boolean = false
+    val showRemoveImageDialog: Boolean = false,
+    val isRemovingImage: Boolean = false // 기본 프로필 설정 중인지 여부
 )
 
 /**
@@ -345,6 +346,56 @@ class EditProfileViewModel @Inject constructor(
                     )
                 }
                 _eventFlow.emit(EditProfileEvent.ShowSnackbar("프로필 이미지 제거 실패: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * 기본 프로필 사용 버튼 클릭 이벤트 처리 (프로필 이미지 제거)
+     */
+    fun onSetDefaultProfileClicked() {
+        viewModelScope.launch {
+            _uiState.update { 
+                it.copy(
+                    isRemovingImage = true, 
+                    errorMessage = null
+                ) 
+            }
+
+            try {
+                val result = withContext(dispatcherProvider.io) {
+                    userUseCases.removeProfileImageUseCase()
+                }
+                
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필로 설정되었습니다"))
+                        
+                        // Firebase Functions가 user의 updatedAt을 갱신하면 자동으로 프로필 이미지가 새로고침됨
+                        _uiState.update { 
+                            it.copy(
+                                isRemovingImage = false,
+                                selectedImageUri = null
+                            ) 
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isRemovingImage = false) }
+                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필 설정 실패: ${result.error.message}"))
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isRemovingImage = false) }
+                        _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필 설정 중 알 수 없는 오류가 발생했습니다."))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        errorMessage = e.message ?: "기본 프로필 설정 중 오류가 발생했습니다",
+                        isRemovingImage = false
+                    )
+                }
+                _eventFlow.emit(EditProfileEvent.ShowSnackbar("기본 프로필 설정 실패: ${e.message}"))
             }
         }
     }

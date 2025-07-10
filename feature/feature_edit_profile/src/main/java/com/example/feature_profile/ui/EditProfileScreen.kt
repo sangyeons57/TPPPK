@@ -170,7 +170,8 @@ fun EditProfileScreen(
                     uiState = uiState,
                     onNameChanged = viewModel::onNameChanged,
                     onProfileImageClicked = viewModel::onProfileImageClicked,
-                    onSaveProfileClicked = viewModel::onSaveProfileClicked
+                    onSaveProfileClicked = viewModel::onSaveProfileClicked,
+                    onSetDefaultProfileClicked = viewModel::onSetDefaultProfileClicked
                 )
             }
         }
@@ -186,7 +187,8 @@ fun EditProfileContent(
     uiState: EditProfileUiState, // uiState now contains user: User?
     onNameChanged: (String) -> Unit,
     onProfileImageClicked: () -> Unit,
-    onSaveProfileClicked: () -> Unit
+    onSaveProfileClicked: () -> Unit,
+    onSetDefaultProfileClicked: () -> Unit
 ) {
     // val currentUser = uiState.user // No need for this local var, can use uiState.user directly
 
@@ -237,6 +239,27 @@ fun EditProfileContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        
+        // 기본 프로필 사용 버튼
+        Button(
+            onClick = onSetDefaultProfileClicked,
+            enabled = !uiState.isRemovingImage && !uiState.isLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+        ) {
+            if (uiState.isRemovingImage) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("설정 중...")
+            } else {
+                Text("기본 프로필 사용")
+            }
         }
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -317,7 +340,8 @@ fun EditProfileContentPreview() {
             ),
             onNameChanged = {},
             onProfileImageClicked = {},
-            onSaveProfileClicked = {}
+            onSaveProfileClicked = {},
+            onSetDefaultProfileClicked = {}
         )
     }
 }
@@ -334,7 +358,8 @@ fun EditProfileContentLoadingPreview() {
             ), // User is null during loading
             onNameChanged = {},
             onProfileImageClicked = {},
-            onSaveProfileClicked = {}
+            onSaveProfileClicked = {},
+            onSetDefaultProfileClicked = {}
         )
     }
 }

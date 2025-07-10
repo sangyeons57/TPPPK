@@ -148,7 +148,8 @@ fun ProjectSettingScreen(
                 onRenameProjectClick = viewModel::requestRenameProject, // 프로젝트 이름 변경 요청
                 onDeleteProjectClick = viewModel::requestDeleteProject, // 프로젝트 삭제 요청
                 onProjectImageClick = viewModel::onProjectImageClicked,
-                onSaveProjectImageClick = viewModel::onSaveProjectImageClicked
+                onSaveProjectImageClick = viewModel::onSaveProjectImageClicked,
+                onSetDefaultProjectProfileClick = viewModel::onSetDefaultProjectProfileClicked
             )
         }
     }
@@ -239,7 +240,8 @@ fun ProjectSettingContent(
     onRenameProjectClick: () -> Unit,
     onDeleteProjectClick: () -> Unit,
     onProjectImageClick: () -> Unit,
-    onSaveProjectImageClick: () -> Unit
+    onSaveProjectImageClick: () -> Unit,
+    onSetDefaultProjectProfileClick: () -> Unit
 ) {
     LazyColumn(
         modifier = modifier
@@ -252,7 +254,8 @@ fun ProjectSettingContent(
             ProjectProfileSection(
                 uiState = uiState,
                 onProjectImageClick = onProjectImageClick,
-                onSaveProjectImageClick = onSaveProjectImageClick
+                onSaveProjectImageClick = onSaveProjectImageClick,
+                onSetDefaultProjectProfileClick = onSetDefaultProjectProfileClick
             )
         }
 
@@ -341,6 +344,7 @@ fun ProjectProfileSection(
     uiState: ProjectSettingUiState,
     onProjectImageClick: () -> Unit,
     onSaveProjectImageClick: () -> Unit,
+    onSetDefaultProjectProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -361,18 +365,34 @@ fun ProjectProfileSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 프로젝트 이미지 표시
-                ProjectProfileImage(
-                    projectId = uiState.projectId.value,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.medium
-                        ),
-                    contentDescription = "test description",
-                    contentScale = ContentScale.Crop
-                )
+                // 프로젝트 이미지 표시 - 선택된 이미지가 있으면 미리보기, 없으면 기존 이미지
+                if (uiState.selectedImageUri != null) {
+                    // 선택된 이미지 미리보기
+                    coil.compose.AsyncImage(
+                        model = uiState.selectedImageUri,
+                        contentDescription = "Selected Project Image",
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                shape = MaterialTheme.shapes.medium
+                            ),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // 기존 프로젝트 이미지
+                    ProjectProfileImage(
+                        projectId = uiState.projectId.value,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                shape = MaterialTheme.shapes.medium
+                            ),
+                        contentDescription = "test description",
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 
                 Column {
                     Text(
@@ -416,6 +436,28 @@ fun ProjectProfileSection(
                     }
                     Text("이미지 저장")
                 }
+            }
+        }
+        
+        // 기본 프로젝트 프로필 사용 버튼
+        Spacer(modifier = Modifier.height(12.dp))
+        androidx.compose.material3.Button(
+            onClick = onSetDefaultProjectProfileClick,
+            enabled = !uiState.isRemovingImage && !uiState.isLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+        ) {
+            if (uiState.isRemovingImage) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("설정 중...")
+            } else {
+                Text("기본 프로젝트 프로필 사용")
             }
         }
     }
