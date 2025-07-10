@@ -161,10 +161,46 @@ abstract class DefaultDatasourceImpl <Dto> (
         source: Source,
     ): CustomResult<DTO, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("findById")
-        resultTry {
-            val snapshot = collection.document(id.value).get(source).await()
-            snapshot.toDtoSafely() ?: throw Exception("${clazz.simpleName} not found or failed to deserialize")
+        
+        // Firestore 클라이언트가 종료된 경우 재시도 로직
+        var retryCount = 0
+        val maxRetries = 3
+        var lastException: Exception? = null
+        
+        while (retryCount <= maxRetries) {
+            val result = resultTry {
+                val snapshot = collection.document(id.value).get(source).await()
+                snapshot.toDtoSafely() ?: throw Exception("${clazz.simpleName} not found or failed to deserialize")
+            }
+            
+            when (result) {
+                is CustomResult.Success -> return result
+                is CustomResult.Failure -> {
+                    val exception = result.error
+                    lastException = exception
+                    
+                    // Firestore 클라이언트가 종료된 경우 재시도
+                    if (exception.message?.contains("client has already been terminated", ignoreCase = true) == true) {
+                        retryCount++
+                        if (retryCount <= maxRetries) {
+                            android.util.Log.w("DefaultDatasourceImpl", 
+                                "Firestore client terminated, retrying ($retryCount/$maxRetries) for document: ${id.value}")
+                            kotlinx.coroutines.delay(1000L * retryCount) // 지수 백오프
+                            continue
+                        }
+                    }
+                    
+                    // 재시도 불가능한 오류이거나 최대 재시도 횟수 초과
+                    return result
+                }
+                else -> return result
+            }
         }
+        
+        // 모든 재시도 실패
+        android.util.Log.e("DefaultDatasourceImpl", 
+            "Failed to findById after $maxRetries retries for document: ${id.value}")
+        return CustomResult.Failure(lastException ?: Exception("Failed to retrieve document after retries"))
     }
 
     override suspend fun findAll(source: Source): CustomResult<List<DTO>, Exception> = withContext(Dispatchers.IO) {

@@ -68,6 +68,8 @@ class LoginUseCase @Inject constructor(
                     is CustomResult.Failure -> {
                         // Failed to fetch user details – sign out to avoid stale session and propagate failure
                         val errorMessage = when {
+                            userResult.error.message?.contains("client has already been terminated", ignoreCase = true) == true -> 
+                                "로그인 처리 중 시스템 상태가 변경되었습니다. 잠시 후 다시 시도해주세요."
                             userResult.error.message?.contains("network", ignoreCase = true) == true -> 
                                 "네트워크 연결을 확인해주세요."
                             userResult.error.message?.contains("timeout", ignoreCase = true) == true -> 

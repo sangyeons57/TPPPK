@@ -4,7 +4,6 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Initial.getOrThrow
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
-import com.example.data.service.CacheService
 import com.example.data.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.Token
@@ -25,7 +24,6 @@ import javax.inject.Inject
 class AuthRepositoryImpl @Inject constructor(
     private val authWrapper: FirebaseAuthWrapper, // 추가: FirebaseAuthWrapper 주입
     private val authRemoteDataSource: AuthRemoteDataSource,
-    private val cacheService: CacheService, // 캐시 정리를 위한 서비스
 ): AuthRepository {
 
 
@@ -132,37 +130,20 @@ class AuthRepositoryImpl @Inject constructor(
                 is CustomResult.Success -> {
                     Log.d("AuthRepositoryImpl", "Firebase Auth logout successful")
                     
-                    // Firebase Auth 상태 변경 대기 (최대 3초)
-                    val authStateCleared = waitForAuthStateChange(maxWaitTimeMs = 3000)
+                    // Firebase Auth 상태 변경 대기 (최대 2초로 단축)
+                    val authStateCleared = waitForAuthStateChange(maxWaitTimeMs = 2000)
                     if (!authStateCleared) {
-                        Log.w("AuthRepositoryImpl", "Auth state did not clear within timeout, continuing with cache clearing")
+                        Log.w("AuthRepositoryImpl", "Auth state did not clear within timeout, continuing anyway")
                     }
                     
-                    // 2. 모든 캐시 정리
-                    when (val cacheResult = cacheService.clearAllCache()) {
-                        is CustomResult.Success -> {
-                            Log.d("AuthRepositoryImpl", "Cache cleared successfully")
-                        }
-                        is CustomResult.Failure -> {
-                            Log.w("AuthRepositoryImpl", "Auth logout successful but cache clearing failed", cacheResult.error)
-                        }
-                        else -> {
-                            Log.w("AuthRepositoryImpl", "Unexpected cache clearing result: $cacheResult")
-                        }
-                    }
-                    
-                    // 3. 로그아웃 완료 검증
-                    kotlinx.coroutines.delay(500) // Auth 상태 변경 전파를 위한 짧은 대기
+                    // 2. 로그아웃 완료 검증
                     val isLogoutVerified = verifyLogoutComplete()
-                    
-                    if (isLogoutVerified) {
-                        Log.d("AuthRepositoryImpl", "Complete logout successful: Auth + Cache cleared and verified")
-                        CustomResult.Success(Unit)
-                    } else {
-                        Log.w("AuthRepositoryImpl", "Logout verification failed but auth logout was successful")
-                        // Auth 로그아웃은 성공했으므로 Success로 반환하되 경고 로그 남김
-                        CustomResult.Success(Unit)
+                    if (!isLogoutVerified) {
+                        Log.w("AuthRepositoryImpl", "Logout verification failed, but auth logout was successful")
                     }
+                    
+                    Log.d("AuthRepositoryImpl", "Complete logout successful: Firebase Auth cleared (Firestore uses native caching)")
+                    CustomResult.Success(Unit)
                 }
                 is CustomResult.Failure -> {
                     Log.e("AuthRepositoryImpl", "Auth logout failed during complete logout", authLogoutResult.error)
