@@ -41,31 +41,60 @@ class AuthRepositoryImpl @Inject constructor(
         email: UserEmail,
         password: String
     ): CustomResult<UserSession, Exception> {
-        // 로그인 시도
-
+        Log.d("AuthRepositoryImpl", "Starting login process for email: ${email.value}")
+        
         return when (val loginResult = authRemoteDataSource.signIn(email, password)) {
             is CustomResult.Success -> {
-                // 로그인 성공 시 세션 정보 가져오기
-                Log.d("AuthRepositoryImpl", loginResult.data)
-                when (val userSessionResult = getCurrentUserSession()) {
-                    is CustomResult.Success -> {
-                        CustomResult.Success(userSessionResult.data)
-                    }
-                    is CustomResult.Failure -> {
-                        // 세션 정보를 가져오는 데 실패한 경우
-                        CustomResult.Failure(userSessionResult.error)
-                    }
-                    else -> {
-                        CustomResult.Failure(Exception("Unknown error occurred during login"))
+                Log.d("AuthRepositoryImpl", "Firebase Auth login successful, userId: ${loginResult.data}")
+                
+                // 로그인 성공 시 세션 정보 가져오기 (재시도 로직 포함)
+                var retryCount = 0
+                val maxRetries = 3
+                var lastError: Exception? = null
+                
+                while (retryCount <= maxRetries) {
+                    when (val userSessionResult = getCurrentUserSession()) {
+                        is CustomResult.Success -> {
+                            Log.d("AuthRepositoryImpl", "Session retrieved successfully after ${retryCount} retries")
+                            return CustomResult.Success(userSessionResult.data)
+                        }
+                        is CustomResult.Failure -> {
+                            lastError = userSessionResult.error
+                            Log.w("AuthRepositoryImpl", "Failed to get session (attempt ${retryCount + 1}/${maxRetries + 1}): ${lastError?.message}")
+                            
+                            if (retryCount < maxRetries) {
+                                // 네트워크 오류나 일시적 오류인 경우 재시도
+                                if (lastError?.message?.contains("network", ignoreCase = true) == true ||
+                                    lastError?.message?.contains("timeout", ignoreCase = true) == true) {
+                                    kotlinx.coroutines.delay(1000L * (retryCount + 1)) // 지수 백오프
+                                    retryCount++
+                                    continue
+                                } else {
+                                    // 재시도 불가능한 오류
+                                    break
+                                }
+                            }
+                            retryCount++
+                        }
+                        else -> {
+                            Log.e("AuthRepositoryImpl", "Unexpected session result type: $userSessionResult")
+                            lastError = Exception("세션 정보 조회 중 예상치 못한 오류가 발생했습니다.")
+                            break
+                        }
                     }
                 }
+                
+                // 모든 재시도 실패
+                Log.e("AuthRepositoryImpl", "Failed to get session after $maxRetries retries, last error: ${lastError?.message}")
+                CustomResult.Failure(lastError ?: Exception("로그인 후 세션 정보를 가져오는 데 실패했습니다."))
             }
             is CustomResult.Failure -> {
-                // 로그인 실패 시 오류 그대로 전달
+                Log.e("AuthRepositoryImpl", "Firebase Auth login failed: ${loginResult.error.message}", loginResult.error)
                 CustomResult.Failure(loginResult.error)
             }
             else -> {
-                CustomResult.Failure(Exception("Unknown error occurred during login"))
+                Log.e("AuthRepositoryImpl", "Unexpected login result type: $loginResult")
+                CustomResult.Failure(Exception("로그인 처리 중 예상치 못한 오류가 발생했습니다."))
             }
         }
     }
@@ -94,12 +123,21 @@ class AuthRepositoryImpl @Inject constructor(
      * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
      */
     override suspend fun logoutCompletely(): CustomResult<Unit, Exception> {
+        Log.d("AuthRepositoryImpl", "Starting complete logout process")
         return try {
             // 1. Firebase Auth 로그아웃
             val authLogoutResult = authRemoteDataSource.signOut()
             
             when (authLogoutResult) {
                 is CustomResult.Success -> {
+                    Log.d("AuthRepositoryImpl", "Firebase Auth logout successful")
+                    
+                    // Firebase Auth 상태 변경 대기 (최대 3초)
+                    val authStateCleared = waitForAuthStateChange(maxWaitTimeMs = 3000)
+                    if (!authStateCleared) {
+                        Log.w("AuthRepositoryImpl", "Auth state did not clear within timeout, continuing with cache clearing")
+                    }
+                    
                     // 2. 모든 캐시 정리
                     when (val cacheResult = cacheService.clearAllCache()) {
                         is CustomResult.Success -> {
@@ -123,13 +161,29 @@ class AuthRepositoryImpl @Inject constructor(
                 }
                 else -> {
                     Log.e("AuthRepositoryImpl", "Unexpected auth logout result: $authLogoutResult")
-                    CustomResult.Failure(Exception("Unknown error occurred during complete logout"))
+                    CustomResult.Failure(Exception("로그아웃 처리 중 예상치 못한 오류가 발생했습니다."))
                 }
             }
         } catch (e: Exception) {
             Log.e("AuthRepositoryImpl", "Exception during complete logout", e)
             CustomResult.Failure(e)
         }
+    }
+    
+    /**
+     * Firebase Auth 상태 변경을 대기합니다.
+     * 로그아웃 후 Auth 상태가 완전히 정리되었는지 확인합니다.
+     * @param maxWaitTimeMs 최대 대기 시간 (밀리초)
+     * @return Auth 상태가 정리되었으면 true, 타임아웃이면 false
+     */
+    private suspend fun waitForAuthStateChange(maxWaitTimeMs: Long): Boolean {
+        return withTimeoutOrNull(maxWaitTimeMs) {
+            // Auth 상태가 null이 될 때까지 대기
+            while (authWrapper.getCurrentUser() != null) {
+                kotlinx.coroutines.delay(100)
+            }
+            true
+        } ?: false
     }
 
     /**

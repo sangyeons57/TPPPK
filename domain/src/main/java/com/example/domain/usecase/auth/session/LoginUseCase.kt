@@ -42,47 +42,61 @@ class LoginUseCase @Inject constructor(
         password: String
     ): CustomResult<UserSession, Exception> {
         // 시작 로그 – 입력된 이메일 기준으로 로그인 시도
-        //(TAG, "Attempting login for email=$email")
+        android.util.Log.d(TAG, "Attempting login for email=${email.value}")
         return when (val loginResult = authRepository.login(email, password)) {
             is CustomResult.Success -> {
                 val userSession = loginResult.data
                 // AuthRepository 에서 세션 획득 성공
-                //(TAG, "Auth success. Session=$userSession")
+                android.util.Log.d(TAG, "Auth success. Session=${userSession}")
                 // After successful authentication, fetch user details to check account status
-                //(TAG, "Fetching user details (may hit cache) for userId=${userSession.userId}")
+                android.util.Log.d(TAG, "Fetching user details from server for userId=${userSession.userId}")
                 when (val userResult = userRepository.findById(DocumentId.from(userSession.userId), Source.SERVER)) {
                     is CustomResult.Success -> {
-                        // Firestore 에서 가져온 사용자 정보 (캐시 또는 서버)
+                        // Firestore 에서 가져온 사용자 정보 (서버)
                         val user = userResult.data as User
-                        //(TAG, "Fetched User (possibly from cache): ${user}")
+                        android.util.Log.d(TAG, "Fetched User from server: accountStatus=${user.accountStatus}")
                         if (user.accountStatus == UserAccountStatus.WITHDRAWN) {
-                            //(TAG, "Cached status=WITHDRAWN, verifying against server...")
+                            android.util.Log.w(TAG, "Account is WITHDRAWN, logging out completely")
                             authRepository.logoutCompletely()
                             CustomResult.Failure(WithdrawnAccountException("탈퇴한 계정입니다. (서버 확인)"))
                         } else {
                             // Account is active, return the original success result with session
+                            android.util.Log.d(TAG, "Account is active, login successful")
                             loginResult
                         }
                     }
                     is CustomResult.Failure -> {
                         // Failed to fetch user details – sign out to avoid stale session and propagate failure
+                        val errorMessage = when {
+                            userResult.error.message?.contains("network", ignoreCase = true) == true -> 
+                                "네트워크 연결을 확인해주세요."
+                            userResult.error.message?.contains("timeout", ignoreCase = true) == true -> 
+                                "서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요."
+                            userResult.error.message?.contains("permission", ignoreCase = true) == true -> 
+                                "사용자 정보 접근 권한이 없습니다. 관리자에게 문의하세요."
+                            else -> 
+                                "사용자 정보를 가져오는 중 오류가 발생했습니다. 다시 시도해주세요."
+                        }
+                        android.util.Log.e(TAG, "Failed to fetch user details after login: ${userResult.error.message}", userResult.error)
                         authRepository.logoutCompletely()
-                        CustomResult.Failure(userResult.error)
+                        CustomResult.Failure(Exception(errorMessage))
                     }
                     else -> {
-                        //(TAG, "Unexpected userDetailsResult state: $userResult")
-                        CustomResult.Failure(Exception("알 수 없는 오류가 발생했습니다."))
+                        android.util.Log.e(TAG, "Unexpected userDetailsResult state: $userResult")
+                        authRepository.logoutCompletely()
+                        CustomResult.Failure(Exception("사용자 정보 조회 중 예상치 못한 오류가 발생했습니다."))
                     }
                 }
             }
             is CustomResult.Failure -> {
                 // Login authentication failed, log failure reason
-                //(TAG, "Authentication failed: ${loginResult.error}")
+                android.util.Log.e(TAG, "Authentication failed: ${loginResult.error.message}", loginResult.error)
                 // Login authentication failed, return the original failure
                 loginResult
             }
             else -> {
-                 CustomResult.Failure(Exception("알 수 없는 로그인 오류가 발생했습니다."))
+                android.util.Log.e(TAG, "Unexpected login result state: $loginResult")
+                CustomResult.Failure(Exception("로그인 처리 중 예상치 못한 오류가 발생했습니다."))
             }
         }
     }

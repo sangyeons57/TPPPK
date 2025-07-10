@@ -92,15 +92,32 @@ class AuthRemoteDataSourceImpl @Inject constructor(
 
     override fun observeAuthState(): Flow<CustomResult<FirebaseUser, Exception>> = callbackFlow {
         val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-            if (firebaseAuth.currentUser == null) {
+            val currentUser = firebaseAuth.currentUser
+            android.util.Log.d("AuthRemoteDataSource", "Auth state changed: user=${currentUser?.uid ?: "null"}")
+            
+            if (currentUser == null) {
                 trySend(CustomResult.Failure(Exception("No user is currently signed in")))
             } else {
-                trySend(CustomResult.Success(firebaseAuth.currentUser!!))
+                trySend(CustomResult.Success(currentUser))
             }
         }
+        
+        // 리스너 등록
         auth.addAuthStateListener(authStateListener)
+        
+        // 초기 상태 전송
+        val initialUser = auth.currentUser
+        android.util.Log.d("AuthRemoteDataSource", "Initial auth state: user=${initialUser?.uid ?: "null"}")
+        if (initialUser == null) {
+            trySend(CustomResult.Failure(Exception("No user is currently signed in")))
+        } else {
+            trySend(CustomResult.Success(initialUser))
+        }
 
-        awaitClose { auth.removeAuthStateListener(authStateListener) }
+        awaitClose { 
+            android.util.Log.d("AuthRemoteDataSource", "Auth state listener removed")
+            auth.removeAuthStateListener(authStateListener) 
+        }
     }
 
     override fun getCurrentUser(): CustomResult<FirebaseUser, Exception> {
@@ -127,15 +144,20 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         password: String
     ): CustomResult<String, Exception> =
         withContext(Dispatchers.IO) {
+            android.util.Log.d("AuthRemoteDataSource", "Attempting Firebase signIn for email: ${email.value}")
             resultTry {
                 val authResult = auth.signInWithEmailAndPassword(email.value, password).await()
-                authResult.user?.uid ?: throw Exception("Failed to sign in: UID is null.")
+                val uid = authResult.user?.uid ?: throw Exception("Failed to sign in: UID is null.")
+                android.util.Log.d("AuthRemoteDataSource", "Firebase signIn successful, UID: $uid")
+                uid
             }
         }
 
     override suspend fun signOut(): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        android.util.Log.d("AuthRemoteDataSource", "Attempting Firebase signOut")
         resultTry {
             auth.signOut()
+            android.util.Log.d("AuthRemoteDataSource", "Firebase signOut successful")
         }
     }
 
@@ -144,6 +166,7 @@ class AuthRemoteDataSourceImpl @Inject constructor(
             CustomResult.Success(block())
         } catch (e: Exception) {
             if (e is java.util.concurrent.CancellationException) throw e
+            android.util.Log.e("AuthRemoteDataSource", "Exception in resultTry: ${e.message}", e)
             CustomResult.Failure(e)
         }
     }
