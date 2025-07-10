@@ -201,30 +201,46 @@ fun EditProfileContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Profile Image - 선택된 이미지가 있으면 미리보기, 없으면 기존 이미지
-        if (uiState.selectedImageUri != null) {
-            // 선택된 이미지 미리보기
-            AsyncImage(
-                model = uiState.selectedImageUri,
-                contentDescription = "Selected Profile Image",
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .clickable { onProfileImageClicked() }
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            // 기존 프로필 이미지
-            UserProfileImage(
-                userId = uiState.user?.id?.value,
-                contentDescription = "Profile Image",
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .clickable { onProfileImageClicked() }
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                contentScale = ContentScale.Crop
-            )
+        when {
+            uiState.selectedImageUri != null -> {
+                // 선택된 이미지 미리보기
+                AsyncImage(
+                    model = uiState.selectedImageUri,
+                    contentDescription = "Selected Profile Image",
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .clickable { onProfileImageClicked() }
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            uiState.isRemovingImage -> {
+                // 기본 프로필(placeholder) 미리보기
+                UserProfileImage(
+                    userId = null, // null 로 전달하여 placeholder만 표시
+                    contentDescription = "Default Profile Placeholder",
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .clickable { onProfileImageClicked() }
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            else -> {
+                // 기존 프로필 이미지
+                UserProfileImage(
+                    userId = uiState.user?.id?.value,
+                    contentDescription = "Profile Image",
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .clickable { onProfileImageClicked() }
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
         
         // 이미지 선택 안내 텍스트
