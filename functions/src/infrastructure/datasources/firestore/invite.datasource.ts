@@ -90,8 +90,6 @@ export class FirestoreInviteDataSource implements InviteDataSource {
       projectId: data.projectId,
       inviterId: data.inviterId,
       expiresAt: data.expiresAt?.toDate() || new Date(),
-      maxUses: data.maxUses,
-      currentUses: data.currentUses || 0,
       status: data.status,
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date()

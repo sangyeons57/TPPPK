@@ -69,8 +69,6 @@ export class ValidateInviteCodeUseCase {
           errorMessage = 'Invite has expired';
         } else if (invite.isRevoked()) {
           errorMessage = 'Invite has been revoked';
-        } else if (invite.maxUses !== undefined && invite.currentUses >= invite.maxUses) {
-          errorMessage = 'Invite has reached maximum usage limit';
         }
         
         return Result.success({
@@ -111,8 +109,7 @@ export class ValidateInviteCodeUseCase {
         projectName: project.name,
         projectImage: project.image,
         expiresAt: invite.expiresAt,
-        maxUses: invite.maxUses,
-        currentUses: invite.currentUses,
+        status: invite.status,
         isAlreadyMember
       });
 

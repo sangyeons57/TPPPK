@@ -10,14 +10,13 @@ export interface GenerateInviteLinkRequest {
   projectId: string;
   inviterId: string;
   expiresInHours?: number; // Default 24 hours
-  maxUses?: number; // Optional limit
 }
 
 export interface GenerateInviteLinkResponse {
   inviteCode: string;
   inviteLink: string;
   expiresAt: Date;
-  maxUses?: number;
+  status: string;
 }
 
 export class GenerateInviteLinkUseCase {
@@ -29,7 +28,7 @@ export class GenerateInviteLinkUseCase {
 
   async execute(request: GenerateInviteLinkRequest): Promise<CustomResult<GenerateInviteLinkResponse>> {
     try {
-      const { projectId, inviterId, expiresInHours = 24, maxUses } = request;
+      const {projectId, inviterId, expiresInHours = 24} = request;
 
       // Validate input
       if (!projectId || !inviterId) {
@@ -100,8 +99,7 @@ export class GenerateInviteLinkUseCase {
         inviteCode, // Custom invite code will be used as document ID
         projectId,
         inviterId,
-        expiresAt,
-        maxUses
+        expiresAt
       );
 
       // Save invite
@@ -120,7 +118,7 @@ export class GenerateInviteLinkUseCase {
         inviteCode: savedInvite.inviteCode, // Same as savedInvite.id
         inviteLink,
         expiresAt: savedInvite.expiresAt,
-        maxUses: savedInvite.maxUses
+        status: savedInvite.status,
       });
 
     } catch (error) {

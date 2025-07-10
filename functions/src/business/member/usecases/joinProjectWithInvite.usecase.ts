@@ -144,13 +144,8 @@ export class JoinProjectWithInviteUseCase {
         }
       }
 
-      // Increment invite usage
-      const updatedInvite = invite.incrementUses();
-      const updateInviteResult = await this.inviteRepository.update(updatedInvite);
-      if (!updateInviteResult.success) {
-        // Log warning but don't fail the operation
-        console.warn('Failed to update invite usage:', updateInviteResult.error);
-      }
+      // Note: Global invite links don't track usage count
+      // No need to update invite usage for this approach
 
       // Update project member count
       const updatedProject = project.updateMemberCount(project.memberCount + 1);
