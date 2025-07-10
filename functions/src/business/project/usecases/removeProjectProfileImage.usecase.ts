@@ -1,8 +1,8 @@
-import { ProjectRepository } from "../../../domain/project/repositories/project.repository";
-import { MemberRepository } from "../../../domain/member/repositories/member.repository";
-import { CustomResult, Result } from "../../../core/types";
-import { NotFoundError, ValidationError } from "../../../core/errors";
-import * as admin from 'firebase-admin';
+import {ProjectRepository} from "../../../domain/project/repositories/project.repository";
+import {MemberRepository} from "../../../domain/member/repositories/member.repository";
+import {CustomResult, Result} from "../../../core/types";
+import {NotFoundError, ValidationError} from "../../../core/errors";
+import * as admin from "firebase-admin";
 
 export interface RemoveProjectProfileImageRequest {
   projectId: string;
@@ -33,10 +33,19 @@ export class RemoveProjectProfileImageUseCase {
         return Result.failure(new NotFoundError("Project", request.projectId));
       }
 
-      // 2. 사용자 권한 확인 (프로젝트 멤버인지 확인)
-      const hasPermission = await this.checkUserPermission(request.projectId, request.userId);
-      if (!hasPermission.success) {
-        return Result.failure(hasPermission.error);
+      // 2. 사용자 권한 확인
+      //    - 프로젝트 owner는 항상 허용
+      //    - 그 외 사용자는 멤버십을 확인
+
+      if (project.ownerId !== request.userId) {
+        const hasPermission = await this.checkUserPermission(
+          request.projectId,
+          request.userId,
+        );
+
+        if (!hasPermission.success) {
+          return Result.failure(hasPermission.error);
+        }
       }
 
       // 3. 프로젝트 이미지 경로 정의
@@ -51,22 +60,22 @@ export class RemoveProjectProfileImageUseCase {
         // 5. 성공 응답
         return Result.success({
           success: true,
-          message: "Project profile image removed successfully"
+          message: "Project profile image removed successfully",
         });
       } catch (storageError) {
         // 파일이 존재하지 않는 경우도 성공으로 간주
         if (this.isFileNotFoundError(storageError)) {
           return Result.success({
             success: true,
-            message: "Project profile image already removed or does not exist"
+            message: "Project profile image already removed or does not exist",
           });
         }
 
         // 다른 스토리지 에러는 실패로 처리
-        return Result.failure(new Error(`Failed to delete project profile image: ${storageError instanceof Error ? storageError.message : 'Unknown storage error'}`));
+        return Result.failure(new Error(`Failed to delete project profile image: ${storageError instanceof Error ? storageError.message : "Unknown storage error"}`));
       }
     } catch (error) {
-      return Result.failure(new Error(`Failed to remove project profile image: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return Result.failure(new Error(`Failed to remove project profile image: ${error instanceof Error ? error.message : "Unknown error"}`));
     }
   }
 
@@ -80,7 +89,7 @@ export class RemoveProjectProfileImageUseCase {
 
       return Result.success(undefined);
     } catch (error) {
-      return Result.failure(new Error(`Permission check failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      return Result.failure(new Error(`Permission check failed: ${error instanceof Error ? error.message : "Unknown error"}`));
     }
   }
 
