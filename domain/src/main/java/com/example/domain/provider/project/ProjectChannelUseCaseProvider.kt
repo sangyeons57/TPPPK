@@ -15,6 +15,8 @@ import com.example.domain.usecase.project.channel.AddProjectChannelUseCaseImpl
 import com.example.domain.usecase.project.channel.CreateProjectChannelUseCase
 import com.example.domain.usecase.project.channel.DeleteChannelUseCase
 import com.example.domain.usecase.project.channel.DeleteChannelUseCaseImpl
+import com.example.domain.usecase.project.channel.GetCategoryChannelsUseCase
+import com.example.domain.usecase.project.channel.GetCategoryChannelsUseCaseImpl
 import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCaseImpl
@@ -68,6 +70,10 @@ class ProjectChannelUseCaseProvider @Inject constructor(
             ),
             
             getProjectChannelUseCase = GetProjectChannelUseCase(
+                projectChannelRepository = projectChannelRepository
+            ),
+            
+            getCategoryChannelsUseCase = GetCategoryChannelsUseCaseImpl(
                 projectChannelRepository = projectChannelRepository
             ),
             
@@ -125,6 +131,7 @@ data class ProjectChannelUseCases(
     // 채널 기본 CRUD
     val createProjectChannelUseCase: CreateProjectChannelUseCase,
     val getProjectChannelUseCase: GetProjectChannelUseCase,
+    val getCategoryChannelsUseCase: GetCategoryChannelsUseCase,
     val updateProjectChannelUseCase: UpdateProjectChannelUseCase,
     // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
     // val deleteChannelUseCase: DeleteChannelUseCase,
