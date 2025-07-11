@@ -80,7 +80,7 @@ class ProjectSettingViewModel @Inject constructor(
     // Create UseCase groups via providers
     private val coreProjectUseCases = coreProjectUseCaseProvider.createForProject(projectId, UserId.EMPTY)
     private val projectStructureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
-    private val projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
+    // Note: projectChannelUseCases는 특정 채널 작업 시 필요한 categoryId와 함께 동적으로 생성됨
     private val projectAssetsUseCases = projectAssetsUseCaseProvider.createForProject(projectId.value)
 
     private val _uiState = MutableStateFlow(ProjectSettingUiState(projectId = projectId, isLoading = true))

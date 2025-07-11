@@ -87,6 +87,7 @@ class EditProjectChannelViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
+    private val categoryId: String = savedStateHandle.getRequiredString(RouteArgs.CATEGORY_ID)
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
 
     // Store the original channel to pass to the update use case
@@ -96,17 +97,17 @@ class EditProjectChannelViewModel @Inject constructor(
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectChannelUseCases = projectId?.let {
-        projectChannelUseCaseProvider.createForProject(DocumentId(projectId))
+        projectChannelUseCaseProvider.createForProject(DocumentId(projectId), DocumentId(categoryId))
     }
     private val projectStructureUseCases = projectId?.let {
         projectStructureUseCaseProvider.createForProject(DocumentId(it))
     }
 
     init {
-        if (projectId != null && channelId != null) {
+        if (projectId != null && categoryId != null && channelId != null) {
             loadChannelDetails(channelId)
         } else {
-            _uiState.update { it.copy(isLoading = false, generalError = "Project or Channel ID is missing.") }
+            _uiState.update { it.copy(isLoading = false, generalError = "Project, Category, or Channel ID is missing.") }
         }
     }
 
