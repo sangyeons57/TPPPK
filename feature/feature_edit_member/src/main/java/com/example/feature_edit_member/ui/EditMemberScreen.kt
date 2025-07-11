@@ -131,6 +131,7 @@ fun EditMemberScreen(
                 EditMemberContent(
                     modifier = Modifier.padding(paddingValues),
                     memberInfo = uiState.memberInfo!!, // Null 체크 완료
+                    userInfo = uiState.userInfo, // 사용자 정보 (이름, 이메일 등)
                     availableRoles = uiState.availableRoles, // ★ UI 모델 리스트 전달
                     onRoleSelectionChanged = viewModel::onRoleSelectionChanged,
                     onSaveClick = viewModel::saveMemberRoles,
@@ -148,6 +149,7 @@ fun EditMemberScreen(
 fun EditMemberContent(
     modifier: Modifier = Modifier,
     memberInfo: Member, // Domain 모델 직접 사용 (표시용)
+    userInfo: com.example.domain.model.base.User?, // 사용자 정보 (이름, 이메일 등)
     availableRoles: List<RoleSelectionItem>, // ★ UI 모델 사용 (선택용)
     onRoleSelectionChanged: (String, Boolean) -> Unit, // roleId, isSelected 전달
     onSaveClick: () -> Unit,
@@ -170,11 +172,20 @@ fun EditMemberContent(
                     .clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = "User ID: ${memberInfo.id}", // Display userId as placeholder
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
+            Column {
+                Text(
+                    text = userInfo?.name?.value ?: "알 수 없는 사용자", // Display actual user name or fallback
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                userInfo?.email?.let { email ->
+                    Text(
+                        text = email.value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -261,6 +272,13 @@ private fun EditMemberContentPreview() {
     // For now, constructing Member according to its domain model using role IDs.
     val previewMember =
         Member.create(id = DocumentId.from(UserId("u1")), roleIds = listOf(previewRole1.id, previewRole2.id))
+    
+    val previewUser = com.example.domain.model.base.User.create(
+        id = DocumentId.from(UserId("u1")),
+        email = com.example.domain.model.vo.user.UserEmail("test@example.com"),
+        name = com.example.domain.model.vo.user.UserName("테스트 사용자"),
+        consentTimeStamp = java.time.Instant.now()
+    )
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
@@ -271,6 +289,7 @@ private fun EditMemberContentPreview() {
         Surface {
             EditMemberContent(
                 memberInfo = previewMember,
+                userInfo = previewUser,
                 availableRoles = previewRoles,
                 onRoleSelectionChanged = { _, _ -> },
                 onSaveClick = {},
@@ -290,6 +309,13 @@ private fun EditMemberContentSavingPreview() {
     // Constructing Member according to its domain model using role IDs.
     val previewMember =
         Member.create(id = DocumentId.from(UserId("u1")), roleIds = listOf(previewRole1.id, previewRole2.id))
+    
+    val previewUser = com.example.domain.model.base.User.create(
+        id = DocumentId.from(UserId("u1")),
+        email = com.example.domain.model.vo.user.UserEmail("test@example.com"),
+        name = com.example.domain.model.vo.user.UserName("테스트 사용자"),
+        consentTimeStamp = java.time.Instant.now()
+    )
 
     val previewRoles = listOf(
         RoleSelectionItem("r1", "관리자", true),
@@ -300,6 +326,7 @@ private fun EditMemberContentSavingPreview() {
         Surface {
             EditMemberContent(
                 memberInfo = previewMember,
+                userInfo = previewUser,
                 availableRoles = previewRoles,
                 onRoleSelectionChanged = { _, _ -> },
                 onSaveClick = {},

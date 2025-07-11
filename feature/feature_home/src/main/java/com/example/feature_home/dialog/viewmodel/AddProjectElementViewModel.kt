@@ -77,7 +77,7 @@ class AddProjectElementViewModel @Inject constructor(
             // Provider를 통해 UseCase 그룹 생성
             this.projectStructureUseCases =
                 projectStructureUseCaseProvider.createForCurrentUser(projectId)
-            this.projectChannelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
+            // Note: projectChannelUseCases는 채널 추가 시 categoryId와 함께 생성됨
             loadCategoriesForDropdown()
         }
     }
@@ -160,7 +160,6 @@ class AddProjectElementViewModel @Inject constructor(
         selectedCategory: Category?
     ) {
         val currentProjectId = projectId ?: return
-        val channelUseCases = projectChannelUseCases ?: return
         viewModelScope.launch {
             if (channelName.isBlank()) {
                 _eventFlow.emit(AddProjectElementEvent.ShowSnackbar("Channel name cannot be empty."))
@@ -172,6 +171,12 @@ class AddProjectElementViewModel @Inject constructor(
             }
             
             _uiState.update { it.copy(isLoading = true) }
+
+            // 채널 추가 시 categoryId와 함께 채널 UseCases 생성
+            val channelUseCases = projectChannelUseCaseProvider.createForProject(
+                currentProjectId, 
+                selectedCategory.id
+            )
 
             val result = channelUseCases.addProjectChannelUseCase(
                 projectId = currentProjectId,

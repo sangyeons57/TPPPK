@@ -10,10 +10,13 @@ import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Role
+import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.user.UserName
 import com.example.domain.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain.provider.project.ProjectRoleUseCaseProvider
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +39,8 @@ data class RoleSelectionItem(
 
 // --- UI 상태 ---
 data class EditMemberUiState(
-    val memberInfo: Member? = null, // 멤버 기본 정보 (Domain 모델 직접 사용 가능)
+    val memberInfo: Member? = null, // 멤버 기본 정보 (Domain 모델)
+    val userInfo: User? = null, // 사용자 정보 (이름, 이메일 등)
     val availableRoles: List<RoleSelectionItem> = emptyList(), // 선택 가능한 전체 역할 목록 (UI 모델)
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
@@ -55,7 +59,8 @@ sealed class EditMemberEvent {
 class EditMemberViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
-    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider
+    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider
 ) : ViewModel() {
 
     private val projectId: DocumentId =
@@ -66,6 +71,7 @@ class EditMemberViewModel @Inject constructor(
     // Provider를 통해 생성된 UseCase 그룹
     private val projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
     private val projectRoleUseCases = projectRoleUseCaseProvider.createForProject(projectId)
+    private val userUseCases = userUseCaseProvider.createForUser()
 
     // 예시: 만약 멤버 편집 화면에서 특정 역할 ID를 옵션으로 받는다면?
     // private val optionalRoleId: String? = savedStateHandle.getOptionalString("optionalRoleId")
@@ -100,7 +106,22 @@ class EditMemberViewModel @Inject constructor(
                     originalSelectedRoleIds =
                         member.roleIds.map { it.value }.toSet() // Convert DocumentId to String
 
-                    _uiState.update { it.copy(memberInfo = member, isLoading = false) }
+                    // 2. 사용자 정보 가져오기 (이름, 이메일 등)
+                    val userResult = userUseCases.getUserByIdUseCase(member.id)
+                    when (userResult) {
+                        is CustomResult.Success -> {
+                            val user = userResult.data
+                            _uiState.update { it.copy(memberInfo = member, userInfo = user, isLoading = false) }
+                        }
+                        is CustomResult.Failure -> {
+                            // 사용자 정보 로드 실패 시 멤버 정보만 설정하고 경고
+                            _uiState.update { it.copy(memberInfo = member, userInfo = null, isLoading = false) }
+                            _eventFlow.emit(EditMemberEvent.ShowSnackbar("사용자 정보를 불러올 수 없습니다: ${userResult.error.message}"))
+                        }
+                        else -> {
+                            _uiState.update { it.copy(memberInfo = member, userInfo = null, isLoading = false) }
+                        }
+                    }
                 }
                 is CustomResult.Failure -> {
                     val errorMsg = memberResult.error

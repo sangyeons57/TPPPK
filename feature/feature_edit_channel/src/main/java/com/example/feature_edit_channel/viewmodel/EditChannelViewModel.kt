@@ -70,7 +70,7 @@ class EditChannelViewModel @Inject constructor(
     }
     
     private val channelUseCases by lazy {
-        projectChannelUseCaseProvider.createForProject(DocumentId(projectId))
+        projectChannelUseCaseProvider.createForProject(DocumentId(projectId), DocumentId(categoryId))
     }
 
     init {

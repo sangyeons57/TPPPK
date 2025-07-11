@@ -14,6 +14,7 @@ import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,6 +57,7 @@ class ProjectDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -64,7 +66,7 @@ class ProjectDetailViewModel @Inject constructor(
 
     // ProjectUseCaseProvider를 통해 해당 프로젝트의 UseCases 생성
     private val projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
-    private val channelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
+    private val structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
 
     private val _uiState = MutableStateFlow(ProjectDetailUiState(projectId = projectId))
     val uiState: StateFlow<ProjectDetailUiState> = _uiState.asStateFlow()
@@ -166,15 +168,22 @@ class ProjectDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             val result = if (dialogData.categoryId == null) {
-                // Create Direct Channel - Provider의 UseCase 사용
+                // Create Direct Channel - 기본 카테고리 사용
+                val channelUseCases = projectChannelUseCaseProvider.createForProject(
+                    projectId, 
+                    DocumentId("default") // 기본 카테고리 ID
+                )
                 channelUseCases.createProjectChannelUseCase(
                     dialogData.channelName,
                     ProjectChannelOrder.DEFAULT,
                     ProjectChannelType.MESSAGES
                 )
             } else {
-                // Create Category Channel - Provider의 UseCase 사용
-                //  TODO:체널 생성 Provider가 아니라 Category관련 사용
+                // Create Category Channel - 선택된 카테고리 사용
+                val channelUseCases = projectChannelUseCaseProvider.createForProject(
+                    projectId, 
+                    dialogData.categoryId
+                )
                 channelUseCases.createProjectChannelUseCase(
                     dialogData.channelName,
                     ProjectChannelOrder.DEFAULT,
