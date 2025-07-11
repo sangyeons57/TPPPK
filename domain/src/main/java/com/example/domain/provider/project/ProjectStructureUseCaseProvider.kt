@@ -22,6 +22,10 @@ import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCa
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCaseImpl
 import com.example.domain.usecase.project.structure.RenameCategoryUseCase
 import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
+import com.example.domain.usecase.project.channel.GetCategoryChannelsUseCase
+import com.example.domain.usecase.project.channel.GetCategoryChannelsUseCaseImpl
+import com.example.domain.usecase.project.channel.GetProjectDirectChannelsUseCase
+import com.example.domain.usecase.project.channel.GetProjectDirectChannelsUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -83,6 +87,15 @@ class ProjectStructureUseCaseProvider @Inject constructor(
                 categoryRepository = categoryRepository
             ),
             
+            // 채널 조회 UseCases
+            getCategoryChannelsUseCase = GetCategoryChannelsUseCaseImpl(
+                projectChannelRepository = projectChannelRepository
+            ),
+            
+            getProjectDirectChannelsUseCase = GetProjectDirectChannelsUseCaseImpl(
+                projectChannelRepository = projectChannelRepository
+            ),
+            
 
             // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
             // moveChannelBetweenCategoriesUseCase = MoveChannelBetweenCategoriesUseCaseImpl(),
@@ -124,6 +137,10 @@ data class ProjectStructureUseCases(
 
     // 프로젝트 구조 조회 및 변환
     val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
+
+    // 채널 조회 UseCases
+    val getCategoryChannelsUseCase: GetCategoryChannelsUseCase,
+    val getProjectDirectChannelsUseCase: GetProjectDirectChannelsUseCase,
 
     // 구조 업데이트
 

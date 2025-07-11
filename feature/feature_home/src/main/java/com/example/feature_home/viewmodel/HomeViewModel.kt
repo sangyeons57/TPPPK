@@ -27,6 +27,8 @@ import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.project.CoreProjectUseCases
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCases
+import com.example.domain.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain.provider.project.ProjectChannelUseCases
 import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
@@ -138,6 +140,7 @@ sealed class HomeEvent {
 class HomeViewModel @Inject constructor(
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
+    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val dmUseCaseProvider: DMUseCaseProvider,
     private val navigationManger: NavigationManger
@@ -635,35 +638,8 @@ class HomeViewModel @Inject constructor(
                             val categoriesMap =
                                 categoryExpandedStates.getOrPut(projectId.value) { mutableMapOf() }
 
-                            // Filter categories that are actual categories (not special "no category")
-                            val categoryUiModels =
-                                categories.filter { category -> category.isCategory.value }
-                                    .map { categoryDomain ->
-                                        val isExpanded =
-                                            categoriesMap.getOrPut(categoryDomain.id.value) { true } // Default to expanded
-
-                                        CategoryUiModel(
-                                            id = categoryDomain.id,
-                                            name = categoryDomain.name,
-                                            channels = emptyList(), // TODO: Load channels for each category
-                                            isExpanded = isExpanded
-                                        )
-                                    }
-
-                            // TODO: Load direct channels (no category)
-                            val directChannelUiModels = emptyList<ChannelUiModel>()
-
-                            _uiState.update { state ->
-                                state.copy(
-                                    projectStructure = ProjectStructureUiState(
-                                        categories = categoryUiModels,
-                                        directChannel = directChannelUiModels,
-                                        isLoading = false,
-                                        error = "default"
-                                    )
-                                )
-                            }
-                            Log.d("HomeViewModel", "Project structure loaded for $projectId")
+                            // Load channels for each category and direct channels concurrently
+                            loadChannelsForCategories(projectId, categories, categoriesMap)
                         }
 
                         is CustomResult.Failure -> {
@@ -708,6 +684,120 @@ class HomeViewModel @Inject constructor(
                 }
             } else {
                 Log.w("HomeViewModel", "projectStructureUseCases not initialized yet")
+            }
+        }
+    }
+    
+    // 카테고리별 채널 로드 및 직접 채널 로드
+    private fun loadChannelsForCategories(
+        projectId: DocumentId,
+        categories: List<Category>,
+        categoriesMap: MutableMap<String, Boolean>
+    ) {
+        viewModelScope.launch {
+            try {
+                Log.d("HomeViewModel", "Loading channels for ${categories.size} categories")
+                
+                // 1. 실제 카테고리들 필터링 (isCategory = true)
+                val actualCategories = categories.filter { it.isCategory.value }
+                
+                // 2. 직접 채널 로드 (NoCategory 카테고리에서)
+                val directChannelUseCases = projectChannelUseCaseProvider.createForProject(
+                    projectId, 
+                    DocumentId(Constants.NO_CATEGORY_ID)
+                )
+                
+                // 3. 각 카테고리의 채널 로드 (first() 사용으로 one-time load)
+                val categoryUiModels = mutableListOf<CategoryUiModel>()
+                
+                for (category in actualCategories) {
+                    val isExpanded = categoriesMap.getOrPut(category.id.value) { true }
+                    
+                    // 카테고리별 채널 로드
+                    val categoryChannelUseCases = projectChannelUseCaseProvider.createForProject(
+                        projectId,
+                        category.id
+                    )
+                    
+                    val channelResult = categoryChannelUseCases.getCategoryChannelsUseCase(category.id).first()
+                    
+                    when (channelResult) {
+                        is CustomResult.Success -> {
+                            val channels = channelResult.data.map { ChannelUiModel.fromDomain(it) }
+                            
+                            val categoryUiModel = CategoryUiModel(
+                                id = category.id,
+                                name = category.name,
+                                channels = channels,
+                                isExpanded = isExpanded
+                            )
+                            
+                            categoryUiModels.add(categoryUiModel)
+                            Log.d("HomeViewModel", "Loaded ${channels.size} channels for category ${category.name.value}")
+                        }
+                        is CustomResult.Failure -> {
+                            Log.w("HomeViewModel", "Failed to load channels for category ${category.name.value}: ${channelResult.error}")
+                            // 채널 로드 실패 시에도 빈 채널 리스트로 카테고리 추가
+                            categoryUiModels.add(CategoryUiModel(
+                                id = category.id,
+                                name = category.name,
+                                channels = emptyList(),
+                                isExpanded = isExpanded
+                            ))
+                        }
+                        else -> {
+                            // Loading states - 빈 채널 리스트로 카테고리 추가
+                            categoryUiModels.add(CategoryUiModel(
+                                id = category.id,
+                                name = category.name,
+                                channels = emptyList(),
+                                isExpanded = isExpanded
+                            ))
+                        }
+                    }
+                }
+                
+                // 4. 직접 채널 로드
+                val directChannelResult = directChannelUseCases.getCategoryChannelsUseCase(
+                    DocumentId(Constants.NO_CATEGORY_ID)
+                ).first()
+                
+                val directChannels = when (directChannelResult) {
+                    is CustomResult.Success -> {
+                        Log.d("HomeViewModel", "Loaded ${directChannelResult.data.size} direct channels")
+                        directChannelResult.data.map { ChannelUiModel.fromDomain(it) }
+                    }
+                    is CustomResult.Failure -> {
+                        Log.w("HomeViewModel", "Failed to load direct channels: ${directChannelResult.error}")
+                        emptyList()
+                    }
+                    else -> emptyList()
+                }
+                
+                // 5. UI 업데이트
+                _uiState.update { state ->
+                    state.copy(
+                        projectStructure = ProjectStructureUiState(
+                            categories = categoryUiModels.sortedBy { it.name.value },
+                            directChannel = directChannels,
+                            isLoading = false,
+                            error = "default"
+                        )
+                    )
+                }
+                
+                Log.d("HomeViewModel", "Channel loading completed for project $projectId - ${categoryUiModels.size} categories, ${directChannels.size} direct channels")
+                
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Error loading channels for categories", e)
+                _uiState.update { state ->
+                    state.copy(
+                        projectStructure = state.projectStructure.copy(
+                            isLoading = false,
+                            error = "채널 로드 중 오류가 발생했습니다: ${e.message}"
+                        )
+                    )
+                }
             }
         }
     }
