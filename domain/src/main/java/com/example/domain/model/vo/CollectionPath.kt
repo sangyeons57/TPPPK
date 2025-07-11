@@ -82,18 +82,13 @@ value class CollectionPath(val value: String) {
         fun projectCategory(projectId: String, categoryId: String): CollectionPath = 
             CollectionPath("${projectCategories(projectId).value}/$categoryId")
         
-        fun projectChannels(projectId: String): CollectionPath = 
-            CollectionPath("${project(projectId).value}/${ProjectChannel.COLLECTION_NAME}")
-        fun projectChannel(projectId: String, channelId: String): CollectionPath = 
-            CollectionPath("${projectChannels(projectId).value}/$channelId")
-        
-        fun projectCategoryChannels(projectId: String, categoryId: String): CollectionPath =
+        fun projectChannels(projectId: String, categoryId: String): CollectionPath = 
             CollectionPath("${projectCategory(projectId, categoryId).value}/${ProjectChannel.COLLECTION_NAME}")
-        fun projectCategoryChannel(projectId: String, categoryId: String, channelId: String): CollectionPath =
-            CollectionPath("${projectCategoryChannels(projectId, categoryId).value}/$channelId")
+        fun projectChannel(projectId: String, categoryId: String, channelId: String): CollectionPath = 
+            CollectionPath("${projectChannels(projectId, categoryId).value}/$channelId")
         
         fun projectChannelMessages(projectId: String, categoryId: String, channelId: String): CollectionPath =
-            CollectionPath("${projectCategoryChannel(projectId, categoryId, channelId).value}/${Message.COLLECTION_NAME}")
+            CollectionPath("${projectChannel(projectId, categoryId, channelId).value}/${Message.COLLECTION_NAME}")
         fun projectChannelMessage(projectId: String, categoryId: String, channelId: String, messageId: String): CollectionPath =
             CollectionPath("${projectChannelMessages(projectId, categoryId, channelId).value}/$messageId")
         
