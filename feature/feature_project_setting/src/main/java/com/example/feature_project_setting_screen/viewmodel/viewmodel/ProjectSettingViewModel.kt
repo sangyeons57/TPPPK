@@ -173,7 +173,7 @@ class ProjectSettingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteCategoryUseCase 호출
             println("Deleting Category: ${category.id} (UseCase)") // Used category.id
-            val result = projectStructureUseCases.deleteCategoryUseCase(projectId, category.id) // Used category.id
+            val result = projectStructureUseCases.deleteCategoryUseCase(category.id) // Used category.id
             // delay(500) // Remove delay
             when (result) {
                 is CustomResult.Success -> {

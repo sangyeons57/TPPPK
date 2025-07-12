@@ -130,9 +130,10 @@ class EditChannelViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             
-            when (val result = channelUseCases.getProjectChannelUseCase(DocumentId(channelId))) {
-                is CustomResult.Success -> {
-                    val channel = result.data
+            channelUseCases.getProjectChannelUseCase(channelId).collect { result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        val channel = result.data
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -146,25 +147,26 @@ class EditChannelViewModel @Inject constructor(
                             originalOrder = channel.order.value
                         )
                     }
-                }
-                is CustomResult.Failure -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "채널 정보를 불러오지 못했습니다: ${result.error.message}"
-                        )
                     }
-                    _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 정보를 불러오지 못했습니다."))
-                }
-                is CustomResult.Loading -> {
-                    _uiState.update { it.copy(isLoading = true) }
-                }
-                else -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "알 수 없는 오류가 발생했습니다."
-                        )
+                    is CustomResult.Failure -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "채널 정보를 불러오지 못했습니다: ${result.error.message}"
+                            )
+                        }
+                        _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 정보를 불러오지 못했습니다."))
+                    }
+                    is CustomResult.Loading -> {
+                        _uiState.update { it.copy(isLoading = true) }
+                    }
+                    else -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "알 수 없는 오류가 발생했습니다."
+                            )
+                        }
                     }
                 }
             }
@@ -247,9 +249,10 @@ class EditChannelViewModel @Inject constructor(
             _eventFlow.emit(EditChannelEvent.ClearFocus)
 
             // 먼저 현재 채널 정보를 가져온 후 업데이트
-            when (val getChannelResult = channelUseCases.getProjectChannelUseCase(DocumentId(channelId))) {
-                is CustomResult.Success -> {
-                    val channelToUpdate = getChannelResult.data
+            channelUseCases.getProjectChannelUseCase(channelId).collect { getChannelResult ->
+                when (getChannelResult) {
+                    is CustomResult.Success -> {
+                        val channelToUpdate = getChannelResult.data
                     val newChannelName = com.example.domain.model.vo.Name(newName)
                     val newCategoryDocumentId = if (newCategoryId.isNotEmpty()) DocumentId(newCategoryId) else null
                     
@@ -272,12 +275,15 @@ class EditChannelViewModel @Inject constructor(
                             _uiState.update { it.copy(isLoading = false, error = "채널 수정 중 오류가 발생했습니다.") }
                         }
                     }
-                }
-                is CustomResult.Failure -> {
-                    _uiState.update { it.copy(isLoading = false, error = "채널 정보를 가져올 수 없습니다: ${getChannelResult.error.message}") }
-                }
-                else -> {
-                    _uiState.update { it.copy(isLoading = false, error = "채널 정보를 가져오는 중 오류가 발생했습니다.") }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isLoading = false, error = "채널 정보를 가져올 수 없습니다: ${getChannelResult.error.message}") }
+                        return@collect
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false, error = "채널 정보를 가져오는 중 오류가 발생했습니다.") }
+                        return@collect
+                    }
                 }
             }
         }

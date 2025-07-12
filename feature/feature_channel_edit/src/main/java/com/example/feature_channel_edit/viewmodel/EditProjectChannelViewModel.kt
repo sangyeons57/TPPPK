@@ -257,27 +257,44 @@ class EditProjectChannelViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, isSaveAttempted = true, generalError = null, nameError = null, orderError = null) }
 
         viewModelScope.launch {
-            when (val result = projectChannelUseCases?.updateProjectChannelUseCase?.invoke(
-                name = nameInput,
-                order = orderInputDouble
-            )) {
-                is CustomResult.Success<*> -> {
-                    _eventFlow.emit(EditChannelEvent.SaveSuccess)
-                }
-                is CustomResult.Failure<*> -> {
-                    val errorMessage = (result.error as? Exception)?.message ?: "Failed to update channel."
-                    if (errorMessage.contains("name", ignoreCase = true)) {
-                        _uiState.update { it.copy(nameError = errorMessage) }
-                    } else if (errorMessage.contains("order", ignoreCase = true)) {
-                        _uiState.update { it.copy(orderError = errorMessage) }
-                    } else {
-                        _uiState.update { it.copy(generalError = errorMessage) }
+            // 먼저 현재 채널을 가져온 다음 업데이트
+            when (val getChannelResult = projectChannelUseCases?.getProjectChannelUseCase?.invoke(DocumentId(channelId))) {
+                is CustomResult.Success -> {
+                    val channelToUpdate = getChannelResult.data
+                    when (val result = projectChannelUseCases?.updateProjectChannelUseCase?.invoke(
+                        channelToUpdate = channelToUpdate,
+                        newName = com.example.domain.model.vo.Name(nameInput),
+                        newOrder = com.example.domain.model.vo.projectchannel.ProjectChannelOrder(orderInputDouble)
+                    )) {
+                        is CustomResult.Success<*> -> {
+                            _eventFlow.emit(EditChannelEvent.SaveSuccess)
+                        }
+                        is CustomResult.Failure<*> -> {
+                            val errorMessage = (result.error as? Exception)?.message ?: "Failed to update channel."
+                            if (errorMessage.contains("name", ignoreCase = true)) {
+                                _uiState.update { it.copy(nameError = errorMessage) }
+                            } else if (errorMessage.contains("order", ignoreCase = true)) {
+                                _uiState.update { it.copy(orderError = errorMessage) }
+                            } else {
+                                _uiState.update { it.copy(generalError = errorMessage) }
+                            }
+                            _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
+                        }
+                        is CustomResult.Loading, is CustomResult.Initial, is CustomResult.Progress -> Unit // Do nothing
+                        null -> {
+                            val errorMessage = "Failed to update channel."
+                            _uiState.update { it.copy(generalError = errorMessage) }
+                            _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
+                        }
                     }
+                }
+                is CustomResult.Failure -> {
+                    val errorMessage = "Failed to get channel: ${getChannelResult.error.message}"
+                    _uiState.update { it.copy(generalError = errorMessage) }
                     _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
                 }
-                is CustomResult.Loading, is CustomResult.Initial, is CustomResult.Progress -> Unit // Do nothing
-                null -> {
-                    val errorMessage = "Failed to update channel."
+                else -> {
+                    val errorMessage = "Failed to get channel."
                     _uiState.update { it.copy(generalError = errorMessage) }
                     _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
                 }

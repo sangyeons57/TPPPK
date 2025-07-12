@@ -68,7 +68,7 @@ class EditCategoryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             
-            when (val result = structureUseCases.getCategoryDetailsUseCase(DocumentId(categoryId))) {
+            when (val result = structureUseCases.getCategoryDetailsUseCase(projectId, categoryId)) {
                 is CustomResult.Success -> {
                     val category = result.data
                     _uiState.update {
@@ -163,7 +163,7 @@ class EditCategoryViewModel @Inject constructor(
             _eventFlow.emit(EditCategoryEvent.ClearFocus)
 
             // 먼저 현재 카테고리 정보를 가져온 후 업데이트
-            when (val getCategoryResult = structureUseCases.getCategoryDetailsUseCase(DocumentId(categoryId))) {
+            when (val getCategoryResult = structureUseCases.getCategoryDetailsUseCase(projectId, categoryId)) {
                 is CustomResult.Success -> {
                     val categoryToUpdate = getCategoryResult.data
                     val newCategoryName = CategoryName(currentName)
