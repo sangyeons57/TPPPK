@@ -92,15 +92,15 @@ value class CollectionPath(val value: String) {
         fun projectChannelMessage(projectId: String, channelId: String, messageId: String): CollectionPath =
             CollectionPath("${projectChannelMessages(projectId, channelId).value}/$messageId")
         
-        fun projectMessageAttachments(projectId: String, categoryId: String, channelId: String, messageId: String): CollectionPath =
-            CollectionPath("${projectChannelMessage(projectId, categoryId, channelId, messageId).value}/${MessageAttachment.COLLECTION_NAME}")
+        fun projectMessageAttachments(projectId: String, channelId: String, messageId: String): CollectionPath =
+            CollectionPath("${projectChannelMessage(projectId, channelId, messageId).value}/${MessageAttachment.COLLECTION_NAME}")
         fun projectMessageAttachment(
             projectId: String,
             categoryId: String,
             channelId: String,
             messageId: String,
             attachmentId: String
-        ): CollectionPath = CollectionPath("${projectMessageAttachments(projectId, categoryId, channelId, messageId).value}/$attachmentId")
+        ): CollectionPath = CollectionPath("${projectMessageAttachments(projectId, channelId, messageId).value}/$attachmentId")
         
         /* -------------------- Schedule Paths -------------------- */
         fun schedule(scheduleId: String): CollectionPath = 

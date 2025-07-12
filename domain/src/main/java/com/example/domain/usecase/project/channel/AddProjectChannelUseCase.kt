@@ -2,6 +2,7 @@ package com.example.domain.usecase.project.channel
 
 import com.example.core_common.constants.Constants
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId

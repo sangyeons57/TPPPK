@@ -80,7 +80,7 @@ class AddCategoryUseCaseImpl(
                 
                 // Find the maximum order among all categories (excluding NoCategory itself which is fixed at 0.0)
                 val maxCategoryOrder = categories
-                    .filter { it.order.value > Constants.NO_CATEGORY_ORDER } // Exclude NoCategory (0.0)
+                    .filter { it.order.value > Category.NO_CATEGORY_ORDER } // Exclude NoCategory (0.0)
                     .maxOfOrNull { it.order.value } ?: 0.0
 
                 // TODO: Also consider NoCategory channels when implementing full unified ordering
