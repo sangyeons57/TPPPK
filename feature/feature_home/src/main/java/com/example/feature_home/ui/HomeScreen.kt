@@ -63,14 +63,14 @@ import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.user.UserName
+import com.example.feature_edit_category.ui.EditCategoryDialog
+import com.example.feature_edit_channel.ui.EditChannelDialog
 import com.example.feature_home.component.DmListComponent
 import com.example.feature_home.component.ExtendableFloatingActionMenu
 import com.example.feature_home.component.MainHomeFloatingButton
 import com.example.feature_home.component.ProjectChannelList
 import com.example.feature_home.component.ProjectListScreen
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
-import com.example.feature_edit_category.ui.EditCategoryDialog
-import com.example.feature_edit_channel.ui.EditChannelDialog
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
@@ -228,19 +228,19 @@ fun HomeScreen(
 
                 is HomeEvent.NavigateToEditCategory -> {
                     // Find the category name for the dialog
-                    val category = uiState.projectStructureUiState?.categories?.find { it.id == event.categoryId }
+                    val category = uiState.projectStructure.categories.find { it.id == event.categoryId }
                     if (category != null) {
-                        editCategoryName = category.name
+                        editCategoryName = category.name.value
                         showEditCategoryDialog = true
                     }
                 }
                 is HomeEvent.NavigateToEditChannel -> {
                     // Find the channel name for the dialog
-                    val channel = uiState.projectStructureUiState?.categories
-                        ?.flatMap { it.channels }
-                        ?.find { it.id == event.channelId }
+                    val channel = uiState.projectStructure.categories
+                        .flatMap { it.channels }
+                        .find { it.id.value == event.channelId }
                     if (channel != null) {
-                        editChannelName = channel.name
+                        editChannelName = channel.name.value
                         showEditChannelDialog = true
                     }
                 }
