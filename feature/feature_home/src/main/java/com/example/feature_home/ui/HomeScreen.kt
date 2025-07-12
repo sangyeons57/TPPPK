@@ -68,8 +68,9 @@ import com.example.feature_home.component.ExtendableFloatingActionMenu
 import com.example.feature_home.component.MainHomeFloatingButton
 import com.example.feature_home.component.ProjectChannelList
 import com.example.feature_home.component.ProjectListScreen
-import com.example.feature_home.dialog.ui.AddDmUserDialogWrapper
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
+import com.example.feature_edit_category.ui.EditCategoryDialog
+import com.example.feature_edit_channel.ui.EditChannelDialog
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
@@ -91,8 +92,6 @@ private object HomeScreenStateKeys {
     const val SELECTED_TOP_SECTION = "selected_top_section"
     const val SELECTED_PROJECT_ID = "selected_project_id"
     const val EXPANDED_CATEGORIES = "expanded_categories"
-    const val SHOW_ADD_DM_DIALOG = "show_add_dm_dialog"
-
     const val SHOW_FLOATING_MENU = "show_floating_menu"
 }
 
@@ -119,10 +118,15 @@ fun HomeScreen(
     rememberCoroutineScope()
     
     // 다이얼로그 상태 추가
-    var showAddDmDialog by remember { mutableStateOf(false) }
     var showAddProjectElementDialog by remember { mutableStateOf(false) }
     var showFloatingMenu by remember { mutableStateOf(false) }
     var currentProjectIdForDialog by remember { mutableStateOf<DocumentId?>(null) }
+    
+    // 편집 다이얼로그 상태
+    var showEditCategoryDialog by remember { mutableStateOf(false) }
+    var showEditChannelDialog by remember { mutableStateOf(false) }
+    var editCategoryName by remember { mutableStateOf("") }
+    var editChannelName by remember { mutableStateOf("") }
 
     // 상태 복원 (탭 전환 시)
     LaunchedEffect(savedState) {
@@ -147,7 +151,6 @@ fun HomeScreen(
             }
             
             // 다이얼로그 상태 복원
-            showAddDmDialog = bundle.getBoolean(HomeScreenStateKeys.SHOW_ADD_DM_DIALOG, false)
             showFloatingMenu = bundle.getBoolean(HomeScreenStateKeys.SHOW_FLOATING_MENU, false)
             
             // 확장된 카테고리 복원
@@ -161,7 +164,6 @@ fun HomeScreen(
     DisposableEffect(
         uiState.selectedTopSection,
         uiState.selectedProjectId,
-        showAddDmDialog,
         showFloatingMenu
     ) {
         onDispose {
@@ -172,7 +174,6 @@ fun HomeScreen(
                     HomeScreenStateKeys.SELECTED_PROJECT_ID,
                     uiState.selectedProjectId?.value ?: ""
                 )
-                putBoolean(HomeScreenStateKeys.SHOW_ADD_DM_DIALOG, showAddDmDialog)
                 putBoolean(HomeScreenStateKeys.SHOW_FLOATING_MENU, showFloatingMenu)
             }
             
@@ -208,8 +209,7 @@ fun HomeScreen(
                     snackbarHostState.showSnackbar("프로젝트 추가 다이얼로그 (미구현)")
                 }
                 is HomeEvent.ShowAddFriendDialog -> {
-                    // DM 추가 다이얼로그 표시
-                    showAddDmDialog = true
+                    // TODO: Implement friend dialog or navigation
                 }
                 is HomeEvent.NavigateToAddProject -> {
                     navigationManger.navigateToAddProject()
@@ -226,8 +226,24 @@ fun HomeScreen(
                     showAddProjectElementDialog = true
                 }
 
-                is HomeEvent.NavigateToEditCategory -> TODO()
-                is HomeEvent.NavigateToEditChannel -> TODO()
+                is HomeEvent.NavigateToEditCategory -> {
+                    // Find the category name for the dialog
+                    val category = uiState.projectStructureUiState?.categories?.find { it.id == event.categoryId }
+                    if (category != null) {
+                        editCategoryName = category.name
+                        showEditCategoryDialog = true
+                    }
+                }
+                is HomeEvent.NavigateToEditChannel -> {
+                    // Find the channel name for the dialog
+                    val channel = uiState.projectStructureUiState?.categories
+                        ?.flatMap { it.channels }
+                        ?.find { it.id == event.channelId }
+                    if (channel != null) {
+                        editChannelName = channel.name
+                        showEditChannelDialog = true
+                    }
+                }
                 is HomeEvent.NavigateToReorderCategory -> TODO()
                 is HomeEvent.NavigateToReorderChannel -> TODO()
                 
@@ -279,13 +295,45 @@ fun HomeScreen(
             // AddProjectElementDialog
             if (showAddProjectElementDialog && currentProjectIdForDialog != null) {
                 AddProjectElementDialog(
-                    projectId = currentProjectIdForDialog!!,
                     onDismissRequest = {
                         showAddProjectElementDialog = false
                         currentProjectIdForDialog = null
                         // 다이얼로그가 닫힐 때 프로젝트 구조를 새로고침합니다.
                         // 이것이 채널/카테고리 추가 후 UI가 업데이트되지 않는 문제를 해결합니다.
                         uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
+                    },
+                    onAddCategoryClick = {
+                        // TODO: Navigate to actual category creation screen
+                    },
+                    onAddChannelClick = {
+                        // TODO: Navigate to actual channel creation screen  
+                    }
+                )
+            }
+            
+            // EditCategoryDialog
+            if (showEditCategoryDialog) {
+                EditCategoryDialog(
+                    categoryName = editCategoryName,
+                    onDismissRequest = { showEditCategoryDialog = false },
+                    onNavigateToEditCategory = {
+                        // TODO: Navigate to actual category edit screen
+                    },
+                    onNavigateToCreateChannel = {
+                        // Open AddProjectElementDialog for channel creation
+                        currentProjectIdForDialog = uiState.selectedProjectId
+                        showAddProjectElementDialog = true
+                    }
+                )
+            }
+            
+            // EditChannelDialog  
+            if (showEditChannelDialog) {
+                EditChannelDialog(
+                    channelName = editChannelName,
+                    onDismissRequest = { showEditChannelDialog = false },
+                    onNavigateToEditChannel = {
+                        // TODO: Navigate to actual channel edit screen
                     }
                 )
             }
@@ -311,7 +359,7 @@ fun HomeScreen(
             
             // 배경 오버레이 (다이얼로그 또는 메뉴가 열렸을 때 표시)
             AnimatedVisibility(
-                visible = showAddDmDialog || showFloatingMenu,
+                visible = showFloatingMenu,
                 enter = fadeIn(tween(300)),
                 exit = fadeOut(tween(300)),
                 modifier = Modifier
@@ -333,27 +381,50 @@ fun HomeScreen(
             
             // 다이얼로그들 (zIndex를 높게 설정하여 오버레이 위에 표시)
             
-            // AddDmUserDialog 추가
-            if (showAddDmDialog) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(2f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AddDmUserDialogWrapper(
-                        onDismiss = { showAddDmDialog = false },
-                        onNavigateToDm = { dmChannelId ->
-                            navigationManger.navigateToChat(dmChannelId.value)
-                        },
-                        onShowSnackbar = { message ->
-                            // 스코프 없이 suspend 함수를 직접 호출할 수 없음
-                            // 따라서 람다 내에서는 로깅만 수행하고, 이벤트를 통해 스낵바 표시
-                            Log.d("HomeScreen", "Show snackbar: $message")
-                            viewModel.showErrorMessage(message)
-                        }
-                    )
-                }
+            // AddProjectElementDialog
+            if (showAddProjectElementDialog && currentProjectIdForDialog != null) {
+                AddProjectElementDialog(
+                    onDismissRequest = {
+                        showAddProjectElementDialog = false
+                        currentProjectIdForDialog = null
+                        // 다이얼로그가 닫힐 때 프로젝트 구조를 새로고침합니다.
+                        // 이것이 채널/카테고리 추가 후 UI가 업데이트되지 않는 문제를 해결합니다.
+                        uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
+                    },
+                    onAddCategoryClick = {
+                        // TODO: Navigate to actual category creation screen
+                    },
+                    onAddChannelClick = {
+                        // TODO: Navigate to actual channel creation screen  
+                    }
+                )
+            }
+            
+            // EditCategoryDialog
+            if (showEditCategoryDialog) {
+                EditCategoryDialog(
+                    categoryName = editCategoryName,
+                    onDismissRequest = { showEditCategoryDialog = false },
+                    onNavigateToEditCategory = {
+                        // TODO: Navigate to actual category edit screen
+                    },
+                    onNavigateToCreateChannel = {
+                        // Open AddProjectElementDialog for channel creation
+                        currentProjectIdForDialog = uiState.selectedProjectId
+                        showAddProjectElementDialog = true
+                    }
+                )
+            }
+            
+            // EditChannelDialog  
+            if (showEditChannelDialog) {
+                EditChannelDialog(
+                    channelName = editChannelName,
+                    onDismissRequest = { showEditChannelDialog = false },
+                    onNavigateToEditChannel = {
+                        // TODO: Navigate to actual channel edit screen
+                    }
+                )
             }
         }
     }
