@@ -762,7 +762,6 @@ class HomeViewModel @Inject constructor(
         val projectId = _uiState.value.selectedProjectId ?: return
         
         // 이미 선택된 채널이면 무시
-        if (selectedChannelId == channel.id) return
         
         // 선택된 채널 ID 업데이트
         selectedChannelId = channel.id
