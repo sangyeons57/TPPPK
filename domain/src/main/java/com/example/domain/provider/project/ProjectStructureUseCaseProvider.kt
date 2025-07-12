@@ -72,7 +72,8 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             ),
             
             deleteCategoryUseCase = DeleteCategoryUseCaseImpl(
-                categoryRepository = categoryRepository
+                categoryRepository = categoryRepository,
+                projectChannelRepository = projectChannelRepository
             ),
             
             renameCategoryUseCase = RenameCategoryUseCaseImpl(

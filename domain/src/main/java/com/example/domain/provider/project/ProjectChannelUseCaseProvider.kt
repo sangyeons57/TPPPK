@@ -76,13 +76,13 @@ class ProjectChannelUseCaseProvider @Inject constructor(
                 projectChannelRepository = projectChannelRepository
             ),
             
-            updateProjectChannelUseCase = UpdateProjectChannelUseCase(
-                categoryRepository = categoryRepository,
-                authRepository = authRepository
+            updateProjectChannelUseCase = UpdateProjectChannelUseCaseImpl(
+                projectChannelRepository = projectChannelRepository
             ),
             
-            // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
-            // deleteChannelUseCase = DeleteChannelUseCaseImpl(),
+            deleteChannelUseCase = DeleteChannelUseCaseImpl(
+                projectChannelRepository = projectChannelRepository
+            ),
             
             // 채널 고급 관리
             addProjectChannelUseCase = AddProjectChannelUseCaseImpl(
@@ -130,8 +130,7 @@ data class ProjectChannelUseCases(
     val getProjectChannelUseCase: GetProjectChannelUseCase,
     val getCategoryChannelsUseCase: GetCategoryChannelsUseCase,
     val updateProjectChannelUseCase: UpdateProjectChannelUseCase,
-    // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
-    // val deleteChannelUseCase: DeleteChannelUseCase,
+    val deleteChannelUseCase: DeleteChannelUseCase,
     
     // 채널 고급 관리
     val addProjectChannelUseCase: AddProjectChannelUseCase,

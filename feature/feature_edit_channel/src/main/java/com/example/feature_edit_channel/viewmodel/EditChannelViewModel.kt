@@ -8,6 +8,7 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Category
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.core_common.result.CustomResult
@@ -55,7 +56,6 @@ class EditChannelViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
-    private val categoryId: String = savedStateHandle.getRequiredString(RouteArgs.CATEGORY_ID)
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
 
     private val _uiState = MutableStateFlow(EditChannelUiState(channelId = channelId, isLoading = true))
@@ -129,36 +129,43 @@ class EditChannelViewModel @Inject constructor(
     private fun loadChannelDetails() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Loading details for channel $channelId")
             
-            // --- TODO: 실제 채널 정보 로드 (channelUseCases.getProjectChannelUseCase 사용) ---
-            delay(500)
-            val success = true
-            val currentName = "기존 채널 이름 $channelId" // 임시
-            val currentType = ProjectChannelType.MESSAGES
-            val currentOrder = channelId.hashCode().toDouble() % 100.0 // 임시 순서값
-            // -------------------------------------------------------------
-            
-            if (success) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        currentChannelName = currentName,
-                        originalChannelName = currentName,
-                        currentChannelMode = currentType,
-                        originalChannelMode = currentType,
-                        currentCategoryId = categoryId,
-                        originalCategoryId = categoryId,
-                        currentOrder = currentOrder,
-                        originalOrder = currentOrder
-                    )
+            when (val result = channelUseCases.getProjectChannelUseCase(DocumentId(channelId))) {
+                is CustomResult.Success -> {
+                    val channel = result.data
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            currentChannelName = channel.channelName.value,
+                            originalChannelName = channel.channelName.value,
+                            currentChannelMode = channel.channelType,
+                            originalChannelMode = channel.channelType,
+                            currentCategoryId = channel.categoryId.value,
+                            originalCategoryId = channel.categoryId.value,
+                            currentOrder = channel.order.value,
+                            originalOrder = channel.order.value
+                        )
+                    }
                 }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "채널 정보를 불러오지 못했습니다."
-                    )
+                is CustomResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "채널 정보를 불러오지 못했습니다: ${result.error.message}"
+                        )
+                    }
+                    _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 정보를 불러오지 못했습니다."))
+                }
+                is CustomResult.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                }
+                else -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "알 수 없는 오류가 발생했습니다."
+                        )
+                    }
                 }
             }
         }
@@ -238,19 +245,40 @@ class EditChannelViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             _eventFlow.emit(EditChannelEvent.ClearFocus)
-            println("ViewModel: Updating channel $channelId to '$newName' (${newType}) in category $newCategoryId with order $newOrder")
 
-            // --- TODO: 실제 채널 업데이트 로직 (channelUseCases.updateProjectChannelUseCase 사용) ---
-            delay(1000)
-            val success = true
-            // --------------------------------------------------------------
-
-            if (success) {
-                _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 정보가 수정되었습니다."))
-                _uiState.update { it.copy(isLoading = false, updateSuccess = true) }
-            } else {
-                val errorMessage = "채널 수정 실패"
-                _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+            // 먼저 현재 채널 정보를 가져온 후 업데이트
+            when (val getChannelResult = channelUseCases.getProjectChannelUseCase(DocumentId(channelId))) {
+                is CustomResult.Success -> {
+                    val channelToUpdate = getChannelResult.data
+                    val newChannelName = com.example.domain.model.vo.Name(newName)
+                    val newCategoryDocumentId = if (newCategoryId.isNotEmpty()) DocumentId(newCategoryId) else null
+                    
+                    when (val updateResult = channelUseCases.updateProjectChannelUseCase(
+                        channelToUpdate = channelToUpdate,
+                        newName = newChannelName,
+                        newOrder = ProjectChannelOrder(newOrder),
+                        newCategoryId = newCategoryDocumentId,
+                        newChannelType = newType
+                    )) {
+                        is CustomResult.Success -> {
+                            _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 정보가 수정되었습니다."))
+                            _uiState.update { it.copy(isLoading = false, updateSuccess = true) }
+                        }
+                        is CustomResult.Failure -> {
+                            val errorMessage = "채널 수정 실패: ${updateResult.error.message}"
+                            _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+                        }
+                        else -> {
+                            _uiState.update { it.copy(isLoading = false, error = "채널 수정 중 오류가 발생했습니다.") }
+                        }
+                    }
+                }
+                is CustomResult.Failure -> {
+                    _uiState.update { it.copy(isLoading = false, error = "채널 정보를 가져올 수 없습니다: ${getChannelResult.error.message}") }
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false, error = "채널 정보를 가져오는 중 오류가 발생했습니다.") }
+                }
             }
         }
     }
@@ -272,20 +300,21 @@ class EditChannelViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Deleting channel $channelId")
 
-            // --- TODO: 실제 채널 삭제 로직 (channelUseCases.deleteChannelUseCase 사용) ---
-            delay(1000)
-            val success = true
-            // ---------------------------------------------------------
-
-            if (success) {
-                _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널이 삭제되었습니다."))
-                _uiState.update { it.copy(isLoading = false, deleteSuccess = true) }
-            } else {
-                val errorMessage = "채널 삭제 실패"
-                _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
-                _uiState.update { it.copy(isLoading = false) }
+            when (val result = channelUseCases.deleteChannelUseCase(DocumentId(channelId))) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널이 삭제되었습니다."))
+                    _uiState.update { it.copy(isLoading = false, deleteSuccess = true) }
+                }
+                is CustomResult.Failure -> {
+                    val errorMessage = "채널 삭제 실패: ${result.error.message}"
+                    _eventFlow.emit(EditChannelEvent.ShowSnackbar(errorMessage))
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+                else -> {
+                    _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 삭제 중 오류가 발생했습니다."))
+                    _uiState.update { it.copy(isLoading = false) }
+                }
             }
         }
     }
