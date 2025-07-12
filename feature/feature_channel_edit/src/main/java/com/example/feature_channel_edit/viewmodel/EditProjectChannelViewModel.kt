@@ -258,10 +258,10 @@ class EditProjectChannelViewModel @Inject constructor(
 
         viewModelScope.launch {
             // 먼저 현재 채널을 가져온 다음 업데이트
-            when (val getChannelResult = projectChannelUseCases?.getProjectChannelUseCase?.invoke(DocumentId(channelId))) {
+            when (val getChannelResult = projectChannelUseCases?.getProjectChannelUseCase?.invoke(channelId)?.first()) {
                 is CustomResult.Success -> {
                     val channelToUpdate = getChannelResult.data
-                    when (val result = projectChannelUseCases?.updateProjectChannelUseCase?.invoke(
+                    when (val result = projectChannelUseCases.updateProjectChannelUseCase?.invoke(
                         channelToUpdate = channelToUpdate,
                         newName = com.example.domain.model.vo.Name(nameInput),
                         newOrder = com.example.domain.model.vo.projectchannel.ProjectChannelOrder(orderInputDouble)
