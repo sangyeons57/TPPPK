@@ -160,8 +160,10 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
                             val categoryChannelMap = mutableMapOf<Category, List<ProjectChannel>>()
                             categories.forEach { category ->
                                 val channels = channelsByCategory[category.id.value] ?: emptyList()
-                                if (channels.isNotEmpty()) {
-                                    categoryChannelMap[category] = channels.sortedBy { it.order.value }
+                                categoryChannelMap[category] = channels.sortedBy { it.order.value }
+                                if (channels.isEmpty()) {
+                                    android.util.Log.d("GetProjectStructureUseCase", "Category ${category.name.value} has 0 channels (empty category included)")
+                                } else {
                                     android.util.Log.d("GetProjectStructureUseCase", "Category ${category.name.value} has ${channels.size} channels")
                                 }
                             }
