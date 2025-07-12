@@ -104,6 +104,7 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
     override suspend fun invoke(projectId: DocumentId): Flow<CustomResult<ProjectStructureData, Exception>> {
         return categoryRepository.observeAll()
             .flatMapLatest { categoryResult ->
+                android.util.Log.d("GetProjectStructureUseCase", "Category result for project ${projectId.value}: $categoryResult")
                 when (categoryResult) {
                     is CustomResult.Success -> {
                         val categories = categoryResult.data
@@ -111,10 +112,15 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
                             .filter { it.isCategory.value } // 실제 카테고리만 필터링
                             .sortedBy { it.order.value }
                         
+                        android.util.Log.d("GetProjectStructureUseCase", "Found ${categories.size} categories for project ${projectId.value}")
+                        
                         // 각 카테고리별로 채널을 가져오고 통합 (Flow 반환)
                         buildProjectStructure(projectId, categories)
                     }
-                    is CustomResult.Failure -> kotlinx.coroutines.flow.flowOf(CustomResult.Failure(categoryResult.error))
+                    is CustomResult.Failure -> {
+                        android.util.Log.e("GetProjectStructureUseCase", "Failed to load categories for project ${projectId.value}", categoryResult.error)
+                        kotlinx.coroutines.flow.flowOf(CustomResult.Failure(categoryResult.error))
+                    }
                     is CustomResult.Loading -> kotlinx.coroutines.flow.flowOf(CustomResult.Loading)
                     is CustomResult.Initial -> kotlinx.coroutines.flow.flowOf(CustomResult.Initial)
                     is CustomResult.Progress -> kotlinx.coroutines.flow.flowOf(CustomResult.Progress(categoryResult.progress))
@@ -135,16 +141,20 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
         // 모든 프로젝트 채널을 한 번에 가져와서 groupBy로 분류
         return projectChannelRepository.observeAll()
             .map { channelResult ->
+                android.util.Log.d("GetProjectStructureUseCase", "Channel result for project ${projectId.value}: $channelResult")
                 when (channelResult) {
                     is CustomResult.Success -> {
                         try {
                             val allChannels = channelResult.data.filterIsInstance<ProjectChannel>()
+                            android.util.Log.d("GetProjectStructureUseCase", "Found ${allChannels.size} channels for project ${projectId.value}")
                             
                             // categoryId로 채널들을 그룹핑
                             val channelsByCategory = allChannels.groupBy { it.categoryId.value }
+                            android.util.Log.d("GetProjectStructureUseCase", "Channels grouped by category: ${channelsByCategory.keys}")
                             
                             // 직접 채널 (NoCategory)
                             val directChannels = channelsByCategory[Category.NO_CATEGORY_ID] ?: emptyList()
+                            android.util.Log.d("GetProjectStructureUseCase", "Direct channels count: ${directChannels.size}")
                             
                             // 카테고리별 채널 맵 생성
                             val categoryChannelMap = mutableMapOf<Category, List<ProjectChannel>>()
@@ -152,21 +162,28 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
                                 val channels = channelsByCategory[category.id.value] ?: emptyList()
                                 if (channels.isNotEmpty()) {
                                     categoryChannelMap[category] = channels.sortedBy { it.order.value }
+                                    android.util.Log.d("GetProjectStructureUseCase", "Category ${category.name.value} has ${channels.size} channels")
                                 }
                             }
                             
-                            CustomResult.Success(
-                                ProjectStructureData(
-                                    categoryChannelMap = categoryChannelMap.toMap(),
-                                    directChannels = directChannels.sortedBy { it.order.value },
-                                    projectId = projectId
-                                )
+                            val result = ProjectStructureData(
+                                categoryChannelMap = categoryChannelMap.toMap(),
+                                directChannels = directChannels.sortedBy { it.order.value },
+                                projectId = projectId
                             )
+                            
+                            android.util.Log.d("GetProjectStructureUseCase", "Built project structure: ${categoryChannelMap.size} categories with channels, ${directChannels.size} direct channels")
+                            
+                            CustomResult.Success(result)
                         } catch (e: Exception) {
+                            android.util.Log.e("GetProjectStructureUseCase", "Error building project structure for ${projectId.value}", e)
                             CustomResult.Failure(e)
                         }
                     }
-                    is CustomResult.Failure -> channelResult
+                    is CustomResult.Failure -> {
+                        android.util.Log.e("GetProjectStructureUseCase", "Failed to load channels for project ${projectId.value}", channelResult.error)
+                        channelResult
+                    }
                     is CustomResult.Loading -> CustomResult.Loading
                     is CustomResult.Initial -> CustomResult.Initial
                     is CustomResult.Progress -> CustomResult.Progress(channelResult.progress)

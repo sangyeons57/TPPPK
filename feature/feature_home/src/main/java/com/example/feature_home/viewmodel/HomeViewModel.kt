@@ -348,13 +348,18 @@ class HomeViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e("HomeViewModel", "Unexpected error in loadProjects", e)
-                _uiState.update {
-                    it.copy(
-                        projects = emptyList(),
-                        isLoading = false,
-                        errorMessage = "default"
-                    )
+                // JobCancellationException은 정상적인 취소이므로 에러가 아님
+                if (e is kotlinx.coroutines.JobCancellationException) {
+                    Log.d("HomeViewModel", "loadProjects job was cancelled (normal behavior)")
+                } else {
+                    Log.e("HomeViewModel", "Unexpected error in loadProjects", e)
+                    _uiState.update {
+                        it.copy(
+                            projects = emptyList(),
+                            isLoading = false,
+                            errorMessage = "프로젝트를 불러오는 중 오류가 발생했습니다."
+                        )
+                    }
                 }
             }
         }
@@ -500,13 +505,18 @@ class HomeViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e("HomeViewModel", "Unexpected error in loadDms", e)
-                _uiState.update {
-                    it.copy(
-                        dms = emptyList(),
-                        isLoading = false,
-                        errorMessage = "default"
-                    )
+                // JobCancellationException은 정상적인 취소이므로 에러가 아님
+                if (e is kotlinx.coroutines.JobCancellationException) {
+                    Log.d("HomeViewModel", "loadDms job was cancelled (normal behavior)")
+                } else {
+                    Log.e("HomeViewModel", "Unexpected error in loadDms", e)
+                    _uiState.update {
+                        it.copy(
+                            dms = emptyList(),
+                            isLoading = false,
+                            errorMessage = "DM을 불러오는 중 오류가 발생했습니다."
+                        )
+                    }
                 }
             }
         }
@@ -611,87 +621,107 @@ class HomeViewModel @Inject constructor(
     
     // 프로젝트 구조 (카테고리 및 채널) 로드
     private fun loadProjectStructure(projectId: DocumentId) {
+        projectStructureJob?.cancel()
         projectStructureUseCases = projectStructureUseCaseProvider.createForCurrentUser(projectId = projectId)
-        viewModelScope.launch {
-            Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
-            if (::projectStructureUseCases.isInitialized) {
-                // 새로운 통합 UseCase 사용
-                projectStructureUseCases.getProjectStructureUseCase(projectId).collectLatest { result ->
-                    Log.d("HomeViewModel", "Received project structure result: $result")
-                    when (result) {
-                        is CustomResult.Loading -> {
-                            _uiState.update { state ->
-                                state.copy(
-                                    projectStructure = ProjectStructureUiState.loading()
-                                )
-                            }
-                        }
-
-                        is CustomResult.Success -> {
-                            val structureData = result.data
-                            val categoriesMap =
-                                categoryExpandedStates.getOrPut(projectId.value) { mutableMapOf() }
-                            
-                            // 확장된 카테고리 ID 목록 생성
-                            val expandedCategoryIds = categoriesMap.filterValues { it }.keys.toSet()
-                            
-                            // 선택된 채널 ID 가져오기
-                            val selectedChannelId = _uiState.value.projectStructure.selectedChannelId
-                            
-                            // 통합된 구조를 UI 상태로 변환
-                            val newProjectStructure = ProjectStructureUiState.fromDomain(
-                                data = structureData,
-                                expandedCategoryIds = expandedCategoryIds,
-                                selectedChannelId = selectedChannelId
-                            )
-                            
-                            _uiState.update { state ->
-                                state.copy(projectStructure = newProjectStructure)
-                            }
-                            
-                            Log.d("HomeViewModel", "Project structure loaded: ${structureData.getCategoryCount()} categories, ${structureData.getTotalChannelCount()} total channels")
-                        }
-
-                        is CustomResult.Failure -> {
-                            Log.e(
-                                "HomeViewModel",
-                                "Failed to load project structure for $projectId",
-                                result.error
-                            )
-                            _uiState.update { state ->
-                                state.copy(
-                                    projectStructure = ProjectStructureUiState.error(
-                                        result.error.message ?: "프로젝트 구조를 가져오지 못했습니다."
+        projectStructureJob = viewModelScope.launch {
+            try {
+                Log.d("HomeViewModel", "loadProjectStructure called for projectId: $projectId")
+                if (::projectStructureUseCases.isInitialized) {
+                    // 새로운 통합 UseCase 사용
+                    projectStructureUseCases.getProjectStructureUseCase(projectId).collectLatest { result ->
+                        Log.d("HomeViewModel", "Received project structure result: $result")
+                        when (result) {
+                            is CustomResult.Loading -> {
+                                _uiState.update { state ->
+                                    state.copy(
+                                        projectStructure = ProjectStructureUiState.loading()
                                     )
-                                )
+                                }
                             }
-                        }
 
-                        is CustomResult.Initial -> {
-                            _uiState.update { state ->
-                                state.copy(
-                                    projectStructure = ProjectStructureUiState.loading()
+                            is CustomResult.Success -> {
+                                val structureData = result.data
+                                val categoriesMap =
+                                    categoryExpandedStates.getOrPut(projectId.value) { mutableMapOf() }
+                                
+                                // 확장된 카테고리 ID 목록 생성
+                                val expandedCategoryIds = categoriesMap.filterValues { it }.keys.toSet()
+                                
+                                // 선택된 채널 ID 가져오기
+                                val selectedChannelId = _uiState.value.projectStructure.selectedChannelId
+                                
+                                // 통합된 구조를 UI 상태로 변환
+                                val newProjectStructure = ProjectStructureUiState.fromDomain(
+                                    data = structureData,
+                                    expandedCategoryIds = expandedCategoryIds,
+                                    selectedChannelId = selectedChannelId
                                 )
+                                
+                                _uiState.update { state ->
+                                    state.copy(projectStructure = newProjectStructure)
+                                }
+                                
+                                Log.d("HomeViewModel", "Project structure loaded: ${structureData.getCategoryCount()} categories, ${structureData.getTotalChannelCount()} total channels")
                             }
-                            Log.d("HomeViewModel", "Project structure loading initial state.")
-                        }
 
-                        is CustomResult.Progress -> {
-                            val progressValue = result.progress
-                            Log.d(
-                                "HomeViewModel",
-                                "Project structure loading progress: $progressValue%"
-                            )
-                            _uiState.update { state ->
-                                state.copy(
-                                    projectStructure = ProjectStructureUiState.loading()
+                            is CustomResult.Failure -> {
+                                Log.e(
+                                    "HomeViewModel",
+                                    "Failed to load project structure for $projectId",
+                                    result.error
                                 )
+                                _uiState.update { state ->
+                                    state.copy(
+                                        projectStructure = ProjectStructureUiState.error(
+                                            result.error.message ?: "프로젝트 구조를 가져오지 못했습니다."
+                                        )
+                                    )
+                                }
+                            }
+
+                            is CustomResult.Initial -> {
+                                _uiState.update { state ->
+                                    state.copy(
+                                        projectStructure = ProjectStructureUiState.loading()
+                                    )
+                                }
+                                Log.d("HomeViewModel", "Project structure loading initial state.")
+                            }
+
+                            is CustomResult.Progress -> {
+                                val progressValue = result.progress
+                                Log.d(
+                                    "HomeViewModel",
+                                    "Project structure loading progress: $progressValue%"
+                                )
+                                _uiState.update { state ->
+                                    state.copy(
+                                        projectStructure = ProjectStructureUiState.loading()
+                                    )
+                                }
                             }
                         }
                     }
+                } else {
+                    Log.w("HomeViewModel", "projectStructureUseCases not initialized yet")
+                    _uiState.update { state ->
+                        state.copy(
+                            projectStructure = ProjectStructureUiState.error("프로젝트 구조 초기화 실패")
+                        )
+                    }
                 }
-            } else {
-                Log.w("HomeViewModel", "projectStructureUseCases not initialized yet")
+            } catch (e: Exception) {
+                // JobCancellationException은 정상적인 취소이므로 에러가 아님
+                if (e is kotlinx.coroutines.JobCancellationException) {
+                    Log.d("HomeViewModel", "loadProjectStructure job was cancelled (normal behavior)")
+                } else {
+                    Log.e("HomeViewModel", "Unexpected error in loadProjectStructure", e)
+                    _uiState.update { state ->
+                        state.copy(
+                            projectStructure = ProjectStructureUiState.error("프로젝트 구조 로딩 중 오류가 발생했습니다.")
+                        )
+                    }
+                }
             }
         }
     }
