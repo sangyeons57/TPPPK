@@ -12,19 +12,28 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
 }
 
-// Configure Java toolchain for all subprojects
-allprojects {
-    tasks.withType<JavaCompile>().configureEach {
-        options.release.set(17)
-    }
-}
-
-// Ensure all projects use JDK 17 toolchain
+// Configure JDK 17 for all subprojects (centralized configuration)
 subprojects {
     afterEvaluate {
+        // Java toolchain configuration
         extensions.findByType<JavaPluginExtension>()?.apply {
             toolchain {
                 languageVersion.set(JavaLanguageVersion.of(17))
+            }
+        }
+        
+        // Kotlin compile options (applies to all Kotlin-enabled modules)
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+        
+        // Android compile options (applies to Android modules)
+        extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
             }
         }
     }

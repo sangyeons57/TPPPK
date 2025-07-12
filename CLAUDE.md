@@ -33,7 +33,7 @@ docker run --rm android-kotlin-slim ./gradlew assembleDebug --no-daemon
 ## Build Configuration
 
 ### Core Versions
-- **Kotlin**: 2.1.0 | **AGP**: 8.10.1 | **JVM**: 17
+- **Kotlin**: 2.1.0 | **AGP**: 8.10.1 | **JVM**: 17 (centralized configuration)
 - **Compile/Target SDK**: 36 | **Min SDK**: 29
 - **Compose BOM**: 2025.06.01 | **Hilt**: 2.56.2
 - **Firebase BOM**: 33.16.0 | **Room**: 2.7.2
@@ -254,6 +254,16 @@ docker run --rm android-kotlin-slim ./gradlew build --no-daemon
 # Solution 3: Set org.gradle.java.home in gradle.properties
 # Uncomment and set the correct path in gradle.properties:
 # org.gradle.java.home=/usr/lib/jvm/java-17-openjdk-amd64
+```
+
+**Android Gradle Plugin --release option error:**
+```bash
+# Error: Using '--release' option for JavaCompile is not supported because it prevents 
+# the Android Gradle plugin from setting up the bootclasspath
+
+# Solution: Removed from build.gradle.kts
+# Use Java toolchain configuration instead of --release option
+# Android projects should rely on sourceCompatibility/targetCompatibility in app/build.gradle.kts
 ```
 
 **Docker not available:**
