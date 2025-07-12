@@ -40,10 +40,9 @@ class ProjectChannelUseCaseProvider @Inject constructor(
      * 특정 프로젝트의 채널 관리 UseCase들을 생성합니다.
      * 
      * @param projectId 프로젝트 ID
-     * @param categoryId 카테고리 ID
      * @return 프로젝트 채널 관리 UseCase 그룹
      */
-    fun createForProject(projectId: DocumentId, categoryId: DocumentId): ProjectChannelUseCases {
+    fun createForProject(projectId: DocumentId): ProjectChannelUseCases {
         // repository 생성은 viewmodel 에서 해야함
         // 정확히는 provider 에서 해야함 provider를 viemodel 에서 주입받고
         val categoryRepository = categoryRepositoryFactory.create(
@@ -104,23 +103,21 @@ class ProjectChannelUseCaseProvider @Inject constructor(
      * 현재 사용자를 위한 프로젝트 채널 관리 UseCase들을 생성합니다.
      * 
      * @param projectId 프로젝트 ID
-     * @param categoryId 카테고리 ID
      * @return 프로젝트 채널 관리 UseCase 그룹
      */
-    fun createForCurrentUser(projectId: DocumentId, categoryId: DocumentId): ProjectChannelUseCases {
-        return createForProject(projectId, categoryId)
+    fun createForCurrentUser(projectId: DocumentId): ProjectChannelUseCases {
+        return createForProject(projectId)
     }
 
     /**
      * 특정 채널에 대한 UseCase들을 생성합니다.
      * 
      * @param projectId 프로젝트 ID
-     * @param categoryId 카테고리 ID
      * @param channelId 채널 ID
      * @return 채널별 UseCase 그룹
      */
-    fun createForChannel(projectId: DocumentId, categoryId: DocumentId, channelId: String): ProjectChannelUseCases {
-        return createForProject(projectId, categoryId)
+    fun createForChannel(projectId: DocumentId, channelId: String): ProjectChannelUseCases {
+        return createForProject(projectId)
     }
 }
 

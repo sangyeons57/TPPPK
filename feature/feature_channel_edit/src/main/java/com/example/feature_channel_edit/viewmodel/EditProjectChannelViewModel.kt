@@ -97,7 +97,7 @@ class EditProjectChannelViewModel @Inject constructor(
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectChannelUseCases = projectId?.let {
-        projectChannelUseCaseProvider.createForProject(DocumentId(projectId), DocumentId(categoryId))
+        projectChannelUseCaseProvider.createForProject(DocumentId(projectId))
     }
     private val projectStructureUseCases = projectId?.let {
         projectStructureUseCaseProvider.createForProject(DocumentId(it))

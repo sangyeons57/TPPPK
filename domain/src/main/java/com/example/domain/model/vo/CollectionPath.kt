@@ -96,7 +96,6 @@ value class CollectionPath(val value: String) {
             CollectionPath("${projectChannelMessage(projectId, channelId, messageId).value}/${MessageAttachment.COLLECTION_NAME}")
         fun projectMessageAttachment(
             projectId: String,
-            categoryId: String,
             channelId: String,
             messageId: String,
             attachmentId: String
