@@ -349,7 +349,7 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 // JobCancellationException은 정상적인 취소이므로 에러가 아님
-                if (e is kotlinx.coroutines.JobCancellationException) {
+                if (e is kotlinx.coroutines.CancellationException) {
                     Log.d("HomeViewModel", "loadProjects job was cancelled (normal behavior)")
                 } else {
                     Log.e("HomeViewModel", "Unexpected error in loadProjects", e)
@@ -506,7 +506,7 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 // JobCancellationException은 정상적인 취소이므로 에러가 아님
-                if (e is kotlinx.coroutines.JobCancellationException) {
+                if (e is kotlinx.coroutines.CancellationException) {
                     Log.d("HomeViewModel", "loadDms job was cancelled (normal behavior)")
                 } else {
                     Log.e("HomeViewModel", "Unexpected error in loadDms", e)
@@ -712,7 +712,7 @@ class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 // JobCancellationException은 정상적인 취소이므로 에러가 아님
-                if (e is kotlinx.coroutines.JobCancellationException) {
+                if (e is kotlinx.coroutines.CancellationException) {
                     Log.d("HomeViewModel", "loadProjectStructure job was cancelled (normal behavior)")
                 } else {
                     Log.e("HomeViewModel", "Unexpected error in loadProjectStructure", e)
