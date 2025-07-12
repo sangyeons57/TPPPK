@@ -256,6 +256,30 @@ docker run --rm android-kotlin-slim ./gradlew build --no-daemon
 # org.gradle.java.home=/usr/lib/jvm/java-17-openjdk-amd64
 ```
 
+**SDK location not found error:**
+```bash
+# Error: SDK location not found. Define a valid SDK location with an ANDROID_HOME environment variable
+
+# Environment-Independent Solution: Set ANDROID_HOME per environment
+# NO local.properties needed - everything uses environment variables
+
+# Linux/macOS environments:
+export ANDROID_HOME=/opt/nix/store/*/androidsdk/libexec/android-sdk  # Nix environments
+export ANDROID_HOME=/opt/android-sdk                                 # Standard installations
+export ANDROID_HOME=/usr/lib/android-sdk                            # Ubuntu/Debian
+export ANDROID_HOME=$HOME/Android/Sdk                                # User installations
+
+# Windows environments:
+set ANDROID_HOME=C:\Users\%USERNAME%\AppData\Local\Android\Sdk       # Standard
+set ANDROID_HOME=C:\Android\Sdk                                      # Custom
+
+# Docker environments:
+# Android SDK included in Dockerfile.android.slim
+
+# CI/CD environments:
+# Use setup-android actions or appropriate SDK installation steps
+```
+
 **Android Gradle Plugin --release option error:**
 ```bash
 # Error: Using '--release' option for JavaCompile is not supported because it prevents 
