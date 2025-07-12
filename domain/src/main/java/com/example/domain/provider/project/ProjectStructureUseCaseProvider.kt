@@ -5,9 +5,11 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.base.ProjectChannelRepository
 
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCase
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCaseImpl
 import com.example.domain.usecase.project.category.UpdateCategoryUseCase
@@ -18,6 +20,8 @@ import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
 import com.example.domain.usecase.project.structure.DeleteCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCaseImpl
+import com.example.domain.usecase.project.structure.GetProjectStructureUseCase
+import com.example.domain.usecase.project.structure.GetProjectStructureUseCaseImpl
 import com.example.domain.usecase.project.structure.RenameCategoryUseCase
 import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
 import javax.inject.Inject
@@ -31,6 +35,7 @@ import javax.inject.Singleton
 @Singleton
 class ProjectStructureUseCaseProvider @Inject constructor(
     private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
+    private val projectChannelRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
@@ -49,6 +54,11 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             )
         )
 
+        val projectChannelRepository = projectChannelRepositoryFactory.create(
+            ProjectChannelRepositoryFactoryContext(
+                collectionPath = CollectionPath.projectChannels(projectId.value, "")
+            )
+        )
 
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
@@ -73,6 +83,11 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             // 프로젝트 구조 조회 및 변환
             getProjectAllCategoriesUseCase = GetProjectAllCategoriesUseCaseImpl(
                 categoryRepository = categoryRepository
+            ),
+            
+            getProjectStructureUseCase = GetProjectStructureUseCaseImpl(
+                categoryRepository = categoryRepository,
+                projectChannelRepository = projectChannelRepository
             ),
             
 
@@ -116,6 +131,7 @@ data class ProjectStructureUseCases(
 
     // 프로젝트 구조 조회 및 변환
     val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
+    val getProjectStructureUseCase: GetProjectStructureUseCase,
 
     // 구조 업데이트
 
