@@ -186,6 +186,36 @@ useCase().onSuccess { data ->
 
 **Prerequisites**: Android Studio (Ladybug+), JDK 17+, Docker (optional), Firebase CLI, Sentry
 
+### JDK 17 Setup (Hybrid Approach)
+
+**Automatic JDK Management**: The project uses a hybrid approach for maximum compatibility:
+
+1. **First Priority**: Detects locally installed JDK 17
+2. **Fallback**: Automatically downloads JDK 17 if not found locally
+
+**Option 1 - Local Installation (Recommended):**
+```bash
+# Via SDKMAN (recommended for cross-platform)
+curl -s "https://get.sdkman.io" | bash
+sdk install java 17.0.12-tem
+
+# Windows via Chocolatey
+choco install openjdk17
+
+# macOS via Homebrew  
+brew install openjdk@17
+
+# Ubuntu/Debian
+sudo apt install openjdk-17-jdk
+
+# Arch Linux
+sudo pacman -S jdk17-openjdk
+```
+
+**Option 2 - Automatic Download**: If no local JDK 17 is found, Gradle will automatically download and cache JDK 17 using the foojay-resolver plugin.
+
+**Docker Environment**: JDK 17 is pre-installed, uses local detection.
+
 **First Build**:
 1. Download `google-services.json` to `app/`
 2. `./gradlew clean build`

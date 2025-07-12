@@ -11,3 +11,21 @@ plugins {
     alias(libs.plugins.sentry) apply false
     alias(libs.plugins.kotlin.compose) apply false
 }
+
+// Configure Java toolchain for all subprojects
+allprojects {
+    tasks.withType<JavaCompile>().configureEach {
+        options.release.set(17)
+    }
+}
+
+// Ensure all projects use JDK 17 toolchain
+subprojects {
+    afterEvaluate {
+        extensions.findByType<JavaPluginExtension>()?.apply {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(17))
+            }
+        }
+    }
+}
