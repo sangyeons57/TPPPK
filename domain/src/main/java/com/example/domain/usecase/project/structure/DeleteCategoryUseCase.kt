@@ -1,6 +1,7 @@
 package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.ProjectChannelRepository
@@ -38,8 +39,8 @@ class DeleteCategoryUseCaseImpl @Inject constructor(
             when (val channelsResult = projectChannelRepository.observeAll().first()) {
                 is CustomResult.Success -> {
                     val channelsInCategory = channelsResult.data.filter { channel ->
-                        channel.categoryId == categoryId
-                    }
+                        (channel is ProjectChannel) && channel.categoryId == categoryId
+                    }.map{ it as ProjectChannel }
                     
                     // 각 채널을 DELETED 상태로 변경
                     for (channel in channelsInCategory) {

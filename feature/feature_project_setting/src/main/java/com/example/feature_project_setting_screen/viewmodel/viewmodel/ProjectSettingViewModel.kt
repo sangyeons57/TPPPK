@@ -199,9 +199,9 @@ class ProjectSettingViewModel @Inject constructor(
     }
 
     // --- 채널 관련 액션 ---
-    fun requestEditChannel(categoryId: String, channelId: String) {
+    fun requestEditChannel(channelId: String) {
         navigationManger.navigateTo(
-            EditChannelRoute(projectId.value, categoryId, channelId)
+            EditChannelRoute(projectId.value, channelId)
         )
     }
     fun requestDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel

@@ -2,6 +2,7 @@ package com.example.domain.usecase.project.channel
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
+import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.ProjectChannelRepository
 import javax.inject.Inject
@@ -33,10 +34,7 @@ class DeleteChannelUseCaseImpl @Inject constructor(
             // 채널을 soft delete 처리 (DELETED 상태로 변경)
             when (val getResult = projectChannelRepository.findById(channelId)) {
                 is CustomResult.Success -> {
-                    val channel = getResult.data
-                    if (channel == null) {
-                        return CustomResult.Failure(IllegalArgumentException("Channel with ID ${channelId.value} not found"))
-                    }
+                    val channel = getResult.data as ProjectChannel
                     
                     // 채널을 DELETED 상태로 변경 (soft delete)
                     val deletedChannel = channel.markDeleted()

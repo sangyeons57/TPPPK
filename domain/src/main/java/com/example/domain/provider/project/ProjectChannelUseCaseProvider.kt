@@ -21,6 +21,7 @@ import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCaseImpl
 import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCase
+import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
