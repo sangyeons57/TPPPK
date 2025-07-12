@@ -26,14 +26,20 @@ class EditChannelDialogViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<EditChannelDialogEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    fun initialize(channelName: String) {
-        _uiState.value = _uiState.value.copy(channelName = channelName)
+    fun initialize(channelName: String, projectId: String, channelId: String) {
+        _uiState.value = _uiState.value.copy(
+            channelName = channelName,
+            projectId = projectId,
+            channelId = channelId
+        )
     }
 
     fun onEditChannelClick() {
+        val state = _uiState.value
+        if (state.projectId.isNotEmpty() && state.channelId.isNotEmpty()) {
+            navigationManger.navigateToEditChannel(state.projectId, state.channelId)
+        }
         viewModelScope.launch {
-            // TODO: Navigate to actual channel edit screen
-            _eventFlow.emit(EditChannelDialogEvent.NavigateToEditChannel)
             _eventFlow.emit(EditChannelDialogEvent.DismissDialog)
         }
     }
@@ -50,6 +56,8 @@ class EditChannelDialogViewModel @Inject constructor(
  */
 data class EditChannelDialogUiState(
     val channelName: String = "",
+    val projectId: String = "",
+    val channelId: String = "",
     val isLoading: Boolean = false,
     val error: String? = null
 )

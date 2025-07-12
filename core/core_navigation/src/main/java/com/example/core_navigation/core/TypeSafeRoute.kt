@@ -124,14 +124,12 @@ data class CreateChannelRoute(
 @Serializable
 data class EditChannelRoute(
     val projectId: String,
-    val categoryId: String,
     val channelId: String
 ) : TypeSafeRoute {
     companion object {
-        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/category/{${RouteArgs.CATEGORY_ID}}/channel/edit/{${RouteArgs.CHANNEL_ID}}"
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/channel/edit/{${RouteArgs.CHANNEL_ID}}"
         val arguments = listOf(
             navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
-            navArgument(RouteArgs.CATEGORY_ID) { type = NavType.StringType },
             navArgument(RouteArgs.CHANNEL_ID) { type = NavType.StringType }
         )
     }
@@ -352,7 +350,7 @@ object TypeSafeRouteCompat {
         is CreateCategoryRoute -> "project/$projectId/category/create"
         is EditCategoryRoute -> "project/$projectId/category/edit/$categoryId"
         is CreateChannelRoute -> "project/$projectId/category/$categoryId/channel/create"
-        is EditChannelRoute -> "project/$projectId/category/$categoryId/channel/edit/$channelId"
+        is EditChannelRoute -> "project/$projectId/channel/edit/$channelId"
         
         // Member routes
         is MemberListRoute -> "project/$projectId/members"

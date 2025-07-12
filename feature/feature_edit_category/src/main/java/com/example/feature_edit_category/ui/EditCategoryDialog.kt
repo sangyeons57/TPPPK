@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.collectLatest
  * HiltViewModel을 사용하여 비즈니스 로직을 처리합니다.
  *
  * @param categoryName 현재 선택된 카테고리 이름
+ * @param projectId 프로젝트 ID
+ * @param categoryId 카테고리 ID
  * @param onDismissRequest 다이얼로그 닫기 요청 콜백
  * @param onNavigateToEditCategory 카테고리 편집 화면으로 이동 콜백
  * @param onNavigateToCreateChannel 채널 생성 화면으로 이동 콜백
@@ -28,6 +30,8 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun EditCategoryDialog(
     categoryName: String,
+    projectId: String,
+    categoryId: String,
     onDismissRequest: () -> Unit,
     onNavigateToEditCategory: () -> Unit = {},
     onNavigateToCreateChannel: () -> Unit = {},
@@ -36,8 +40,8 @@ fun EditCategoryDialog(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // 카테고리 이름 초기화
-    LaunchedEffect(categoryName) {
-        viewModel.initialize(categoryName)
+    LaunchedEffect(categoryName, projectId, categoryId) {
+        viewModel.initialize(categoryName, projectId, categoryId)
     }
 
     // 이벤트 처리
@@ -88,6 +92,8 @@ private fun EditCategoryDialogPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditCategoryDialog(
             categoryName = "일반",
+            projectId = "project123",
+            categoryId = "category123",
             onDismissRequest = {},
             onNavigateToEditCategory = {},
             onNavigateToCreateChannel = {}

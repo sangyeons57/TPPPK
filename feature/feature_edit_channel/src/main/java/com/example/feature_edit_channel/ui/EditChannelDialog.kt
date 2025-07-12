@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.collectLatest
  * HiltViewModel을 사용하여 비즈니스 로직을 처리합니다.
  *
  * @param channelName 현재 선택된 채널 이름
+ * @param projectId 프로젝트 ID
+ * @param channelId 채널 ID
  * @param onDismissRequest 다이얼로그 닫기 요청 콜백
  * @param onNavigateToEditChannel 채널 편집 화면으로 이동 콜백
  * @param viewModel EditChannelDialogViewModel 인스턴스
@@ -26,6 +28,8 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun EditChannelDialog(
     channelName: String,
+    projectId: String,
+    channelId: String,
     onDismissRequest: () -> Unit,
     onNavigateToEditChannel: () -> Unit = {},
     viewModel: EditChannelDialogViewModel = hiltViewModel()
@@ -33,8 +37,8 @@ fun EditChannelDialog(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // 채널 이름 초기화
-    LaunchedEffect(channelName) {
-        viewModel.initialize(channelName)
+    LaunchedEffect(channelName, projectId, channelId) {
+        viewModel.initialize(channelName, projectId, channelId)
     }
 
     // 이벤트 처리
@@ -78,6 +82,8 @@ private fun EditChannelDialogPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditChannelDialog(
             channelName = "일반 대화",
+            projectId = "project123",
+            channelId = "channel123",
             onDismissRequest = {},
             onNavigateToEditChannel = {}
         )

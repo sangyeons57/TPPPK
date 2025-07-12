@@ -324,6 +324,14 @@ class NavigationManagerImpl @Inject constructor(
         executeNavigationOnParent(EditScheduleRoute(scheduleId).toAppRoutePath(), navOptions)
     }
 
+    override fun navigateToEditCategory(projectId: String, categoryId: String, navOptions: NavOptions?) {
+        executeNavigationOnParent(EditCategoryRoute(projectId, categoryId).toAppRoutePath(), navOptions)
+    }
+
+    override fun navigateToEditChannel(projectId: String, channelId: String, navOptions: NavOptions?) {
+        executeNavigationOnParent(EditChannelRoute(projectId, channelId).toAppRoutePath(), navOptions)
+    }
+
     override fun navigateToAcceptFriends(navOptions: NavOptions?) {
         executeNavigationOnParent(AcceptFriendsRoute.toAppRoutePath(), navOptions)
     }

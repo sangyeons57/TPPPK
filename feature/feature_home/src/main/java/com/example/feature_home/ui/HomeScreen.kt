@@ -127,6 +127,10 @@ fun HomeScreen(
     var showEditChannelDialog by remember { mutableStateOf(false) }
     var editCategoryName by remember { mutableStateOf("") }
     var editChannelName by remember { mutableStateOf("") }
+    var editCategoryProjectId by remember { mutableStateOf("") }
+    var editCategoryId by remember { mutableStateOf("") }
+    var editChannelProjectId by remember { mutableStateOf("") }
+    var editChannelId by remember { mutableStateOf("") }
 
     // 상태 복원 (탭 전환 시)
     LaunchedEffect(savedState) {
@@ -231,6 +235,8 @@ fun HomeScreen(
                     val category = uiState.projectStructure.categories.find { it.id == event.categoryId }
                     if (category != null) {
                         editCategoryName = category.name.value
+                        editCategoryProjectId = event.projectId.value
+                        editCategoryId = event.categoryId.value
                         showEditCategoryDialog = true
                     }
                 }
@@ -241,6 +247,8 @@ fun HomeScreen(
                         .find { it.id.value == event.channelId }
                     if (channel != null) {
                         editChannelName = channel.name.value
+                        editChannelProjectId = event.projectId.value
+                        editChannelId = event.channelId
                         showEditChannelDialog = true
                     }
                 }
@@ -315,9 +323,11 @@ fun HomeScreen(
             if (showEditCategoryDialog) {
                 EditCategoryDialog(
                     categoryName = editCategoryName,
+                    projectId = editCategoryProjectId,
+                    categoryId = editCategoryId,
                     onDismissRequest = { showEditCategoryDialog = false },
                     onNavigateToEditCategory = {
-                        // TODO: Navigate to actual category edit screen
+                        // Navigation handled by ViewModel
                     },
                     onNavigateToCreateChannel = {
                         // Open AddProjectElementDialog for channel creation
@@ -331,9 +341,11 @@ fun HomeScreen(
             if (showEditChannelDialog) {
                 EditChannelDialog(
                     channelName = editChannelName,
+                    projectId = editChannelProjectId,
+                    channelId = editChannelId,
                     onDismissRequest = { showEditChannelDialog = false },
                     onNavigateToEditChannel = {
-                        // TODO: Navigate to actual channel edit screen
+                        // Navigation handled by ViewModel
                     }
                 )
             }
@@ -404,9 +416,11 @@ fun HomeScreen(
             if (showEditCategoryDialog) {
                 EditCategoryDialog(
                     categoryName = editCategoryName,
+                    projectId = editCategoryProjectId,
+                    categoryId = editCategoryId,
                     onDismissRequest = { showEditCategoryDialog = false },
                     onNavigateToEditCategory = {
-                        // TODO: Navigate to actual category edit screen
+                        // Navigation handled by ViewModel
                     },
                     onNavigateToCreateChannel = {
                         // Open AddProjectElementDialog for channel creation
@@ -420,9 +434,11 @@ fun HomeScreen(
             if (showEditChannelDialog) {
                 EditChannelDialog(
                     channelName = editChannelName,
+                    projectId = editChannelProjectId,
+                    channelId = editChannelId,
                     onDismissRequest = { showEditChannelDialog = false },
                     onNavigateToEditChannel = {
-                        // TODO: Navigate to actual channel edit screen
+                        // Navigation handled by ViewModel
                     }
                 )
             }

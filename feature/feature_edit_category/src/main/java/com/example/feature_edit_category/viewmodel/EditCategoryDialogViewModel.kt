@@ -26,14 +26,20 @@ class EditCategoryDialogViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<EditCategoryDialogEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
-    fun initialize(categoryName: String) {
-        _uiState.value = _uiState.value.copy(categoryName = categoryName)
+    fun initialize(categoryName: String, projectId: String, categoryId: String) {
+        _uiState.value = _uiState.value.copy(
+            categoryName = categoryName,
+            projectId = projectId,
+            categoryId = categoryId
+        )
     }
 
     fun onEditCategoryClick() {
+        val state = _uiState.value
+        if (state.projectId.isNotEmpty() && state.categoryId.isNotEmpty()) {
+            navigationManger.navigateToEditCategory(state.projectId, state.categoryId)
+        }
         viewModelScope.launch {
-            // TODO: Navigate to actual category edit screen
-            _eventFlow.emit(EditCategoryDialogEvent.NavigateToEditCategory)
             _eventFlow.emit(EditCategoryDialogEvent.DismissDialog)
         }
     }
@@ -58,6 +64,8 @@ class EditCategoryDialogViewModel @Inject constructor(
  */
 data class EditCategoryDialogUiState(
     val categoryName: String = "",
+    val projectId: String = "",
+    val categoryId: String = "",
     val isLoading: Boolean = false,
     val error: String? = null
 )
