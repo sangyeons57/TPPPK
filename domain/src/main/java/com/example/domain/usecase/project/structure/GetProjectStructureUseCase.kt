@@ -9,6 +9,7 @@ import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -103,7 +104,7 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
      */
     override suspend fun invoke(projectId: DocumentId): Flow<CustomResult<ProjectStructureData, Exception>> {
         return categoryRepository.observeAll()
-            .map { categoryResult ->
+            .flatMapLatest { categoryResult ->
                 when (categoryResult) {
                     is CustomResult.Success -> {
                         val categories = categoryResult.data
@@ -111,13 +112,13 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
                             .filter { it.isCategory.value } // 실제 카테고리만 필터링
                             .sortedBy { it.order.value }
                         
-                        // 각 카테고리별로 채널을 가져오고 통합
+                        // 각 카테고리별로 채널을 가져오고 통합 (Flow 반환)
                         buildProjectStructure(projectId, categories)
                     }
-                    is CustomResult.Failure -> CustomResult.Failure(categoryResult.error)
-                    is CustomResult.Loading -> CustomResult.Loading
-                    is CustomResult.Initial -> CustomResult.Initial
-                    is CustomResult.Progress -> CustomResult.Progress(categoryResult.progress)
+                    is CustomResult.Failure -> kotlinx.coroutines.flow.flowOf(CustomResult.Failure(categoryResult.error))
+                    is CustomResult.Loading -> kotlinx.coroutines.flow.flowOf(CustomResult.Loading)
+                    is CustomResult.Initial -> kotlinx.coroutines.flow.flowOf(CustomResult.Initial)
+                    is CustomResult.Progress -> kotlinx.coroutines.flow.flowOf(CustomResult.Progress(categoryResult.progress))
                 }
             }
     }
@@ -125,8 +126,9 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
     /**
      * 카테고리 목록을 기반으로 프로젝트 구조를 빌드합니다.
      * 각 카테고리별로 채널을 가져오고 직접 채널도 포함합니다.
+     * 실시간 업데이트를 위해 Flow를 반환합니다.
      */
-    private suspend fun buildProjectStructure(
+    private fun buildProjectStructure(
         projectId: DocumentId,
         categories: List<Category>
     ): Flow<CustomResult<ProjectStructureData, Exception>> {
