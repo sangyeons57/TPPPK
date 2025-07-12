@@ -231,6 +231,31 @@ sudo pacman -S jdk17-openjdk
 
 **Common Issues:**
 
+**JAVA_HOME not set error:**
+```bash
+# Error: JAVA_HOME is not set and no 'java' command could be found in your PATH
+
+# Solution 1: Install JDK 17 locally (recommended)
+# Ubuntu/Debian
+sudo apt update && sudo apt install openjdk-17-jdk
+
+# Set JAVA_HOME temporarily
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH=$JAVA_HOME/bin:$PATH
+
+# Make it permanent (add to ~/.bashrc or ~/.zshrc)
+echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
+echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
+
+# Solution 2: Use Docker build (if Docker available)
+docker build -f Dockerfile.android.slim -t android-kotlin-slim .
+docker run --rm android-kotlin-slim ./gradlew build --no-daemon
+
+# Solution 3: Set org.gradle.java.home in gradle.properties
+# Uncomment and set the correct path in gradle.properties:
+# org.gradle.java.home=/usr/lib/jvm/java-17-openjdk-amd64
+```
+
 **Docker not available:**
 ```bash
 # Check Docker Desktop is running (Windows)
