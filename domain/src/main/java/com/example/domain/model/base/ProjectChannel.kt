@@ -19,7 +19,7 @@ class ProjectChannel private constructor(
     initialOrder: ProjectChannelOrder,
     initialChannelType: ProjectChannelType,
     initialStatus: ProjectChannelStatus,
-    initialCategoryId: DocumentId?,
+    initialCategoryId: DocumentId,
     override val id: DocumentId,
     override val isNew: Boolean,
     override val createdAt: Instant,
@@ -34,7 +34,7 @@ class ProjectChannel private constructor(
         private set
     var status: ProjectChannelStatus = initialStatus
         private set
-    var categoryId: DocumentId? = initialCategoryId
+    var categoryId: DocumentId = initialCategoryId
         private set
 
     init {
@@ -47,7 +47,7 @@ class ProjectChannel private constructor(
             KEY_CHANNEL_TYPE to this.channelType.value,
             KEY_ORDER to this.order.value,
             KEY_STATUS to this.status.value,
-            KEY_CATEGORY_ID to this.categoryId?.value,
+            KEY_CATEGORY_ID to this.categoryId.value,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_CREATED_AT to this.createdAt
         )
@@ -86,11 +86,11 @@ class ProjectChannel private constructor(
 
     /**
      * Moves the channel to a different category.
-     * Use null for NoCategory (project-level channels).
+     * Use Constants.NO_CATEGORY_ID for NoCategory (project-level channels).
      *
-     * @param newCategoryId The ID of the target category, or null for NoCategory
+     * @param newCategoryId The ID of the target category, or Constants.NO_CATEGORY_ID for NoCategory
      */
-    fun moveToCategory(newCategoryId: DocumentId?) {
+    fun moveToCategory(newCategoryId: DocumentId) {
         if (this.categoryId == newCategoryId) return
         
         this.categoryId = newCategoryId
@@ -209,7 +209,7 @@ class ProjectChannel private constructor(
             channelType: ProjectChannelType,
             order: ProjectChannelOrder,
             status: ProjectChannelStatus = ProjectChannelStatus.ACTIVE,
-            categoryId: DocumentId? = null
+            categoryId: DocumentId = DocumentId(Category.NO_CATEGORY_ID)
         ): ProjectChannel {
             val channel = ProjectChannel(
                 id = DocumentId.EMPTY,
@@ -234,7 +234,7 @@ class ProjectChannel private constructor(
             order: ProjectChannelOrder,
             channelType: ProjectChannelType,
             status: ProjectChannelStatus = ProjectChannelStatus.ACTIVE,
-            categoryId: DocumentId? = null,
+            categoryId: DocumentId = DocumentId(Category.NO_CATEGORY_ID),
             createdAt: Instant?,
             updatedAt: Instant?
         ): ProjectChannel {

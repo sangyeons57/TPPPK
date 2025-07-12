@@ -91,7 +91,7 @@ class AddProjectChannelUseCaseImpl(
         // TODO: Once we implement the new structure with categoryId field, update this logic
         
         // 3. Calculate the correct order based on whether this is a NoCategory channel or category channel
-        val newOrderValue = if (categoryId.value == Constants.NO_CATEGORY_ID) {
+        val newOrderValue = if (categoryId.value == Category.NO_CATEGORY_ID) {
             // For NoCategory channels: they share order space with categories
             // We need to place them after existing categories and NoCategory channels
             // TODO: Query categories to get their max order for true unified ordering
@@ -101,7 +101,7 @@ class AddProjectChannelUseCaseImpl(
             } else {
                 // Find max order among NoCategory channels and add 1.0
                 val maxNoCategoryChannelOrder = allProjectChannels
-                    .filter { it.categoryId?.value == Constants.NO_CATEGORY_ID }
+                    .filter { it.categoryId.value == Category.NO_CATEGORY_ID }
                     .maxOfOrNull { it.order.value } ?: 0.0
                 maxOf(maxNoCategoryChannelOrder + 1.0, 1.0)
             }

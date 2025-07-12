@@ -8,7 +8,6 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.CategoryRepository
 import com.example.domain.repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -125,7 +124,7 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
 
     /**
      * 카테고리 목록을 기반으로 프로젝트 구조를 빌드합니다.
-     * 각 카테고리별로 채널을 가져오고 직접 채널도 포함합니다.
+     * 모든 채널을 한 번에 가져와서 categoryId로 그룹핑합니다.
      * 실시간 업데이트를 위해 Flow를 반환합니다.
      */
     private fun buildProjectStructure(
@@ -133,82 +132,46 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
         categories: List<Category>
     ): Flow<CustomResult<ProjectStructureData, Exception>> {
         
-        // 모든 카테고리별 채널 Flow를 결합
-        val categoryChannelFlows = categories.map { category ->
-            getCategoryChannels(category.id)
-                .map { channelResult ->
-                    when (channelResult) {
-                        is CustomResult.Success -> category to channelResult.data
-                        is CustomResult.Failure -> category to emptyList<ProjectChannel>()
-                        else -> category to emptyList<ProjectChannel>()
-                    }
-                }
-        }
-
-        // 직접 채널 Flow
-        val directChannelFlow = getCategoryChannels(DocumentId(Constants.NO_CATEGORY_ID))
-            .map { result ->
-                when (result) {
-                    is CustomResult.Success -> result.data
-                    is CustomResult.Failure -> emptyList<ProjectChannel>()
-                    else -> emptyList<ProjectChannel>()
-                }
-            }
-
-        // 모든 Flow를 결합하여 ProjectStructureData 생성
-        return if (categoryChannelFlows.isEmpty()) {
-            // 카테고리가 없는 경우 직접 채널만 반환
-            directChannelFlow.map { directChannels ->
-                CustomResult.Success(
-                    ProjectStructureData(
-                        categoryChannelMap = emptyMap(),
-                        directChannels = directChannels,
-                        projectId = projectId
-                    )
-                )
-            }
-        } else {
-            // 카테고리가 있는 경우 모든 데이터 결합
-            combine(categoryChannelFlows + directChannelFlow) { results ->
-                try {
-                    val directChannels = results.last() as List<ProjectChannel>
-                    val categoryChannelPairs = results.dropLast(1) as List<Pair<Category, List<ProjectChannel>>>
-                    
-                    val categoryChannelMap = categoryChannelPairs.toMap()
-                    
-                    CustomResult.Success(
-                        ProjectStructureData(
-                            categoryChannelMap = categoryChannelMap,
-                            directChannels = directChannels,
-                            projectId = projectId
-                        )
-                    )
-                } catch (e: Exception) {
-                    CustomResult.Failure(e)
-                }
-            }
-        }
-    }
-
-    /**
-     * 특정 카테고리의 채널들을 가져옵니다.
-     */
-    private fun getCategoryChannels(categoryId: DocumentId): Flow<CustomResult<List<ProjectChannel>, Exception>> {
+        // 모든 프로젝트 채널을 한 번에 가져와서 groupBy로 분류
         return projectChannelRepository.observeAll()
-            .map { result ->
-                when (result) {
+            .map { channelResult ->
+                when (channelResult) {
                     is CustomResult.Success -> {
-                        val channels = result.data
-                            .filterIsInstance<ProjectChannel>()
-                            .filter { it.categoryId == categoryId }
-                            .sortedBy { it.order.value }
-                        CustomResult.Success(channels)
+                        try {
+                            val allChannels = channelResult.data.filterIsInstance<ProjectChannel>()
+                            
+                            // categoryId로 채널들을 그룹핑
+                            val channelsByCategory = allChannels.groupBy { it.categoryId.value }
+                            
+                            // 직접 채널 (NoCategory)
+                            val directChannels = channelsByCategory[Category.NO_CATEGORY_ID] ?: emptyList()
+                            
+                            // 카테고리별 채널 맵 생성
+                            val categoryChannelMap = mutableMapOf<Category, List<ProjectChannel>>()
+                            categories.forEach { category ->
+                                val channels = channelsByCategory[category.id.value] ?: emptyList()
+                                if (channels.isNotEmpty()) {
+                                    categoryChannelMap[category] = channels.sortedBy { it.order.value }
+                                }
+                            }
+                            
+                            CustomResult.Success(
+                                ProjectStructureData(
+                                    categoryChannelMap = categoryChannelMap.toMap(),
+                                    directChannels = directChannels.sortedBy { it.order.value },
+                                    projectId = projectId
+                                )
+                            )
+                        } catch (e: Exception) {
+                            CustomResult.Failure(e)
+                        }
                     }
-                    is CustomResult.Failure -> result
+                    is CustomResult.Failure -> channelResult
                     is CustomResult.Loading -> CustomResult.Loading
                     is CustomResult.Initial -> CustomResult.Initial
-                    is CustomResult.Progress -> CustomResult.Progress(result.progress)
+                    is CustomResult.Progress -> CustomResult.Progress(channelResult.progress)
                 }
             }
     }
+
 }

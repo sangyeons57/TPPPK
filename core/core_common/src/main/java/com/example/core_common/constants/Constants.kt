@@ -5,18 +5,6 @@ package com.example.core_common.constants
  */
 object Constants {
     const val DB_NAME = "(default)"
-    const val NO_CATEGORY_ID = "NoCategory" // Changed to Double
-    /**
-     * "카테고리 없음"으로 표시될 기본 카테고리의 이름입니다.
-     * 채널이 특정 카테고리에 속하지 않을 때 이 카테고리에 할당됩니다.
-     */
-    const val NO_CATEGORY_NAME = "카테고리 없음"
-
-    /**
-     * "카테고리 없음" 카테고리의 기본 순서 값입니다.
-     * 일반적으로 가장 낮은 순서 값을 가져 목록의 처음이나 마지막에 정렬되도록 합니다.
-     */
-    const val NO_CATEGORY_ORDER = 0.0 // Changed to Double
 
     /**
      * 채널을 추가할 수 있는 최대 개수입니다. (소수점 두 자리로 표현되므로 00-99까지 100개)
