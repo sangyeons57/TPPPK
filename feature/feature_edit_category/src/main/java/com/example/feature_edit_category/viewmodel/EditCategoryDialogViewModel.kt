@@ -1,5 +1,6 @@
 package com.example.feature_edit_category.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger

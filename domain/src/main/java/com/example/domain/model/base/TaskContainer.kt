@@ -85,7 +85,7 @@ class TaskContainer private constructor(
          * 고정된 TaskContainer ID
          * 통합된 collection에서 container 정의 문서는 항상 이 ID를 사용합니다.
          */
-        const val FIXED_CONTAINER_ID = "container"
+        val FIXED_CONTAINER_ID = DocumentId("container")
 
         /**
          * Factory method for creating a new task container.
@@ -99,7 +99,7 @@ class TaskContainer private constructor(
                 initialStatus = TaskContainerStatus.ACTIVE,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
-                id = DocumentId(FIXED_CONTAINER_ID),
+                id = FIXED_CONTAINER_ID,
                 isNew = true
             )
             return taskContainer

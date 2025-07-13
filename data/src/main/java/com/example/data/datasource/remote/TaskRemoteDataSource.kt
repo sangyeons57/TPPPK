@@ -26,9 +26,11 @@ class TaskRemoteDataSourceImpl @Inject constructor(
      * 모든 task 타입 문서를 관찰합니다.
      * container 타입 문서는 제외됩니다.
      */
-    override fun observeAll(): Flow<List<TaskDTO>> {
-        return super.observeAll().map { documents ->
-            documents.filter { it.type == TaskDTO.TYPE_TASK }
+    override fun observeAll(): Flow<CustomResult<List<TaskDTO>, Exception>> {
+        return super.observeAll().map { result ->
+            result.successProcess { documents ->
+                documents.map{it as TaskDTO}.filter { it.type == TaskDTO.TYPE_TASK }
+            }
         }
     }
     
@@ -41,23 +43,10 @@ class TaskRemoteDataSourceImpl @Inject constructor(
     }
     
     /**
-     * Task 문서를 업데이트합니다.
-     */
-    suspend fun updateTask(taskId: String, fields: Map<String, Any?>): CustomResult<DocumentId, Exception> {
-        return update(taskId, fields)
-    }
-    
-    /**
      * Task 문서를 삭제합니다.
      */
-    suspend fun deleteTask(taskId: String): CustomResult<DocumentId, Exception> {
+    suspend fun deleteTask(taskId: DocumentId): CustomResult<Unit, Exception> {
         return delete(taskId)
     }
-    
-    /**
-     * 특정 task ID로 문서를 관찰합니다.
-     */
-    fun observeTask(taskId: String): Flow<TaskDTO?> {
-        return observeById(taskId)
-    }
+
 }
