@@ -10,9 +10,6 @@ plugins {
     alias(libs.plugins.google.gms) apply false
     alias(libs.plugins.sentry) apply false
     alias(libs.plugins.kotlin.compose) apply false
-    
-    // Toolchain resolver for automatic JDK provisioning
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
 // Configure JDK 17 for all subprojects (centralized configuration)
