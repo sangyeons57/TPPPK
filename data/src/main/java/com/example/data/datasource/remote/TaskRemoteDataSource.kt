@@ -3,7 +3,7 @@ package com.example.data.datasource.remote
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
-import com.example.data.model.remote.TaskContainerUnifiedDTO
+import com.example.data.model.remote.TaskDTO
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
@@ -20,23 +20,23 @@ interface TaskRemoteDataSource : DefaultDatasource
 @Singleton
 class TaskRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<TaskContainerUnifiedDTO>(firestore, TaskContainerUnifiedDTO::class.java), TaskRemoteDataSource {
+) : DefaultDatasourceImpl<TaskDTO>(firestore, TaskDTO::class.java), TaskRemoteDataSource {
     
     /**
      * 모든 task 타입 문서를 관찰합니다.
      * container 타입 문서는 제외됩니다.
      */
-    override fun observeAll(): Flow<List<TaskContainerUnifiedDTO>> {
+    override fun observeAll(): Flow<List<TaskDTO>> {
         return super.observeAll().map { documents ->
-            documents.filter { it.type == TaskContainerUnifiedDTO.TYPE_TASK }
+            documents.filter { it.type == TaskDTO.TYPE_TASK }
         }
     }
     
     /**
      * Task 문서를 생성합니다. 타입을 "task"로 설정합니다.
      */
-    suspend fun createTask(dto: TaskContainerUnifiedDTO): CustomResult<DocumentId, Exception> {
-        val taskDto = dto.copy(type = TaskContainerUnifiedDTO.TYPE_TASK)
+    suspend fun createTask(dto: TaskDTO): CustomResult<DocumentId, Exception> {
+        val taskDto = dto.copy(type = TaskDTO.TYPE_TASK)
         return create(taskDto)
     }
     
@@ -57,7 +57,7 @@ class TaskRemoteDataSourceImpl @Inject constructor(
     /**
      * 특정 task ID로 문서를 관찰합니다.
      */
-    fun observeTask(taskId: String): Flow<TaskContainerUnifiedDTO?> {
+    fun observeTask(taskId: String): Flow<TaskDTO?> {
         return observeById(taskId)
     }
 }

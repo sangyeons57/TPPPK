@@ -3,7 +3,7 @@ package com.example.data.repository.base
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.TaskRemoteDataSource
 import com.example.data.datasource.remote.TaskRemoteDataSourceImpl
-import com.example.data.model.remote.toUnifiedDto
+import com.example.data.model.remote.toDto
 import com.example.data.repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Task
@@ -23,7 +23,7 @@ class TaskRepositoryImpl @Inject constructor(
         ensureCollection()
         return if (entity.isNew) {
             (taskRemoteDataSource as TaskRemoteDataSourceImpl)
-                .createTask(entity.toUnifiedDto())
+                .createTask(entity.toDto())
         } else {
             (taskRemoteDataSource as TaskRemoteDataSourceImpl)
                 .updateTask(entity.id.value, entity.getChangedFields())
