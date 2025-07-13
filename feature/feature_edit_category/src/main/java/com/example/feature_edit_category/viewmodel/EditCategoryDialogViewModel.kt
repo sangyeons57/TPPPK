@@ -32,6 +32,7 @@ class EditCategoryDialogViewModel @Inject constructor(
             projectId = projectId,
             categoryId = categoryId
         )
+        Log.d ("EditCategoryDialogViewModel", "initialize: $categoryName, $projectId, $categoryId")
     }
 
     fun onEditCategoryClick() {
