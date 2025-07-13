@@ -1,13 +1,13 @@
 #!/bin/bash
+set -e
 
 echo "==========Install openjdk-17==========="
 apt-get update
 apt-get install -y openjdk-17-jdk
 
-echo "==========SET JAVA_HOME openjdk-17==========="
+echo "========== Configure Java alternatives ==========="
 update-java-alternatives --list
 update-java-alternatives --set java-1.17.0-openjdk-amd64
-echo $JAVA_HOME
 java -version
 
 echo "========== Persist enviroment variables in ~/.bashrc ==========="
@@ -26,22 +26,22 @@ echo "==========Install Android SDK==========="
 # Download latest tools
 wget -q -O android-sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
 
-# Unpack to standard SDK root
 mkdir -p /usr/lib/android-sdk/cmdline-tools
 unzip -q android-sdk-tools.zip -d /usr/lib/android-sdk/cmdline-tools
-
-# Restructure into 'latest' folder
-sudo mv /usr/lib/android-sdk/cmdline-tools/cmdline-tools /usr/lib/android-sdk/cmdline-tools/latest
+mv /usr/lib/android-sdk/cmdline-tools/cmdline-tools /usr/lib/android-sdk/cmdline-tools/latest
 rm android-sdk-tools.zip
 
-echo "========== Update SDK Manager & Install Platform 35 ==========="
+echo "========== Accept Android SDK Licenses ==========="
+yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses
+
+echo "========== Update SDK and Install Platform 35 ==========="
 yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --update
 yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platforms;android-35" "build-tools;35.0.0"
+
 
 echo "========== Initialize Git Submodules ==========="
 git submodule update --init --recursive
 
 echo "========== Setup Complete =========="
 java -version
-sdkmanager --versionecho "==========Git Submodule Init=========="
-git submodule update --init --recursive
+sdkmanager --version
