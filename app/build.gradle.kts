@@ -59,6 +59,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.appcheck.playintegrity)
     debugImplementation(libs.firebase.appcheck.debug)
+    implementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.messaging.ktx)
 
     implementation(libs.firebase.auth.ktx)
