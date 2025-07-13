@@ -9,6 +9,8 @@ update-java-alternatives --set java-1.17.0-openjdk-amd64
 echo $JAVA_HOME
 java -version
 
+export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64
+export PATH=$JAVA_HOME/bin:$PATH
 
 echo "Getting Android Studio"
 wget -O android-commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
