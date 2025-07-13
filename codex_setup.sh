@@ -11,6 +11,10 @@ update-java-alternatives --set java-1.17.0-openjdk-amd64
 java -version
 
 echo "========== Persist enviroment variables in ~/.bashrc ==========="
+export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64
+export ANDROID_SDK_ROOT=/usr/lib/android-sdk
+export PATH=$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+
 grep -qxF 'export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64' ~/.bashrc || \
   echo 'export JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64' >> ~/.bashrc
 grep -qxF 'export PATH=$JAVA_HOME/bin:$PATH' ~/.bashrc || \
