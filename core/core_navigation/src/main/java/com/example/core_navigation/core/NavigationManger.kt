@@ -197,6 +197,16 @@ interface NavigationManger {
     fun navigateToEditSchedule(scheduleId: String, navOptions: NavOptions? = null)
 
     /**
+     * Navigates to edit category screen.
+     */
+    fun navigateToEditCategory(projectId: String, categoryId: String, navOptions: NavOptions? = null)
+
+    /**
+     * Navigates to edit channel screen.
+     */
+    fun navigateToEditChannel(projectId: String, channelId: String, navOptions: NavOptions? = null)
+
+    /**
      * Navigates to accept friends screen.
      */
     fun navigateToAcceptFriends(navOptions: NavOptions? = null)

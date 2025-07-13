@@ -1,8 +1,5 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
-    //id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
-    //kotlin("jvm") version "1.9.22" apply false
-
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
 
@@ -13,4 +10,31 @@ plugins {
     alias(libs.plugins.google.gms) apply false
     alias(libs.plugins.sentry) apply false
     alias(libs.plugins.kotlin.compose) apply false
+}
+
+// Configure JDK 17 for all subprojects (centralized configuration)
+subprojects {
+    afterEvaluate {
+        // Java toolchain configuration
+        extensions.findByType<JavaPluginExtension>()?.apply {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(17))
+            }
+        }
+        
+        // Kotlin compile options (applies to all Kotlin-enabled modules)
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+        
+        // Android compile options (applies to Android modules)
+        extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+        }
+    }
 }

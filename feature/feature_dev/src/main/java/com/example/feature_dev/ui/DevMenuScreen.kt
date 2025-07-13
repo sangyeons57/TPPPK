@@ -139,7 +139,7 @@ fun DevMenuScreen(
             }
             DevMenuButton(text = "채널 편집 (EditChannel - 임시ID)") {
                 navigationManger.navigateTo(
-                    EditChannelRoute("temp_project_1", "temp_category_1", "temp_channel_1")
+                    EditChannelRoute("temp_project_1", "temp_channel_1")
                 )
             }
 

@@ -54,6 +54,10 @@ dependencies {
     implementation(project(":core:core_ui"))
     implementation(project(":domain"))
     implementation(project(":data"))
+    
+    // --- Feature 모듈 의존성 ---
+    implementation(project(":feature:feature_edit_category"))
+    implementation(project(":feature:feature_edit_channel"))
 
     // --- 라이브러리 의존성 ---
     // Jetpack Compose UI

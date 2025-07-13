@@ -20,6 +20,8 @@ import com.example.domain.usecase.project.structure.DeleteCategoryUseCase
 import com.example.domain.usecase.project.structure.DeleteCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCase
 import com.example.domain.usecase.project.structure.GetProjectAllCategoriesUseCaseImpl
+import com.example.domain.usecase.project.structure.GetProjectStructureUseCase
+import com.example.domain.usecase.project.structure.GetProjectStructureUseCaseImpl
 import com.example.domain.usecase.project.structure.RenameCategoryUseCase
 import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
 import javax.inject.Inject
@@ -54,7 +56,7 @@ class ProjectStructureUseCaseProvider @Inject constructor(
 
         val projectChannelRepository = projectChannelRepositoryFactory.create(
             ProjectChannelRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectChannels(projectId.value, "default")
+                collectionPath = CollectionPath.projectChannels(projectId.value)
             )
         )
 
@@ -70,7 +72,8 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             ),
             
             deleteCategoryUseCase = DeleteCategoryUseCaseImpl(
-                categoryRepository = categoryRepository
+                categoryRepository = categoryRepository,
+                projectChannelRepository = projectChannelRepository
             ),
             
             renameCategoryUseCase = RenameCategoryUseCaseImpl(
@@ -81,6 +84,11 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             // 프로젝트 구조 조회 및 변환
             getProjectAllCategoriesUseCase = GetProjectAllCategoriesUseCaseImpl(
                 categoryRepository = categoryRepository
+            ),
+            
+            getProjectStructureUseCase = GetProjectStructureUseCaseImpl(
+                categoryRepository = categoryRepository,
+                projectChannelRepository = projectChannelRepository
             ),
             
 
@@ -124,6 +132,7 @@ data class ProjectStructureUseCases(
 
     // 프로젝트 구조 조회 및 변환
     val getProjectAllCategoriesUseCase: GetProjectAllCategoriesUseCase,
+    val getProjectStructureUseCase: GetProjectStructureUseCase,
 
     // 구조 업데이트
 

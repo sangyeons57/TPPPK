@@ -3,6 +3,7 @@ package com.example.feature_edit_category.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -12,6 +13,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -96,6 +98,7 @@ fun EditCategoryScreen(
                 modifier = Modifier.padding(paddingValues),
                 uiState = uiState,
                 onCategoryNameChange = viewModel::onCategoryNameChange,
+                onCategoryOrderChange = viewModel::onCategoryOrderChange,
                 onUpdateClick = viewModel::updateCategory
             )
         }
@@ -135,6 +138,7 @@ fun EditCategoryContent(
     modifier: Modifier = Modifier,
     uiState: EditCategoryUiState,
     onCategoryNameChange: (String) -> Unit,
+    onCategoryOrderChange: (String) -> Unit,
     onUpdateClick: () -> Unit
 ) {
     Column(
@@ -151,7 +155,19 @@ fun EditCategoryContent(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("카테고리 이름") },
             singleLine = true,
-            isError = uiState.error != null
+            isError = uiState.error?.contains("이름") == true
+        )
+
+        // 카테고리 순서 입력 필드
+        OutlinedTextField(
+            value = uiState.currentCategoryOrder.toString(),
+            onValueChange = onCategoryOrderChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("순서") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = uiState.error?.contains("순서") == true || uiState.error?.contains("숫자") == true,
+            supportingText = { Text("숫자로 입력하세요. 낮은 숫자일수록 위에 표시됩니다.") }
         )
 
         if (uiState.error != null) {
@@ -189,8 +205,9 @@ fun EditCategoryContent(
 private fun EditCategoryContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditCategoryContent(
-            uiState = EditCategoryUiState(categoryId = "1", currentCategoryName = "기존 카테고리"),
+            uiState = EditCategoryUiState(categoryId = "1", currentCategoryName = "기존 카테고리", currentCategoryOrder = 1.0),
             onCategoryNameChange = {},
+            onCategoryOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -204,9 +221,11 @@ private fun EditCategoryContentLoadingPreview() {
             uiState = EditCategoryUiState(
                 categoryId = "1",
                 currentCategoryName = "수정 중...",
+                currentCategoryOrder = 2.0,
                 isLoading = true
             ),
             onCategoryNameChange = {},
+            onCategoryOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -220,9 +239,11 @@ private fun EditCategoryContentErrorPreview() {
             uiState = EditCategoryUiState(
                 categoryId = "1",
                 currentCategoryName = "",
+                currentCategoryOrder = 0.0,
                 error = "이름은 비워둘 수 없습니다."
             ),
             onCategoryNameChange = {},
+            onCategoryOrderChange = {},
             onUpdateClick = {}
         )
     }

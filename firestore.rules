@@ -169,36 +169,36 @@ service cloud.firestore {
                 allow read: if isProjectMember(projectId);
                 // 카테고리 생성/수정/삭제: 프로젝트 소유자만 (또는 특정 역할)
                 allow write: if isProjectOwner(projectId);
+            }
 
-                // --- 카테고리 내 프로젝트 채널 (project_channels) ---
-                match /project_channels/{projectChannelId} {
-                    // 프로젝트 채널 정보 읽기: 프로젝트 멤버만
+            // 프로젝트 채널 (project_channels) - 프로젝트 직속 서브컬렉션
+            match /project_channels/{projectChannelId} {
+                // 프로젝트 채널 정보 읽기: 프로젝트 멤버만
+                allow read: if isProjectMember(projectId);
+                // 프로젝트 채널 생성/수정/삭제: 프로젝트 소유자만 (또는 특정 역할)
+                allow write: if isProjectOwner(projectId);
+
+                // 프로젝트 채널 메시지 (messages)
+                match /messages/{messageId} {
+                    // 메시지 읽기: 프로젝트 멤버만
                     allow read: if isProjectMember(projectId);
-                    // 프로젝트 채널 생성/수정/삭제: 프로젝트 소유자만 (또는 특정 역할)
-                    allow write: if isProjectOwner(projectId);
+                    // 메시지 생성: 프로젝트 멤버이고, 발신자가 본인
+                    allow create: if isProjectMember(projectId) &&
+                                   request.resource.data.senderId == request.auth.uid;
+                    // 메시지 수정: 발신자 본인만 (프로젝트 멤버 조건은 상위 경로에서 이미 만족)
+                    allow update: if resource.data.senderId == request.auth.uid; // isProjectMember는 이미 만족
+                    // 메시지 삭제: 발신자 본인 또는 프로젝트 소유자
+                    allow delete: if (resource.data.senderId == request.auth.uid || isProjectOwner(projectId)); // isProjectMember는 이미 만족
 
-                    // 프로젝트 채널 메시지 (messages)
-                    match /messages/{messageId} {
-                        // 메시지 읽기: 프로젝트 멤버만
+                    // 메시지 첨부파일 (message_attachments)
+                    match /message_attachments/{attachmentId} {
+                        // 첨부파일 읽기: 프로젝트 멤버
                         allow read: if isProjectMember(projectId);
-                        // 메시지 생성: 프로젝트 멤버이고, 발신자가 본인
-                        allow create: if isProjectMember(projectId) &&
-                                       request.resource.data.senderId == request.auth.uid;
-                        // 메시지 수정: 발신자 본인만 (프로젝트 멤버 조건은 상위 경로에서 이미 만족)
-                        allow update: if resource.data.senderId == request.auth.uid; // isProjectMember는 이미 만족
-                        // 메시지 삭제: 발신자 본인 또는 프로젝트 소유자
-                        allow delete: if (resource.data.senderId == request.auth.uid || isProjectOwner(projectId)); // isProjectMember는 이미 만족
-
-                        // 메시지 첨부파일 (message_attachments)
-                        match /message_attachments/{attachmentId} {
-                            // 첨부파일 읽기: 프로젝트 멤버
-                            allow read: if isProjectMember(projectId);
-                            // 첨부파일 생성: 메시지 생성자와 동일 조건 (프로젝트 멤버, 본인)
-                            allow create: if isProjectMember(projectId) && get(/databases/$(database)/documents/projects/$(projectId)/categories/$(categoryId)/project_channels/$(projectChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
-                            // 첨부파일 수정/삭제: 메시지 생성자 또는 프로젝트 소유자
-                            allow update, delete: if isProjectMember(projectId) &&
-                                (get(/databases/$(database)/documents/projects/$(projectId)/categories/$(categoryId)/project_channels/$(projectChannelId)/messages/$(messageId)).data.senderId == request.auth.uid || isProjectOwner(projectId));
-                        }
+                        // 첨부파일 생성: 메시지 생성자와 동일 조건 (프로젝트 멤버, 본인)
+                        allow create: if isProjectMember(projectId) && get(/databases/$(database)/documents/projects/$(projectId)/project_channels/$(projectChannelId)/messages/$(messageId)).data.senderId == request.auth.uid;
+                        // 첨부파일 수정/삭제: 메시지 생성자 또는 프로젝트 소유자
+                        allow update, delete: if isProjectMember(projectId) &&
+                            (get(/databases/$(database)/documents/projects/$(projectId)/project_channels/$(projectChannelId)/messages/$(messageId)).data.senderId == request.auth.uid || isProjectOwner(projectId));
                     }
                 }
             }

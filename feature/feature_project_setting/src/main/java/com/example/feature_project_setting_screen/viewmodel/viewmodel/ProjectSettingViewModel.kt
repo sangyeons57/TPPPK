@@ -173,7 +173,7 @@ class ProjectSettingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteCategoryUseCase 호출
             println("Deleting Category: ${category.id} (UseCase)") // Used category.id
-            val result = projectStructureUseCases.deleteCategoryUseCase(projectId, category.id) // Used category.id
+            val result = projectStructureUseCases.deleteCategoryUseCase(category.id) // Used category.id
             // delay(500) // Remove delay
             when (result) {
                 is CustomResult.Success -> {
@@ -199,9 +199,9 @@ class ProjectSettingViewModel @Inject constructor(
     }
 
     // --- 채널 관련 액션 ---
-    fun requestEditChannel(categoryId: String, channelId: String) {
+    fun requestEditChannel(channelId: String) {
         navigationManger.navigateTo(
-            EditChannelRoute(projectId.value, categoryId, channelId)
+            EditChannelRoute(projectId.value, channelId)
         )
     }
     fun requestDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel

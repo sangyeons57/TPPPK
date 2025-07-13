@@ -233,7 +233,7 @@ fun ProjectSettingContent(
     uiState: ProjectSettingUiState,
     onCategoryEditClick: (String) -> Unit, // categoryId
     onCategoryDeleteClick: (CategoryUiModel) -> Unit, // Changed to CategoryUiModel
-    onChannelEditClick: (String, String) -> Unit, // categoryId, channelId
+    onChannelEditClick: (String) -> Unit, // categoryId, channelId
     onChannelDeleteClick: (ChannelUiModel) -> Unit, // Changed to ChannelUiModel
     onAddCategoryClick: () -> Unit,
     onAddChannelClick: (String) -> Unit, // categoryId
@@ -625,7 +625,7 @@ private fun ProjectSettingContentLoadingPreview() {
             ),
             onCategoryEditClick = {},
             onCategoryDeleteClick = {},
-            onChannelEditClick = { _, _ -> },
+            onChannelEditClick = { _ -> },
             onChannelDeleteClick = {},
             onAddCategoryClick = {},
             onAddChannelClick = {},
@@ -656,7 +656,7 @@ private fun ProjectSettingContentErrorPreview() {
             ),
             onCategoryEditClick = {},
             onCategoryDeleteClick = {},
-            onChannelEditClick = { _, _ -> },
+            onChannelEditClick = { _ -> },
             onChannelDeleteClick = {},
             onAddCategoryClick = {},
             onAddChannelClick = {},

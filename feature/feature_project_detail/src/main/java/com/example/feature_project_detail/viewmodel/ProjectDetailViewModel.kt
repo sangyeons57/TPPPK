@@ -168,11 +168,8 @@ class ProjectDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             val result = if (dialogData.categoryId == null) {
-                // Create Direct Channel - 기본 카테고리 사용
-                val channelUseCases = projectChannelUseCaseProvider.createForProject(
-                    projectId, 
-                    DocumentId("default") // 기본 카테고리 ID
-                )
+                // Create Direct Channel - NoCategory 사용
+                val channelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
                 channelUseCases.createProjectChannelUseCase(
                     dialogData.channelName,
                     ProjectChannelOrder.DEFAULT,
@@ -180,10 +177,7 @@ class ProjectDetailViewModel @Inject constructor(
                 )
             } else {
                 // Create Category Channel - 선택된 카테고리 사용
-                val channelUseCases = projectChannelUseCaseProvider.createForProject(
-                    projectId, 
-                    dialogData.categoryId
-                )
+                val channelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
                 channelUseCases.createProjectChannelUseCase(
                     dialogData.channelName,
                     ProjectChannelOrder.DEFAULT,

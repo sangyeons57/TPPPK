@@ -12,6 +12,7 @@ import com.example.domain.model.vo.DocumentId as VODocumentId
 import com.google.firebase.firestore.PropertyName
 import java.util.Date
 import com.example.domain.model.AggregateRoot
+import com.example.domain.model.base.Category
 
 /*
  * 프로젝트 채널 정보를 나타내는 DTO 클래스
@@ -27,7 +28,7 @@ data class ProjectChannelDTO(
     @get:PropertyName(STATUS)
     val status: ProjectChannelStatus = ProjectChannelStatus.ACTIVE,
     @get:PropertyName(CATEGORY_ID)
-    val categoryId: String? = null, // Added categoryId field for category association
+    val categoryId: String = Category.NO_CATEGORY_ID, // Added categoryId field for category association
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp override val createdAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
@@ -53,7 +54,7 @@ data class ProjectChannelDTO(
             channelType = channelType,
             order = ProjectChannelOrder(order), // Added order mapping
             status = status,
-            categoryId = categoryId?.let { VODocumentId(it) }, // Added categoryId mapping
+            categoryId = VODocumentId(categoryId), // Added categoryId mapping
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant()
         )
@@ -71,7 +72,7 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
         channelType = channelType,
         order = order.value, // Added order mapping
         status = status,
-        categoryId = categoryId?.value, // Added categoryId mapping
+        categoryId = categoryId.value, // Added categoryId mapping
         createdAt = null,
         updatedAt = null
     )

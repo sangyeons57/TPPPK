@@ -45,7 +45,6 @@ class Project private constructor(
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_NAME to this.name.value,
-            KEY_IMAGE_URL to this.imageUrl?.value,
             KEY_STATUS to this.status.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
@@ -64,19 +63,6 @@ class Project private constructor(
         pushDomainEvent(ProjectNameChangedEvent(this.id, oldName, newName, DateTimeUtil.nowInstant()))
     }
 
-    /**
-     * Changes the image URL of the project, firing a domain event.
-     * 
-     * @deprecated Use fixed path system with project_profiles/{projectId}/profile.webp instead.
-     * This method is kept for backward compatibility but should not be used for new implementations.
-     */
-    @Deprecated("Use fixed path system with project_profiles/{projectId}/profile.webp instead")
-    fun changeImageUrl(newImageUrl: ImageUrl?) {
-        if (this.imageUrl == newImageUrl) return
-
-        this.imageUrl = newImageUrl
-        pushDomainEvent(ProjectImageUrlChangedEvent(this.id, newImageUrl, DateTimeUtil.nowInstant()))
-    }
 
     /**
      * Marks the project as deleted (soft delete).

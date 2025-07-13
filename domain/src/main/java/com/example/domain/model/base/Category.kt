@@ -136,6 +136,17 @@ class Category private constructor(
         const val KEY_ORDER = "order"
         const val KEY_CREATED_BY = "createdBy"
         const val KEY_IS_CATEGORY = "isCategory"
+        
+        /**
+         * Special category ID for channels that don't belong to any specific category.
+         * These channels are displayed directly under the project.
+         */
+        const val NO_CATEGORY_ID = "NoCategory"
+        
+        /**
+         * Default order for the NoCategory. Usually the lowest order to appear first/last.
+         */
+        const val NO_CATEGORY_ORDER = 0.0
         /**
          * Creates a new Category instance.
          * This factory method is the designated way to create new categories.
@@ -168,9 +179,9 @@ class Category private constructor(
 
         fun createNoCategory(createdBy: OwnerId) : Category {
             val category = Category(
-                id = DocumentId(Constants.NO_CATEGORY_ID),
+                id = DocumentId(NO_CATEGORY_ID),
                 initialName = CategoryName.NO_CATEGORY_NAME,
-                initialOrder = CategoryOrder(Constants.NO_CATEGORY_ORDER),
+                initialOrder = CategoryOrder(NO_CATEGORY_ORDER),
                 initialCreatedBy = createdBy,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),

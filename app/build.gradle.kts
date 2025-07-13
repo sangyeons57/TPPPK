@@ -37,13 +37,10 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        // sourceCompatibility and targetCompatibility now set globally in root build.gradle.kts
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions {
-        //jvmTarget = libs.versions.jvmTarget.get()
-    }
+    // kotlinOptions.jvmTarget now set globally in root build.gradle.kts
     buildFeatures {
         compose = true
         viewBinding = true

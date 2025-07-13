@@ -172,11 +172,8 @@ class AddProjectElementViewModel @Inject constructor(
             
             _uiState.update { it.copy(isLoading = true) }
 
-            // 채널 추가 시 categoryId와 함께 채널 UseCases 생성
-            val channelUseCases = projectChannelUseCaseProvider.createForProject(
-                currentProjectId, 
-                selectedCategory.id
-            )
+            // 채널 추가 시 프로젝트 채널 UseCases 생성
+            val channelUseCases = projectChannelUseCaseProvider.createForProject(currentProjectId)
 
             val result = channelUseCases.addProjectChannelUseCase(
                 projectId = currentProjectId,
