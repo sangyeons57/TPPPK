@@ -2,8 +2,8 @@ package com.example.domain.event.task
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.task.TaskTitle
-import com.example.domain.model.vo.task.TaskDescription
+import com.example.domain.model.vo.task.TaskContent
+import com.example.domain.model.vo.task.TaskType
 import java.time.Instant
 
 /**
@@ -11,9 +11,9 @@ import java.time.Instant
  */
 data class TaskUpdatedEvent(
     val taskId: DocumentId,
-    val oldTitle: TaskTitle?,
-    val newTitle: TaskTitle?,
-    val oldDescription: TaskDescription?,
-    val newDescription: TaskDescription?,
+    val oldTaskType: TaskType?,
+    val newTaskType: TaskType?,
+    val oldContent: TaskContent?,
+    val newContent: TaskContent?,
     override val occurredOn: Instant
 ) : DomainEvent
