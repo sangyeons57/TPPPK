@@ -1,0 +1,63 @@
+package com.example.data.datasource.remote
+
+import com.example.core_common.result.CustomResult
+import com.example.data.datasource.remote.special.DefaultDatasource
+import com.example.data.datasource.remote.special.DefaultDatasourceImpl
+import com.example.data.model.remote.TaskContainerUnifiedDTO
+import com.example.domain.model.vo.DocumentId
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * 태스크 정보에 접근하기 위한 인터페이스입니다.
+ * 통합된 task_container collection에서 task 타입 문서만 필터링하여 처리합니다.
+ */
+interface TaskRemoteDataSource : DefaultDatasource
+
+@Singleton
+class TaskRemoteDataSourceImpl @Inject constructor(
+    private val firestore: FirebaseFirestore
+) : DefaultDatasourceImpl<TaskContainerUnifiedDTO>(firestore, TaskContainerUnifiedDTO::class.java), TaskRemoteDataSource {
+    
+    /**
+     * 모든 task 타입 문서를 관찰합니다.
+     * container 타입 문서는 제외됩니다.
+     */
+    override fun observeAll(): Flow<List<TaskContainerUnifiedDTO>> {
+        return super.observeAll().map { documents ->
+            documents.filter { it.type == TaskContainerUnifiedDTO.TYPE_TASK }
+        }
+    }
+    
+    /**
+     * Task 문서를 생성합니다. 타입을 "task"로 설정합니다.
+     */
+    suspend fun createTask(dto: TaskContainerUnifiedDTO): CustomResult<DocumentId, Exception> {
+        val taskDto = dto.copy(type = TaskContainerUnifiedDTO.TYPE_TASK)
+        return create(taskDto)
+    }
+    
+    /**
+     * Task 문서를 업데이트합니다.
+     */
+    suspend fun updateTask(taskId: String, fields: Map<String, Any?>): CustomResult<DocumentId, Exception> {
+        return update(taskId, fields)
+    }
+    
+    /**
+     * Task 문서를 삭제합니다.
+     */
+    suspend fun deleteTask(taskId: String): CustomResult<DocumentId, Exception> {
+        return delete(taskId)
+    }
+    
+    /**
+     * 특정 task ID로 문서를 관찰합니다.
+     */
+    fun observeTask(taskId: String): Flow<TaskContainerUnifiedDTO?> {
+        return observeById(taskId)
+    }
+}

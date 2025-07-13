@@ -337,18 +337,6 @@ fun HomeScreen(
                 )
             }
             
-            // EditChannelDialog  
-            if (showEditChannelDialog) {
-                EditChannelDialog(
-                    channelName = editChannelName,
-                    projectId = editChannelProjectId,
-                    channelId = editChannelId,
-                    onDismissRequest = { showEditChannelDialog = false },
-                    onNavigateToEditChannel = {
-                        // Navigation handled by ViewModel
-                    }
-                )
-            }
             // 메인 콘텐츠 (HomeContent)
             HomeContent(
                 modifier = Modifier.fillMaxSize(),
