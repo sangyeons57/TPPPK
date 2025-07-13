@@ -336,7 +336,7 @@ fun HomeScreen(
                     }
                 )
             }
-            
+
             // 메인 콘텐츠 (HomeContent)
             HomeContent(
                 modifier = Modifier.fillMaxSize(),
