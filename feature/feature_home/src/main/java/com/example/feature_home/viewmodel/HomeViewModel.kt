@@ -1042,22 +1042,7 @@ class HomeViewModel @Inject constructor(
         val channel = _uiState.value.targetChannelForSheet
 
         if (projectId != null && channel != null) {
-            val categoryId = getCategoryIdForChannel(channel.id.value)
-            if (categoryId != null) {
-                viewModelScope.launch {
-                    _eventFlow.emit(
-                        HomeEvent.NavigateToEditChannel(
-                            projectId,
-                            channel.id.value
-                        )
-                    )
-                }
-            } else {
-                // Handle case where categoryId is not found for the channel (e.g., direct channel or error)
-                Log.w("HomeViewModel", "Category ID not found for channel: ${channel.id.value}")
-                // Optionally, show a snackbar message to the user
-                // viewModelScope.launch { _eventFlow.emit(HomeEvent.ShowSnackbar("채널의 카테고리를 찾을 수 없습니다.")) }
-            }
+            navigationManger.navigateToEditChannel(projectId.value, channel.id.value)
         }
         onProjectItemActionSheetDismiss()
     }
@@ -1067,9 +1052,7 @@ class HomeViewModel @Inject constructor(
         val category = _uiState.value.targetCategoryForSheet
 
         if (projectId != null && category != null) {
-            viewModelScope.launch {
-                _eventFlow.emit(HomeEvent.NavigateToEditCategory(projectId, category.id))
-            }
+            navigationManger.navigateToEditCategory(projectId.value, category.id.value)
         }
         onProjectItemActionSheetDismiss()
     }
@@ -1280,17 +1263,4 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "All Flow collection jobs cancelled")
     }
 
-    // === Dialog Confirm Navigation Methods ===
-    fun onEditChannelConfirm(channelId: String) {
-        val projectId = _uiState.value.selectedProjectId ?: return
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.NavigateToEditChannel(projectId, channelId))
-        }
-    }
-    fun onEditCategoryConfirm(categoryId: String) {
-        val projectId = _uiState.value.selectedProjectId ?: return
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.NavigateToEditCategory(projectId, DocumentId(categoryId)))
-        }
-    }
 }
