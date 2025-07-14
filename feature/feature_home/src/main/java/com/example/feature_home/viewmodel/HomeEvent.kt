@@ -15,7 +15,6 @@ sealed class HomeEvent {
     data class NavigateToEditCategory(val projectId: DocumentId, val categoryId: DocumentId) : HomeEvent()
     data class NavigateToEditChannel(
         val projectId: DocumentId,
-        val categoryId: String,
         val channelId: String,
     ) : HomeEvent()
     data class NavigateToReorderCategory(val projectId: String) : HomeEvent()

@@ -1048,7 +1048,6 @@ class HomeViewModel @Inject constructor(
                     _eventFlow.emit(
                         HomeEvent.NavigateToEditChannel(
                             projectId,
-                            categoryId,
                             channel.id.value
                         )
                     )
