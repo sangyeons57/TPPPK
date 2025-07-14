@@ -39,7 +39,7 @@ data class TaskContainerDTO(
         /**
          * 고정된 컨테이너 ID
          */
-        const val FIXED_CONTAINER_ID = TaskContainer.FIXED_CONTAINER_ID
+        val FIXED_CONTAINER_ID = TaskContainer.FIXED_CONTAINER_ID
     }
 
     /**

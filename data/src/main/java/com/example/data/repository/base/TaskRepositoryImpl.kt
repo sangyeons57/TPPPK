@@ -26,7 +26,7 @@ class TaskRepositoryImpl @Inject constructor(
                 .createTask(entity.toDto())
         } else {
             (taskRemoteDataSource as TaskRemoteDataSourceImpl)
-                .updateTask(entity.id.value, entity.getChangedFields())
+                .update(entity.id, entity.getChangedFields())
         }
     }
 }

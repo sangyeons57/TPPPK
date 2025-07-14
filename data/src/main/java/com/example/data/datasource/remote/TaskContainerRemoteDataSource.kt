@@ -3,11 +3,17 @@ package com.example.data.datasource.remote
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
+import com.example.data.model.DTO
 import com.example.data.model.remote.TaskContainerDTO
+import com.example.domain.model.base.TaskContainer
+import com.example.domain.model.ui.sealed_class.UserNameResult
 import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,17 +31,19 @@ class TaskContainerRemoteDataSourceImpl @Inject constructor(
     /**
      * 고정된 container ID로 단일 TaskContainer 문서를 관찰합니다.
      */
-    fun observeContainer(): Flow<TaskContainerDTO?> {
-        return observeById(TaskContainerDTO.FIXED_CONTAINER_ID)
+    override fun observe(id: DocumentId): Flow<CustomResult<TaskContainerDTO, Exception>> = callbackFlow{
+        super.observe(TaskContainerDTO.FIXED_CONTAINER_ID).map { result ->
+            result.successProcess { data ->
+                data as TaskContainerDTO
+            }
+        }
     }
     
     /**
      * 모든 container 타입 문서를 관찰합니다 (실제로는 하나만 있음).
      */
-    override fun observeAll(): Flow<List<TaskContainerDTO>> {
-        return super.observeAll().map { documents ->
-            documents.filter { it.type == TaskContainerDTO.TYPE_CONTAINER }
-        }
+    override fun observeAll(): Flow<CustomResult<List<DTO>, Exception>> {
+        throw Exception("This method not supported in TaskContainer")
     }
     
     /**
@@ -43,7 +51,7 @@ class TaskContainerRemoteDataSourceImpl @Inject constructor(
      */
     suspend fun createContainer(dto: TaskContainerDTO): CustomResult<DocumentId, Exception> {
         val containerDto = dto.copy(
-            id = TaskContainerDTO.FIXED_CONTAINER_ID,
+            id = TaskContainerDTO.FIXED_CONTAINER_ID.value,
             type = TaskContainerDTO.TYPE_CONTAINER
         )
         return create(containerDto)
@@ -55,11 +63,9 @@ class TaskContainerRemoteDataSourceImpl @Inject constructor(
     suspend fun updateContainer(fields: Map<String, Any?>): CustomResult<DocumentId, Exception> {
         return update(TaskContainerDTO.FIXED_CONTAINER_ID, fields)
     }
-    
-    /**
-     * Container 정의 문서를 삭제합니다.
-     */
-    suspend fun deleteContainer(): CustomResult<DocumentId, Exception> {
-        return delete(TaskContainerDTO.FIXED_CONTAINER_ID)
+
+    override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        throw Exception("This method not supported in TaskContainer")
     }
+
 }

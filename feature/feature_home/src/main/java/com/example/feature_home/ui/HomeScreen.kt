@@ -325,12 +325,18 @@ fun HomeScreen(
                     categoryName = editCategoryName,
                     projectId = editCategoryProjectId,
                     categoryId = editCategoryId,
-                    onDismissRequest = { showEditCategoryDialog = false },
+                    onDismissRequest = {
+                        showEditCategoryDialog = false
+                        Log.d("HomeScreen", "EditCategoryDialog(Dismiss)")
+                                       },
                     onNavigateToEditCategory = {
+                        Log.d("HomeScreen", "EditCategoryDialog(EditCateogry)")
                         // Navigation handled by ViewModel
                     },
                     onNavigateToCreateChannel = {
                         // Open AddProjectElementDialog for channel creation
+                        Log.d("HomeScreen", "EditCategoryDialog(createChannel)")
+
                         currentProjectIdForDialog = uiState.selectedProjectId
                         showAddProjectElementDialog = true
                     }

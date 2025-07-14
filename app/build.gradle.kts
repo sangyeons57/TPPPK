@@ -44,6 +44,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -58,8 +59,8 @@ dependencies {
     // Firebase App Check
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.appcheck.playintegrity)
-    debugImplementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.appcheck.debug)
+    debugImplementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.messaging.ktx)
 
     implementation(libs.firebase.auth.ktx)
@@ -140,6 +141,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose) // Navigation Compose
     implementation(libs.material.icons.core)
     implementation(libs.androidx.runtime)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
