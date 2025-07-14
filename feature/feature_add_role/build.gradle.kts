@@ -82,9 +82,6 @@ dependencies {
     // 기타 ChatScreen, ChatViewModel에서 사용하는 라이브러리 (예: Activity Result API)
     implementation(libs.androidx.activity.compose)
 
-    // Sentry 직접 사용 (core_logging 의존성을 통해 간접적으로 사용되지만 직접 참조를 위해)
-    implementation(libs.sentry.android)
-
     // 테스트 의존성
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

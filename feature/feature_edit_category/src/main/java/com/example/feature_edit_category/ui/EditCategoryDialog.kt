@@ -34,7 +34,6 @@ fun EditCategoryDialog(
     categoryId: String,
     onDismissRequest: () -> Unit,
     onNavigateToEditCategory: () -> Unit = {},
-    onNavigateToCreateChannel: () -> Unit = {},
     viewModel: EditCategoryDialogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -54,9 +53,6 @@ fun EditCategoryDialog(
                 is EditCategoryDialogEvent.NavigateToEditCategory -> {
                     onNavigateToEditCategory()
                 }
-                is EditCategoryDialogEvent.NavigateToCreateChannel -> {
-                    onNavigateToCreateChannel()
-                }
             }
         }
     }
@@ -69,11 +65,6 @@ fun EditCategoryDialog(
                 label = "카테고리 편집하기",
                 icon = Icons.Filled.Edit,
                 onClick = viewModel::onEditCategoryClick
-            )
-            .button(
-                label = "채널 추가하기",
-                icon = Icons.Filled.Add,
-                onClick = viewModel::onCreateChannelClick
             )
             .spacer(height = 16.dp)
             .build()
@@ -96,7 +87,6 @@ private fun EditCategoryDialogPreview() {
             categoryId = "category123",
             onDismissRequest = {},
             onNavigateToEditCategory = {},
-            onNavigateToCreateChannel = {}
         )
     }
 }

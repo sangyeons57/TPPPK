@@ -296,24 +296,6 @@ fun HomeScreen(
                     }
                 )
             }
-            
-            // EditCategoryDialog
-            if (showEditCategoryDialog) {
-                EditCategoryDialog(
-                    categoryName = editCategoryName,
-                    projectId = editCategoryProjectId,
-                    categoryId = editCategoryId,
-                    onDismissRequest = { showEditCategoryDialog = false },
-                    onNavigateToEditCategory = {
-                        showEditCategoryDialog = false
-                    },
-                    onNavigateToCreateChannel = {
-                        // Open AddProjectElementDialog for channel creation
-                        currentProjectIdForDialog = uiState.selectedProjectId
-                        showAddProjectElementDialog = true
-                    }
-                )
-            }
 
             // 메인 콘텐츠 (HomeContent)
             HomeContent(
@@ -386,13 +368,9 @@ fun HomeScreen(
                     categoryId = editCategoryId,
                     onDismissRequest = { showEditCategoryDialog = false },
                     onNavigateToEditCategory = {
+                        Log.d("HomeScreen", "onNavigateToEditCategory")
                         showEditCategoryDialog = false
                     },
-                    onNavigateToCreateChannel = {
-                        // Open AddProjectElementDialog for channel creation
-                        currentProjectIdForDialog = uiState.selectedProjectId
-                        showAddProjectElementDialog = true
-                    }
                 )
             }
             

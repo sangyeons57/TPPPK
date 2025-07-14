@@ -38,18 +38,13 @@ class EditCategoryDialogViewModel @Inject constructor(
 
     fun onEditCategoryClick() {
         val state = _uiState.value
+        Log.d("EditCategoryDialogViewModel", "1")
         if (state.projectId.isNotEmpty() && state.categoryId.isNotEmpty()) {
+            Log.d("EditCategoryDialogViewModel", "2")
+
             navigationManger.navigateToEditCategory(state.projectId, state.categoryId)
         }
         viewModelScope.launch {
-            _eventFlow.emit(EditCategoryDialogEvent.DismissDialog)
-        }
-    }
-
-    fun onCreateChannelClick() {
-        viewModelScope.launch {
-            // TODO: Navigate to channel creation screen
-            _eventFlow.emit(EditCategoryDialogEvent.NavigateToCreateChannel)
             _eventFlow.emit(EditCategoryDialogEvent.DismissDialog)
         }
     }
@@ -78,5 +73,4 @@ data class EditCategoryDialogUiState(
 sealed class EditCategoryDialogEvent {
     object DismissDialog : EditCategoryDialogEvent()
     object NavigateToEditCategory : EditCategoryDialogEvent()
-    object NavigateToCreateChannel : EditCategoryDialogEvent()
 }
