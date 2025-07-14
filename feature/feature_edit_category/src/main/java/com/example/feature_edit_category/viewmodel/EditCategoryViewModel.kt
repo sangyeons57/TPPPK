@@ -100,8 +100,8 @@ class EditCategoryViewModel @Inject constructor(
                                 originalCategoryName = currentCategory.name.value,
                                 currentCategoryOrder = currentCategoryIndex.toDouble(),
                                 originalCategoryOrder = currentCategory.order.value,
-                                canMoveUp = currentCategoryIndex > 0,
-                                canMoveDown = currentCategoryIndex < allCategories.size - 1,
+                                canMoveUp = currentCategoryIndex > 0 && currentCategory.id.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
+                                canMoveDown = currentCategoryIndex < allCategories.size - 1 && currentCategory.id.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
                                 totalCategories = allCategories.size,
                                 allCategoryIds = allCategoryIds
                             )
@@ -151,6 +151,9 @@ class EditCategoryViewModel @Inject constructor(
         val currentState = _uiState.value
         if (!currentState.canMoveUp || currentState.isLoading) return
         
+        // No_Category cannot be moved
+        if (categoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
+        
         val currentIndex = currentState.currentCategoryOrder.toInt()
         val newIndex = currentIndex - 1
         
@@ -169,6 +172,9 @@ class EditCategoryViewModel @Inject constructor(
     fun moveCategoryDown() {
         val currentState = _uiState.value
         if (!currentState.canMoveDown || currentState.isLoading) return
+        
+        // No_Category cannot be moved
+        if (categoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
         
         val currentIndex = currentState.currentCategoryOrder.toInt()
         val newIndex = currentIndex + 1
@@ -222,6 +228,12 @@ class EditCategoryViewModel @Inject constructor(
                     val newCategoryIds = currentState.allCategoryIds.toMutableList()
                     newCategoryIds.removeAt(originalOrderIndex)
                     newCategoryIds.add(currentOrderIndex, categoryId)
+                    
+                    // No_Category가 포함된 경우 항상 첫 번째 위치로 이동
+                    if (newCategoryIds.contains(com.example.domain.model.base.Category.NO_CATEGORY_ID)) {
+                        newCategoryIds.remove(com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                        newCategoryIds.add(0, com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                    }
                     
                     when (val reorderResult = structureUseCases.reorderCategoriesUseCase(
                         DocumentId(projectId),

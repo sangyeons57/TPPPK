@@ -661,6 +661,7 @@ fun HomeScreenPreview_WithData() {
                 CategoryUiModel(
                     id = DocumentId("cat1"),
                     name = CategoryName("Text Channels"),
+                    order = 1.0,
                     channels = listOf(
                         ChannelUiModel(
                             id = DocumentId("ch2"),

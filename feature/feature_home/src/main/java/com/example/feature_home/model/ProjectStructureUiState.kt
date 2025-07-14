@@ -33,11 +33,12 @@ data class ProjectStructureUiState(
                 CategoryUiModel(
                     id = category.id,
                     name = category.name,
+                    order = category.order.value,
                     channels = channels.map { ChannelUiModel.fromDomain(it) }
                         .map { it.copy(isSelected = it.id.value == selectedChannelId) },
                     isExpanded = expandedCategoryIds.contains(category.id.value)
                 )
-            }.sortedBy { it.name.value }
+            }.sortedBy { it.order }
 
             val directChannelUiModels = data.directChannels.map { channel ->
                 ChannelUiModel.fromDomain(channel)
@@ -76,12 +77,14 @@ data class ProjectStructureUiState(
  * 카테고리 UI 모델
  * @param id 카테고리 ID
  * @param name 카테고리 이름
+ * @param order 카테고리 순서 (정렬용)
  * @param channels 카테고리에 속한 채널 목록
  * @param isExpanded 카테고리 펼침 상태
  */
 data class CategoryUiModel(
     val id: DocumentId,
     val name: CategoryName,
+    val order: Double,
     val channels: List<ChannelUiModel> = emptyList(),
     val isExpanded: Boolean = true
 ) {
@@ -90,6 +93,7 @@ data class CategoryUiModel(
             return CategoryUiModel(
                 id = category.id,
                 name = category.name,
+                order = category.order.value,
                 isExpanded = isExpanded
             )
         }

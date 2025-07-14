@@ -327,6 +327,7 @@ fun CategoryItemPreview_Expanded() {
             category = CategoryUiModel(
                 id = DocumentId("ch1"),
                 name = CategoryName("엔지니어링"),
+                order = 1.0,
                 channels = sampleChannels,
                 isExpanded = true
             ),
@@ -349,6 +350,7 @@ fun CategoryItemPreview_Collapsed() {
             category = CategoryUiModel(
                 id = DocumentId("cat2"),
                 name = CategoryName("마케팅"),
+                order = 2.0,
                 channels = emptyList(),
                 isExpanded = false
             ),
@@ -382,7 +384,7 @@ fun ProjectChannelListPreview_Default() {
     )
     val categories = listOf(
         CategoryUiModel(
-            id = DocumentId("cat_dev"), name = CategoryName("개발팀"), isExpanded = true,
+            id = DocumentId("cat_dev"), name = CategoryName("개발팀"), order = 1.0, isExpanded = true,
             channels = listOf(
                 ChannelUiModel(
                     id = DocumentId("dev_ch1"),
@@ -407,11 +409,12 @@ fun ProjectChannelListPreview_Default() {
         CategoryUiModel(
             id = DocumentId("cat_design"),
             name = CategoryName("디자인팀"),
+            order = 2.0,
             isExpanded = false,
             channels = emptyList()
         ),
         CategoryUiModel(
-            id = DocumentId("cat_plan"), name = CategoryName("기획팀"), isExpanded = true,
+            id = DocumentId("cat_plan"), name = CategoryName("기획팀"), order = 3.0, isExpanded = true,
             channels = listOf(
                 ChannelUiModel(
                     id = DocumentId("plan_ch1"),

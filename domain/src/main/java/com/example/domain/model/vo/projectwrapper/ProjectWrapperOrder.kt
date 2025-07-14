@@ -6,7 +6,7 @@ value class ProjectWrapperOrder(val value: Double) {
 //        require(value > 0) { "Order must be a positive number." }
     }
     companion object {
-        val CREATE = ProjectWrapperOrder(1.0)
+        val CREATE = ProjectWrapperOrder(com.example.domain.model.base.Category.MIN_CATEGORY_ORDER)
     }
 
 }
