@@ -64,7 +64,9 @@ class ReorderCategoriesUseCaseImpl @Inject constructor(
                     ?: return CustomResult.Failure(IllegalArgumentException("Category not found: $categoryId"))
                 
                 val newOrder = CategoryOrder(index.toDouble())
-                category.changeOrder(newOrder)
+                
+                // Update the category order using the domain method
+                category.update(newOrder = newOrder)
                 
                 // Save the updated category
                 when (val saveResult = categoryRepository.save(category)) {
