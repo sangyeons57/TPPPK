@@ -1280,4 +1280,18 @@ class HomeViewModel @Inject constructor(
         
         Log.d("HomeViewModel", "All Flow collection jobs cancelled")
     }
+
+    // === Dialog Confirm Navigation Methods ===
+    fun onEditChannelConfirm(channelId: String) {
+        val projectId = _uiState.value.selectedProjectId ?: return
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.NavigateToEditChannel(projectId, channelId))
+        }
+    }
+    fun onEditCategoryConfirm(categoryId: String) {
+        val projectId = _uiState.value.selectedProjectId ?: return
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.NavigateToEditCategory(projectId, DocumentId(categoryId)))
+        }
+    }
 }

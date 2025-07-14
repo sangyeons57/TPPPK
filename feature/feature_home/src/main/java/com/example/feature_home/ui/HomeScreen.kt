@@ -325,18 +325,13 @@ fun HomeScreen(
                     categoryName = editCategoryName,
                     projectId = editCategoryProjectId,
                     categoryId = editCategoryId,
-                    onDismissRequest = {
-                        showEditCategoryDialog = false
-                        Log.d("HomeScreen", "EditCategoryDialog(Dismiss)")
-                                       },
+                    onDismissRequest = { showEditCategoryDialog = false },
                     onNavigateToEditCategory = {
-                        Log.d("HomeScreen", "EditCategoryDialog(EditCateogry)")
-                        // Navigation handled by ViewModel
+                        viewModel.onEditCategoryConfirm(editCategoryId)
+                        showEditCategoryDialog = false
                     },
                     onNavigateToCreateChannel = {
                         // Open AddProjectElementDialog for channel creation
-                        Log.d("HomeScreen", "EditCategoryDialog(createChannel)")
-
                         currentProjectIdForDialog = uiState.selectedProjectId
                         showAddProjectElementDialog = true
                     }
@@ -414,7 +409,8 @@ fun HomeScreen(
                     categoryId = editCategoryId,
                     onDismissRequest = { showEditCategoryDialog = false },
                     onNavigateToEditCategory = {
-                        // Navigation handled by ViewModel
+                        viewModel.onEditCategoryConfirm(editCategoryId)
+                        showEditCategoryDialog = false
                     },
                     onNavigateToCreateChannel = {
                         // Open AddProjectElementDialog for channel creation
@@ -432,7 +428,8 @@ fun HomeScreen(
                     channelId = editChannelId,
                     onDismissRequest = { showEditChannelDialog = false },
                     onNavigateToEditChannel = {
-                        // Navigation handled by ViewModel
+                        viewModel.onEditChannelConfirm(editChannelId)
+                        showEditChannelDialog = false
                     }
                 )
             }
