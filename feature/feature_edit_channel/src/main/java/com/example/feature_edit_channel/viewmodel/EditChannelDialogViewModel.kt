@@ -2,6 +2,8 @@ package com.example.feature_edit_channel.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_navigation.core.NavigationManger
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +15,10 @@ import javax.inject.Inject
 /**
  * EditChannelDialogViewModel: 채널 편집 다이얼로그의 비즈니스 로직을 처리하는 ViewModel
  */
-class EditChannelDialogViewModel @Inject constructor() : ViewModel() {
+@HiltViewModel
+class EditChannelDialogViewModel @Inject constructor(
+    private val navigationManger: NavigationManger
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditChannelDialogUiState())
     val uiState: StateFlow<EditChannelDialogUiState> = _uiState.asStateFlow()
@@ -31,6 +36,11 @@ class EditChannelDialogViewModel @Inject constructor() : ViewModel() {
 
     fun onEditChannelClick() {
         val state = _uiState.value
+        
+        // Validate required parameters before navigation
+        if (state.projectId.isNotEmpty() && state.channelId.isNotEmpty()) {
+            navigationManger.navigateToEditChannel(state.projectId, state.channelId)
+        }
 
         viewModelScope.launch {
             _eventFlow.emit(EditChannelDialogEvent.DismissDialog)
