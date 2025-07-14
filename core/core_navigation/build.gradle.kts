@@ -85,8 +85,6 @@ dependencies {
     // Coil (Image Loading)
     implementation(libs.coil.compose) // 버전 통일
 
-    // Sentry for tracking (if used in navigation)
-    implementation(libs.sentry.android)
     
     // 코루틴
     implementation(libs.kotlinx.coroutines.android)

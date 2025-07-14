@@ -44,8 +44,6 @@ implementation(project(":core:core_navigation"))
 - SavedStateHandleUtils.kt
 - NavigationManagerExtensions.kt
 - NavigationManager.kt
-- SentryNavigationTracker.kt
-- SentryNavigationHelper.kt
 - NavControllerExtensions.kt
 - NavigationManagerComposables.kt
 - NestedNavigationManagerFactory.kt

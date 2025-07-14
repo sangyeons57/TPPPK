@@ -10,17 +10,15 @@ Move the following files from `core/core_common/src/main/java/com/example/core_c
 2. `SavedStateHandleUtils.kt`
 3. `NavigationManagerExtensions.kt`
 4. `NavigationManager.kt`
-5. `SentryNavigationTracker.kt`
-6. `SentryNavigationHelper.kt`
-7. `NavControllerExtensions.kt`
-8. `NavigationManagerComposables.kt`
-9. `NestedNavigationManagerFactory.kt`
-10. `SavedStateNavigationResultHandler.kt`
-11. `NavigationResultListener.kt`
-12. `NavigationHandler.kt`
-13. `NavigationCommand.kt`
-14. `ComposeNavigationHandler.kt`
-15. `README.md`
+5. `NavControllerExtensions.kt`
+6. `NavigationManagerComposables.kt`
+7. `NestedNavigationManagerFactory.kt`
+8. `SavedStateNavigationResultHandler.kt`
+9. `NavigationResultListener.kt`
+10. `NavigationHandler.kt`
+11. `NavigationCommand.kt`
+12. `ComposeNavigationHandler.kt`
+13. `README.md`
 
 ## Package Name Updates
 Update package declarations from `com.example.core_common.navigation` to `com.example.core_navigation`.

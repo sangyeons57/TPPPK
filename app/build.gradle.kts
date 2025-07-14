@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.dagger.hilt)
 
-    alias(libs.plugins.sentry)
     alias(libs.plugins.org.jetbrains.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
@@ -188,20 +187,11 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
 
-    implementation(libs.sentry.android)
     
     // LeakCanary for memory leak detection (debug only)
     debugImplementation(libs.leakcanary.android)
 }
 
-sentry {
-    org.set("bamsol")
-    projectName.set("android")
-
-    // this will upload your source code to Sentry to show it as part of the stack traces
-    // disable if you don't want to expose your sources
-    includeSourceContext.set(true)
-}
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")

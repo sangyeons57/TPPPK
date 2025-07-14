@@ -57,7 +57,6 @@ dependencies {
     implementation(libs.androidx.material.icons.core)
     implementation(libs.material.icons.extended)
     
-    // Sentry 및 Core_Logging 의존성
 
     // Firebase - 최소 필요한 의존성만 추가
     implementation(platform(libs.firebase.bom))

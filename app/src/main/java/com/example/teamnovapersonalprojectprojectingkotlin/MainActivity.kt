@@ -26,16 +26,11 @@ import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigationGraph
 import dagger.hilt.android.AndroidEntryPoint
-import io.sentry.ITransaction
-import io.sentry.Sentry
-import io.sentry.SpanStatus
 import javax.inject.Inject
 
 @AndroidEntryPoint // Hilt 사용 시 Activity에 추가
 class MainActivity : ComponentActivity() {
     
-    // 앱 성능 측정용 트랜잭션
-    private var appStartTransaction: ITransaction? = null
     
     @Inject
     lateinit var navigationManger: NavigationManger
@@ -56,11 +51,8 @@ class MainActivity : ComponentActivity() {
         
         setupBackPressHandler()
         
-        // Sentry 초기화 확인 (테스트 예외 제거됨 - 프로덕션 안정성을 위해)
         
         setContent {
-            // UI 렌더링 성능 측정
-            val uiRenderSpan = appStartTransaction?.startChild("ui.render", "Initial UI Rendering")
             
             // NavController 생성 및 AppNavigator에 설정
             val navController = rememberNavController()
@@ -85,16 +77,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
             
-            uiRenderSpan?.finish(SpanStatus.OK)
 
             // LaunchedEffect를 사용하여 생명주기 인식 코루틴 관리
             LaunchedEffect(key1 = lifecycle) { // lifecycle을 키로 사용하여 Activity 생명주기와 연동
                 // 이 코루틴은 LaunchedEffect가 컴포지션에 있는 동안 실행됩니다.
                 // lifecycle은 Activity에서 가져옵니다.
                 lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                    appStartTransaction?.finish(SpanStatus.OK)
-                    // Sentry 트랜잭션의 finish()는 여러 번 호출되어도 일반적으로 안전하지만,
-                    // 필요하다면 한 번만 호출되도록 플래그 관리를 추가할 수 있습니다.
+                    // App resumed - no performance tracking needed
                 }
             }
         }
@@ -208,29 +197,27 @@ class MainActivity : ComponentActivity() {
     }
     
     /**
-     * 네비게이션 컨트롤러에 Sentry 추적 설정
+     * Navigation controller setup
      */
     private fun setupNavigationTracking(navController: NavController) {
-        // 네비게이션 변경 추적
+        // Navigation change tracking (placeholder)
         navController.addOnDestinationChangedListener { _, destination, _ ->
-
+            // Navigation tracking logic can be added here
         }
-        
-        // 세션 추적 시작
     }
     
     override fun onResume() {
         super.onResume()
-        // 앱이 다시 활성화될 때 세션 추적 시작
+        // App resumed
     }
     
     override fun onPause() {
-        // 앱이 백그라운드로 갈 때 이벤트 기록
+        // App paused
         super.onPause()
     }
     
     override fun onDestroy() {
-        // 앱 종료 시 마지막 트랜잭션 정리
+        // App destroyed
         super.onDestroy()
     }
 

@@ -6,7 +6,6 @@ mockitoCore = "5.18.0"
 mockitoJunitJupiter = "5.18.0"
 mockitoKotlin = "5.4.0"
 pluginAgp = "8.10.1"
-pluginSentry = "5.8.0"
 pluginGms = "4.4.3"
 hilt = "2.56.2"
 coil = "2.7.0"
@@ -32,7 +31,6 @@ androidxHiltNavigationCompose = "1.2.0"
 okhttp = "4.12.0"
 retrofit = "3.0.0"
 room = "2.7.2"
-sentryAndroid = "8.14.0"
 desugarJdkLibs = "2.1.5"
 appcompat = "1.7.1"
 material = "1.12.0"
@@ -111,7 +109,6 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
-sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentryAndroid" }
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
@@ -145,7 +142,6 @@ android-application = { id = "com.android.application", version.ref = "pluginAgp
 google-gms = { id = "com.google.gms.google-services", version.ref = "pluginGms" }
 android-library = { id = "com.android.library", version.ref = "pluginAgp" } 
 dagger-hilt= {id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-sentry = { id = "io.sentry.android.gradle", version.ref = "pluginSentry"}
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
