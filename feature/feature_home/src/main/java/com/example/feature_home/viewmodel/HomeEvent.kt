@@ -12,11 +12,6 @@ sealed class HomeEvent {
     object NavigateToAddProject : HomeEvent()
     data class ShowSnackbar(val message: String) : HomeEvent()
     data class ShowAddProjectElementDialog(val projectId: DocumentId) : HomeEvent()
-    data class NavigateToEditCategory(val projectId: DocumentId, val categoryId: DocumentId) : HomeEvent()
-    data class NavigateToEditChannel(
-        val projectId: DocumentId,
-        val channelId: String,
-    ) : HomeEvent()
     data class NavigateToReorderCategory(val projectId: String) : HomeEvent()
     data class NavigateToReorderChannel(val projectId: String, val categoryId: String) : HomeEvent()
     data class ProjectDeleted(val projectId: DocumentId, val projectName: String) : HomeEvent()
