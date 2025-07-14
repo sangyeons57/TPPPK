@@ -331,7 +331,6 @@ fun HomeScreen(
                                        },
                     onNavigateToEditCategory = {
                         Log.d("HomeScreen", "EditCategoryDialog(EditCateogry)")
-
                         // Navigation handled by ViewModel
                     },
                     onNavigateToCreateChannel = {
