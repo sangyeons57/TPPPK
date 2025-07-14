@@ -42,7 +42,7 @@ class ReorderCategoriesUseCaseImpl @Inject constructor(
     ): CustomResult<Unit, Exception> {
         try {
             // Get all categories for the project
-            val allCategoriesResult = categoryRepository.getAll()
+            val allCategoriesResult = categoryRepository.findAll()
             if (allCategoriesResult !is CustomResult.Success) {
                 return CustomResult.Failure(Exception("Failed to fetch categories"))
             }
