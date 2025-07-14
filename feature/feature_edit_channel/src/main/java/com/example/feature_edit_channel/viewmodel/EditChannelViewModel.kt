@@ -86,7 +86,7 @@ class EditChannelViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingCategories = true) }
             
-            structureUseCases.getProjectAllCategoriesUseCase(DocumentId(projectId))
+            structureUseCases.getProjectAllCategoriesUseCase()
                 .catch { exception ->
                     _uiState.update { 
                         it.copy(

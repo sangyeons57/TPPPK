@@ -18,7 +18,7 @@ interface GetProjectAllCategoriesUseCase {
      * @param projectId 프로젝트 ID
      * @return Flow<CustomResult<List<Category>, Exception>> 카테고리 목록을 포함한 결과
      */
-    suspend operator fun invoke(projectId: DocumentId): Flow<CustomResult<List<Category>, Exception>>
+    suspend operator fun invoke(): Flow<CustomResult<List<Category>, Exception>>
 }
 
 /**
@@ -36,7 +36,7 @@ class GetProjectAllCategoriesUseCaseImpl @Inject constructor(
      * @param projectId 프로젝트 ID (사용되지 않음 - Repository에서 이미 프로젝트별로 생성됨)
      * @return Flow<CustomResult<List<Category>, Exception>> 카테고리 목록을 포함한 결과
      */
-    override suspend fun invoke(projectId: DocumentId): Flow<CustomResult<List<Category>, Exception>> {
+    override suspend fun invoke(): Flow<CustomResult<List<Category>, Exception>> {
         // observeAll()을 사용하여 카테고리 목록 조회
         return categoryRepository.observeAll().map { result ->
             when (result) {

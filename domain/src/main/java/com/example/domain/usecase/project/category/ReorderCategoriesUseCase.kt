@@ -60,13 +60,13 @@ class ReorderCategoriesUseCaseImpl @Inject constructor(
             
             // Update each category with its new normalized order
             categoryIds.forEachIndexed { index, categoryId ->
-                val category = categoryMap[categoryId]
+                val category = categoryMap[categoryId] as Category?
                     ?: return CustomResult.Failure(IllegalArgumentException("Category not found: $categoryId"))
                 
                 val newOrder = CategoryOrder(index.toDouble())
                 
                 // Update the category order using the domain method
-                category.update(newOrder = newOrder)
+                category.changeOrder(newOrder = newOrder)
                 
                 // Save the updated category
                 when (val saveResult = categoryRepository.save(category)) {
