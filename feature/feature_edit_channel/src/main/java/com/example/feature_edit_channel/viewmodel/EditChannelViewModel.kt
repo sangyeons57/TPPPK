@@ -12,6 +12,7 @@ import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -41,7 +42,6 @@ data class EditChannelUiState(
 
 // --- 이벤트 ---
 sealed class EditChannelEvent {
-    object NavigateBack : EditChannelEvent()
     data class ShowSnackbar(val message: String) : EditChannelEvent()
     object ClearFocus : EditChannelEvent()
     object ShowDeleteConfirmation : EditChannelEvent()
@@ -51,6 +51,7 @@ sealed class EditChannelEvent {
 @HiltViewModel
 class EditChannelViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    private val navigationManger: NavigationManger,
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider
 ) : ViewModel() {
@@ -237,7 +238,7 @@ class EditChannelViewModel @Inject constructor(
             newOrder == currentState.originalOrder) {
             viewModelScope.launch {
                 _eventFlow.emit(EditChannelEvent.ShowSnackbar("변경된 내용이 없습니다."))
-                _eventFlow.emit(EditChannelEvent.NavigateBack)
+                navigateBack()
             }
             return
         }
@@ -323,5 +324,9 @@ class EditChannelViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun navigateBack() {
+        navigationManger.navigateBack()
     }
 }
