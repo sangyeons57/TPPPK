@@ -12,6 +12,8 @@ import com.example.domain.repository.factory.context.CategoryRepositoryFactoryCo
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCase
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCaseImpl
+import com.example.domain.usecase.project.category.ReorderCategoriesUseCase
+import com.example.domain.usecase.project.category.ReorderCategoriesUseCaseImpl
 import com.example.domain.usecase.project.category.UpdateCategoryUseCase
 import com.example.domain.usecase.project.category.UpdateCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.AddCategoryUseCase
@@ -104,6 +106,10 @@ class ProjectStructureUseCaseProvider @Inject constructor(
                 categoryRepository = categoryRepository
             ),
             
+            reorderCategoriesUseCase = ReorderCategoriesUseCaseImpl(
+                categoryRepository = categoryRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             categoryRepository = categoryRepository
@@ -143,6 +149,7 @@ data class ProjectStructureUseCases(
     // 카테고리 도메인 UseCases
     val getCategoryDetailsUseCase: GetCategoryDetailsUseCase,
     val updateCategoryUseCase: UpdateCategoryUseCase,
+    val reorderCategoriesUseCase: ReorderCategoriesUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,
