@@ -11,7 +11,6 @@ import com.example.core_common.constants.Constants
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogBuilder
-import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Project
@@ -59,81 +58,10 @@ import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
-// 상단 탭 상태
-enum class TopSection {
-    PROJECTS, DMS
-}
-
-
-// 홈 화면 UI 상태
-data class HomeUiState(
-    val selectedTopSection: TopSection = TopSection.DMS, // 기본 선택: DMS
-    val projects: List<ProjectUiModel> = emptyList(), // Now using ProjectUiModel
-    val dms: List<DmUiModel> = emptyList(), // Use DmUiModel
-    val isLoading: Boolean = false,
-    val errorMessage: String = "default",
-    
-    // 프로젝트 관련 상태
-    val selectedProjectId: DocumentId? = null, // 선택된 프로젝트 ID
-    val selectedDmId: String? = null, // 선택된 프로젝트 ID
-    val projectName: String = "", // 선택된 프로젝트 이름
-    val projectDescription: String? = null, // 선택된 프로젝트 설명
-    val projectMembers: List<ProjectMember> = emptyList(), // 선택된 프로젝트 멤버
-    
-    // 카테고리 및 채널 관련 상태
-    val projectStructure: ProjectStructureUiState = ProjectStructureUiState(),
-
-    // 사용자 프로필 관련 상태
-    val userInitial: String = "U", // 사용자 이니셜 (기본값: "U")
-    val userProfileImageUrl: String? = null, // 사용자 프로필 이미지 URL
-    
-    // 표시 관련 상태
-    val isDetailFullScreen: Boolean = false, // 전체 화면 모드 플래그
-
-    // --- Bottom-sheet (long-press) dialog state ---
-    val showBottomSheet: Boolean = false,
-    val showBottomSheetItems: List<BottomSheetDialogItem> = emptyList(),
-
-    val targetDMChannelForSheet: DmUiModel? = null,
-    val targetCategoryForSheet: CategoryUiModel? = null,
-    val targetChannelForSheet: ChannelUiModel? = null
-)
-
-// 프로젝트 멤버 정보
-data class ProjectMember(
-    val id: String,
-    val name: String,
-    val role: String
-)
-
-// 홈 화면 이벤트
-sealed class HomeEvent {
-    data class NavigateToProjectSettings(val projectId: DocumentId?) : HomeEvent() // 프로젝트 설정 화면
-    data class NavigateToDmChat(val dmId: DocumentId) : HomeEvent()
-    data class NavigateToChannel(val projectId: DocumentId, val channelId: String) :
-        HomeEvent() // 채널 화면으로 이동
-    object ShowAddProjectDialog : HomeEvent() // 또는 화면 이동
-    object ShowAddFriendDialog : HomeEvent() // 또는 화면 이동
-    object NavigateToAddProject : HomeEvent() // 프로젝트 추가 화면
-    data class ShowSnackbar(val message: String) : HomeEvent()
-    data class ShowAddProjectElementDialog(val projectId: DocumentId) :
-        HomeEvent() // 프로젝트 구조 편집 다이얼로그 표시
-
-    // --- New navigation events for long-press actions ---
-    data class NavigateToEditCategory(val projectId: DocumentId, val categoryId: DocumentId) :
-        HomeEvent()
-
-    data class NavigateToEditChannel(
-        val projectId: DocumentId,
-        val categoryId: String,
-        val channelId: String
-    ) : HomeEvent()
-    data class NavigateToReorderCategory(val projectId: String) : HomeEvent()
-    data class NavigateToReorderChannel(val projectId: String, val categoryId: String) : HomeEvent()
-    
-    // --- Project deletion event ---
-    data class ProjectDeleted(val projectId: DocumentId, val projectName: String) : HomeEvent()
-}
+import com.example.feature_home.viewmodel.TopSection
+import com.example.feature_home.viewmodel.HomeUiState
+import com.example.feature_home.viewmodel.HomeEvent
+import com.example.feature_home.viewmodel.ProjectMember
 
 
 @HiltViewModel
@@ -1114,23 +1042,7 @@ class HomeViewModel @Inject constructor(
         val channel = _uiState.value.targetChannelForSheet
 
         if (projectId != null && channel != null) {
-            val categoryId = getCategoryIdForChannel(channel.id.value)
-            if (categoryId != null) {
-                viewModelScope.launch {
-                    _eventFlow.emit(
-                        HomeEvent.NavigateToEditChannel(
-                            projectId,
-                            categoryId,
-                            channel.id.value
-                        )
-                    )
-                }
-            } else {
-                // Handle case where categoryId is not found for the channel (e.g., direct channel or error)
-                Log.w("HomeViewModel", "Category ID not found for channel: ${channel.id.value}")
-                // Optionally, show a snackbar message to the user
-                // viewModelScope.launch { _eventFlow.emit(HomeEvent.ShowSnackbar("채널의 카테고리를 찾을 수 없습니다.")) }
-            }
+            navigationManger.navigateToEditChannel(projectId.value, channel.id.value)
         }
         onProjectItemActionSheetDismiss()
     }
@@ -1140,9 +1052,7 @@ class HomeViewModel @Inject constructor(
         val category = _uiState.value.targetCategoryForSheet
 
         if (projectId != null && category != null) {
-            viewModelScope.launch {
-                _eventFlow.emit(HomeEvent.NavigateToEditCategory(projectId, category.id))
-            }
+            navigationManger.navigateToEditCategory(projectId.value, category.id.value)
         }
         onProjectItemActionSheetDismiss()
     }
@@ -1352,4 +1262,5 @@ class HomeViewModel @Inject constructor(
         
         Log.d("HomeViewModel", "All Flow collection jobs cancelled")
     }
+
 }

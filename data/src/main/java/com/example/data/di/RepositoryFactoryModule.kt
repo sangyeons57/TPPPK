@@ -19,6 +19,8 @@ import com.example.data.repository.factory.ProjectsWrapperRepositoryFactoryImpl
 import com.example.data.repository.factory.RoleRepositoryFactoryImpl
 import com.example.data.repository.factory.ScheduleRepositoryFactoryImpl
 import com.example.data.repository.factory.SearchRepositoryFactoryImpl
+import com.example.data.repository.factory.TaskContainerRepositoryFactoryImpl
+import com.example.data.repository.factory.TaskRepositoryFactoryImpl
 import com.example.data.repository.factory.UserRepositoryFactoryImpl
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
@@ -39,6 +41,8 @@ import com.example.domain.repository.base.ProjectRoleRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
 import com.example.domain.repository.base.ScheduleRepository
 import com.example.domain.repository.base.SearchRepository
+import com.example.domain.repository.base.TaskContainerRepository
+import com.example.domain.repository.base.TaskRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
@@ -58,6 +62,8 @@ import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactor
 import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
 import com.example.domain.repository.factory.context.ScheduleRepositoryFactoryContext
 import com.example.domain.repository.factory.context.SearchRepositoryFactoryContext
+import com.example.domain.repository.factory.context.TaskContainerRepositoryFactoryContext
+import com.example.domain.repository.factory.context.TaskRepositoryFactoryContext
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 import dagger.Binds
 import dagger.Module
@@ -151,5 +157,12 @@ abstract class RepositoryFactoryModule {
     @Singleton
     abstract fun bindSearchRepositoryFactory(impl: SearchRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<SearchRepositoryFactoryContext, SearchRepository>
 
+    @Binds
+    @Singleton
+    abstract fun bindTaskContainerRepositoryFactory(impl: TaskContainerRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<TaskContainerRepositoryFactoryContext, TaskContainerRepository>
+
+    @Binds
+    @Singleton
+    abstract fun bindTaskRepositoryFactory(impl: TaskRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<TaskRepositoryFactoryContext, TaskRepository>
 
 }

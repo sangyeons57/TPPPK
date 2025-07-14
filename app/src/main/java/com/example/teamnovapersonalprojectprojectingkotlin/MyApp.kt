@@ -25,9 +25,6 @@ class MyApp : Application() {
         appcheck()
 
 
-        // Sentry 초기화 :: 잠시 꺼두기
-        //SentryUtil.SentryInit(this)
-        //SentryUtil.logInfo("앱 시작됨", mapOf("startup_type" to "manual_init"))
     }
     
     /**

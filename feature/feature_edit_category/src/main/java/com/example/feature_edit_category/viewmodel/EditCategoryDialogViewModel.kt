@@ -1,5 +1,6 @@
 package com.example.feature_edit_category.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
@@ -32,6 +33,7 @@ class EditCategoryDialogViewModel @Inject constructor(
             projectId = projectId,
             categoryId = categoryId
         )
+        Log.d ("EditCategoryDialogViewModel", "initialize: $categoryName, $projectId, $categoryId")
     }
 
     fun onEditCategoryClick() {

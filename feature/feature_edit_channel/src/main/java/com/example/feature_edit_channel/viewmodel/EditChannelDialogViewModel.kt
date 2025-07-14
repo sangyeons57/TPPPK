@@ -36,9 +36,12 @@ class EditChannelDialogViewModel @Inject constructor(
 
     fun onEditChannelClick() {
         val state = _uiState.value
+        
+        // Validate required parameters before navigation
         if (state.projectId.isNotEmpty() && state.channelId.isNotEmpty()) {
             navigationManger.navigateToEditChannel(state.projectId, state.channelId)
         }
+
         viewModelScope.launch {
             _eventFlow.emit(EditChannelDialogEvent.DismissDialog)
         }

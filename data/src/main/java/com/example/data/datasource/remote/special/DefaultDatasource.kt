@@ -205,8 +205,7 @@ abstract class DefaultDatasourceImpl <Dto> (
         }
     }
 
-    override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> = withContext(
-        Dispatchers.IO) {
+    override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("delete")
         resultTry {
             if (id.isNotAssigned()) throw IllegalArgumentException("ID cannot be empty when deleting")

@@ -49,3 +49,6 @@ render.experimental.xml
 
 # Sentry Config File
 sentry.properties
+
+#env
+.env

@@ -230,28 +230,6 @@ fun HomeScreen(
                     showAddProjectElementDialog = true
                 }
 
-                is HomeEvent.NavigateToEditCategory -> {
-                    // Find the category name for the dialog
-                    val category = uiState.projectStructure.categories.find { it.id == event.categoryId }
-                    if (category != null) {
-                        editCategoryName = category.name.value
-                        editCategoryProjectId = event.projectId.value
-                        editCategoryId = event.categoryId.value
-                        showEditCategoryDialog = true
-                    }
-                }
-                is HomeEvent.NavigateToEditChannel -> {
-                    // Find the channel name for the dialog
-                    val channel = uiState.projectStructure.categories
-                        .flatMap { it.channels }
-                        .find { it.id.value == event.channelId }
-                    if (channel != null) {
-                        editChannelName = channel.name.value
-                        editChannelProjectId = event.projectId.value
-                        editChannelId = event.channelId
-                        showEditChannelDialog = true
-                    }
-                }
                 is HomeEvent.NavigateToReorderCategory -> TODO()
                 is HomeEvent.NavigateToReorderChannel -> TODO()
                 
@@ -327,7 +305,7 @@ fun HomeScreen(
                     categoryId = editCategoryId,
                     onDismissRequest = { showEditCategoryDialog = false },
                     onNavigateToEditCategory = {
-                        // Navigation handled by ViewModel
+                        showEditCategoryDialog = false
                     },
                     onNavigateToCreateChannel = {
                         // Open AddProjectElementDialog for channel creation
@@ -336,19 +314,7 @@ fun HomeScreen(
                     }
                 )
             }
-            
-            // EditChannelDialog  
-            if (showEditChannelDialog) {
-                EditChannelDialog(
-                    channelName = editChannelName,
-                    projectId = editChannelProjectId,
-                    channelId = editChannelId,
-                    onDismissRequest = { showEditChannelDialog = false },
-                    onNavigateToEditChannel = {
-                        // Navigation handled by ViewModel
-                    }
-                )
-            }
+
             // 메인 콘텐츠 (HomeContent)
             HomeContent(
                 modifier = Modifier.fillMaxSize(),
@@ -420,7 +386,7 @@ fun HomeScreen(
                     categoryId = editCategoryId,
                     onDismissRequest = { showEditCategoryDialog = false },
                     onNavigateToEditCategory = {
-                        // Navigation handled by ViewModel
+                        showEditCategoryDialog = false
                     },
                     onNavigateToCreateChannel = {
                         // Open AddProjectElementDialog for channel creation
@@ -438,7 +404,7 @@ fun HomeScreen(
                     channelId = editChannelId,
                     onDismissRequest = { showEditChannelDialog = false },
                     onNavigateToEditChannel = {
-                        // Navigation handled by ViewModel
+                        showEditChannelDialog = false
                     }
                 )
             }

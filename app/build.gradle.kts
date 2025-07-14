@@ -44,6 +44,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -58,6 +59,7 @@ dependencies {
     // Firebase App Check
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.appcheck.playintegrity)
+    implementation(libs.firebase.appcheck.debug)
     debugImplementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.messaging.ktx)
 
@@ -91,8 +93,6 @@ dependencies {
     implementation(project(":feature:feature_search"))
     implementation(project(":feature:feature_profile"))
     implementation(project(":feature:feature_dev")) // DevMenuScreen 호출 시
-    implementation(project(":feature:feature_category_edit"))
-    implementation(project(":feature:feature_channel_edit"))
     implementation(project(":feature:feature_find_password"))
     
     // 새로 추가된 feature 모듈들
@@ -139,6 +139,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose) // Navigation Compose
     implementation(libs.material.icons.core)
     implementation(libs.androidx.runtime)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun EditCategoryScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: EditCategoryViewModel = hiltViewModel()
 ) {
@@ -46,7 +45,6 @@ fun EditCategoryScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditCategoryEvent.NavigateBack -> navigationManger.navigateBack()
                 is EditCategoryEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditCategoryEvent.ClearFocus -> focusManager.clearFocus()
                 is EditCategoryEvent.ShowDeleteConfirmation -> showDeleteConfirmationDialog = true
@@ -57,7 +55,7 @@ fun EditCategoryScreen(
     // 수정 또는 삭제 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.updateSuccess, uiState.deleteSuccess) {
         if (uiState.updateSuccess || uiState.deleteSuccess) {
-            navigationManger.navigateBack()
+            viewModel.navigateBack()
         }
     }
 
@@ -68,7 +66,7 @@ fun EditCategoryScreen(
             TopAppBar(
                 title = { Text("카테고리 편집") },
                 navigationIcon = {
-                    DebouncedBackButton(onClick = { navigationManger.navigateBack() })
+                    DebouncedBackButton(onClick = viewModel::navigateBack)
                 },
                 actions = {
                     // 삭제 버튼 (로딩 중 아닐 때만 활성화)

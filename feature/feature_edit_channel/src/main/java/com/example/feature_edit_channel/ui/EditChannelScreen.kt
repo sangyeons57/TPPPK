@@ -38,7 +38,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun EditChannelScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: EditChannelViewModel = hiltViewModel()
 ) {
@@ -51,7 +50,6 @@ fun EditChannelScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is EditChannelEvent.NavigateBack -> navigationManger.navigateBack()
                 is EditChannelEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is EditChannelEvent.ClearFocus -> focusManager.clearFocus()
                 is EditChannelEvent.ShowDeleteConfirmation -> showDeleteConfirmationDialog = true
@@ -62,7 +60,7 @@ fun EditChannelScreen(
     // 수정 또는 삭제 성공 시 자동으로 뒤로가기
     LaunchedEffect(uiState.updateSuccess, uiState.deleteSuccess) {
         if (uiState.updateSuccess || uiState.deleteSuccess) {
-            navigationManger.navigateBack()
+            viewModel.navigateBack()
         }
     }
 
@@ -73,7 +71,7 @@ fun EditChannelScreen(
             TopAppBar(
                 title = { Text("채널 편집") },
                 navigationIcon = {
-                    DebouncedBackButton(onClick = { navigationManger.navigateBack() })
+                    DebouncedBackButton(onClick = viewModel::navigateBack)
                 },
                 actions = {
                     IconButton(
