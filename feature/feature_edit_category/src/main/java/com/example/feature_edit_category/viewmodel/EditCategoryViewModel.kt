@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.vo.DocumentId
@@ -30,7 +31,6 @@ data class EditCategoryUiState(
 
 // --- 이벤트 ---
 sealed class EditCategoryEvent {
-    object NavigateBack : EditCategoryEvent()
     data class ShowSnackbar(val message: String) : EditCategoryEvent()
     object ClearFocus : EditCategoryEvent()
     object ShowDeleteConfirmation : EditCategoryEvent() // 삭제 확인 다이얼로그 표시 요청
@@ -40,6 +40,7 @@ sealed class EditCategoryEvent {
 @HiltViewModel
 class EditCategoryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    private val navigationManger: NavigationManger,
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider
 ) : ViewModel() {
 
@@ -151,7 +152,7 @@ class EditCategoryViewModel @Inject constructor(
         if (currentName == originalName && currentOrder == originalOrder) {
             viewModelScope.launch {
                 _eventFlow.emit(EditCategoryEvent.ShowSnackbar("변경된 내용이 없습니다."))
-                _eventFlow.emit(EditCategoryEvent.NavigateBack) // 변경 없으면 그냥 뒤로 가기
+                navigateBack()
             }
             return
         }
@@ -233,5 +234,8 @@ class EditCategoryViewModel @Inject constructor(
                 }
             }
         }
+    }
+    fun navigateBack() {
+        navigationManger.navigateBack()
     }
 }

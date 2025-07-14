@@ -357,9 +357,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
         ) {
             // EditCategoryScreen 에는 projectId 와 categoryId 가 필요하며,
             // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.
-            com.example.feature_edit_category.ui.EditCategoryScreen(
-                onNavigateBack = { navigationManger.navigateBack() }
-            )
+            com.example.feature_edit_category.ui.EditCategoryScreen()
         }
 
         // 채널 수정 화면
@@ -369,9 +367,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
         ) {
             // EditChannelScreen 에는 projectId 와 channelId 가 필요하며,
             // ViewModel 이 hiltViewModel() 로 주입되므로 SavedStateHandle 을 통해 자동으로 받습니다.
-            com.example.feature_edit_channel.ui.EditChannelScreen(
-                onNavigateBack = { navigationManger.navigateBack() }
-            )
+            com.example.feature_edit_channel.ui.EditChannelScreen()
         }
     }
 }
