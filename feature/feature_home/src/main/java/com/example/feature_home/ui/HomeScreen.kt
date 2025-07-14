@@ -281,6 +281,7 @@ fun HomeScreen(
             // AddProjectElementDialog
             if (showAddProjectElementDialog && currentProjectIdForDialog != null) {
                 AddProjectElementDialog(
+                    projectId = currentProjectIdForDialog as? String ?: "",
                     onDismissRequest = {
                         showAddProjectElementDialog = false
                         currentProjectIdForDialog = null
@@ -288,11 +289,13 @@ fun HomeScreen(
                         // 이것이 채널/카테고리 추가 후 UI가 업데이트되지 않는 문제를 해결합니다.
                         uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
                     },
-                    onAddCategoryClick = {
-                        // TODO: Navigate to actual category creation screen
+                    onCategoryCreated = { category ->
+                        // 카테고리 생성 후 프로젝트 구조 새로고침
+                        uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
                     },
-                    onAddChannelClick = {
-                        // TODO: Navigate to actual channel creation screen  
+                    onChannelCreated = { channel ->
+                        // 채널 생성 후 프로젝트 구조 새로고침
+                        uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
                     }
                 )
             }
@@ -344,6 +347,7 @@ fun HomeScreen(
             // AddProjectElementDialog
             if (showAddProjectElementDialog && currentProjectIdForDialog != null) {
                 AddProjectElementDialog(
+                    projectId = currentProjectIdForDialog as? String ?: "",
                     onDismissRequest = {
                         showAddProjectElementDialog = false
                         currentProjectIdForDialog = null
@@ -351,11 +355,13 @@ fun HomeScreen(
                         // 이것이 채널/카테고리 추가 후 UI가 업데이트되지 않는 문제를 해결합니다.
                         uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
                     },
-                    onAddCategoryClick = {
-                        // TODO: Navigate to actual category creation screen
+                    onCategoryCreated = { category ->
+                        // 카테고리 생성 후 프로젝트 구조 새로고침
+                        uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
                     },
-                    onAddChannelClick = {
-                        // TODO: Navigate to actual channel creation screen  
+                    onChannelCreated = { channel ->
+                        // 채널 생성 후 프로젝트 구조 새로고침
+                        uiState.selectedProjectId?.let { viewModel.refreshProjectStructure(it) }
                     }
                 )
             }
