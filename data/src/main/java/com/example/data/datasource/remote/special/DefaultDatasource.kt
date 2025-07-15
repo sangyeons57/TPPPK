@@ -142,18 +142,42 @@ abstract class DefaultDatasourceImpl <Dto> (
 
     override fun observeAll(): Flow<CustomResult<List<DTO>, Exception>> = callbackFlow{
         checkCollectionInitialized("observeAll")
+        
+        // 초기 로딩 상태 전송
+        trySend(CustomResult.Loading)
+        
         val listener = collection.addSnapshotListener{ snapshot, error ->
             if(error != null) {
+                Log.e("DefaultDatasourceImpl", "observeAll listener error: ${error.message}", error)
                 trySend(CustomResult.Failure(error))
-                close(error)
+                // 에러 발생 시 리스너를 닫지 않고 재시도 가능하도록 유지
                 return@addSnapshotListener
             }
             if(snapshot != null) {
-                val dtos = snapshot.documents.mapNotNull { it.toDtoSafely() }
-                trySend(CustomResult.Success(dtos))
+                try {
+                    val dtos = snapshot.documents.mapNotNull { document ->
+                        val dto = document.toDtoSafely()
+                        if (dto == null) {
+                            Log.w("DefaultDatasourceImpl", "Failed to deserialize document: ${document.id}")
+                        }
+                        dto
+                    }
+                    Log.d("DefaultDatasourceImpl", "observeAll success: ${dtos.size} items from collection ${collection.path}")
+                    trySend(CustomResult.Success(dtos))
+                } catch (e: Exception) {
+                    Log.e("DefaultDatasourceImpl", "observeAll processing error: ${e.message}", e)
+                    trySend(CustomResult.Failure(e))
+                }
+            } else {
+                Log.w("DefaultDatasourceImpl", "observeAll received null snapshot")
+                trySend(CustomResult.Success(emptyList()))
             }
         }
-        awaitClose { listener.remove() }
+        
+        awaitClose { 
+            Log.d("DefaultDatasourceImpl", "observeAll listener closed for collection: ${collection.path}")
+            listener.remove() 
+        }
     }
 
     override suspend fun findById(

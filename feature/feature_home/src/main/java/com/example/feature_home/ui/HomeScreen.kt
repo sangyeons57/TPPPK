@@ -65,6 +65,10 @@ import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.user.UserName
 import com.example.feature_edit_category.ui.EditCategoryDialog
 import com.example.feature_edit_channel.ui.EditChannelDialog
+import com.example.core_ui.components.reorder.SimpleReorderDialog
+import com.example.domain.model.base.ProjectChannel
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.feature_home.component.DmListComponent
 import com.example.feature_home.component.ExtendableFloatingActionMenu
 import com.example.feature_home.component.MainHomeFloatingButton
@@ -131,6 +135,11 @@ fun HomeScreen(
     var editCategoryId by remember { mutableStateOf("") }
     var editChannelProjectId by remember { mutableStateOf("") }
     var editChannelId by remember { mutableStateOf("") }
+    
+    // 순서 변경 다이얼로그 상태
+    var showReorderCategoriesDialog by remember { mutableStateOf(false) }
+    var showReorderChannelsDialog by remember { mutableStateOf(false) }
+    var reorderCategoryId by remember { mutableStateOf<String?>(null) }
 
     // 상태 복원 (탭 전환 시)
     LaunchedEffect(savedState) {
@@ -225,13 +234,21 @@ fun HomeScreen(
                 is HomeEvent.NavigateToChannel -> {
                     navigationManger.navigateToChat(event.channelId)
                 }
+                is HomeEvent.NavigateToTaskList -> {
+                    navigationManger.navigateToTaskList(event.projectId.value, event.channelId.value)
+                }
                 is HomeEvent.ShowAddProjectElementDialog -> {
                     currentProjectIdForDialog = event.projectId
                     showAddProjectElementDialog = true
                 }
 
-                is HomeEvent.NavigateToReorderCategory -> TODO()
-                is HomeEvent.NavigateToReorderChannel -> TODO()
+                is HomeEvent.NavigateToReorderCategory -> {
+                    showReorderCategoriesDialog = true
+                }
+                is HomeEvent.NavigateToReorderChannel -> {
+                    reorderCategoryId = event.categoryId
+                    showReorderChannelsDialog = true
+                }
                 
                 is HomeEvent.ProjectDeleted -> {
                     // 삭제된 프로젝트에 대한 사용자 친화적인 메시지 표시
@@ -281,7 +298,7 @@ fun HomeScreen(
             // AddProjectElementDialog
             if (showAddProjectElementDialog && currentProjectIdForDialog != null) {
                 AddProjectElementDialog(
-                    projectId = currentProjectIdForDialog as? String ?: "",
+                    projectId = currentProjectIdForDialog?.value ?: "",
                     onDismissRequest = {
                         showAddProjectElementDialog = false
                         currentProjectIdForDialog = null
@@ -347,7 +364,7 @@ fun HomeScreen(
             // AddProjectElementDialog
             if (showAddProjectElementDialog && currentProjectIdForDialog != null) {
                 AddProjectElementDialog(
-                    projectId = currentProjectIdForDialog as? String ?: "",
+                    projectId = currentProjectIdForDialog?.value ?: "",
                     onDismissRequest = {
                         showAddProjectElementDialog = false
                         currentProjectIdForDialog = null
@@ -389,6 +406,79 @@ fun HomeScreen(
                     onDismissRequest = { showEditChannelDialog = false },
                     onNavigateToEditChannel = {
                         showEditChannelDialog = false
+                    }
+                )
+            }
+            
+            // ReorderCategoriesDialog
+            if (showReorderCategoriesDialog && uiState.selectedProjectId != null) {
+                val categories = uiState.projectStructure.categories
+                    .filter { it.id.value != com.example.domain.model.base.Category.NO_CATEGORY_ID }
+                    .map { categoryUiModel ->
+                        // CategoryUiModel을 Category 도메인 객체로 변환
+                        com.example.domain.model.base.Category.fromDataSource(
+                            id = categoryUiModel.id,
+                            name = categoryUiModel.name,
+                            order = com.example.domain.model.vo.category.CategoryOrder(categoryUiModel.order),
+                            createdBy = com.example.domain.model.vo.OwnerId("system"),
+                            createdAt = java.time.Instant.now(),
+                            updatedAt = java.time.Instant.now(),
+                            isCategory = com.example.domain.model.vo.category.IsCategoryFlag.TRUE
+                        )
+                    }
+                    
+                SimpleReorderDialog(
+                    title = "카테고리 순서 변경",
+                    items = categories,
+                    itemKey = { it.id.value },
+                    itemLabel = { it.name.value },
+                    onDismiss = { showReorderCategoriesDialog = false },
+                    onReorderComplete = { reorderedCategories ->
+                        viewModel.onReorderCategories(uiState.selectedProjectId!!, reorderedCategories)
+                    }
+                )
+            }
+            
+            // ReorderChannelsDialog
+            if (showReorderChannelsDialog && uiState.selectedProjectId != null) {
+                val channels = if (reorderCategoryId == null) {
+                    // 프로젝트 직속 채널들
+                    uiState.projectStructure.directChannel
+                } else {
+                    // 특정 카테고리의 채널들
+                    uiState.projectStructure.categories
+                        .find { it.id.value == reorderCategoryId }
+                        ?.channels ?: emptyList()
+                }.map { channelUiModel ->
+                    // ChannelUiModel을 ProjectChannel 도메인 객체로 변환
+                    ProjectChannel.create(
+                        channelName = channelUiModel.name,
+                        channelType = channelUiModel.mode,
+                        order = ProjectChannelOrder(0.0), // 임시 order, 실제로는 reorder use case에서 재설정됨
+                        categoryId = DocumentId(reorderCategoryId ?: com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                    )
+                }
+                
+                val categoryName = if (reorderCategoryId == null) {
+                    "프로젝트 직속 채널"
+                } else {
+                    uiState.projectStructure.categories
+                        .find { it.id.value == reorderCategoryId }
+                        ?.name?.value ?: "채널"
+                }
+                
+                SimpleReorderDialog(
+                    title = "$categoryName 순서 변경",
+                    items = channels,
+                    itemKey = { it.id.value },
+                    itemLabel = { it.channelName.value },
+                    onDismiss = { 
+                        showReorderChannelsDialog = false
+                        reorderCategoryId = null
+                    },
+                    onReorderComplete = { reorderedChannels ->
+                        val categoryDocumentId = reorderCategoryId?.let { DocumentId(it) }
+                        viewModel.onReorderChannels(uiState.selectedProjectId!!, categoryDocumentId, reorderedChannels)
                     }
                 )
             }

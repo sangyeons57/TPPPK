@@ -241,6 +241,14 @@ class NavigationManagerImpl @Inject constructor(
         executeNavigationOnParent(ChatRoute(channelId, messageId).toAppRoutePath(), navOptions)
     }
 
+    override fun navigateToTaskList(projectId: String, channelId: String, navOptions: NavOptions?) {
+        executeNavigationOnParent(TaskListRoute(projectId, channelId).toAppRoutePath(), navOptions)
+    }
+
+    override fun navigateToTaskDetail(projectId: String, channelId: String, taskId: String, navOptions: NavOptions?) {
+        executeNavigationOnParent(TaskDetailRoute(projectId, channelId, taskId).toAppRoutePath(), navOptions)
+    }
+
     override fun navigateToAddProject(navOptions: NavOptions?) {
         executeNavigationOnParent(AddProjectRoute.toAppRoutePath(), navOptions)
     }

@@ -3,6 +3,7 @@ package com.example.feature_home.dialog.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Category
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
@@ -44,6 +45,10 @@ class AddProjectElementDialogViewModel @Inject constructor(
      * @param projectId 프로젝트 ID
      */
     fun initialize(projectId: String) {
+        if (projectId.isBlank()) {
+            return
+        }
+        
         this.projectId = DocumentId(projectId)
         
         // 프로젝트 구조 로드하여 카테고리 목록 가져오기
@@ -255,27 +260,72 @@ class AddProjectElementDialogViewModel @Inject constructor(
                 val structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
                 when (val result = structureUseCases.getProjectAllCategoriesUseCase().first()) {
                     is CustomResult.Success -> {
+                        // UI 레이어에서 NoCategory 추가 처리
+                        val categories = result.data.toMutableList()
+                        
+                        // NoCategory가 없으면 UI 표시용으로 추가
+                        val hasNoCategory = categories.any { it.id.value == Category.NO_CATEGORY_ID }
+                        if (!hasNoCategory) {
+                            val noCategory = Category.fromDataSource(
+                                id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
+                                name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                                order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
+                                createdBy = com.example.domain.model.vo.OwnerId("system"),
+                                createdAt = java.time.Instant.now(),
+                                updatedAt = java.time.Instant.now(),
+                                isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                            )
+                            categories.add(0, noCategory)
+                        }
+                        
                         _uiState.value = _uiState.value.copy(
-                            availableCategories = result.data
+                            availableCategories = categories.sortedBy { it.order.value }
                         )
                     }
                     is CustomResult.Failure -> {
-                        // 카테고리 로드 실패 시 빈 목록 유지
+                        // 카테고리 로드 실패 시 NoCategory만 표시
+                        val noCategory = Category.fromDataSource(
+                            id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
+                            name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                            order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
+                            createdBy = com.example.domain.model.vo.OwnerId("system"),
+                            createdAt = java.time.Instant.now(),
+                            updatedAt = java.time.Instant.now(),
+                            isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                        )
                         _uiState.value = _uiState.value.copy(
-                            availableCategories = emptyList()
+                            availableCategories = listOf(noCategory)
                         )
                     }
                     else -> {
-                        // 다른 상태의 경우 빈 목록 유지
+                        // 다른 상태의 경우 NoCategory만 표시
+                        val noCategory = Category.fromDataSource(
+                            id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
+                            name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                            order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
+                            createdBy = com.example.domain.model.vo.OwnerId("system"),
+                            createdAt = java.time.Instant.now(),
+                            updatedAt = java.time.Instant.now(),
+                            isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                        )
                         _uiState.value = _uiState.value.copy(
-                            availableCategories = emptyList()
+                            availableCategories = listOf(noCategory)
                         )
                     }
                 }
             } catch (e: Exception) {
-                // 예외 발생 시 빈 목록 유지
+                // 예외 발생 시 NoCategory만 표시
+                val noCategory = Category.fromDataSource(
+                    id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
+                    name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                    order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
+                    createdBy = com.example.domain.model.vo.OwnerId("system"),
+                    createdAt = java.time.Instant.now(),
+                    updatedAt = java.time.Instant.now(),
+                    isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                )
                 _uiState.value = _uiState.value.copy(
-                    availableCategories = emptyList()
+                    availableCategories = listOf(noCategory)
                 )
             }
         }

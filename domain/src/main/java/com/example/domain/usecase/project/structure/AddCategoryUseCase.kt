@@ -101,7 +101,7 @@ class AddCategoryUseCaseImpl(
 
         // 3. Create new Category object
         val newCategory = Category.create(
-            name = categoryName.trim(),
+            name = CategoryName(categoryName.value.trim()),
             order = CategoryOrder(nextOrder),
             createdBy = OwnerId.from(currentUserSession.userId),
         )

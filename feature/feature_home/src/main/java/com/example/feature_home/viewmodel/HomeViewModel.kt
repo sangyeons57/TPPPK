@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.constants.Constants
@@ -17,6 +18,7 @@ import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.usecase.project.structure.ProjectStructureData
 import com.example.domain.model.base.User
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
@@ -716,9 +718,22 @@ class HomeViewModel @Inject constructor(
             )
         }
         
-        // 채널 화면으로 이동 이벤트 발행
+        // 채널 타입에 따라 적절한 화면으로 이동 이벤트 발행
         viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.NavigateToChannel(projectId, channel.id.value))
+            when (channel.mode) {
+                ProjectChannelType.TASKS -> {
+                    // 작업 채널인 경우 TaskListScreen으로 이동
+                    _eventFlow.emit(HomeEvent.NavigateToTaskList(projectId, channel.id))
+                }
+                ProjectChannelType.MESSAGES -> {
+                    // 메시지 채널인 경우 ChatScreen으로 이동
+                    _eventFlow.emit(HomeEvent.NavigateToChannel(projectId, channel.id.value))
+                }
+                else -> {
+                    // 기본적으로 ChatScreen으로 이동 (UNKNOWN 등)
+                    _eventFlow.emit(HomeEvent.NavigateToChannel(projectId, channel.id.value))
+                }
+            }
         }
     }
 
@@ -937,6 +952,11 @@ class HomeViewModel @Inject constructor(
                         label= "프로젝트 카테고리 편집",
                         icon = Icons.Default.Edit,
                         onClick = { onEditSelectedProjectCategory() }
+                    )
+                    .button(
+                        label = "카테고리 순서 변경",
+                        icon = Icons.Filled.SwapVert,
+                        onClick = { onReorderCategoriesClicked() }
                     ).build(),
                 showBottomSheet = true,
 
@@ -954,6 +974,11 @@ class HomeViewModel @Inject constructor(
                         label = "프로젝트 체널 편집",
                         icon = Icons.Default.Edit,
                         onClick = { onEditSelectedProjectChannel() }
+                    )
+                    .button(
+                        label = "채널 순서 변경",
+                        icon = Icons.Filled.SwapVert,
+                        onClick = { onReorderChannelsClicked(channel) }
                     ).build(),
                 showBottomSheet = true,
 
@@ -1053,6 +1078,28 @@ class HomeViewModel @Inject constructor(
 
         if (projectId != null && category != null) {
             navigationManger.navigateToEditCategory(projectId.value, category.id.value)
+        }
+        onProjectItemActionSheetDismiss()
+    }
+    
+    fun onReorderCategoriesClicked() {
+        val projectId = _uiState.value.selectedProjectId
+        if (projectId != null) {
+            viewModelScope.launch {
+                _eventFlow.emit(HomeEvent.NavigateToReorderCategory(projectId.value))
+            }
+        }
+        onProjectItemActionSheetDismiss()
+    }
+    
+    fun onReorderChannelsClicked(channel: ChannelUiModel) {
+        val projectId = _uiState.value.selectedProjectId
+        if (projectId != null) {
+            viewModelScope.launch {
+                // 채널이 어느 카테고리에 속하는지 찾기
+                val categoryId = getCategoryIdForChannel(channel.id.value)
+                _eventFlow.emit(HomeEvent.NavigateToReorderChannel(projectId.value, categoryId ?: com.example.domain.model.base.Category.NO_CATEGORY_ID))
+            }
         }
         onProjectItemActionSheetDismiss()
     }
@@ -1247,6 +1294,76 @@ class HomeViewModel @Inject constructor(
             } else {
                 Log.w("HomeViewModel", "coreProjectUseCases not initialized, cannot remove ProjectWrapper")
                 _eventFlow.emit(HomeEvent.ShowSnackbar("잠시 후 다시 시도해주세요."))
+            }
+        }
+    }
+    
+    /**
+     * 카테고리 순서 변경 처리
+     */
+    fun onReorderCategories(projectId: DocumentId, reorderedCategories: List<Category>) {
+        viewModelScope.launch {
+            try {
+                if (::projectStructureUseCases.isInitialized) {
+                    // 순서를 정규화하여 빈 숫자 없이 연속된 순서로 설정
+                    val categoryIds = reorderedCategories.map { it.id.value }
+                    
+                    val result = projectStructureUseCases.reorderCategoriesUseCase(projectId, categoryIds)
+                    when (result) {
+                        is CustomResult.Success -> {
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("카테고리 순서가 변경되었습니다."))
+                            // 프로젝트 구조 새로고침
+                            refreshProjectStructure(projectId)
+                        }
+                        is CustomResult.Failure -> {
+                            Log.e("HomeViewModel", "Failed to reorder categories", result.error)
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("카테고리 순서 변경에 실패했습니다."))
+                        }
+                        else -> {
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("카테고리 순서 변경 중 문제가 발생했습니다."))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Exception during category reordering", e)
+                _eventFlow.emit(HomeEvent.ShowSnackbar("카테고리 순서 변경 중 오류가 발생했습니다."))
+            }
+        }
+    }
+    
+    /**
+     * 채널 순서 변경 처리
+     */
+    fun onReorderChannels(projectId: DocumentId, categoryId: DocumentId?, reorderedChannels: List<ProjectChannel>) {
+        viewModelScope.launch {
+            try {
+                if (::projectStructureUseCases.isInitialized) {
+                    // 순서를 정규화하여 빈 숫자 없이 연속된 순서로 설정
+                    val channelIds = reorderedChannels.map { it.id.value }
+                    
+                    val result = projectStructureUseCases.reorderChannelsUseCase(
+                        projectId = projectId,
+                        categoryId = categoryId,
+                        channelIds = channelIds
+                    )
+                    when (result) {
+                        is CustomResult.Success -> {
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서가 변경되었습니다."))
+                            // 프로젝트 구조 새로고침
+                            refreshProjectStructure(projectId)
+                        }
+                        is CustomResult.Failure -> {
+                            Log.e("HomeViewModel", "Failed to reorder channels", result.error)
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서 변경에 실패했습니다."))
+                        }
+                        else -> {
+                            _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서 변경 중 문제가 발생했습니다."))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Exception during channel reordering", e)
+                _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서 변경 중 오류가 발생했습니다."))
             }
         }
     }

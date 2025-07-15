@@ -54,6 +54,7 @@
             <option value="$PROJECT_DIR$/feature/feature_settings" />
             <option value="$PROJECT_DIR$/feature/feature_signup" />
             <option value="$PROJECT_DIR$/feature/feature_splash" />
+            <option value="$PROJECT_DIR$/feature/feature_task" />
             <option value="$PROJECT_DIR$/feature/feature_terms_of_service" />
             <option value="$PROJECT_DIR$/navigation" />
           </set>

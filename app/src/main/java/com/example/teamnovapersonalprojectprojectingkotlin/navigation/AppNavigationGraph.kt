@@ -56,6 +56,8 @@ import com.example.feature_role_list.ui.RoleListScreen
 import com.example.feature_add_role.ui.AddRoleScreen
 import com.example.feature_edit_role.ui.EditRoleScreen
 import com.example.feature_edit_member.ui.EditMemberScreen
+import com.example.feature_task.ui.TaskListScreen
+import com.example.feature_task.ui.TaskDetailScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -156,6 +158,7 @@ fun AppNavigationGraph(
         // 독립적인 화면들의 그래프 - 메인 탭 외부에서 접근하는 화면들
         projectGraph(navigationManger)
         chatGraph(navigationManger)
+        taskGraph(navigationManger)
         scheduleGraph(navigationManger)
 
         // 프로필 수정 화면 (Settings Route)
@@ -442,5 +445,31 @@ fun NavGraphBuilder.scheduleGraph(navigationManger: NavigationManger) {
             )
         }
 
+    }
+}
+
+/**
+ * 작업 관리 관련 화면들의 네비게이션 그래프
+ */
+fun NavGraphBuilder.taskGraph(navigationManger: NavigationManger) {
+    navigation(
+        route = "task",
+        startDestination = TaskListRoute.ROUTE_PATTERN
+    ) {
+        // 작업 목록 화면
+        composable(
+            route = TaskListRoute.ROUTE_PATTERN,
+            arguments = TaskListRoute.arguments
+        ) {
+            TaskListScreen(navigationManger = navigationManger)
+        }
+        
+        // 작업 상세 화면
+        composable(
+            route = TaskDetailRoute.ROUTE_PATTERN,
+            arguments = TaskDetailRoute.arguments
+        ) {
+            TaskDetailScreen(navigationManger = navigationManger)
+        }
     }
 } 

@@ -44,6 +44,10 @@ class GetProjectAllCategoriesUseCaseImpl @Inject constructor(
                     val categories = result.data
                         .filterIsInstance<Category>()
                         .sortedBy { it.order.value }
+                        .toMutableList()
+                    
+                    // NoCategory는 UI 레이어에서 처리하도록 변경
+                    // 여기서는 실제 DB 데이터만 반환하여 무한 로딩 방지
                     CustomResult.Success(categories)
                 }
                 is CustomResult.Failure -> result

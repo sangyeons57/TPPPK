@@ -108,6 +108,16 @@ interface NavigationManger {
     fun navigateToChat(channelId: String, messageId: String? = null, navOptions: NavOptions? = null)
     
     /**
+     * Navigates to task list screen.
+     */
+    fun navigateToTaskList(projectId: String, channelId: String, navOptions: NavOptions? = null)
+    
+    /**
+     * Navigates to task detail screen.
+     */
+    fun navigateToTaskDetail(projectId: String, channelId: String, taskId: String, navOptions: NavOptions? = null)
+    
+    /**
      * Navigates to add project screen.
      */
     fun navigateToAddProject(navOptions: NavOptions? = null)

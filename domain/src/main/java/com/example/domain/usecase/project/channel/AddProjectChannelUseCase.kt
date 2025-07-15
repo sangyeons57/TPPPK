@@ -74,8 +74,8 @@ class AddProjectChannelUseCaseImpl(
         channelType: ProjectChannelType,
         categoryId: DocumentId
     ): CustomResult<ProjectChannel, Exception> {
-        val trimmedChannelName = channelName.trim()
-        if (trimmedChannelName.isBlank()) {
+        val trimmedChannelName = Name(channelName.value.trim())
+        if (trimmedChannelName.value.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("Channel name cannot be blank."))
         }
 

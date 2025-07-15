@@ -7,6 +7,7 @@ sealed class HomeEvent {
     data class NavigateToProjectSettings(val projectId: DocumentId?) : HomeEvent()
     data class NavigateToDmChat(val dmId: DocumentId) : HomeEvent()
     data class NavigateToChannel(val projectId: DocumentId, val channelId: String) : HomeEvent()
+    data class NavigateToTaskList(val projectId: DocumentId, val channelId: DocumentId) : HomeEvent()
     object ShowAddProjectDialog : HomeEvent()
     object ShowAddFriendDialog : HomeEvent()
     object NavigateToAddProject : HomeEvent()

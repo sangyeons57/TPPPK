@@ -265,6 +265,7 @@ private fun CategoryCreationContent(
 /**
  * 채널 생성 컨텐츠
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChannelCreationContent(
     channelName: String,
@@ -305,55 +306,61 @@ private fun ChannelCreationContent(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // 카테고리 선택
+        // 카테고리 선택 드롭다운
+        var expanded by remember { mutableStateOf(false) }
+        val selectedCategoryName = if (selectedCategoryId == null) {
+            "카테고리 선택안함"
+        } else {
+            availableCategories.find { it.id.value == selectedCategoryId }?.name?.value ?: "카테고리 선택안함"
+        }
+        
         Text(
             text = "카테고리",
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // "카테고리 없음" 옵션
-            Row(
+            OutlinedTextField(
+                value = selectedCategoryName,
+                onValueChange = { },
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .selectable(
-                        selected = selectedCategoryId == null,
-                        onClick = { onChannelCategoryChanged(null) }
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = selectedCategoryId == null,
-                    onClick = { onChannelCategoryChanged(null) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("카테고리 없음 (프로젝트 직속 채널)")
-            }
+                    .menuAnchor()
+                    .focusRequester(FocusRequester()),
+                enabled = !isLoading
+            )
             
-            // 기존 카테고리 옵션들
-            availableCategories.forEach { category ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .selectable(
-                            selected = selectedCategoryId == category.id.value,
-                            onClick = { onChannelCategoryChanged(category.id.value) }
-                        )
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = selectedCategoryId == category.id.value,
-                        onClick = { onChannelCategoryChanged(category.id.value) }
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                // "카테고리 선택안함" 옵션
+                DropdownMenuItem(
+                    text = { Text("카테고리 선택안함 (프로젝트 직속 채널)") },
+                    onClick = {
+                        onChannelCategoryChanged(null)
+                        expanded = false
+                    }
+                )
+                
+                // 기존 카테고리 옵션들
+                availableCategories.forEach { category ->
+                    DropdownMenuItem(
+                        text = { Text(category.name.value) },
+                        onClick = {
+                            onChannelCategoryChanged(category.id.value)
+                            expanded = false
+                        }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(category.name.value)
                 }
             }
         }

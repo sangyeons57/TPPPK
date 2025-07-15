@@ -98,7 +98,6 @@ fun EditChannelScreen(
                 modifier = Modifier.padding(paddingValues),
                 uiState = uiState,
                 onChannelNameChange = viewModel::onChannelNameChange,
-                onChannelTypeSelected = viewModel::onChannelTypeSelected,
                 onCategorySelected = viewModel::onCategorySelected,
                 onOrderChange = viewModel::onOrderChange,
                 onUpdateClick = viewModel::updateChannel
@@ -141,7 +140,6 @@ fun EditChannelContent(
     modifier: Modifier = Modifier,
     uiState: EditChannelUiState,
     onChannelNameChange: (String) -> Unit,
-    onChannelTypeSelected: (ProjectChannelType) -> Unit,
     onCategorySelected: (String) -> Unit,
     onOrderChange: (String) -> Unit,
     onUpdateClick: () -> Unit
@@ -185,33 +183,27 @@ fun EditChannelContent(
             supportingText = { Text("숫자로 입력하세요. 낮은 숫자일수록 위에 표시됩니다.") }
         )
 
-        // 채널 타입 선택 라디오 버튼 그룹
-        Column(modifier = Modifier.selectableGroup()) {
+        // 채널 타입 표시 (읽기 전용)
+        Column {
             Text(
                 "채널 유형",
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .selectable(
-                        selected = (uiState.currentChannelMode == ProjectChannelType.MESSAGES),
-                        onClick = { onChannelTypeSelected(ProjectChannelType.MESSAGES) },
-                        role = Role.RadioButton
-                    )
-                    .padding(horizontal = 16.dp)
-            ) {
-                RadioButton(
-                    selected = (uiState.currentChannelMode == ProjectChannelType.MESSAGES),
-                    onClick = null
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
+            ) {
                 Text(
-                    text = "텍스트 채널",
+                    text = when(uiState.currentChannelMode) {
+                        ProjectChannelType.MESSAGES -> "텍스트 채널"
+                        ProjectChannelType.TASKS -> "작업 채널" 
+                        else -> "알 수 없는 채널"
+                    },
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 16.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
             }
         }
@@ -323,7 +315,6 @@ private fun EditChannelContentPreview() {
                 availableCategories = emptyList()
             ),
             onChannelNameChange = {},
-            onChannelTypeSelected = {},
             onCategorySelected = {},
             onOrderChange = {},
             onUpdateClick = {}
@@ -343,7 +334,6 @@ private fun EditChannelContentLoadingPreview() {
                 currentOrder = 2.0
             ),
             onChannelNameChange = {},
-            onChannelTypeSelected = {},
             onCategorySelected = {},
             onOrderChange = {},
             onUpdateClick = {}
@@ -363,7 +353,6 @@ private fun EditChannelContentErrorPreview() {
                 currentOrder = 0.0
             ),
             onChannelNameChange = {},
-            onChannelTypeSelected = {},
             onCategorySelected = {},
             onOrderChange = {},
             onUpdateClick = {}

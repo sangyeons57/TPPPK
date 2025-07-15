@@ -18,6 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,29 +61,7 @@ fun ProjectChannelList(
     LazyColumn(
         modifier = modifier.padding(horizontal = 4.dp)
     ) {
-        // 일반 채널 (카테고리에 속하지 않은 채널)
-        if (structureUiState.directChannel.isNotEmpty()) {
-            items(structureUiState.directChannel) { channel ->
-                ChannelItem(
-                    channel = channel,
-                    onClick = { onChannelClick(channel) },
-                    onLongPress = { onChannelLongPress(channel) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            item {
-                HorizontalDivider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                )
-            }
-        }
-        
-        // 카테고리 및 해당 채널 목록
+        // 카테고리 및 해당 채널 목록을 먼저 표시
         items(structureUiState.categories) { category ->
             CategoryItem(
                 category = category,
@@ -90,6 +71,28 @@ fun ProjectChannelList(
                 onChannelLongPress = onChannelLongPress,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+        
+        // 일반 채널 (카테고리에 속하지 않은 채널)을 아래쪽에 표시
+        if (structureUiState.directChannel.isNotEmpty()) {
+            item {
+                HorizontalDivider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                )
+            }
+            
+            items(structureUiState.directChannel) { channel ->
+                ChannelItem(
+                    channel = channel,
+                    onClick = { onChannelClick(channel) },
+                    onLongPress = { onChannelLongPress(channel) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
@@ -226,11 +229,13 @@ fun ChannelItem(
     ) {
         Icon(
             imageVector = when(channel.mode) {
-                ProjectChannelType.MESSAGES ->  Icons.Default.Tag // Discord의 # 아이콘과 유사
+                ProjectChannelType.MESSAGES -> Icons.Default.Tag // 메시지 채널: # 태그 아이콘
+                ProjectChannelType.TASKS -> Icons.Default.CheckCircle // 테스크 채널: 체크 아이콘
                 else -> Icons.Default.Tag // 기본값으로 Tag 아이콘
             },
             contentDescription = when(channel.mode) {
-                ProjectChannelType.MESSAGES -> "텍스트 채널"
+                ProjectChannelType.MESSAGES -> "메시지 채널"
+                ProjectChannelType.TASKS -> "테스크 채널"
                 else -> "알 수 없는 채널"
             },
             modifier = Modifier.size(18.dp), // 아이콘 크기 약간 키움
@@ -252,11 +257,11 @@ fun ChannelItem(
 // --- Previews Start ---
 
 /**
- * ChannelItem 미리보기: 텍스트 채널, 선택됨
+ * ChannelItem 미리보기: 메시지 채널, 선택됨
  */
-@Preview(showBackground = true, name = "ChannelItem - Text Selected")
+@Preview(showBackground = true, name = "ChannelItem - Message Selected")
 @Composable
-fun ChannelItemPreview_TextSelected() {
+fun ChannelItemPreview_MessageSelected() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ChannelItem(
             channel = ChannelUiModel(
@@ -264,6 +269,26 @@ fun ChannelItemPreview_TextSelected() {
                 name = Name("일반 대화"),
                 mode = ProjectChannelType.MESSAGES,
                 isSelected = true
+            ),
+            onClick = {},
+            onLongPress = {}
+        )
+    }
+}
+
+/**
+ * ChannelItem 미리보기: 테스크 채널, 선택 안됨
+ */
+@Preview(showBackground = true, name = "ChannelItem - Task Unselected")
+@Composable
+fun ChannelItemPreview_TaskUnselected() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        ChannelItem(
+            channel = ChannelUiModel(
+                id = DocumentId("ch2"),
+                name = Name("할 일 관리"),
+                mode = ProjectChannelType.TASKS,
+                isSelected = false
             ),
             onClick = {},
             onLongPress = {}
@@ -320,6 +345,12 @@ fun CategoryItemPreview_Expanded() {
             name = Name("백엔드 작업"),
             mode = ProjectChannelType.MESSAGES,
             isSelected = true
+        ),
+        ChannelUiModel(
+            id = DocumentId("ch5"),
+            name = Name("스프린트 관리"),
+            mode = ProjectChannelType.TASKS,
+            isSelected = false
         )
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -380,6 +411,12 @@ fun ProjectChannelListPreview_Default() {
             name = Name("자유 게시판"),
             mode = ProjectChannelType.MESSAGES,
             isSelected = false
+        ),
+        ChannelUiModel(
+            id = DocumentId("gen3"),
+            name = Name("전체 할 일"),
+            mode = ProjectChannelType.TASKS,
+            isSelected = false
         )
     )
     val categories = listOf(
@@ -399,9 +436,9 @@ fun ProjectChannelListPreview_Default() {
                     isSelected = false
                 ),
                 ChannelUiModel(
-                    id = DocumentId("dev_voice"),
-                    name = Name("개발팀 음성"),
-                    mode = ProjectChannelType.MESSAGES,
+                    id = DocumentId("dev_tasks"),
+                    name = Name("개발 작업"),
+                    mode = ProjectChannelType.TASKS,
                     isSelected = false
                 )
             )
