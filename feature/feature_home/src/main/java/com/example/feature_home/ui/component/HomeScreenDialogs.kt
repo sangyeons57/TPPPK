@@ -85,19 +85,7 @@ fun HomeScreenDialogs(
                 onDialogStateChange(dialogStates.copy(showEditChannelDialog = false))
             },
             onNavigateToEditChannel = {
-                // Dialog는 자동으로 닫히므로 별도 처리 불필요
-                // EditChannelDialogViewModel에서 navigation 처리됨
-            },
-            onShowReorderDialog = {
-                // 채널의 경우 어떤 카테고리의 채널인지 확인 필요
-                // 현재는 카테고리 정보가 없으므로 전체 채널 순서 변경으로 처리
-                onDialogStateChange(
-                    dialogStates.copy(
-                        showEditChannelDialog = false,
-                        showReorderChannelsDialog = true,
-                        reorderCategoryId = null // 전체 채널 순서 변경
-                    )
-                )
+                onDialogStateChange(dialogStates.copy(showEditChannelDialog = false))
             }
         )
     }
