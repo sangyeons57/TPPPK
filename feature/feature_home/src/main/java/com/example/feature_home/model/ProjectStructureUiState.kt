@@ -122,4 +122,18 @@ data class ChannelUiModel(
             )
         }
     }
+}
+
+/**
+ * ProjectStructureData를 ProjectStructureUiState로 변환하는 확장 함수
+ */
+fun ProjectStructureData.toProjectStructureUiState(
+    expandedCategoryIds: Set<String> = emptySet(),
+    selectedChannelId: String? = null
+): ProjectStructureUiState {
+    return ProjectStructureUiState.fromDomain(
+        data = this,
+        expandedCategoryIds = expandedCategoryIds,
+        selectedChannelId = selectedChannelId
+    )
 } 

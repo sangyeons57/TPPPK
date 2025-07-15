@@ -461,7 +461,7 @@ fun NavGraphBuilder.taskGraph(navigationManger: NavigationManger) {
             route = TaskListRoute.ROUTE_PATTERN,
             arguments = TaskListRoute.arguments
         ) {
-            TaskListScreen(navigationManger = navigationManger)
+            TaskListScreen()
         }
         
         // 작업 상세 화면
