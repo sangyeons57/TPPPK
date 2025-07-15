@@ -6,14 +6,13 @@ import com.example.domain.model.vo.DocumentId
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
-import javax.inject.Inject
 
 /**
  * 네비게이션 처리를 담당하는 Service
- * NavigationManger를 래핑하여 UI에 특화된 네비게이션 기능을 제공합니다.
+ * NavigationManager를 래핑하여 UI에 특화된 네비게이션 기능을 제공합니다.
  */
-class NavigationService @Inject constructor(
-    private val navigationManger: NavigationManger
+class NavigationService(
+    private val navigationManager: NavigationManger
 ) {
     
     /**
@@ -21,7 +20,7 @@ class NavigationService @Inject constructor(
      */
     fun navigateToProjectSettings(projectId: DocumentId) {
         Log.d("NavigationService", "Navigating to project settings: $projectId")
-        navigationManger.navigateToProjectSettings(projectId.value)
+        navigationManager.navigateToProjectSettings(projectId.value)
     }
     
     /**
@@ -29,7 +28,7 @@ class NavigationService @Inject constructor(
      */
     fun navigateToDmChat(dmId: DocumentId) {
         Log.d("NavigationService", "Navigating to DM chat: $dmId")
-        navigationManger.navigateToChat(dmId.value)
+        navigationManager.navigateToChat(dmId.value)
     }
     
     /**
@@ -40,11 +39,11 @@ class NavigationService @Inject constructor(
         when {
             // 태스크 채널인 경우 태스크 리스트로 이동
             isTaskChannel(channelId) -> {
-                navigationManger.navigateToTaskList(projectId.value, channelId.value)
+                navigationManager.navigateToTaskList(projectId.value, channelId.value)
             }
             // 일반 채널인 경우 채팅으로 이동
             else -> {
-                navigationManger.navigateToChat(channelId.value)
+                navigationManager.navigateToChat(channelId.value)
             }
         }
     }
@@ -54,7 +53,7 @@ class NavigationService @Inject constructor(
      */
     fun navigateToTaskList(projectId: DocumentId, channelId: DocumentId) {
         Log.d("NavigationService", "Navigating to task list: $channelId in project: $projectId")
-        navigationManger.navigateToTaskList(projectId.value, channelId.value)
+        navigationManager.navigateToTaskList(projectId.value, channelId.value)
     }
     
     /**
@@ -62,7 +61,7 @@ class NavigationService @Inject constructor(
      */
     fun navigateToAddProject() {
         Log.d("NavigationService", "Navigating to add project")
-        navigationManger.navigateToAddProject()
+        navigationManager.navigateToAddProject()
     }
     
     /**

@@ -13,13 +13,11 @@ import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
 import com.example.feature_home.model.ProjectUiModel
-import javax.inject.Inject
-
 /**
  * 다이얼로그 상태 관리를 담당하는 Service
  * UI에 특화된 다이얼로그 생성 및 관리 기능을 제공합니다.
  */
-class DialogManagementService @Inject constructor() {
+class DialogManagementService() {
     
     /**
      * 프로젝트 아이템 액션 시트 생성

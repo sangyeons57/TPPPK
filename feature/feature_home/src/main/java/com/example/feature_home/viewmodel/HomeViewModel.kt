@@ -13,8 +13,8 @@ import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
 import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.ProjectUiModel
-import com.example.feature_home.viewmodel.service.HomeViewModelServiceProvider
-import com.example.feature_home.viewmodel.service.HomeViewModelServiceProvider.HomeViewModelServices
+import com.example.feature_home.viewmodel.service.HomeServiceProvider
+import com.example.feature_home.viewmodel.service.HomeServices
 import com.example.feature_home.viewmodel.service.DialogManagementService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,7 +33,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val homeViewModelServiceProvider: HomeViewModelServiceProvider
+    private val homeServiceProvider: HomeServiceProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -43,7 +43,7 @@ class HomeViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     // Service 그룹들
-    private val services: HomeViewModelServices = homeViewModelServiceProvider.create()
+    private lateinit var services: HomeServices
     
     // 선택된 채널 ID
     private var selectedChannelId: DocumentId? = null
@@ -56,7 +56,7 @@ class HomeViewModel @Inject constructor(
     private var projectStructureJob: Job? = null
     
     // 다이얼로그 상태
-    private var dialogState = services.dialogManagementService.getInitialDialogState()
+    private lateinit var dialogState: com.example.feature_home.viewmodel.service.DialogManagementService.DialogState
     
     // 현재 사용자 ID
     private var currentUserId: UserId = UserId.EMPTY
@@ -64,22 +64,19 @@ class HomeViewModel @Inject constructor(
             Log.d("HomeViewModel", "Setting currentUserId: $value")
             field = value
             if (value.isNotBlank()) {
-                initializeForUser(value)
                 loadDataForUser()
             }
         }
 
     init {
         Log.d("HomeViewModel", "HomeViewModel initialized")
+        // Initialize services for current user without project context
+        services = homeServiceProvider.createForCurrentUser()
+        // Initialize dialog state after services are created
+        dialogState = services.dialogManagementService.getInitialDialogState()
         startUserStream()
     }
 
-    /**
-     * 사용자별 Service 초기화
-     */
-    private fun initializeForUser(userId: UserId) {
-        services.loadDmsService.initializeForUser(userId)
-    }
 
     /**
      * 선택 상태를 초기화합니다.
@@ -264,9 +261,8 @@ class HomeViewModel @Inject constructor(
         
         _uiState.update { it.copy(selectedProjectId = projectId) }
         
-        // 프로젝트 선택 Service 초기화
-        services.projectSelectionService.initializeForProject(projectId, currentUserId)
-        services.categoryManagementService.initializeForProject(projectId)
+        // 프로젝트 선택 시 해당 프로젝트 컨텍스트로 services 재생성
+        services = homeServiceProvider.create(projectId, currentUserId)
         
         loadProjectDetails(projectId)
         loadProjectStructure(projectId)

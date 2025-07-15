@@ -2,7 +2,6 @@ package com.example.feature_home.viewmodel.service
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.project.CoreProjectUseCases
 import com.example.feature_home.model.ProjectUiModel
 import com.example.feature_home.model.toProjectUiModel
@@ -11,24 +10,20 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
 
 /**
  * 프로젝트 데이터 로딩을 담당하는 Service
  * Domain UseCase들을 조합하여 UI에 특화된 프로젝트 데이터를 제공합니다.
  */
-class LoadProjectsService @Inject constructor(
-    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider
+class LoadProjectsService(
+    private val coreProjectUseCases: CoreProjectUseCases
 ) {
-    
-    private lateinit var coreProjectUseCases: CoreProjectUseCases
 
     /**
      * 사용자가 참여한 프로젝트 목록을 UI에 최적화된 형태로 스트림 제공
      */
     fun getUserParticipatingProjectsStream(): Flow<CustomResult<List<ProjectUiModel>, Exception>> = flow {
         Log.d("LoadProjectsService", "Starting to load projects")
-        coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
 
         try {
             emitAll(

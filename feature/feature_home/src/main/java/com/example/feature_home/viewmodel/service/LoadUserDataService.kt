@@ -4,24 +4,20 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.UserId
-import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.domain.provider.user.UserUseCases
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
 
 /**
  * 사용자 데이터 로딩을 담당하는 Service
  * Domain UseCase들을 조합하여 UI에 특화된 사용자 데이터를 제공합니다.
  */
-class LoadUserDataService @Inject constructor(
-    private val userUseCaseProvider: UserUseCaseProvider
+class LoadUserDataService(
+    private val userUseCases: UserUseCases
 ) {
-    
-    private val userUseCases: UserUseCases = userUseCaseProvider.createForUser()
     
     data class UserData(
         val userId: UserId,
