@@ -48,7 +48,11 @@ class DialogManagementService() {
     /**
      * 카테고리 롱프레스 액션 시트 생성
      */
-    fun createCategoryLongPressActionSheet(category: CategoryUiModel): List<BottomSheetDialogItem> {
+    fun createCategoryLongPressActionSheet(
+        category: CategoryUiModel,
+        onEditClick: (CategoryUiModel) -> Unit,
+        onReorderClick: (CategoryUiModel) -> Unit
+    ): List<BottomSheetDialogItem> {
         Log.d("DialogManagementService", "Creating category action sheet for: ${category.name}")
         
         return BottomSheetDialogBuilder()
@@ -57,7 +61,7 @@ class DialogManagementService() {
                 icon = Icons.Default.Edit,
                 onClick = { 
                     Log.d("DialogManagementService", "Edit category clicked for: ${category.name}")
-                    // 카테고리 편집 처리는 ViewModel에서 처리
+                    onEditClick(category)
                 }
             )
             .button(
@@ -65,7 +69,7 @@ class DialogManagementService() {
                 icon = Icons.Default.SwapVert,
                 onClick = { 
                     Log.d("DialogManagementService", "Reorder category clicked for: ${category.name}")
-                    // 순서 변경 처리는 ViewModel에서 처리
+                    onReorderClick(category)
                 }
             )
             .build()
@@ -74,7 +78,11 @@ class DialogManagementService() {
     /**
      * 채널 롱프레스 액션 시트 생성
      */
-    fun createChannelLongPressActionSheet(channel: ChannelUiModel): List<BottomSheetDialogItem> {
+    fun createChannelLongPressActionSheet(
+        channel: ChannelUiModel,
+        onEditClick: (ChannelUiModel) -> Unit,
+        onReorderClick: (ChannelUiModel) -> Unit
+    ): List<BottomSheetDialogItem> {
         Log.d("DialogManagementService", "Creating channel action sheet for: ${channel.name}")
         
         return BottomSheetDialogBuilder()
@@ -83,7 +91,7 @@ class DialogManagementService() {
                 icon = Icons.Default.Edit,
                 onClick = { 
                     Log.d("DialogManagementService", "Edit channel clicked for: ${channel.name}")
-                    // 채널 편집 처리는 ViewModel에서 처리
+                    onEditClick(channel)
                 }
             )
             .button(
@@ -91,7 +99,7 @@ class DialogManagementService() {
                 icon = Icons.Default.SwapVert,
                 onClick = { 
                     Log.d("DialogManagementService", "Reorder channel clicked for: ${channel.name}")
-                    // 순서 변경 처리는 ViewModel에서 처리
+                    onReorderClick(channel)
                 }
             )
             .build()

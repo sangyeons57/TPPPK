@@ -377,7 +377,11 @@ class HomeViewModel @Inject constructor(
     fun onCategoryLongPress(category: CategoryUiModel) {
         Log.d("HomeViewModel", "Category long pressed: ${category.name}")
         
-        val items = services.dialogManagementService.createCategoryLongPressActionSheet(category)
+        val items = services.dialogManagementService.createCategoryLongPressActionSheet(
+            category = category,
+            onEditClick = { cat -> onCategoryEditClick(cat) },
+            onReorderClick = { cat -> onCategoryReorderClick(cat) }
+        )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
         _uiState.update { it.copy(
@@ -392,7 +396,11 @@ class HomeViewModel @Inject constructor(
     fun onChannelLongPress(channel: ChannelUiModel) {
         Log.d("HomeViewModel", "Channel long pressed: ${channel.name}")
         
-        val items = services.dialogManagementService.createChannelLongPressActionSheet(channel)
+        val items = services.dialogManagementService.createChannelLongPressActionSheet(
+            channel = channel,
+            onEditClick = { ch -> onChannelEditClick(ch) },
+            onReorderClick = { ch -> onChannelReorderClick(ch) }
+        )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
         _uiState.update { it.copy(
@@ -557,5 +565,96 @@ class HomeViewModel @Inject constructor(
         }
         
         Log.d("HomeViewModel", "HomeViewModel cleared")
+    }
+
+    /**
+     * 카테고리 편집 버튼 클릭 처리
+     */
+    private fun onCategoryEditClick(category: CategoryUiModel) {
+        Log.d("HomeViewModel", "Category edit clicked: ${category.name}")
+        
+        // 바텀시트 닫기
+        onActionSheetDismiss()
+        
+        // 현재 프로젝트 ID 가져오기
+        val projectId = _uiState.value.selectedProjectId
+        if (projectId != null) {
+            // EditCategoryDialog 표시를 위한 상태 업데이트
+            _uiState.update { currentState ->
+                currentState.copy(
+                    dialogStates = currentState.dialogStates.copy(
+                        showEditCategoryDialog = true,
+                        editCategoryName = category.name.value,
+                        editCategoryProjectId = projectId.value,
+                        editCategoryId = category.id.value
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * 카테고리 순서 변경 버튼 클릭 처리
+     */
+    private fun onCategoryReorderClick(category: CategoryUiModel) {
+        Log.d("HomeViewModel", "Category reorder clicked: ${category.name}")
+        
+        // 바텀시트 닫기
+        onActionSheetDismiss()
+        
+        // 카테고리 순서 변경 다이얼로그 표시
+        _uiState.update { currentState ->
+            currentState.copy(
+                dialogStates = currentState.dialogStates.copy(
+                    showReorderCategoriesDialog = true
+                )
+            )
+        }
+    }
+
+    /**
+     * 채널 편집 버튼 클릭 처리
+     */
+    private fun onChannelEditClick(channel: ChannelUiModel) {
+        Log.d("HomeViewModel", "Channel edit clicked: ${channel.name}")
+        
+        // 바텀시트 닫기
+        onActionSheetDismiss()
+        
+        // 현재 프로젝트 ID 가져오기
+        val projectId = _uiState.value.selectedProjectId
+        if (projectId != null) {
+            // EditChannelDialog 표시를 위한 상태 업데이트
+            _uiState.update { currentState ->
+                currentState.copy(
+                    dialogStates = currentState.dialogStates.copy(
+                        showEditChannelDialog = true,
+                        editChannelName = channel.name.value,
+                        editChannelProjectId = projectId.value,
+                        editChannelId = channel.id.value
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * 채널 순서 변경 버튼 클릭 처리
+     */
+    private fun onChannelReorderClick(channel: ChannelUiModel) {
+        Log.d("HomeViewModel", "Channel reorder clicked: ${channel.name}")
+        
+        // 바텀시트 닫기
+        onActionSheetDismiss()
+        
+        // 채널 순서 변경 다이얼로그 표시
+        _uiState.update { currentState ->
+            currentState.copy(
+                dialogStates = currentState.dialogStates.copy(
+                    showReorderChannelsDialog = true,
+                    reorderCategoryId = channel.categoryId.value.takeIf { it != com.example.domain.model.base.Category.NO_CATEGORY_ID }
+                )
+            )
+        }
     }
 }
