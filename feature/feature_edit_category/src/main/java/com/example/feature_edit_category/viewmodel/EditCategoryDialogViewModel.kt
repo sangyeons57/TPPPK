@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,9 +44,17 @@ class EditCategoryDialogViewModel @Inject constructor(
             Log.d("EditCategoryDialogViewModel", "2")
 
             navigationManger.navigateToEditCategory(state.projectId, state.categoryId)
-        }
-        viewModelScope.launch {
-            _eventFlow.emit(EditCategoryDialogEvent.DismissDialog)
+            
+            // Delay dismissal to allow navigation to complete
+            viewModelScope.launch {
+                delay(100) // Small delay to ensure navigation starts
+                _eventFlow.emit(EditCategoryDialogEvent.DismissDialog)
+            }
+        } else {
+            // If validation fails, dismiss immediately
+            viewModelScope.launch {
+                _eventFlow.emit(EditCategoryDialogEvent.DismissDialog)
+            }
         }
     }
 

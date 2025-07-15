@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,10 +41,17 @@ class EditChannelDialogViewModel @Inject constructor(
         // Validate required parameters before navigation
         if (state.projectId.isNotEmpty() && state.channelId.isNotEmpty()) {
             navigationManger.navigateToEditChannel(state.projectId, state.channelId)
-        }
-
-        viewModelScope.launch {
-            _eventFlow.emit(EditChannelDialogEvent.DismissDialog)
+            
+            // Delay dismissal to allow navigation to complete
+            viewModelScope.launch {
+                delay(100) // Small delay to ensure navigation starts
+                _eventFlow.emit(EditChannelDialogEvent.DismissDialog)
+            }
+        } else {
+            // If validation fails, dismiss immediately
+            viewModelScope.launch {
+                _eventFlow.emit(EditChannelDialogEvent.DismissDialog)
+            }
         }
     }
 
