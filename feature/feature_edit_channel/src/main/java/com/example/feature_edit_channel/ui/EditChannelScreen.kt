@@ -99,7 +99,6 @@ fun EditChannelScreen(
                 uiState = uiState,
                 onChannelNameChange = viewModel::onChannelNameChange,
                 onCategorySelected = viewModel::onCategorySelected,
-                onOrderChange = viewModel::onOrderChange,
                 onUpdateClick = viewModel::updateChannel
             )
         }
@@ -141,7 +140,6 @@ fun EditChannelContent(
     uiState: EditChannelUiState,
     onChannelNameChange: (String) -> Unit,
     onCategorySelected: (String) -> Unit,
-    onOrderChange: (String) -> Unit,
     onUpdateClick: () -> Unit
 ) {
     Column(
@@ -171,17 +169,6 @@ fun EditChannelContent(
             isError = uiState.error?.contains("카테고리") == true
         )
 
-        // 순서 입력 필드
-        OutlinedTextField(
-            value = uiState.currentOrder.toString(),
-            onValueChange = onOrderChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("순서") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            isError = uiState.error?.contains("숫자") == true,
-            supportingText = { Text("숫자로 입력하세요. 낮은 숫자일수록 위에 표시됩니다.") }
-        )
 
         // 채널 타입 표시 (읽기 전용)
         Column {
@@ -311,12 +298,10 @@ private fun EditChannelContentPreview() {
                 currentChannelMode = ProjectChannelType.MESSAGES,
                 originalChannelMode = ProjectChannelType.MESSAGES,
                 currentCategoryId = "category1",
-                currentOrder = 1.0,
                 availableCategories = emptyList()
             ),
             onChannelNameChange = {},
             onCategorySelected = {},
-            onOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -331,11 +316,9 @@ private fun EditChannelContentLoadingPreview() {
                 channelId = "1",
                 currentChannelName = "수정 중...",
                 isLoading = true,
-                currentOrder = 2.0
             ),
             onChannelNameChange = {},
             onCategorySelected = {},
-            onOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -350,11 +333,9 @@ private fun EditChannelContentErrorPreview() {
                 channelId = "1",
                 currentChannelName = "",
                 error = "이름은 필수입니다.",
-                currentOrder = 0.0
             ),
             onChannelNameChange = {},
             onCategorySelected = {},
-            onOrderChange = {},
             onUpdateClick = {}
         )
     }

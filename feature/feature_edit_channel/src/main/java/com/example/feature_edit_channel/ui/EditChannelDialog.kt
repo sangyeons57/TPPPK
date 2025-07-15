@@ -2,6 +2,7 @@ package com.example.feature_edit_channel.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ fun EditChannelDialog(
     channelId: String,
     onDismissRequest: () -> Unit,
     onNavigateToEditChannel: () -> Unit = {},
+    onShowReorderDialog: () -> Unit = {},
     viewModel: EditChannelDialogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,6 +66,14 @@ fun EditChannelDialog(
                 icon = Icons.Filled.Edit,
                 onClick = viewModel::onEditChannelClick
             )
+            .button(
+                label = "순서 변경",
+                icon = Icons.Filled.SwapVert,
+                onClick = {
+                    onShowReorderDialog()
+                    viewModel.onDismiss()
+                }
+            )
             .spacer(height = 16.dp)
             .build()
     }
@@ -85,7 +95,8 @@ private fun EditChannelDialogPreview() {
             projectId = "project123",
             channelId = "channel123",
             onDismissRequest = {},
-            onNavigateToEditChannel = {}
+            onNavigateToEditChannel = {},
+            onShowReorderDialog = {}
         )
     }
 }

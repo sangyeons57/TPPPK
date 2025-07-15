@@ -3,6 +3,7 @@ package com.example.feature_edit_category.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ fun EditCategoryDialog(
     categoryId: String,
     onDismissRequest: () -> Unit,
     onNavigateToEditCategory: () -> Unit = {},
+    onShowReorderDialog: () -> Unit = {},
     viewModel: EditCategoryDialogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,6 +68,14 @@ fun EditCategoryDialog(
                 icon = Icons.Filled.Edit,
                 onClick = viewModel::onEditCategoryClick
             )
+            .button(
+                label = "순서 변경",
+                icon = Icons.Filled.SwapVert,
+                onClick = {
+                    onShowReorderDialog()
+                    viewModel.onDismiss()
+                }
+            )
             .spacer(height = 16.dp)
             .build()
     }
@@ -87,6 +97,7 @@ private fun EditCategoryDialogPreview() {
             categoryId = "category123",
             onDismissRequest = {},
             onNavigateToEditCategory = {},
+            onShowReorderDialog = {}
         )
     }
 }
