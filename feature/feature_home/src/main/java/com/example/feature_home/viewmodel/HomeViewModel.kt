@@ -15,6 +15,7 @@ import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.ProjectUiModel
 import com.example.feature_home.viewmodel.service.HomeViewModelServiceProvider
 import com.example.feature_home.viewmodel.service.HomeViewModelServiceProvider.HomeViewModelServices
+import com.example.feature_home.viewmodel.service.HomeViewModelServiceProvider.ProjectServices
 import com.example.feature_home.viewmodel.service.DialogManagementService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,7 +44,9 @@ class HomeViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     // Service 그룹들
-    private val services: HomeViewModelServices = homeViewModelServiceProvider.create()
+    private var services: HomeViewModelServices =
+        homeViewModelServiceProvider.createForUser(UserId.EMPTY)
+    private lateinit var projectServices: ProjectServices
     
     // 선택된 채널 ID
     private var selectedChannelId: DocumentId? = null
@@ -56,7 +59,7 @@ class HomeViewModel @Inject constructor(
     private var projectStructureJob: Job? = null
     
     // 다이얼로그 상태
-    private var dialogState = services.dialogManagementService.getInitialDialogState()
+    private var dialogState = DialogManagementService.DialogState()
     
     // 현재 사용자 ID
     private var currentUserId: UserId = UserId.EMPTY
@@ -64,7 +67,8 @@ class HomeViewModel @Inject constructor(
             Log.d("HomeViewModel", "Setting currentUserId: $value")
             field = value
             if (value.isNotBlank()) {
-                initializeForUser(value)
+                services = homeViewModelServiceProvider.createForUser(value)
+                dialogState = services.dialogManagementService.getInitialDialogState()
                 loadDataForUser()
             }
         }
@@ -74,12 +78,6 @@ class HomeViewModel @Inject constructor(
         startUserStream()
     }
 
-    /**
-     * 사용자별 Service 초기화
-     */
-    private fun initializeForUser(userId: UserId) {
-        services.loadDmsService.initializeForUser(userId)
-    }
 
     /**
      * 선택 상태를 초기화합니다.
@@ -264,10 +262,9 @@ class HomeViewModel @Inject constructor(
         
         _uiState.update { it.copy(selectedProjectId = projectId) }
         
-        // 프로젝트 선택 Service 초기화
-        services.projectSelectionService.initializeForProject(projectId, currentUserId)
-        services.categoryManagementService.initializeForProject(projectId)
-        
+        // 프로젝트 선택 Service 생성
+        projectServices = homeViewModelServiceProvider.createProjectServices(projectId, currentUserId)
+
         loadProjectDetails(projectId)
         loadProjectStructure(projectId)
     }
@@ -278,7 +275,7 @@ class HomeViewModel @Inject constructor(
     private fun loadProjectDetails(projectId: DocumentId) {
         projectDetailsJob?.cancel()
         projectDetailsJob = viewModelScope.launch {
-            services.projectSelectionService.getProjectDetailsStream(projectId).collectLatest { result ->
+            projectServices.projectSelectionService.getProjectDetailsStream(projectId).collectLatest { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val project = result.data
@@ -308,7 +305,7 @@ class HomeViewModel @Inject constructor(
     private fun loadProjectStructure(projectId: DocumentId) {
         projectStructureJob?.cancel()
         projectStructureJob = viewModelScope.launch {
-            services.projectSelectionService.getProjectStructureStream(projectId).collectLatest { result ->
+            projectServices.projectSelectionService.getProjectStructureStream(projectId).collectLatest { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val structure = result.data
@@ -336,7 +333,7 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Category clicked: ${category.name}")
         
         val projectId = _uiState.value.selectedProjectId ?: return
-        val expanded = services.categoryManagementService.toggleCategoryExpansion(projectId, category.id)
+        val expanded = projectServices.categoryManagementService.toggleCategoryExpansion(projectId, category.id)
         
         // UI 상태 업데이트
         val updatedCategories = _uiState.value.projectStructure.categories.map { cat ->
@@ -463,7 +460,7 @@ class HomeViewModel @Inject constructor(
     fun onReorderCategories(projectId: DocumentId, reorderedCategories: List<Category>) {
         Log.d("HomeViewModel", "Reordering categories for project: $projectId")
         viewModelScope.launch {
-            val result = services.categoryManagementService.reorderCategories(projectId, reorderedCategories)
+            val result = projectServices.categoryManagementService.reorderCategories(projectId, reorderedCategories)
             when (result) {
                 is CustomResult.Success -> {
                     refreshProjectStructure(projectId)
@@ -483,7 +480,7 @@ class HomeViewModel @Inject constructor(
     fun onReorderChannels(projectId: DocumentId, categoryId: DocumentId?, reorderedChannels: List<ProjectChannel>) {
         Log.d("HomeViewModel", "Reordering channels for project: $projectId, category: $categoryId")
         viewModelScope.launch {
-            val result = services.categoryManagementService.reorderChannels(projectId, categoryId, reorderedChannels)
+            val result = projectServices.categoryManagementService.reorderChannels(projectId, categoryId, reorderedChannels)
             when (result) {
                 is CustomResult.Success -> {
                     refreshProjectStructure(projectId)
@@ -503,7 +500,7 @@ class HomeViewModel @Inject constructor(
     fun refreshProjectStructure(projectId: DocumentId) {
         Log.d("HomeViewModel", "Refreshing project structure: $projectId")
         viewModelScope.launch {
-            services.projectSelectionService.refreshProjectStructure(projectId)
+            projectServices.projectSelectionService.refreshProjectStructure(projectId)
             loadProjectStructure(projectId)
         }
     }
@@ -514,7 +511,7 @@ class HomeViewModel @Inject constructor(
     fun restoreExpandedCategories(expandedCategoryIds: List<String>) {
         Log.d("HomeViewModel", "Restoring expanded categories: $expandedCategoryIds")
         val projectId = _uiState.value.selectedProjectId ?: return
-        services.categoryManagementService.restoreExpandedCategories(projectId, expandedCategoryIds)
+        projectServices.categoryManagementService.restoreExpandedCategories(projectId, expandedCategoryIds)
     }
 
     /**
@@ -554,7 +551,9 @@ class HomeViewModel @Inject constructor(
         
         // 카테고리 상태 정리
         _uiState.value.selectedProjectId?.let { projectId ->
-            services.categoryManagementService.clearCategoryStates(projectId)
+            if (::projectServices.isInitialized) {
+                projectServices.categoryManagementService.clearCategoryStates(projectId)
+            }
         }
         
         Log.d("HomeViewModel", "HomeViewModel cleared")

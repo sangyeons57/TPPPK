@@ -5,29 +5,19 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCases
-import javax.inject.Inject
 
 /**
  * 카테고리 상태 관리를 담당하는 Service
  * Domain UseCase들을 조합하여 카테고리 관련 기능을 제공합니다.
  */
-class CategoryManagementService @Inject constructor(
-    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider
+class CategoryManagementService(
+    private val projectStructureUseCases: ProjectStructureUseCases
 ) {
-    
-    private lateinit var projectStructureUseCases: ProjectStructureUseCases
     
     // 카테고리 확장 상태 캐시 (프로젝트 ID -> 카테고리 ID -> 확장 상태)
     private val categoryExpandedStates = mutableMapOf<String, MutableMap<String, Boolean>>()
     
-    /**
-     * 특정 프로젝트를 위한 UseCase 초기화
-     */
-    fun initializeForProject(projectId: DocumentId) {
-        projectStructureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
-    }
     
     /**
      * 카테고리 확장 상태를 토글
@@ -97,13 +87,8 @@ class CategoryManagementService @Inject constructor(
         Log.d("CategoryManagementService", "Reordering categories for project: $projectId")
         
         return try {
-            if (!::projectStructureUseCases.isInitialized) {
-                Log.w("CategoryManagementService", "ProjectStructureUseCases not initialized")
-                CustomResult.Failure(IllegalStateException("Service not initialized"))
-            } else {
-                val categoryIds = reorderedCategories.map { it.id.value }
-                projectStructureUseCases.reorderCategoriesUseCase(projectId, categoryIds)
-            }
+            val categoryIds = reorderedCategories.map { it.id.value }
+            projectStructureUseCases.reorderCategoriesUseCase(projectId, categoryIds)
         } catch (e: Exception) {
             Log.e("CategoryManagementService", "Failed to reorder categories", e)
             CustomResult.Failure(e)
@@ -121,13 +106,8 @@ class CategoryManagementService @Inject constructor(
         Log.d("CategoryManagementService", "Reordering channels for project: $projectId, category: $categoryId")
         
         return try {
-            if (!::projectStructureUseCases.isInitialized) {
-                Log.w("CategoryManagementService", "ProjectStructureUseCases not initialized")
-                CustomResult.Failure(IllegalStateException("Service not initialized"))
-            } else {
-                val channelIds = reorderedChannels.map { it.id.value }
-                projectStructureUseCases.reorderChannelsUseCase(projectId, categoryId, channelIds)
-            }
+            val channelIds = reorderedChannels.map { it.id.value }
+            projectStructureUseCases.reorderChannelsUseCase(projectId, categoryId, channelIds)
         } catch (e: Exception) {
             Log.e("CategoryManagementService", "Failed to reorder channels", e)
             CustomResult.Failure(e)
