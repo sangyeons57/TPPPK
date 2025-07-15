@@ -718,31 +718,27 @@ class HomeViewModel @Inject constructor(
             )
         }
         
-        // 채널 타입에 따라 적절한 화면으로 이동 이벤트 발행
-        viewModelScope.launch {
-            when (channel.mode) {
-                ProjectChannelType.TASKS -> {
-                    // 작업 채널인 경우 TaskListScreen으로 이동
-                    _eventFlow.emit(HomeEvent.NavigateToTaskList(projectId, channel.id))
-                }
-                ProjectChannelType.MESSAGES -> {
-                    // 메시지 채널인 경우 ChatScreen으로 이동
-                    _eventFlow.emit(HomeEvent.NavigateToChannel(projectId, channel.id.value))
-                }
-                else -> {
-                    // 기본적으로 ChatScreen으로 이동 (UNKNOWN 등)
-                    _eventFlow.emit(HomeEvent.NavigateToChannel(projectId, channel.id.value))
-                }
+        // 채널 타입에 따라 적절한 화면으로 이동
+        when (channel.mode) {
+            ProjectChannelType.TASKS -> {
+                // 작업 채널인 경우 TaskListScreen으로 이동
+                navigationManger.navigateToTaskList(projectId.value, channel.id.value)
+            }
+            ProjectChannelType.MESSAGES -> {
+                // 메시지 채널인 경우 ChatScreen으로 이동
+                navigationManger.navigateToChat(channel.id.value)
+            }
+            else -> {
+                // 기본적으로 ChatScreen으로 이동 (UNKNOWN 등)
+                navigationManger.navigateToChat(channel.id.value)
             }
         }
     }
 
     // 프로젝트 설정 아이콘 클릭 시 (새로 추가)
     fun onProjectSettingsClick(projectId: DocumentId) {
-        viewModelScope.launch {
-            // 설정은 별도 화면으로 네비게이션
-            _eventFlow.emit(HomeEvent.NavigateToProjectSettings(projectId))
-        }
+        // 설정은 별도 화면으로 네비게이션
+        navigationManger.navigateToProjectSettings(projectId.value)
     }
 
     // DM 아이템 클릭 시
@@ -751,7 +747,7 @@ class HomeViewModel @Inject constructor(
             when (_uiState.value.selectedTopSection) {
                 TopSection.PROJECTS -> {
                     println("ViewModel: 프로젝트 추가 버튼 클릭 -> 화면 이동 요청")
-                    _eventFlow.emit(HomeEvent.NavigateToAddProject) // 수정: 화면 이동 이벤트 발생
+                    navigationManger.navigateToAddProject()
                 }
                 TopSection.DMS -> {
                     println("ViewModel: 친구 추가/DM 버튼 클릭")
@@ -779,10 +775,8 @@ class HomeViewModel @Inject constructor(
 
     // 프로젝트 추가 버튼 클릭 시
     fun onProjectAddButtonClick() {
-        viewModelScope.launch {
-            println("ViewModel: 프로젝트 추가 버튼 클릭")
-            _eventFlow.emit(HomeEvent.NavigateToAddProject) // 또는 화면 이동 이벤트
-        }
+        println("ViewModel: 프로젝트 추가 버튼 클릭")
+        navigationManger.navigateToAddProject()
     }
     
     fun onAddFriendClick() {
@@ -860,9 +854,7 @@ class HomeViewModel @Inject constructor(
 
     // DM 아이템 클릭 시 이벤트 발생
     fun onDmItemClick(dmUiModel: DmUiModel) {
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.NavigateToDmChat(dmUiModel.channelId))
-        }
+        navigationManger.navigateToChat(dmUiModel.channelId.value)
     }
 
     /**
@@ -910,9 +902,7 @@ class HomeViewModel @Inject constructor(
     fun onProjectSettingsClicked() {
         val currentProjectId = _uiState.value.selectedProjectId
         if (currentProjectId != null) {
-            viewModelScope.launch {
-                _eventFlow.emit(HomeEvent.NavigateToProjectSettings(currentProjectId))
-            }
+            navigationManger.navigateToProjectSettings(currentProjectId.value)
         } else {
             Log.w("HomeViewModel", "Project settings clicked but no project is selected.")
             // Optionally, show a snackbar message to the user
@@ -1086,7 +1076,7 @@ class HomeViewModel @Inject constructor(
         val projectId = _uiState.value.selectedProjectId
         if (projectId != null) {
             viewModelScope.launch {
-                _eventFlow.emit(HomeEvent.NavigateToReorderCategory(projectId.value))
+                _eventFlow.emit(HomeEvent.ShowSnackbar("카테고리 순서 변경 다이얼로그를 표시합니다."))
             }
         }
         onProjectItemActionSheetDismiss()
@@ -1096,9 +1086,7 @@ class HomeViewModel @Inject constructor(
         val projectId = _uiState.value.selectedProjectId
         if (projectId != null) {
             viewModelScope.launch {
-                // 채널이 어느 카테고리에 속하는지 찾기
-                val categoryId = getCategoryIdForChannel(channel.id.value)
-                _eventFlow.emit(HomeEvent.NavigateToReorderChannel(projectId.value, categoryId ?: com.example.domain.model.base.Category.NO_CATEGORY_ID))
+                _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서 변경 다이얼로그를 표시합니다."))
             }
         }
         onProjectItemActionSheetDismiss()

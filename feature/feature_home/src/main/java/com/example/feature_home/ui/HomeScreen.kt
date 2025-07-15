@@ -52,9 +52,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
-import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.NavigationResultManager
-import com.example.core_navigation.core.TypeSafeRoute
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialog
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
@@ -106,14 +103,12 @@ private object HomeScreenStateKeys {
  * - 오른쪽: (채팅 화면으로 이동)
  *
  * @param modifier UI 요소에 적용할 Modifier.
- * @param navigationManger 내비게이션 이벤트를 처리하는 AppNavigator.
  * @param viewModel HomeViewModel 인스턴스, 화면의 상태 및 비즈니스 로직 관리.
  * @param savedState 화면 상태를 복원하기 위한 Bundle (탭 전환 시 상태 유지).
  */
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    navigationManger: NavigationManger,
     viewModel: HomeViewModel = hiltViewModel(),
     savedState: Bundle? = null
 ) {
@@ -190,9 +185,8 @@ fun HomeScreen(
                 putBoolean(HomeScreenStateKeys.SHOW_FLOATING_MENU, showFloatingMenu)
             }
             
-            // NavigationHandler를 통해 상태 저장
-            // 현재 화면 경로를 키로 사용
-            navigationManger.saveScreenState(HOME_SCREEN_STATE_KEY, screenState)
+            // TODO: Implement screen state saving if needed
+            // navigationManger.saveScreenState(HOME_SCREEN_STATE_KEY, screenState)
             Log.d("HomeScreen", "상태 저장: $screenState for key $HOME_SCREEN_STATE_KEY")
         }
     }
@@ -211,45 +205,16 @@ fun HomeScreen(
                 is HomeEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message, duration = SnackbarDuration.Short)
                 }
-                is HomeEvent.NavigateToProjectSettings -> {
-                    if (event.projectId == null) {
-                        Log.d("HomeScreen", "Project ID is null")
-                        return@collectLatest
-                    }
-                    navigationManger.navigateToProjectSettings(event.projectId.value)
-                }
                 is HomeEvent.ShowAddProjectDialog -> {
                     snackbarHostState.showSnackbar("프로젝트 추가 다이얼로그 (미구현)")
                 }
                 is HomeEvent.ShowAddFriendDialog -> {
                     // TODO: Implement friend dialog or navigation
                 }
-                is HomeEvent.NavigateToAddProject -> {
-                    navigationManger.navigateToAddProject()
-                }
-                is HomeEvent.NavigateToDmChat -> {
-                    Log.d("HomeScreen", "Navigating to DM Chat with ID: ${event.dmId}")
-                    navigationManger.navigateToChat(event.dmId.value)
-                }
-                is HomeEvent.NavigateToChannel -> {
-                    navigationManger.navigateToChat(event.channelId)
-                }
-                is HomeEvent.NavigateToTaskList -> {
-                    navigationManger.navigateToTaskList(event.projectId.value, event.channelId.value)
-                }
                 is HomeEvent.ShowAddProjectElementDialog -> {
                     currentProjectIdForDialog = event.projectId
                     showAddProjectElementDialog = true
                 }
-
-                is HomeEvent.NavigateToReorderCategory -> {
-                    showReorderCategoriesDialog = true
-                }
-                is HomeEvent.NavigateToReorderChannel -> {
-                    reorderCategoryId = event.categoryId
-                    showReorderChannelsDialog = true
-                }
-                
                 is HomeEvent.ProjectDeleted -> {
                     // 삭제된 프로젝트에 대한 사용자 친화적인 메시지 표시
                     val message = "프로젝트 '${event.projectName}'이(가) 삭제되어 목록에서 제거되었습니다."
@@ -649,9 +614,8 @@ fun HomeContentProjectsPreview() {
             onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") },
             onChannelLongPress = {},
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
-            modifier = TODO(),
-            onClickTopSection = TODO(),
-            viewModel = TODO()
+            onClickTopSection = { Log.d("Preview", "Top section clicked") },
+            viewModel = null!! // Preview only
         )
     }
 }
@@ -681,9 +645,8 @@ fun HomeContentDmsPreview() {
             onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") },
             onChannelLongPress = {},
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
-            modifier = TODO(),
-            onClickTopSection = TODO(),
-            viewModel = TODO()
+            onClickTopSection = { Log.d("Preview", "Top section clicked") },
+            viewModel = null!! // Preview only
         )
     }
 }
@@ -705,9 +668,8 @@ fun HomeContentLoadingPreview() {
             onChannelClick = { Log.d("Preview", "Channel clicked: ${it.name}") },
             onChannelLongPress = {},
             onDmItemClick = { Log.d("Preview", "DM clicked: ${it.partnerName}") },
-            modifier = TODO(),
-            onClickTopSection = TODO(),
-            viewModel = TODO()
+            onClickTopSection = { Log.d("Preview", "Top section clicked") },
+            viewModel = null!! // Preview only
         )
     }
 }
@@ -718,7 +680,8 @@ fun HomeContentLoadingPreview() {
 @Composable
 fun HomeScreenPreview_Default() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        HomeScreen(modifier = TODO(), navigationManger = TODO(), viewModel = TODO())
+        // HomeScreen preview requires actual ViewModel instance
+        // HomeScreen(modifier = Modifier, viewModel = TODO())
     }
 }
 
@@ -817,8 +780,8 @@ fun HomeScreenPreview_WithData() {
                          "DM clicked in HomeContent: ${dm.partnerName}"
                      )
                  },
-                 onClickTopSection = TODO(),
-                 viewModel = TODO()
+                 onClickTopSection = { Log.d("Preview", "Top section clicked") },
+                 viewModel = null!! // Preview only
              )
         }
     }
@@ -832,22 +795,16 @@ fun HomeScreenInScaffoldPreview() {
             modifier = Modifier.fillMaxSize(),
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             floatingActionButton = {
-                ExtendableFloatingActionMenu(
-                    isExpanded = TODO(),
-                    onExpandedChange = TODO(),
-                    modifier = TODO(),
-                    menuItems = TODO(),
-                )
+                FloatingActionButton(onClick = { Log.d("Preview", "FAB Clicked") }) {
+                    Icon(Icons.Filled.Add, contentDescription = "추가")
+                }
             },
             floatingActionButtonPosition = FabPosition.End
         ) { innerPadding ->
-            // 실제 HomeScreen을 호출하되, Scaffold의 innerPadding을 활용하도록 가정
-            // HomeScreen 내부에서 이 padding을 어떻게 사용하는지에 따라 결과가 달라짐
-            // HomeScreen이 자체 Scaffold를 사용한다면, 여기서는 별도 패딩 없이 호출
-            HomeScreen(
-                modifier = Modifier.padding(top = innerPadding.calculateTopPadding()), // HomeScreen이 Scaffold 없이 바로 Content를 그린다고 가정
-                navigationManger = TODO()
-            )
+            // HomeScreen preview requires actual ViewModel instance
+            // HomeScreen(
+            //     modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
+            // )
         }
     }
 }

@@ -74,7 +74,7 @@ class EditCategoryViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             
             // 모든 카테고리 목록 가져오기
-            structureUseCases.getProjectAllCategoriesUseCase().map {result ->
+            structureUseCases.getProjectAllCategoriesUseCase().collect {result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val allCategories = result.data.sortedBy { it.order.value }
@@ -88,7 +88,7 @@ class EditCategoryViewModel @Inject constructor(
                                     error = "카테고리를 찾을 수 없습니다."
                                 )
                             }
-                            return@map
+                            return@collect
                         }
 
                         val currentCategory = allCategories[currentCategoryIndex]
