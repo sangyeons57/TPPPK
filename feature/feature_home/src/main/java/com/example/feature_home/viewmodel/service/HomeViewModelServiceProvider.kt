@@ -1,5 +1,7 @@
 package com.example.feature_home.viewmodel.service
 
+import com.example.core_navigation.core.NavigationManger
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.provider.dm.DMUseCaseProvider
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
@@ -12,13 +14,11 @@ import javax.inject.Inject
  * Hilt의 DI를 통해 필요한 Service들을 생성하여 제공합니다.
  */
 class HomeViewModelServiceProvider @Inject constructor(
-    private val loadUserDataService: LoadUserDataService,
-    private val loadProjectsService: LoadProjectsService,
-    private val loadDmsService: LoadDmsService,
-    private val projectSelectionService: ProjectSelectionService,
-    private val categoryManagementService: CategoryManagementService,
-    private val navigationService: NavigationService,
-    private val dialogManagementService: DialogManagementService
+    private val userUseCaseProvider: UserUseCaseProvider,
+    private val dmUseCaseProvider: DMUseCaseProvider,
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
+    private val navigationManger: NavigationManger
 ) {
     
     /**
@@ -28,24 +28,48 @@ class HomeViewModelServiceProvider @Inject constructor(
         val loadUserDataService: LoadUserDataService,
         val loadProjectsService: LoadProjectsService,
         val loadDmsService: LoadDmsService,
-        val projectSelectionService: ProjectSelectionService,
-        val categoryManagementService: CategoryManagementService,
         val navigationService: NavigationService,
         val dialogManagementService: DialogManagementService
+    )
+
+    data class ProjectServices(
+        val projectSelectionService: ProjectSelectionService,
+        val categoryManagementService: CategoryManagementService
     )
     
     /**
      * HomeViewModel에서 사용할 Service들을 생성하여 반환
      */
-    fun create(): HomeViewModelServices {
+    fun createForUser(userId: UserId): HomeViewModelServices {
+        val userUseCases = userUseCaseProvider.createForUser()
+        val dmUseCases = dmUseCaseProvider.createForUser(userId)
+        val coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+
+        val loadUserDataService = LoadUserDataService(userUseCases)
+        val loadProjectsService = LoadProjectsService(coreProjectUseCases)
+        val loadDmsService = LoadDmsService(dmUseCases, userUseCases)
+        val navigationService = NavigationService(navigationManger)
+        val dialogManagementService = DialogManagementService()
+
         return HomeViewModelServices(
             loadUserDataService = loadUserDataService,
             loadProjectsService = loadProjectsService,
             loadDmsService = loadDmsService,
-            projectSelectionService = projectSelectionService,
-            categoryManagementService = categoryManagementService,
             navigationService = navigationService,
             dialogManagementService = dialogManagementService
+        )
+    }
+
+    fun createProjectServices(projectId: DocumentId, userId: UserId): ProjectServices {
+        val coreProjectUseCases = coreProjectUseCaseProvider.createForProject(projectId, userId)
+        val structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
+
+        val projectSelectionService = ProjectSelectionService(coreProjectUseCases, structureUseCases)
+        val categoryManagementService = CategoryManagementService(structureUseCases)
+
+        return ProjectServices(
+            projectSelectionService = projectSelectionService,
+            categoryManagementService = categoryManagementService
         )
     }
 }

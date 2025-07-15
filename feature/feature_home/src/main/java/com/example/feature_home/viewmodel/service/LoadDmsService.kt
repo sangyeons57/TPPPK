@@ -3,38 +3,23 @@ package com.example.feature_home.viewmodel.service
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMWrapper
-import com.example.domain.model.vo.UserId
-import com.example.domain.provider.dm.DMUseCaseProvider
 import com.example.domain.provider.dm.DMUseCases
-import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.domain.provider.user.UserUseCases
 import com.example.feature_home.model.DmUiModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
 
 /**
  * DM 데이터 로딩을 담당하는 Service
  * Domain UseCase들을 조합하여 UI에 특화된 DM 데이터를 제공합니다.
  */
-class LoadDmsService @Inject constructor(
-    private val dmUseCaseProvider: DMUseCaseProvider,
-    private val userUseCaseProvider: UserUseCaseProvider
+class LoadDmsService(
+    private val dmUseCases: DMUseCases,
+    private val userUseCases: UserUseCases
 ) {
-    
-    private val userUseCases: UserUseCases = userUseCaseProvider.createForUser()
-    private lateinit var dmUseCases: DMUseCases
-    
-    /**
-     * 특정 사용자를 위한 DM UseCase 초기화
-     */
-    fun initializeForUser(userId: UserId) {
-        dmUseCases = dmUseCaseProvider.createForUser(userId)
-    }
     
     /**
      * DMWrapper 객체를 UI에 최적화된 DmUiModel로 변환
@@ -68,12 +53,6 @@ class LoadDmsService @Inject constructor(
                     if (currentUser.id.value.isEmpty()) {
                         Log.w("LoadDmsService", "Current user ID is empty - clearing DMs")
                         emit(CustomResult.Success(emptyList()))
-                        return@flow
-                    }
-                    
-                    if (!::dmUseCases.isInitialized) {
-                        Log.w("LoadDmsService", "DM UseCases not initialized")
-                        emit(CustomResult.Failure(IllegalStateException("DM UseCases not initialized")))
                         return@flow
                     }
                     
