@@ -46,7 +46,6 @@ pkgs.mkShell {
 
     # 기타 개발/배포에 필요한 CLI 도구들
     pkgs.firebase-tools # Firebase CLI (최신 안정 버전)
-    pkgs.sentry-cli     # Sentry CLI (최신 안정 버전)
   ];
 
   # 셸이 활성화될 때 실행될 스크립트
@@ -77,7 +76,7 @@ pkgs.mkShell {
     echo "Android SDK Platforms: $(ls $ANDROID_SDK_ROOT/platforms)" # 설치된 플랫폼 확인
     echo "Android SDK Build-Tools: $(ls $ANDROID_SDK_ROOT/build-tools)" # 설치된 빌드툴 확인
     echo ""
-    echo "Available commands: ./gradlew, firebase, sentry-cli, etc."
+    echo "Available commands: ./gradlew, firebase, etc."
     echo ""
   '';
 } 

@@ -46,8 +46,6 @@ dependencies {
     implementation(project(":domain"))
     implementation(project(":core:core_common"))
 
-    // Sentry 의존성 추가
-    implementation(libs.sentry.android)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

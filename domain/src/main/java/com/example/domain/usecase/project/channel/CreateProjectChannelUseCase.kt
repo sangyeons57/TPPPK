@@ -33,6 +33,7 @@ class CreateProjectChannelUseCase @Inject constructor(
             channelName = name,
             order = order,
             channelType = channelType
+            // categoryId defaults to Category.NO_CATEGORY_ID
         )
 
         return when (val result = projectChannelRepository.save(projectChannel)) {

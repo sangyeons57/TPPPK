@@ -207,6 +207,37 @@ data class ChatRoute(
     }
 }
 
+// ===== Task Routes =====
+@Serializable
+data class TaskListRoute(
+    val projectId: String,
+    val channelId: String
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/channel/{${RouteArgs.CHANNEL_ID}}/tasks"
+        val arguments = listOf(
+            navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.CHANNEL_ID) { type = NavType.StringType }
+        )
+    }
+}
+
+@Serializable
+data class TaskDetailRoute(
+    val projectId: String,
+    val channelId: String,
+    val taskId: String
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/channel/{${RouteArgs.CHANNEL_ID}}/task/{${RouteArgs.TASK_ID}}"
+        val arguments = listOf(
+            navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.CHANNEL_ID) { type = NavType.StringType },
+            navArgument(RouteArgs.TASK_ID) { type = NavType.StringType }
+        )
+    }
+}
+
 // ===== Schedule Routes =====
 @Serializable
 data class Calendar24HourRoute(
@@ -363,6 +394,10 @@ object TypeSafeRouteCompat {
         
         // Chat routes
         is ChatRoute -> if (messageId != null) "chat/$channelId?messageId=$messageId" else "chat/$channelId"
+        
+        // Task routes
+        is TaskListRoute -> "project/$projectId/channel/$channelId/tasks"
+        is TaskDetailRoute -> "project/$projectId/channel/$channelId/task/$taskId"
         
         // Schedule routes
         is Calendar24HourRoute -> "schedule/24hour/$year/$month/$day"

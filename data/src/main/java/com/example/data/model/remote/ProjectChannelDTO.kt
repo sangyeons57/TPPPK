@@ -24,7 +24,7 @@ data class ProjectChannelDTO(
     @get:PropertyName(CHANNEL_TYPE)
     val channelType: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
     @get:PropertyName(ORDER)
-    val order: Double = 0.0, // Added order field
+    val order: Double = Category.NO_CATEGORY_ORDER, // Added order field
     @get:PropertyName(STATUS)
     val status: ProjectChannelStatus = ProjectChannelStatus.ACTIVE,
     @get:PropertyName(CATEGORY_ID)

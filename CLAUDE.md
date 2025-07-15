@@ -184,7 +184,7 @@ useCase().onSuccess { data ->
 
 ## Setup & Troubleshooting
 
-**Prerequisites**: Android Studio (Ladybug+), JDK 17+, Docker (optional), Firebase CLI, Sentry
+**Prerequisites**: Android Studio (Ladybug+), JDK 17+, Docker (optional), Firebase CLI
 
 ### JDK 17 Setup (Hybrid Approach)
 

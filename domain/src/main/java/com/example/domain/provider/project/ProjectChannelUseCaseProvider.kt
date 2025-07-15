@@ -20,6 +20,8 @@ import com.example.domain.usecase.project.channel.GetCategoryChannelsUseCaseImpl
 import com.example.domain.usecase.project.channel.GetProjectChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCase
 import com.example.domain.usecase.project.channel.RenameChannelUseCaseImpl
+import com.example.domain.usecase.project.channel.ReorderChannelsUseCase
+import com.example.domain.usecase.project.channel.ReorderChannelsUseCaseImpl
 import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCase
 import com.example.domain.usecase.project.channel.UpdateProjectChannelUseCaseImpl
 import javax.inject.Inject
@@ -90,6 +92,10 @@ class ProjectChannelUseCaseProvider @Inject constructor(
                 projectChannelRepository = projectChannelRepository
             ),
             
+            reorderChannelsUseCase = ReorderChannelsUseCaseImpl(
+                projectChannelRepository = projectChannelRepository
+            ),
+            
             // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
             // renameChannelUseCase = RenameChannelUseCaseImpl(),
             
@@ -135,6 +141,7 @@ data class ProjectChannelUseCases(
     
     // 채널 고급 관리
     val addProjectChannelUseCase: AddProjectChannelUseCase,
+    val reorderChannelsUseCase: ReorderChannelsUseCase,
     // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
     // val renameChannelUseCase: RenameChannelUseCase,
 

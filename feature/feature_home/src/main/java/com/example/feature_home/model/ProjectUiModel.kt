@@ -48,3 +48,14 @@ fun Project.toProjectUiModel(): ProjectUiModel {
         imageUrl = this.imageUrl
     )
 }
+
+/**
+ * Maps a ProjectsWrapper domain model to a ProjectUiModel.
+ */
+fun com.example.domain.model.base.ProjectsWrapper.toProjectUiModel(): ProjectUiModel {
+    return ProjectUiModel(
+        id = this.id,
+        name = this.projectName,
+        imageUrl = this.projectImageUrl
+    )
+}

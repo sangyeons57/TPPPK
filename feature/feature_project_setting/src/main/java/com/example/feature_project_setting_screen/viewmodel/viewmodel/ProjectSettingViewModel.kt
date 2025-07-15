@@ -118,7 +118,7 @@ class ProjectSettingViewModel @Inject constructor(
             }
 
             // Load project structure (categories)
-            when (val result = projectStructureUseCases.getProjectAllCategoriesUseCase(projectId).first()) {
+            when (val result = projectStructureUseCases.getProjectAllCategoriesUseCase().first()) {
                 is CustomResult.Success -> {
                     val domainCategories = result.data // This is List<com.example.domain.model.base.Category>
                     val uiCategories = domainCategories.map { domainCategory ->

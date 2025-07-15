@@ -90,7 +90,7 @@ class AddProjectElementViewModel @Inject constructor(
         val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = useCases.getProjectAllCategoriesUseCase(currentProjectId).first()) {
+            when (val result = useCases.getProjectAllCategoriesUseCase().first()) {
                 is CustomResult.Success -> {
                     val categories = result.data.sortedBy { it.order.value }
                     _uiState.update {

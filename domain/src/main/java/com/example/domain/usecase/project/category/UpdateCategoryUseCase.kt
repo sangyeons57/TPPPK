@@ -53,8 +53,21 @@ class UpdateCategoryUseCaseImpl @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Category name cannot be blank."))
         }
 
-        if ( newOrder.value > totalCategories) {
-            return CustomResult.Failure(IllegalArgumentException("Invalid category order. Must be between 0.0 and $totalCategories."))
+        // Check if this is No_Category and restrict order modification
+        if (categoryToUpdate.id.value == Category.NO_CATEGORY_ID) {
+            // No_Category order is fixed at 0.0
+            if (newOrder.value != Category.NO_CATEGORY_ORDER) {
+                return CustomResult.Failure(IllegalArgumentException("No_Category order cannot be changed from ${Category.NO_CATEGORY_ORDER}"))
+            }
+        } else {
+            // Other categories cannot have order 0.0 (reserved for No_Category)
+            if (newOrder.value < Category.MIN_CATEGORY_ORDER) {
+                return CustomResult.Failure(IllegalArgumentException("Category order must be ${Category.MIN_CATEGORY_ORDER} or greater (${Category.NO_CATEGORY_ORDER} is reserved for No_Category)"))
+            }
+        }
+
+        if (newOrder.value > totalCategories) {
+            return CustomResult.Failure(IllegalArgumentException("Invalid category order. Must be between ${Category.MIN_CATEGORY_ORDER} and $totalCategories."))
         }
 
         // Perform update within aggregate to keep invariants and raise events

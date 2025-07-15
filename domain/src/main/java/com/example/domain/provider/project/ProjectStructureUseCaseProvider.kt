@@ -12,6 +12,8 @@ import com.example.domain.repository.factory.context.CategoryRepositoryFactoryCo
 import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCase
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCaseImpl
+import com.example.domain.usecase.project.category.ReorderCategoriesUseCase
+import com.example.domain.usecase.project.category.ReorderCategoriesUseCaseImpl
 import com.example.domain.usecase.project.category.UpdateCategoryUseCase
 import com.example.domain.usecase.project.category.UpdateCategoryUseCaseImpl
 import com.example.domain.usecase.project.structure.AddCategoryUseCase
@@ -24,6 +26,8 @@ import com.example.domain.usecase.project.structure.GetProjectStructureUseCase
 import com.example.domain.usecase.project.structure.GetProjectStructureUseCaseImpl
 import com.example.domain.usecase.project.structure.RenameCategoryUseCase
 import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
+import com.example.domain.usecase.project.channel.ReorderChannelsUseCase
+import com.example.domain.usecase.project.channel.ReorderChannelsUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -104,6 +108,14 @@ class ProjectStructureUseCaseProvider @Inject constructor(
                 categoryRepository = categoryRepository
             ),
             
+            reorderCategoriesUseCase = ReorderCategoriesUseCaseImpl(
+                categoryRepository = categoryRepository
+            ),
+            
+            reorderChannelsUseCase = ReorderChannelsUseCaseImpl(
+                projectChannelRepository = projectChannelRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             categoryRepository = categoryRepository
@@ -136,13 +148,13 @@ data class ProjectStructureUseCases(
 
     // 구조 업데이트
 
-    // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
-    // 채널-카테고리 간 이동
-    // val moveChannelBetweenCategoriesUseCase: MoveChannelBetweenCategoriesUseCase,
-    
     // 카테고리 도메인 UseCases
     val getCategoryDetailsUseCase: GetCategoryDetailsUseCase,
     val updateCategoryUseCase: UpdateCategoryUseCase,
+    val reorderCategoriesUseCase: ReorderCategoriesUseCase,
+    
+    // 채널 도메인 UseCases
+    val reorderChannelsUseCase: ReorderChannelsUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

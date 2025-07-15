@@ -147,6 +147,17 @@ class Category private constructor(
          * Default order for the NoCategory. Usually the lowest order to appear first/last.
          */
         const val NO_CATEGORY_ORDER = 0.0
+        
+        /**
+         * Minimum order value for regular categories (non-NoCategory).
+         * Regular categories must have order >= MIN_CATEGORY_ORDER
+         */
+        const val MIN_CATEGORY_ORDER = 1.0
+        
+        /**
+         * Default increment value for category ordering
+         */
+        const val CATEGORY_ORDER_INCREMENT = 1.0
         /**
          * Creates a new Category instance.
          * This factory method is the designated way to create new categories.

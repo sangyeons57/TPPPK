@@ -235,9 +235,7 @@ private fun HomeTabNavHost(
         startDestination = HomeRoute.toAppRoutePath()
     ) {
         composable(HomeRoute.toAppRoutePath()) {
-            HomeScreen(
-                navigationManger = navigationManger
-            )
+            HomeScreen()
         }
     }
 }

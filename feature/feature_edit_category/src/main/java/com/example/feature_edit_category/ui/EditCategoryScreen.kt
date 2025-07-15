@@ -6,6 +6,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -96,7 +98,8 @@ fun EditCategoryScreen(
                 modifier = Modifier.padding(paddingValues),
                 uiState = uiState,
                 onCategoryNameChange = viewModel::onCategoryNameChange,
-                onCategoryOrderChange = viewModel::onCategoryOrderChange,
+                onMoveUp = viewModel::moveCategoryUp,
+                onMoveDown = viewModel::moveCategoryDown,
                 onUpdateClick = viewModel::updateCategory
             )
         }
@@ -136,7 +139,8 @@ fun EditCategoryContent(
     modifier: Modifier = Modifier,
     uiState: EditCategoryUiState,
     onCategoryNameChange: (String) -> Unit,
-    onCategoryOrderChange: (String) -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
     onUpdateClick: () -> Unit
 ) {
     Column(
@@ -156,17 +160,71 @@ fun EditCategoryContent(
             isError = uiState.error?.contains("이름") == true
         )
 
-        // 카테고리 순서 입력 필드
-        OutlinedTextField(
-            value = uiState.currentCategoryOrder.toString(),
-            onValueChange = onCategoryOrderChange,
+        // 카테고리 순서 조절 버튼
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("순서") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            isError = uiState.error?.contains("순서") == true || uiState.error?.contains("숫자") == true,
-            supportingText = { Text("숫자로 입력하세요. 낮은 숫자일수록 위에 표시됩니다.") }
-        )
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "순서",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "현재 순서: ${uiState.currentCategoryOrder.toInt()}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 위로 이동 버튼
+                        IconButton(
+                            onClick = onMoveUp,
+                            enabled = !uiState.isLoading && uiState.canMoveUp
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowUp,
+                                contentDescription = "위로 이동",
+                                tint = if (uiState.canMoveUp) MaterialTheme.colorScheme.primary 
+                                      else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                        
+                        // 아래로 이동 버튼
+                        IconButton(
+                            onClick = onMoveDown,
+                            enabled = !uiState.isLoading && uiState.canMoveDown
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "아래로 이동",
+                                tint = if (uiState.canMoveDown) MaterialTheme.colorScheme.primary 
+                                      else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                    }
+                }
+                
+                Text(
+                    text = "버튼을 사용하여 카테고리 순서를 조정하세요. 낮은 순서일수록 위에 표시됩니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
         if (uiState.error != null) {
             Text(
@@ -203,9 +261,10 @@ fun EditCategoryContent(
 private fun EditCategoryContentPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         EditCategoryContent(
-            uiState = EditCategoryUiState(categoryId = "1", currentCategoryName = "기존 카테고리", currentCategoryOrder = 1.0),
+            uiState = EditCategoryUiState(categoryId = "1", currentCategoryName = "기존 카테고리", currentCategoryOrder = 1.0, canMoveUp = true, canMoveDown = true),
             onCategoryNameChange = {},
-            onCategoryOrderChange = {},
+            onMoveUp = {},
+            onMoveDown = {},
             onUpdateClick = {}
         )
     }
@@ -220,10 +279,13 @@ private fun EditCategoryContentLoadingPreview() {
                 categoryId = "1",
                 currentCategoryName = "수정 중...",
                 currentCategoryOrder = 2.0,
-                isLoading = true
+                isLoading = true,
+                canMoveUp = false,
+                canMoveDown = false
             ),
             onCategoryNameChange = {},
-            onCategoryOrderChange = {},
+            onMoveUp = {},
+            onMoveDown = {},
             onUpdateClick = {}
         )
     }
@@ -238,10 +300,13 @@ private fun EditCategoryContentErrorPreview() {
                 categoryId = "1",
                 currentCategoryName = "",
                 currentCategoryOrder = 0.0,
-                error = "이름은 비워둘 수 없습니다."
+                error = "이름은 비워둘 수 없습니다.",
+                canMoveUp = false,
+                canMoveDown = true
             ),
             onCategoryNameChange = {},
-            onCategoryOrderChange = {},
+            onMoveUp = {},
+            onMoveDown = {},
             onUpdateClick = {}
         )
     }

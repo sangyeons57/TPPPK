@@ -38,8 +38,8 @@ fun BottomSheetDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onDismiss()
                                     item.onClick()
+                                    onDismiss()
                                 }
                         )
                     }

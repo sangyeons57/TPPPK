@@ -60,47 +60,16 @@
 
         <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
 
-        <!-- Required: set your sentry.io project identifier (DSN) -->
-        <meta-data android:name="io.sentry.dsn" android:value="https://0a3d0d1fe57deb2e7baebd1f244a04de@o4509194335223808.ingest.us.sentry.io/4509194511974400" />
 
-        <!-- Add data like request headers, user ip address and device name -->
-        <meta-data android:name="io.sentry.send-default-pii" android:value="true" />
         
-        <!-- Temporarily disabled for testing -->
-        <!-- <meta-data android:name="io.sentry.traces.user-interaction.enable" android:value="true" /> -->
         
-        <!-- Temporarily disabled for testing -->
-        <!-- <meta-data android:name="io.sentry.attach-screenshot" android:value="true" /> -->
         
-        <!-- Temporarily disabled for testing -->
-        <!-- <meta-data android:name="io.sentry.attach-view-hierarchy" android:value="true" /> -->
         
-        <!-- Temporarily disabled for testing -->
-        <!-- <meta-data android:name="io.sentry.traces.sample-rate" android:value="1.0" /> -->
         
-        <!-- Breadcrumb 설정 -->
-        <meta-data android:name="io.sentry.breadcrumbs.user-interaction" android:value="true" />
-        <meta-data android:name="io.sentry.breadcrumbs.app-lifecycle" android:value="true" />
-        <meta-data android:name="io.sentry.breadcrumbs.system-events" android:value="true" />
         
-        <!-- Temporarily disabled for testing -->
-        <!-- Profiling 설정 (UI Profiling 방식) -->
-        <!-- <meta-data android:name="io.sentry.traces.profiling.session-sample-rate" android:value="1.0" /> -->
-        <!-- <meta-data android:name="io.sentry.traces.profiling.lifecycle" android:value="trace" /> -->
-        <!-- <meta-data android:name="io.sentry.traces.profiling.start-on-app-start" android:value="true" /> -->
         
-        <!-- Temporarily disabled for testing -->
-        <!-- Session Replay 설정 (기본) -->
-        <!-- <meta-data android:name="io.sentry.session-replay.session-sample-rate" android:value="0.1" /> -->
-        <!-- <meta-data android:name="io.sentry.session-replay.on-error-sample-rate" android:value="1.0" /> -->
         
-        <!-- ANR 감지 설정 -->
-        <meta-data android:name="io.sentry.anr.enable" android:value="true" />
-        <meta-data android:name="io.sentry.anr.timeout-interval-mills" android:value="5000" />
         
-        <!-- Temporarily disabled for testing -->
-        <!-- 네트워크 모니터링 설정 -->
-        <!-- <meta-data android:name="io.sentry.okhttp.enable" android:value="true" /> -->
 
         <!-- FCM 서비스 등록 -->
         <service

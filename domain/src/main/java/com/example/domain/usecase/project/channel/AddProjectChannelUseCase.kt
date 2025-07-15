@@ -74,8 +74,8 @@ class AddProjectChannelUseCaseImpl(
         channelType: ProjectChannelType,
         categoryId: DocumentId
     ): CustomResult<ProjectChannel, Exception> {
-        val trimmedChannelName = channelName.trim()
-        if (trimmedChannelName.isBlank()) {
+        val trimmedChannelName = Name(channelName.value.trim())
+        if (trimmedChannelName.value.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("Channel name cannot be blank."))
         }
 
@@ -93,29 +93,17 @@ class AddProjectChannelUseCaseImpl(
         
         // 3. Calculate the correct order based on whether this is a NoCategory channel or category channel
         val newOrderValue = if (categoryId.value == Category.NO_CATEGORY_ID) {
-            // For NoCategory channels: they share order space with categories
-            // We need to place them after existing categories and NoCategory channels
-            // TODO: Query categories to get their max order for true unified ordering
-            // For now, use a simplified approach
-            if (allProjectChannels.isEmpty()) {
-                1.0 // First NoCategory channel gets order 1.0 (after NoCategory category at 0.0)
-            } else {
-                // Find max order among NoCategory channels and add 1.0
-                val maxNoCategoryChannelOrder = allProjectChannels
-                    .filter { it.categoryId.value == Category.NO_CATEGORY_ID }
-                    .maxOfOrNull { it.order.value } ?: 0.0
-                maxOf(maxNoCategoryChannelOrder + 1.0, 1.0)
-            }
+            // For NoCategory channels: order is always 0.0 (reserved for project direct channels)
+            Category.NO_CATEGORY_ORDER
         } else {
             // For category channels: place after existing channels in this category
             val categoryChannels = allProjectChannels.filter { it.categoryId == categoryId }
             if (categoryChannels.isEmpty()) {
-                // First channel in this category: place after the category itself
-                // TODO: Query category order and place channel right after it
-                1.0 // Simplified for now
+                // First channel in this category starts at order 1.0
+                ProjectChannel.MIN_CHANNEL_ORDER
             } else {
                 // Place after existing channels in this category
-                (categoryChannels.maxOfOrNull { it.order.value } ?: 0.0) + 0.1 // Use 0.1 increment for channels within categories
+                (categoryChannels.maxOfOrNull { it.order.value } ?: Category.NO_CATEGORY_ORDER) + ProjectChannel.CHANNEL_ORDER_INCREMENT
             }
         }
         val newOrder = ProjectChannelOrder.from(newOrderValue)

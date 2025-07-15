@@ -10,7 +10,7 @@ value class ProjectChannelOrder(val value: Double) {
     }
 
     companion object {
-        val DEFAULT = ProjectChannelOrder(0.0)
+        val DEFAULT = ProjectChannelOrder(com.example.domain.model.base.Category.NO_CATEGORY_ORDER)
 
         private fun formatting (v: Double): Double = DecimalFormat("0.00").format(v).toDouble()
 

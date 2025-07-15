@@ -8,7 +8,6 @@ plugins {
     alias(libs.plugins.ksp) apply false
 
     alias(libs.plugins.google.gms) apply false
-    alias(libs.plugins.sentry) apply false
     alias(libs.plugins.kotlin.compose) apply false
 }
 

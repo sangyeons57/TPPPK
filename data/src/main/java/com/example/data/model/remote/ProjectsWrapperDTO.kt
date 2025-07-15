@@ -17,7 +17,7 @@ import java.util.Date
 data class ProjectsWrapperDTO(
     @DocumentId override val id: String = "",
     @get:PropertyName(ORDER)
-    val order: Double = 0.0,
+    val order: Double = com.example.domain.model.base.Category.NO_CATEGORY_ORDER,
     @get:PropertyName(PROJECT_NAME)
     val projectName: String = "",
     @get:PropertyName(PROJECT_IMAGE_URL)

@@ -33,6 +33,10 @@ data class EditChannelUiState(
     val currentOrder: Double = 0.0,
     val originalOrder: Double = 0.0,
     val availableCategories: List<Category> = emptyList(),
+    val canMoveUp: Boolean = false,
+    val canMoveDown: Boolean = false,
+    val totalChannels: Int = 0,
+    val allChannelIds: List<String> = emptyList(),
     val isLoading: Boolean = false,
     val isLoadingCategories: Boolean = false,
     val error: String? = null,
@@ -86,7 +90,7 @@ class EditChannelViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingCategories = true) }
             
-            structureUseCases.getProjectAllCategoriesUseCase(DocumentId(projectId))
+            structureUseCases.getProjectAllCategoriesUseCase()
                 .catch { exception ->
                     _uiState.update { 
                         it.copy(
@@ -135,19 +139,7 @@ class EditChannelViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         val channel = result.data
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            currentChannelName = channel.channelName.value,
-                            originalChannelName = channel.channelName.value,
-                            currentChannelMode = channel.channelType,
-                            originalChannelMode = channel.channelType,
-                            currentCategoryId = channel.categoryId.value,
-                            originalCategoryId = channel.categoryId.value,
-                            currentOrder = channel.order.value,
-                            originalOrder = channel.order.value
-                        )
-                    }
+                        loadChannelMovabilityInfo(channel)
                     }
                     is CustomResult.Failure -> {
                         _uiState.update {
@@ -206,6 +198,61 @@ class EditChannelViewModel @Inject constructor(
             _uiState.update { it.copy(currentOrder = orderValue, error = null) }
         } else {
             _uiState.update { it.copy(error = "올바른 숫자를 입력해주세요.") }
+        }
+    }
+
+    /**
+     * 채널 이동 가능 여부 정보 로드
+     */
+    private fun loadChannelMovabilityInfo(currentChannel: com.example.domain.model.base.ProjectChannel) {
+        viewModelScope.launch {
+            // 해당 카테고리의 모든 채널 정보 가져오기
+            channelUseCases.getCategoryChannelsUseCase(currentChannel.categoryId).collect { result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        val allChannels = result.data.sortedBy { it.order.value }
+                        val allChannelIds = allChannels.map { it.id.value }
+                        val currentChannelIndex = allChannels.indexOfFirst { it.id.value == channelId }
+                        
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                currentChannelName = currentChannel.channelName.value,
+                                originalChannelName = currentChannel.channelName.value,
+                                currentChannelMode = currentChannel.channelType,
+                                originalChannelMode = currentChannel.channelType,
+                                currentCategoryId = currentChannel.categoryId.value,
+                                originalCategoryId = currentChannel.categoryId.value,
+                                currentOrder = currentChannel.order.value,
+                                originalOrder = currentChannel.order.value,
+                                canMoveUp = currentChannelIndex > 0 && currentChannel.categoryId.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
+                                canMoveDown = currentChannelIndex < allChannels.size - 1 && currentChannel.categoryId.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
+                                totalChannels = allChannels.size,
+                                allChannelIds = allChannelIds
+                            )
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                currentChannelName = currentChannel.channelName.value,
+                                originalChannelName = currentChannel.channelName.value,
+                                currentChannelMode = currentChannel.channelType,
+                                originalChannelMode = currentChannel.channelType,
+                                currentCategoryId = currentChannel.categoryId.value,
+                                originalCategoryId = currentChannel.categoryId.value,
+                                currentOrder = currentChannel.order.value,
+                                originalOrder = currentChannel.order.value,
+                                error = "채널 정보를 불러오지 못했습니다: ${result.error.message}"
+                            )
+                        }
+                    }
+                    else -> {
+                        // Loading 등 다른 상태 처리
+                    }
+                }
+            }
         }
     }
 
@@ -321,6 +368,107 @@ class EditChannelViewModel @Inject constructor(
                 else -> {
                     _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 삭제 중 오류가 발생했습니다."))
                     _uiState.update { it.copy(isLoading = false) }
+                }
+            }
+        }
+    }
+
+    /**
+     * 채널을 위로 이동
+     */
+    fun moveChannelUp() {
+        val currentState = _uiState.value
+        if (!currentState.canMoveUp || currentState.isLoading) return
+        
+        // No_Category 채널은 이동 불가
+        if (currentState.currentCategoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
+        
+        val currentIndex = currentState.currentOrder.toInt()
+        val newIndex = currentIndex - 1
+        
+        moveChannelToPosition(newIndex)
+    }
+
+    /**
+     * 채널을 아래로 이동
+     */
+    fun moveChannelDown() {
+        val currentState = _uiState.value
+        if (!currentState.canMoveDown || currentState.isLoading) return
+        
+        // No_Category 채널은 이동 불가
+        if (currentState.currentCategoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
+        
+        val currentIndex = currentState.currentOrder.toInt()
+        val newIndex = currentIndex + 1
+        
+        moveChannelToPosition(newIndex)
+    }
+
+    /**
+     * 채널을 특정 위치로 이동
+     */
+    private fun moveChannelToPosition(newIndex: Int) {
+        val currentState = _uiState.value
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            
+            try {
+                // 현재 채널 순서에서 이동할 위치로 재정렬
+                val newChannelIds = currentState.allChannelIds.toMutableList()
+                val originalOrderIndex = currentState.originalOrder.toInt()
+                val currentOrderIndex = currentState.currentOrder.toInt()
+                
+                // 임시로 현재 위치에서 제거하고 새 위치에 삽입
+                newChannelIds.removeAt(originalOrderIndex)
+                newChannelIds.add(currentOrderIndex, channelId)
+                
+                // No_Category 채널이 포함된 경우 항상 첫 번째 위치로 이동
+                if (newChannelIds.contains(com.example.domain.model.base.Category.NO_CATEGORY_ID)) {
+                    newChannelIds.remove(com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                    newChannelIds.add(0, com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                }
+                
+                when (val reorderResult = channelUseCases.reorderChannelsUseCase(
+                    DocumentId(projectId),
+                    if (currentState.currentCategoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) null else DocumentId(currentState.currentCategoryId),
+                    newChannelIds
+                )) {
+                    is CustomResult.Success -> {
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false, 
+                                currentOrder = newIndex.toDouble(),
+                                canMoveUp = newIndex > 0,
+                                canMoveDown = newIndex < currentState.totalChannels - 1
+                            ) 
+                        }
+                        _eventFlow.emit(EditChannelEvent.ShowSnackbar("채널 순서가 변경되었습니다."))
+                    }
+                    is CustomResult.Failure -> {
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false, 
+                                error = "순서 변경 실패: ${reorderResult.error.message}"
+                            ) 
+                        }
+                    }
+                    else -> {
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false, 
+                                error = "순서 변경 중 오류가 발생했습니다."
+                            ) 
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        error = "순서 변경 중 오류가 발생했습니다: ${e.message}"
+                    ) 
                 }
             }
         }
