@@ -162,13 +162,17 @@ class NavigationManagerImpl @Inject constructor(
     // ===== Private Navigation Helpers =====
 
     private fun executeNavigation(route: String, navOptions: NavOptions? = null) {
+        startNavigationProgress()
         val targetController = activeChildNavController ?: parentNavController
+        Log.d("NavigationManager", "executeNavigation: route=$route, activeChild=${activeChildNavController != null}, parent=${parentNavController != null}")
+        
         targetController?.let { controller ->
             try {
+                Log.d("NavigationManager", "Current destination: ${controller.currentDestination?.route}")
                 controller.navigate(route, navOptions)
-                Log.d("NavigationManager", "Navigated to: $route")
+                Log.d("NavigationManager", "Navigation successful to: $route")
             } catch (e: Exception) {
-                Log.e("NavigationManager", "Failed to navigate to $route: ${e.message}")
+                Log.e("NavigationManager", "Navigation failed to $route: ${e.message}", e)
                 _isNavigationInProgress.value = false
             }
         } ?: run {
@@ -333,11 +337,11 @@ class NavigationManagerImpl @Inject constructor(
     }
 
     override fun navigateToEditCategory(projectId: String, categoryId: String, navOptions: NavOptions?) {
-        executeNavigationOnParent(EditCategoryRoute(projectId, categoryId).toAppRoutePath(), navOptions)
+        executeNavigation(EditCategoryRoute(projectId, categoryId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToEditChannel(projectId: String, channelId: String, navOptions: NavOptions?) {
-        executeNavigationOnParent(EditChannelRoute(projectId, channelId).toAppRoutePath(), navOptions)
+        executeNavigation(EditChannelRoute(projectId, channelId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToAcceptFriends(navOptions: NavOptions?) {
