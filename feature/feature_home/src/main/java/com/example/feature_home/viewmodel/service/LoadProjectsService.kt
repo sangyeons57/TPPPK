@@ -7,7 +7,6 @@ import com.example.feature_home.model.ProjectUiModel
 import com.example.feature_home.model.toProjectUiModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 

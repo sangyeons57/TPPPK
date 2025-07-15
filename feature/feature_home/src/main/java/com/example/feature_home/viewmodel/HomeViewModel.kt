@@ -72,6 +72,7 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "HomeViewModel initialized")
         // Initialize services for current user without project context
         services = homeServiceProvider.createForCurrentUser()
+        dialogState = services.dialogManagementService.getInitialDialogState()
         // Initialize dialog state after services are created
         dialogState = services.dialogManagementService.getInitialDialogState()
         startUserStream()
@@ -550,7 +551,9 @@ class HomeViewModel @Inject constructor(
         
         // 카테고리 상태 정리
         _uiState.value.selectedProjectId?.let { projectId ->
-            services.categoryManagementService.clearCategoryStates(projectId)
+            if (::services.isInitialized) {
+                services.categoryManagementService.clearCategoryStates(projectId)
+            }
         }
         
         Log.d("HomeViewModel", "HomeViewModel cleared")

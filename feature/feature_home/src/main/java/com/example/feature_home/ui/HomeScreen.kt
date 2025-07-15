@@ -315,8 +315,10 @@ fun HomeScreenInScaffoldPreview() {
                 }
             },
             floatingActionButtonPosition = FabPosition.End
-        ){
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
 
+            }
         }
     }
 }

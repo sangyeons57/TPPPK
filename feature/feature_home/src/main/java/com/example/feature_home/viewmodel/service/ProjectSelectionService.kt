@@ -11,7 +11,6 @@ import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.toProjectStructureUiState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 
@@ -28,7 +27,6 @@ class ProjectSelectionService(
         val projectDetails: Project,
         val projectStructure: ProjectStructureUiState
     )
-    
     
     /**
      * 프로젝트 세부사항을 UI에 최적화된 형태로 스트림 제공
