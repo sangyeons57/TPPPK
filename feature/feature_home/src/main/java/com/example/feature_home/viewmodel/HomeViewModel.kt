@@ -393,13 +393,14 @@ class HomeViewModel @Inject constructor(
     /**
      * 채널 롱프레스 처리
      */
-    fun onChannelLongPress(channel: ChannelUiModel) {
-        Log.d("HomeViewModel", "Channel long pressed: ${channel.name}")
+    fun onChannelLongPress(channel: ChannelUiModel, categoryId: String? = null) {
+        Log.d("HomeViewModel", "Channel long pressed: ${channel.name}, categoryId: $categoryId")
         
         val items = services.dialogManagementService.createChannelLongPressActionSheet(
             channel = channel,
-            onEditClick = { ch -> onChannelEditClick(ch) },
-            onReorderClick = { ch -> onChannelReorderClick(ch) }
+            categoryId = categoryId,
+            onEditClick = { ch, catId -> onChannelEditClick(ch, catId) },
+            onReorderClick = { ch, catId -> onChannelReorderClick(ch, catId) }
         )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
@@ -574,21 +575,18 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Category edit clicked: ${category.name}")
         
         // 바텀시트 닫기
-        onActionSheetDismiss()
+        onProjectItemActionSheetDismiss()
         
         // 현재 프로젝트 ID 가져오기
         val projectId = _uiState.value.selectedProjectId
         if (projectId != null) {
-            // EditCategoryDialog 표시를 위한 상태 업데이트
-            _uiState.update { currentState ->
-                currentState.copy(
-                    dialogStates = currentState.dialogStates.copy(
-                        showEditCategoryDialog = true,
-                        editCategoryName = category.name.value,
-                        editCategoryProjectId = projectId.value,
-                        editCategoryId = category.id.value
-                    )
-                )
+            // EditCategoryDialog 표시를 위한 이벤트 발생
+            viewModelScope.launch {
+                _eventFlow.emit(HomeEvent.ShowEditCategoryDialog(
+                    projectId = projectId.value,
+                    categoryId = category.id.value,
+                    categoryName = category.name.value
+                ))
             }
         }
     }
@@ -600,40 +598,33 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Category reorder clicked: ${category.name}")
         
         // 바텀시트 닫기
-        onActionSheetDismiss()
+        onProjectItemActionSheetDismiss()
         
-        // 카테고리 순서 변경 다이얼로그 표시
-        _uiState.update { currentState ->
-            currentState.copy(
-                dialogStates = currentState.dialogStates.copy(
-                    showReorderCategoriesDialog = true
-                )
-            )
+        // 카테고리 순서 변경 다이얼로그 표시를 위한 이벤트 발생
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowReorderCategoriesDialog)
         }
     }
 
     /**
      * 채널 편집 버튼 클릭 처리
      */
-    private fun onChannelEditClick(channel: ChannelUiModel) {
-        Log.d("HomeViewModel", "Channel edit clicked: ${channel.name}")
+    private fun onChannelEditClick(channel: ChannelUiModel, categoryId: String?) {
+        Log.d("HomeViewModel", "Channel edit clicked: ${channel.name}, categoryId: $categoryId")
         
         // 바텀시트 닫기
-        onActionSheetDismiss()
+        onProjectItemActionSheetDismiss()
         
         // 현재 프로젝트 ID 가져오기
         val projectId = _uiState.value.selectedProjectId
         if (projectId != null) {
-            // EditChannelDialog 표시를 위한 상태 업데이트
-            _uiState.update { currentState ->
-                currentState.copy(
-                    dialogStates = currentState.dialogStates.copy(
-                        showEditChannelDialog = true,
-                        editChannelName = channel.name.value,
-                        editChannelProjectId = projectId.value,
-                        editChannelId = channel.id.value
-                    )
-                )
+            // EditChannelDialog 표시를 위한 이벤트 발생
+            viewModelScope.launch {
+                _eventFlow.emit(HomeEvent.ShowEditChannelDialog(
+                    projectId = projectId.value,
+                    channelId = channel.id.value,
+                    channelName = channel.name.value
+                ))
             }
         }
     }
@@ -641,20 +632,17 @@ class HomeViewModel @Inject constructor(
     /**
      * 채널 순서 변경 버튼 클릭 처리
      */
-    private fun onChannelReorderClick(channel: ChannelUiModel) {
-        Log.d("HomeViewModel", "Channel reorder clicked: ${channel.name}")
+    private fun onChannelReorderClick(channel: ChannelUiModel, categoryId: String?) {
+        Log.d("HomeViewModel", "Channel reorder clicked: ${channel.name}, categoryId: $categoryId")
         
         // 바텀시트 닫기
-        onActionSheetDismiss()
+        onProjectItemActionSheetDismiss()
         
-        // 채널 순서 변경 다이얼로그 표시
-        _uiState.update { currentState ->
-            currentState.copy(
-                dialogStates = currentState.dialogStates.copy(
-                    showReorderChannelsDialog = true,
-                    reorderCategoryId = channel.categoryId.value.takeIf { it != com.example.domain.model.base.Category.NO_CATEGORY_ID }
-                )
-            )
+        // 채널 순서 변경 다이얼로그 표시를 위한 이벤트 발생
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowReorderChannelsDialog(
+                categoryId = categoryId
+            ))
         }
     }
 }

@@ -59,6 +59,45 @@ fun HomeScreenEffects(
                         duration = SnackbarDuration.Long
                     )
                 }
+
+                is HomeEvent.ShowEditCategoryDialog -> {
+                    onDialogStateChange(
+                        dialogStates.copy(
+                            showEditCategoryDialog = true,
+                            editCategoryName = event.categoryName,
+                            editCategoryProjectId = event.projectId,
+                            editCategoryId = event.categoryId
+                        )
+                    )
+                }
+
+                is HomeEvent.ShowEditChannelDialog -> {
+                    onDialogStateChange(
+                        dialogStates.copy(
+                            showEditChannelDialog = true,
+                            editChannelName = event.channelName,
+                            editChannelProjectId = event.projectId,
+                            editChannelId = event.channelId
+                        )
+                    )
+                }
+
+                is HomeEvent.ShowReorderCategoriesDialog -> {
+                    onDialogStateChange(
+                        dialogStates.copy(
+                            showReorderCategoriesDialog = true
+                        )
+                    )
+                }
+
+                is HomeEvent.ShowReorderChannelsDialog -> {
+                    onDialogStateChange(
+                        dialogStates.copy(
+                            showReorderChannelsDialog = true,
+                            reorderCategoryId = event.categoryId
+                        )
+                    )
+                }
             }
         }
     }

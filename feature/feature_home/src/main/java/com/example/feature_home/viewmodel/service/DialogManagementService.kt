@@ -80,8 +80,9 @@ class DialogManagementService() {
      */
     fun createChannelLongPressActionSheet(
         channel: ChannelUiModel,
-        onEditClick: (ChannelUiModel) -> Unit,
-        onReorderClick: (ChannelUiModel) -> Unit
+        categoryId: String?, // 채널이 속한 카테고리 ID (직속 채널이면 null)
+        onEditClick: (ChannelUiModel, String?) -> Unit,
+        onReorderClick: (ChannelUiModel, String?) -> Unit
     ): List<BottomSheetDialogItem> {
         Log.d("DialogManagementService", "Creating channel action sheet for: ${channel.name}")
         
@@ -91,7 +92,7 @@ class DialogManagementService() {
                 icon = Icons.Default.Edit,
                 onClick = { 
                     Log.d("DialogManagementService", "Edit channel clicked for: ${channel.name}")
-                    onEditClick(channel)
+                    onEditClick(channel, categoryId)
                 }
             )
             .button(
@@ -99,7 +100,7 @@ class DialogManagementService() {
                 icon = Icons.Default.SwapVert,
                 onClick = { 
                     Log.d("DialogManagementService", "Reorder channel clicked for: ${channel.name}")
-                    onReorderClick(channel)
+                    onReorderClick(channel, categoryId)
                 }
             )
             .build()
