@@ -112,6 +112,7 @@ data class DialogStates(
     val editChannelId: String = "",
     val showReorderCategoriesDialog: Boolean = false,
     val showReorderChannelsDialog: Boolean = false,
+    val showReorderProjectStructureDialog: Boolean = false,
     val reorderCategoryId: String? = null
 )
 
@@ -133,6 +134,7 @@ fun rememberDialogStates(): DialogStates {
     var editChannelId by remember { mutableStateOf("") }
     var showReorderCategoriesDialog by remember { mutableStateOf(false) }
     var showReorderChannelsDialog by remember { mutableStateOf(false) }
+    var showReorderProjectStructureDialog by remember { mutableStateOf(false) }
     var reorderCategoryId by remember { mutableStateOf<String?>(null) }
 
     return DialogStates(
@@ -149,6 +151,7 @@ fun rememberDialogStates(): DialogStates {
         editChannelId = editChannelId,
         showReorderCategoriesDialog = showReorderCategoriesDialog,
         showReorderChannelsDialog = showReorderChannelsDialog,
+        showReorderProjectStructureDialog = showReorderProjectStructureDialog,
         reorderCategoryId = reorderCategoryId
     )
 }

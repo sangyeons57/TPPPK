@@ -12,6 +12,8 @@ import com.example.feature_edit_category.ui.EditCategoryDialog
 import com.example.feature_edit_channel.ui.EditChannelDialog
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
 import com.example.feature_home.model.ProjectStructureUiState
+import com.example.feature_home.model.toUnifiedDialogItems
+import com.example.feature_home.model.toProjectStructureItems
 import com.example.feature_home.viewmodel.HomeViewModel
 import java.time.Instant
 
@@ -129,6 +131,20 @@ fun HomeScreenDialogs(
             }
         )
     }
+
+    // ReorderUnifiedProjectStructureDialog
+    if (dialogStates.showReorderProjectStructureDialog && uiState.selectedProjectId != null) {
+        ReorderUnifiedProjectStructureDialog(
+            projectStructure = uiState.projectStructure,
+            onDismiss = { 
+                onDialogStateChange(dialogStates.copy(showReorderProjectStructureDialog = false))
+            },
+            onReorderComplete = { reorderedItems ->
+                viewModel.onReorderUnifiedProjectStructure(uiState.selectedProjectId!!, reorderedItems)
+                onDialogStateChange(dialogStates.copy(showReorderProjectStructureDialog = false))
+            }
+        )
+    }
 }
 
 /**
@@ -208,5 +224,29 @@ private fun ReorderChannelsDialog(
         itemLabel = { it.channelName.value },
         onDismiss = onDismiss,
         onReorderComplete = onReorderComplete
+    )
+}
+
+/**
+ * 통합 프로젝트 구조 순서 변경 다이얼로그
+ */
+@Composable
+private fun ReorderUnifiedProjectStructureDialog(
+    projectStructure: ProjectStructureUiState,
+    onDismiss: () -> Unit,
+    onReorderComplete: (List<com.example.feature_home.model.ProjectStructureItem>) -> Unit
+) {
+    val dialogItems = projectStructure.toUnifiedDialogItems()
+
+    SimpleReorderDialog(
+        title = "프로젝트 구조 순서 변경",
+        items = dialogItems,
+        itemKey = { it.id },
+        itemLabel = { it.displayName },
+        onDismiss = onDismiss,
+        onReorderComplete = { reorderedDialogItems ->
+            val reorderedProjectStructureItems = reorderedDialogItems.toProjectStructureItems()
+            onReorderComplete(reorderedProjectStructureItems)
+        }
     )
 }

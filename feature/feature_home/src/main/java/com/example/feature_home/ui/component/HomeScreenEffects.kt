@@ -98,6 +98,14 @@ fun HomeScreenEffects(
                         )
                     )
                 }
+                
+                is HomeEvent.ShowReorderProjectStructureDialog -> {
+                    onDialogStateChange(
+                        dialogStates.copy(
+                            showReorderProjectStructureDialog = true
+                        )
+                    )
+                }
             }
         }
     }

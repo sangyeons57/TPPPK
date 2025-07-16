@@ -26,6 +26,8 @@ import com.example.domain.usecase.project.structure.GetProjectStructureUseCase
 import com.example.domain.usecase.project.structure.GetProjectStructureUseCaseImpl
 import com.example.domain.usecase.project.structure.RenameCategoryUseCase
 import com.example.domain.usecase.project.structure.RenameCategoryUseCaseImpl
+import com.example.domain.usecase.project.structure.ReorderUnifiedProjectStructureUseCase
+import com.example.domain.usecase.project.structure.ReorderUnifiedProjectStructureUseCaseImpl
 import com.example.domain.usecase.project.channel.ReorderChannelsUseCase
 import com.example.domain.usecase.project.channel.ReorderChannelsUseCaseImpl
 import javax.inject.Inject
@@ -116,6 +118,11 @@ class ProjectStructureUseCaseProvider @Inject constructor(
                 projectChannelRepository = projectChannelRepository
             ),
             
+            reorderUnifiedProjectStructureUseCase = ReorderUnifiedProjectStructureUseCaseImpl(
+                categoryRepository = categoryRepository,
+                projectChannelRepository = projectChannelRepository
+            ),
+            
             // 공통 Repository
             authRepository = authRepository,
             categoryRepository = categoryRepository
@@ -155,6 +162,9 @@ data class ProjectStructureUseCases(
     
     // 채널 도메인 UseCases
     val reorderChannelsUseCase: ReorderChannelsUseCase,
+    
+    // 통합 구조 관리 UseCases
+    val reorderUnifiedProjectStructureUseCase: ReorderUnifiedProjectStructureUseCase,
     
     // 공통 Repository
     val authRepository: AuthRepository,

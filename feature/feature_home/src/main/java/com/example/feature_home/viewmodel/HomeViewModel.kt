@@ -11,6 +11,7 @@ import com.example.domain.model.vo.UserId
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
+import com.example.feature_home.model.ProjectStructureItem
 import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.ProjectUiModel
 import com.example.feature_home.viewmodel.service.HomeServiceProvider
@@ -504,6 +505,46 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
+     * 프로젝트 구조 순서 변경 버튼 클릭 처리
+     */
+    fun onProjectStructureReorderClick() {
+        Log.d("HomeViewModel", "Project structure reorder clicked")
+        
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowReorderProjectStructureDialog)
+        }
+    }
+
+    /**
+     * 통합된 프로젝트 구조 순서 변경 처리 (카테고리와 직속 채널 통합)
+     */
+    fun onReorderUnifiedProjectStructure(
+        projectId: DocumentId,
+        reorderedStructure: List<ProjectStructureItem>
+    ) {
+        Log.d("HomeViewModel", "Reordering unified project structure for project: $projectId")
+        Log.d("HomeViewModel", "Reordered structure: $reorderedStructure")
+        
+        viewModelScope.launch {
+            val result = services.categoryManagementService.reorderUnifiedProjectStructure(
+                projectId = projectId,
+                reorderedStructure = reorderedStructure
+            )
+            when (result) {
+                is CustomResult.Success -> {
+                    Log.d("HomeViewModel", "Successfully reordered unified project structure")
+                    refreshProjectStructure(projectId)
+                }
+                is CustomResult.Failure -> {
+                    Log.e("HomeViewModel", "Failed to reorder unified project structure", result.error)
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트 구조 순서 변경에 실패했습니다."))
+                }
+                else -> {}
+            }
+        }
+    }
+
+    /**
      * 프로젝트 구조 새로고침
      */
     fun refreshProjectStructure(projectId: DocumentId) {
@@ -546,6 +587,7 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Top section clicked")
         // 추가 처리 필요시 구현
     }
+
 
     /**
      * 정리 작업

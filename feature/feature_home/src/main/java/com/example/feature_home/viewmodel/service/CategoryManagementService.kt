@@ -6,6 +6,7 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.provider.project.ProjectStructureUseCases
+import com.example.feature_home.model.ProjectStructureItem
 
 /**
  * 카테고리 상태 관리를 담당하는 Service
@@ -120,6 +121,46 @@ class CategoryManagementService(
             }
         } catch (e: Exception) {
             Log.e("CategoryManagementService", "Failed to reorder channels", e)
+            CustomResult.Failure(e)
+        }
+    }
+    
+    /**
+     * 통합 프로젝트 구조 순서 변경
+     * 카테고리와 채널을 포함한 전체 프로젝트 구조의 순서를 변경합니다.
+     */
+    suspend fun reorderUnifiedProjectStructure(
+        projectId: DocumentId,
+        reorderedStructure: List<Any>
+    ): CustomResult<Unit, Exception> {
+        Log.d("CategoryManagementService", "Reordering unified project structure for project: $projectId")
+        
+        return try {
+            if (projectStructureUseCases == null) {
+                Log.w("CategoryManagementService", "ProjectStructureUseCases not available")
+                CustomResult.Failure(IllegalStateException("Service not available for this context"))
+            } else {
+                // ProjectStructureItem을 ID와 타입으로 변환
+                val itemIds = reorderedStructure.map { item ->
+                    when (item) {
+                        is ProjectStructureItem.CategoryItem -> item.id
+                        is ProjectStructureItem.DirectChannelItem -> item.id
+                        else -> item.toString()
+                    }
+                }
+                
+                val itemTypes = reorderedStructure.map { item ->
+                    when (item) {
+                        is ProjectStructureItem.CategoryItem -> "category"
+                        is ProjectStructureItem.DirectChannelItem -> "channel"
+                        else -> "unknown"
+                    }
+                }
+                
+                projectStructureUseCases.reorderUnifiedProjectStructureUseCase(projectId, itemIds, itemTypes)
+            }
+        } catch (e: Exception) {
+            Log.e("CategoryManagementService", "Failed to reorder unified project structure", e)
             CustomResult.Failure(e)
         }
     }

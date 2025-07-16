@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -50,7 +52,7 @@ import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.user.UserName
 import com.example.feature_home.component.DmListComponent
-import com.example.feature_home.component.ProjectChannelList
+import com.example.feature_home.component.UnifiedProjectStructureList
 import com.example.feature_home.component.ProjectListScreen
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
@@ -193,14 +195,18 @@ fun HomeContent(
                 .padding(start = 8.dp, end = 4.dp)
         ) {
             // 섹션 헤더
-            HomeMiddleSectionHeader(uiState = uiState, onClickTopSection = onClickTopSection)
+            HomeMiddleSectionHeader(
+                uiState = uiState, 
+                onClickTopSection = onClickTopSection,
+                onReorderClick = viewModel::onProjectStructureReorderClick
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
             // 컨텐츠 분기
             when (uiState.selectedTopSection) {
                 TopSection.PROJECTS -> {
                     if (uiState.selectedProjectId != null) {
-                        ProjectChannelList(
+                        UnifiedProjectStructureList(
                             structureUiState = uiState.projectStructure,
                             onCategoryClick = onCategoryClick,
                             onCategoryLongPress = onCategoryLongPress,
@@ -240,6 +246,7 @@ fun HomeContent(
 @Composable
 fun HomeMiddleSectionHeader(
     onClickTopSection: () -> Unit,
+    onReorderClick: () -> Unit = {},
     uiState: HomeUiState
 ) {
     Surface(
@@ -267,6 +274,19 @@ fun HomeMiddleSectionHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+
+            // 프로젝트 섹션이고 프로젝트가 선택된 경우에만 순서 변경 버튼 표시
+            if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
+                IconButton(
+                    onClick = onReorderClick
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SwapVert,
+                        contentDescription = "구조 순서 변경",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

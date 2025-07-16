@@ -16,6 +16,7 @@ import com.example.domain.model.vo.category.CategoryName
 data class ProjectStructureUiState(
     val categories: List<CategoryUiModel> = emptyList(),
     val directChannel: List<ChannelUiModel> = emptyList(),
+    val unifiedStructureItems: List<ProjectStructureItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedChannelId: String? = null
@@ -45,9 +46,33 @@ data class ProjectStructureUiState(
                     .copy(isSelected = channel.id.value == selectedChannelId)
             }
 
+            // 통합된 구조 요소 리스트 생성
+            val unifiedItems = mutableListOf<ProjectStructureItem>()
+            
+            // 카테고리들을 통합 리스트에 추가
+            categoryUiModels.forEach { category ->
+                unifiedItems.add(
+                    ProjectStructureItem.CategoryItem(
+                        category = category,
+                        globalOrder = category.order
+                    )
+                )
+            }
+            
+            // 직속 채널들을 통합 리스트에 추가 (globalOrder를 0.5로 설정하여 카테고리와 구분)
+            directChannelUiModels.forEachIndexed { index, channel ->
+                unifiedItems.add(
+                    ProjectStructureItem.DirectChannelItem(
+                        channel = channel,
+                        globalOrder = 0.1 + (index * 0.05) // 0.1, 0.15, 0.2, ... 순서
+                    )
+                )
+            }
+
             return ProjectStructureUiState(
                 categories = categoryUiModels,
                 directChannel = directChannelUiModels,
+                unifiedStructureItems = unifiedItems.sortedBy { it.globalOrder },
                 isLoading = false,
                 error = null,
                 selectedChannelId = selectedChannelId
@@ -121,6 +146,29 @@ data class ChannelUiModel(
                 mode = channel.channelType
             )
         }
+    }
+}
+
+/**
+ * 통합된 프로젝트 구조 요소 (카테고리 또는 직속 채널)
+ * 카테고리와 직속 채널을 하나의 리스트에서 순서 관리하기 위한 sealed class
+ */
+sealed interface ProjectStructureItem {
+    val id: String
+    val globalOrder: Double
+    
+    data class CategoryItem(
+        val category: CategoryUiModel,
+        override val globalOrder: Double
+    ) : ProjectStructureItem {
+        override val id: String = category.id.value
+    }
+    
+    data class DirectChannelItem(
+        val channel: ChannelUiModel,
+        override val globalOrder: Double
+    ) : ProjectStructureItem {
+        override val id: String = channel.id.value
     }
 }
 
