@@ -371,32 +371,60 @@ class HomeViewModel @Inject constructor(
      * 카테고리 클릭 처리
      */
     fun onCategoryClick(category: CategoryUiModel) {
-        Log.d("HomeViewModel", "Category clicked: ${category.name}, current expanded: ${category.isExpanded}")
-        
         val projectId = _uiState.value.selectedProjectId ?: return
-        val expanded = services.categoryManagementService.toggleCategoryExpansion(projectId, category.id)
         
-        Log.d("HomeViewModel", "CategoryManagementService returned expanded: $expanded")
+        // CategoryManagementService에서 현재 실제 상태를 먼저 확인
+        val currentStateInService = services.categoryManagementService.getCategoryExpansionState(projectId, category.id)
+        Log.d("HomeViewModel", "Category clicked: ${category.name}, UI shows: ${category.isExpanded}, Service has: $currentStateInService")
         
-        // UI 상태 업데이트
+        val newExpanded = services.categoryManagementService.toggleCategoryExpansion(projectId, category.id)
+        
+        Log.d("HomeViewModel", "CategoryManagementService toggled: $currentStateInService -> $newExpanded")
+        
+        // UI 상태 업데이트 - unified structure도 함께 업데이트
         val updatedCategories = _uiState.value.projectStructure.categories.map { cat ->
             if (cat.id == category.id) {
-                Log.d("HomeViewModel", "Updating category ${cat.name.value}: ${cat.isExpanded} -> $expanded")
-                cat.copy(isExpanded = expanded)
+                Log.d("HomeViewModel", "Updating category ${cat.name.value}: ${cat.isExpanded} -> $newExpanded")
+                cat.copy(isExpanded = newExpanded)
             } else {
                 cat
             }
         }
         
-        _uiState.update { state ->
-            state.copy(
-                projectStructure = state.projectStructure.copy(
-                    categories = updatedCategories
+        // Rebuild unified structure items with updated expansion states
+        val updatedUnifiedItems = mutableListOf<com.example.feature_home.model.ProjectStructureItem>()
+        
+        // Add updated categories
+        updatedCategories.forEach { cat ->
+            updatedUnifiedItems.add(
+                com.example.feature_home.model.ProjectStructureItem.CategoryItem(
+                    category = cat,
+                    globalOrder = cat.order
                 )
             )
         }
         
-        Log.d("HomeViewModel", "Updated categories count: ${updatedCategories.size}")
+        // Add direct channels
+        _uiState.value.projectStructure.directChannel.forEachIndexed { index, channel ->
+            val globalOrder = 0.1 + (index * 0.05)
+            updatedUnifiedItems.add(
+                com.example.feature_home.model.ProjectStructureItem.DirectChannelItem(
+                    channel = channel,
+                    globalOrder = globalOrder
+                )
+            )
+        }
+        
+        _uiState.update { state ->
+            state.copy(
+                projectStructure = state.projectStructure.copy(
+                    categories = updatedCategories,
+                    unifiedStructureItems = updatedUnifiedItems.sortedBy { it.globalOrder }
+                )
+            )
+        }
+        
+        Log.d("HomeViewModel", "Updated categories count: ${updatedCategories.size}, unified items: ${updatedUnifiedItems.size}")
     }
 
     /**
