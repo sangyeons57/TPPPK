@@ -24,7 +24,7 @@ data class ProjectChannelDTO(
     @get:PropertyName(CHANNEL_TYPE)
     val channelType: ProjectChannelType = ProjectChannelType.MESSAGES, // "MESSAGES", "TASKS" 등
     @get:PropertyName(ORDER)
-    val order: Double = 0.0, // Added order field
+    val order: Double = Category.NO_CATEGORY_ORDER.toDouble(), // Added order field
     @get:PropertyName(STATUS)
     val status: ProjectChannelStatus = ProjectChannelStatus.ACTIVE,
     @get:PropertyName(CATEGORY_ID)
@@ -52,9 +52,9 @@ data class ProjectChannelDTO(
             id = VODocumentId(id),
             channelName = Name(channelName),
             channelType = channelType,
-            order = ProjectChannelOrder(order), // Added order mapping
+            order = ProjectChannelOrder.fromDouble(order),
             status = status,
-            categoryId = VODocumentId(categoryId), // Added categoryId mapping
+            categoryId = VODocumentId(categoryId),
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant()
         )
@@ -70,9 +70,9 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
         id = id.value,
         channelName = channelName.value,
         channelType = channelType,
-        order = order.value, // Added order mapping
+        order = order.value.toDouble(),
         status = status,
-        categoryId = categoryId.value, // Added categoryId mapping
+        categoryId = categoryId.value,
         createdAt = null,
         updatedAt = null
     )

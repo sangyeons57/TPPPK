@@ -98,9 +98,7 @@ fun EditChannelScreen(
                 modifier = Modifier.padding(paddingValues),
                 uiState = uiState,
                 onChannelNameChange = viewModel::onChannelNameChange,
-                onChannelTypeSelected = viewModel::onChannelTypeSelected,
                 onCategorySelected = viewModel::onCategorySelected,
-                onOrderChange = viewModel::onOrderChange,
                 onUpdateClick = viewModel::updateChannel
             )
         }
@@ -141,9 +139,7 @@ fun EditChannelContent(
     modifier: Modifier = Modifier,
     uiState: EditChannelUiState,
     onChannelNameChange: (String) -> Unit,
-    onChannelTypeSelected: (ProjectChannelType) -> Unit,
     onCategorySelected: (String) -> Unit,
-    onOrderChange: (String) -> Unit,
     onUpdateClick: () -> Unit
 ) {
     Column(
@@ -173,45 +169,28 @@ fun EditChannelContent(
             isError = uiState.error?.contains("카테고리") == true
         )
 
-        // 순서 입력 필드
-        OutlinedTextField(
-            value = uiState.currentOrder.toString(),
-            onValueChange = onOrderChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("순서") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            isError = uiState.error?.contains("숫자") == true,
-            supportingText = { Text("숫자로 입력하세요. 낮은 숫자일수록 위에 표시됩니다.") }
-        )
 
-        // 채널 타입 선택 라디오 버튼 그룹
-        Column(modifier = Modifier.selectableGroup()) {
+        // 채널 타입 표시 (읽기 전용)
+        Column {
             Text(
                 "채널 유형",
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .selectable(
-                        selected = (uiState.currentChannelMode == ProjectChannelType.MESSAGES),
-                        onClick = { onChannelTypeSelected(ProjectChannelType.MESSAGES) },
-                        role = Role.RadioButton
-                    )
-                    .padding(horizontal = 16.dp)
-            ) {
-                RadioButton(
-                    selected = (uiState.currentChannelMode == ProjectChannelType.MESSAGES),
-                    onClick = null
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
+            ) {
                 Text(
-                    text = "텍스트 채널",
+                    text = when(uiState.currentChannelMode) {
+                        ProjectChannelType.MESSAGES -> "텍스트 채널"
+                        ProjectChannelType.TASKS -> "작업 채널" 
+                        else -> "알 수 없는 채널"
+                    },
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 16.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
             }
         }
@@ -319,13 +298,10 @@ private fun EditChannelContentPreview() {
                 currentChannelMode = ProjectChannelType.MESSAGES,
                 originalChannelMode = ProjectChannelType.MESSAGES,
                 currentCategoryId = "category1",
-                currentOrder = 1.0,
                 availableCategories = emptyList()
             ),
             onChannelNameChange = {},
-            onChannelTypeSelected = {},
             onCategorySelected = {},
-            onOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -340,12 +316,9 @@ private fun EditChannelContentLoadingPreview() {
                 channelId = "1",
                 currentChannelName = "수정 중...",
                 isLoading = true,
-                currentOrder = 2.0
             ),
             onChannelNameChange = {},
-            onChannelTypeSelected = {},
             onCategorySelected = {},
-            onOrderChange = {},
             onUpdateClick = {}
         )
     }
@@ -360,12 +333,9 @@ private fun EditChannelContentErrorPreview() {
                 channelId = "1",
                 currentChannelName = "",
                 error = "이름은 필수입니다.",
-                currentOrder = 0.0
             ),
             onChannelNameChange = {},
-            onChannelTypeSelected = {},
             onCategorySelected = {},
-            onOrderChange = {},
             onUpdateClick = {}
         )
     }

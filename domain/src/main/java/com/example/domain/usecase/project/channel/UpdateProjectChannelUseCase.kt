@@ -51,8 +51,9 @@ class UpdateProjectChannelUseCaseImpl @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Channel name cannot be blank."))
         }
 
-        if (newOrder.value < 0.0) {
-            return CustomResult.Failure(IllegalArgumentException("Channel order must be non-negative."))
+        // 채널 order 검증 - 모든 채널은 0 이상의 order 값을 가질 수 있음
+        if (newOrder.value < 0) {
+            return CustomResult.Failure(IllegalArgumentException("Channel order must be 0 or greater"))
         }
 
         try {

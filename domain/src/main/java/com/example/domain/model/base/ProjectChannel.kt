@@ -72,12 +72,14 @@ class ProjectChannel private constructor(
      * Changes the order of the channel after validation.
      * Note: Uniqueness of the order should be validated by a domain or application service.
      *
-     * @throws IllegalArgumentException if the new order is not a positive number.
+     * @throws IllegalArgumentException if the new order is invalid.
      */
     fun changeOrder(newOrder: ProjectChannelOrder) {
         if (this.order == newOrder) return
-        if (newOrder.value <= 0) {
-            throw IllegalArgumentException("Channel order must be a positive number.")
+        
+        // 모든 채널은 0 이상의 order 값을 가져야 함
+        if (newOrder.value < 0) {
+            throw IllegalArgumentException("Channel order must be 0 or greater")
         }
 
         this.order = newOrder
@@ -200,6 +202,17 @@ class ProjectChannel private constructor(
         const val KEY_ORDER = "order"
         const val KEY_STATUS = "status"
         const val KEY_CATEGORY_ID = "categoryId"
+        
+        /**
+         * Minimum order value for regular channels (non-NoCategory).
+         * Regular channels must have order >= MIN_CHANNEL_ORDER
+         */
+        const val MIN_CHANNEL_ORDER = 1
+        
+        /**
+         * Default increment value for channel ordering within categories
+         */
+        const val CHANNEL_ORDER_INCREMENT = 1
 
         /**
          * Factory method for creating a new project channel.

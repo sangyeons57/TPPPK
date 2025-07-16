@@ -24,8 +24,6 @@ import com.example.data.datasource.remote.RoleRemoteDataSource
 import com.example.data.datasource.remote.RoleRemoteDataSourceImpl
 import com.example.data.datasource.remote.ScheduleRemoteDataSource
 import com.example.data.datasource.remote.ScheduleRemoteDataSourceImpl
-import com.example.data.datasource.remote.TaskContainerRemoteDataSource
-import com.example.data.datasource.remote.TaskContainerRemoteDataSourceImpl
 import com.example.data.datasource.remote.TaskRemoteDataSource
 import com.example.data.datasource.remote.TaskRemoteDataSourceImpl
 import com.example.data.datasource.remote.UserRemoteDataSource
@@ -206,16 +204,6 @@ abstract class DataSourceModule {
     abstract fun bindFunctionsRemoteDataSource(
         functionsRemoteDataSourceImpl: FunctionsRemoteDataSourceImpl
     ): FunctionsRemoteDataSource
-
-    /**
-     * TaskContainerRemoteDataSource 인터페이스 요청 시
-     * TaskContainerRemoteDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
-     */
-    @Binds
-    @Singleton
-    abstract fun bindTaskContainerRemoteDataSource(
-        taskContainerRemoteDataSourceImpl: TaskContainerRemoteDataSourceImpl
-    ): TaskContainerRemoteDataSource
 
     /**
      * TaskRemoteDataSource 인터페이스 요청 시

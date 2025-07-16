@@ -18,6 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,58 +44,53 @@ import com.example.domain.model.vo.category.CategoryName
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureUiState
+import com.example.feature_home.model.ProjectStructureItem
+
 
 
 /**
- * 프로젝트의 카테고리 및 채널 목록을 표시하는 컴포넌트
+ * 통합된 프로젝트 구조 목록을 표시하는 컴포넌트 (카테고리와 직속 채널을 함께 관리)
  */
 @Composable
-fun ProjectChannelList(
+fun UnifiedProjectStructureList(
     structureUiState: ProjectStructureUiState,
     onCategoryClick: (CategoryUiModel) -> Unit,
     onCategoryLongPress: (CategoryUiModel) -> Unit,
     onChannelClick: (ChannelUiModel) -> Unit,
-    onChannelLongPress: (ChannelUiModel) -> Unit,
+    onChannelLongPress: (ChannelUiModel, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
         modifier = modifier.padding(horizontal = 4.dp)
     ) {
-        // 일반 채널 (카테고리에 속하지 않은 채널)
-        if (structureUiState.directChannel.isNotEmpty()) {
-            items(structureUiState.directChannel) { channel ->
-                ChannelItem(
-                    channel = channel,
-                    onClick = { onChannelClick(channel) },
-                    onLongPress = { onChannelLongPress(channel) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+        items(
+            items = structureUiState.unifiedStructureItems,
+            key = { it.id }
+        ) { item ->
+            when (item) {
+                is ProjectStructureItem.CategoryItem -> {
+                    CategoryItem(
+                        category = item.category,
+                        onCategoryClick = { onCategoryClick(item.category) },
+                        onCategoryLongPress = { onCategoryLongPress(item.category) },
+                        onChannelClick = onChannelClick,
+                        onChannelLongPress = onChannelLongPress,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                is ProjectStructureItem.DirectChannelItem -> {
+                    DirectChannelListItem(
+                        channel = item.channel,
+                        onClick = { onChannelClick(item.channel) },
+                        onLongPress = { onChannelLongPress(item.channel, com.example.domain.model.base.Category.NO_CATEGORY_ID) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
-            
-            item {
-                HorizontalDivider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                )
-            }
-        }
-        
-        // 카테고리 및 해당 채널 목록
-        items(structureUiState.categories) { category ->
-            CategoryItem(
-                category = category,
-                onCategoryClick = { onCategoryClick(category) },
-                onCategoryLongPress = { onCategoryLongPress(category) },
-                onChannelClick = onChannelClick,
-                onChannelLongPress = onChannelLongPress,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }
+
 
 /**
  * 카테고리 아이템 컴포넌트
@@ -103,7 +101,7 @@ fun CategoryItem(
     onCategoryClick: () -> Unit,
     onCategoryLongPress: () -> Unit,
     onChannelClick: (ChannelUiModel) -> Unit,
-    onChannelLongPress: (ChannelUiModel) -> Unit,
+    onChannelLongPress: (ChannelUiModel, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -122,7 +120,7 @@ fun CategoryItem(
                     ChannelItem(
                         channel = channel,
                         onClick = { onChannelClick(channel) },
-                        onLongPress = { onChannelLongPress(channel) },
+                        onLongPress = { onChannelLongPress(channel, category.id.value) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 8.dp) // 들여쓰기 효과
@@ -184,7 +182,76 @@ fun CategoryHeader(
 }
 
 /**
- * 채널 아이템 컴포넌트
+ * 직속 채널 아이템 컴포넌트 (프로젝트 직접 하위 채널용)
+ */
+@Composable
+fun DirectChannelListItem(
+    channel: ChannelUiModel,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val iconColor = if (channel.isSelected)
+        MaterialTheme.colorScheme.onPrimaryContainer
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+
+    val textColor = if (channel.isSelected)
+        MaterialTheme.colorScheme.onPrimaryContainer
+    else
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+
+    val fontWeight = if (channel.isSelected)
+        FontWeight.SemiBold
+    else
+        FontWeight.Normal
+
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(
+                color = if (channel.isSelected)
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                else
+                    Color.Transparent
+            )
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
+            .padding(vertical = 10.dp, horizontal = 12.dp), // 직속 채널은 약간 더 큰 패딩
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 직속 채널임을 나타내는 시각적 구분 (좌측 여백 없음)
+        Icon(
+            imageVector = when(channel.mode) {
+                ProjectChannelType.MESSAGES -> Icons.Default.Tag
+                ProjectChannelType.TASKS -> Icons.Default.CheckCircle
+                else -> Icons.Default.Tag
+            },
+            contentDescription = when(channel.mode) {
+                ProjectChannelType.MESSAGES -> "메시지 채널"
+                ProjectChannelType.TASKS -> "테스크 채널"
+                else -> "알 수 없는 채널"
+            },
+            modifier = Modifier.size(20.dp), // 직속 채널은 아이콘이 약간 더 큼
+            tint = iconColor
+        )
+        
+        Spacer(modifier = Modifier.width(10.dp))
+        
+        Text(
+            text = channel.name.value,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = fontWeight),
+            color = textColor,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * 채널 아이템 컴포넌트 (카테고리 내부 채널용)
  */
 @Composable
 fun ChannelItem(
@@ -226,11 +293,13 @@ fun ChannelItem(
     ) {
         Icon(
             imageVector = when(channel.mode) {
-                ProjectChannelType.MESSAGES ->  Icons.Default.Tag // Discord의 # 아이콘과 유사
+                ProjectChannelType.MESSAGES -> Icons.Default.Tag // 메시지 채널: # 태그 아이콘
+                ProjectChannelType.TASKS -> Icons.Default.CheckCircle // 테스크 채널: 체크 아이콘
                 else -> Icons.Default.Tag // 기본값으로 Tag 아이콘
             },
             contentDescription = when(channel.mode) {
-                ProjectChannelType.MESSAGES -> "텍스트 채널"
+                ProjectChannelType.MESSAGES -> "메시지 채널"
+                ProjectChannelType.TASKS -> "테스크 채널"
                 else -> "알 수 없는 채널"
             },
             modifier = Modifier.size(18.dp), // 아이콘 크기 약간 키움
@@ -252,11 +321,11 @@ fun ChannelItem(
 // --- Previews Start ---
 
 /**
- * ChannelItem 미리보기: 텍스트 채널, 선택됨
+ * ChannelItem 미리보기: 메시지 채널, 선택됨
  */
-@Preview(showBackground = true, name = "ChannelItem - Text Selected")
+@Preview(showBackground = true, name = "ChannelItem - Message Selected")
 @Composable
-fun ChannelItemPreview_TextSelected() {
+fun ChannelItemPreview_MessageSelected() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
         ChannelItem(
             channel = ChannelUiModel(
@@ -264,6 +333,26 @@ fun ChannelItemPreview_TextSelected() {
                 name = Name("일반 대화"),
                 mode = ProjectChannelType.MESSAGES,
                 isSelected = true
+            ),
+            onClick = {},
+            onLongPress = {}
+        )
+    }
+}
+
+/**
+ * ChannelItem 미리보기: 테스크 채널, 선택 안됨
+ */
+@Preview(showBackground = true, name = "ChannelItem - Task Unselected")
+@Composable
+fun ChannelItemPreview_TaskUnselected() {
+    TeamnovaPersonalProjectProjectingKotlinTheme {
+        ChannelItem(
+            channel = ChannelUiModel(
+                id = DocumentId("ch2"),
+                name = Name("할 일 관리"),
+                mode = ProjectChannelType.TASKS,
+                isSelected = false
             ),
             onClick = {},
             onLongPress = {}
@@ -320,6 +409,12 @@ fun CategoryItemPreview_Expanded() {
             name = Name("백엔드 작업"),
             mode = ProjectChannelType.MESSAGES,
             isSelected = true
+        ),
+        ChannelUiModel(
+            id = DocumentId("ch5"),
+            name = Name("스프린트 관리"),
+            mode = ProjectChannelType.TASKS,
+            isSelected = false
         )
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -327,13 +422,14 @@ fun CategoryItemPreview_Expanded() {
             category = CategoryUiModel(
                 id = DocumentId("ch1"),
                 name = CategoryName("엔지니어링"),
+                order = 1,
                 channels = sampleChannels,
                 isExpanded = true
             ),
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
-            onChannelLongPress = {}
+            onChannelLongPress = {} as (ChannelUiModel, String?) -> Unit
         )
     }
 }
@@ -349,56 +445,56 @@ fun CategoryItemPreview_Collapsed() {
             category = CategoryUiModel(
                 id = DocumentId("cat2"),
                 name = CategoryName("마케팅"),
+                order = 2,
                 channels = emptyList(),
                 isExpanded = false
             ),
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
-            onChannelLongPress = {}
+            onChannelLongPress = {} as (ChannelUiModel, String?) -> Unit
         )
     }
 }
 
+
 /**
- * ProjectChannelList 미리보기: 기본 상태 (일반 채널, 카테고리 포함)
+ * UnifiedProjectStructureList 미리보기: 통합된 구조 (카테고리와 직속 채널 혼합)
  */
-@Preview(showBackground = true, name = "ProjectChannelList - Default")
+@Preview(showBackground = true, name = "UnifiedProjectStructureList - Mixed")
 @Composable
-fun ProjectChannelListPreview_Default() {
-    val generalChannels = listOf(
+fun UnifiedProjectStructureListPreview_Mixed() {
+    val directChannels = listOf(
         ChannelUiModel(
-            id = DocumentId("gen1"),
+            id = DocumentId("direct1"),
             name = Name("공지사항"),
             mode = ProjectChannelType.MESSAGES,
             isSelected = false
         ),
         ChannelUiModel(
-            id = DocumentId("gen2"),
+            id = DocumentId("direct2"),
             name = Name("자유 게시판"),
             mode = ProjectChannelType.MESSAGES,
-            isSelected = false
+            isSelected = true
         )
     )
+    
     val categories = listOf(
         CategoryUiModel(
-            id = DocumentId("cat_dev"), name = CategoryName("개발팀"), isExpanded = true,
+            id = DocumentId("cat_dev"), 
+            name = CategoryName("개발팀"), 
+            order = 1, 
+            isExpanded = true,
             channels = listOf(
                 ChannelUiModel(
                     id = DocumentId("dev_ch1"),
                     name = Name("프론트엔드"),
                     mode = ProjectChannelType.MESSAGES,
-                    isSelected = true
+                    isSelected = false
                 ),
                 ChannelUiModel(
                     id = DocumentId("dev_ch2"),
                     name = Name("백엔드"),
-                    mode = ProjectChannelType.MESSAGES,
-                    isSelected = false
-                ),
-                ChannelUiModel(
-                    id = DocumentId("dev_voice"),
-                    name = Name("개발팀 음성"),
                     mode = ProjectChannelType.MESSAGES,
                     isSelected = false
                 )
@@ -407,57 +503,50 @@ fun ProjectChannelListPreview_Default() {
         CategoryUiModel(
             id = DocumentId("cat_design"),
             name = CategoryName("디자인팀"),
+            order = 2,
             isExpanded = false,
             channels = emptyList()
-        ),
-        CategoryUiModel(
-            id = DocumentId("cat_plan"), name = CategoryName("기획팀"), isExpanded = true,
-            channels = listOf(
-                ChannelUiModel(
-                    id = DocumentId("plan_ch1"),
-                    name = Name("아이디어 공유"),
-                    mode = ProjectChannelType.MESSAGES,
-                    isSelected = false
-                )
-            )
         )
     )
+    
+    // 통합된 구조 아이템 생성
+    val unifiedItems = mutableListOf<ProjectStructureItem>()
+    
+    // 직속 채널들을 먼저 추가 (order 1, 2, 3)
+    directChannels.forEachIndexed { index, channel ->
+        unifiedItems.add(
+            ProjectStructureItem.DirectChannelItem(
+                channel = channel,
+                globalOrder = 1 + index
+            )
+        )
+    }
+    
+    // 카테고리들을 추가 (order 1.0, 2.0)
+    categories.forEach { category ->
+        unifiedItems.add(
+            ProjectStructureItem.CategoryItem(
+                category = category,
+                globalOrder = category.order
+            )
+        )
+    }
+    
     val uiState = ProjectStructureUiState(
         isLoading = false,
         error = null,
         categories = categories,
-        directChannel = generalChannels
+        directChannel = directChannels,
+        unifiedStructureItems = unifiedItems.sortedBy { it.globalOrder }
     )
+    
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        ProjectChannelList(
+        UnifiedProjectStructureList(
             structureUiState = uiState,
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
-            onChannelLongPress = {}
-        )
-    }
-}
-
-/**
- * ProjectChannelList 미리보기: 비어 있는 상태
- */
-@Preview(showBackground = true, name = "ProjectChannelList - Empty")
-@Composable
-fun ProjectChannelListPreview_Empty() {
-    val uiState = ProjectStructureUiState(
-        isLoading = false,
-        error = null,
-        categories = emptyList(),
-        directChannel = emptyList()
-    )
-    TeamnovaPersonalProjectProjectingKotlinTheme {
-        ProjectChannelList(
-            structureUiState = uiState,
-            onCategoryClick = {},
-            onCategoryLongPress = {},
-            onChannelClick = {},
-            onChannelLongPress = {}
+            onChannelLongPress = {} as (ChannelUiModel, String?) -> Unit,
         )
     }
 }

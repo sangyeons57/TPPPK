@@ -2,7 +2,6 @@ package com.example.core_navigation.core
 
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
-import com.example.domain.model.vo.DocumentId
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -91,7 +90,7 @@ interface NavigationManger {
      * Navigates to main container (home screen).
      */
     fun navigateToMain(navOptions: NavOptions? = null)
-    
+
     /**
      * Navigates to project details.
      */
@@ -106,6 +105,16 @@ interface NavigationManger {
      * Navigates to chat screen.
      */
     fun navigateToChat(channelId: String, messageId: String? = null, navOptions: NavOptions? = null)
+    
+    /**
+     * Navigates to task list screen.
+     */
+    fun navigateToTaskList(projectId: String, channelId: String, navOptions: NavOptions? = null)
+    
+    /**
+     * Navigates to task detail screen.
+     */
+    fun navigateToTaskDetail(projectId: String, channelId: String, taskId: String, navOptions: NavOptions? = null)
     
     /**
      * Navigates to add project screen.
@@ -210,7 +219,8 @@ interface NavigationManger {
      * Navigates to accept friends screen.
      */
     fun navigateToAcceptFriends(navOptions: NavOptions? = null)
-    
+
+    fun navigateToSettings(navOptions: NavOptions? = null)
     // ===== Result Handling Convenience =====
     
     /**

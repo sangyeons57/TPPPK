@@ -17,10 +17,12 @@ import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 data class ProjectStructureUiState(
     val categories: List<CategoryUiModel> = emptyList(),
     val directChannel: List<ChannelUiModel> = emptyList(),
+    val unifiedStructureItems: List<ProjectStructureItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedChannelId: String? = null
 ) {
+
     companion object {
         /**
          * ProjectStructureData를 UI 모델로 변환합니다.
@@ -34,20 +36,49 @@ data class ProjectStructureUiState(
                 CategoryUiModel(
                     id = category.id,
                     name = category.name,
+                    order = category.order.value,
                     channels = channels.map { ChannelUiModel.fromDomain(it) }
                         .map { it.copy(isSelected = it.id.value == selectedChannelId) },
                     isExpanded = expandedCategoryIds.contains(category.id.value)
                 )
-            }.sortedBy { it.name.value }
+            }.sortedBy { it.order }
 
             val directChannelUiModels = data.directChannels.map { channel ->
                 ChannelUiModel.fromDomain(channel)
                     .copy(isSelected = channel.id.value == selectedChannelId)
             }
+            
+            android.util.Log.d("ProjectStructureUiState", "Converting domain data: ${categoryUiModels.size} categories, ${directChannelUiModels.size} direct channels")
+
+            // 통합된 구조 요소 리스트 생성
+            val unifiedItems = mutableListOf<ProjectStructureItem>()
+            
+            // 카테고리들을 통합 리스트에 추가
+            categoryUiModels.forEach { category ->
+                unifiedItems.add(
+                    ProjectStructureItem.CategoryItem(
+                        category = category,
+                        globalOrder = category.order
+                    )
+                )
+            }
+            
+            // 직속 채널들을 통합 리스트에 추가 (실제 order 값 사용)
+            directChannelUiModels.forEach { channel ->
+                val globalOrder = channel.order.value
+                android.util.Log.d("ProjectStructureUiState", "Adding direct channel '${channel.name.value}' with order $globalOrder")
+                unifiedItems.add(
+                    ProjectStructureItem.DirectChannelItem(
+                        channel = channel,
+                        globalOrder = globalOrder
+                    )
+                )
+            }
 
             return ProjectStructureUiState(
                 categories = categoryUiModels,
                 directChannel = directChannelUiModels,
+                unifiedStructureItems = unifiedItems.sortedBy { it.globalOrder },
                 isLoading = false,
                 error = null,
                 selectedChannelId = selectedChannelId
@@ -77,12 +108,14 @@ data class ProjectStructureUiState(
  * 카테고리 UI 모델
  * @param id 카테고리 ID
  * @param name 카테고리 이름
+ * @param order 카테고리 순서 (정렬용)
  * @param channels 카테고리에 속한 채널 목록
  * @param isExpanded 카테고리 펼침 상태
  */
 data class CategoryUiModel(
     val id: DocumentId,
     val name: CategoryName,
+    val order: Int,
     val channels: List<ChannelUiModel> = emptyList(),
     val isExpanded: Boolean = true
 ) {
@@ -91,6 +124,7 @@ data class CategoryUiModel(
             return CategoryUiModel(
                 id = category.id,
                 name = category.name,
+                order = category.order.value,
                 isExpanded = isExpanded
             )
         }
@@ -121,4 +155,41 @@ data class ChannelUiModel(
             )
         }
     }
+}
+
+/**
+ * 통합된 프로젝트 구조 요소 (카테고리 또는 직속 채널)
+ * 카테고리와 직속 채널을 하나의 리스트에서 순서 관리하기 위한 sealed class
+ */
+sealed interface ProjectStructureItem {
+    val id: String
+    val globalOrder: Int
+    
+    data class CategoryItem(
+        val category: CategoryUiModel,
+        override val globalOrder: Int
+    ) : ProjectStructureItem {
+        override val id: String = category.id.value
+    }
+    
+    data class DirectChannelItem(
+        val channel: ChannelUiModel,
+        override val globalOrder: Int
+    ) : ProjectStructureItem {
+        override val id: String = channel.id.value
+    }
+}
+
+/**
+ * ProjectStructureData를 ProjectStructureUiState로 변환하는 확장 함수
+ */
+fun ProjectStructureData.toProjectStructureUiState(
+    expandedCategoryIds: Set<String> = emptySet(),
+    selectedChannelId: String? = null
+): ProjectStructureUiState {
+    return ProjectStructureUiState.fromDomain(
+        data = this,
+        expandedCategoryIds = expandedCategoryIds,
+        selectedChannelId = selectedChannelId
+    )
 } 

@@ -1,5 +1,6 @@
 package com.example.feature_edit_channel.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
@@ -36,12 +37,14 @@ class EditChannelDialogViewModel @Inject constructor(
 
     fun onEditChannelClick() {
         val state = _uiState.value
+        Log.d("EditChannelDialogViewModel", "onEditChannelClick called with projectId=${state.projectId}, channelId=${state.channelId}")
         
         // Validate required parameters before navigation
         if (state.projectId.isNotEmpty() && state.channelId.isNotEmpty()) {
+            Log.d("EditChannelDialogViewModel", "Calling navigation to edit channel")
             navigationManger.navigateToEditChannel(state.projectId, state.channelId)
+            Log.d("EditChannelDialogViewModel", "Navigation call completed, dismissing dialog")
         }
-
         viewModelScope.launch {
             _eventFlow.emit(EditChannelDialogEvent.DismissDialog)
         }

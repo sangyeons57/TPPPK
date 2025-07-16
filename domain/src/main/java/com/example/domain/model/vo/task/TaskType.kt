@@ -4,11 +4,8 @@ package com.example.domain.model.vo.task
  * Enum representing the type of a task.
  */
 enum class TaskType(val value: String) {
-    GENERAL("general"),
-    BUG("bug"),
-    FEATURE("feature"),
-    IMPROVEMENT("improvement"),
-    DOCUMENTATION("documentation");
+    CHECKLIST("checklist"),
+    COMMENT("comment");
 
     companion object {
         fun fromValue(value: String): TaskType {

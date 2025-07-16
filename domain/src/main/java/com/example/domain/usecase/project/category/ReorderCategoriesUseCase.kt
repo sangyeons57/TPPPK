@@ -60,13 +60,26 @@ class ReorderCategoriesUseCaseImpl @Inject constructor(
             
             // Update each category with its new normalized order
             categoryIds.forEachIndexed { index, categoryId ->
-                val category = categoryMap[categoryId]
+                val category = categoryMap[categoryId] as Category?
                     ?: return CustomResult.Failure(IllegalArgumentException("Category not found: $categoryId"))
                 
-                val newOrder = CategoryOrder(index.toDouble())
+                val newOrder = if (categoryId == Category.NO_CATEGORY_ID) {
+                    // No_Category order is always fixed at 0.0
+                    CategoryOrder(Category.NO_CATEGORY_ORDER)
+                } else {
+                    // Other categories get normalized order (but skip 0.0 if No_Category exists)
+                    val adjustedIndex = if (categoryIds.contains(Category.NO_CATEGORY_ID) && index > 0) {
+                        index // Keep original index if No_Category is at position 0
+                    } else if (categoryIds.contains(Category.NO_CATEGORY_ID)) {
+                        index + Category.CATEGORY_ORDER_INCREMENT.toInt() // Adjust index to skip 0.0 for No_Category
+                    } else {
+                        index // No No_Category in the list
+                    }
+                    CategoryOrder(adjustedIndex)
+                }
                 
                 // Update the category order using the domain method
-                category.update(newOrder = newOrder)
+                category.changeOrder(newOrder = newOrder)
                 
                 // Save the updated category
                 when (val saveResult = categoryRepository.save(category)) {

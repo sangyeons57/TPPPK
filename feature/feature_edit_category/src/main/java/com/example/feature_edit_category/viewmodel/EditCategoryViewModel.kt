@@ -74,56 +74,61 @@ class EditCategoryViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             
             // 모든 카테고리 목록 가져오기
-            when (val allCategoriesResult = structureUseCases.getProjectAllCategoriesUseCase()) {
-                is CustomResult.Success -> {
-                    val allCategories = allCategoriesResult.data.sortedBy { it.order.value }
-                    val allCategoryIds = allCategories.map { it.id.value }
-                    val currentCategoryIndex = allCategoryIds.indexOf(categoryId)
-                    
-                    if (currentCategoryIndex == -1) {
+            structureUseCases.getProjectAllCategoriesUseCase().collect {result ->
+                when (result) {
+                    is CustomResult.Success -> {
+                        val allCategories = result.data.sortedBy { it.order.value }
+                        val allCategoryIds = allCategories.map { it.id.value }
+                        val currentCategoryIndex = allCategoryIds.indexOf(categoryId)
+
+                        if (currentCategoryIndex == -1) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = "카테고리를 찾을 수 없습니다."
+                                )
+                            }
+                            return@collect
+                        }
+
+                        val currentCategory = allCategories[currentCategoryIndex]
+
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                error = "카테고리를 찾을 수 없습니다."
+                                currentCategoryName = currentCategory.name.value,
+                                originalCategoryName = currentCategory.name.value,
+                                currentCategoryOrder = currentCategoryIndex.toDouble(),
+                                originalCategoryOrder = currentCategory.order.toDouble(),
+                                canMoveUp = currentCategoryIndex > 0 && currentCategory.id.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
+                                canMoveDown = currentCategoryIndex < allCategories.size - 1 && currentCategory.id.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
+                                totalCategories = allCategories.size,
+                                allCategoryIds = allCategoryIds
                             )
                         }
-                        return@launch
                     }
-                    
-                    val currentCategory = allCategories[currentCategoryIndex]
-                    
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            currentCategoryName = currentCategory.name.value,
-                            originalCategoryName = currentCategory.name.value,
-                            currentCategoryOrder = currentCategoryIndex.toDouble(),
-                            originalCategoryOrder = currentCategory.order.value,
-                            canMoveUp = currentCategoryIndex > 0,
-                            canMoveDown = currentCategoryIndex < allCategories.size - 1,
-                            totalCategories = allCategories.size,
-                            allCategoryIds = allCategoryIds
-                        )
+
+                    is CustomResult.Failure -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "카테고리 정보를 불러오지 못했습니다: ${result.error.message}"
+                            )
+                        }
+                        _eventFlow.emit(EditCategoryEvent.ShowSnackbar("카테고리 정보를 불러오지 못했습니다."))
                     }
-                }
-                is CustomResult.Failure -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "카테고리 정보를 불러오지 못했습니다: ${allCategoriesResult.error.message}"
-                        )
+
+                    is CustomResult.Loading -> {
+                        _uiState.update { it.copy(isLoading = true) }
                     }
-                    _eventFlow.emit(EditCategoryEvent.ShowSnackbar("카테고리 정보를 불러오지 못했습니다."))
-                }
-                is CustomResult.Loading -> {
-                    _uiState.update { it.copy(isLoading = true) }
-                }
-                else -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "알 수 없는 오류가 발생했습니다."
-                        )
+
+                    else -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "알 수 없는 오류가 발생했습니다."
+                            )
+                        }
                     }
                 }
             }
@@ -146,6 +151,9 @@ class EditCategoryViewModel @Inject constructor(
         val currentState = _uiState.value
         if (!currentState.canMoveUp || currentState.isLoading) return
         
+        // No_Category cannot be moved
+        if (categoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
+        
         val currentIndex = currentState.currentCategoryOrder.toInt()
         val newIndex = currentIndex - 1
         
@@ -164,6 +172,9 @@ class EditCategoryViewModel @Inject constructor(
     fun moveCategoryDown() {
         val currentState = _uiState.value
         if (!currentState.canMoveDown || currentState.isLoading) return
+        
+        // No_Category cannot be moved
+        if (categoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
         
         val currentIndex = currentState.currentCategoryOrder.toInt()
         val newIndex = currentIndex + 1
@@ -218,6 +229,12 @@ class EditCategoryViewModel @Inject constructor(
                     newCategoryIds.removeAt(originalOrderIndex)
                     newCategoryIds.add(currentOrderIndex, categoryId)
                     
+                    // No_Category가 포함된 경우 항상 첫 번째 위치로 이동
+                    if (newCategoryIds.contains(com.example.domain.model.base.Category.NO_CATEGORY_ID)) {
+                        newCategoryIds.remove(com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                        newCategoryIds.add(0, com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                    }
+                    
                     when (val reorderResult = structureUseCases.reorderCategoriesUseCase(
                         DocumentId(projectId),
                         newCategoryIds
@@ -242,7 +259,7 @@ class EditCategoryViewModel @Inject constructor(
                         is CustomResult.Success -> {
                             val categoryToUpdate = getCategoryResult.data
                             val newCategoryName = CategoryName(currentName)
-                            val newCategoryOrder = CategoryOrder(currentOrderIndex.toDouble())
+                            val newCategoryOrder = CategoryOrder(currentOrderIndex)
                             
                             when (val updateResult = structureUseCases.updateCategoryUseCase(
                                 projectId = DocumentId(projectId),

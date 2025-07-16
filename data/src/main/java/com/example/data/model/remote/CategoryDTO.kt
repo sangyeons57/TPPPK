@@ -24,7 +24,7 @@ data class CategoryDTO(
     val name: String = "",
     // 순서를 소수점으로 관리하면 정수보다 유연하게 아이템 사이에 삽입할 수 있습니다.
     @get:PropertyName(ORDER)
-    val order: Double = 0.0,
+    val order: Double = Category.NO_CATEGORY_ORDER.toDouble(),
     @get:PropertyName(CREATED_BY)
     val createdBy: String = "",
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
@@ -50,7 +50,7 @@ data class CategoryDTO(
         return Category.fromDataSource(
             id = DocumentId(id),
             name = CategoryName(name),
-            order = CategoryOrder(order),
+            order = CategoryOrder.fromDouble(order),
             createdBy = OwnerId(createdBy),
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant(),
@@ -67,7 +67,7 @@ fun Category.toDto(): CategoryDTO {
     return CategoryDTO(
         id = id.value,
         name = name.value,
-        order = order.value,
+        order = order.value.toDouble(),
         createdBy = createdBy.value,
         createdAt = null,
         updatedAt = null,

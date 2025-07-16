@@ -86,7 +86,7 @@ private fun EditCategoryDialogPreview() {
             projectId = "project123",
             categoryId = "category123",
             onDismissRequest = {},
-            onNavigateToEditCategory = {},
+            onNavigateToEditCategory = {}
         )
     }
 }

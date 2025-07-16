@@ -22,31 +22,4 @@ class TaskRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : DefaultDatasourceImpl<TaskDTO>(firestore, TaskDTO::class.java), TaskRemoteDataSource {
     
-    /**
-     * 모든 task 타입 문서를 관찰합니다.
-     * container 타입 문서는 제외됩니다.
-     */
-    override fun observeAll(): Flow<CustomResult<List<TaskDTO>, Exception>> {
-        return super.observeAll().map { result ->
-            result.successProcess { documents ->
-                documents.map{it as TaskDTO}.filter { it.type == TaskDTO.TYPE_TASK }
-            }
-        }
-    }
-    
-    /**
-     * Task 문서를 생성합니다. 타입을 "task"로 설정합니다.
-     */
-    suspend fun createTask(dto: TaskDTO): CustomResult<DocumentId, Exception> {
-        val taskDto = dto.copy(type = TaskDTO.TYPE_TASK)
-        return create(taskDto)
-    }
-    
-    /**
-     * Task 문서를 삭제합니다.
-     */
-    suspend fun deleteTask(taskId: DocumentId): CustomResult<Unit, Exception> {
-        return delete(taskId)
-    }
-
 }

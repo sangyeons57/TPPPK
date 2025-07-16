@@ -38,11 +38,11 @@ class EditCategoryDialogViewModel @Inject constructor(
 
     fun onEditCategoryClick() {
         val state = _uiState.value
-        Log.d("EditCategoryDialogViewModel", "1")
+        Log.d("EditCategoryDialogViewModel", "onEditCategoryClick called with projectId=${state.projectId}, categoryId=${state.categoryId}")
         if (state.projectId.isNotEmpty() && state.categoryId.isNotEmpty()) {
-            Log.d("EditCategoryDialogViewModel", "2")
-
+            Log.d("EditCategoryDialogViewModel", "Calling navigation to edit category")
             navigationManger.navigateToEditCategory(state.projectId, state.categoryId)
+            Log.d("EditCategoryDialogViewModel", "Navigation call completed, dismissing dialog")
         }
         viewModelScope.launch {
             _eventFlow.emit(EditCategoryDialogEvent.DismissDialog)

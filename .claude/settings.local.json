@@ -24,7 +24,8 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(export:*)",
-      "Bash(export PATH=$JAVA_HOME/bin:$PATH)"
+      "Bash(export PATH=$JAVA_HOME/bin:$PATH)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": []
   }

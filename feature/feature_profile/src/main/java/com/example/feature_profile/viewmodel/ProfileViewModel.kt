@@ -53,9 +53,7 @@ data class ProfileUiState(
 
 // 프로필 화면 이벤트
 sealed class ProfileEvent {
-    object NavigateToSettings : ProfileEvent() // 설정 화면으로 이동
     // NavigateToStatus is now handled by showChangeStatusDialog in UiState
-    object NavigateToFriends: ProfileEvent()
     object PickProfileImage : ProfileEvent() // 이미지 선택기 실행 요청
     object LogoutCompleted : ProfileEvent() // 로그아웃 완료 알림 -> 화면 전환용
     data class ShowSnackbar(val message: String) : ProfileEvent()
@@ -194,9 +192,7 @@ class ProfileViewModel @Inject constructor(
     }
     // 설정 버튼 클릭
     fun onSettingsClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(ProfileEvent.NavigateToSettings)
-        }
+        navigationManger.navigateToSettings()
     }
 
     // 로그아웃 버튼 클릭
