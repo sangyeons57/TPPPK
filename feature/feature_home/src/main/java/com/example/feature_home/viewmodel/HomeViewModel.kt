@@ -528,9 +528,6 @@ class HomeViewModel @Inject constructor(
      */
     fun onAddFriendClick() {
         Log.d("HomeViewModel", "Add friend button clicked")
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.ShowAddFriendDialog)
-        }
     }
 
     /**
@@ -704,7 +701,7 @@ class HomeViewModel @Inject constructor(
         
         // 카테고리별 채널 순서 변경 다이얼로그 표시
         viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.ShowReorderCategoryChannelsDialog(categoryId))
+            _eventFlow.emit(HomeEvent.ShowReorderProjectStructureDialog)
         }
     }
     

@@ -429,7 +429,7 @@ fun CategoryItemPreview_Expanded() {
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
-            onChannelLongPress = {}
+            onChannelLongPress = {} as (ChannelUiModel, String?) -> Unit
         )
     }
 }
@@ -452,7 +452,7 @@ fun CategoryItemPreview_Collapsed() {
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
-            onChannelLongPress = {}
+            onChannelLongPress = {} as (ChannelUiModel, String?) -> Unit
         )
     }
 }
@@ -546,7 +546,7 @@ fun UnifiedProjectStructureListPreview_Mixed() {
             onCategoryClick = {},
             onCategoryLongPress = {},
             onChannelClick = {},
-            onChannelLongPress = {},
+            onChannelLongPress = {} as (ChannelUiModel, String?) -> Unit,
         )
     }
 }
