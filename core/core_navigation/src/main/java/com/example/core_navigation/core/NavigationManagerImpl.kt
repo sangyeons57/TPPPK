@@ -337,11 +337,11 @@ class NavigationManagerImpl @Inject constructor(
     }
 
     override fun navigateToEditCategory(projectId: String, categoryId: String, navOptions: NavOptions?) {
-        executeNavigation(EditCategoryRoute(projectId, categoryId).toAppRoutePath(), navOptions)
+        executeNavigationOnParent(EditCategoryRoute(projectId, categoryId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToEditChannel(projectId: String, channelId: String, navOptions: NavOptions?) {
-        executeNavigation(EditChannelRoute(projectId, channelId).toAppRoutePath(), navOptions)
+        executeNavigationOnParent(EditChannelRoute(projectId, channelId).toAppRoutePath(), navOptions)
     }
 
     override fun navigateToAcceptFriends(navOptions: NavOptions?) {
