@@ -7,6 +7,7 @@ import com.google.firebase.Timestamp
 import com.example.core_common.util.DateTimeUtil
 import com.example.data.model.DTO
 import com.example.domain.model.AggregateRoot
+import com.example.domain.model.base.Category
 import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
 import com.google.firebase.firestore.ServerTimestamp
 import com.example.domain.model.vo.DocumentId as VODocumentId
@@ -17,7 +18,7 @@ import java.util.Date
 data class ProjectsWrapperDTO(
     @DocumentId override val id: String = "",
     @get:PropertyName(ORDER)
-    val order: Double = com.example.domain.model.base.Category.NO_CATEGORY_ORDER,
+    val order: Double = Category.NO_CATEGORY_ORDER.toDouble(),
     @get:PropertyName(PROJECT_NAME)
     val projectName: String = "",
     @get:PropertyName(PROJECT_IMAGE_URL)
@@ -41,7 +42,7 @@ data class ProjectsWrapperDTO(
     override fun toDomain(): ProjectsWrapper {
         return ProjectsWrapper.fromDataSource(
             id = VODocumentId(id),
-            order = ProjectWrapperOrder(order),
+            order = ProjectWrapperOrder.from(order),
             projectName = ProjectName(projectName),
             projectImageUrl = projectImageUrl?.let{ImageUrl(it)},
             createdAt = createdAt?.toInstant(),
@@ -57,7 +58,7 @@ data class ProjectsWrapperDTO(
 fun ProjectsWrapper.toDto(): ProjectsWrapperDTO {
     return ProjectsWrapperDTO(
         id = id.value,
-        order = order.value,
+        order = order.toDouble(),
         projectName = projectName.value,
         projectImageUrl = projectImageUrl?.value,
         createdAt = null,

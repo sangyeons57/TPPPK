@@ -13,6 +13,7 @@ import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
+import com.example.domain.model.base.ProjectChannel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -30,8 +31,8 @@ data class EditChannelUiState(
     val originalChannelMode: ProjectChannelType = ProjectChannelType.MESSAGES,
     val currentCategoryId: String = "",
     val originalCategoryId: String = "",
-    val currentOrder: Double = 0.0,
-    val originalOrder: Double = 0.0,
+    val currentOrder: Int = 0,
+    val originalOrder: Int = 0,
     val availableCategories: List<Category> = emptyList(),
     val canMoveUp: Boolean = false,
     val canMoveDown: Boolean = false,
@@ -193,7 +194,7 @@ class EditChannelViewModel @Inject constructor(
      * 순서 변경 시 호출
      */
     fun onOrderChange(newOrder: String) {
-        val orderValue = newOrder.toDoubleOrNull()
+        val orderValue = newOrder.toIntOrNull()
         if (orderValue != null) {
             _uiState.update { it.copy(currentOrder = orderValue, error = null) }
         } else {
@@ -204,7 +205,7 @@ class EditChannelViewModel @Inject constructor(
     /**
      * 채널 이동 가능 여부 정보 로드
      */
-    private fun loadChannelMovabilityInfo(currentChannel: com.example.domain.model.base.ProjectChannel) {
+    private fun loadChannelMovabilityInfo(currentChannel: ProjectChannel) {
         viewModelScope.launch {
             // 해당 카테고리의 모든 채널 정보 가져오기
             channelUseCases.getCategoryChannelsUseCase(currentChannel.categoryId).collect { result ->
@@ -439,7 +440,7 @@ class EditChannelViewModel @Inject constructor(
                         _uiState.update { 
                             it.copy(
                                 isLoading = false, 
-                                currentOrder = newIndex.toDouble(),
+                                currentOrder = newIndex,
                                 canMoveUp = newIndex > 0,
                                 canMoveDown = newIndex < currentState.totalChannels - 1
                             ) 

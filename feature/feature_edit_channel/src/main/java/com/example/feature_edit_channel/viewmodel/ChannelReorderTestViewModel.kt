@@ -16,14 +16,14 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface ReorderItem {
-    val order: Double
+    val order: Int
 
     data class CategoryItem(val category: Category) : ReorderItem {
-        override val order: Double get() = category.order.value
+        override val order: Int get() = category.order.value
     }
 
     data class ChannelItem(val channel: ProjectChannel) : ReorderItem {
-        override val order: Double get() = channel.order.value
+        override val order: Int get() = channel.order.value
     }
 }
 

@@ -114,7 +114,7 @@ data class ProjectStructureUiState(
 data class CategoryUiModel(
     val id: DocumentId,
     val name: CategoryName,
-    val order: Double,
+    val order: Int,
     val channels: List<ChannelUiModel> = emptyList(),
     val isExpanded: Boolean = true
 ) {
@@ -160,18 +160,18 @@ data class ChannelUiModel(
  */
 sealed interface ProjectStructureItem {
     val id: String
-    val globalOrder: Double
+    val globalOrder: Int
     
     data class CategoryItem(
         val category: CategoryUiModel,
-        override val globalOrder: Double
+        override val globalOrder: Int
     ) : ProjectStructureItem {
         override val id: String = category.id.value
     }
     
     data class DirectChannelItem(
         val channel: ChannelUiModel,
-        override val globalOrder: Double
+        override val globalOrder: Int
     ) : ProjectStructureItem {
         override val id: String = channel.id.value
     }

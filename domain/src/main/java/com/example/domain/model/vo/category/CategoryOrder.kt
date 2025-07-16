@@ -9,6 +9,10 @@ value class CategoryOrder(val value: Int) {
         require(value >= 0) { "CategoryOrder must be non-negative" }
     }
 
+    fun toDouble() : Double {
+        return value.toDouble()
+    }
+    
     companion object {
         fun of(raw: Int): CategoryOrder {
             return CategoryOrder(raw)

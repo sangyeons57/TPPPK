@@ -99,7 +99,7 @@ class EditCategoryViewModel @Inject constructor(
                                 currentCategoryName = currentCategory.name.value,
                                 originalCategoryName = currentCategory.name.value,
                                 currentCategoryOrder = currentCategoryIndex.toDouble(),
-                                originalCategoryOrder = currentCategory.order.value,
+                                originalCategoryOrder = currentCategory.order.toDouble(),
                                 canMoveUp = currentCategoryIndex > 0 && currentCategory.id.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
                                 canMoveDown = currentCategoryIndex < allCategories.size - 1 && currentCategory.id.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
                                 totalCategories = allCategories.size,
@@ -259,7 +259,7 @@ class EditCategoryViewModel @Inject constructor(
                         is CustomResult.Success -> {
                             val categoryToUpdate = getCategoryResult.data
                             val newCategoryName = CategoryName(currentName)
-                            val newCategoryOrder = CategoryOrder(currentOrderIndex.toDouble())
+                            val newCategoryOrder = CategoryOrder(currentOrderIndex)
                             
                             when (val updateResult = structureUseCases.updateCategoryUseCase(
                                 projectId = DocumentId(projectId),
