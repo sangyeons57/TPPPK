@@ -126,6 +126,30 @@ class CategoryManagementService(
     }
     
     /**
+     * 카테고리 내 채널 순서 변경 (UI 모델 사용)
+     */
+    suspend fun reorderCategoryChannels(
+        projectId: DocumentId,
+        categoryId: DocumentId,
+        reorderedChannels: List<com.example.feature_home.model.ChannelUiModel>
+    ): CustomResult<Unit, Exception> {
+        Log.d("CategoryManagementService", "Reordering category channels for project: $projectId, category: $categoryId")
+        
+        return try {
+            if (projectStructureUseCases == null) {
+                Log.w("CategoryManagementService", "ProjectStructureUseCases not available")
+                CustomResult.Failure(IllegalStateException("Service not available for this context"))
+            } else {
+                val channelIds = reorderedChannels.map { it.id.value }
+                projectStructureUseCases.reorderChannelsUseCase(projectId, categoryId, channelIds)
+            }
+        } catch (e: Exception) {
+            Log.e("CategoryManagementService", "Failed to reorder category channels", e)
+            CustomResult.Failure(e)
+        }
+    }
+    
+    /**
      * 통합 프로젝트 구조 순서 변경
      * 카테고리와 채널을 포함한 전체 프로젝트 구조의 순서를 변경합니다.
      */

@@ -69,6 +69,15 @@ fun HomeScreenEffects(
                         )
                     )
                 }
+                
+                is HomeEvent.ShowReorderCategoryChannelsDialog -> {
+                    onDialogStateChange(
+                        dialogStates.copy(
+                            showReorderCategoryChannelsDialog = true,
+                            currentCategoryIdForDialog = event.categoryId
+                        )
+                    )
+                }
             }
         }
     }

@@ -707,4 +707,35 @@ class HomeViewModel @Inject constructor(
             _eventFlow.emit(HomeEvent.ShowReorderCategoryChannelsDialog(categoryId))
         }
     }
+    
+    /**
+     * 카테고리 내 채널 순서 변경 처리
+     */
+    fun onReorderCategoryChannels(
+        projectId: DocumentId,
+        categoryId: DocumentId,
+        reorderedChannels: List<ChannelUiModel>
+    ) {
+        Log.d("HomeViewModel", "Reordering category channels - projectId: $projectId, categoryId: $categoryId")
+        Log.d("HomeViewModel", "Reordered channels: ${reorderedChannels.map { it.name.value }}")
+        
+        viewModelScope.launch {
+            val result = services.categoryManagementService.reorderCategoryChannels(
+                projectId = projectId,
+                categoryId = categoryId,
+                reorderedChannels = reorderedChannels
+            )
+            when (result) {
+                is CustomResult.Success -> {
+                    Log.d("HomeViewModel", "Successfully reordered category channels")
+                    refreshProjectStructure(projectId)
+                }
+                is CustomResult.Failure -> {
+                    Log.e("HomeViewModel", "Failed to reorder category channels", result.error)
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서 변경에 실패했습니다."))
+                }
+                else -> {}
+            }
+        }
+    }
 }

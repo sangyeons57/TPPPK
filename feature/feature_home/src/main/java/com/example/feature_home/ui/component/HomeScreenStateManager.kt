@@ -102,7 +102,9 @@ data class DialogStates(
     val showAddProjectElementDialog: Boolean = false,
     val showFloatingMenu: Boolean = false,
     val currentProjectIdForDialog: DocumentId? = null,
-    val showReorderProjectStructureDialog: Boolean = false
+    val showReorderProjectStructureDialog: Boolean = false,
+    val showReorderCategoryChannelsDialog: Boolean = false,
+    val currentCategoryIdForDialog: DocumentId? = null
 )
 
 /**

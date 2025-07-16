@@ -61,6 +61,33 @@ fun HomeScreenDialogs(
             }
         )
     }
+    
+    // ReorderCategoryChannelsDialog
+    if (dialogStates.showReorderCategoryChannelsDialog && 
+        dialogStates.currentCategoryIdForDialog != null && 
+        uiState.selectedProjectId != null) {
+        ReorderCategoryChannelsDialog(
+            projectStructure = uiState.projectStructure,
+            categoryId = dialogStates.currentCategoryIdForDialog!!,
+            onDismiss = { 
+                onDialogStateChange(dialogStates.copy(
+                    showReorderCategoryChannelsDialog = false,
+                    currentCategoryIdForDialog = null
+                ))
+            },
+            onReorderComplete = { reorderedChannels ->
+                viewModel.onReorderCategoryChannels(
+                    projectId = uiState.selectedProjectId!!,
+                    categoryId = dialogStates.currentCategoryIdForDialog!!,
+                    reorderedChannels = reorderedChannels
+                )
+                onDialogStateChange(dialogStates.copy(
+                    showReorderCategoryChannelsDialog = false,
+                    currentCategoryIdForDialog = null
+                ))
+            }
+        )
+    }
 
 }
 
@@ -85,6 +112,46 @@ private fun ReorderUnifiedProjectStructureDialog(
         onReorderComplete = { reorderedDialogItems ->
             val reorderedProjectStructureItems = reorderedDialogItems.toProjectStructureItems()
             onReorderComplete(reorderedProjectStructureItems)
+        }
+    )
+}
+
+/**
+ * 카테고리 내 채널 순서 변경 다이얼로그
+ */
+@Composable
+private fun ReorderCategoryChannelsDialog(
+    projectStructure: ProjectStructureUiState,
+    categoryId: com.example.domain.model.vo.DocumentId,
+    onDismiss: () -> Unit,
+    onReorderComplete: (List<com.example.feature_home.model.ChannelUiModel>) -> Unit
+) {
+    // 해당 카테고리의 채널 목록 가져오기
+    val categoryChannels = projectStructure.categories
+        .find { it.id == categoryId }
+        ?.channels
+        ?: emptyList()
+    
+    val categoryName = projectStructure.categories
+        .find { it.id == categoryId }
+        ?.name?.value
+        ?: "카테고리"
+
+    SimpleReorderDialog(
+        title = "$categoryName 채널 순서 변경",
+        items = categoryChannels,
+        itemKey = { it.id.value },
+        itemLabel = { channel ->
+            val channelIcon = when (channel.mode) {
+                com.example.domain.model.enum.ProjectChannelType.MESSAGES -> "#"
+                com.example.domain.model.enum.ProjectChannelType.TASKS -> "◉"
+                else -> "#"
+            }
+            "$channelIcon ${channel.name.value}"
+        },
+        onDismiss = onDismiss,
+        onReorderComplete = { reorderedChannels ->
+            onReorderComplete(reorderedChannels)
         }
     )
 }
