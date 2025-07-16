@@ -101,86 +101,9 @@ value class CollectionPath(val value: String) {
             attachmentId: String
         ): CollectionPath = CollectionPath("${projectMessageAttachments(projectId, channelId, messageId).value}/$attachmentId")
         
-        /* -------------------- Unified Task Container Paths -------------------- */
-        /**
-         * 통합된 task_container collection 경로
-         * 하나의 collection에 TaskContainer 정의 문서와 Task 문서들이 함께 저장됩니다.
-         */
-        fun projectChannelUnifiedTaskContainer(projectId: String, channelId: String): CollectionPath =
-            CollectionPath("${projectChannel(projectId, channelId).value}/task_container")
-        
-        /**
-         * 중첩된 TaskContainer collection 경로들
-         * TaskContainer는 자기 자신의 subcollection이 될 수 있습니다.
-         */
-        
-        /**
-         * 1단계 중첩: project/channel/task_container/{container_id}/task_container
-         */
-        fun nestedTaskContainer1(projectId: String, channelId: String, containerId: String): CollectionPath =
-            CollectionPath("${projectChannelUnifiedTaskContainer(projectId, channelId).value}/$containerId/task_container")
-        
-        /**
-         * 2단계 중첩: project/channel/task_container/{id1}/task_container/{id2}/task_container
-         */
-        fun nestedTaskContainer2(
-            projectId: String, 
-            channelId: String, 
-            containerId1: String, 
-            containerId2: String
-        ): CollectionPath =
-            CollectionPath("${nestedTaskContainer1(projectId, channelId, containerId1).value}/$containerId2/task_container")
-        
-        /**
-         * 3단계 중첩: project/channel/task_container/{id1}/task_container/{id2}/task_container/{id3}/task_container
-         */
-        fun nestedTaskContainer3(
-            projectId: String, 
-            channelId: String, 
-            containerId1: String, 
-            containerId2: String,
-            containerId3: String
-        ): CollectionPath =
-            CollectionPath("${nestedTaskContainer2(projectId, channelId, containerId1, containerId2).value}/$containerId3/task_container")
-        
-        /**
-         * 일반적인 중첩 TaskContainer 경로 생성 함수
-         * @param projectId 프로젝트 ID
-         * @param channelId 채널 ID
-         * @param containerPath 중첩된 container ID들의 배열 (예: ["container1", "container2", "container3"])
-         * @return 중첩된 TaskContainer collection 경로
-         */
-        fun nestedTaskContainer(
-            projectId: String, 
-            channelId: String, 
-            containerPath: List<String>
-        ): CollectionPath {
-            if (containerPath.isEmpty()) {
-                return projectChannelUnifiedTaskContainer(projectId, channelId)
-            }
-            
-            var path = projectChannelUnifiedTaskContainer(projectId, channelId).value
-            containerPath.forEach { containerId ->
-                path += "/$containerId/task_container"
-            }
-            return CollectionPath(path)
-        }
-        
-        /* -------------------- Legacy Task Container Paths (Deprecated) -------------------- */
-        @Deprecated("Use projectChannelUnifiedTaskContainer instead")
-        fun projectChannelTaskContainers(projectId: String, channelId: String): CollectionPath =
-            CollectionPath("${projectChannel(projectId, channelId).value}/${TaskContainer.COLLECTION_NAME}")
-        @Deprecated("Use projectChannelUnifiedTaskContainer instead")
-        fun projectChannelTaskContainer(projectId: String, channelId: String, containerId: String): CollectionPath =
-            CollectionPath("${projectChannelTaskContainers(projectId, channelId).value}/$containerId")
-        
-        /* -------------------- Legacy Task Paths (Deprecated) -------------------- */
-        @Deprecated("Use projectChannelUnifiedTaskContainer instead")
-        fun taskContainerTasks(projectId: String, channelId: String, containerId: String): CollectionPath =
-            CollectionPath("${projectChannelTaskContainer(projectId, channelId, containerId).value}/${Task.COLLECTION_NAME}")
-        @Deprecated("Use projectChannelUnifiedTaskContainer instead")
-        fun taskContainerTask(projectId: String, channelId: String, containerId: String, taskId: String): CollectionPath =
-            CollectionPath("${taskContainerTasks(projectId, channelId, containerId).value}/$taskId")
+        /* -------------------- Task Paths -------------------- */
+        fun task(projectId: String, channelId: String, taskId: String): CollectionPath =
+            CollectionPath("${projectChannel(projectId, channelId).value}/${Task.COLLECTION_NAME}/$taskId")
         
         /* -------------------- Schedule Paths -------------------- */
         fun schedule(scheduleId: String): CollectionPath = 

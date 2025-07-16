@@ -114,7 +114,7 @@ class Task private constructor(
          */
         fun create(
             id: DocumentId,
-            taskType: TaskType = TaskType.GENERAL,
+            taskType: TaskType = TaskType.CHECKLIST,
             content: TaskContent = TaskContent.EMPTY,
             order: TaskOrder = TaskOrder.DEFAULT
         ): Task {
