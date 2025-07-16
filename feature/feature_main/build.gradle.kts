@@ -60,6 +60,8 @@ dependencies {
     implementation(project(":feature:feature_home"))
     implementation(project(":feature:feature_calendar"))
     implementation(project(":feature:feature_profile"))
+    implementation(project(":feature:feature_edit_category"))
+    implementation(project(":feature:feature_edit_channel"))
 
     // --- 라이브러리 의존성 ---
     // Jetpack Compose UI

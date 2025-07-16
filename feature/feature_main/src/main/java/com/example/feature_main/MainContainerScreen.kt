@@ -31,6 +31,8 @@ import com.example.core_navigation.destination.mainBottomNavItems
 import com.example.feature_calendar.ui.CalendarScreen
 import com.example.feature_home.ui.HomeScreen
 import com.example.feature_profile.ui.ProfileScreen
+import com.example.feature_edit_category.ui.EditCategoryScreen
+import com.example.feature_edit_channel.ui.EditChannelScreen
 
 /**
  * 메인 컨테이너 화면: 하단 탭 네비게이션과 각 탭의 콘텐츠를 표시하는 컨트롤러
@@ -236,6 +238,21 @@ private fun HomeTabNavHost(
     ) {
         composable(HomeRoute.toAppRoutePath()) {
             HomeScreen()
+        }
+        
+        // Add edit category/channel routes to this navigation graph
+        composable(
+            route = EditCategoryRoute.ROUTE_PATTERN,
+            arguments = EditCategoryRoute.arguments
+        ) {
+            EditCategoryScreen()
+        }
+
+        composable(
+            route = EditChannelRoute.ROUTE_PATTERN,
+            arguments = EditChannelRoute.arguments
+        ) {
+            EditChannelScreen()
         }
     }
 }
