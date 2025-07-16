@@ -45,6 +45,8 @@ data class ProjectStructureUiState(
                 ChannelUiModel.fromDomain(channel)
                     .copy(isSelected = channel.id.value == selectedChannelId)
             }
+            
+            android.util.Log.d("ProjectStructureUiState", "Converting domain data: ${categoryUiModels.size} categories, ${directChannelUiModels.size} direct channels")
 
             // 통합된 구조 요소 리스트 생성
             val unifiedItems = mutableListOf<ProjectStructureItem>()
@@ -61,10 +63,12 @@ data class ProjectStructureUiState(
             
             // 직속 채널들을 통합 리스트에 추가 (globalOrder를 0.5로 설정하여 카테고리와 구분)
             directChannelUiModels.forEachIndexed { index, channel ->
+                val globalOrder = 0.1 + (index * 0.05) // 0.1, 0.15, 0.2, ... 순서
+                android.util.Log.d("ProjectStructureUiState", "Adding direct channel '${channel.name.value}' with order $globalOrder")
                 unifiedItems.add(
                     ProjectStructureItem.DirectChannelItem(
                         channel = channel,
-                        globalOrder = 0.1 + (index * 0.05) // 0.1, 0.15, 0.2, ... 순서
+                        globalOrder = globalOrder
                     )
                 )
             }

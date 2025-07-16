@@ -19,6 +19,18 @@ enum class UnifiedStructureItemType {
  * ProjectStructureUiState를 SimpleReorderDialog에서 사용할 수 있는 형태로 변환하는 확장 함수
  */
 fun ProjectStructureUiState.toUnifiedDialogItems(): List<UnifiedStructureDialogItem> {
+    android.util.Log.d("ProjectStructureDialogItems", "Converting ${unifiedStructureItems.size} items to dialog items")
+    unifiedStructureItems.forEachIndexed { index, item ->
+        when (item) {
+            is ProjectStructureItem.CategoryItem -> {
+                android.util.Log.d("ProjectStructureDialogItems", "Item $index: Category '${item.category.name.value}' (order: ${item.globalOrder})")
+            }
+            is ProjectStructureItem.DirectChannelItem -> {
+                android.util.Log.d("ProjectStructureDialogItems", "Item $index: Direct Channel '${item.channel.name.value}' (order: ${item.globalOrder})")
+            }
+        }
+    }
+    
     return unifiedStructureItems.map { item ->
         when (item) {
             is ProjectStructureItem.CategoryItem -> {
