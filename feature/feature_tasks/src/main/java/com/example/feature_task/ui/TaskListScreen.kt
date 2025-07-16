@@ -20,6 +20,16 @@ import com.example.feature_task.viewmodel.TaskListViewModel
  * 작업 목록 화면 (임시 구현)
  * 현재는 "곧 제공될 예정" 메시지를 표시합니다.
  */
+
+ /**
+  * 테스크 기능 동기화 방식
+  우선 각테스크 필드가 편집이 완료된 경우 동기화됨
+  동기화는 항상 마지막 수정이 우선시 됨
+  대신 초기 값이 수정되어 있는 경우 사용자에게 다른 사용자가 수정했다고
+  덮어씨울지 묻는 다이얼로그를 보네고 
+  ok -> 동기화
+  no -> 업데이트 취소하고 데이터 읽어오기
+  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
