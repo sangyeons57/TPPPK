@@ -51,17 +51,9 @@ class UpdateProjectChannelUseCaseImpl @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Channel name cannot be blank."))
         }
 
-        // No_Category에 속한 채널 order 검증
-        if (channelToUpdate.categoryId.value == com.example.domain.model.base.Category.NO_CATEGORY_ID) {
-            // No_Category 채널은 order 0으로 고정
-            if (newOrder.value != com.example.domain.model.base.Category.NO_CATEGORY_ORDER) {
-                return CustomResult.Failure(IllegalArgumentException("No_Category channel order must be ${com.example.domain.model.base.Category.NO_CATEGORY_ORDER}"))
-            }
-        } else {
-            // 다른 카테고리 채널은 order 1 이상
-            if (newOrder.value < com.example.domain.model.base.ProjectChannel.MIN_CHANNEL_ORDER) {
-                return CustomResult.Failure(IllegalArgumentException("Channel order must be ${com.example.domain.model.base.ProjectChannel.MIN_CHANNEL_ORDER} or greater (${com.example.domain.model.base.Category.NO_CATEGORY_ORDER} is reserved for No_Category channels)"))
-            }
+        // 채널 order 검증 - 모든 채널은 0 이상의 order 값을 가질 수 있음
+        if (newOrder.value < 0) {
+            return CustomResult.Failure(IllegalArgumentException("Channel order must be 0 or greater"))
         }
 
         try {

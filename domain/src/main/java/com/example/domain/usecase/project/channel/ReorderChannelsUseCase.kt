@@ -59,13 +59,8 @@ class ReorderChannelsUseCaseImpl @Inject constructor(
                 val channel = channelMap[channelId] as ProjectChannel?
                     ?: return CustomResult.Failure(IllegalArgumentException("Channel not found: $channelId"))
                 
-                val newOrder = if (targetCategoryId == Category.NO_CATEGORY_ID) {
-                    // No_Category 채널은 order 0으로 고정
-                    ProjectChannelOrder(Category.NO_CATEGORY_ORDER)
-                } else {
-                    // 다른 카테고리 채널은 1부터 시작
-                    ProjectChannelOrder(index + Category.MIN_CATEGORY_ORDER)
-                }
+                // 모든 채널은 순서에 따라 0부터 시작하는 order 값을 가짐
+                val newOrder = ProjectChannelOrder(index)
                 
                 // 채널 순서 업데이트
                 channel.changeOrder(newOrder)

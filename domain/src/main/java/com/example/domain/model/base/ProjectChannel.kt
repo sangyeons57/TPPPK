@@ -77,15 +77,9 @@ class ProjectChannel private constructor(
     fun changeOrder(newOrder: ProjectChannelOrder) {
         if (this.order == newOrder) return
         
-        // No_Category 채널은 order 0으로 고정, 다른 채널은 1 이상
-        if (this.categoryId.value == Category.NO_CATEGORY_ID) {
-            if (newOrder.value != Category.NO_CATEGORY_ORDER) {
-                throw IllegalArgumentException("No_Category channel order must be ${Category.NO_CATEGORY_ORDER}")
-            }
-        } else {
-            if (newOrder.value < MIN_CHANNEL_ORDER) {
-                throw IllegalArgumentException("Channel order must be ${MIN_CHANNEL_ORDER} or greater (${Category.NO_CATEGORY_ORDER} is reserved for No_Category channels)")
-            }
+        // 모든 채널은 0 이상의 order 값을 가져야 함
+        if (newOrder.value < 0) {
+            throw IllegalArgumentException("Channel order must be 0 or greater")
         }
 
         this.order = newOrder
