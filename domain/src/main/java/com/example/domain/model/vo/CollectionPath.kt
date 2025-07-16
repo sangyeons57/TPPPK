@@ -102,8 +102,10 @@ value class CollectionPath(val value: String) {
         ): CollectionPath = CollectionPath("${projectMessageAttachments(projectId, channelId, messageId).value}/$attachmentId")
         
         /* -------------------- Task Paths -------------------- */
+        fun tasks(projectId: String, channelId: String): CollectionPath =
+            CollectionPath("${projectChannel(projectId, channelId).value}/${Task.COLLECTION_NAME}")
         fun task(projectId: String, channelId: String, taskId: String): CollectionPath =
-            CollectionPath("${projectChannel(projectId, channelId).value}/${Task.COLLECTION_NAME}/$taskId")
+            CollectionPath("${tasks(projectId, channelId).value}/$taskId")
         
         /* -------------------- Schedule Paths -------------------- */
         fun schedule(scheduleId: String): CollectionPath = 

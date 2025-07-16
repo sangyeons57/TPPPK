@@ -22,11 +22,9 @@ class TaskRepositoryImpl @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Entity must be of type Task"))
         ensureCollection()
         return if (entity.isNew) {
-            (taskRemoteDataSource as TaskRemoteDataSourceImpl)
-                .createTask(entity.toDto())
+            taskRemoteDataSource.create(entity.toDto())
         } else {
-            (taskRemoteDataSource as TaskRemoteDataSourceImpl)
-                .update(entity.id, entity.getChangedFields())
+            taskRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
 }

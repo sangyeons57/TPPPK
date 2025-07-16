@@ -14,7 +14,7 @@ import javax.inject.Inject
  */
 interface CreateTaskUseCase {
     suspend operator fun invoke(
-        taskType: TaskType = TaskType.GENERAL,
+        taskType: TaskType = TaskType.CHECKLIST,
         content: String = "",
         order: Int = 0
     ): CustomResult<String, Exception>
