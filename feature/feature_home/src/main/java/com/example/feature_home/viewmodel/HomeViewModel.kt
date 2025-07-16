@@ -312,9 +312,47 @@ class HomeViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         val structure = result.data
-                        _uiState.update { state ->
-                            state.copy(projectStructure = structure)
+                        
+                        // Apply current expansion states from CategoryManagementService
+                        val updatedCategories = structure.categories.map { category ->
+                            val isExpanded = services.categoryManagementService.getCategoryExpansionState(projectId, category.id)
+                            category.copy(isExpanded = isExpanded)
                         }
+                        
+                        // Rebuild unified structure items with updated expansion states
+                        val updatedUnifiedItems = mutableListOf<com.example.feature_home.model.ProjectStructureItem>()
+                        
+                        // Add updated categories
+                        updatedCategories.forEach { category ->
+                            updatedUnifiedItems.add(
+                                com.example.feature_home.model.ProjectStructureItem.CategoryItem(
+                                    category = category,
+                                    globalOrder = category.order
+                                )
+                            )
+                        }
+                        
+                        // Add direct channels
+                        structure.directChannel.forEachIndexed { index, channel ->
+                            val globalOrder = 0.1 + (index * 0.05)
+                            updatedUnifiedItems.add(
+                                com.example.feature_home.model.ProjectStructureItem.DirectChannelItem(
+                                    channel = channel,
+                                    globalOrder = globalOrder
+                                )
+                            )
+                        }
+                        
+                        val updatedStructure = structure.copy(
+                            categories = updatedCategories,
+                            unifiedStructureItems = updatedUnifiedItems.sortedBy { it.globalOrder }
+                        )
+                        
+                        _uiState.update { state ->
+                            state.copy(projectStructure = updatedStructure)
+                        }
+                        
+                        Log.d("HomeViewModel", "Project structure loaded with ${updatedCategories.size} categories, expansion states preserved")
                     }
                     
                     is CustomResult.Failure -> {
