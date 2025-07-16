@@ -7,6 +7,7 @@ import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 
 
 /**
@@ -107,14 +108,16 @@ data class ChannelUiModel(
     val id: DocumentId,
     val name: Name,
     val mode: ProjectChannelType,
-    val isSelected: Boolean = false
+    val isSelected: Boolean = false,
+    val order: ProjectChannelOrder
 ) {
     companion object {
         fun fromDomain(channel: ProjectChannel): ChannelUiModel {
             return ChannelUiModel(
                 id = channel.id,
                 name = channel.channelName,
-                mode = channel.channelType
+                mode = channel.channelType,
+                order = channel.order
             )
         }
     }
