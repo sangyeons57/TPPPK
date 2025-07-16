@@ -93,6 +93,38 @@ fun HomeScreenDialogs(
             }
         )
     }
+
+    // ReorderChannelsByDepthDialog
+    if (dialogStates.showReorderChannelsByDepthDialog && uiState.selectedProjectId != null) {
+        ReorderChannelsByDepthDialog(
+            projectStructure = uiState.projectStructure,
+            targetChannelId = dialogStates.reorderTargetChannelId,
+            targetCategoryId = dialogStates.reorderTargetCategoryId,
+            onDismiss = { 
+                onDialogStateChange(
+                    dialogStates.copy(
+                        showReorderChannelsByDepthDialog = false,
+                        reorderTargetChannelId = null,
+                        reorderTargetCategoryId = null
+                    )
+                )
+            },
+            onReorderComplete = { reorderedChannels ->
+                viewModel.onReorderChannelsByDepth(
+                    uiState.selectedProjectId!!,
+                    dialogStates.reorderTargetCategoryId,
+                    reorderedChannels
+                )
+                onDialogStateChange(
+                    dialogStates.copy(
+                        showReorderChannelsByDepthDialog = false,
+                        reorderTargetChannelId = null,
+                        reorderTargetCategoryId = null
+                    )
+                )
+            }
+        )
+    }
 }
 
 
@@ -117,5 +149,48 @@ private fun ReorderUnifiedProjectStructureDialog(
             val reorderedProjectStructureItems = reorderedDialogItems.toProjectStructureItems()
             onReorderComplete(reorderedProjectStructureItems)
         }
+    )
+}
+
+/**
+ * 채널 Depth별 순서 변경 다이얼로그
+ * 선택된 채널과 같은 카테고리/Depth의 채널들만 표시
+ */
+@Composable
+private fun ReorderChannelsByDepthDialog(
+    projectStructure: ProjectStructureUiState,
+    targetChannelId: String?,
+    targetCategoryId: String?,
+    onDismiss: () -> Unit,
+    onReorderComplete: (List<com.example.feature_home.model.ChannelUiModel>) -> Unit
+) {
+    // 같은 Depth의 채널들 가져오기
+    val channelsInSameDepth = projectStructure.getChannelsByDepth(targetCategoryId)
+    
+    Log.d("ReorderChannelsByDepthDialog", "Target channel: $targetChannelId, category: $targetCategoryId")
+    Log.d("ReorderChannelsByDepthDialog", "Channels in same depth: ${channelsInSameDepth.size}")
+
+    val categoryName = if (targetCategoryId == null) {
+        "프로젝트 직속 채널"
+    } else {
+        projectStructure.categories
+            .find { it.id.value == targetCategoryId }
+            ?.name?.value ?: "채널"
+    }
+
+    SimpleReorderDialog(
+        title = "$categoryName 순서 변경",
+        items = channelsInSameDepth,
+        itemKey = { it.id.value },
+        itemLabel = { channel ->
+            val channelIcon = when (channel.mode) {
+                com.example.domain.model.enum.ProjectChannelType.MESSAGES -> "💬"
+                com.example.domain.model.enum.ProjectChannelType.TASKS -> "✅"
+                else -> "📄"
+            }
+            "$channelIcon ${channel.name.value}"
+        },
+        onDismiss = onDismiss,
+        onReorderComplete = onReorderComplete
     )
 }

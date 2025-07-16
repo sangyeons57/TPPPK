@@ -12,4 +12,5 @@ sealed class HomeEvent {
     data class ShowEditCategoryDialog(val projectId: String, val categoryId: String, val categoryName: String) : HomeEvent()
     data class ShowEditChannelDialog(val projectId: String, val channelId: String, val channelName: String) : HomeEvent()
     object ShowReorderProjectStructureDialog : HomeEvent()
+    data class ShowReorderChannelsByDepth(val channelId: String, val categoryId: String?) : HomeEvent()
 }

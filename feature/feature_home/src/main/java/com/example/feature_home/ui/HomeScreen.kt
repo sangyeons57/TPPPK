@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -197,8 +196,7 @@ fun HomeContent(
             // 섹션 헤더
             HomeMiddleSectionHeader(
                 uiState = uiState, 
-                onClickTopSection = onClickTopSection,
-                onReorderClick = viewModel::onProjectStructureReorderClick
+                onClickTopSection = onClickTopSection
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -246,7 +244,6 @@ fun HomeContent(
 @Composable
 fun HomeMiddleSectionHeader(
     onClickTopSection: () -> Unit,
-    onReorderClick: () -> Unit = {},
     uiState: HomeUiState
 ) {
     Surface(
@@ -261,8 +258,7 @@ fun HomeMiddleSectionHeader(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 18.dp)
                 .height(32.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
@@ -274,19 +270,6 @@ fun HomeMiddleSectionHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-
-            // 프로젝트 섹션이고 프로젝트가 선택된 경우에만 순서 변경 버튼 표시
-            if (uiState.selectedTopSection == TopSection.PROJECTS && uiState.selectedProjectId != null) {
-                IconButton(
-                    onClick = onReorderClick
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapVert,
-                        contentDescription = "구조 순서 변경",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
         }
     }
 }

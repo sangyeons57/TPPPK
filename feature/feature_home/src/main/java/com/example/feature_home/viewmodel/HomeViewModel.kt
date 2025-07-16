@@ -380,7 +380,8 @@ class HomeViewModel @Inject constructor(
         
         val items = services.dialogManagementService.createCategoryLongPressActionSheet(
             category = category,
-            onEditClick = { cat -> onCategoryEditClick(cat) }
+            onEditClick = { cat -> onCategoryEditClick(cat) },
+            onReorderClick = { cat -> onCategoryReorderClick(cat) }
         )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
@@ -399,7 +400,8 @@ class HomeViewModel @Inject constructor(
         val items = services.dialogManagementService.createChannelLongPressActionSheet(
             channel = channel,
             categoryId = categoryId,
-            onEditClick = { ch, catId -> onChannelEditClick(ch, catId) }
+            onEditClick = { ch, catId -> onChannelEditClick(ch, catId) },
+            onReorderClick = { ch, catId -> onChannelReorderClick(ch, catId) }
         )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
@@ -463,16 +465,6 @@ class HomeViewModel @Inject constructor(
     }
 
 
-    /**
-     * 프로젝트 구조 순서 변경 버튼 클릭 처리
-     */
-    fun onProjectStructureReorderClick() {
-        Log.d("HomeViewModel", "Project structure reorder clicked")
-        
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.ShowReorderProjectStructureDialog)
-        }
-    }
 
     /**
      * 통합된 프로젝트 구조 순서 변경 처리 (카테고리와 직속 채널 통합)
@@ -616,4 +608,78 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 채널 Depth별 순서 변경 처리
+     */
+    fun onReorderChannelsByDepth(
+        projectId: DocumentId,
+        categoryId: String?,
+        reorderedChannels: List<ChannelUiModel>
+    ) {
+        Log.d("HomeViewModel", "Reordering channels by depth for project: $projectId, category: $categoryId")
+        Log.d("HomeViewModel", "Reordered channels: ${reorderedChannels.map { it.name.value }}")
+        
+        viewModelScope.launch {
+            // ChannelUiModel을 ProjectChannel 도메인 객체로 변환
+            val domainChannels = reorderedChannels.map { channelUiModel ->
+                ProjectChannel.create(
+                    channelName = channelUiModel.name,
+                    channelType = channelUiModel.mode,
+                    order = com.example.domain.model.vo.projectchannel.ProjectChannelOrder(0.0), // UseCase에서 순서 재설정
+                    categoryId = DocumentId(categoryId ?: com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                )
+            }
+            
+            val result = services.categoryManagementService.reorderChannels(
+                projectId = projectId,
+                categoryId = categoryId?.let { DocumentId(it) },
+                reorderedChannels = domainChannels
+            )
+            
+            when (result) {
+                is CustomResult.Success -> {
+                    Log.d("HomeViewModel", "Successfully reordered channels by depth")
+                    refreshProjectStructure(projectId)
+                }
+                is CustomResult.Failure -> {
+                    Log.e("HomeViewModel", "Failed to reorder channels by depth", result.error)
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서 변경에 실패했습니다."))
+                }
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * 카테고리 순서 변경 버튼 클릭 처리 (전체 프로젝트 구조 이동)
+     */
+    private fun onCategoryReorderClick(category: CategoryUiModel) {
+        Log.d("HomeViewModel", "Category reorder clicked: ${category.name}")
+        
+        // 바텀시트 닫기
+        onProjectItemActionSheetDismiss()
+        
+        // 전체 프로젝트 구조 순서 변경 다이얼로그 표시를 위한 이벤트 발생
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowReorderProjectStructureDialog)
+        }
+    }
+
+    /**
+     * 채널 순서 변경 버튼 클릭 처리 (같은 Depth의 채널들만 표시)
+     */
+    private fun onChannelReorderClick(channel: ChannelUiModel, categoryId: String?) {
+        Log.d("HomeViewModel", "Channel reorder clicked: ${channel.name}, categoryId: $categoryId")
+        
+        // 바텀시트 닫기
+        onProjectItemActionSheetDismiss()
+        
+        // 채널 Depth별 순서 변경 다이얼로그 표시를 위한 이벤트 발생
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowReorderChannelsByDepth(
+                channelId = channel.id.value,
+                categoryId = categoryId
+            ))
+        }
+    }
 }

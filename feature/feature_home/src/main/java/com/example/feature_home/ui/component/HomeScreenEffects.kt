@@ -90,6 +90,16 @@ fun HomeScreenEffects(
                         )
                     )
                 }
+
+                is HomeEvent.ShowReorderChannelsByDepth -> {
+                    onDialogStateChange(
+                        dialogStates.copy(
+                            showReorderChannelsByDepthDialog = true,
+                            reorderTargetChannelId = event.channelId,
+                            reorderTargetCategoryId = event.categoryId
+                        )
+                    )
+                }
             }
         }
     }
