@@ -334,7 +334,7 @@ class HomeViewModel @Inject constructor(
                         
                         // Add direct channels
                         structure.directChannel.forEachIndexed { index, channel ->
-                            val globalOrder = 0.1 + (index * 0.05)
+                            val globalOrder = 1 + index
                             updatedUnifiedItems.add(
                                 ProjectStructureItem.DirectChannelItem(
                                     channel = channel,
@@ -406,7 +406,7 @@ class HomeViewModel @Inject constructor(
         
         // Add direct channels
         _uiState.value.projectStructure.directChannel.forEachIndexed { index, channel ->
-            val globalOrder = 0.1 + (index * 0.05)
+            val globalOrder = 1 + index
             updatedUnifiedItems.add(
                 com.example.feature_home.model.ProjectStructureItem.DirectChannelItem(
                     channel = channel,

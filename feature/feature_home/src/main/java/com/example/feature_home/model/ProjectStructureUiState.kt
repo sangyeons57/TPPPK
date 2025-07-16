@@ -62,9 +62,9 @@ data class ProjectStructureUiState(
                 )
             }
             
-            // 직속 채널들을 통합 리스트에 추가 (globalOrder를 0.5로 설정하여 카테고리와 구분)
+            // 직속 채널들을 통합 리스트에 추가 (globalOrder를 1부터 시작하여 카테고리와 구분)
             directChannelUiModels.forEachIndexed { index, channel ->
-                val globalOrder = 0.1 + (index * 0.05) // 0.1, 0.15, 0.2, ... 순서
+                val globalOrder = 1 + index // 1, 2, 3, ... 순서
                 android.util.Log.d("ProjectStructureUiState", "Adding direct channel '${channel.name.value}' with order $globalOrder")
                 unifiedItems.add(
                     ProjectStructureItem.DirectChannelItem(

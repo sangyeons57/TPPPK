@@ -422,7 +422,7 @@ fun CategoryItemPreview_Expanded() {
             category = CategoryUiModel(
                 id = DocumentId("ch1"),
                 name = CategoryName("엔지니어링"),
-                order = 1.0,
+                order = 1,
                 channels = sampleChannels,
                 isExpanded = true
             ),
@@ -445,7 +445,7 @@ fun CategoryItemPreview_Collapsed() {
             category = CategoryUiModel(
                 id = DocumentId("cat2"),
                 name = CategoryName("마케팅"),
-                order = 2.0,
+                order = 2,
                 channels = emptyList(),
                 isExpanded = false
             ),
@@ -483,7 +483,7 @@ fun UnifiedProjectStructureListPreview_Mixed() {
         CategoryUiModel(
             id = DocumentId("cat_dev"), 
             name = CategoryName("개발팀"), 
-            order = 1.0, 
+            order = 1, 
             isExpanded = true,
             channels = listOf(
                 ChannelUiModel(
@@ -503,7 +503,7 @@ fun UnifiedProjectStructureListPreview_Mixed() {
         CategoryUiModel(
             id = DocumentId("cat_design"),
             name = CategoryName("디자인팀"),
-            order = 2.0,
+            order = 2,
             isExpanded = false,
             channels = emptyList()
         )
@@ -512,12 +512,12 @@ fun UnifiedProjectStructureListPreview_Mixed() {
     // 통합된 구조 아이템 생성
     val unifiedItems = mutableListOf<ProjectStructureItem>()
     
-    // 직속 채널들을 먼저 추가 (order 0.1, 0.15)
+    // 직속 채널들을 먼저 추가 (order 1, 2, 3)
     directChannels.forEachIndexed { index, channel ->
         unifiedItems.add(
             ProjectStructureItem.DirectChannelItem(
                 channel = channel,
-                globalOrder = 0.1 + (index * 0.05)
+                globalOrder = 1 + index
             )
         )
     }
