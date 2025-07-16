@@ -69,7 +69,7 @@ fun HomeScreenDialogs(
         uiState.selectedProjectId != null) {
         ReorderCategoryChannelsDialog(
             projectStructure = uiState.projectStructure,
-            categoryId = dialogStates.currentCategoryIdForDialog!!,
+            categoryId = dialogStates.currentCategoryIdForDialog,
             onDismiss = { 
                 onDialogStateChange(dialogStates.copy(
                     showReorderCategoryChannelsDialog = false,

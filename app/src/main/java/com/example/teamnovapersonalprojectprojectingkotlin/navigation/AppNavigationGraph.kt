@@ -57,7 +57,6 @@ import com.example.feature_add_role.ui.AddRoleScreen
 import com.example.feature_edit_role.ui.EditRoleScreen
 import com.example.feature_edit_member.ui.EditMemberScreen
 import com.example.feature_task.ui.TaskListScreen
-import com.example.feature_task.ui.TaskDetailScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -462,14 +461,6 @@ fun NavGraphBuilder.taskGraph(navigationManger: NavigationManger) {
             arguments = TaskListRoute.arguments
         ) {
             TaskListScreen()
-        }
-        
-        // 작업 상세 화면
-        composable(
-            route = TaskDetailRoute.ROUTE_PATTERN,
-            arguments = TaskDetailRoute.arguments
-        ) {
-            TaskDetailScreen(navigationManger = navigationManger)
         }
     }
 } 
