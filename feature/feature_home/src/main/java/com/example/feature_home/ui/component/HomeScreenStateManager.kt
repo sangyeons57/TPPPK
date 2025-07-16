@@ -102,18 +102,7 @@ data class DialogStates(
     val showAddProjectElementDialog: Boolean = false,
     val showFloatingMenu: Boolean = false,
     val currentProjectIdForDialog: DocumentId? = null,
-    val showEditCategoryDialog: Boolean = false,
-    val showEditChannelDialog: Boolean = false,
-    val editCategoryName: String = "",
-    val editChannelName: String = "",
-    val editCategoryProjectId: String = "",
-    val editCategoryId: String = "",
-    val editChannelProjectId: String = "",
-    val editChannelId: String = "",
-    val showReorderProjectStructureDialog: Boolean = false,
-    val showReorderChannelsByDepthDialog: Boolean = false,
-    val reorderTargetChannelId: String? = null,
-    val reorderTargetCategoryId: String? = null
+    val showReorderProjectStructureDialog: Boolean = false
 )
 
 /**
@@ -124,34 +113,12 @@ fun rememberDialogStates(): DialogStates {
     var showAddProjectElementDialog by remember { mutableStateOf(false) }
     var showFloatingMenu by remember { mutableStateOf(false) }
     var currentProjectIdForDialog by remember { mutableStateOf<DocumentId?>(null) }
-    var showEditCategoryDialog by remember { mutableStateOf(false) }
-    var showEditChannelDialog by remember { mutableStateOf(false) }
-    var editCategoryName by remember { mutableStateOf("") }
-    var editChannelName by remember { mutableStateOf("") }
-    var editCategoryProjectId by remember { mutableStateOf("") }
-    var editCategoryId by remember { mutableStateOf("") }
-    var editChannelProjectId by remember { mutableStateOf("") }
-    var editChannelId by remember { mutableStateOf("") }
     var showReorderProjectStructureDialog by remember { mutableStateOf(false) }
-    var showReorderChannelsByDepthDialog by remember { mutableStateOf(false) }
-    var reorderTargetChannelId by remember { mutableStateOf<String?>(null) }
-    var reorderTargetCategoryId by remember { mutableStateOf<String?>(null) }
 
     return DialogStates(
         showAddProjectElementDialog = showAddProjectElementDialog,
         showFloatingMenu = showFloatingMenu,
         currentProjectIdForDialog = currentProjectIdForDialog,
-        showEditCategoryDialog = showEditCategoryDialog,
-        showEditChannelDialog = showEditChannelDialog,
-        editCategoryName = editCategoryName,
-        editChannelName = editChannelName,
-        editCategoryProjectId = editCategoryProjectId,
-        editCategoryId = editCategoryId,
-        editChannelProjectId = editChannelProjectId,
-        editChannelId = editChannelId,
-        showReorderProjectStructureDialog = showReorderProjectStructureDialog,
-        showReorderChannelsByDepthDialog = showReorderChannelsByDepthDialog,
-        reorderTargetChannelId = reorderTargetChannelId,
-        reorderTargetCategoryId = reorderTargetCategoryId
+        showReorderProjectStructureDialog = showReorderProjectStructureDialog
     )
 }

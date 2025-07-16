@@ -21,20 +21,6 @@ data class ProjectStructureUiState(
     val error: String? = null,
     val selectedChannelId: String? = null
 ) {
-    /**
-     * 특정 카테고리/Depth의 채널들만 가져오는 함수
-     * @param categoryId 카테고리 ID (null이면 직속 채널들)
-     * @return 해당 Depth의 채널 목록
-     */
-    fun getChannelsByDepth(categoryId: String?): List<ChannelUiModel> {
-        return if (categoryId == null) {
-            // 직속 채널들
-            directChannel
-        } else {
-            // 특정 카테고리의 채널들
-            categories.find { it.id.value == categoryId }?.channels ?: emptyList()
-        }
-    }
 
     companion object {
         /**

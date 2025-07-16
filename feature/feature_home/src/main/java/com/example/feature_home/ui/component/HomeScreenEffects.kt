@@ -60,43 +60,12 @@ fun HomeScreenEffects(
                     )
                 }
 
-                is HomeEvent.ShowEditCategoryDialog -> {
-                    onDialogStateChange(
-                        dialogStates.copy(
-                            showEditCategoryDialog = true,
-                            editCategoryName = event.categoryName,
-                            editCategoryProjectId = event.projectId,
-                            editCategoryId = event.categoryId
-                        )
-                    )
-                }
-
-                is HomeEvent.ShowEditChannelDialog -> {
-                    onDialogStateChange(
-                        dialogStates.copy(
-                            showEditChannelDialog = true,
-                            editChannelName = event.channelName,
-                            editChannelProjectId = event.projectId,
-                            editChannelId = event.channelId
-                        )
-                    )
-                }
 
                 
                 is HomeEvent.ShowReorderProjectStructureDialog -> {
                     onDialogStateChange(
                         dialogStates.copy(
                             showReorderProjectStructureDialog = true
-                        )
-                    )
-                }
-
-                is HomeEvent.ShowReorderChannelsByDepth -> {
-                    onDialogStateChange(
-                        dialogStates.copy(
-                            showReorderChannelsByDepthDialog = true,
-                            reorderTargetChannelId = event.channelId,
-                            reorderTargetCategoryId = event.categoryId
                         )
                     )
                 }
