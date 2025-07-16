@@ -4,18 +4,18 @@ package com.example.domain.model.vo.category
  * Represents the display order of a Category.
  */
 @JvmInline
-value class CategoryOrder(val value: Double) {
+value class CategoryOrder(val value: Int) {
     init {
+        require(value >= 0) { "CategoryOrder must be non-negative" }
     }
 
     companion object {
-        private fun isTwoDecimalPlace(v: Double): Boolean {
-            return String.format("%.2f", v).toDouble() == v
+        fun of(raw: Int): CategoryOrder {
+            return CategoryOrder(raw)
         }
-
-        fun of(raw: Double): CategoryOrder {
-            val rounded = String.format("%.2f", raw).toDouble()
-            return CategoryOrder(rounded)
+        
+        fun fromDouble(raw: Double): CategoryOrder {
+            return CategoryOrder(raw.toInt())
         }
     }
 }

@@ -52,9 +52,9 @@ data class ProjectChannelDTO(
             id = VODocumentId(id),
             channelName = Name(channelName),
             channelType = channelType,
-            order = ProjectChannelOrder(order), // Added order mapping
+            order = ProjectChannelOrder.fromDouble(order),
             status = status,
-            categoryId = VODocumentId(categoryId), // Added categoryId mapping
+            categoryId = VODocumentId(categoryId),
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant()
         )
@@ -70,9 +70,9 @@ fun ProjectChannel.toDto(): ProjectChannelDTO {
         id = id.value,
         channelName = channelName.value,
         channelType = channelType,
-        order = order.value, // Added order mapping
+        order = order.value.toDouble(),
         status = status,
-        categoryId = categoryId.value, // Added categoryId mapping
+        categoryId = categoryId.value,
         createdAt = null,
         updatedAt = null
     )

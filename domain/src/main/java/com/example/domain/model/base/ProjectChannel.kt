@@ -213,12 +213,12 @@ class ProjectChannel private constructor(
          * Minimum order value for regular channels (non-NoCategory).
          * Regular channels must have order >= MIN_CHANNEL_ORDER
          */
-        const val MIN_CHANNEL_ORDER = 1.0
+        const val MIN_CHANNEL_ORDER = 1
         
         /**
          * Default increment value for channel ordering within categories
          */
-        const val CHANNEL_ORDER_INCREMENT = 0.1
+        const val CHANNEL_ORDER_INCREMENT = 1
 
         /**
          * Factory method for creating a new project channel.

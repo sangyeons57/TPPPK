@@ -50,7 +50,7 @@ data class CategoryDTO(
         return Category.fromDataSource(
             id = DocumentId(id),
             name = CategoryName(name),
-            order = CategoryOrder(order),
+            order = CategoryOrder.fromDouble(order),
             createdBy = OwnerId(createdBy),
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant(),
@@ -67,7 +67,7 @@ fun Category.toDto(): CategoryDTO {
     return CategoryDTO(
         id = id.value,
         name = name.value,
-        order = order.value,
+        order = order.value.toDouble(),
         createdBy = createdBy.value,
         createdAt = null,
         updatedAt = null,
