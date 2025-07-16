@@ -5,7 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SwapVert
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogBuilder
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
 import com.example.domain.model.vo.DocumentId
@@ -50,8 +49,7 @@ class DialogManagementService() {
      */
     fun createCategoryLongPressActionSheet(
         category: CategoryUiModel,
-        onEditClick: (CategoryUiModel) -> Unit,
-        onReorderClick: (CategoryUiModel) -> Unit
+        onEditClick: (CategoryUiModel) -> Unit
     ): List<BottomSheetDialogItem> {
         Log.d("DialogManagementService", "Creating category action sheet for: ${category.name}")
         
@@ -64,14 +62,6 @@ class DialogManagementService() {
                     onEditClick(category)
                 }
             )
-            .button(
-                label = "순서 변경",
-                icon = Icons.Default.SwapVert,
-                onClick = { 
-                    Log.d("DialogManagementService", "Reorder category clicked for: ${category.name}")
-                    onReorderClick(category)
-                }
-            )
             .build()
     }
     
@@ -81,8 +71,7 @@ class DialogManagementService() {
     fun createChannelLongPressActionSheet(
         channel: ChannelUiModel,
         categoryId: String?, // 채널이 속한 카테고리 ID (직속 채널이면 null)
-        onEditClick: (ChannelUiModel, String?) -> Unit,
-        onReorderClick: (ChannelUiModel, String?) -> Unit
+        onEditClick: (ChannelUiModel, String?) -> Unit
     ): List<BottomSheetDialogItem> {
         Log.d("DialogManagementService", "Creating channel action sheet for: ${channel.name}")
         
@@ -93,14 +82,6 @@ class DialogManagementService() {
                 onClick = { 
                     Log.d("DialogManagementService", "Edit channel clicked for: ${channel.name}")
                     onEditClick(channel, categoryId)
-                }
-            )
-            .button(
-                label = "순서 변경",
-                icon = Icons.Default.SwapVert,
-                onClick = { 
-                    Log.d("DialogManagementService", "Reorder channel clicked for: ${channel.name}")
-                    onReorderClick(channel, categoryId)
                 }
             )
             .build()

@@ -380,8 +380,7 @@ class HomeViewModel @Inject constructor(
         
         val items = services.dialogManagementService.createCategoryLongPressActionSheet(
             category = category,
-            onEditClick = { cat -> onCategoryEditClick(cat) },
-            onReorderClick = { cat -> onCategoryReorderClick(cat) }
+            onEditClick = { cat -> onCategoryEditClick(cat) }
         )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
@@ -400,8 +399,7 @@ class HomeViewModel @Inject constructor(
         val items = services.dialogManagementService.createChannelLongPressActionSheet(
             channel = channel,
             categoryId = categoryId,
-            onEditClick = { ch, catId -> onChannelEditClick(ch, catId) },
-            onReorderClick = { ch, catId -> onChannelReorderClick(ch, catId) }
+            onEditClick = { ch, catId -> onChannelEditClick(ch, catId) }
         )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
@@ -464,45 +462,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 카테고리 순서 변경 처리
-     */
-    fun onReorderCategories(projectId: DocumentId, reorderedCategories: List<Category>) {
-        Log.d("HomeViewModel", "Reordering categories for project: $projectId")
-        viewModelScope.launch {
-            val result = services.categoryManagementService.reorderCategories(projectId, reorderedCategories)
-            when (result) {
-                is CustomResult.Success -> {
-                    refreshProjectStructure(projectId)
-                }
-                is CustomResult.Failure -> {
-                    Log.e("HomeViewModel", "Failed to reorder categories", result.error)
-                    _eventFlow.emit(HomeEvent.ShowSnackbar("카테고리 순서 변경에 실패했습니다."))
-                }
-                else -> {}
-            }
-        }
-    }
-
-    /**
-     * 채널 순서 변경 처리
-     */
-    fun onReorderChannels(projectId: DocumentId, categoryId: DocumentId?, reorderedChannels: List<ProjectChannel>) {
-        Log.d("HomeViewModel", "Reordering channels for project: $projectId, category: $categoryId")
-        viewModelScope.launch {
-            val result = services.categoryManagementService.reorderChannels(projectId, categoryId, reorderedChannels)
-            when (result) {
-                is CustomResult.Success -> {
-                    refreshProjectStructure(projectId)
-                }
-                is CustomResult.Failure -> {
-                    Log.e("HomeViewModel", "Failed to reorder channels", result.error)
-                    _eventFlow.emit(HomeEvent.ShowSnackbar("채널 순서 변경에 실패했습니다."))
-                }
-                else -> {}
-            }
-        }
-    }
 
     /**
      * 프로젝트 구조 순서 변경 버튼 클릭 처리
@@ -633,20 +592,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 카테고리 순서 변경 버튼 클릭 처리
-     */
-    private fun onCategoryReorderClick(category: CategoryUiModel) {
-        Log.d("HomeViewModel", "Category reorder clicked: ${category.name}")
-        
-        // 바텀시트 닫기
-        onProjectItemActionSheetDismiss()
-        
-        // 카테고리 순서 변경 다이얼로그 표시를 위한 이벤트 발생
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.ShowReorderCategoriesDialog)
-        }
-    }
 
     /**
      * 채널 편집 버튼 클릭 처리
@@ -671,20 +616,4 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 채널 순서 변경 버튼 클릭 처리
-     */
-    private fun onChannelReorderClick(channel: ChannelUiModel, categoryId: String?) {
-        Log.d("HomeViewModel", "Channel reorder clicked: ${channel.name}, categoryId: $categoryId")
-        
-        // 바텀시트 닫기
-        onProjectItemActionSheetDismiss()
-        
-        // 채널 순서 변경 다이얼로그 표시를 위한 이벤트 발생
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.ShowReorderChannelsDialog(
-                categoryId = categoryId
-            ))
-        }
-    }
 }

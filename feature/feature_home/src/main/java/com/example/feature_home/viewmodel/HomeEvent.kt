@@ -11,7 +11,5 @@ sealed class HomeEvent {
     data class ProjectDeleted(val projectId: DocumentId, val projectName: String) : HomeEvent()
     data class ShowEditCategoryDialog(val projectId: String, val categoryId: String, val categoryName: String) : HomeEvent()
     data class ShowEditChannelDialog(val projectId: String, val channelId: String, val channelName: String) : HomeEvent()
-    object ShowReorderCategoriesDialog : HomeEvent()
-    data class ShowReorderChannelsDialog(val categoryId: String?) : HomeEvent()
     object ShowReorderProjectStructureDialog : HomeEvent()
 }

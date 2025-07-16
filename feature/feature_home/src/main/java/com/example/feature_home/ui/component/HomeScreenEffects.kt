@@ -82,22 +82,6 @@ fun HomeScreenEffects(
                     )
                 }
 
-                is HomeEvent.ShowReorderCategoriesDialog -> {
-                    onDialogStateChange(
-                        dialogStates.copy(
-                            showReorderCategoriesDialog = true
-                        )
-                    )
-                }
-
-                is HomeEvent.ShowReorderChannelsDialog -> {
-                    onDialogStateChange(
-                        dialogStates.copy(
-                            showReorderChannelsDialog = true,
-                            reorderCategoryId = event.categoryId
-                        )
-                    )
-                }
                 
                 is HomeEvent.ShowReorderProjectStructureDialog -> {
                     onDialogStateChange(
