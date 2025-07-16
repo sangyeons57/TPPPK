@@ -57,7 +57,7 @@ fun UnifiedProjectStructureList(
     onCategoryClick: (CategoryUiModel) -> Unit,
     onCategoryLongPress: (CategoryUiModel) -> Unit,
     onChannelClick: (ChannelUiModel) -> Unit,
-    onChannelLongPress: (ChannelUiModel) -> Unit,
+    onChannelLongPress: (ChannelUiModel, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -82,7 +82,7 @@ fun UnifiedProjectStructureList(
                     DirectChannelListItem(
                         channel = item.channel,
                         onClick = { onChannelClick(item.channel) },
-                        onLongPress = { onChannelLongPress(item.channel) },
+                        onLongPress = { onChannelLongPress(item.channel, com.example.domain.model.base.Category.NO_CATEGORY_ID) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -101,7 +101,7 @@ fun CategoryItem(
     onCategoryClick: () -> Unit,
     onCategoryLongPress: () -> Unit,
     onChannelClick: (ChannelUiModel) -> Unit,
-    onChannelLongPress: (ChannelUiModel) -> Unit,
+    onChannelLongPress: (ChannelUiModel, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -120,7 +120,7 @@ fun CategoryItem(
                     ChannelItem(
                         channel = channel,
                         onClick = { onChannelClick(channel) },
-                        onLongPress = { onChannelLongPress(channel) },
+                        onLongPress = { onChannelLongPress(channel, category.id.value) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 8.dp) // 들여쓰기 효과

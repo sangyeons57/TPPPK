@@ -93,8 +93,15 @@ class AddProjectChannelUseCaseImpl(
         
         // 3. Calculate the correct order based on whether this is a NoCategory channel or category channel
         val newOrderValue = if (categoryId.value == Category.NO_CATEGORY_ID) {
-            // For NoCategory channels: order is always 0.0 (reserved for project direct channels)
-            Category.NO_CATEGORY_ORDER
+            // For NoCategory channels: place after existing NoCategory channels
+            val noCategoryChannels = allProjectChannels.filter { it.categoryId.value == Category.NO_CATEGORY_ID }
+            if (noCategoryChannels.isEmpty()) {
+                // First NoCategory channel starts at order 0.1
+                0.1
+            } else {
+                // Place after existing NoCategory channels
+                (noCategoryChannels.maxOfOrNull { it.order.value } ?: 0.0) + ProjectChannel.CHANNEL_ORDER_INCREMENT
+            }
         } else {
             // For category channels: place after existing channels in this category
             val categoryChannels = allProjectChannels.filter { it.categoryId == categoryId }

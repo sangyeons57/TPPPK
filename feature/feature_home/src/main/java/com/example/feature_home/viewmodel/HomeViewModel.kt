@@ -474,7 +474,13 @@ class HomeViewModel @Inject constructor(
             channel = channel,
             categoryId = categoryId,
             onEditClick = { ch, catId -> onChannelEditClick(ch, catId) },
-            onReorderClick = { onReorderClick() }
+            onReorderClick = { 
+                if (categoryId != null && categoryId != Category.NO_CATEGORY_ID) {
+                    onChannelReorderClick(DocumentId(categoryId))
+                } else {
+                    onReorderClick() // 직속 채널의 경우 전체 구조 순서 변경
+                }
+            }
         )
         dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
         
@@ -684,6 +690,21 @@ class HomeViewModel @Inject constructor(
         // 통합 프로젝트 구조 순서 변경 다이얼로그 표시
         viewModelScope.launch {
             _eventFlow.emit(HomeEvent.ShowReorderProjectStructureDialog)
+        }
+    }
+
+    /**
+     * 카테고리 내 채널 순서 변경 버튼 클릭 처리
+     */
+    private fun onChannelReorderClick(categoryId: DocumentId) {
+        Log.d("HomeViewModel", "Channel reorder clicked - showing category channels dialog for categoryId: $categoryId")
+        
+        // 바텀시트 닫기
+        onProjectItemActionSheetDismiss()
+        
+        // 카테고리별 채널 순서 변경 다이얼로그 표시
+        viewModelScope.launch {
+            _eventFlow.emit(HomeEvent.ShowReorderCategoryChannelsDialog(categoryId))
         }
     }
 }

@@ -83,10 +83,6 @@ class AddCategoryUseCaseImpl(
                     .filter { it.order.value > Category.NO_CATEGORY_ORDER } // Exclude NoCategory (0.0)
                     .maxOfOrNull { it.order.value } ?: Category.NO_CATEGORY_ORDER
 
-                // TODO: Also consider NoCategory channels when implementing full unified ordering
-                // For now, new categories are placed after existing categories
-                // In the future, we should query NoCategory channels and find their max order too
-                
                 // New category gets the next available order (minimum 1.0)
                 val newOrder = maxOf(maxCategoryOrder + Category.CATEGORY_ORDER_INCREMENT, Category.MIN_CATEGORY_ORDER)
                 newOrder

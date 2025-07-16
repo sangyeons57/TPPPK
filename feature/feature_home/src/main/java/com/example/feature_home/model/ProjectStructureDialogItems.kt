@@ -36,16 +36,16 @@ fun ProjectStructureUiState.toUnifiedDialogItems(): List<UnifiedStructureDialogI
             is ProjectStructureItem.CategoryItem -> {
                 UnifiedStructureDialogItem(
                     id = item.category.id.value,
-                    displayName = "📁 ${item.category.name.value}",
+                    displayName = "# ${item.category.name.value}",
                     type = UnifiedStructureItemType.CATEGORY,
                     originalItem = item
                 )
             }
             is ProjectStructureItem.DirectChannelItem -> {
                 val channelIcon = when (item.channel.mode) {
-                    com.example.domain.model.enum.ProjectChannelType.MESSAGES -> "💬"
-                    com.example.domain.model.enum.ProjectChannelType.TASKS -> "✅"
-                    else -> "📄"
+                    com.example.domain.model.enum.ProjectChannelType.MESSAGES -> "#"
+                    com.example.domain.model.enum.ProjectChannelType.TASKS -> "◉"
+                    else -> "#"
                 }
                 UnifiedStructureDialogItem(
                     id = item.channel.id.value,
