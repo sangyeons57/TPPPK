@@ -333,8 +333,8 @@ class HomeViewModel @Inject constructor(
                         }
                         
                         // Add direct channels
-                        structure.directChannel.forEachIndexed { index, channel ->
-                            val globalOrder = 1 + index
+                        structure.directChannel.forEach { channel ->
+                            val globalOrder = channel.order.value
                             updatedUnifiedItems.add(
                                 ProjectStructureItem.DirectChannelItem(
                                     channel = channel,
