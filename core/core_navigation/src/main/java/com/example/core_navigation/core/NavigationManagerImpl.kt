@@ -348,6 +348,10 @@ class NavigationManagerImpl @Inject constructor(
         executeNavigationOnParent(AcceptFriendsRoute.toAppRoutePath(), navOptions)
     }
 
+    override fun navigateToSettings(navOptions: NavOptions?) {
+        executeNavigationOnParent(AppSettingsRoute.toAppRoutePath())
+    }
+
     override fun <T> setResult(key: String, result: T) {
         try {
             val currentController = activeChildNavController ?: parentNavController

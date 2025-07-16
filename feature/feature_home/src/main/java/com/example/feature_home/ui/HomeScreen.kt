@@ -160,7 +160,7 @@ fun HomeContent(
     onCategoryClick: (category: CategoryUiModel) -> Unit,
     onCategoryLongPress: (category: CategoryUiModel) -> Unit = {},
     onChannelClick: (channel: ChannelUiModel) -> Unit,
-    onChannelLongPress: (channel: ChannelUiModel) -> Unit = {},
+    onChannelLongPress: (channel: ChannelUiModel, categoryId: String?) -> Unit,
     onDmItemClick: (dm: DmUiModel) -> Unit,
     viewModel: HomeViewModel
 ) {

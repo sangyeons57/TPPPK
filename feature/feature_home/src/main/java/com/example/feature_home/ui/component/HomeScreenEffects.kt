@@ -38,10 +38,6 @@ fun HomeScreenEffects(
                     snackbarHostState.showSnackbar("프로젝트 추가 다이얼로그 (미구현)")
                 }
 
-                is HomeEvent.ShowAddFriendDialog -> {
-                    // TODO: Implement friend dialog or navigation
-                }
-
                 is HomeEvent.ShowAddProjectElementDialog -> {
                     onDialogStateChange(
                         dialogStates.copy(
