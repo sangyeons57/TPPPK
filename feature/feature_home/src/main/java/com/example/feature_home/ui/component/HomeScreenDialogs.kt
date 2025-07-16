@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.core_ui.components.reorder.SimpleReorderDialog
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
+import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.toUnifiedDialogItems
 import com.example.feature_home.model.toProjectStructureItems
@@ -124,7 +125,7 @@ private fun ReorderCategoryChannelsDialog(
     projectStructure: ProjectStructureUiState,
     categoryId: com.example.domain.model.vo.DocumentId,
     onDismiss: () -> Unit,
-    onReorderComplete: (List<com.example.feature_home.model.ChannelUiModel>) -> Unit
+    onReorderComplete: (List<ChannelUiModel>) -> Unit
 ) {
     // 해당 카테고리의 채널 목록 가져오기
     val categoryChannels = projectStructure.categories

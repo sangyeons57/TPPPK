@@ -1,5 +1,7 @@
 package com.example.feature_home.model
 
+import com.example.domain.model.enum.ProjectChannelType
+
 /**
  * SimpleReorderDialog에서 사용할 통합된 프로젝트 구조 아이템
  */
@@ -36,15 +38,15 @@ fun ProjectStructureUiState.toUnifiedDialogItems(): List<UnifiedStructureDialogI
             is ProjectStructureItem.CategoryItem -> {
                 UnifiedStructureDialogItem(
                     id = item.category.id.value,
-                    displayName = "# ${item.category.name.value}",
+                    displayName = "> ${item.category.name.value}",
                     type = UnifiedStructureItemType.CATEGORY,
                     originalItem = item
                 )
             }
             is ProjectStructureItem.DirectChannelItem -> {
                 val channelIcon = when (item.channel.mode) {
-                    com.example.domain.model.enum.ProjectChannelType.MESSAGES -> "#"
-                    com.example.domain.model.enum.ProjectChannelType.TASKS -> "◉"
+                    ProjectChannelType.MESSAGES -> "#"
+                    ProjectChannelType.TASKS -> "◉"
                     else -> "#"
                 }
                 UnifiedStructureDialogItem(
