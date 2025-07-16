@@ -75,7 +75,7 @@ class ReorderCategoriesUseCaseImpl @Inject constructor(
                     } else {
                         index // No No_Category in the list
                     }
-                    CategoryOrder(adjustedIndex.toDouble())
+                    CategoryOrder(adjustedIndex)
                 }
                 
                 // Update the category order using the domain method

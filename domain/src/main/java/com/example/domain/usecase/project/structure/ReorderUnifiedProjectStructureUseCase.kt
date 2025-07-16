@@ -94,7 +94,7 @@ class ReorderUnifiedProjectStructureUseCaseImpl @Inject constructor(
                         val newOrder = if (itemId == Category.NO_CATEGORY_ID) {
                             CategoryOrder(Category.NO_CATEGORY_ORDER)
                         } else {
-                            CategoryOrder(globalOrder)
+                            CategoryOrder(globalOrder.toInt())
                         }
                         
                         categoryUpdates.add(category to newOrder)
@@ -107,7 +107,7 @@ class ReorderUnifiedProjectStructureUseCaseImpl @Inject constructor(
                             )
                         
                         // 직속 채널은 globalOrder를 그대로 사용 (No_Category 채널)
-                        val newOrder = ProjectChannelOrder(globalOrder)
+                        val newOrder = ProjectChannelOrder(globalOrder.toInt())
                         channelUpdates.add(channel to newOrder)
                     }
                     

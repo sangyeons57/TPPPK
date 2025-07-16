@@ -64,7 +64,7 @@ class ReorderChannelsUseCaseImpl @Inject constructor(
                     ProjectChannelOrder(Category.NO_CATEGORY_ORDER)
                 } else {
                     // 다른 카테고리 채널은 1부터 시작
-                    ProjectChannelOrder((index + Category.MIN_CATEGORY_ORDER.toInt()).toDouble())
+                    ProjectChannelOrder(index + Category.MIN_CATEGORY_ORDER)
                 }
                 
                 // 채널 순서 업데이트

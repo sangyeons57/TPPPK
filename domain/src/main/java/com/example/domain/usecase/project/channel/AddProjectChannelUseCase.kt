@@ -96,11 +96,11 @@ class AddProjectChannelUseCaseImpl(
             // For NoCategory channels: place after existing NoCategory channels
             val noCategoryChannels = allProjectChannels.filter { it.categoryId.value == Category.NO_CATEGORY_ID }
             if (noCategoryChannels.isEmpty()) {
-                // First NoCategory channel starts at order 0.1
-                0.1
+                // First NoCategory channel starts at order 1
+                1
             } else {
                 // Place after existing NoCategory channels
-                (noCategoryChannels.maxOfOrNull { it.order.value } ?: 0.0) + ProjectChannel.CHANNEL_ORDER_INCREMENT
+                (noCategoryChannels.maxOfOrNull { it.order.value } ?: 0) + ProjectChannel.CHANNEL_ORDER_INCREMENT
             }
         } else {
             // For category channels: place after existing channels in this category
@@ -113,7 +113,7 @@ class AddProjectChannelUseCaseImpl(
                 (categoryChannels.maxOfOrNull { it.order.value } ?: Category.NO_CATEGORY_ORDER) + ProjectChannel.CHANNEL_ORDER_INCREMENT
             }
         }
-        val newOrder = ProjectChannelOrder.from(newOrderValue)
+        val newOrder = ProjectChannelOrder.from(newOrderValue.toInt())
 
         // 4. Check maximum channels limit (optional - remove if not needed)
         if (allProjectChannels.size >= Constants.MAX_CHANNELS_PER_CATEGORY) {
