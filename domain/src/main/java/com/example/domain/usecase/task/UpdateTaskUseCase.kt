@@ -16,10 +16,11 @@ import javax.inject.Inject
 interface UpdateTaskUseCase {
     suspend operator fun invoke(
         taskId: String,
+        title: String? = null,
+        description: String? = null,
         taskType: TaskType? = null,
-        content: String? = null,
-        order: Int? = null,
-        status: TaskStatus? = null
+        status: TaskStatus? = null,
+        order: TaskOrder? = null
     ): CustomResult<Unit, Exception>
 }
 
@@ -29,10 +30,11 @@ class UpdateTaskUseCaseImpl @Inject constructor(
     
     override suspend operator fun invoke(
         taskId: String,
+        title: String?,
+        description: String?,
         taskType: TaskType?,
-        content: String?,
-        order: Int?,
-        status: TaskStatus?
+        status: TaskStatus?,
+        order: TaskOrder?
     ): CustomResult<Unit, Exception> {
         val task = when (val result = taskRepository.findById(DocumentId(taskId))) {
             is CustomResult.Success -> result.data as Task
@@ -44,9 +46,22 @@ class UpdateTaskUseCaseImpl @Inject constructor(
 
         // Update fields if provided
         taskType?.let { task.updateTaskType(it) }
-        content?.let { task.updateContent(TaskContent(it)) }
-        order?.let { task.updateOrder(TaskOrder(it)) }
         status?.let { task.updateStatus(it) }
+        order?.let { task.updateOrder(it) }
+        
+        // Update content if title or description is provided
+        if (title != null || description != null) {
+            val newTitle = title ?: task.content.value.split("\n").firstOrNull() ?: ""
+            val newDescription = description ?: task.content.value.split("\n").drop(1).joinToString("\n")
+            
+            val content = if (newDescription.isNotBlank()) {
+                "$newTitle\n$newDescription"
+            } else {
+                newTitle
+            }
+            
+            task.updateContent(TaskContent(content))
+        }
 
         return when (val result = taskRepository.save(task)) {
             is CustomResult.Success -> CustomResult.Success(Unit)

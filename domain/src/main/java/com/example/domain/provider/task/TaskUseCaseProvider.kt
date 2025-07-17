@@ -8,6 +8,10 @@ import com.example.domain.usecase.task.CreateTaskUseCase
 import com.example.domain.usecase.task.CreateTaskUseCaseImpl
 import com.example.domain.usecase.task.DeleteTaskUseCase
 import com.example.domain.usecase.task.DeleteTaskUseCaseImpl
+import com.example.domain.usecase.task.GetTasksUseCase
+import com.example.domain.usecase.task.GetTasksUseCaseImpl
+import com.example.domain.usecase.task.ObserveTasksUseCase
+import com.example.domain.usecase.task.ObserveTasksUseCaseImpl
 import com.example.domain.usecase.task.UpdateTaskStatusUseCase
 import com.example.domain.usecase.task.UpdateTaskStatusUseCaseImpl
 import com.example.domain.usecase.task.UpdateTaskUseCase
@@ -60,6 +64,14 @@ class TaskUseCaseProvider @Inject constructor(
                 taskRepository = taskRepository
             ),
             
+            getTasksUseCase = GetTasksUseCaseImpl(
+                taskRepository = taskRepository
+            ),
+            
+            observeTasksUseCase = ObserveTasksUseCaseImpl(
+                taskRepository = taskRepository
+            ),
+            
             // 공통 Repository
             taskRepository = taskRepository
         )
@@ -75,6 +87,8 @@ data class TaskUseCases(
     val deleteTaskUseCase: DeleteTaskUseCase,
     val updateTaskUseCase: UpdateTaskUseCase,
     val updateTaskStatusUseCase: UpdateTaskStatusUseCase,
+    val getTasksUseCase: GetTasksUseCase,
+    val observeTasksUseCase: ObserveTasksUseCase,
     
     // 공통 Repository
     val taskRepository: TaskRepository
