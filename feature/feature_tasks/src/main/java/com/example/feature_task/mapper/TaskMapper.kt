@@ -11,8 +11,7 @@ object TaskMapper {
             taskType = task.taskType,
             status = task.status,
             content = task.content,
-            order = task.order,
-            lastModified = task.updatedAt
+            order = task.order
         )
     }
     
@@ -24,7 +23,7 @@ object TaskMapper {
             content = taskUiModel.content,
             order = taskUiModel.order,
             createdAt = null,
-            updatedAt = taskUiModel.lastModified
+            updatedAt = null
         )
     }
 }

@@ -19,6 +19,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.feature_task.viewmodel.TaskListViewModel
 import com.example.feature_task.model.TaskUiModel
 import com.example.domain.model.vo.task.TaskStatus
+import com.example.domain.model.vo.task.TaskType
 
 /**
  * 작업 목록 화면
@@ -49,7 +50,7 @@ fun TaskListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { 
-                    viewModel.createTask(title = "새 작업", description = "")
+                    viewModel.showTaskCreationDialog()
                 }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "작업 추가")
@@ -174,6 +175,17 @@ LazyColumn(
                     ) {
                         Text("확인")
                     }
+                }
+            )
+        }
+        
+        // Task creation dialog
+        if (uiState.showTaskCreationDialog) {
+            TaskCreationDialog(
+                onDismiss = { viewModel.hideTaskCreationDialog() },
+                onCreateTask = { title, description, taskType ->
+                    viewModel.createTask(title = title, description = description, taskType = taskType)
+                    viewModel.hideTaskCreationDialog()
                 }
             )
         }

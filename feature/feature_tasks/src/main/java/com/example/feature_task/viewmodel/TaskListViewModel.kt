@@ -8,6 +8,7 @@ import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.provider.task.TaskUseCaseProvider
 import com.example.domain.provider.task.TaskUseCases
 import com.example.domain.model.base.Task
+import com.example.domain.model.vo.task.TaskType
 import com.example.feature_task.model.TaskUiModel
 import com.example.feature_task.mapper.TaskMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -70,11 +71,12 @@ class TaskListViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
     
-    fun createTask(title: String, description: String = "") {
+    fun createTask(title: String, description: String = "", taskType: TaskType = TaskType.CHECKLIST) {
         viewModelScope.launch {
             val result = taskUseCases.createTaskUseCase.invoke(
                 title = title,
-                description = description
+                description = description,
+                taskType = taskType
             )
             
             result.onFailure { error ->
@@ -116,6 +118,14 @@ class TaskListViewModel @Inject constructor(
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
+    
+    fun showTaskCreationDialog() {
+        _uiState.value = _uiState.value.copy(showTaskCreationDialog = true)
+    }
+    
+    fun hideTaskCreationDialog() {
+        _uiState.value = _uiState.value.copy(showTaskCreationDialog = false)
+    }
 }
 
 /**
@@ -126,6 +136,7 @@ data class TaskListUiState(
     val channelId: String = "",
     val tasks: List<TaskUiModel> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val showTaskCreationDialog: Boolean = false
 )
 
