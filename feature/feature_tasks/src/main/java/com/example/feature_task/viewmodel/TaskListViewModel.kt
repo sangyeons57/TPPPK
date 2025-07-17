@@ -90,7 +90,7 @@ class TaskListViewModel @Inject constructor(
         viewModelScope.launch {
             val result = taskUseCases.updateTaskStatusUseCase(
                 taskId = taskId,
-                status = TaskStatus.COMPLETED
+                status = if (isCompleted) TaskStatus.COMPLETED else TaskStatus.PENDING
             )
             
             result.onFailure { error ->
@@ -101,6 +101,21 @@ class TaskListViewModel @Inject constructor(
         }
     }
     
+    fun editTask(taskId: String, title: String, description: String) {
+        viewModelScope.launch {
+            val result = taskUseCases.updateTaskUseCase(
+                taskId = taskId,
+                title = title,
+                description = description
+            )
+            
+            result.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.message
+                )
+            }
+        }
+    }
     
     fun deleteTask(taskId: String) {
         viewModelScope.launch {

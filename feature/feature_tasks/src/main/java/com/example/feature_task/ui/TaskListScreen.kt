@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -128,6 +129,9 @@ LazyColumn(
                                 onStatusChange = { taskId, isCompleted ->
                                     viewModel.updateTaskStatus(taskId, isCompleted)
                                 },
+                                onEdit = { taskId, title, description ->
+                                    viewModel.editTask(taskId, title, description)
+                                },
                                 onDelete = { taskId ->
                                     viewModel.deleteTask(taskId)
                                 }
@@ -151,6 +155,9 @@ LazyColumn(
                                 task = task,
                                 onStatusChange = { taskId, isCompleted ->
                                     viewModel.updateTaskStatus(taskId, isCompleted)
+                                },
+                                onEdit = { taskId, title, description ->
+                                    viewModel.editTask(taskId, title, description)
                                 },
                                 onDelete = { taskId ->
                                     viewModel.deleteTask(taskId)
@@ -184,8 +191,11 @@ LazyColumn(
 fun TaskItem(
     task: TaskUiModel,
     onStatusChange: (String, Boolean) -> Unit,
+    onEdit: (String, String, String) -> Unit,
     onDelete: (String) -> Unit
 ) {
+    var showEditDialog by remember { mutableStateOf(false) }
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -235,15 +245,89 @@ fun TaskItem(
                 }
             }
             
-            IconButton(
-                onClick = { onDelete(task.id.value) }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "삭제",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row {
+                IconButton(
+                    onClick = { showEditDialog = true }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "편집",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
+                IconButton(
+                    onClick = { onDelete(task.id.value) }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "삭제",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
+    
+    // Edit dialog
+    if (showEditDialog) {
+        TaskEditDialog(
+            task = task,
+            onDismiss = { showEditDialog = false },
+            onSave = { title, description ->
+                onEdit(task.id.value, title, description)
+                showEditDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun TaskEditDialog(
+    task: TaskUiModel,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var titleText by remember { mutableStateOf(task.title) }
+    var descriptionText by remember { mutableStateOf(task.description) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("작업 편집") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = titleText,
+                    onValueChange = { titleText = it },
+                    label = { Text("제목") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = descriptionText,
+                    onValueChange = { descriptionText = it },
+                    label = { Text("설명") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    maxLines = 4
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { 
+                    onSave(titleText.trim(), descriptionText.trim())
+                }
+            ) {
+                Text("저장")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
 }
