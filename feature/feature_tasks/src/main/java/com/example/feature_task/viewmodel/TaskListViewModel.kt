@@ -9,6 +9,7 @@ import com.example.domain.provider.task.TaskUseCaseProvider
 import com.example.domain.provider.task.TaskUseCases
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.task.TaskType
+import com.example.domain.model.vo.task.TaskStatus
 import com.example.feature_task.model.TaskUiModel
 import com.example.feature_task.mapper.TaskMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -89,9 +90,9 @@ class TaskListViewModel @Inject constructor(
     
     fun updateTaskStatus(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
-            val result = taskUseCases.updateTaskStatusUseCase.invoke(
+            val result = taskUseCases.updateTaskStatusUseCase(
                 taskId = taskId,
-                isCompleted = isCompleted
+                status = if (isCompleted) TaskStatus.COMPLETED else TaskStatus.PENDING
             )
             
             result.onFailure { error ->
@@ -102,6 +103,21 @@ class TaskListViewModel @Inject constructor(
         }
     }
     
+    fun editTask(taskId: String, title: String, description: String) {
+        viewModelScope.launch {
+            val result = taskUseCases.updateTaskUseCase(
+                taskId = taskId,
+                title = title,
+                description = description
+            )
+            
+            result.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.message
+                )
+            }
+        }
+    }
     
     fun deleteTask(taskId: String) {
         viewModelScope.launch {

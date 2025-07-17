@@ -103,7 +103,7 @@ class Task private constructor(
     }
 
     companion object {
-        const val COLLECTION_NAME = "task_container"  // 통합된 collection 이름
+        const val COLLECTION_NAME = "tasks"  // 통합된 collection 이름
         const val KEY_TASK_TYPE = "taskType"
         const val KEY_STATUS = "status"
         const val KEY_CONTENT = "content"
