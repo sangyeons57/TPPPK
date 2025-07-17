@@ -16,8 +16,7 @@ import javax.inject.Inject
 interface UpdateTaskUseCase {
     suspend operator fun invoke(
         taskId: String,
-        title: String? = null,
-        description: String? = null,
+        content: String? = null,
         taskType: TaskType? = null,
         status: TaskStatus? = null,
         order: TaskOrder? = null
@@ -30,8 +29,7 @@ class UpdateTaskUseCaseImpl @Inject constructor(
     
     override suspend operator fun invoke(
         taskId: String,
-        title: String?,
-        description: String?,
+        content: String?,
         taskType: TaskType?,
         status: TaskStatus?,
         order: TaskOrder?
@@ -49,19 +47,8 @@ class UpdateTaskUseCaseImpl @Inject constructor(
         status?.let { task.updateStatus(it) }
         order?.let { task.updateOrder(it) }
         
-        // Update content if title or description is provided
-        if (title != null || description != null) {
-            val newTitle = title ?: task.content.value.split("\n").firstOrNull() ?: ""
-            val newDescription = description ?: task.content.value.split("\n").drop(1).joinToString("\n")
-            
-            val content = if (newDescription.isNotBlank()) {
-                "$newTitle\n$newDescription"
-            } else {
-                newTitle
-            }
-            
-            task.updateContent(TaskContent(content))
-        }
+        // Update content if provided
+        content?.let { task.updateContent(TaskContent(it)) }
 
         return when (val result = taskRepository.save(task)) {
             is CustomResult.Success -> CustomResult.Success(Unit)

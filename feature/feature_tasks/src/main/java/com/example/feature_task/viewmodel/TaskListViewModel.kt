@@ -72,11 +72,10 @@ class TaskListViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
     
-    fun createTask(title: String, description: String = "", taskType: TaskType = TaskType.CHECKLIST) {
+    fun createTask(content: String, taskType: TaskType = TaskType.CHECKLIST) {
         viewModelScope.launch {
             val result = taskUseCases.createTaskUseCase.invoke(
-                title = title,
-                description = description,
+                content = content,
                 taskType = taskType
             )
             
@@ -103,12 +102,11 @@ class TaskListViewModel @Inject constructor(
         }
     }
     
-    fun editTask(taskId: String, title: String, description: String) {
+    fun editTask(taskId: String, content: String) {
         viewModelScope.launch {
             val result = taskUseCases.updateTaskUseCase(
                 taskId = taskId,
-                title = title,
-                description = description
+                content = content
             )
             
             result.onFailure { error ->
@@ -135,13 +133,6 @@ class TaskListViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
     
-    fun showTaskCreationDialog() {
-        _uiState.value = _uiState.value.copy(showTaskCreationDialog = true)
-    }
-    
-    fun hideTaskCreationDialog() {
-        _uiState.value = _uiState.value.copy(showTaskCreationDialog = false)
-    }
 }
 
 /**
@@ -152,7 +143,6 @@ data class TaskListUiState(
     val channelId: String = "",
     val tasks: List<TaskUiModel> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val showTaskCreationDialog: Boolean = false
+    val errorMessage: String? = null
 )
 

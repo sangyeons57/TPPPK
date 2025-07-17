@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
@@ -34,6 +41,7 @@ fun TaskListScreen(
     viewModel: TaskListViewModel = hiltViewModel(),
     ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var fabExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -48,13 +56,16 @@ fun TaskListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { 
-                    viewModel.showTaskCreationDialog()
+            TaskCreationFab(
+                expanded = fabExpanded,
+                onExpandedChange = { fabExpanded = it },
+                onCreateTask = { taskType ->
+                    viewModel.createTask(
+                        content = if (taskType == TaskType.CHECKLIST) "새 체크리스트" else "새 메모",
+                        taskType = taskType
+                    )
                 }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "작업 추가")
-            }
+            )
         }
     ) { paddingValues ->
         Column(
@@ -129,8 +140,8 @@ LazyColumn(
                                 onStatusChange = { taskId, isCompleted ->
                                     viewModel.updateTaskStatus(taskId, isCompleted)
                                 },
-                                onEdit = { taskId, title, description ->
-                                    viewModel.editTask(taskId, title, description)
+                                onEdit = { taskId, content ->
+                                    viewModel.editTask(taskId, content)
                                 },
                                 onDelete = { taskId ->
                                     viewModel.deleteTask(taskId)
@@ -156,8 +167,8 @@ LazyColumn(
                                 onStatusChange = { taskId, isCompleted ->
                                     viewModel.updateTaskStatus(taskId, isCompleted)
                                 },
-                                onEdit = { taskId, title, description ->
-                                    viewModel.editTask(taskId, title, description)
+                                onEdit = { taskId, content ->
+                                    viewModel.editTask(taskId, content)
                                 },
                                 onDelete = { taskId ->
                                     viewModel.deleteTask(taskId)
@@ -185,16 +196,6 @@ LazyColumn(
             )
         }
         
-        // Task creation dialog
-        if (uiState.showTaskCreationDialog) {
-            TaskCreationDialog(
-                onDismiss = { viewModel.hideTaskCreationDialog() },
-                onCreateTask = { title, description, taskType ->
-                    viewModel.createTask(title = title, description = description, taskType = taskType)
-                    viewModel.hideTaskCreationDialog()
-                }
-            )
-        }
     }
 }
 
@@ -202,7 +203,7 @@ LazyColumn(
 fun TaskItem(
     task: TaskUiModel,
     onStatusChange: (String, Boolean) -> Unit,
-    onEdit: (String, String, String) -> Unit,
+    onEdit: (String, String) -> Unit,
     onDelete: (String) -> Unit
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
@@ -285,8 +286,8 @@ fun TaskItem(
         TaskEditDialog(
             task = task,
             onDismiss = { showEditDialog = false },
-            onSave = { title, description ->
-                onEdit(task.id.value, title, description)
+            onSave = { content ->
+                onEdit(task.id.value, content)
                 showEditDialog = false
             }
         )
@@ -297,39 +298,27 @@ fun TaskItem(
 fun TaskEditDialog(
     task: TaskUiModel,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String) -> Unit
 ) {
-    var titleText by remember { mutableStateOf(task.title) }
-    var descriptionText by remember { mutableStateOf(task.description) }
+    var contentText by remember { mutableStateOf(task.content.value) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("작업 편집") },
         text = {
-            Column {
-                OutlinedTextField(
-                    value = titleText,
-                    onValueChange = { titleText = it },
-                    label = { Text("제목") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                OutlinedTextField(
-                    value = descriptionText,
-                    onValueChange = { descriptionText = it },
-                    label = { Text("설명") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                    maxLines = 4
-                )
-            }
+            OutlinedTextField(
+                value = contentText,
+                onValueChange = { contentText = it },
+                label = { Text("내용") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 6
+            )
         },
         confirmButton = {
             TextButton(
                 onClick = { 
-                    onSave(titleText.trim(), descriptionText.trim())
+                    onSave(contentText.trim())
                 }
             ) {
                 Text("저장")
@@ -341,4 +330,86 @@ fun TaskEditDialog(
             }
         }
     )
+}
+
+@Composable
+fun TaskCreationFab(
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onCreateTask: (TaskType) -> Unit
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 45f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "rotation"
+    )
+    
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Task type buttons (show when expanded)
+        if (expanded) {
+            TaskTypeFab(
+                icon = Icons.Default.CheckBox,
+                label = "체크리스트",
+                onClick = { 
+                    onCreateTask(TaskType.CHECKLIST)
+                    onExpandedChange(false)
+                }
+            )
+            
+            TaskTypeFab(
+                icon = Icons.Default.Comment,
+                label = "메모",
+                onClick = { 
+                    onCreateTask(TaskType.COMMENT)
+                    onExpandedChange(false)
+                }
+            )
+        }
+        
+        // Main FAB
+        FloatingActionButton(
+            onClick = { onExpandedChange(!expanded) },
+            modifier = Modifier.rotate(rotation)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "작업 추가")
+        }
+    }
+}
+
+@Composable
+fun TaskTypeFab(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Label
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Text(
+                text = label,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        
+        // Small FAB
+        SmallFloatingActionButton(
+            onClick = onClick,
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.secondary
+        ) {
+            Icon(icon, contentDescription = label)
+        }
+    }
 }
