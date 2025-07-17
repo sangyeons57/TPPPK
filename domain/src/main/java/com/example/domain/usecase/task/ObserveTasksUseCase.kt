@@ -4,6 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Task
 import com.example.domain.repository.base.TaskRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -18,6 +19,10 @@ class ObserveTasksUseCaseImpl @Inject constructor(
 ) : ObserveTasksUseCase {
     
     override operator fun invoke(): Flow<CustomResult<List<Task>, Exception>> {
-        return taskRepository.observeAll()
+        return taskRepository.observeAll().map { result ->
+            result.map { list ->
+                list.filterIsInstance<Task>()
+            }
+        }
     }
 }
