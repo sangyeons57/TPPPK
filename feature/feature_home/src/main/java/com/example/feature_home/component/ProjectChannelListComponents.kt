@@ -40,6 +40,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
+import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.model.vo.category.CategoryName
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
@@ -332,7 +333,8 @@ fun ChannelItemPreview_MessageSelected() {
                 id = DocumentId("ch1"),
                 name = Name("일반 대화"),
                 mode = ProjectChannelType.MESSAGES,
-                isSelected = true
+                isSelected = true,
+                order = ProjectChannelOrder.DEFAULT
             ),
             onClick = {},
             onLongPress = {}
@@ -352,7 +354,8 @@ fun ChannelItemPreview_TaskUnselected() {
                 id = DocumentId("ch2"),
                 name = Name("할 일 관리"),
                 mode = ProjectChannelType.TASKS,
-                isSelected = false
+                isSelected = false,
+                order = ProjectChannelOrder.DEFAULT
             ),
             onClick = {},
             onLongPress = {}
@@ -402,19 +405,22 @@ fun CategoryItemPreview_Expanded() {
             id = DocumentId("ch3"),
             name = Name("프론트엔드 논의"),
             mode = ProjectChannelType.MESSAGES,
-            isSelected = false
+            isSelected = false,
+            order = ProjectChannelOrder.from(1)
         ),
         ChannelUiModel(
             id = DocumentId("ch4"),
             name = Name("백엔드 작업"),
             mode = ProjectChannelType.MESSAGES,
-            isSelected = true
+            isSelected = true,
+            order = ProjectChannelOrder.from(2)
         ),
         ChannelUiModel(
             id = DocumentId("ch5"),
             name = Name("스프린트 관리"),
             mode = ProjectChannelType.TASKS,
-            isSelected = false
+            isSelected = false,
+            order = ProjectChannelOrder.from(3)
         )
     )
     TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -469,13 +475,15 @@ fun UnifiedProjectStructureListPreview_Mixed() {
             id = DocumentId("direct1"),
             name = Name("공지사항"),
             mode = ProjectChannelType.MESSAGES,
-            isSelected = false
+            isSelected = false,
+            order = ProjectChannelOrder.from(1)
         ),
         ChannelUiModel(
             id = DocumentId("direct2"),
             name = Name("자유 게시판"),
             mode = ProjectChannelType.MESSAGES,
-            isSelected = true
+            isSelected = true,
+            order = ProjectChannelOrder.from(2)
         )
     )
     
@@ -490,13 +498,15 @@ fun UnifiedProjectStructureListPreview_Mixed() {
                     id = DocumentId("dev_ch1"),
                     name = Name("프론트엔드"),
                     mode = ProjectChannelType.MESSAGES,
-                    isSelected = false
+                    isSelected = false,
+                    order = ProjectChannelOrder.from(1)
                 ),
                 ChannelUiModel(
                     id = DocumentId("dev_ch2"),
                     name = Name("백엔드"),
                     mode = ProjectChannelType.MESSAGES,
-                    isSelected = false
+                    isSelected = false,
+                    order = ProjectChannelOrder.from(2)
                 )
             )
         ),

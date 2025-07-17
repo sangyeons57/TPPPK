@@ -111,10 +111,6 @@ interface NavigationManger {
      */
     fun navigateToTaskList(projectId: String, channelId: String, navOptions: NavOptions? = null)
     
-    /**
-     * Navigates to task detail screen.
-     */
-    fun navigateToTaskDetail(projectId: String, channelId: String, taskId: String, navOptions: NavOptions? = null)
     
     /**
      * Navigates to add project screen.
