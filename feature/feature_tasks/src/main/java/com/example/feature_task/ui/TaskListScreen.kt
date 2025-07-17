@@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +23,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
@@ -42,6 +49,7 @@ fun TaskListScreen(
     ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var fabExpanded by remember { mutableStateOf(false) }
+    var isEditMode by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -49,6 +57,17 @@ fun TaskListScreen(
             TopAppBar(
                 title = { 
                     Text("작업 관리") 
+                },
+                actions = {
+                    IconButton(
+                        onClick = { isEditMode = !isEditMode }
+                    ) {
+                        Icon(
+                            imageVector = if (isEditMode) Icons.Default.Visibility else Icons.Default.Edit,
+                            contentDescription = if (isEditMode) "보기 모드" else "편집 모드",
+                            tint = if (isEditMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -114,67 +133,28 @@ fun TaskListScreen(
                     }
                 }
             } else {
-LazyColumn(
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Group tasks by type
-                    val checklistTasks = uiState.tasks.filter { it.taskType == TaskType.CHECKLIST }
-                    val commentTasks = uiState.tasks.filter { it.taskType == TaskType.COMMENT }
+                    // Sort all tasks by order field instead of separating by type
+                    val sortedTasks = uiState.tasks.sortedBy { it.order.value }
                     
-                    // Checklist section
-                    if (checklistTasks.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "체크리스트",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        
-                        items(checklistTasks) { task ->
-                            TaskItem(
-                                task = task,
-                                onStatusChange = { taskId, isCompleted ->
-                                    viewModel.updateTaskStatus(taskId, isCompleted)
-                                },
-                                onEdit = { taskId, content ->
-                                    viewModel.editTask(taskId, content)
-                                },
-                                onDelete = { taskId ->
-                                    viewModel.deleteTask(taskId)
-                                }
-                            )
-                        }
-                    }
-                    
-                    // Comments section
-                    if (commentTasks.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "메모",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        
-                        items(commentTasks) { task ->
-                            TaskItem(
-                                task = task,
-                                onStatusChange = { taskId, isCompleted ->
-                                    viewModel.updateTaskStatus(taskId, isCompleted)
-                                },
-                                onEdit = { taskId, content ->
-                                    viewModel.editTask(taskId, content)
-                                },
-                                onDelete = { taskId ->
-                                    viewModel.deleteTask(taskId)
-                                }
-                            )
-                        }
+                    items(sortedTasks) { task ->
+                        TaskItem(
+                            task = task,
+                            isEditMode = isEditMode,
+                            onStatusChange = { taskId, isCompleted ->
+                                viewModel.updateTaskStatus(taskId, isCompleted)
+                            },
+                            onEdit = { taskId, content ->
+                                viewModel.editTask(taskId, content)
+                            },
+                            onDelete = { taskId ->
+                                viewModel.deleteTask(taskId)
+                            }
+                        )
                     }
                 }
             }
@@ -202,15 +182,36 @@ LazyColumn(
 @Composable
 fun TaskItem(
     task: TaskUiModel,
+    isEditMode: Boolean,
     onStatusChange: (String, Boolean) -> Unit,
     onEdit: (String, String) -> Unit,
     onDelete: (String) -> Unit
 ) {
-    var showEditDialog by remember { mutableStateOf(false) }
+    var editingContent by remember { mutableStateOf(task.content.value) }
+    var isFocused by remember { mutableStateOf(false) }
+    
+    // Auto-save when content changes and not focused (debounced)
+    LaunchedEffect(editingContent, isFocused) {
+        if (!isFocused && editingContent.trim() != task.content.value && editingContent.trim().isNotBlank()) {
+            onEdit(task.id.value, editingContent.trim())
+        }
+    }
+    
+    // Update local state when task content changes
+    LaunchedEffect(task.content.value) {
+        editingContent = task.content.value
+    }
     
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isEditMode) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        )
     ) {
         Row(
             modifier = Modifier
@@ -226,111 +227,80 @@ fun TaskItem(
                 if (task.taskType == TaskType.CHECKLIST) {
                     Checkbox(
                         checked = task.isCompleted,
-                        onCheckedChange = { isChecked ->
+                        onCheckedChange = if (isEditMode) null else { isChecked ->
                             onStatusChange(task.id.value, isChecked)
-                        }
+                        },
+                        enabled = !isEditMode
                     )
                     
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 
-                Column {
-                    Text(
-                        text = if (task.title.isNotBlank()) task.title else task.content.value,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (task.isCompleted) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        maxLines = if (task.taskType == TaskType.COMMENT) 3 else 1
-                    )
-                    
-                    if (task.taskType == TaskType.CHECKLIST && task.description.isNotBlank()) {
-                        Text(
-                            text = task.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2
+                Column(modifier = Modifier.weight(1f)) {
+                    if (isEditMode) {
+                        val focusManager = LocalFocusManager.current
+                        
+                        OutlinedTextField(
+                            value = editingContent,
+                            onValueChange = { editingContent = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    isFocused = focusState.isFocused
+                                },
+                            textStyle = MaterialTheme.typography.bodyLarge,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
+                                }
+                            ),
+                            minLines = 1,
+                            maxLines = if (task.taskType == TaskType.COMMENT) 3 else 1,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
                         )
+                    } else {
+                        Text(
+                            text = if (task.title.isNotBlank()) task.title else task.content.value,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (task.isCompleted) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            maxLines = if (task.taskType == TaskType.COMMENT) 3 else 1
+                        )
+                        
+                        if (task.taskType == TaskType.CHECKLIST && task.description.isNotBlank()) {
+                            Text(
+                                text = task.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2
+                            )
+                        }
                     }
                 }
             }
             
-            Row {
-                IconButton(
-                    onClick = { showEditDialog = true }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "편집",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                
+            if (isEditMode) {
                 IconButton(
                     onClick = { onDelete(task.id.value) }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Default.Close,
                         contentDescription = "삭제",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
             }
         }
     }
-    
-    // Edit dialog
-    if (showEditDialog) {
-        TaskEditDialog(
-            task = task,
-            onDismiss = { showEditDialog = false },
-            onSave = { content ->
-                onEdit(task.id.value, content)
-                showEditDialog = false
-            }
-        )
-    }
 }
 
-@Composable
-fun TaskEditDialog(
-    task: TaskUiModel,
-    onDismiss: () -> Unit,
-    onSave: (String) -> Unit
-) {
-    var contentText by remember { mutableStateOf(task.content.value) }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("작업 편집") },
-        text = {
-            OutlinedTextField(
-                value = contentText,
-                onValueChange = { contentText = it },
-                label = { Text("내용") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 6
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { 
-                    onSave(contentText.trim())
-                }
-            ) {
-                Text("저장")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
-        }
-    )
-}
 
 @Composable
 fun TaskCreationFab(
