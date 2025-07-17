@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Comment
@@ -16,13 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
@@ -30,7 +23,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.NavigationManger
+import com.example.core_ui.components.fab.ExtendableFab
+import com.example.core_ui.components.fab.FabMenuItem
+import com.example.core_ui.components.fab.FabLabelStyle
 import com.example.feature_task.viewmodel.TaskListViewModel
 import com.example.feature_task.model.TaskUiModel
 import com.example.domain.model.vo.task.TaskStatus
@@ -308,78 +303,33 @@ fun TaskCreationFab(
     onExpandedChange: (Boolean) -> Unit,
     onCreateTask: (TaskType) -> Unit
 ) {
-    val rotation by animateFloatAsState(
-        targetValue = if (expanded) 45f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "rotation"
-    )
-    
-    Column(
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Task type buttons (show when expanded)
-        if (expanded) {
-            TaskTypeFab(
+    val menuItems = remember {
+        listOf(
+            FabMenuItem(
                 icon = Icons.Default.CheckBox,
-                label = "체크리스트",
+                text = "체크리스트",
+                contentDescription = "체크리스트 작업 생성",
                 onClick = { 
                     onCreateTask(TaskType.CHECKLIST)
                     onExpandedChange(false)
                 }
-            )
-            
-            TaskTypeFab(
+            ),
+            FabMenuItem(
                 icon = Icons.Default.Comment,
-                label = "메모",
+                text = "메모",
+                contentDescription = "메모 작업 생성",
                 onClick = { 
                     onCreateTask(TaskType.COMMENT)
                     onExpandedChange(false)
                 }
             )
-        }
-        
-        // Main FAB
-        FloatingActionButton(
-            onClick = { onExpandedChange(!expanded) },
-            modifier = Modifier.rotate(rotation)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "작업 추가")
-        }
+        )
     }
-}
-
-@Composable
-fun TaskTypeFab(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Label
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Text(
-                text = label,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-        
-        // Small FAB
-        SmallFloatingActionButton(
-            onClick = onClick,
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.secondary
-        ) {
-            Icon(icon, contentDescription = label)
-        }
-    }
+    
+    ExtendableFab(
+        menuItems = menuItems,
+        isExpanded = expanded,
+        onExpandedChange = onExpandedChange,
+        labelStyle = FabLabelStyle.CARD
+    )
 }
