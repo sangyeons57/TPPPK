@@ -12,7 +12,6 @@ object TaskMapper {
             status = task.status,
             content = task.content,
             order = task.order,
-            lastModified = task.updatedAt
         )
     }
     
@@ -24,7 +23,7 @@ object TaskMapper {
             content = taskUiModel.content,
             order = taskUiModel.order,
             createdAt = null,
-            updatedAt = taskUiModel.lastModified
+            updatedAt = null
         )
     }
 }

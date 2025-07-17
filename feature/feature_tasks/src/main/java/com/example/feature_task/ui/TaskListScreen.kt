@@ -19,6 +19,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.feature_task.viewmodel.TaskListViewModel
 import com.example.feature_task.model.TaskUiModel
 import com.example.domain.model.vo.task.TaskStatus
+import com.example.domain.model.vo.task.TaskType
 
 /**
  * 작업 목록 화면
@@ -30,8 +31,7 @@ import com.example.domain.model.vo.task.TaskStatus
 fun TaskListScreen(
     modifier: Modifier = Modifier,
     viewModel: TaskListViewModel = hiltViewModel(),
-    navigationManger: NavigationManger
-) {
+    ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(

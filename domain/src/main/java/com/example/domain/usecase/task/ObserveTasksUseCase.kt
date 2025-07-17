@@ -20,8 +20,8 @@ class ObserveTasksUseCaseImpl @Inject constructor(
     
     override operator fun invoke(): Flow<CustomResult<List<Task>, Exception>> {
         return taskRepository.observeAll().map { result ->
-            result.map { list ->
-                list.filterIsInstance<Task>()
+            result.successProcess {
+                it.map { it as Task }
             }
         }
     }

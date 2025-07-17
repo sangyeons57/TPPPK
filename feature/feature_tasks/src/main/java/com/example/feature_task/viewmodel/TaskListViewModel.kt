@@ -8,6 +8,7 @@ import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.provider.task.TaskUseCaseProvider
 import com.example.domain.provider.task.TaskUseCases
 import com.example.domain.model.base.Task
+import com.example.domain.model.vo.task.TaskStatus
 import com.example.feature_task.model.TaskUiModel
 import com.example.feature_task.mapper.TaskMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -87,9 +88,9 @@ class TaskListViewModel @Inject constructor(
     
     fun updateTaskStatus(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
-            val result = taskUseCases.updateTaskStatusUseCase.invoke(
+            val result = taskUseCases.updateTaskStatusUseCase(
                 taskId = taskId,
-                isCompleted = isCompleted
+                status = TaskStatus.COMPLETED
             )
             
             result.onFailure { error ->

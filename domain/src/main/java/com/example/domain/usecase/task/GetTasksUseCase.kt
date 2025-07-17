@@ -17,8 +17,8 @@ class GetTasksUseCaseImpl @Inject constructor(
 ) : GetTasksUseCase {
     
     override suspend operator fun invoke(): CustomResult<List<Task>, Exception> {
-        return taskRepository.findAll().map { list ->
-            list.filterIsInstance<Task>()
+        return taskRepository.findAll().successProcess {
+            it.map { list -> list as Task }
         }
     }
 }
