@@ -7,9 +7,12 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.provider.task.TaskUseCaseProvider
 import com.example.domain.provider.task.TaskUseCases
+import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain.provider.user.UserUseCases
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.task.TaskType
 import com.example.domain.model.vo.task.TaskStatus
+import com.example.domain.model.vo.DocumentId
 import com.example.feature_task.model.TaskUiModel
 import com.example.feature_task.mapper.TaskMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +31,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TaskListViewModel @Inject constructor(
     private val taskUseCaseProvider: TaskUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
@@ -40,6 +44,8 @@ class TaskListViewModel @Inject constructor(
         channelId = channelId,
         containerId = containerId
     )
+    
+    private val userUseCases: UserUseCases = userUseCaseProvider.createForUser()
     
     private val _uiState = MutableStateFlow(
         TaskListUiState(
@@ -57,11 +63,24 @@ class TaskListViewModel @Inject constructor(
         taskUseCases.observeTasksUseCase()
             .onEach { result ->
                 result.onSuccess { tasks ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        tasks = tasks.map { TaskMapper.toUiModel(it) },
-                        errorMessage = null
-                    )
+                    viewModelScope.launch {
+                        // 사용자 이름을 가져와서 TaskUiModel에 추가
+                        val tasksWithUserNames = tasks.map { task ->
+                            val checkedByName = task.checkedBy?.let { userId ->
+                                when (val userResult = userUseCases.getUserByIdUseCase(DocumentId(userId.internalValue))) {
+                                    is com.example.core_common.result.CustomResult.Success -> userResult.data.name.value
+                                    else -> null
+                                }
+                            }
+                            TaskMapper.toUiModel(task, checkedByName)
+                        }
+                        
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            tasks = tasksWithUserNames,
+                            errorMessage = null
+                        )
+                    }
                 }.onFailure { error ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

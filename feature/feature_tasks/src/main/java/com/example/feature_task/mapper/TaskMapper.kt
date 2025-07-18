@@ -5,7 +5,7 @@ import com.example.feature_task.model.TaskUiModel
 
 object TaskMapper {
     
-    fun toUiModel(task: Task): TaskUiModel {
+    fun toUiModel(task: Task, checkedByName: String? = null): TaskUiModel {
         return TaskUiModel(
             id = task.id,
             taskType = task.taskType,
@@ -13,6 +13,7 @@ object TaskMapper {
             content = task.content,
             order = task.order,
             checkedBy = task.checkedBy,
+            checkedByName = checkedByName,
             checkedAt = task.checkedAt,
             updatedAt = task.updatedAt
         )

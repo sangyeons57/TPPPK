@@ -287,7 +287,7 @@ fun TaskItem(
                         if (task.isCompleted && task.checkedBy != null && task.checkedAt != null) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "체크됨: ${task.checkedBy!!.internalValue} • ${formatTime(task.checkedAt!!)}",
+                                text = "체크됨: ${task.checkedByName ?: task.checkedBy!!.internalValue} • ${formatTime(task.checkedAt!!)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 fontSize = 11.sp
