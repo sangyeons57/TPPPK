@@ -11,7 +11,10 @@ object TaskMapper {
             taskType = task.taskType,
             status = task.status,
             content = task.content,
-            order = task.order
+            order = task.order,
+            checkedBy = task.checkedBy,
+            checkedAt = task.checkedAt,
+            updatedAt = task.updatedAt
         )
     }
     
@@ -22,8 +25,10 @@ object TaskMapper {
             status = taskUiModel.status,
             content = taskUiModel.content,
             order = taskUiModel.order,
+            checkedBy = taskUiModel.checkedBy,
+            checkedAt = taskUiModel.checkedAt,
             createdAt = null,
-            updatedAt = null
+            updatedAt = taskUiModel.updatedAt
         )
     }
 }

@@ -5,6 +5,7 @@ import com.example.domain.model.vo.task.TaskType
 import com.example.domain.model.vo.task.TaskStatus
 import com.example.domain.model.vo.task.TaskContent
 import com.example.domain.model.vo.task.TaskOrder
+import com.example.domain.model.vo.UserId
 import java.time.Instant
 
 /**
@@ -18,7 +19,10 @@ data class TaskUiModel(
     val taskType: TaskType,
     val status: TaskStatus,
     val content: TaskContent,
-    val order: TaskOrder
+    val order: TaskOrder,
+    val checkedBy: UserId?,
+    val checkedAt: Instant?,
+    val updatedAt: Instant
 ) {
     
     /**
@@ -35,7 +39,11 @@ data class TaskUiModel(
     
     /**
      * Helper method to check if task is completed
+     * 체크박스 타입의 경우 TaskType으로 체크 상태를 판단
      */
     val isCompleted: Boolean
-        get() = status == TaskStatus.COMPLETED
+        get() = when {
+            taskType.isCheckbox() -> taskType.isChecked()
+            else -> status == TaskStatus.COMPLETED
+        }
 }

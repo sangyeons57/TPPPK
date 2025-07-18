@@ -9,12 +9,15 @@ import com.example.domain.model.vo.task.TaskContent
 import com.example.domain.model.vo.task.TaskOrder
 import com.example.domain.model.vo.task.TaskStatus
 import com.example.domain.model.vo.task.TaskType
+import com.example.domain.model.vo.UserId
 
 class Task private constructor(
     initialTaskType: TaskType,
     initialStatus: TaskStatus,
     initialContent: TaskContent,
     initialOrder: TaskOrder,
+    initialCheckedBy: UserId?,
+    initialCheckedAt: Instant?,
     override val id: DocumentId,
     override var isNew: Boolean,
     override val createdAt: Instant,
@@ -30,6 +33,10 @@ class Task private constructor(
         private set
     var order: TaskOrder = initialOrder
         private set
+    var checkedBy: UserId? = initialCheckedBy
+        private set
+    var checkedAt: Instant? = initialCheckedAt
+        private set
 
     init {
         setOriginalState()
@@ -41,6 +48,8 @@ class Task private constructor(
             KEY_STATUS to this.status.value,
             KEY_CONTENT to this.content.value,
             KEY_ORDER to this.order.value,
+            KEY_CHECKED_BY to this.checkedBy?.internalValue,
+            KEY_CHECKED_AT to this.checkedAt,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt
         )
@@ -52,6 +61,16 @@ class Task private constructor(
     fun updateTaskType(newTaskType: TaskType) {
         if (this.taskType == newTaskType) return
         this.taskType = newTaskType
+    }
+
+    /**
+     * Updates the task type with check information.
+     */
+    fun updateTaskType(newTaskType: TaskType, checkedBy: UserId?, checkedAt: Instant?) {
+        if (this.taskType == newTaskType) return
+        this.taskType = newTaskType
+        this.checkedBy = checkedBy
+        this.checkedAt = checkedAt
     }
 
     /**
@@ -108,6 +127,8 @@ class Task private constructor(
         const val KEY_STATUS = "status"
         const val KEY_CONTENT = "content"
         const val KEY_ORDER = "order"
+        const val KEY_CHECKED_BY = "checkedBy"
+        const val KEY_CHECKED_AT = "checkedAt"
 
         /**
          * Factory method for creating a new task.
@@ -123,6 +144,8 @@ class Task private constructor(
                 initialStatus = TaskStatus.PENDING,
                 initialContent = content,
                 initialOrder = order,
+                initialCheckedBy = null,
+                initialCheckedAt = null,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 id = id,
@@ -140,6 +163,8 @@ class Task private constructor(
             status: TaskStatus,
             content: TaskContent,
             order: TaskOrder,
+            checkedBy: UserId?,
+            checkedAt: Instant?,
             createdAt: Instant?,
             updatedAt: Instant?
         ): Task {
@@ -148,6 +173,8 @@ class Task private constructor(
                 initialStatus = status,
                 initialContent = content,
                 initialOrder = order,
+                initialCheckedBy = checkedBy,
+                initialCheckedAt = checkedAt,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,

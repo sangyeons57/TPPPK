@@ -8,6 +8,7 @@ import com.example.domain.model.vo.task.TaskContent
 import com.example.domain.model.vo.task.TaskOrder
 import com.example.domain.model.vo.task.TaskStatus
 import com.example.domain.model.vo.task.TaskType
+import com.example.domain.model.vo.UserId
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
@@ -29,6 +30,10 @@ data class TaskDTO(
     val content: String = "",
     @get:PropertyName(ORDER)
     val order: Int = 0,
+    @get:PropertyName(CHECKED_BY)
+    val checkedBy: String? = null,
+    @get:PropertyName(CHECKED_AT)
+    val checkedAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp override val createdAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
@@ -42,6 +47,8 @@ data class TaskDTO(
         const val STATUS = Task.KEY_STATUS
         const val CONTENT = Task.KEY_CONTENT
         const val ORDER = Task.KEY_ORDER
+        const val CHECKED_BY = Task.KEY_CHECKED_BY
+        const val CHECKED_AT = Task.KEY_CHECKED_AT
         const val TYPE_TASK = "task"
     }
 
@@ -56,6 +63,8 @@ data class TaskDTO(
             status = status,
             content = TaskContent(content),
             order = TaskOrder(order),
+            checkedBy = checkedBy?.let { UserId(it) },
+            checkedAt = checkedAt?.toInstant(),
             createdAt = createdAt?.toInstant(),
             updatedAt = updatedAt?.toInstant()
         )
@@ -74,6 +83,8 @@ fun Task.toDto(): TaskDTO {
         status = status,
         content = content.value,
         order = order.value,
+        checkedBy = checkedBy?.internalValue,
+        checkedAt = checkedAt?.let { java.util.Date.from(it) },
         createdAt = null,
         updatedAt = null
     )

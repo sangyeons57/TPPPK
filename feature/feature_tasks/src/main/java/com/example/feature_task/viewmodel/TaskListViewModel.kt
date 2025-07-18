@@ -89,10 +89,7 @@ class TaskListViewModel @Inject constructor(
     
     fun updateTaskStatus(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
-            val result = taskUseCases.updateTaskStatusUseCase(
-                taskId = taskId,
-                status = if (isCompleted) TaskStatus.COMPLETED else TaskStatus.PENDING
-            )
+            val result = taskUseCases.toggleTaskCheckUseCase(taskId)
             
             result.onFailure { error ->
                 _uiState.value = _uiState.value.copy(

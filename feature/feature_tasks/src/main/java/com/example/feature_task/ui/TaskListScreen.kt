@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
@@ -30,6 +31,10 @@ import com.example.feature_task.viewmodel.TaskListViewModel
 import com.example.feature_task.model.TaskUiModel
 import com.example.domain.model.vo.task.TaskStatus
 import com.example.domain.model.vo.task.TaskType
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * 작업 목록 화면
@@ -70,16 +75,19 @@ fun TaskListScreen(
             )
         },
         floatingActionButton = {
-            TaskCreationFab(
-                expanded = fabExpanded,
-                onExpandedChange = { fabExpanded = it },
-                onCreateTask = { taskType ->
-                    viewModel.createTask(
-                        content = if (taskType == TaskType.CHECKLIST) "새 체크리스트" else "새 메모",
-                        taskType = taskType
-                    )
-                }
-            )
+            // 보기 모드가 아닐 때만 FAB 표시
+            if (!isEditMode) {
+                TaskCreationFab(
+                    expanded = fabExpanded,
+                    onExpandedChange = { fabExpanded = it },
+                    onCreateTask = { taskType ->
+                        viewModel.createTask(
+                            content = if (taskType == TaskType.CHECKLIST) "새 체크리스트" else "새 메모",
+                            taskType = taskType
+                        )
+                    }
+                )
+            }
         }
     ) { paddingValues ->
         Column(
@@ -251,7 +259,6 @@ fun TaskItem(
                                 }
                             ),
                             minLines = 1,
-                            maxLines = if (task.taskType == TaskType.COMMENT) 3 else 1,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
@@ -265,16 +272,25 @@ fun TaskItem(
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             } else {
                                 MaterialTheme.colorScheme.onSurface
-                            },
-                            maxLines = if (task.taskType == TaskType.COMMENT) 3 else 1
+                            }
                         )
                         
                         if (task.taskType == TaskType.CHECKLIST && task.description.isNotBlank()) {
                             Text(
                                 text = task.description,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        // 체크된 작업인 경우 체크한 사람과 시간 표시
+                        if (task.isCompleted && task.checkedBy != null && task.checkedAt != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "체크됨: ${task.checkedBy!!.internalValue} • ${formatTime(task.checkedAt!!)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                fontSize = 11.sp
                             )
                         }
                     }
@@ -332,4 +348,31 @@ fun TaskCreationFab(
         onExpandedChange = onExpandedChange,
         labelStyle = FabLabelStyle.CARD
     )
+}
+
+/**
+ * Instant를 사용자 친화적인 시간 문자열로 포맷팅
+ */
+private fun formatTime(instant: Instant): String {
+    val localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
+    val now = LocalDateTime.now()
+    
+    return when {
+        localDateTime.toLocalDate() == now.toLocalDate() -> {
+            // 오늘인 경우 시간만 표시
+            localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+        }
+        localDateTime.toLocalDate() == now.toLocalDate().minusDays(1) -> {
+            // 어제인 경우
+            "어제 ${localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
+        }
+        localDateTime.year == now.year -> {
+            // 올해인 경우
+            localDateTime.format(DateTimeFormatter.ofPattern("MM/dd HH:mm"))
+        }
+        else -> {
+            // 다른 해인 경우
+            localDateTime.format(DateTimeFormatter.ofPattern("yy/MM/dd HH:mm"))
+        }
+    }
 }
