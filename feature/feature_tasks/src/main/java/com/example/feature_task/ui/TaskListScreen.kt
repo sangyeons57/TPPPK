@@ -227,7 +227,7 @@ fun TaskItem(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                if (task.taskType == TaskType.CHECKLIST) {
+                if (task.taskType.isCheckbox()) {
                     Checkbox(
                         checked = task.isCompleted,
                         onCheckedChange = if (isEditMode) null else { isChecked ->
@@ -275,7 +275,7 @@ fun TaskItem(
                             }
                         )
                         
-                        if (task.taskType == TaskType.CHECKLIST && task.description.isNotBlank()) {
+                        if (task.taskType.isCheckbox() && task.description.isNotBlank()) {
                             Text(
                                 text = task.description,
                                 style = MaterialTheme.typography.bodyMedium,
