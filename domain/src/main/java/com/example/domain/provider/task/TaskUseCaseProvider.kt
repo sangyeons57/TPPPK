@@ -20,6 +20,8 @@ import com.example.domain.usecase.task.UpdateTaskStatusUseCase
 import com.example.domain.usecase.task.UpdateTaskStatusUseCaseImpl
 import com.example.domain.usecase.task.UpdateTaskUseCase
 import com.example.domain.usecase.task.UpdateTaskUseCaseImpl
+import com.example.domain.usecase.task.ReorderTaskUseCase
+import com.example.domain.usecase.task.ReorderTaskUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -86,6 +88,10 @@ class TaskUseCaseProvider @Inject constructor(
                 taskRepository = taskRepository
             ),
             
+            reorderTaskUseCase = ReorderTaskUseCaseImpl(
+                taskRepository = taskRepository
+            ),
+            
             // 공통 Repository
             taskRepository = taskRepository
         )
@@ -104,6 +110,7 @@ data class TaskUseCases(
     val toggleTaskCheckUseCase: ToggleTaskCheckUseCase,
     val getTasksUseCase: GetTasksUseCase,
     val observeTasksUseCase: ObserveTasksUseCase,
+    val reorderTaskUseCase: ReorderTaskUseCase,
     
     // 공통 Repository
     val taskRepository: TaskRepository

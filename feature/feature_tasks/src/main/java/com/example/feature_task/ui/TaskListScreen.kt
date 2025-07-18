@@ -1,6 +1,7 @@
 package com.example.feature_task.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +30,11 @@ import com.example.core_ui.components.fab.ExtendableFab
 import com.example.core_ui.components.fab.FabMenuItem
 import com.example.core_ui.components.fab.FabLabelStyle
 import com.example.core_ui.components.buttons.DebouncedBackButton
+import com.example.core_ui.components.draggablelist.DraggableList
+import com.example.core_ui.components.draggablelist.DraggableListItem
+import com.example.core_ui.components.draggablelist.DraggableListItemData
+import com.example.core_ui.components.draggablelist.DraggableListState
+import com.example.core_ui.components.draggablelist.rememberDraggableListState
 import com.example.feature_task.viewmodel.TaskListViewModel
 import com.example.feature_task.model.TaskUiModel
 import com.example.domain.model.vo.task.TaskStatus
@@ -142,18 +149,35 @@ fun TaskListScreen(
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Sort all tasks by order field instead of separating by type
-                    val sortedTasks = uiState.tasks.sortedBy { it.order.value }
-                    
-                    items(sortedTasks) { task ->
+                // Sort all tasks by order field instead of separating by type
+                val sortedTasks = uiState.tasks.sortedBy { it.order.value }
+                
+                // Create DraggableList state
+                val draggableListState = rememberDraggableListState(
+                    initialItems = sortedTasks.map { task ->
+                        DraggableListItemData(
+                            id = task.id.value,
+                            originalData = task
+                        )
+                    },
+                    onItemMove = { _, fromIndex, toIndex ->
+                        viewModel.reorderTasks(fromIndex, toIndex)
+                    }
+                )
+                
+                DraggableList(
+                    state = draggableListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) { index, itemData, isCurrentlyDragging, listState ->
+                    Column {
                         TaskItem(
-                            task = task,
+                            task = itemData.originalData,
                             isEditMode = isEditMode,
+                            isCurrentlyDragging = isCurrentlyDragging,
+                            draggableListState = listState,
+                            index = index,
                             onStatusChange = { taskId, isCompleted ->
                                 viewModel.updateTaskStatus(taskId, isCompleted)
                             },
@@ -164,6 +188,11 @@ fun TaskListScreen(
                                 viewModel.deleteTask(taskId)
                             }
                         )
+                        
+                        // Add spacing between items
+                        if (index < draggableListState.items.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }
@@ -192,6 +221,9 @@ fun TaskListScreen(
 fun TaskItem(
     task: TaskUiModel,
     isEditMode: Boolean,
+    isCurrentlyDragging: Boolean = false,
+    draggableListState: DraggableListState<TaskUiModel>? = null,
+    index: Int = -1,
     onStatusChange: (String, Boolean) -> Unit,
     onEdit: (String, String) -> Unit,
     onDelete: (String) -> Unit
@@ -211,6 +243,60 @@ fun TaskItem(
         editingContent = task.content.value
     }
     
+    // Wrap with DraggableListItem when in edit mode and draggable state is available
+    if (isEditMode && draggableListState != null && index >= 0) {
+        DraggableListItem(
+            itemData = DraggableListItemData(
+                id = task.id.value,
+                originalData = task
+            ),
+            index = index,
+            isCurrentlyDragging = isCurrentlyDragging,
+            draggableListState = draggableListState,
+            dragHandle = {
+                Icon(
+                    imageVector = Icons.Default.DragIndicator,
+                    contentDescription = "순서 변경",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        ) {
+            TaskCard(
+                task = task,
+                isEditMode = isEditMode,
+                editingContent = editingContent,
+                isFocused = isFocused,
+                onEditingContentChange = { editingContent = it },
+                onFocusChange = { isFocused = it },
+                onStatusChange = onStatusChange,
+                onDelete = onDelete
+            )
+        }
+    } else {
+        TaskCard(
+            task = task,
+            isEditMode = isEditMode,
+            editingContent = editingContent,
+            isFocused = isFocused,
+            onEditingContentChange = { editingContent = it },
+            onFocusChange = { isFocused = it },
+            onStatusChange = onStatusChange,
+            onDelete = onDelete
+        )
+    }
+}
+
+@Composable
+private fun TaskCard(
+    task: TaskUiModel,
+    isEditMode: Boolean,
+    editingContent: String,
+    isFocused: Boolean,
+    onEditingContentChange: (String) -> Unit,
+    onFocusChange: (Boolean) -> Unit,
+    onStatusChange: (String, Boolean) -> Unit,
+    onDelete: (String) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -251,11 +337,11 @@ fun TaskItem(
                         
                         OutlinedTextField(
                             value = editingContent,
-                            onValueChange = { editingContent = it },
+                            onValueChange = onEditingContentChange,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { focusState ->
-                                    isFocused = focusState.isFocused
+                                    onFocusChange(focusState.isFocused)
                                 },
                             textStyle = MaterialTheme.typography.bodyLarge,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),

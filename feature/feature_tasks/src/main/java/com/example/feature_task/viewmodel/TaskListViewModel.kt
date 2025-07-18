@@ -154,6 +154,44 @@ class TaskListViewModel @Inject constructor(
         navigationManger.navigateBack()
     }
     
+    fun reorderTasks(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch {
+            try {
+                // 현재 Task 목록 가져오기
+                val currentTasks = uiState.value.tasks.toMutableList()
+                
+                // 범위 검증
+                if (fromIndex < 0 || fromIndex >= currentTasks.size || 
+                    toIndex < 0 || toIndex >= currentTasks.size) {
+                    return@launch
+                }
+                
+                // 임시로 UI 업데이트 (즉시 반영)
+                val movedTask = currentTasks.removeAt(fromIndex)
+                currentTasks.add(toIndex, movedTask)
+                
+                _uiState.value = _uiState.value.copy(tasks = currentTasks)
+                
+                // 서버에 순서 업데이트 - 모든 Task의 순서를 재계산하여 저장
+                currentTasks.forEachIndexed { index, task ->
+                    val result = taskUseCases.reorderTaskUseCase(task.id.value, index)
+                    result.onFailure { error ->
+                        // 개별 Task 순서 변경 실패 시 에러 로깅만 하고 계속 진행
+                        _uiState.value = _uiState.value.copy(
+                            errorMessage = "순서 변경 중 오류가 발생했습니다: ${error.message}"
+                        )
+                    }
+                }
+                
+            } catch (e: Exception) {
+                // 전체 실패 시 에러 표시
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "순서 변경 중 오류가 발생했습니다: ${e.message}"
+                )
+            }
+        }
+    }
+    
 }
 
 /**
