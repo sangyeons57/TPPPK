@@ -2,7 +2,9 @@ package com.example.domain.provider.task
 
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.RepositoryFactory
+import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.TaskRepository
+import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.TaskRepositoryFactoryContext
 import com.example.domain.usecase.task.CreateTaskUseCase
 import com.example.domain.usecase.task.CreateTaskUseCaseImpl
@@ -12,13 +14,12 @@ import com.example.domain.usecase.task.GetTasksUseCase
 import com.example.domain.usecase.task.GetTasksUseCaseImpl
 import com.example.domain.usecase.task.ObserveTasksUseCase
 import com.example.domain.usecase.task.ObserveTasksUseCaseImpl
+import com.example.domain.usecase.task.ToggleTaskCheckUseCase
+import com.example.domain.usecase.task.ToggleTaskCheckUseCaseImpl
 import com.example.domain.usecase.task.UpdateTaskStatusUseCase
 import com.example.domain.usecase.task.UpdateTaskStatusUseCaseImpl
 import com.example.domain.usecase.task.UpdateTaskUseCase
 import com.example.domain.usecase.task.UpdateTaskUseCaseImpl
-import com.example.domain.usecase.task.ToggleTaskCheckUseCase
-import com.example.domain.usecase.task.ToggleTaskCheckUseCaseImpl
-import com.example.domain.usecase.user.GetCurrentUserUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,7 +31,7 @@ import javax.inject.Singleton
 @Singleton
 class TaskUseCaseProvider @Inject constructor(
     private val taskRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<TaskRepositoryFactoryContext, TaskRepository>,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase
+    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
 ) {
 
 
@@ -49,6 +50,10 @@ class TaskUseCaseProvider @Inject constructor(
             TaskRepositoryFactoryContext(
                 collectionPath = CollectionPath.tasks(projectId, channelId)
             )
+        )
+
+        val authRepository = authRepositoryFactory.create(
+            AuthRepositoryFactoryContext()
         )
 
         return TaskUseCases(
@@ -70,7 +75,7 @@ class TaskUseCaseProvider @Inject constructor(
             
             toggleTaskCheckUseCase = ToggleTaskCheckUseCaseImpl(
                 taskRepository = taskRepository,
-                getCurrentUserUseCase = getCurrentUserUseCase
+                authRepository = authRepository,
             ),
             
             getTasksUseCase = GetTasksUseCaseImpl(

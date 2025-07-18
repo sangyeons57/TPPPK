@@ -3,19 +3,18 @@ package com.example.feature_task.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.core_navigation.extension.getRequiredString
-import com.example.core_navigation.destination.RouteArgs
+import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.destination.RouteArgs
+import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.task.TaskType
 import com.example.domain.provider.task.TaskUseCaseProvider
 import com.example.domain.provider.task.TaskUseCases
 import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.domain.provider.user.UserUseCases
-import com.example.domain.model.base.Task
-import com.example.domain.model.vo.task.TaskType
-import com.example.domain.model.vo.task.TaskStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.feature_task.model.TaskUiModel
 import com.example.feature_task.mapper.TaskMapper
+import com.example.feature_task.model.TaskUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +47,7 @@ class TaskListViewModel @Inject constructor(
     )
     
     private val userUseCases: UserUseCases = userUseCaseProvider.createForUser()
-    
+
     private val _uiState = MutableStateFlow(
         TaskListUiState(
             projectId = projectId,
@@ -70,13 +69,13 @@ class TaskListViewModel @Inject constructor(
                         val tasksWithUserNames = tasks.map { task ->
                             val checkedByName = task.checkedBy?.let { userId ->
                                 when (val userResult = userUseCases.getUserByIdUseCase(DocumentId(userId.internalValue))) {
-                                    is com.example.core_common.result.CustomResult.Success -> userResult.data.name.value
+                                    is CustomResult.Success -> userResult.data.name.value
                                     else -> null
                                 }
                             }
                             TaskMapper.toUiModel(task, checkedByName)
                         }
-                        
+
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             tasks = tasksWithUserNames,
@@ -152,7 +151,7 @@ class TaskListViewModel @Inject constructor(
     }
     
     fun navigateBack() {
-        navigationManger.navigateUp()
+        navigationManger.navigateBack()
     }
     
 }

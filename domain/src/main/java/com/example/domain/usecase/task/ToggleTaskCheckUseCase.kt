@@ -5,8 +5,8 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.TaskRepository
-import com.example.domain.usecase.user.GetCurrentUserUseCase
 import javax.inject.Inject
 
 /**
@@ -18,7 +18,7 @@ interface ToggleTaskCheckUseCase {
 
 class ToggleTaskCheckUseCaseImpl @Inject constructor(
     private val taskRepository: TaskRepository,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase
+    private val authRepository: AuthRepository,
 ) : ToggleTaskCheckUseCase {
     
     override suspend operator fun invoke(taskId: String): CustomResult<Unit, Exception> {
@@ -33,13 +33,13 @@ class ToggleTaskCheckUseCaseImpl @Inject constructor(
         // 체크박스 타입인 경우에만 토글
         if (task.taskType.isCheckbox()) {
             val newTaskType = task.taskType.toggleChecked()
-            
+
             // 체크된 상태로 변경하는 경우 현재 사용자와 시간 저장
             if (newTaskType.isChecked()) {
-                val currentUserResult = getCurrentUserUseCase()
+                val currentUserResult = authRepository.getCurrentUserSession()
                 when (currentUserResult) {
                     is CustomResult.Success -> {
-                        val currentUserId = UserId(currentUserResult.data.id.internalValue)
+                        val currentUserId = UserId(currentUserResult.data.userId.internalValue)
                         task.updateTaskType(newTaskType, currentUserId, DateTimeUtil.SERVER_TIMESTAMP_MARKER)
                     }
                     is CustomResult.Failure -> return CustomResult.Failure(currentUserResult.error)
