@@ -75,8 +75,8 @@ fun TaskListScreen(
             )
         },
         floatingActionButton = {
-            // 보기 모드가 아닐 때만 FAB 표시
-            if (!isEditMode) {
+            // 편집 모드일 때만 FAB 표시 (보기 모드에서는 숨김)
+            if (isEditMode) {
                 TaskCreationFab(
                     expanded = fabExpanded,
                     onExpandedChange = { fabExpanded = it },
