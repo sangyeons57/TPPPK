@@ -162,25 +162,37 @@ class TaskListViewModel @Inject constructor(
                 
                 // 범위 검증
                 if (fromIndex < 0 || fromIndex >= currentTasks.size || 
-                    toIndex < 0 || toIndex >= currentTasks.size) {
+                    toIndex < 0 || toIndex >= currentTasks.size || 
+                    fromIndex == toIndex) {
                     return@launch
                 }
                 
-                // 임시로 UI 업데이트 (즉시 반영)
-                val movedTask = currentTasks.removeAt(fromIndex)
-                currentTasks.add(toIndex, movedTask)
+                // 스와핑 방식으로 두 아이템의 위치만 바꾸기
+                val temp = currentTasks[fromIndex]
+                currentTasks[fromIndex] = currentTasks[toIndex]
+                currentTasks[toIndex] = temp
                 
+                // 임시로 UI 업데이트 (즉시 반영)
                 _uiState.value = _uiState.value.copy(tasks = currentTasks)
                 
-                // 서버에 순서 업데이트 - 모든 Task의 순서를 재계산하여 저장
-                currentTasks.forEachIndexed { index, task ->
-                    val result = taskUseCases.reorderTaskUseCase(task.id.value, index)
-                    result.onFailure { error ->
-                        // 개별 Task 순서 변경 실패 시 에러 로깅만 하고 계속 진행
-                        _uiState.value = _uiState.value.copy(
-                            errorMessage = "순서 변경 중 오류가 발생했습니다: ${error.message}"
-                        )
-                    }
+                // 서버에 순서 업데이트 - 변경된 두 아이템의 순서만 업데이트
+                val task1 = currentTasks[fromIndex]
+                val task2 = currentTasks[toIndex]
+                
+                // 첫 번째 아이템 순서 업데이트
+                val result1 = taskUseCases.reorderTaskUseCase(task1.id.value, fromIndex)
+                result1.onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "순서 변경 중 오류가 발생했습니다: ${error.message}"
+                    )
+                }
+                
+                // 두 번째 아이템 순서 업데이트
+                val result2 = taskUseCases.reorderTaskUseCase(task2.id.value, toIndex)
+                result2.onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "순서 변경 중 오류가 발생했습니다: ${error.message}"
+                    )
                 }
                 
             } catch (e: Exception) {

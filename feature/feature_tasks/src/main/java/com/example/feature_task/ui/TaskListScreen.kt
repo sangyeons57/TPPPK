@@ -165,6 +165,20 @@ fun TaskListScreen(
                     }
                 )
                 
+                // Update draggable list state when tasks change (but not during drag)
+                LaunchedEffect(sortedTasks) {
+                    if (!draggableListState.isDragging) {
+                        draggableListState.updateItems(
+                            sortedTasks.map { task ->
+                                DraggableListItemData(
+                                    id = task.id.value,
+                                    originalData = task
+                                )
+                            }
+                        )
+                    }
+                }
+                
                 DraggableList(
                     state = draggableListState,
                     modifier = Modifier
@@ -269,7 +283,8 @@ fun TaskItem(
                 onEditingContentChange = { editingContent = it },
                 onFocusChange = { isFocused = it },
                 onStatusChange = onStatusChange,
-                onDelete = onDelete
+                onDelete = onDelete,
+                isCurrentlyDragging = isCurrentlyDragging
             )
         }
     } else {
@@ -281,7 +296,8 @@ fun TaskItem(
             onEditingContentChange = { editingContent = it },
             onFocusChange = { isFocused = it },
             onStatusChange = onStatusChange,
-            onDelete = onDelete
+            onDelete = onDelete,
+            isCurrentlyDragging = false
         )
     }
 }
@@ -295,16 +311,19 @@ private fun TaskCard(
     onEditingContentChange: (String) -> Unit,
     onFocusChange: (Boolean) -> Unit,
     onStatusChange: (String, Boolean) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    isCurrentlyDragging: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isCurrentlyDragging) 8.dp else 2.dp
+        ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isEditMode) {
-                MaterialTheme.colorScheme.surfaceVariant
-            } else {
-                MaterialTheme.colorScheme.surface
+            containerColor = when {
+                isCurrentlyDragging -> MaterialTheme.colorScheme.primaryContainer
+                isEditMode -> MaterialTheme.colorScheme.surfaceVariant
+                else -> MaterialTheme.colorScheme.surface
             }
         )
     ) {

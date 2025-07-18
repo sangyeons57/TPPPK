@@ -70,6 +70,7 @@ fun <T> DraggableListItem(
     },
     content: @Composable BoxScope.() -> Unit
 ) {
+    // 드래그 중일 때 전체 Row가 함께 이동하도록 수정
     val itemDisplayModifier = if (isCurrentlyDragging) {
         modifier.offset { IntOffset(0, draggableListState.draggedItemOffsetY.roundToInt()) }
     } else {
@@ -77,23 +78,22 @@ fun <T> DraggableListItem(
     }
 
     Row(
-        modifier = itemDisplayModifier.fillMaxWidth(),
+        modifier = itemDisplayModifier
+            .fillMaxWidth()
+            .pointerInput(itemData.id) { 
+                detectDragGestures(
+                    onDragStart = { draggableListState.startDrag(index) },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        draggableListState.onDrag(dragAmount.y)
+                    },
+                    onDragEnd = { draggableListState.endDrag() },
+                    onDragCancel = { draggableListState.cancelDrag() }
+                )
+            },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .pointerInput(itemData.id) { 
-                    detectDragGestures(
-                        onDragStart = { draggableListState.startDrag(index) },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            draggableListState.onDrag(dragAmount.y)
-                        },
-                        onDragEnd = { draggableListState.endDrag() },
-                        onDragCancel = { draggableListState.cancelDrag() }
-                    )
-                }
-        ) {
+        Box {
             dragHandle()
         }
         Spacer(modifier = Modifier.width(8.dp))
