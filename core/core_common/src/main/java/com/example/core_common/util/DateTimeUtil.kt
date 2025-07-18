@@ -19,6 +19,13 @@ import java.util.Date
  * 프로젝트 전체에서 일관된 날짜/시간 처리를 위해 사용합니다.
  */
 object DateTimeUtil {
+    
+    /**
+     * 서버 타임스탬프를 요청하는 마커 값
+     * 이 값이 설정되면 Repository에서 FieldValue.serverTimestamp()로 변환됨
+     */
+    val SERVER_TIMESTAMP_MARKER: Instant = Instant.ofEpochSecond(0)
+    
     // 자주 사용되는 날짜/시간 포맷 패턴
     private val DATE_PATTERN = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private val TIME_PATTERN = DateTimeFormatter.ofPattern("HH:mm")

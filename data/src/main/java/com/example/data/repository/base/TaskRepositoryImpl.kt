@@ -10,6 +10,7 @@ import com.example.domain.model.base.Task
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.TaskRepository
 import com.example.domain.repository.factory.context.TaskRepositoryFactoryContext
+import com.google.firebase.firestore.FieldValue
 import javax.inject.Inject
 
 class TaskRepositoryImpl @Inject constructor(
@@ -24,7 +25,14 @@ class TaskRepositoryImpl @Inject constructor(
         return if (entity.isNew) {
             taskRemoteDataSource.create(entity.toDto())
         } else {
-            taskRemoteDataSource.update(entity.id, entity.getChangedFields())
+            val changedFields = entity.getChangedFields().toMutableMap()
+            
+            // checkedAt이 서버 타임스탬프 마커인 경우 FieldValue.serverTimestamp()로 변환
+            if (entity.isCheckedAtServerTimestamp()) {
+                changedFields[Task.KEY_CHECKED_AT] = FieldValue.serverTimestamp()
+            }
+            
+            taskRemoteDataSource.update(entity.id, changedFields)
         }
     }
 }

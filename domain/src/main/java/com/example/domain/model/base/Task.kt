@@ -54,6 +54,13 @@ class Task private constructor(
             KEY_UPDATED_AT to this.updatedAt
         )
     }
+    
+    /**
+     * checkedAt이 서버 타임스탬프 마커인지 확인
+     */
+    fun isCheckedAtServerTimestamp(): Boolean {
+        return checkedAt == DateTimeUtil.SERVER_TIMESTAMP_MARKER
+    }
 
     /**
      * Updates the task type.

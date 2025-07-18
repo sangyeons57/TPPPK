@@ -40,7 +40,7 @@ class ToggleTaskCheckUseCaseImpl @Inject constructor(
                 when (currentUserResult) {
                     is CustomResult.Success -> {
                         val currentUserId = UserId(currentUserResult.data.id.internalValue)
-                        task.updateTaskType(newTaskType, currentUserId, DateTimeUtil.nowInstant())
+                        task.updateTaskType(newTaskType, currentUserId, DateTimeUtil.SERVER_TIMESTAMP_MARKER)
                     }
                     is CustomResult.Failure -> return CustomResult.Failure(currentUserResult.error)
                     is CustomResult.Initial -> return CustomResult.Initial
