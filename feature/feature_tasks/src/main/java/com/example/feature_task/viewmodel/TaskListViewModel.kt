@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.extension.getRequiredString
 import com.example.core_navigation.destination.RouteArgs
+import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.task.TaskUseCaseProvider
 import com.example.domain.provider.task.TaskUseCases
 import com.example.domain.provider.user.UserUseCaseProvider
@@ -32,6 +33,7 @@ import javax.inject.Inject
 class TaskListViewModel @Inject constructor(
     private val taskUseCaseProvider: TaskUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
+    private val navigationManger: NavigationManger,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
@@ -147,6 +149,10 @@ class TaskListViewModel @Inject constructor(
     
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+    
+    fun navigateBack() {
+        navigationManger.navigateUp()
     }
     
 }

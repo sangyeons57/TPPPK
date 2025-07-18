@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.components.fab.ExtendableFab
 import com.example.core_ui.components.fab.FabMenuItem
 import com.example.core_ui.components.fab.FabLabelStyle
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.feature_task.viewmodel.TaskListViewModel
 import com.example.feature_task.model.TaskUiModel
 import com.example.domain.model.vo.task.TaskStatus
@@ -45,7 +46,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun TaskListScreen(
     modifier: Modifier = Modifier,
-    viewModel: TaskListViewModel = hiltViewModel(),
+    viewModel: TaskListViewModel = hiltViewModel()
     ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var fabExpanded by remember { mutableStateOf(false) }
@@ -57,6 +58,11 @@ fun TaskListScreen(
             TopAppBar(
                 title = { 
                     Text("작업 관리") 
+                },
+                navigationIcon = {
+                    DebouncedBackButton(
+                        onClick = { viewModel.navigateBack() }
+                    )
                 },
                 actions = {
                     IconButton(
@@ -266,7 +272,7 @@ fun TaskItem(
                         )
                     } else {
                         Text(
-                            text = if (task.title.isNotBlank()) task.title else task.content.value,
+                            text = task.content.value,
                             style = MaterialTheme.typography.bodyLarge,
                             color = if (task.isCompleted) {
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -274,14 +280,6 @@ fun TaskItem(
                                 MaterialTheme.colorScheme.onSurface
                             }
                         )
-                        
-                        if (task.taskType.isCheckbox() && task.description.isNotBlank()) {
-                            Text(
-                                text = task.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                         
                         // 체크된 작업인 경우 체크한 사람과 시간 표시
                         if (task.isCompleted && task.checkedBy != null && task.checkedAt != null) {
