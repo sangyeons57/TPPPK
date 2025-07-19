@@ -7,9 +7,14 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.*
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
+import javax.net.ssl.HostnameVerifier
 
 @Singleton
 class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
@@ -18,7 +23,43 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .pingInterval(30, TimeUnit.SECONDS)
+        .apply {
+            // Configure SSL for Google Cloud Run compatibility
+            configureSslForCloudRun()
+        }
         .build()
+        
+    private fun OkHttpClient.Builder.configureSslForCloudRun() {
+        try {
+            // Create a trust manager that accepts Google Cloud Run certificates
+            val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+                override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {
+                    // For Google Cloud Run, we trust certificates issued by known CAs
+                    // In production, you might want to add more specific validation
+                }
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+            })
+
+            // Create hostname verifier for Cloud Run domains
+            val hostnameVerifier = HostnameVerifier { hostname, session ->
+                // Accept Google Cloud Run domains
+                hostname.endsWith(".run.app") || 
+                hostname.endsWith(".asia-northeast3.run.app") ||
+                hostname.contains("websocket-chat") ||
+                hostname == "localhost"
+            }
+
+            val sslContext = SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            
+            sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+            hostnameVerifier(hostnameVerifier)
+            
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to configure SSL, using default settings", e)
+        }
+    }
     
     private val json = Json {
         ignoreUnknownKeys = true

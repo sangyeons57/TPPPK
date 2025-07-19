@@ -1,6 +1,5 @@
 package com.example.domain.model.base
 
-import com.example.core_common.constants.Constants
 import com.example.domain.model.AggregateRoot
 import com.example.domain.event.category.CategoryCreatedEvent // These will be defined in the next step
 import com.example.domain.event.category.CategoryNameChangedEvent // These will be defined in the next step

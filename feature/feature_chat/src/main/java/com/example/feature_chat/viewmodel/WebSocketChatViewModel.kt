@@ -14,6 +14,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.provider.chat.ChatUseCaseProvider
+import com.example.domain.provider.chat.ChatUseCases
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
@@ -38,8 +39,8 @@ class WebSocketChatViewModel @Inject constructor(
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
     private val roomId: String get() = "chat_room_$channelId" // Convert channelId to roomId format
 
-    private val chatUseCases by lazy { 
-        chatUseCaseProvider.createForChannel(channelId)
+    private val chatUseCases: ChatUseCases by lazy { 
+        chatUseCaseProvider.createForDMChannel(channelId)
     }
 
     private val _uiState = MutableStateFlow(
@@ -64,7 +65,7 @@ class WebSocketChatViewModel @Inject constructor(
     private fun initializeChat() {
         viewModelScope.launch {
             // Initialize connection to WebSocket server
-            val serverUrl = "wss://your-websocket-server.com/chat" // TODO: Get from config
+            val serverUrl = "wss://websocket-chat-445853245473-asia-northeast3.run.app/" // TODO: Get from config
             val authToken = getCurrentUserAuthToken() // TODO: Get from auth repository
             
             if (authToken != null) {
@@ -427,7 +428,7 @@ class WebSocketChatViewModel @Inject constructor(
 
     fun retryConnection() {
         viewModelScope.launch {
-            val serverUrl = "wss://your-websocket-server.com/chat" // TODO: Get from config
+            val serverUrl = "ws://localhost:8080/chat" // Local development server
             val authToken = getCurrentUserAuthToken()
             
             if (authToken != null) {

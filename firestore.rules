@@ -83,19 +83,23 @@ service cloud.firestore {
 
         // === DM 채널 (dm_channels) ===
         match /dm_channels/{dmChannelId} {
-            // DM 채널 정보 읽기: 참가자만
-            allow read: if isAuthenticated();
+            // DM 채널 정보 읽기: 참가자만 (참가자 체크를 위해 일단 읽기 허용)
+            allow read: if isAuthenticated() &&
+                        request.auth.uid in resource.data.participants;
             // DM 채널 생성: 인증된 사용자이고, 생성자가 참가자 중 한 명이며, 참가자는 2명
-            allow create: if isAuthenticated();
+            allow create: if isAuthenticated() &&
+                         request.resource.data.participants.size() == 2 &&
+                         request.auth.uid in request.resource.data.participants;
             // DM 채널 업데이트 (예: lastMessagePreview - 주로 서버에서 업데이트)
-            allow update: if isAuthenticated();
+            allow update: if isAuthenticated() &&
+                         request.auth.uid in resource.data.participants;
             // DM 채널 삭제: (일반적으로 허용 안 함 또는 soft delete)
             allow delete: if false;
 
             // --- DM 채널 서브콜렉션 ---
             // 메시지 (messages)
             match /messages/{messageId} {
-                // 메시지 읽기: DM 채널 참가자만
+                // 메시지 읽기: DM 채널 참가자만 (상위 경로에서 이미 참가자 체크됨)
                 allow read: if isAuthenticated() &&
                              request.auth.uid in get(/databases/$(database)/documents/dm_channels/$(dmChannelId)).data.participants;
                 // 메시지 생성: DM 채널 참가자이고, 발신자가 본인
