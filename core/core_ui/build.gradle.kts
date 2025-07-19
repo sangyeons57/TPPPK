@@ -56,41 +56,36 @@ dependencies {
     implementation(libs.firebase.storage.ktx)
     
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    implementation(libs.androidx.compose.activity)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.runtime)
 
     // Coil for image loading
-    implementation(libs.coil.compose)
+    implementation(libs.androidx.compose.coil)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     // Material Icons Extended (DriveFileRenameOutline, EditNote 아이콘 등을 위한 라이브러리)
-    implementation(libs.material.icons.extended)
+    implementation(libs.androidx.compose.material.icons.extended)
     
     // Compose 애니메이션 라이브러리 (animateItemPlacement 등을 위한 라이브러리)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.runtime)
-    
-    // Compose Foundation 라이브러리 (animateItemPlacement 사용)
-    implementation(libs.androidx.foundation)
-    implementation(libs.androidx.foundation.layout)
-    implementation(libs.androidx.animation)
+    implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.compose.animation)
 
     // Hilt Core
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.android)
-    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.compose.hilt.navigation)
 
 }

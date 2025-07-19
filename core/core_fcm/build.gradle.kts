@@ -60,11 +60,11 @@ dependencies {
     // Hilt
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.android)
-    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.compose.hilt.navigation)
 
     // Compose (for test UI)
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.material3)
+    implementation(libs.androidx.compose.material3)
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

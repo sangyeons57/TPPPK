@@ -62,20 +62,20 @@ dependencies {
     
     // Compose
     implementation(platform(libs.androidx.compose.bom)) // BOM 버전은 프로젝트와 통일
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.material3)
-    implementation(libs.androidx.material.icons.core) // 아이콘 사용
-    implementation(libs.material.icons.extended) // 아이콘 사용
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core) // 아이콘 사용
+    implementation(libs.androidx.compose.material.icons.extended) // 아이콘 사용
 
     // Navigation
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.compose.navigation)
+    implementation(libs.androidx.compose.hilt.navigation)
 
     // Lifecycle
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.compose.lifecycle.viewmodel)
+    implementation(libs.androidx.compose.lifecycle.runtime)
     
     // DI
     implementation(libs.androidx.core.ktx) // 버전 통일
@@ -83,7 +83,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     // Coil (Image Loading)
-    implementation(libs.coil.compose) // 버전 통일
+    implementation(libs.androidx.compose.coil) // 버전 통일
 
     
     // 코루틴

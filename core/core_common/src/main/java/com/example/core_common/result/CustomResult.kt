@@ -76,10 +76,10 @@ sealed class CustomResult<out S, out E> {
     }
 
     suspend fun <T> suspendSuccessProcess(
-        onSuccess: suspend (S) -> Success<T>,
+        onSuccess: suspend (S) -> T,
     ): CustomResult<T, E> {
         return when (this) {
-            is Success -> onSuccess(data)
+            is Success -> Success(onSuccess(data))
             is Failure -> Failure(this.error)
             is Initial -> Initial
             is Loading -> Loading

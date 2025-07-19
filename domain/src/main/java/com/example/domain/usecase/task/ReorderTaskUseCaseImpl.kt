@@ -1,6 +1,7 @@
 package com.example.domain.usecase.task
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Task
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.task.TaskOrder
 import com.example.domain.repository.base.TaskRepository
@@ -21,22 +22,12 @@ class ReorderTaskUseCaseImpl(
             
             // Task를 조회
             val taskResult = taskRepository.findById(taskDocumentId)
-            
-            when (taskResult) {
-                is CustomResult.Success -> {
-                    val task = taskResult.data
-                    
-                    // 새로운 순서로 Task 업데이트
-                    val updatedTask = task.updateOrder(TaskOrder(newOrder))
-                    
-                    // 저장
-                    taskRepository.save(updatedTask)
-                    
-                    CustomResult.Success(Unit)
-                }
-                is CustomResult.Failure -> {
-                    CustomResult.Failure(taskResult.error)
-                }
+
+            taskResult.suspendSuccessProcess {
+                val task = it as Task
+                val updatedTask = task.updateOrder(TaskOrder(newOrder))
+                taskRepository.save(task)
+                Unit
             }
         } catch (e: Exception) {
             CustomResult.Failure(e)

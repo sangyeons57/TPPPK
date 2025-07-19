@@ -46,16 +46,16 @@ dependencies {
     implementation(libs.material)
 
     // Navigation
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.compose.navigation)
+    implementation(libs.androidx.compose.hilt.navigation)
     
     // Compose UI
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.material3)
-    implementation(libs.androidx.material.icons.core)
-    implementation(libs.material.icons.extended)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
     
 
     // Firebase - 최소 필요한 의존성만 추가

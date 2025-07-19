@@ -21,13 +21,7 @@ subprojects {
             }
         }
         
-        // Kotlin compile options (applies to all Kotlin-enabled modules)
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
-        }
-        
+
         // Android compile options (applies to Android modules)
         extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
             compileOptions {

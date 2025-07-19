@@ -46,7 +46,6 @@ class SuspendAccountUseCaseImpl @Inject constructor(
         return userRepository.save(user).suspendSuccessProcess {
             // Step 5: Publish domain events.
             domainEventPublisher.publish(user)
-            CustomResult.Success(Unit)
         }
     }
 }
