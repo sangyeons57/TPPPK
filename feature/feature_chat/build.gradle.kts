@@ -81,6 +81,9 @@ dependencies {
     // WebSocket dependencies
     implementation(libs.okhttp.websocket)
     implementation(libs.kotlinx.serialization.json)
+    
+    // Google Cloud Logging for dual logging
+    implementation(libs.google.cloud.logging)
 
     // Paging dependencies
     implementation(libs.androidx.paging.runtime)

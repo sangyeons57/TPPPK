@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +55,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 // R import might be removed if UserProfileImage handles it all and no other direct R.drawable is used.
 // For now, assume it might still be needed for fallbacks in UserProfileImage or other icons.
 import com.example.core_ui.R
+import com.example.feature_chat.ui.components.ConnectionStatusBar
 // ViewModel 및 관련 모델 Import
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
@@ -75,8 +77,10 @@ import java.time.Instant
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(
+    roomId: String,
+    onNavigateBack: () -> Unit,
+    onNavigateToProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
-    navigationManger: NavigationManger,
     viewModel: WebSocketChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -149,7 +153,9 @@ fun ChatScreen(
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
-        modifier = modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+        modifier = modifier
+            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .testTag("chat_screen"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -189,31 +195,42 @@ fun ChatScreen(
             }
         }
     ) { innerPadding ->
-        // TODO: WebSocket 구현 후 메시지 목록 활성화
-        if (uiState.error != null && uiState.error?.contains("WebSocket 구현 예정") == true) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "채팅 기능을 현재 사용할 수 없습니다.\n(WebSocket 구현 예정)",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-        ChatMessagesList(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            uiState = uiState,
-            listState = listState,
-            onMessageLongClick = viewModel::onMessageLongClick, // ViewModel 함수 직접 전달
-            onUserProfileClick = viewModel::onUserProfileClick // ViewModel 함수 직접 전달
-        )
+                .padding(innerPadding)
+        ) {
+            // Connection Status Bar
+            ConnectionStatusBar(
+                connectionState = uiState.connectionState,
+                queuedMessagesCount = uiState.queuedMessagesCount,
+                onRetryConnection = { viewModel.retryConnection() }
+            )
+            
+            // 메시지 목록 또는 에러 메시지
+            // TODO: WebSocket 구현 후 메시지 목록 활성화
+            if (uiState.error != null && uiState.error?.contains("WebSocket 구현 예정") == true) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "채팅 기능을 현재 사용할 수 없습니다.\n(WebSocket 구현 예정)",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                ChatMessagesList(
+                    modifier = Modifier.fillMaxSize(),
+                    uiState = uiState,
+                    listState = listState,
+                    onMessageLongClick = viewModel::onMessageLongClick, // ViewModel 함수 직접 전달
+                    onUserProfileClick = viewModel::onUserProfileClick // ViewModel 함수 직접 전달
+                )
+            }
         }
     }
 
@@ -265,7 +282,9 @@ fun ChatMessagesList(
     onUserProfileClick: (String) -> Unit // Int -> String 타입으로 수정
 ) {
     LazyColumn(
-        modifier = modifier.padding(horizontal = 8.dp),
+        modifier = modifier
+            .padding(horizontal = 8.dp)
+            .testTag("message_list"),
         state = listState,
         reverseLayout = true // 최신 메시지가 하단에, 스크롤은 위로
     ) {
@@ -278,28 +297,45 @@ fun ChatMessagesList(
             }
         }
 
-        // 메시지 목록 표시
+        // 메시지 목록 표시 (최적화된 렌더링)
         items(
             items = uiState.messages,
             key = { it.localId } // ★ 안정적인 키 사용
         ) { message ->
+            // 메시지 최적화: 같은 사용자의 연속 메시지 그룹화
+            val isFirstInGroup = uiState.messages.indexOfFirst { it.localId == message.localId }
+                .let { index -> 
+                    index == 0 || 
+                    uiState.messages.getOrNull(index - 1)?.userId != message.userId ||
+                    // 시간 차이가 5분 이상나면 새 그룹으로 처리
+                    kotlin.math.abs(
+                        (uiState.messages.getOrNull(index - 1)?.actualTimestamp?.epochSecond ?: 0) - 
+                        message.actualTimestamp.epochSecond
+                    ) > 300
+                }
+            
             ChatMessageItemComposable(
-                message = message, // ★ 타입 변경됨
+                message = message,
+                isFirstInGroup = isFirstInGroup,
                 onLongClick = { onMessageLongClick(message) },
-                onUserProfileClick = { onUserProfileClick(message.userId) } // userId는 String 타입
+                onUserProfileClick = { onUserProfileClick(message.userId) }
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 메시지 간 간격 (그룹 내에서는 작게, 그룹 간에는 크게)
+            Spacer(modifier = Modifier.height(if (isFirstInGroup) 12.dp else 4.dp))
         }
     }
 }
 
 /**
  * ChatMessageItemComposable: 단일 채팅 메시지 UI (Stateless)
+ * isFirstInGroup: 메시지 그룹의 첫 번째 메시지인지 여부 (프로필 이미지, 이름 표시용)
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChatMessageItemComposable(
     message: ChatMessageUiModel, // ★ 타입 변경
+    isFirstInGroup: Boolean = true,
     onLongClick: () -> Unit,
     onUserProfileClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -320,17 +356,22 @@ fun ChatMessageItemComposable(
                 .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 프로필 이미지 (내가 보낸 메시지에는 숨길 수도 있음)
+            // 프로필 이미지 (내가 보낸 메시지가 아니고, 그룹의 첫 번째 메시지일 때만 표시)
             if (!message.isMyMessage) {
-                UserProfileImage(
-                    userId = message.userId,
-                    contentDescription = "${message.userName} 프로필",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onUserProfileClick),
-                    // contentScale is handled by UserProfileImage default or can be passed if needed
-                )
+                if (isFirstInGroup) {
+                    UserProfileImage(
+                        userId = message.userId,
+                        contentDescription = "${message.userName} 프로필",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable(onClick = onUserProfileClick),
+                        // contentScale is handled by UserProfileImage default or can be passed if needed
+                    )
+                } else {
+                    // 그룹 내 후속 메시지에는 빈 공간 유지 (정렬 맞춤용)
+                    Spacer(modifier = Modifier.size(40.dp))
+                }
             }
 
             // 메시지 내용 영역
@@ -343,8 +384,8 @@ fun ChatMessageItemComposable(
                         onLongClick = onLongClick
                     )
             ) {
-                // 사용자 이름 (다른 사람 메시지에만 표시)
-                if (!message.isMyMessage) {
+                // 사용자 이름 (다른 사람 메시지의 첫 번째 메시지에만 표시)
+                if (!message.isMyMessage && isFirstInGroup) {
                     Text(
                         text = message.userName,
                         fontWeight = FontWeight.Bold,
@@ -399,33 +440,47 @@ fun ChatMessageItemComposable(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // 시간 및 상태 표시 (정렬 조정)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (message.isMyMessage) Arrangement.End else Arrangement.Start, // 시간 오른쪽/왼쪽 정렬
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (message.isModified) {
+                // 시간 및 상태 표시 (그룹의 첫 번째 메시지 또는 내 메시지에만 표시)
+                if (isFirstInGroup || message.isMyMessage) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = if (message.isMyMessage) Arrangement.End else Arrangement.Start, // 시간 오른쪽/왼쪽 정렬
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (message.isModified) {
+                            Text(
+                                text = " (수정됨)",
+                                fontSize = 10.sp,
+                                fontStyle = FontStyle.Italic,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
                         Text(
-                            text = " (수정됨)",
+                            text = message.formattedTimestamp, // ★ 포맷된 시간 사용
                             fontSize = 10.sp,
-                            fontStyle = FontStyle.Italic,
                             color = MaterialTheme.colorScheme.outline
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    Text(
-                        text = message.formattedTimestamp, // ★ 포맷된 시간 사용
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    // 전송 중 또는 실패 아이콘 (내 메시지일 때만)
-                    if(message.isMyMessage) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        if (message.isSending) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.dp)
-                        } else if (message.sendFailed) {
-                            Icon(Icons.Default.ErrorOutline, contentDescription = "전송 실패", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(12.dp))
+                        // 전송 중 또는 실패 아이콘 (내 메시지일 때만)
+                        if(message.isMyMessage) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            if (message.isSending) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .testTag("delivery_indicator"), 
+                                    strokeWidth = 1.dp
+                                )
+                            } else if (message.sendFailed) {
+                                Icon(
+                                    Icons.Default.ErrorOutline, 
+                                    contentDescription = "전송 실패", 
+                                    tint = MaterialTheme.colorScheme.error, 
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .testTag("delivery_indicator")
+                                )
+                            }
                         }
                     }
                 }
@@ -460,7 +515,8 @@ fun ChatInputArea(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .testTag("edit_mode_input"),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -518,7 +574,9 @@ fun ChatInputArea(
                 OutlinedTextField(
                     value = uiState.pendingMessageText,
                     onValueChange = onMessageChange,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("message_input_field"),
                     placeholder = { Text("메시지 입력...") },
                     maxLines = 4, // 여러 줄 입력 가능
                     colors = TextFieldDefaults.colors( // 배경 투명하게
@@ -537,7 +595,8 @@ fun ChatInputArea(
                         // focusManager.clearFocus() // ViewModel에서 이벤트로 처리하는 것이 더 좋음
                     },
                     // 내용이 있거나, 이미지가 선택되었거나, 수정 중일 때 활성화. 단, 전송 중에는 비활성화
-                    enabled = !uiState.isSendingMessage && (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty())
+                    enabled = !uiState.isSendingMessage && (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
+                    modifier = Modifier.testTag("send_button")
                 ) {
                     // 전송 중이면 로딩 인디케이터, 아니면 아이콘 표시
                     if (uiState.isSendingMessage) {
@@ -696,11 +755,15 @@ fun EditDeleteChatDialog(
         confirmButton = {
             if (isMyMessage) { // 내 메시지일 경우에만 수정/삭제 버튼 표시
                 Row(horizontalArrangement = Arrangement.End, modifier=Modifier.fillMaxWidth()) {
-                    TextButton(onClick = onEdit) { Text("수정") }
+                    TextButton(
+                        onClick = onEdit,
+                        modifier = Modifier.testTag("edit_message_option")
+                    ) { Text("수정") }
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(
                         onClick = onDelete,
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.testTag("delete_message_option")
                     ) { Text("삭제") }
                 }
             } else { // 다른 사람 메시지면 확인 버튼만 (또는 신고 버튼 등 추가 가능)

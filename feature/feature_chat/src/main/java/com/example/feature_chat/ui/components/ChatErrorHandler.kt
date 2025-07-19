@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -22,11 +23,14 @@ fun ChatErrorSnackbar(
 ) {
     if (errorMessage != null) {
         Snackbar(
-            modifier = modifier,
+            modifier = modifier.testTag("error_message"),
             action = {
                 Row {
                     if (onRetry != null) {
-                        TextButton(onClick = onRetry) {
+                        TextButton(
+                            onClick = onRetry,
+                            modifier = Modifier.testTag("reconnect_button")
+                        ) {
                             Text("재시도")
                         }
                     }

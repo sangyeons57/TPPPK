@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,7 +77,8 @@ fun ConnectionStatusBar(
                 .clickable(enabled = connectionState !is WebSocketConnectionState.Connecting) {
                     onRetryConnection()
                 }
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .testTag("connection_status_bar"),
             colors = CardDefaults.cardColors(
                 containerColor = color.copy(alpha = 0.1f)
             ),
@@ -105,7 +107,8 @@ fun ConnectionStatusBar(
                     text = text,
                     color = color,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.testTag("connection_status_text")
                 )
                 
                 if (connectionState is WebSocketConnectionState.Connecting) {
