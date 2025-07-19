@@ -17,10 +17,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 
 /**
@@ -43,13 +46,14 @@ fun <T> DraggableList(
         state = state.lazyListState,
         modifier = modifier
     ) {
+        // 보이는 위치가 실제 위치이므로 realtimeItems를 항상 사용
         itemsIndexed(
-            items = state.items,
-            key = key
-        ) { index, itemData ->
+            items = state.realtimeItems,
+            key = { _, item -> item.id } // ID 기반 키로 안정성 유지
+        ) { currentIndex, itemData ->
             val isCurrentlyDraggingItem = state.isDragging && state.draggedItemId == itemData.id
             
-            itemContent(index, itemData, isCurrentlyDraggingItem, state)
+            itemContent(currentIndex, itemData, isCurrentlyDraggingItem, state)
         }
     }
 }
@@ -70,30 +74,43 @@ fun <T> DraggableListItem(
     },
     content: @Composable BoxScope.() -> Unit
 ) {
-    // 드래그 중일 때 전체 Row가 함께 이동하도록 수정
+    // 드래그 중일 때 시각적 피드백 개선
     val itemDisplayModifier = if (isCurrentlyDragging) {
-        modifier.offset { IntOffset(0, draggableListState.draggedItemOffsetY.roundToInt()) }
+        modifier
+            .scale(1.02f) // 약간 확대
+            .zIndex(5f)
+            .graphicsLayer {
+                translationY = draggableListState.draggedItemOffsetY
+                shadowElevation = 8.dp.toPx() // 그림자 추가
+                // zIndex 대신 alpha와 scale로 최상위 시각적 효과 제공
+                alpha = 0.95f
+                scaleX = 1.05f
+                scaleY = 1.05f
+            }
     } else {
         modifier
+            .zIndex(0f)
     }
 
     Row(
         modifier = itemDisplayModifier
-            .fillMaxWidth()
-            .pointerInput(itemData.id) { 
-                detectDragGestures(
-                    onDragStart = { draggableListState.startDrag(index) },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        draggableListState.onDrag(dragAmount.y)
-                    },
-                    onDragEnd = { draggableListState.endDrag() },
-                    onDragCancel = { draggableListState.cancelDrag() }
-                )
-            },
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box {
+        Box(
+            modifier = Modifier
+                .pointerInput(itemData.id) { // 안정적인 ID 기반 키로 제스처 연속성 보장
+                    detectDragGestures(
+                        onDragStart = { draggableListState.startDragByItemId(itemData.id) },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            draggableListState.onDrag(dragAmount.y)
+                        },
+                        onDragEnd = { draggableListState.endDrag() },
+                        onDragCancel = { draggableListState.cancelDrag() }
+                    )
+                }
+        ) {
             dragHandle()
         }
         Spacer(modifier = Modifier.width(8.dp))
@@ -101,4 +118,4 @@ fun <T> DraggableListItem(
             content()
         }
     }
-} 
+}

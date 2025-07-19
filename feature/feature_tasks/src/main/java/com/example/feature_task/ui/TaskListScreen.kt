@@ -103,7 +103,7 @@ fun TaskListScreen(
             }
         }
     ) { paddingValues ->
-        Column(
+        Column (
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -152,7 +152,7 @@ fun TaskListScreen(
                 // Sort all tasks by order field instead of separating by type
                 val sortedTasks = uiState.tasks.sortedBy { it.order.value }
                 
-                // Create DraggableList state
+                // Create DraggableList state - 실시간 순서 기반 처리
                 val draggableListState = rememberDraggableListState(
                     initialItems = sortedTasks.map { task ->
                         DraggableListItemData(
@@ -161,7 +161,11 @@ fun TaskListScreen(
                         )
                     },
                     onItemMove = { _, fromIndex, toIndex ->
-                        viewModel.reorderTasks(fromIndex, toIndex)
+                        // 기존 콜백 (호환성을 위해 유지하지만 사용 안함)
+                    },
+                    onRealtimeReorder = { realtimeOrderedTasks ->
+                        // 드래그 완료 시 실시간 순서를 그대로 DB에 저장
+                        viewModel.finalizeReorder(realtimeOrderedTasks)
                     }
                 )
                 
@@ -256,7 +260,8 @@ fun TaskItem(
     LaunchedEffect(task.content.value) {
         editingContent = task.content.value
     }
-    
+
+
     // Wrap with DraggableListItem when in edit mode and draggable state is available
     if (isEditMode && draggableListState != null && index >= 0) {
         DraggableListItem(

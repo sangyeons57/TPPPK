@@ -154,54 +154,53 @@ class TaskListViewModel @Inject constructor(
         navigationManger.navigateBack()
     }
     
-    fun reorderTasks(fromIndex: Int, toIndex: Int) {
+    // 드래그 중에는 데이터 변경 없이 시각적 피드백만 제공
+    // 실제 데이터 변경은 finalizeReorder에서만 수행
+    
+    fun finalizeReorder(realtimeOrderedTasks: List<TaskUiModel>) {
         viewModelScope.launch {
             try {
-                // 현재 Task 목록 가져오기
-                val currentTasks = uiState.value.tasks.toMutableList()
+                // 드래그 중 이미 적용된 실시간 순서를 그대로 사용
+                _uiState.value = _uiState.value.copy(tasks = realtimeOrderedTasks)
                 
-                // 범위 검증
-                if (fromIndex < 0 || fromIndex >= currentTasks.size || 
-                    toIndex < 0 || toIndex >= currentTasks.size || 
-                    fromIndex == toIndex) {
-                    return@launch
-                }
-                
-                // 스와핑 방식으로 두 아이템의 위치만 바꾸기
-                val temp = currentTasks[fromIndex]
-                currentTasks[fromIndex] = currentTasks[toIndex]
-                currentTasks[toIndex] = temp
-                
-                // 임시로 UI 업데이트 (즉시 반영)
-                _uiState.value = _uiState.value.copy(tasks = currentTasks)
-                
-                // 서버에 순서 업데이트 - 변경된 두 아이템의 순서만 업데이트
-                val task1 = currentTasks[fromIndex]
-                val task2 = currentTasks[toIndex]
-                
-                // 첫 번째 아이템 순서 업데이트
-                val result1 = taskUseCases.reorderTaskUseCase(task1.id.value, fromIndex)
-                result1.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "순서 변경 중 오류가 발생했습니다: ${error.message}"
-                    )
-                }
-                
-                // 두 번째 아이템 순서 업데이트
-                val result2 = taskUseCases.reorderTaskUseCase(task2.id.value, toIndex)
-                result2.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "순서 변경 중 오류가 발생했습니다: ${error.message}"
-                    )
+                // 서버에 새로운 순서 저장 (이미 정렬된 순서를 그대로 저장)
+                realtimeOrderedTasks.forEachIndexed { index, task ->
+                    val result = taskUseCases.reorderTaskUseCase(task.id.value, index)
+                    when (result) {
+                        is CustomResult.Success -> {
+                            // 성공 시 계속 진행
+                        }
+                        is CustomResult.Failure -> {
+                            _uiState.value = _uiState.value.copy(
+                                errorMessage = "서버 동기화 중 오류가 발생했습니다: ${result.error.message}"
+                            )
+                            return@launch
+                        }
+                        is CustomResult.Initial -> {
+                            // 초기 상태 - 아직 처리되지 않음
+                        }
+                        is CustomResult.Loading -> {
+                            // 로딩 중 - 계속 대기
+                        }
+                        is CustomResult.Progress -> {
+                            // 진행 중 - 계속 대기
+                        }
+                    }
                 }
                 
             } catch (e: Exception) {
-                // 전체 실패 시 에러 표시
+                // 서버 동기화 실패 시 에러 표시
                 _uiState.value = _uiState.value.copy(
-                    errorMessage = "순서 변경 중 오류가 발생했습니다: ${e.message}"
+                    errorMessage = "서버 동기화 중 오류가 발생했습니다: ${e.message}"
                 )
             }
         }
+    }
+    
+    @Deprecated("Use finalizeReorder instead")
+    fun reorderTasks(fromIndex: Int, toIndex: Int) {
+        // 기존 방식: 현재는 사용하지 않음
+        // finalizeReorder는 실시간 순서 리스트를 파라미터로 받음
     }
     
 }
