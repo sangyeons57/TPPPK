@@ -67,10 +67,10 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
     // Task.await() 사용을 위한 의존성 추가
-    implementation(libs.kotlinx.coroutines.play.services) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(project(":app-api")) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
 
     // app_api 모듈 추가 - app에서 구현을 제공할 API를 정의
-    implementation(project(":app_api"))
 
     implementation(project(":data"))
     implementation(project(":domain"))

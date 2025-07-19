@@ -25,7 +25,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "TeamnovaPersonalProjectProjectingKotlin"
 include(":app")
-include(":app_api")
+include(":app-api")
 include(":navigation")
 include(":data")
 include(":domain")
