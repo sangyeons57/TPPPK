@@ -1,11 +1,10 @@
 package com.example.domain.provider.chat
 
-// TODO: 다음 주에 구현될 채팅 관련 UseCase들
-// import com.example.domain.usecase.message.SendMessageUseCase
-// import com.example.domain.usecase.message.EditMessageUseCase
-// import com.example.domain.usecase.message.DeleteMessageUseCase
-// import com.example.domain.usecase.message.GetMessagesStreamUseCase
-// import com.example.domain.usecase.message.FetchPastMessagesUseCase
+import com.example.domain.usecase.message.SendMessageUseCase
+import com.example.domain.usecase.message.EditMessageUseCase
+import com.example.domain.usecase.message.DeleteMessageUseCase
+import com.example.domain.usecase.message.GetMessagesStreamUseCase
+import com.example.domain.usecase.message.FetchPastMessagesUseCase
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.MessageRepository
@@ -45,12 +44,11 @@ class ChatUseCaseProvider @Inject constructor(
         )
 
         return ChatUseCases(
-            // TODO: 다음 주에 실제 UseCase 구현체들로 교체
-            // sendMessageUseCase = SendMessageUseCaseImpl(...),
-            // editMessageUseCase = EditMessageUseCaseImpl(...),
-            // deleteMessageUseCase = DeleteMessageUseCaseImpl(...),
-            // getMessagesStreamUseCase = GetMessagesStreamUseCaseImpl(...),
-            // fetchPastMessagesUseCase = FetchPastMessagesUseCaseImpl(...),
+            sendMessageUseCase = SendMessageUseCase(messageRepository),
+            editMessageUseCase = EditMessageUseCase(messageRepository),
+            deleteMessageUseCase = DeleteMessageUseCase(messageRepository),
+            getMessagesStreamUseCase = GetMessagesStreamUseCase(messageRepository),
+            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository),
 
             // 공통 Repository
             authRepository = authRepository,
@@ -71,16 +69,13 @@ class ChatUseCaseProvider @Inject constructor(
 
 /**
  * 채팅 관련 UseCase 그룹
- *
- * TODO: 다음 주에 실제 UseCase들 추가
  */
 data class ChatUseCases(
-    // TODO: 실제 UseCase들 추가
-    // val sendMessageUseCase: SendMessageUseCase,
-    // val editMessageUseCase: EditMessageUseCase,
-    // val deleteMessageUseCase: DeleteMessageUseCase,
-    // val getMessagesStreamUseCase: GetMessagesStreamUseCase,
-    // val fetchPastMessagesUseCase: FetchPastMessagesUseCase,
+    val sendMessageUseCase: SendMessageUseCase,
+    val editMessageUseCase: EditMessageUseCase,
+    val deleteMessageUseCase: DeleteMessageUseCase,
+    val getMessagesStreamUseCase: GetMessagesStreamUseCase,
+    val fetchPastMessagesUseCase: FetchPastMessagesUseCase,
 
     // 공통 Repository
     val authRepository: AuthRepository,

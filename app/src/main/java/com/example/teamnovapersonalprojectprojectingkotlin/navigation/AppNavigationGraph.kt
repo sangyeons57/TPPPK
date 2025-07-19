@@ -57,6 +57,7 @@ import com.example.feature_add_role.ui.AddRoleScreen
 import com.example.feature_edit_role.ui.EditRoleScreen
 import com.example.feature_edit_member.ui.EditMemberScreen
 import com.example.feature_task.ui.TaskListScreen
+import com.example.feature_chat.ui.ChatScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -387,10 +388,7 @@ fun NavGraphBuilder.chatGraph(navigationManger: NavigationManger) {
             route = ChatRoute.ROUTE_PATTERN,
             arguments = ChatRoute.arguments
         ) {
-            // TODO: 실제 ChatScreen Composable 구현 필요
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Chat Screen Placeholder\nChannel ID: ${it.arguments?.getString(RouteArgs.CHANNEL_ID)}\nMessage ID: ${it.arguments?.getString(RouteArgs.MESSAGE_ID)}")
-            }
+            ChatScreen(navigationManger = navigationManger)
         }
     }
 }

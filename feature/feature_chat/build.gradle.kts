@@ -77,6 +77,14 @@ dependencies {
     // Coil (Image Loading)
     implementation(libs.androidx.compose.coil) // 버전 통일
 
+    // WebSocket dependencies
+    implementation(libs.okhttp.websocket)
+    implementation(libs.kotlinx.serialization.json)
+
+    // Paging dependencies
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
+
     // 기타 ChatScreen, ChatViewModel에서 사용하는 라이브러리 (예: Activity Result API)
     implementation(libs.androidx.compose.activity)
 

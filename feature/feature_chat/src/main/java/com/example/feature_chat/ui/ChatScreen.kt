@@ -1,6 +1,5 @@
 package com.example.feature_chat.ui
 
-/** 다른 문제 전부 해결하고나면 VIewmodel구현 왜냐하면 chat은 다음주에 할일 이기때문
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -60,10 +59,11 @@ import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.GalleryImageUiModel
+import com.example.feature_chat.viewmodel.WebSocketChatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
-import com.example.core_navigation.core.AppNavigator
+import com.example.core_navigation.core.NavigationManger
 import java.util.Locale
 import android.util.Log // Added for logging
 import com.example.core_ui.components.buttons.DebouncedBackButton
@@ -76,8 +76,8 @@ import java.time.Instant
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
-    appNavigator: AppNavigator,
-    viewModel: ChatViewModel = hiltViewModel()
+    navigationManger: NavigationManger,
+    viewModel: WebSocketChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -107,7 +107,7 @@ fun ChatScreen(
                 is ChatEvent.ShowUserProfileDialog -> showUserProfileDialog = event.userId
                 is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ClearFocus -> focusManager.clearFocus()
-                is ChatEvent.NavigateBack -> appNavigator.navigateBack()
+                is ChatEvent.NavigateBack -> navigationManger.navigateBack()
                 is ChatEvent.Error -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ShowMessageActions -> {
                     // 메시지 ID와 텍스트를 사용해 다이얼로그 표시
@@ -118,6 +118,7 @@ fun ChatScreen(
                 is ChatEvent.AttachmentClicked -> {}
                 is ChatEvent.ImageSelected -> {}
                 is ChatEvent.ImageDeselected -> {}
+                is ChatEvent.SystemMessage -> snackbarHostState.showSnackbar(event.content)
             }
         }
     }
@@ -322,7 +323,7 @@ fun ChatMessageItemComposable(
             // 프로필 이미지 (내가 보낸 메시지에는 숨길 수도 있음)
             if (!message.isMyMessage) {
                 UserProfileImage(
-                    profileImageUrl = message.userProfileUrl,
+                    userId = message.userId,
                     contentDescription = "${message.userName} 프로필",
                     modifier = Modifier
                         .size(40.dp)
@@ -475,7 +476,7 @@ fun ChatInputArea(
         }
 
         // 선택된 이미지 미리보기 영역
-        AnimatedVisibility(visible = uiState.selectedImages.isNotEmpty()) {
+        AnimatedVisibility(visible = uiState.selectedAttachmentUris.isNotEmpty()) {
             FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -484,7 +485,7 @@ fun ChatInputArea(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                uiState.selectedImages.forEach { uri ->
+                uiState.selectedAttachmentUris.forEach { uri ->
                     SelectedImagePreview(uri = uri, onRemove = { onImageDeselected(uri) })
                 }
             }
@@ -494,7 +495,7 @@ fun ChatInputArea(
         AnimatedVisibility(visible = uiState.isAttachmentAreaVisible) {
             ImageSelectionGrid(
                 images = uiState.galleryImages, // ★ 타입 변경됨
-                selectedImages = uiState.selectedImages,
+                selectedImages = uiState.selectedAttachmentUris.toSet(),
                 onImageSelected = onImageSelected,
                 onImageDeselected = onImageDeselected,
                 modifier = Modifier.fillMaxWidth().heightIn(max=200.dp) // 최대 높이 제한
@@ -515,7 +516,7 @@ fun ChatInputArea(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedTextField(
-                    value = uiState.messageInput,
+                    value = uiState.pendingMessageText,
                     onValueChange = onMessageChange,
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("메시지 입력...") },
@@ -536,7 +537,7 @@ fun ChatInputArea(
                         // focusManager.clearFocus() // ViewModel에서 이벤트로 처리하는 것이 더 좋음
                     },
                     // 내용이 있거나, 이미지가 선택되었거나, 수정 중일 때 활성화. 단, 전송 중에는 비활성화
-                    enabled = !uiState.isSendingMessage && (uiState.messageInput.isNotBlank() || uiState.selectedImages.isNotEmpty())
+                    enabled = !uiState.isSendingMessage && (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty())
                 ) {
                     // 전송 중이면 로딩 인디케이터, 아니면 아이콘 표시
                     if (uiState.isSendingMessage) {
@@ -803,4 +804,3 @@ private fun ImageSelectionGridPreview() {
         )
     }
 }
-*/

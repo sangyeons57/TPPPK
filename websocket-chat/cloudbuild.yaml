@@ -1,0 +1,65 @@
+# Google Cloud Build configuration for WebSocket Chat Server
+steps:
+  # Build the Maven project
+  - name: 'gcr.io/cloud-builders/mvn'
+    args: ['clean', 'package', '-DskipTests']
+
+  # Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/websocket-chat:latest'
+      - '.'
+
+  # Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/websocket-chat:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'websocket-chat'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
+      - '--region'
+      - 'asia-northeast3'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '2'
+      - '--max-instances'
+      - '10'
+      - '--timeout'
+      - '300'
+      - '--set-env-vars'
+      - 'JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0'
+
+# Store images in Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
+  - 'gcr.io/$PROJECT_ID/websocket-chat:latest'
+
+# Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+# Build timeout
+timeout: '600s'

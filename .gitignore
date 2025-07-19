@@ -17,6 +17,9 @@ local.properties
 .gradle/
 build/
 
+# Maven build output
+websocket-chat/target/
+
 # Local configuration file (sdk path, etc)
 local.properties
 
@@ -52,3 +55,5 @@ sentry.properties
 
 #env
 .env
+
+websocket-chat/firebase-service-account.json

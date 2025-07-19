@@ -1,6 +1,7 @@
 package com.example.feature_chat.model
 
 import android.net.Uri
+import com.example.core_common.websocket.WebSocketConnectionState
 
 /**
  * ChatViewModel의 UI 상태를 관리하는 데이터 클래스
@@ -26,5 +27,10 @@ data class ChatUiState(
     // Added for ChatViewModel refactor
     val pendingMessageText: String = "", 
     val selectedAttachmentUris: List<Uri> = emptyList(),
-    val isLoadingGallery: Boolean = false
+    val isLoadingGallery: Boolean = false,
+    
+    // WebSocket connection state
+    val connectionState: WebSocketConnectionState = WebSocketConnectionState.Disconnected,
+    val queuedMessagesCount: Int = 0,
+    val showConnectionError: Boolean = false
 ) 

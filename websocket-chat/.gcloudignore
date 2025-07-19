@@ -1,0 +1,50 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud. It follows the same syntax as .gitignore
+
+# Maven build directories
+target/
+dependency-reduced-pom.xml
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Git files
+.git/
+.gitignore
+
+# Documentation
+README*
+*.md
+
+# Test files
+src/test/
+
+# Maven wrapper (if exists)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Backup files
+*.bak
+*.backup

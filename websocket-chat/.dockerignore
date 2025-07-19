@@ -1,0 +1,54 @@
+# Docker ignore file to reduce image size and build time
+
+# Maven build cache (only keep target/)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Source files (not needed in final image)
+src/
+pom.xml
+dependency-reduced-pom.xml
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git files
+.git/
+.gitignore
+
+# Documentation
+README*
+*.md
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+
+# Cloud Build files
+cloudbuild.yaml
+.gcloudignore
+
+# Test files
+src/test/

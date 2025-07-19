@@ -40,6 +40,13 @@ value class DocumentId(val value: String) {
         fun isAssigned(id: String): Boolean {
             return id != EMPTY_VALUE
         }
+
+        /**
+         * Generates a new random DocumentId using UUID
+         */
+        fun generate(): DocumentId {
+            return DocumentId(java.util.UUID.randomUUID().toString())
+        }
     }
 
     /**
