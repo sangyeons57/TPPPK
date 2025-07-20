@@ -34,7 +34,7 @@ class ChatWebSocketClient @Inject constructor(
         ))
         
         return webSocketManager.incomingMessages
-            .filter { it.roomId == roomId }
+            .filter { it.roomId == roomId && it.type != WebSocketMessage.TYPE_AUTH_SUCCESS }
             .onEach { message ->
                 val correlationId = ChatLogUtils.generateCorrelationId()
                 Log.i(ChatLogUtils.TAG_MESSAGE, ChatLogUtils.formatLogMessage(
@@ -158,59 +158,67 @@ class ChatWebSocketClient @Inject constructor(
         return connect(serverUrl, authToken)
     }
     
-    suspend fun authenticate(userId: UserId, authToken: String): Result<Unit> {
+    suspend fun waitForAuthentication(userId: UserId, timeoutMs: Long = 10000): Result<Unit> {
         val authCorrelationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
             correlationId = authCorrelationId,
-            message = "WebSocket 인증 시도",
+            message = "WebSocket 인증 확인 대기",
             userId = userId.value
         ))
         
-        val authMessage = WebSocketMessage(
-            type = WebSocketMessage.TYPE_AUTH,
-            senderId = userId.value,
-            payload = mapOf("token" to authToken),
-            timestamp = Instant.now().epochSecond.toDouble()
-        )
-        
-        // Send authentication message and wait briefly for any immediate errors
-        val sendResult = webSocketManager.sendMessage(authMessage)
-        if (sendResult.isFailure) {
+        // Wait for AUTH_SUCCESS message from server
+        return try {
+            val authResult = withTimeoutOrNull(timeoutMs) {
+                webSocketManager.incomingMessages
+                    .filter { message -> 
+                        message.type == WebSocketMessage.TYPE_AUTH_SUCCESS || 
+                        message.type == WebSocketMessage.TYPE_ERROR 
+                    }
+                    .first()
+            }
+            
+            when {
+                authResult == null -> {
+                    Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                        correlationId = authCorrelationId,
+                        message = "WebSocket 인증 시간 초과",
+                        userId = userId.value
+                    ))
+                    Result.failure(Exception("Authentication timeout - no AUTH_SUCCESS received"))
+                }
+                authResult.type == WebSocketMessage.TYPE_AUTH_SUCCESS -> {
+                    Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                        correlationId = authCorrelationId,
+                        message = "WebSocket 인증 성공",
+                        userId = userId.value
+                    ))
+                    Result.success(Unit)
+                }
+                authResult.type == WebSocketMessage.TYPE_ERROR -> {
+                    Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                        correlationId = authCorrelationId,
+                        message = "WebSocket 인증 실패: ${authResult.content}",
+                        userId = userId.value
+                    ))
+                    Result.failure(Exception("Authentication failed: ${authResult.content}"))
+                }
+                else -> {
+                    Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                        correlationId = authCorrelationId,
+                        message = "WebSocket 인증 처리 중 예상치 못한 메시지 타입: ${authResult.type}",
+                        userId = userId.value
+                    ))
+                    Result.failure(Exception("Unexpected message type during authentication: ${authResult.type}"))
+                }
+            }
+        } catch (e: Exception) {
             Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                 correlationId = authCorrelationId,
-                message = "인증 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}",
+                message = "WebSocket 인증 대기 중 오류 발생: ${e.message}",
                 userId = userId.value
             ))
-            return sendResult
+            Result.failure(e)
         }
-        
-        Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-            correlationId = authCorrelationId,
-            message = "인증 메시지 전송 완료",
-            userId = userId.value
-        ))
-        
-        // Give a brief moment for any immediate auth errors, but don't wait for explicit success
-        kotlinx.coroutines.delay(500) // Wait 500ms for potential immediate errors
-        
-        // Check if we got disconnected due to auth failure
-        if (connectionState.value is com.example.core_common.websocket.WebSocketConnectionState.Error) {
-            Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-                correlationId = authCorrelationId,
-                message = "인증 후 연결 오류 발생",
-                userId = userId.value
-            ))
-            return Result.failure(Exception("Authentication failed - connection error"))
-        }
-        
-        Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-            correlationId = authCorrelationId,
-            message = "WebSocket 인증 처리 완료",
-            userId = userId.value,
-            metadata = mapOf("action" to "AUTH", "status" to "SENT")
-        ))
-        
-        return Result.success(Unit)
     }
     
     suspend fun disconnect() {

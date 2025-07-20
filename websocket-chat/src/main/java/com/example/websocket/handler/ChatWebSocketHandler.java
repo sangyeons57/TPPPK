@@ -66,6 +66,7 @@ public class ChatWebSocketHandler {
                     if (uid != null) {
                         this.userId = uid;
                         logger.info("✅ User authenticated successfully: {}", userId);
+                        // Send explicit AUTH_SUCCESS message to client
                         sendSystemMessage("AUTH_SUCCESS", "Authentication successful");
                     } else {
                         logger.warn("❌ Authentication failed for token");
@@ -111,6 +112,10 @@ public class ChatWebSocketHandler {
 
     private void handleChatMessage(ChatMessage message) {
         switch (message.getType()) {
+            case "AUTH":
+                // Skip AUTH messages - authentication is handled during handshake
+                logger.debug("Ignoring AUTH message - authentication already handled during handshake");
+                break;
             case "JOIN_ROOM":
                 handleJoinRoom(message.getRoomId());
                 break;
@@ -164,7 +169,7 @@ public class ChatWebSocketHandler {
 
         // Set message metadata
         message.setSenderId(userId);
-        message.setTimestamp(Instant.now()); // This will use the overloaded method
+        message.setTimestampFromInstant(Instant.now());
         message.setRoomId(currentRoomId);
 
         // Broadcast to room

@@ -38,7 +38,7 @@ public class ChatMessage {
         this.roomId = roomId;
         this.senderId = senderId;
         this.content = content;
-        this.timestamp = timestamp != null ? (double) timestamp.getEpochSecond() : null;
+        this.setTimestampFromInstant(timestamp);
     }
 
     // Getters and Setters
@@ -63,8 +63,8 @@ public class ChatMessage {
     }
     
     // Convenience method to set timestamp from Instant
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp != null ? (double) timestamp.getEpochSecond() : null;
+    public void setTimestampFromInstant(Instant instant) {
+        this.timestamp = instant != null ? (double) instant.getEpochSecond() : null;
     }
 
     public String getMessageId() { return messageId; }

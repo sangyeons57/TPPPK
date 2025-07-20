@@ -223,12 +223,12 @@ class DevMenuViewModel @Inject constructor(
                         val connectResult = webSocketClient.connect(SERVER_URL, token)
 
                         if (connectResult.isSuccess) {
-                            addMessage("✅ Connected, now authenticating...")
+                            addMessage("✅ Connected, waiting for authentication confirmation...")
                             
-                            // 2단계: 명시적 인증
-                            val authResult = webSocketClient.authenticate(userId, token)
+                            // 2단계: 인증 완료 대기 (서버가 handshake token으로 자동 인증)
+                            val authResult = webSocketClient.waitForAuthentication(userId)
                             if (authResult.isSuccess) {
-                                addMessage("✅ Authentication sent, joining room...")
+                                addMessage("✅ Authentication confirmed, joining room...")
                                 
                                 // 3단계: 방 입장
                                 val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
@@ -250,12 +250,12 @@ class DevMenuViewModel @Inject constructor(
                                 if (newToken != null) {
                                     val retryResult = webSocketClient.connect(SERVER_URL, newToken)
                                     if (retryResult.isSuccess) {
-                                        addMessage("✅ Connected after token refresh, now authenticating...")
+                                        addMessage("✅ Connected after token refresh, waiting for authentication...")
                                         
-                                        // 재시도 시에도 2단계 인증 적용
-                                        val retryAuthResult = webSocketClient.authenticate(userId, newToken)
+                                        // 재시도 시에도 인증 완료 대기 적용
+                                        val retryAuthResult = webSocketClient.waitForAuthentication(userId)
                                         if (retryAuthResult.isSuccess) {
-                                            addMessage("✅ Re-authentication sent, joining room...")
+                                            addMessage("✅ Re-authentication confirmed, joining room...")
                                             val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
                                             if (joinResult.isSuccess) {
                                                 addMessage("✅ Joined room: $TEST_ROOM_ID")
