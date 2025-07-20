@@ -98,11 +98,7 @@ class ProjectRoleUseCaseProvider @Inject constructor(
             // 권한 관리
             getRolePermissionsUseCase = GetRolePermissionsUseCaseImpl(
                 permissionRepository = permissionRepository
-            ),
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            projectRoleRepository = projectRoleRepository
+            )
         )
     }
 
@@ -144,9 +140,5 @@ data class ProjectRoleUseCases(
     val getRoleDetailsUseCase: GetRoleDetailsUseCase,
     
     // 권한 관리
-    val getRolePermissionsUseCase: GetRolePermissionsUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val projectRoleRepository: ProjectRoleRepository
+    val getRolePermissionsUseCase: GetRolePermissionsUseCase
 )

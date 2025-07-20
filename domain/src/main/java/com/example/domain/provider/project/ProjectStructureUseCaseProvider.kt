@@ -121,11 +121,7 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             reorderUnifiedProjectStructureUseCase = ReorderUnifiedProjectStructureUseCaseImpl(
                 categoryRepository = categoryRepository,
                 projectChannelRepository = projectChannelRepository
-            ),
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            categoryRepository = categoryRepository
+            )
         )
     }
 
@@ -164,9 +160,5 @@ data class ProjectStructureUseCases(
     val reorderChannelsUseCase: ReorderChannelsUseCase,
     
     // 통합 구조 관리 UseCases
-    val reorderUnifiedProjectStructureUseCase: ReorderUnifiedProjectStructureUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val categoryRepository: CategoryRepository
+    val reorderUnifiedProjectStructureUseCase: ReorderUnifiedProjectStructureUseCase
 )

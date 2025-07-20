@@ -106,12 +106,7 @@ class ProjectMemberUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository,
                 memberRepository= memberRepository,
                 authRepository= authRepository,
-            ),
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            memberRepository = memberRepository,
-            projectRepository = projectRepository
+            )
         )
     }
 
@@ -156,10 +151,5 @@ data class ProjectMemberUseCases(
     
     // 프로젝트 나가기 및 소유권 전달
     val leaveProjectUseCase: LeaveProjectUseCase,
-    val transferOwnershipUseCase: TransferOwnershipUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val memberRepository: MemberRepository,
-    val projectRepository: ProjectRepository
+    val transferOwnershipUseCase: TransferOwnershipUseCase
 )

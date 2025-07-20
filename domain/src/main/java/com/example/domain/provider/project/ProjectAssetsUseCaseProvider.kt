@@ -47,11 +47,7 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
             ),
             removeProjectProfileImageUseCase = RemoveProjectProfileImageUseCaseImpl(
                 projectRepository = projectRepository
-            ),
-            
-            // 공통 Repository
-            projectRepository = projectRepository,
-            mediaRepository = mediaRepository
+            )
         )
     }
 
@@ -72,9 +68,5 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
 data class ProjectAssetsUseCases(
     // 프로젝트 이미지/파일 관리
     val uploadProjectProfileImageUseCase: UploadProjectProfileImageUseCase,
-    val removeProjectProfileImageUseCase: RemoveProjectProfileImageUseCase,
-    
-    // 공통 Repository
-    val projectRepository: ProjectRepository,
-    val mediaRepository: MediaRepository
+    val removeProjectProfileImageUseCase: RemoveProjectProfileImageUseCase
 )

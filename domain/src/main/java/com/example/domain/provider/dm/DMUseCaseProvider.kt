@@ -94,12 +94,7 @@ class DMUseCaseProvider @Inject constructor(
             getUserDmWrappersUseCase = GetUserDmWrappersUseCase(
                 authRepository = authRepository,
                 dmWrapperRepository = dmWrapperRepository
-            ),
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            dmChannelRepository = dmChannelRepository,
-            dmWrapperRepository = dmWrapperRepository
+            )
         )
     }
 
@@ -123,13 +118,9 @@ class DMUseCaseProvider @Inject constructor(
         return DMChannelUseCases(
             getDmChannelUseCase = GetDmChannelUseCase(
                 dmRepository = dmChannelRepository
-            ),
+            )
             
             // 향후 DM 메시지 관련 UseCase들 추가 예정
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            dmChannelRepository = dmChannelRepository
         )
     }
 }
@@ -144,21 +135,12 @@ data class DMUseCases(
     val blockDMChannelUseCase: BlockDMChannelUseCase,
     val unblockDMChannelUseCase: UnblockDMChannelUseCase,
     val getDmChannelUseCase: GetDmChannelUseCase,
-    val getUserDmWrappersUseCase: GetUserDmWrappersUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val dmChannelRepository: DMChannelRepository,
-    val dmWrapperRepository: DMWrapperRepository
+    val getUserDmWrappersUseCase: GetUserDmWrappersUseCase
 )
 
 /**
  * DM 채널별 UseCase 그룹
  */
 data class DMChannelUseCases(
-    val getDmChannelUseCase: GetDmChannelUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val dmChannelRepository: DMChannelRepository
+    val getDmChannelUseCase: GetDmChannelUseCase
 )

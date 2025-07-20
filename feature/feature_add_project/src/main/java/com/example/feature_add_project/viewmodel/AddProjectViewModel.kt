@@ -6,6 +6,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.vo.UserId
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -40,6 +41,7 @@ sealed class AddProjectEvent {
 @HiltViewModel
 class AddProjectViewModel @Inject constructor(
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -59,9 +61,9 @@ class AddProjectViewModel @Inject constructor(
     
     private fun initializeUserContext() {
         viewModelScope.launch {
-            // 임시로 AuthRepository를 통해 사용자 정보 가져오기
-            val tempUserUseCases = coreProjectUseCaseProvider.createForCurrentUser()
-            when (val userSession = tempUserUseCases.authRepository.getCurrentUserSession()) {
+            // AuthSessionUseCaseProvider를 통해 사용자 정보 가져오기
+            val authUseCases = authSessionUseCaseProvider.create()
+            when (val userSession = authUseCases.getCurrentUserSessionUseCase()) {
                 is CustomResult.Success -> {
                     currentUserId = userSession.data.userId
                 }

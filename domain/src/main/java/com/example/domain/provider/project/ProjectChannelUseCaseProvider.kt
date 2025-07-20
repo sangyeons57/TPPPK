@@ -97,12 +97,7 @@ class ProjectChannelUseCaseProvider @Inject constructor(
             ),
             
             // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
-            // renameChannelUseCase = RenameChannelUseCaseImpl(),
-            
-
-            // 공통 Repository
-            authRepository = authRepository,
-            projectChannelRepository = projectChannelRepository
+            // renameChannelUseCase = RenameChannelUseCaseImpl()
         )
     }
 
@@ -143,9 +138,5 @@ data class ProjectChannelUseCases(
     val addProjectChannelUseCase: AddProjectChannelUseCase,
     val reorderChannelsUseCase: ReorderChannelsUseCase,
     // TODO: CategoryCollectionRepository 제거로 인해 임시 비활성화
-    // val renameChannelUseCase: RenameChannelUseCase,
-
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val projectChannelRepository: ProjectChannelRepository
+    // val renameChannelUseCase: RenameChannelUseCase
 )

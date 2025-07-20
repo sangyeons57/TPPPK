@@ -154,11 +154,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
             
             deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository
-            ),
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            projectRepository = projectRepository
+            )
         )
     }
 
@@ -259,11 +255,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
             deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository
             ),
-            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase(),
-
-            // 공통 Repository
-            authRepository = authRepository,
-            projectRepository = projectRepository,
+            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase()
         )
     }
 }
@@ -282,8 +274,5 @@ data class CoreProjectUseCases(
     val generateInviteLinkUseCase: GenerateInviteLinkUseCase,
     val validateInviteCodeUseCase: ValidateInviteCodeUseCase,
     val deleteProjectsWrapperUseCase: DeleteProjectsWrapperUseCase,
-    val generateInviteLinkFromIdUseCase : GenerateInviteLinkFromIdUseCase,
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val projectRepository: ProjectRepository
+    val generateInviteLinkFromIdUseCase : GenerateInviteLinkFromIdUseCase
 )
