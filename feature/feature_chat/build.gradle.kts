@@ -82,8 +82,11 @@ dependencies {
     implementation(libs.okhttp.websocket)
     implementation(libs.kotlinx.serialization.json)
     
-    // Google Cloud Logging for dual logging
-    implementation(libs.google.cloud.logging)
+    
+    // Google Cloud Logging for dual logging - Removed due to protobuf conflicts with Firebase
+    // implementation(libs.google.cloud.logging) {
+    //     exclude(group = "com.google.guava", module = "listenablefuture")
+    // }
 
     // Paging dependencies
     implementation(libs.androidx.paging.runtime)

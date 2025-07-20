@@ -110,7 +110,7 @@ class FriendUseCaseProvider @Inject constructor(
      * 
      * @return 친구 관련 UseCase 그룹 (현재 사용자 기준)
      */
-     fun createForCurrentUser(): FriendUseCases {
+    suspend fun createForCurrentUser(): FriendUseCases {
         Log.d(TAG, "createForCurrentUser called")
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()

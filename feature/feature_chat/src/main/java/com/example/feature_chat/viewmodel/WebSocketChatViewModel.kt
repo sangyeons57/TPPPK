@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.websocket.WebSocketConnectionState
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Message
@@ -33,7 +34,8 @@ class WebSocketChatViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val chatUseCaseProvider: ChatUseCaseProvider,
     private val webSocketClient: ChatWebSocketClient,
-    private val offlineMessageQueue: OfflineMessageQueue
+    private val offlineMessageQueue: OfflineMessageQueue,
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -65,7 +67,7 @@ class WebSocketChatViewModel @Inject constructor(
     private fun initializeChat() {
         viewModelScope.launch {
             // Initialize connection to WebSocket server
-            val serverUrl = "wss://websocket-chat-445853245473-asia-northeast3.run.app/" // TODO: Get from config
+            val serverUrl = "wss://websocket-chat-wizwlraydq-du.a.run.app/chat" // TODO: Get from config
             val authToken = getCurrentUserAuthToken() // TODO: Get from auth repository
             
             if (authToken != null) {
@@ -428,7 +430,7 @@ class WebSocketChatViewModel @Inject constructor(
 
     fun retryConnection() {
         viewModelScope.launch {
-            val serverUrl = "ws://localhost:8080/chat" // Local development server
+            val serverUrl = "wss://websocket-chat-wizwlraydq-du.a.run.app/chat" // Production server
             val authToken = getCurrentUserAuthToken()
             
             if (authToken != null) {
@@ -479,7 +481,7 @@ class WebSocketChatViewModel @Inject constructor(
     
     fun onBackClick() {
         viewModelScope.launch {
-            _eventFlow.emit(ChatEvent.NavigateBack)
+            navigationManger.navigateBack()
         }
     }
     

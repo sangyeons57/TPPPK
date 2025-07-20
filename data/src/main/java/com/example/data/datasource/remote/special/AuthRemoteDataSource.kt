@@ -94,7 +94,7 @@ class AuthRemoteDataSourceImpl @Inject constructor(
     override fun observeAuthState(): Flow<CustomResult<FirebaseUser, Exception>> = callbackFlow {
         val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             val currentUser = firebaseAuth.currentUser
-            android.util.Log.d("AuthRemoteDataSource", "Auth state changed: user=${currentUser?.uid ?: "null"}")
+            Log.d("AuthRemoteDataSource", "Auth state changed: user=${currentUser?.uid ?: "null"}")
             
             if (currentUser == null) {
                 trySend(CustomResult.Failure(Exception("No user is currently signed in")))
@@ -108,7 +108,7 @@ class AuthRemoteDataSourceImpl @Inject constructor(
         
         // 초기 상태 전송
         val initialUser = auth.currentUser
-        android.util.Log.d("AuthRemoteDataSource", "Initial auth state: user=${initialUser?.uid ?: "null"}")
+        Log.d("AuthRemoteDataSource", "Initial auth state: user=${initialUser?.uid ?: "null"}")
         if (initialUser == null) {
             trySend(CustomResult.Failure(Exception("No user is currently signed in")))
         } else {

@@ -38,10 +38,7 @@ class ContextDependentUseCaseProvider @Inject constructor(
         )
         
         return ContextDependentUseCases(
-
-            // Repository references for potential future use
-            userRepository = userRepository,
-            authRepository = authRepository
+            // Currently no context-dependent UseCases
         )
     }
 }
@@ -50,8 +47,7 @@ class ContextDependentUseCaseProvider @Inject constructor(
  * Context-dependent UseCase group
  */
 data class ContextDependentUseCases(
-
-    // Repository references
-    val userRepository: UserRepository,
-    val authRepository: AuthRepository
+    // Currently no context-dependent UseCases
+    // Add context-dependent UseCases here when needed
+    private val placeholder: Unit = Unit
 )

@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import android.util.Log
+import com.example.domain.provider.friend.FriendUseCases
+import com.example.domain.provider.user.UserUseCases
 
 // --- UI 상태 ---
 data class AddFriendUiState(
@@ -48,14 +50,21 @@ class AddFriendViewModel @Inject constructor(
     private val TAG = "AddFriendViewModel"
 
     // Provider를 통해 생성된 UseCase 그룹들
-    private val friendUseCases = friendUseCaseProvider.createForCurrentUser()
-    private val userUseCases = userUseCaseProvider.createForUser()
+    private lateinit var friendUseCases: FriendUseCases
+    private lateinit var userUseCases: UserUseCases
 
     private val _uiState = MutableStateFlow(AddFriendUiState())
     val uiState: StateFlow<AddFriendUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<AddFriendEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
+
+    init {
+        viewModelScope.launch {
+            friendUseCases = friendUseCaseProvider.createForCurrentUser()
+            userUseCases = userUseCaseProvider.createForUser()
+        }
+    }
 
     /**
      * 사용자 이름 입력 변경 시 호출

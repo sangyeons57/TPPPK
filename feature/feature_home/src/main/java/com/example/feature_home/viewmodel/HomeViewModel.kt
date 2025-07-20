@@ -73,8 +73,10 @@ class HomeViewModel @Inject constructor(
 
     init {
         Log.d("HomeViewModel", "HomeViewModel initialized")
-        // Initialize services for current user without project context
-        services = homeServiceProvider.createForCurrentUser()
+        viewModelScope.launch {
+            // Initialize services for current user without project context
+            services = homeServiceProvider.createForCurrentUser()
+        }
         dialogState = services.dialogManagementService.getInitialDialogState()
         // Initialize dialog state after services are created
         dialogState = services.dialogManagementService.getInitialDialogState()

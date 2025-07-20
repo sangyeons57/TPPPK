@@ -52,24 +52,19 @@ interface AuthRepository : Repository {
     // --- 세션 관리 ---
     /**
      * 현재 사용자의 세션 정보를 가져옵니다.
-     * 로그인되어 있지 않은 경우 null을 반환합니다.
-     * 
-     * @return 현재 사용자의 세션 정보가 포함된 CustomResult 또는 null
+     * 이 메서드는 ID 토큰을 포함한 세션 정보를 반환합니다.
+     * 토큰이 만료되었거나 forceRefresh가 true인 경우, 토큰을 갱신합니다.
+     *
+     * @param forceRefresh 토큰을 강제로 재발급할지 여부 (기본값: false)
+     * @return 토큰이 포함된 사용자 세션 정보
      */
-    fun getCurrentUserSession(): CustomResult<UserSession, Exception>
+    suspend fun getCurrentUserSession(forceRefresh: Boolean = false): CustomResult<UserSession, Exception>
 
     /**
      * 현재 사용자의 세션 정보를 실시간으로 관찰합니다.
      * 로그인/로그아웃 상태 변화에 따라 값이 업데이트됩니다.
-     * 
+     *
      * @return 사용자 세션 정보의 Flow
      */
-    fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>>
-
-    /**
-     * Firebase ID Token을 가져옵니다.
-     * 백엔드 호출 등에서 인증이 필요할 때 사용하세요.
-     * @param forceRefresh true 시 서버로부터 토큰을 강제로 재발급받습니다.
-     */
-    suspend fun fetchIdToken(forceRefresh: Boolean = false): CustomResult<com.example.domain.model.vo.Token, Exception>
+    fun getCurrentUserSessionStream(): Flow<CustomResult<UserSession, Exception>>
 }

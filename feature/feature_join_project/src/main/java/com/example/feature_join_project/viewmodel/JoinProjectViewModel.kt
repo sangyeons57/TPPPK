@@ -8,6 +8,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.domain.provider.project.CoreProjectUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -37,7 +38,7 @@ class JoinProjectViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
-    private val coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+    private lateinit var coreProjectUseCases : CoreProjectUseCases
 
     private val _uiState = MutableStateFlow(JoinProjectUiState())
     val uiState: StateFlow<JoinProjectUiState> = _uiState.asStateFlow()
@@ -46,6 +47,9 @@ class JoinProjectViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
     
     init {
+        viewModelScope.launch {
+            coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+        }
         // 딥링크로부터 전달된 초대 코드가 있는지 확인
         val pendingInviteCode = navigationManger.getResult<String>("pending_invite_code")
         pendingInviteCode?.let { inviteCode ->

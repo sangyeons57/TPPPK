@@ -2,7 +2,6 @@ package com.example.data.repository.base
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.core_common.result.CustomResult.Initial.getOrThrow
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
 import com.example.data.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
@@ -11,10 +10,13 @@ import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.AuthRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.Instant
 import javax.inject.Inject
 
 /**
@@ -30,7 +32,7 @@ class AuthRepositoryImpl @Inject constructor(
     /**
      * 이메일과 비밀번호로 로그인합니다.
      * 성공 시 UserSession 객체를 반환합니다.
-     * 
+     *
      * @param email 사용자 이메일
      * @param password 사용자 비밀번호
      * @return 성공 시 UserSession이 포함된 CustomResult.Success, 실패 시 CustomResult.Failure
@@ -40,18 +42,19 @@ class AuthRepositoryImpl @Inject constructor(
         password: String
     ): CustomResult<UserSession, Exception> {
         Log.d("AuthRepositoryImpl", "Starting login process for email: ${email.value}")
-        
+
         return when (val loginResult = authRemoteDataSource.signIn(email, password)) {
             is CustomResult.Success -> {
                 Log.d("AuthRepositoryImpl", "Firebase Auth login successful, userId: ${loginResult.data}")
-                
+
                 // 로그인 성공 시 세션 정보 가져오기 (재시도 로직 포함)
                 var retryCount = 0
                 val maxRetries = 3
                 var lastError: Exception? = null
-                
+
                 while (retryCount <= maxRetries) {
-                    when (val userSessionResult = getCurrentUserSession()) {
+                    // 로그인 직후이므로 항상 새로운 토큰을 가져옵니다.
+                    when (val userSessionResult = getCurrentUserSession(forceRefresh = true)) {
                         is CustomResult.Success -> {
                             Log.d("AuthRepositoryImpl", "Session retrieved successfully after ${retryCount} retries")
                             return CustomResult.Success(userSessionResult.data)
@@ -59,7 +62,7 @@ class AuthRepositoryImpl @Inject constructor(
                         is CustomResult.Failure -> {
                             lastError = userSessionResult.error
                             Log.w("AuthRepositoryImpl", "Failed to get session (attempt ${retryCount + 1}/${maxRetries + 1}): ${lastError?.message}")
-                            
+
                             if (retryCount < maxRetries) {
                                 // 네트워크 오류나 일시적 오류인 경우 재시도
                                 if (lastError?.message?.contains("network", ignoreCase = true) == true ||
@@ -81,7 +84,7 @@ class AuthRepositoryImpl @Inject constructor(
                         }
                     }
                 }
-                
+
                 // 모든 재시도 실패
                 Log.e("AuthRepositoryImpl", "Failed to get session after $maxRetries retries, last error: ${lastError?.message}")
                 CustomResult.Failure(lastError ?: Exception("로그인 후 세션 정보를 가져오는 데 실패했습니다."))
@@ -125,23 +128,23 @@ class AuthRepositoryImpl @Inject constructor(
         return try {
             // 1. Firebase Auth 로그아웃
             val authLogoutResult = authRemoteDataSource.signOut()
-            
+
             when (authLogoutResult) {
                 is CustomResult.Success -> {
                     Log.d("AuthRepositoryImpl", "Firebase Auth logout successful")
-                    
+
                     // Firebase Auth 상태 변경 대기 (최대 2초로 단축)
                     val authStateCleared = waitForAuthStateChange(maxWaitTimeMs = 2000)
                     if (!authStateCleared) {
                         Log.w("AuthRepositoryImpl", "Auth state did not clear within timeout, continuing anyway")
                     }
-                    
+
                     // 2. 로그아웃 완료 검증
                     val isLogoutVerified = verifyLogoutComplete()
                     if (!isLogoutVerified) {
                         Log.w("AuthRepositoryImpl", "Logout verification failed, but auth logout was successful")
                     }
-                    
+
                     Log.d("AuthRepositoryImpl", "Complete logout successful: Firebase Auth cleared (Firestore uses native caching)")
                     CustomResult.Success(Unit)
                 }
@@ -159,7 +162,7 @@ class AuthRepositoryImpl @Inject constructor(
             CustomResult.Failure(e)
         }
     }
-    
+
     /**
      * Firebase Auth 상태 변경을 대기합니다.
      * 로그아웃 후 Auth 상태가 완전히 정리되었는지 확인합니다.
@@ -170,20 +173,20 @@ class AuthRepositoryImpl @Inject constructor(
         return withTimeoutOrNull(maxWaitTimeMs) {
             var attempts = 0
             val maxAttempts = (maxWaitTimeMs / 100).toInt()
-            
+
             // Auth 상태가 null이 될 때까지 대기
             while (authWrapper.getCurrentUser() != null && attempts < maxAttempts) {
                 attempts++
                 Log.d("AuthRepositoryImpl", "Waiting for auth state to clear... attempt $attempts/$maxAttempts")
                 kotlinx.coroutines.delay(100)
             }
-            
+
             val isCleared = authWrapper.getCurrentUser() == null
             Log.d("AuthRepositoryImpl", "Auth state cleared: $isCleared after $attempts attempts")
             isCleared
         } ?: false
     }
-    
+
     /**
      * 로그아웃 후 Firebase Auth 상태를 추가로 검증합니다.
      * @return Firebase Auth가 완전히 로그아웃되었으면 true
@@ -196,7 +199,7 @@ class AuthRepositoryImpl @Inject constructor(
                 Log.w("AuthRepositoryImpl", "AuthWrapper still shows user: ${currentUser.uid}")
                 return false
             }
-            
+
             // 2. 현재 세션 정보 확인
             when (val sessionResult = getCurrentUserSession()) {
                 is CustomResult.Success -> {
@@ -210,14 +213,14 @@ class AuthRepositoryImpl @Inject constructor(
                     Log.w("AuthRepositoryImpl", "Unexpected session result after logout: $sessionResult")
                 }
             }
-            
+
             // 3. 로그인 상태 확인
             val isLoggedIn = isLoggedIn()
             if (isLoggedIn) {
                 Log.w("AuthRepositoryImpl", "isLoggedIn() still returns true after logout")
                 return false
             }
-            
+
             Log.d("AuthRepositoryImpl", "Logout verification completed successfully")
             true
         } catch (e: Exception) {
@@ -328,7 +331,7 @@ class AuthRepositoryImpl @Inject constructor(
     /**
      * 현재 로그인된 사용자 계정을 삭제합니다.
      * Firebase의 자체 캐싱 시스템을 활용합니다.
-     * 
+     *
      * @return 성공 시 Result.success(Unit), 실패 시 Result.failure
      */
     override suspend fun withdrawCurrentUser(): CustomResult<Unit, Exception> {
@@ -348,74 +351,71 @@ class AuthRepositoryImpl @Inject constructor(
 
     /**
      * 현재 사용자의 세션 정보를 가져옵니다.
-     * Firebase의 현재 사용자 정보를 기반으로 UserSession 객체를 생성합니다.
-     * 
-     * @return 현재 사용자의 세션 정보가 포함된 CustomResult 또는 null
-     */
-    override fun getCurrentUserSession(): CustomResult<UserSession, Exception> {
-        return when (val result = authRemoteDataSource.getCurrentUser()) {
-            is CustomResult.Success -> {
-                val firebaseUser = result.data
-                val userSession = UserSession(
-                    userId = UserId(firebaseUser.uid),
-                    email = firebaseUser.email?.let { value -> UserEmail(value) },
-                    displayName = firebaseUser.displayName?.let { value -> UserName.from(value) },
-                )
-
-                CustomResult.Success(userSession)
-            }
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
-            else -> CustomResult.Failure(Exception("Unknown error occurred during login"))
-        }
-    }
-
-
-    /**
-     * 현재 사용자의 세션 정보를 실시간으로 관찰합니다.
-     * Firebase의 인증 상태 변경을 감지하여 세션 정보를 업데이트합니다.
+     * 이 메서드는 항상 ID 토큰을 포함한 세션 정보를 반환하며, 필요 시 토큰을 갱신합니다.
      *
-     * @return 사용자 세션 정보의 Flow
+     * @param forceRefresh 토큰을 강제로 재발급할지 여부 (기본값: false)
+     * @return 토큰이 포함된 사용자 세션 정보
      */
-    override fun getUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
-        return authRemoteDataSource.observeAuthState().map { firebaseUser ->
-            when (firebaseUser) {
-                is CustomResult.Success -> {
-                    val userSession = UserSession(
-                        userId = UserId(firebaseUser.data.uid),
-                        email = firebaseUser.data.email?.let { value -> UserEmail(value) },
-                        displayName = firebaseUser.data.displayName?.let { value -> UserName.from(value) },
-                    )
-
-                    return@map CustomResult.Success(userSession)
-                }
-
-                else -> {
-                    // 로그아웃 상태
-                    return@map CustomResult.Failure(Exception("No user is currently signed in"))
-                }
-            }
-        }
-    }
-
-    /**
-     * 신규 구현: ID Token 획득 전용 메서드.
-     */
-    override suspend fun fetchIdToken(forceRefresh: Boolean): CustomResult<Token, Exception> {
+    override suspend fun getCurrentUserSession(forceRefresh: Boolean): CustomResult<UserSession, Exception> {
         return when (val firebaseUserResult = authRemoteDataSource.getCurrentUser()) {
             is CustomResult.Success -> {
+                val firebaseUser = firebaseUserResult.data
                 try {
-                    val tokenResult = firebaseUserResult.data.getIdToken(forceRefresh).await()
-                    if ( tokenResult.token.isNullOrEmpty()) {
-                        CustomResult.Failure(Exception("No token found"))
+                    val tokenResult = firebaseUser.getIdToken(forceRefresh).await()
+                    val token = tokenResult.token
+                    if (token.isNullOrEmpty()) {
+                        Log.e("AuthRepositoryImpl", "Fetched token is null or empty.")
+                        CustomResult.Failure(Exception("Failed to retrieve a valid user token."))
                     } else {
-                        CustomResult.Success(Token(tokenResult.token!!))
+                        val expiresAt = Instant.now().plusSeconds(3600) // Firebase ID 토큰은 1시간 뒤 만료
+                        val userSession = UserSession(
+                            userId = UserId(firebaseUser.uid),
+                            email = firebaseUser.email?.let { UserEmail(it) },
+                            displayName = firebaseUser.displayName?.let { UserName.from(it) },
+                            idToken = Token(token),
+                        )
+                        Log.d("AuthRepositoryImpl", "Session with token created successfully.")
+                        CustomResult.Success(userSession)
                     }
                 } catch (e: Exception) {
+                    Log.e("AuthRepositoryImpl", "Failed to fetch ID token", e)
                     CustomResult.Failure(e)
                 }
             }
-            is CustomResult.Failure -> CustomResult.Failure(firebaseUserResult.error)
-            else -> CustomResult.Failure(Exception("No authenticated user"))
+            is CustomResult.Failure -> {
+                Log.w("AuthRepositoryImpl", "No authenticated user found: ${firebaseUserResult.error.message}")
+                CustomResult.Failure(firebaseUserResult.error)
+            }
+            else -> {
+                Log.e("AuthRepositoryImpl", "Unexpected result while getting current user.")
+                CustomResult.Failure(Exception("An unexpected error occurred while retrieving user data."))
+            }
+        }
+    }
+
+    /**
+     * 현재 사용자의 세션 정보를 실시간으로 관찰합니다.
+     * Firebase의 인증 상태 변경을 감지하여 토큰을 포함한 세션 정보를 업데이트합니다.
+     *
+     * @return 사용자 세션 정보의 Flow
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getCurrentUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
+        return authRemoteDataSource.observeAuthState().flatMapLatest { authStateResult ->
+            when (authStateResult) {
+                is CustomResult.Success -> {
+                    // 사용자가 로그인 상태이면, 토큰을 포함한 전체 세션 정보를 가져옵니다.
+                    // 인증 상태가 변경된 직후이므로 새로운 토큰을 가져오는 것이 안전합니다.
+                    flowOf(getCurrentUserSession(forceRefresh = true))
+                }
+                is CustomResult.Failure -> {
+                    // 로그아웃 상태이거나 사용자가 없는 경우
+                    flowOf(CustomResult.Failure(Exception("No user is currently signed in.")))
+                }
+                else -> {
+                    flowOf(CustomResult.Failure(Exception("Unknown authentication state.")))
+                }
+            }
         }
     }
 }

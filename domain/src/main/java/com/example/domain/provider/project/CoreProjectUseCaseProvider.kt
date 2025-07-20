@@ -167,7 +167,7 @@ class CoreProjectUseCaseProvider @Inject constructor(
      * 
      * @return 사용자별 핵심 프로젝트 관리 UseCase 그룹
      */
-    fun createForCurrentUser(): CoreProjectUseCases {
+    suspend fun createForCurrentUser(): CoreProjectUseCases {
         val authRepository = authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )

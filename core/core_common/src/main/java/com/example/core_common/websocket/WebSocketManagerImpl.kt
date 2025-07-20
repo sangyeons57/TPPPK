@@ -22,7 +22,8 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     private val okHttpClient = OkHttpClient.Builder()
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
-        .pingInterval(30, TimeUnit.SECONDS)
+        .pingInterval(20, TimeUnit.SECONDS) // Cloud Run LB idle-timeout is 30s, so use <30s
+        .retryOnConnectionFailure(true)
         .apply {
             // Configure SSL for Google Cloud Run compatibility
             configureSslForCloudRun()
@@ -107,12 +108,26 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             Log.d(TAG, "WebSocket closed: $code - $reason")
-            _connectionState.value = WebSocketConnectionState.Disconnected
             stopHeartbeat()
             
-            // Attempt reconnection for unexpected closures
-            if (code != 1000 && code != 1001) { // Not normal closure or going away
-                scheduleReconnect()
+            when (code) {
+                1000, 1001 -> {
+                    // Normal closure or going away - don't reconnect
+                    _connectionState.value = WebSocketConnectionState.Disconnected
+                }
+                1008 -> {
+                    // Policy Violation - likely authentication issue, don't auto-reconnect
+                    _connectionState.value = WebSocketConnectionState.Error(
+                        message = "Authentication required (1008 - Policy Violation)",
+                        throwable = Exception("WebSocket closed with code 1008: $reason")
+                    )
+                    Log.w(TAG, "Authentication error (1008): $reason - Manual token refresh required")
+                }
+                else -> {
+                    // Other unexpected closures - attempt reconnection
+                    _connectionState.value = WebSocketConnectionState.Disconnected
+                    scheduleReconnect()
+                }
             }
         }
         

@@ -1,41 +1,18 @@
 package com.example.feature_chat.logging
 
 import android.util.Log
-import com.google.cloud.logging.LogEntry
-import com.google.cloud.logging.Logging
-import com.google.cloud.logging.LoggingOptions
-import com.google.cloud.logging.Payload
-import com.google.cloud.logging.Severity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Serializable
-data class ChatLogEvent(
-    val timestamp: String,
-    val level: String,
-    val category: String,
-    val message: String,
-    val metadata: Map<String, String> = emptyMap(),
-    val userId: String? = null,
-    val roomId: String? = null,
-    val messageId: String? = null
-)
-
+/**
+ * 간소화된 채팅 로거 - 표준 Android Log로 대체
+ * 이전 ChatLogger API 호환성을 위한 스텁 클래스
+ */
 @Singleton
 class ChatLogger @Inject constructor() {
     
     companion object {
-        private const val TAG = "ChatLogger"
-        private const val LOG_NAME = "android-chat-app"
-        
-        // 로그 카테고리
+        // 로그 카테고리 (호환성용)
         const val CATEGORY_WEBSOCKET = "WEBSOCKET"
         const val CATEGORY_FIREBASE = "FIREBASE"
         const val CATEGORY_UI = "UI"
@@ -43,19 +20,6 @@ class ChatLogger @Inject constructor() {
         const val CATEGORY_CONNECTION = "CONNECTION"
         const val CATEGORY_ERROR = "ERROR"
         const val CATEGORY_TEST = "TEST"
-    }
-    
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private val json = Json { ignoreUnknownKeys = true }
-    
-    // Google Cloud Logging (lazy initialization for performance)
-    private val cloudLogging: Logging? by lazy {
-        try {
-            LoggingOptions.getDefaultInstance().service
-        } catch (e: Exception) {
-            Log.w(TAG, "Google Cloud Logging 초기화 실패: ${e.message}")
-            null
-        }
     }
     
     fun logInfo(
@@ -66,7 +30,7 @@ class ChatLogger @Inject constructor() {
         roomId: String? = null,
         messageId: String? = null
     ) {
-        log(LogLevel.INFO, category, message, metadata, userId, roomId, messageId)
+        Log.i("Chat_$category", formatMessage(message, userId, roomId, messageId, metadata))
     }
     
     fun logWarning(
@@ -77,7 +41,7 @@ class ChatLogger @Inject constructor() {
         roomId: String? = null,
         messageId: String? = null
     ) {
-        log(LogLevel.WARNING, category, message, metadata, userId, roomId, messageId)
+        Log.w("Chat_$category", formatMessage(message, userId, roomId, messageId, metadata))
     }
     
     fun logError(
@@ -89,12 +53,12 @@ class ChatLogger @Inject constructor() {
         roomId: String? = null,
         messageId: String? = null
     ) {
-        val errorMetadata = metadata.toMutableMap()
-        throwable?.let {
-            errorMetadata["exception"] = it.javaClass.simpleName
-            errorMetadata["stackTrace"] = it.stackTraceToString()
+        val formattedMessage = formatMessage(message, userId, roomId, messageId, metadata)
+        if (throwable != null) {
+            Log.e("Chat_$category", formattedMessage, throwable)
+        } else {
+            Log.e("Chat_$category", formattedMessage)
         }
-        log(LogLevel.ERROR, category, message, errorMetadata, userId, roomId, messageId)
     }
     
     fun logDebug(
@@ -105,132 +69,35 @@ class ChatLogger @Inject constructor() {
         roomId: String? = null,
         messageId: String? = null
     ) {
-        log(LogLevel.DEBUG, category, message, metadata, userId, roomId, messageId)
+        Log.d("Chat_$category", formatMessage(message, userId, roomId, messageId, metadata))
     }
     
-    private fun log(
-        level: LogLevel,
-        category: String,
-        message: String,
-        metadata: Map<String, String>,
-        userId: String?,
-        roomId: String?,
-        messageId: String?
-    ) {
-        val logEvent = ChatLogEvent(
-            timestamp = Instant.now().toString(),
-            level = level.name,
-            category = category,
-            message = message,
-            metadata = metadata,
-            userId = userId,
-            roomId = roomId,
-            messageId = messageId
-        )
-        
-        // Android Log 출력
-        logToAndroid(level, category, message, logEvent)
-        
-        // Google Cloud Logging 출력 (비동기)
-        logToGoogleCloud(level, logEvent)
-    }
-    
-    private fun logToAndroid(level: LogLevel, category: String, message: String, logEvent: ChatLogEvent) {
-        val tag = "Chat_$category"
-        val formattedMessage = buildString {
-            append("[$category] $message")
-            if (logEvent.userId != null) append(" | User: ${logEvent.userId}")
-            if (logEvent.roomId != null) append(" | Room: ${logEvent.roomId}")
-            if (logEvent.messageId != null) append(" | Msg: ${logEvent.messageId}")
-            if (logEvent.metadata.isNotEmpty()) {
-                append(" | Meta: ${logEvent.metadata}")
-            }
-        }
-        
-        when (level) {
-            LogLevel.DEBUG -> Log.d(tag, formattedMessage)
-            LogLevel.INFO -> Log.i(tag, formattedMessage)
-            LogLevel.WARNING -> Log.w(tag, formattedMessage)
-            LogLevel.ERROR -> Log.e(tag, formattedMessage)
-        }
-    }
-    
-    private fun logToGoogleCloud(level: LogLevel, logEvent: ChatLogEvent) {
-        coroutineScope.launch {
-            try {
-                cloudLogging?.let { logging ->
-                    val severity = when (level) {
-                        LogLevel.DEBUG -> Severity.DEBUG
-                        LogLevel.INFO -> Severity.INFO
-                        LogLevel.WARNING -> Severity.WARNING
-                        LogLevel.ERROR -> Severity.ERROR
-                    }
-                    
-                    val logEntry = LogEntry.newBuilder(Payload.JsonPayload.of(json.encodeToString(logEvent)))
-                        .setSeverity(severity)
-                        .setLogName(LOG_NAME)
-                        .setResource(com.google.cloud.MonitoredResource.newBuilder("android_app").build())
-                        .build()
-                    
-                    logging.write(listOf(logEntry))
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Google Cloud Logging 전송 실패: ${e.message}")
-            }
-        }
-    }
-    
-    // WebSocket 특화 로깅 메서드들
+    // WebSocket 특화 로깅 메서드들 (호환성용)
     fun logWebSocketConnection(success: Boolean, serverUrl: String, userId: String?) {
         val status = if (success) "SUCCESS" else "FAILED"
-        logInfo(
-            CATEGORY_WEBSOCKET, 
-            "WebSocket 연결 $status",
-            mapOf("serverUrl" to serverUrl, "status" to status),
-            userId = userId
-        )
+        Log.i("Chat_$CATEGORY_WEBSOCKET", "WebSocket 연결 $status | URL: $serverUrl | User: $userId")
     }
     
     fun logWebSocketMessage(
-        action: String, // SEND, RECEIVE, EDIT, DELETE
+        action: String,
         messageId: String,
         roomId: String,
         userId: String?,
         success: Boolean = true
     ) {
-        val level = if (success) LogLevel.INFO else LogLevel.ERROR
         val status = if (success) "SUCCESS" else "FAILED"
-        log(
-            level,
-            CATEGORY_MESSAGE,
-            "WebSocket 메시지 $action $status",
-            mapOf("action" to action, "status" to status),
-            userId = userId,
-            roomId = roomId,
-            messageId = messageId
-        )
+        Log.i("Chat_$CATEGORY_MESSAGE", "WebSocket 메시지 $action $status | Room: $roomId | User: $userId | Msg: $messageId")
     }
     
     fun logFirebaseUpdate(
-        operation: String, // CREATE, UPDATE, DELETE
+        operation: String,
         collection: String,
         documentId: String,
         success: Boolean,
         userId: String?
     ) {
-        val level = if (success) LogLevel.INFO else LogLevel.ERROR
         val status = if (success) "SUCCESS" else "FAILED"
-        logInfo(
-            CATEGORY_FIREBASE,
-            "Firebase $operation $status",
-            mapOf(
-                "operation" to operation,
-                "collection" to collection,
-                "documentId" to documentId,
-                "status" to status
-            ),
-            userId = userId
-        )
+        Log.i("Chat_$CATEGORY_FIREBASE", "Firebase $operation $status | Collection: $collection | Doc: $documentId | User: $userId")
     }
     
     fun logTestResult(
@@ -239,25 +106,26 @@ class ChatLogger @Inject constructor() {
         details: String = "",
         duration: Long? = null
     ) {
-        val level = if (success) LogLevel.INFO else LogLevel.ERROR
         val status = if (success) "PASSED" else "FAILED"
-        val metadata = mutableMapOf(
-            "testName" to testName,
-            "status" to status
-        )
-        duration?.let { metadata["duration"] = "${it}ms" }
-        if (details.isNotEmpty()) metadata["details"] = details
-        
-        log(
-            level,
-            CATEGORY_TEST,
-            "테스트 $testName $status",
-            metadata,
-            null, null, null
-        )
+        val durationStr = duration?.let { " (${it}ms)" } ?: ""
+        Log.i("Chat_$CATEGORY_TEST", "테스트 $testName $status$durationStr | $details")
     }
     
-    private enum class LogLevel {
-        DEBUG, INFO, WARNING, ERROR
+    private fun formatMessage(
+        message: String,
+        userId: String?,
+        roomId: String?,
+        messageId: String?,
+        metadata: Map<String, String>
+    ): String {
+        return buildString {
+            append(message)
+            userId?.let { append(" | User: $it") }
+            roomId?.let { append(" | Room: $it") }
+            messageId?.let { append(" | Msg: $it") }
+            if (metadata.isNotEmpty()) {
+                append(" | Meta: $metadata")
+            }
+        }
     }
 }

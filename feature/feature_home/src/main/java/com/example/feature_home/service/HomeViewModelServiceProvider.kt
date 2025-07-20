@@ -40,7 +40,7 @@ class HomeViewModelServiceProvider @Inject constructor(
     /**
      * HomeViewModel에서 사용할 Service들을 생성하여 반환
      */
-    fun createForUser(userId: UserId): HomeViewModelServices {
+    suspend fun createForUser(userId: UserId): HomeViewModelServices {
         val userUseCases = userUseCaseProvider.createForUser()
         val dmUseCases = dmUseCaseProvider.createForUser(userId)
         val coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()

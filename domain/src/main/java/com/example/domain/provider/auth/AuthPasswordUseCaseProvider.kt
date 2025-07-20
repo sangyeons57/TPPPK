@@ -44,10 +44,7 @@ class AuthPasswordUseCaseProvider @Inject constructor(
             
             validatePasswordFormatUseCase = ValidatePasswordFormatUseCase(),
             
-            validatePasswordForSignUpUseCase = ValidatePasswordForSignUpUseCase(),
-            
-            // 공통 Repository
-            authRepository = authRepository
+            validatePasswordForSignUpUseCase = ValidatePasswordForSignUpUseCase()
         )
     }
 }
@@ -63,8 +60,5 @@ data class AuthPasswordUseCases(
     // 비밀번호 유효성 검사
     val validateNewPasswordUseCase: ValidateNewPasswordUseCase,
     val validatePasswordFormatUseCase: ValidatePasswordFormatUseCase,
-    val validatePasswordForSignUpUseCase: ValidatePasswordForSignUpUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository
+    val validatePasswordForSignUpUseCase: ValidatePasswordForSignUpUseCase
 )

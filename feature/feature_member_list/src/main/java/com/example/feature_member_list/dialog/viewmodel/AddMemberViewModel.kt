@@ -9,6 +9,7 @@ import com.example.domain.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
 import com.example.domain.provider.friend.FriendUseCaseProvider
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain.usecase.auth.session.GetCurrentUserSessionUseCase
 import com.example.feature_member_list.dialog.ui.FriendItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -62,7 +63,7 @@ class AddMemberViewModel @Inject constructor(
     /**
      * 친구 목록을 로드합니다.
      */
-    fun loadFriends() {
+    suspend fun loadFriends() {
         if (friendUseCases == null) {
             // 현재 사용자 ID를 가져와서 FriendUseCases 생성
             friendUseCases = friendUseCaseProvider.createForCurrentUser() // 임시로 사용
@@ -122,7 +123,7 @@ class AddMemberViewModel @Inject constructor(
     /**
      * 프로젝트 초대 링크를 로드합니다.
      */
-    fun loadProjectInviteLink(projectId: DocumentId) {
+    suspend fun loadProjectInviteLink(projectId: DocumentId) {
         // 기존 초대 링크가 있다면 생성하지 않고 바로 새로운 링크 생성을 권장
         generateProjectInviteLink(projectId)
     }
@@ -133,24 +134,25 @@ class AddMemberViewModel @Inject constructor(
     fun generateProjectInviteLink(projectId: DocumentId) {
         // CoreProjectUseCases 초기화
         if (coreProjectUseCases == null && authSessionUseCases != null) {
-            val currentUser = authSessionUseCases!!.authRepository.getCurrentUserSession()
-            when (currentUser) {
-                is CustomResult.Success -> {
-                    coreProjectUseCases = coreProjectUseCaseProvider.createForProject(
-                        projectId = projectId,
-                        userId = currentUser.data.userId
-                    )
-                }
-                else -> {
-                    viewModelScope.launch {
-                        _uiState.update { 
-                            it.copy(
-                                isLoadingLink = false, 
-                                error = "사용자 인증 정보를 가져올 수 없습니다."
-                            ) 
+            viewModelScope.launch {
+                val currentUser = authSessionUseCases!!.getCurrentUserSessionUseCase()
+                when (currentUser) {
+                    is CustomResult.Success -> {
+                        coreProjectUseCases = coreProjectUseCaseProvider.createForProject(
+                            projectId = projectId,
+                            userId = currentUser.data.userId
+                        )
+                    }
+                    else -> {
+                        viewModelScope.launch {
+                            _uiState.update {
+                                it.copy(
+                                    isLoadingLink = false,
+                                    error = "사용자 인증 정보를 가져올 수 없습니다."
+                                )
+                            }
                         }
                     }
-                    return
                 }
             }
         }
@@ -161,7 +163,7 @@ class AddMemberViewModel @Inject constructor(
             _uiState.update { it.copy(isLoadingLink = true, error = null) }
             
             try {
-                val currentUser = authSessionUseCases!!.authRepository.getCurrentUserSession()
+                val currentUser = authSessionUseCases!!.getCurrentUserSessionUseCase()
                 when (currentUser) {
                     is CustomResult.Success -> {
                         // 1. 초대 생성 (DocumentId 반환)

@@ -387,8 +387,15 @@ fun NavGraphBuilder.chatGraph(navigationManger: NavigationManger) {
         composable(
             route = ChatRoute.ROUTE_PATTERN,
             arguments = ChatRoute.arguments
-        ) {
-            ChatScreen(navigationManger = navigationManger)
+        ) { backStackEntry ->
+            val roomId = backStackEntry.arguments?.getString(RouteArgs.CHANNEL_ID) ?: ""
+            ChatScreen(
+                roomId = roomId,
+                onNavigateBack = { navigationManger.navigateBack() },
+                onNavigateToProfile = { userId -> 
+                    // TODO: Implement profile navigation 
+                }
+            )
         }
     }
 }

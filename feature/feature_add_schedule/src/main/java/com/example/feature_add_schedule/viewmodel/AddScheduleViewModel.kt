@@ -12,7 +12,9 @@ import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.domain.provider.project.CoreProjectUseCases
 import com.example.domain.provider.schedule.ScheduleUseCaseProvider
+import com.example.domain.provider.schedule.ScheduleUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,12 +75,16 @@ class AddScheduleViewModel @Inject constructor(
 
     private val _eventFlow = MutableSharedFlow<AddScheduleEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
-    val scheduleUseCases = scheduleUseCaseProvider.createForCurrentUser()
-    val projectUseCases = projectUseCaseProvider.createForCurrentUser()
-    private val addScheduleUseCase = scheduleUseCases.addScheduleUseCase
-    private val getUserParticipatingProjectsUseCase = projectUseCases.getUserParticipatingProjectsUseCase
+    lateinit var scheduleUseCases : ScheduleUseCases
+
+    lateinit var projectUseCases : CoreProjectUseCases
 
     init {
+        viewModelScope.launch {
+            projectUseCases = projectUseCaseProvider.createForCurrentUser()
+            scheduleUseCases = scheduleUseCaseProvider.createForCurrentUser()
+        }
+
         val initialDate = if (year != null && month != null && day != null) {
             LocalDate.of(year, month, day)
         } else {
@@ -102,7 +108,7 @@ class AddScheduleViewModel @Inject constructor(
             )
             _uiState.update { it.copy(isLoading = true, availableProjects = listOf(personalScheduleOption), selectedProject = personalScheduleOption) }
 
-            getUserParticipatingProjectsUseCase().collect { result ->
+            projectUseCases.getUserParticipatingProjectsUseCase().collect { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val fetchedProjects = result.data.map { project ->
@@ -220,7 +226,7 @@ class AddScheduleViewModel @Inject constructor(
             val instantStartTime = DateTimeUtil.toInstant(localStartTime)
             val instantEndTime = DateTimeUtil.toInstant(localEndTime)
 
-            val result = addScheduleUseCase(
+            val result = scheduleUseCases.addScheduleUseCase(
                 title = title,
                 content = content,
                 startTime = instantStartTime,

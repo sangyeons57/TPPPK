@@ -3,6 +3,7 @@ package com.example.feature_dev.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -69,6 +72,16 @@ fun DevMenuScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val cacheClearResult by viewModel.cacheClearResult.collectAsState()
     val isCacheClearing by viewModel.isCacheClearing.collectAsState()
+    
+    // 로그인 상태
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val currentUserInfo by viewModel.currentUserInfo.collectAsState()
+    
+    // WebSocket 테스트 상태
+    val webSocketConnectionState by viewModel.webSocketConnectionState.collectAsState()
+    val isWebSocketConnecting by viewModel.isWebSocketConnecting.collectAsState()
+    val webSocketMessages by viewModel.webSocketMessages.collectAsState()
+    val lastSentCode by viewModel.lastSentCode.collectAsState()
     
     Scaffold(
         modifier = modifier,
@@ -233,6 +246,193 @@ fun DevMenuScreen(
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("호출 중...")
+                }
+            }
+
+            /* ----------------------------------------- */
+            /* 로그인 상태                              */
+            /* ----------------------------------------- */
+            Text(
+                "--- 로그인 상태 ---",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            // 로그인 상태 카드
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isLoggedIn) 
+                        MaterialTheme.colorScheme.primaryContainer 
+                    else 
+                        MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = if (isLoggedIn) "✅ 로그인됨" else "❌ 로그인 필요",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isLoggedIn) 
+                            MaterialTheme.colorScheme.onPrimaryContainer 
+                        else 
+                            MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    currentUserInfo?.let { userInfo ->
+                        Text(
+                            text = userInfo,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
+            // 로그인 관련 버튼들
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (!isLoggedIn) {
+                    Button(
+                        onClick = { navigationManger.navigateTo(com.example.core_navigation.core.LoginRoute) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("로그인하기")
+                    }
+                } else {
+                    Button(
+                        onClick = { viewModel.refreshLoginStatus() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("상태 새로고침")
+                    }
+                }
+            }
+
+            /* ----------------------------------------- */
+            /* WebSocket 테스트                         */
+            /* ----------------------------------------- */
+            Text(
+                "--- WebSocket 테스트 ---",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            // WebSocket 연결 상태 표시
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = when (webSocketConnectionState) {
+                        is com.example.core_common.websocket.WebSocketConnectionState.Connected -> 
+                            MaterialTheme.colorScheme.primaryContainer
+                        is com.example.core_common.websocket.WebSocketConnectionState.Error -> 
+                            MaterialTheme.colorScheme.errorContainer
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    }
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "연결 상태: ${viewModel.getWebSocketStatusText()}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    lastSentCode?.let { code ->
+                        Text(
+                            text = "마지막 전송 코드: $code",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
+            // WebSocket 버튼들
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isWebSocketConnecting) {
+                    Button(
+                        onClick = { },
+                        modifier = Modifier.weight(1f),
+                        enabled = false
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("연결 중...")
+                    }
+                } else {
+                    Button(
+                        onClick = viewModel::connectWebSocket,
+                        modifier = Modifier.weight(1f),
+                        enabled = isLoggedIn && webSocketConnectionState !is com.example.core_common.websocket.WebSocketConnectionState.Connected
+                    ) {
+                        Text("연결")
+                    }
+                }
+                
+                Button(
+                    onClick = viewModel::sendHelloWorldTest,
+                    modifier = Modifier.weight(1f),
+                    enabled = isLoggedIn && webSocketConnectionState is com.example.core_common.websocket.WebSocketConnectionState.Connected
+                ) {
+                    Text("Hello World 전송")
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = viewModel::disconnectWebSocket,
+                    modifier = Modifier.weight(1f),
+                    enabled = isLoggedIn && webSocketConnectionState is com.example.core_common.websocket.WebSocketConnectionState.Connected
+                ) {
+                    Text("연결 해제")
+                }
+                
+                Button(
+                    onClick = viewModel::clearWebSocketMessages,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("로그 지우기")
+                }
+            }
+
+            // WebSocket 메시지 로그
+            if (webSocketMessages.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                            text = "WebSocket 로그:",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            reverseLayout = true
+                        ) {
+                            items(webSocketMessages.reversed()) { message ->
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

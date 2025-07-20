@@ -4,7 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.repository.MessageRepository
-import com.example.feature_chat.logging.ChatLogger
+import android.util.Log
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.testing.HiltAndroidRule

@@ -46,8 +46,6 @@ class FileManagementUseCaseProvider @Inject constructor(
             downloadFileUseCase = DownloadFileUseCaseImpl(fileRepository),
             uploadMediaUseCase = UploadMediaUseCaseImpl(mediaRepository),
             deleteMediaUseCase = DeleteMediaUseCaseImpl(mediaRepository),
-            fileRepository = fileRepository,
-            mediaRepository = mediaRepository
         )
     }
 }
@@ -62,6 +60,4 @@ data class FileManagementUseCases(
     val downloadFileUseCase: DownloadFileUseCase,
     val uploadMediaUseCase: UploadMediaUseCase,
     val deleteMediaUseCase: DeleteMediaUseCase,
-    val fileRepository: FileRepository,
-    val mediaRepository: MediaRepository
 )

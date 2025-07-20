@@ -58,8 +58,6 @@ class ValidationUseCaseProvider @Inject constructor(
                 userRepository = userRepository
             ),
             
-            // 공통 Repository
-            userRepository = userRepository
         )
     }
 }
@@ -82,6 +80,4 @@ data class ValidationUseCases(
     // 닉네임 유효성 검사
     val validateNicknameForSignUpUseCase: ValidateNicknameForSignUpUseCase,
     
-    // 공통 Repository
-    val userRepository: UserRepository
 )

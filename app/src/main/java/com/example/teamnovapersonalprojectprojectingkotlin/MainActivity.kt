@@ -228,7 +228,7 @@ class MainActivity : ComponentActivity() {
     private fun decideStartDestination(): String {
         // val isLoggedIn = false // 예시: 사용자 로그인 상태 확인 로직
         // return if (isLoggedIn) "main" else "auth"
-//        return DevMenuRoute.toAppRoutePath()
-         return "auth" // Auth 네비게이션 그래프 자체를 시작점으로 지정
+        return DevMenuRoute.toAppRoutePath() // 임시: WebSocket 테스트를 위해 DevMenu로 시작
+        // return "auth" // Auth 네비게이션 그래프 자체를 시작점으로 지정
     }
 }

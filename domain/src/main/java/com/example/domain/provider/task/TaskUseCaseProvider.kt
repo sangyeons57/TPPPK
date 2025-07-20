@@ -92,8 +92,6 @@ class TaskUseCaseProvider @Inject constructor(
                 taskRepository = taskRepository
             ),
             
-            // 공통 Repository
-            taskRepository = taskRepository
         )
     }
 }
@@ -112,6 +110,4 @@ data class TaskUseCases(
     val observeTasksUseCase: ObserveTasksUseCase,
     val reorderTaskUseCase: ReorderTaskUseCase,
     
-    // 공통 Repository
-    val taskRepository: TaskRepository
 )

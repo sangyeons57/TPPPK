@@ -56,11 +56,7 @@ class AuthRegistrationUseCaseProvider @Inject constructor(
             
             requestEmailVerificationAfterSignUpUseCase = RequestEmailVerificationAfterSignUpUseCase(
                 authRepository = authRepository
-            ),
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            userRepository = userRepository
+            )
         )
     }
 }
@@ -75,9 +71,5 @@ data class AuthRegistrationUseCases(
     // 이메일 인증
     val checkEmailVerificationUseCase: CheckEmailVerificationUseCase,
     val sendEmailVerificationUseCase: SendEmailVerificationUseCase,
-    val requestEmailVerificationAfterSignUpUseCase: RequestEmailVerificationAfterSignUpUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val userRepository: UserRepository
+    val requestEmailVerificationAfterSignUpUseCase: RequestEmailVerificationAfterSignUpUseCase
 )

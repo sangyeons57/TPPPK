@@ -5,13 +5,9 @@ import com.example.domain.model.base.DMWrapper
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.DMWrapperRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.catch
 import javax.inject.Inject
-import android.util.Log
-import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -34,7 +30,7 @@ class GetUserDmWrappersUseCase @Inject constructor(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(): Flow<CustomResult<List<DMWrapper>, Exception>> =
-        authRepository.getUserSessionStream()
+        authRepository.getCurrentUserSessionStream()
             .flatMapLatest { sessionResult ->
                 if (sessionResult !is CustomResult.Success) {
                     flowOf(CustomResult.Failure(Exception("Not authenticated")))

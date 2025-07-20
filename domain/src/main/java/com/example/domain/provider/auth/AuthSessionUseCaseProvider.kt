@@ -8,6 +8,8 @@ import com.example.domain.repository.factory.context.UserRepositoryFactoryContex
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCaseImpl
 import com.example.domain.usecase.auth.session.CheckSessionUseCase
+import com.example.domain.usecase.auth.session.GetCurrentUserSessionStreamUseCase
+import com.example.domain.usecase.auth.session.GetCurrentUserSessionUseCase
 import com.example.domain.usecase.auth.session.LoginUseCase
 import com.example.domain.usecase.auth.session.LogoutUseCase
 import javax.inject.Inject
@@ -59,9 +61,14 @@ class AuthSessionUseCaseProvider @Inject constructor(
                 authRepository = authRepository
             ),
             
-            // 공통 Repository
-            authRepository = authRepository,
-            userRepository = userRepository
+            // 세션 관리
+            getCurrentUserSessionUseCase = GetCurrentUserSessionUseCase(
+                authRepository = authRepository
+            ),
+            getCurrentUserSessionStreamUseCase = GetCurrentUserSessionStreamUseCase(
+                authRepository = authRepository
+            ),
+
         )
     }
 }
@@ -78,7 +85,7 @@ data class AuthSessionUseCases(
     val checkAuthenticationStatusUseCase: CheckAuthenticationStatusUseCaseImpl,
     val checkSessionUseCase: CheckSessionUseCase,
     
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val userRepository: UserRepository
+    // 세션 관리
+    val getCurrentUserSessionUseCase: GetCurrentUserSessionUseCase,
+    val getCurrentUserSessionStreamUseCase: GetCurrentUserSessionStreamUseCase,
 )

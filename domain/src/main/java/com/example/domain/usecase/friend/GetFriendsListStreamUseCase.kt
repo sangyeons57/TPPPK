@@ -25,7 +25,7 @@ class GetFriendsListStreamUseCase @Inject constructor(
      *
      * @return Flow<CustomResult<List<Friend>, Exception>> 친구 목록 정보 Flow
      */
-    operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> {
+    suspend operator fun invoke(): Flow<CustomResult<List<Friend>, Exception>> {
         val session = when (val result = authRepository.getCurrentUserSession()) {
             is CustomResult.Success -> result.data
             is CustomResult.Failure -> return flowOf(CustomResult.Failure(Exception("로그인 상태를 확인할 수 없습니다.")))

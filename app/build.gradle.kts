@@ -53,6 +53,18 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("com.google.guava:guava:32.1.1-jre")
+        capabilitiesResolution {
+            withCapability("com.google.guava:listenablefuture") {
+                select("com.google.guava:guava:0")
+                because("Use Guava instead of standalone listenablefuture")
+            }
+        }
+    }
+}
+
 dependencies {
 
 

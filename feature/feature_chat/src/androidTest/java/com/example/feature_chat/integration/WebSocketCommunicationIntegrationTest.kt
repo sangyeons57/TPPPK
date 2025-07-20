@@ -5,7 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.core_common.websocket.WebSocketManager
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.feature_chat.logging.ChatLogger
+import android.util.Log
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import dagger.hilt.android.testing.HiltAndroidRule

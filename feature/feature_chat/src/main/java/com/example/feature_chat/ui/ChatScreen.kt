@@ -111,7 +111,6 @@ fun ChatScreen(
                 is ChatEvent.ShowUserProfileDialog -> showUserProfileDialog = event.userId
                 is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ClearFocus -> focusManager.clearFocus()
-                is ChatEvent.NavigateBack -> navigationManger.navigateBack()
                 is ChatEvent.Error -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ShowMessageActions -> {
                     // 메시지 ID와 텍스트를 사용해 다이얼로그 표시

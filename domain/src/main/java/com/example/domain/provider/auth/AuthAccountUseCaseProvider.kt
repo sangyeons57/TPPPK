@@ -52,11 +52,7 @@ class AuthAccountUseCaseProvider @Inject constructor(
             withdrawMembershipUseCase = WithdrawMembershipUseCaseImpl(
                 authRepository = authRepository,
                 userRepository = userRepository
-            ),
-            
-            // 공통 Repository
-            authRepository = authRepository,
-            userRepository = userRepository
+            )
         )
     }
 }
@@ -68,9 +64,5 @@ data class AuthAccountUseCases(
     // 계정 관리
     val deleteAuthUserUseCase: DeleteAuthUserUseCase,
     val reactivateAccountUseCase: ReactivateAccountUseCase,
-    val withdrawMembershipUseCase: WithdrawMembershipUseCase,
-    
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val userRepository: UserRepository
+    val withdrawMembershipUseCase: WithdrawMembershipUseCase
 )

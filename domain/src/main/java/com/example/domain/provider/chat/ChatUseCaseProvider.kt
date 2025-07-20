@@ -62,11 +62,7 @@ class ChatUseCaseProvider @Inject constructor(
             editMessageUseCase = EditMessageUseCase(messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(messageRepository),
-            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository),
-
-            // 공통 Repository
-            authRepository = authRepository,
-            messageRepository = messageRepository
+            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository)
         )
     }
 
@@ -92,11 +88,7 @@ class ChatUseCaseProvider @Inject constructor(
             editMessageUseCase = EditMessageUseCase(messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(messageRepository),
-            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository),
-
-            // 공통 Repository
-            authRepository = authRepository,
-            messageRepository = messageRepository
+            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository)
         )
     }
 
@@ -144,9 +136,5 @@ data class ChatUseCases(
     val editMessageUseCase: EditMessageUseCase,
     val deleteMessageUseCase: DeleteMessageUseCase,
     val getMessagesStreamUseCase: GetMessagesStreamUseCase,
-    val fetchPastMessagesUseCase: FetchPastMessagesUseCase,
-
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val messageRepository: MessageRepository
+    val fetchPastMessagesUseCase: FetchPastMessagesUseCase
 )

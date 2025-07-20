@@ -6,7 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.core_ui.theme.AppTheme
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.feature_chat.logging.ChatLogger
+import android.util.Log
 import com.example.feature_chat.ui.ChatScreen
 import com.example.feature_chat.viewmodel.WebSocketChatViewModel
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -37,8 +37,6 @@ class ChatUIIntegrationTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    @Inject
-    lateinit var chatLogger: ChatLogger
 
     private val testRoomId = "ui-test-room-${UUID.randomUUID()}"
     private val testUserId = UserId("ui-test-user-${UUID.randomUUID()}")
@@ -59,10 +57,7 @@ class ChatUIIntegrationTest {
         val startTime = System.currentTimeMillis()
         
         try {
-            chatLogger.logInfo(
-                ChatLogger.CATEGORY_UI,
-                "채팅 화면 연결 상태 표시 테스트 시작"
-            )
+            Log.i("ChatUI_Test", "채팅 화면 연결 상태 표시 테스트 시작")
 
             composeTestRule.setContent {
                 AppTheme {
@@ -113,10 +108,7 @@ class ChatUIIntegrationTest {
         val startTime = System.currentTimeMillis()
         
         try {
-            chatLogger.logInfo(
-                ChatLogger.CATEGORY_UI,
-                "메시지 입력 및 전송 UI 테스트 시작"
-            )
+            Log.i("ChatUI_Test", "메시지 입력 및 전송 UI 테스트 시작")
 
             composeTestRule.setContent {
                 AppTheme {
@@ -183,10 +175,7 @@ class ChatUIIntegrationTest {
         val startTime = System.currentTimeMillis()
         
         try {
-            chatLogger.logInfo(
-                ChatLogger.CATEGORY_UI,
-                "메시지 전송 상태 표시 UI 테스트 시작"
-            )
+            Log.i("ChatUI_Test", "메시지 전송 상태 표시 UI 테스트 시작")
 
             composeTestRule.setContent {
                 AppTheme {
@@ -256,10 +245,7 @@ class ChatUIIntegrationTest {
         val startTime = System.currentTimeMillis()
         
         try {
-            chatLogger.logInfo(
-                ChatLogger.CATEGORY_UI,
-                "에러 처리 UI 테스트 시작"
-            )
+            Log.i("ChatUI_Test", "에러 처리 UI 테스트 시작")
 
             composeTestRule.setContent {
                 AppTheme {
@@ -285,23 +271,14 @@ class ChatUIIntegrationTest {
             // 에러 메시지 또는 재연결 버튼 확인
             try {
                 composeTestRule.onNodeWithTag("error_message").assertIsDisplayed()
-                chatLogger.logInfo(
-                    ChatLogger.CATEGORY_UI,
-                    "에러 메시지가 표시됨"
-                )
+                Log.i("ChatUI_Test", "에러 메시지가 표시됨")
             } catch (e: AssertionError) {
                 // 에러 메시지가 없는 경우, 재연결 버튼 확인
                 try {
                     composeTestRule.onNodeWithTag("reconnect_button").assertExists()
-                    chatLogger.logInfo(
-                        ChatLogger.CATEGORY_UI,
-                        "재연결 버튼이 표시됨"
-                    )
+                    Log.i("ChatUI_Test", "재연결 버튼이 표시됨")
                 } catch (e2: AssertionError) {
-                    chatLogger.logInfo(
-                        ChatLogger.CATEGORY_UI,
-                        "에러 UI 요소 없음 (정상 연결 상태)"
-                    )
+                    Log.i("ChatUI_Test", "에러 UI 요소 없음 (정상 연결 상태)")
                 }
             }
 
@@ -330,10 +307,7 @@ class ChatUIIntegrationTest {
         val startTime = System.currentTimeMillis()
         
         try {
-            chatLogger.logInfo(
-                ChatLogger.CATEGORY_UI,
-                "메시지 수정 UI 테스트 시작"
-            )
+            Log.i("ChatUI_Test", "메시지 수정 UI 테스트 시작")
 
             composeTestRule.setContent {
                 AppTheme {
@@ -411,10 +385,7 @@ class ChatUIIntegrationTest {
         val startTime = System.currentTimeMillis()
         
         try {
-            chatLogger.logInfo(
-                ChatLogger.CATEGORY_UI,
-                "연결 상태 변화 UI 테스트 시작"
-            )
+            Log.i("ChatUI_Test", "연결 상태 변화 UI 테스트 시작")
 
             composeTestRule.setContent {
                 AppTheme {
@@ -440,10 +411,7 @@ class ChatUIIntegrationTest {
                     .fetchSemanticsNode().config.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text
                 statusText?.let { connectionStates.add(it) }
             } catch (e: Exception) {
-                chatLogger.logWarning(
-                    ChatLogger.CATEGORY_UI,
-                    "연결 상태 텍스트를 찾을 수 없음: ${e.message}"
-                )
+                Log.w("ChatUI_Test", "연결 상태 텍스트를 찾을 수 없음: ${e.message}")
             }
 
             // 연결 상태 변화 대기 (최대 10초)
@@ -455,10 +423,7 @@ class ChatUIIntegrationTest {
                     statusText?.let { 
                         if (connectionStates.lastOrNull() != it) {
                             connectionStates.add(it) 
-                            chatLogger.logInfo(
-                                ChatLogger.CATEGORY_UI,
-                                "연결 상태 변화 감지: $it"
-                            )
+                            Log.i("ChatUI_Test", "연결 상태 변화 감지: $it")
                         }
                     }
                 } catch (e: Exception) {
@@ -466,10 +431,7 @@ class ChatUIIntegrationTest {
                 }
             }
 
-            chatLogger.logInfo(
-                ChatLogger.CATEGORY_UI,
-                "관찰된 연결 상태들: $connectionStates"
-            )
+            Log.i("ChatUI_Test", "관찰된 연결 상태들: $connectionStates")
 
             val duration = System.currentTimeMillis() - startTime
             chatLogger.logTestResult(

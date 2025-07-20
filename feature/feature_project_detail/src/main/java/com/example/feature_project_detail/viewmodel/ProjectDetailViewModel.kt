@@ -13,8 +13,10 @@ import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.provider.project.CoreProjectUseCaseProvider
+import com.example.domain.provider.project.CoreProjectUseCases
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain.provider.project.ProjectStructureUseCases
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -65,13 +67,17 @@ class ProjectDetailViewModel @Inject constructor(
     private val projectId: DocumentId = DocumentId(savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID))
 
     // ProjectUseCaseProvider를 통해 해당 프로젝트의 UseCases 생성
-    private val projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
-    private val structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
+    private lateinit var projectUseCases : CoreProjectUseCases
+    private lateinit var structureUseCases : ProjectStructureUseCases
 
     private val _uiState = MutableStateFlow(ProjectDetailUiState(projectId = projectId))
     val uiState: StateFlow<ProjectDetailUiState> = _uiState.asStateFlow()
     
     init {
+        viewModelScope.launch {
+            projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+            structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
+        }
         // 프로젝트 상세 정보 로드
         loadProjectDetails()
     }

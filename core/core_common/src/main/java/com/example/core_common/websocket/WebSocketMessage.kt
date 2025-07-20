@@ -9,7 +9,7 @@ data class WebSocketMessage(
     @SerialName("roomId") val roomId: String? = null,
     @SerialName("senderId") val senderId: String? = null,
     @SerialName("content") val content: String? = null,
-    @SerialName("timestamp") val timestamp: String? = null,
+    @SerialName("timestamp") val timestamp: Double? = null,
     @SerialName("messageId") val messageId: String? = null,
     @SerialName("replyToMessageId") val replyToMessageId: String? = null,
     @SerialName("payload") val payload: Map<String, String>? = null

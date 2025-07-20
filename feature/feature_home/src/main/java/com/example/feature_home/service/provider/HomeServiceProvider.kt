@@ -54,7 +54,7 @@ class HomeServiceProvider @Inject constructor(
      * 
      * @return Home 화면에서 사용할 Service 그룹
      */
-    fun createForCurrentUser(): HomeServices {
+    suspend fun createForCurrentUser(): HomeServices {
         val userUseCases = userUseCaseProvider.createForUser()
         val coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
         // For DM, we need to use current user, but dmUseCaseProvider.createForUser needs a userId

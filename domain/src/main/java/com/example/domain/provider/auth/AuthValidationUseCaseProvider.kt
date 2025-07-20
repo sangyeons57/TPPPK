@@ -51,10 +51,7 @@ class AuthValidationUseCaseProvider @Inject constructor(
             ),
 
             // 오류 메시지 처리
-            getAuthErrorMessageUseCase = GetAuthErrorMessageUseCaseImpl(),
-            
-            // 공통 Repository
-            userRepository = userRepository
+            getAuthErrorMessageUseCase = GetAuthErrorMessageUseCaseImpl()
         )
     }
 }
@@ -72,8 +69,5 @@ data class AuthValidationUseCases(
     val validateNicknameForSignUpUseCase: ValidateNicknameForSignUpUseCase,
 
     // 오류 메시지 처리
-    val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase,
-    
-    // 공통 Repository
-    val userRepository: UserRepository
+    val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
 )

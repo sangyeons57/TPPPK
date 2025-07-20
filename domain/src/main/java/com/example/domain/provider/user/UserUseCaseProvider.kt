@@ -114,9 +114,6 @@ class UserUseCaseProvider @Inject constructor(
             ),
 
 
-            // 공통 Repository
-            authRepository = authRepository,
-            userRepository = userRepository,
         )
     }
 }
@@ -139,9 +136,5 @@ data class UserUseCases(
 
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
     val removeProfileImageUseCase: RemoveProfileImageUseCase,
-    val uploadProfileImageUseCase: UploadProfileImageUseCase,
-
-    // 공통 Repository
-    val authRepository: AuthRepository,
-    val userRepository: UserRepository
+    val uploadProfileImageUseCase: UploadProfileImageUseCase
 )
