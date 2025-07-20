@@ -1,3 +1,11 @@
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.gms)
@@ -27,7 +35,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "APP_CHECK_DEBUG_SECRET", "\"${localProperties.getProperty("appCheckDebugSecret")}\"")
+        }
         release {
+            buildConfigField("String", "APP_CHECK_DEBUG_SECRET", "null")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -214,4 +226,3 @@ ksp {
 kotlin {
     jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }
-

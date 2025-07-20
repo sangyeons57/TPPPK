@@ -12,25 +12,42 @@ public class FirebaseConfig {
 
     public static void initialize() {
         if (initialized) {
-            logger.info("Firebase already initialized");
+            logger.info("🔥 Firebase already initialized");
             return;
         }
 
         try {
+            logger.info("🔥 Starting Firebase initialization...");
+            logger.info("🔥 Project ID: teamnovaprojectprojecting");
+            
+            // Check environment variables
+            String googleAppCreds = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
+            logger.info("🔥 GOOGLE_APPLICATION_CREDENTIALS: {}", googleAppCreds != null ? "set" : "not_set");
+            
             // Use Application Default Credentials (Workload Identity)
+            logger.info("🔥 Loading Application Default Credentials...");
             GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+            logger.info("🔥 Credentials loaded successfully");
             
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(credentials)
                     .setProjectId("teamnovaprojectprojecting")
                     .build();
 
+            logger.info("🔥 Initializing Firebase app...");
             FirebaseApp.initializeApp(options);
             initialized = true;
-            logger.info("Firebase initialized successfully using Workload Identity");
+            logger.info("✅ Firebase initialized successfully using Workload Identity");
             
+        } catch (java.io.IOException e) {
+            logger.warn("❌ Failed to load Google credentials ({}): {}. Running in mock authentication mode.", 
+                       e.getClass().getSimpleName(), e.getMessage());
+            logger.info("💡 To fix: Set GOOGLE_APPLICATION_CREDENTIALS environment variable or deploy to Google Cloud");
+            initialized = false;
         } catch (Exception e) {
-            logger.warn("Failed to initialize Firebase with Workload Identity: {}. Running without Firebase integration.", e.getMessage());
+            logger.warn("❌ Failed to initialize Firebase ({}): {}. Running in mock authentication mode.", 
+                       e.getClass().getSimpleName(), e.getMessage());
+            logger.debug("🔍 Full stack trace:", e);
             initialized = false;
         }
     }

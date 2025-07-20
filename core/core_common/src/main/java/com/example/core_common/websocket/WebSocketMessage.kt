@@ -17,6 +17,7 @@ data class WebSocketMessage(
     companion object {
         // Message Types
         const val TYPE_AUTH = "AUTH"
+        const val TYPE_AUTH_SUCCESS = "AUTH_SUCCESS"
         const val TYPE_JOIN_ROOM = "JOIN_ROOM"
         const val TYPE_LEAVE_ROOM = "LEAVE_ROOM"
         const val TYPE_MESSAGE = "MESSAGE"

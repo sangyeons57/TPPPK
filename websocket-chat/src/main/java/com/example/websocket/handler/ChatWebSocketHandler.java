@@ -10,11 +10,12 @@ import org.slf4j.LoggerFactory;
 
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
+import jakarta.websocket.server.ServerEndpointConfig;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 
-@ServerEndpoint("/chat")
+@ServerEndpoint(value = "/chat")
 public class ChatWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     
@@ -36,29 +37,45 @@ public class ChatWebSocketHandler {
     @OnOpen
     public void onOpen(Session session) {
         this.session = session;
-        logger.info("WebSocket connection established: {}", session.getId());
+        logger.info("🔌 WebSocket connection established - Session ID: {}", session.getId());
+        logger.info("🔌 Remote address: {}", session.getRequestURI());
+        logger.info("🔌 Protocol version: {}", session.getProtocolVersion());
         
-        // Extract token from query parameters
-        Map<String, Object> userProperties = session.getUserProperties();
-        String token = session.getRequestParameterMap().get("token") != null ? 
-                      session.getRequestParameterMap().get("token").get(0) : null;
+        // Log all user properties for debugging
+        logger.debug("🔍 Session user properties: {}", session.getUserProperties());
+        
+        // Extract token from Authorization header (stored in user properties by configurator)
+        String token = (String) session.getUserProperties().get("auth_token");
+        
+        logger.info("🔑 Token extraction result - Token present: {}", token != null);
+        if (token != null) {
+            logger.debug("🔑 Token length: {}", token.length());
+            logger.debug("🔑 Token starts with: {}", token.length() > 10 ? token.substring(0, 10) + "..." : token);
+        }
         
         if (token == null || token.trim().isEmpty()) {
-            logger.warn("No authentication token provided");
+            logger.warn("❌ No authentication token provided in Authorization header");
+            logger.warn("❌ Available user properties: {}", session.getUserProperties().keySet());
             closeWithError("Authentication required");
             return;
         }
 
+        logger.info("🔑 Starting token verification...");
         authService.verifyToken(token)
                 .thenAccept(uid -> {
                     if (uid != null) {
                         this.userId = uid;
-                        logger.info("User authenticated: {}", userId);
+                        logger.info("✅ User authenticated successfully: {}", userId);
                         sendSystemMessage("AUTH_SUCCESS", "Authentication successful");
                     } else {
-                        logger.warn("Authentication failed for token");
+                        logger.warn("❌ Authentication failed for token");
                         closeWithError("Authentication failed");
                     }
+                })
+                .exceptionally(throwable -> {
+                    logger.error("💥 Exception during token verification: {}", throwable.getMessage(), throwable);
+                    closeWithError("Authentication error");
+                    return null;
                 });
     }
 
@@ -147,12 +164,13 @@ public class ChatWebSocketHandler {
 
         // Set message metadata
         message.setSenderId(userId);
-        message.setTimestamp(Instant.now());
+        message.setTimestamp(Instant.now()); // This will use the overloaded method
         message.setRoomId(currentRoomId);
 
         // Broadcast to room
         roomManager.broadcastToRoom(currentRoomId, message);
-        logger.info("Message broadcast to room {} by user {}", currentRoomId, userId);
+        logger.info("📤 Message broadcast to room {} by user {} (messageId: {})", 
+                   currentRoomId, userId, message.getMessageId());
     }
 
     private void sendPong() {
@@ -198,5 +216,73 @@ public class ChatWebSocketHandler {
 
     public String getCurrentRoomId() {
         return currentRoomId;
+    }
+
+    /**
+     * Configurator for extracting Authorization header and storing token in session properties
+     */
+    public static class AuthConfigurator extends ServerEndpointConfig.Configurator {
+        private static final Logger logger = LoggerFactory.getLogger(AuthConfigurator.class);
+        
+        @Override
+        public void modifyHandshake(ServerEndpointConfig config, 
+                                   jakarta.websocket.server.HandshakeRequest request, 
+                                   jakarta.websocket.HandshakeResponse response) {
+            
+            logger.info("🤝 WebSocket handshake started");
+            logger.info("🤝 Request URI: {}", request.getRequestURI());
+            
+            try {
+                // Extract Authorization header
+                Map<String, java.util.List<String>> headers = request.getHeaders();
+                logger.info("🔍 Total headers received: {}", headers.size());
+                
+                // Log all headers for debugging (be careful not to log sensitive data in production)
+                headers.forEach((key, values) -> {
+                    if (key.toLowerCase().contains("auth")) {
+                        logger.info("🔍 Header {}: [REDACTED] (length: {})", key, 
+                                   values.isEmpty() ? 0 : values.get(0).length());
+                    } else {
+                        logger.debug("🔍 Header {}: {}", key, values);
+                    }
+                });
+                
+                String authHeader = null;
+                
+                // Check both lowercase and uppercase variants
+                if (headers.containsKey("authorization") && !headers.get("authorization").isEmpty()) {
+                    authHeader = headers.get("authorization").get(0);
+                    logger.info("🔑 Found Authorization header (lowercase key)");
+                } else if (headers.containsKey("Authorization") && !headers.get("Authorization").isEmpty()) {
+                    authHeader = headers.get("Authorization").get(0);
+                    logger.info("🔑 Found Authorization header (uppercase key)");
+                } else {
+                    logger.warn("❌ No Authorization header found");
+                    logger.info("🔍 Available header keys: {}", headers.keySet());
+                }
+                
+                String token = null;
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    token = authHeader.substring(7); // Remove "Bearer " prefix
+                    logger.info("✅ Token extracted from Authorization header (length: {})", token.length());
+                } else if (authHeader != null) {
+                    logger.warn("❌ Authorization header does not start with 'Bearer ': {}", 
+                               authHeader.length() > 20 ? authHeader.substring(0, 20) + "..." : authHeader);
+                } else {
+                    logger.warn("❌ No Authorization header to process");
+                }
+                
+                // Store token in user properties for later use in onOpen
+                config.getUserProperties().put("auth_token", token);
+                
+                logger.info("🤝 Handshake processing completed - Token present: {}", token != null);
+                
+            } catch (Exception e) {
+                logger.error("💥 Error during handshake processing: {}", e.getMessage(), e);
+                // Don't fail the handshake, but log the error
+                config.getUserProperties().put("auth_token", null);
+                config.getUserProperties().put("handshake_error", e.getMessage());
+            }
+        }
     }
 }

@@ -33,63 +33,104 @@ public class ChatWebSocketServer {
 
     public void start(int port) {
         try {
-            // Initialize Firebase
-            logger.info("Initializing Firebase...");
+            // Initialize Firebase with detailed logging
+            logger.info("🔧 Starting WebSocket Chat Server initialization...");
+            logger.info("🔧 Port: {}", port);
+            logger.info("🔧 Environment PORT variable: {}", System.getenv("PORT"));
+            
+            logger.info("🔥 Initializing Firebase...");
             FirebaseConfig.initialize();
+            logger.info("🔥 Firebase initialization status: {}", FirebaseConfig.isInitialized());
 
-            // Create shared services
+            // Create shared services with detailed logging
+            logger.info("🔧 Creating shared services...");
             FirebaseAuthService authService = new FirebaseAuthService();
             ChatRoomManager roomManager = new ChatRoomManager();
+            logger.info("🔧 Services created successfully");
 
             // Create Jetty server
+            logger.info("🚀 Creating Jetty server on port {}...", port);
             Server server = new Server(port);
 
             // Configure servlet context
+            logger.info("🔧 Configuring servlet context...");
             ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
             context.setContextPath("/");
             server.setHandler(context);
 
             // Add health check endpoint
+            logger.info("🔧 Adding health check endpoint...");
             context.addServlet(HealthCheckServlet.class, "/health");
 
             // Configure WebSocket with Jakarta EE 10
+            logger.info("🔧 Configuring WebSocket endpoints...");
             JakartaWebSocketServletContainerInitializer.configure(context, (servletContext, wsContainer) -> {
-                // Set WebSocket configuration
-                wsContainer.setDefaultMaxTextMessageBufferSize(65536);
-                wsContainer.setDefaultMaxSessionIdleTimeout(Duration.ofMinutes(5).toMillis());
+                try {
+                    logger.info("🔧 Setting WebSocket container configuration...");
+                    // Set WebSocket configuration
+                    wsContainer.setDefaultMaxTextMessageBufferSize(65536);
+                    wsContainer.setDefaultMaxSessionIdleTimeout(Duration.ofMinutes(5).toMillis());
+                    logger.info("🔧 WebSocket buffer size: 65536, idle timeout: 5 minutes");
 
-                // Create configurator to provide service instances
-                ServerEndpointConfig.Configurator configurator = new ServerEndpointConfig.Configurator() {
-                    @Override
-                    public <T> T getEndpointInstance(Class<T> endpointClass) throws InstantiationException {
-                        if (endpointClass.equals(ChatWebSocketHandler.class)) {
-                            return endpointClass.cast(new ChatWebSocketHandler(authService, roomManager));
+                    // Create configurator that combines dependency injection with authentication
+                    logger.info("🔧 Creating enhanced endpoint configurator...");
+                    ServerEndpointConfig.Configurator configurator = new ServerEndpointConfig.Configurator() {
+                        @Override
+                        public <T> T getEndpointInstance(Class<T> endpointClass) throws InstantiationException {
+                            logger.debug("🔧 Creating endpoint instance for class: {}", endpointClass.getName());
+                            if (endpointClass.equals(ChatWebSocketHandler.class)) {
+                                ChatWebSocketHandler handler = new ChatWebSocketHandler(authService, roomManager);
+                                logger.debug("🔧 ChatWebSocketHandler instance created successfully");
+                                return endpointClass.cast(handler);
+                            }
+                            return super.getEndpointInstance(endpointClass);
                         }
-                        return super.getEndpointInstance(endpointClass);
-                    }
-                };
+                        
+                        @Override
+                        public void modifyHandshake(ServerEndpointConfig config, 
+                                                   jakarta.websocket.server.HandshakeRequest request, 
+                                                   jakarta.websocket.HandshakeResponse response) {
+                            // Delegate to the AuthConfigurator logic
+                            new ChatWebSocketHandler.AuthConfigurator().modifyHandshake(config, request, response);
+                        }
+                    };
 
-                // Create endpoint configuration
-                ServerEndpointConfig config = ServerEndpointConfig.Builder
-                        .create(ChatWebSocketHandler.class, "/chat")
-                        .configurator(configurator)
-                        .build();
+                    // Create endpoint configuration
+                    logger.info("🔧 Creating endpoint configuration for /chat...");
+                    ServerEndpointConfig config = ServerEndpointConfig.Builder
+                            .create(ChatWebSocketHandler.class, "/chat")
+                            .configurator(configurator)
+                            .build();
 
-                // Add endpoint
-                wsContainer.addEndpoint(config);
+                    // Add endpoint
+                    logger.info("🔧 Adding WebSocket endpoint to container...");
+                    wsContainer.addEndpoint(config);
+                    logger.info("✅ WebSocket endpoint /chat configured successfully");
+                    
+                } catch (Exception e) {
+                    logger.error("❌ Error during WebSocket configuration: {}", e.getMessage(), e);
+                    throw new RuntimeException("WebSocket configuration failed", e);
+                }
             });
 
             // Start server
+            logger.info("🚀 Starting Jetty server...");
             server.start();
-            logger.info("🚀 WebSocket Chat Server started on port {}", port);
-            logger.info("WebSocket endpoint: ws://localhost:{}/chat", port);
-            logger.info("Health check: http://localhost:{}/health", port);
+            
+            // Success logging
+            logger.info("✅ WebSocket Chat Server started successfully!");
+            logger.info("🌐 Server URL: http://localhost:{}", port);
+            logger.info("🔌 WebSocket endpoint: ws://localhost:{}/chat", port);
+            logger.info("❤️ Health check: http://localhost:{}/health", port);
+            logger.info("🔥 Firebase enabled: {}", FirebaseConfig.isInitialized());
 
             // Wait for server to stop
+            logger.info("🕐 Server running, waiting for shutdown signal...");
             server.join();
 
         } catch (Exception e) {
-            logger.error("Failed to start server: {}", e.getMessage(), e);
+            logger.error("❌ Failed to start server: {}", e.getMessage(), e);
+            logger.error("💥 Stack trace:", e);
             System.exit(1);
         }
     }
@@ -101,12 +142,64 @@ public class ChatWebSocketServer {
             resp.setContentType("application/json");
             resp.setStatus(HttpServletResponse.SC_OK);
             
-            String healthStatus = String.format(
-                "{\"status\":\"healthy\",\"firebase\":\"" + (FirebaseConfig.isInitialized() ? "initialized" : "not_initialized") + "\",\"timestamp\":\"%s\"}",
-                java.time.Instant.now()
-            );
-            
-            resp.getWriter().write(healthStatus);
+            try {
+                // Detailed health check information
+                String firebaseStatus = FirebaseConfig.isInitialized() ? "initialized" : "not_initialized";
+                String javaVersion = System.getProperty("java.version");
+                String osName = System.getProperty("os.name");
+                String osVersion = System.getProperty("os.version");
+                long totalMemory = Runtime.getRuntime().totalMemory() / 1024 / 1024; // MB
+                long freeMemory = Runtime.getRuntime().freeMemory() / 1024 / 1024; // MB
+                long usedMemory = totalMemory - freeMemory;
+                String timestamp = java.time.Instant.now().toString();
+                
+                // Environment variables
+                String portEnv = System.getenv("PORT");
+                String googleAppCreds = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
+                
+                String healthStatus = String.format(
+                    "{" +
+                    "\"status\":\"healthy\"," +
+                    "\"timestamp\":\"%s\"," +
+                    "\"firebase\":{\"%s\":\"%s\"}," +
+                    "\"system\":{" +
+                        "\"java_version\":\"%s\"," +
+                        "\"os_name\":\"%s\"," +
+                        "\"os_version\":\"%s\"," +
+                        "\"memory_total_mb\":%d," +
+                        "\"memory_free_mb\":%d," +
+                        "\"memory_used_mb\":%d" +
+                    "}," +
+                    "\"environment\":{" +
+                        "\"PORT\":\"%s\"," +
+                        "\"GOOGLE_APPLICATION_CREDENTIALS\":\"%s\"" +
+                    "}," +
+                    "\"websocket\":{" +
+                        "\"endpoint\":\"/chat\"," +
+                        "\"protocol\":\"ws\"," +
+                        "\"authentication\":\"firebase_jwt\"" +
+                    "}" +
+                    "}",
+                    timestamp,
+                    "status", firebaseStatus,
+                    javaVersion, osName, osVersion,
+                    totalMemory, freeMemory, usedMemory,
+                    portEnv != null ? portEnv : "not_set",
+                    googleAppCreds != null ? "set" : "not_set"
+                );
+                
+                resp.getWriter().write(healthStatus);
+                logger.info("🏥 Health check requested - Status: healthy, Firebase: {}", firebaseStatus);
+                
+            } catch (Exception e) {
+                logger.error("💥 Error in health check: {}", e.getMessage(), e);
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                resp.getWriter().write(String.format(
+                    "{\"status\":\"error\",\"message\":\"%s\",\"timestamp\":\"%s\"}",
+                    e.getMessage(),
+                    java.time.Instant.now()
+                ));
+            }
         }
     }
 }

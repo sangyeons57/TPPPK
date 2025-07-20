@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.*
+import okio.ByteString
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -22,7 +23,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     private val okHttpClient = OkHttpClient.Builder()
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
-        .pingInterval(20, TimeUnit.SECONDS) // Cloud Run LB idle-timeout is 30s, so use <30s
+        .pingInterval(15, TimeUnit.SECONDS) // Cloud Run LB idle-timeout is 30s, so use 15s
         .retryOnConnectionFailure(true)
         .apply {
             // Configure SSL for Google Cloud Run compatibility
@@ -82,19 +83,37 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     private var webSocket: WebSocket? = null
     private var currentRoomId: String? = null
     private var reconnectJob: Job? = null
-    private var heartbeatJob: Job? = null
+    
+    // Authentication state tracking
+    private val _isAuthenticated = MutableStateFlow(false)
+    override val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
     
     private val webSocketListener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             Log.d(TAG, "WebSocket connection opened")
             _connectionState.value = WebSocketConnectionState.Connected
-            startHeartbeat()
+            // OkHttp handles ping/pong automatically with pingInterval
         }
         
         override fun onMessage(webSocket: WebSocket, text: String) {
             Log.d(TAG, "Received message: $text")
             try {
                 val message = json.decodeFromString<WebSocketMessage>(text)
+                
+                // Handle authentication responses
+                when (message.type) {
+                    WebSocketMessage.TYPE_AUTH_SUCCESS -> {
+                        Log.d(TAG, "Authentication successful")
+                        _isAuthenticated.value = true
+                    }
+                    WebSocketMessage.TYPE_ERROR -> {
+                        if (message.content?.contains("Authentication") == true) {
+                            Log.w(TAG, "Authentication failed: ${message.content}")
+                            _isAuthenticated.value = false
+                        }
+                    }
+                }
+                
                 _incomingMessages.tryEmit(message)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse message: $text", e)
@@ -104,16 +123,17 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
             Log.d(TAG, "WebSocket closing: $code - $reason")
             _connectionState.value = WebSocketConnectionState.Disconnected
+            _isAuthenticated.value = false
         }
         
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             Log.d(TAG, "WebSocket closed: $code - $reason")
-            stopHeartbeat()
             
             when (code) {
                 1000, 1001 -> {
                     // Normal closure or going away - don't reconnect
                     _connectionState.value = WebSocketConnectionState.Disconnected
+                    _isAuthenticated.value = false
                 }
                 1008 -> {
                     // Policy Violation - likely authentication issue, don't auto-reconnect
@@ -121,11 +141,13 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                         message = "Authentication required (1008 - Policy Violation)",
                         throwable = Exception("WebSocket closed with code 1008: $reason")
                     )
+                    _isAuthenticated.value = false
                     Log.w(TAG, "Authentication error (1008): $reason - Manual token refresh required")
                 }
                 else -> {
                     // Other unexpected closures - attempt reconnection
                     _connectionState.value = WebSocketConnectionState.Disconnected
+                    _isAuthenticated.value = false
                     scheduleReconnect()
                 }
             }
@@ -185,11 +207,11 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     override suspend fun disconnect() {
         withContext(Dispatchers.IO) {
             reconnectJob?.cancel()
-            stopHeartbeat()
             webSocket?.close(1000, "User disconnection")
             webSocket = null
             currentRoomId = null
             _connectionState.value = WebSocketConnectionState.Disconnected
+            _isAuthenticated.value = false
         }
     }
     
@@ -233,21 +255,6 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         return sendMessage(message)
     }
     
-    private fun startHeartbeat() {
-        heartbeatJob?.cancel()
-        heartbeatJob = scope.launch {
-            while (isActive && _connectionState.value is WebSocketConnectionState.Connected) {
-                delay(30_000) // Send heartbeat every 30 seconds
-                val heartbeat = WebSocketMessage(type = WebSocketMessage.TYPE_HEARTBEAT)
-                sendMessage(heartbeat)
-            }
-        }
-    }
-    
-    private fun stopHeartbeat() {
-        heartbeatJob?.cancel()
-        heartbeatJob = null
-    }
     
     private fun scheduleReconnect() {
         reconnectJob?.cancel()

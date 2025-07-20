@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface WebSocketManager {
     val connectionState: StateFlow<WebSocketConnectionState>
     val incomingMessages: kotlinx.coroutines.flow.Flow<WebSocketMessage>
+    val isAuthenticated: StateFlow<Boolean>
     
     suspend fun connect(serverUrl: String, authToken: String): Result<Unit>
     suspend fun disconnect()

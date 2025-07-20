@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,6 +23,7 @@ class ChatWebSocketClient @Inject constructor(
 ) {
     
     val connectionState = webSocketManager.connectionState
+    val isAuthenticated = webSocketManager.isAuthenticated
     
     fun getChatMessages(roomId: String): Flow<ChatWebSocketEvent> {
         val correlationId = ChatLogUtils.generateCorrelationId()
@@ -170,23 +173,44 @@ class ChatWebSocketClient @Inject constructor(
             timestamp = Instant.now().epochSecond.toDouble()
         )
         
-        return webSocketManager.sendMessage(authMessage).also { result ->
-            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
-            Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+        // Send authentication message and wait briefly for any immediate errors
+        val sendResult = webSocketManager.sendMessage(authMessage)
+        if (sendResult.isFailure) {
+            Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                 correlationId = authCorrelationId,
-                message = "WebSocket 인증 $status",
-                userId = userId.value,
-                metadata = mapOf("action" to "AUTH", "status" to status)
+                message = "인증 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}",
+                userId = userId.value
             ))
-            
-            if (result.isFailure) {
-                Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-                    correlationId = authCorrelationId,
-                    message = "인증 실패: ${result.exceptionOrNull()?.message}",
-                    userId = userId.value
-                ))
-            }
+            return sendResult
         }
+        
+        Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+            correlationId = authCorrelationId,
+            message = "인증 메시지 전송 완료",
+            userId = userId.value
+        ))
+        
+        // Give a brief moment for any immediate auth errors, but don't wait for explicit success
+        kotlinx.coroutines.delay(500) // Wait 500ms for potential immediate errors
+        
+        // Check if we got disconnected due to auth failure
+        if (connectionState.value is com.example.core_common.websocket.WebSocketConnectionState.Error) {
+            Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                correlationId = authCorrelationId,
+                message = "인증 후 연결 오류 발생",
+                userId = userId.value
+            ))
+            return Result.failure(Exception("Authentication failed - connection error"))
+        }
+        
+        Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+            correlationId = authCorrelationId,
+            message = "WebSocket 인증 처리 완료",
+            userId = userId.value,
+            metadata = mapOf("action" to "AUTH", "status" to "SENT")
+        ))
+        
+        return Result.success(Unit)
     }
     
     suspend fun disconnect() {

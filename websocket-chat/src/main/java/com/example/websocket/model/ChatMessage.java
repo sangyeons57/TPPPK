@@ -1,8 +1,11 @@
 package com.example.websocket.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
+import java.util.Map;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatMessage {
     @JsonProperty("type")
     private String type;
@@ -17,7 +20,16 @@ public class ChatMessage {
     private String content;
     
     @JsonProperty("timestamp")
-    private Instant timestamp;
+    private Double timestamp; // Changed to Double to match client
+    
+    @JsonProperty("messageId")
+    private String messageId;
+    
+    @JsonProperty("replyToMessageId")
+    private String replyToMessageId;
+    
+    @JsonProperty("payload")
+    private Map<String, String> payload;
 
     public ChatMessage() {}
 
@@ -26,7 +38,7 @@ public class ChatMessage {
         this.roomId = roomId;
         this.senderId = senderId;
         this.content = content;
-        this.timestamp = timestamp;
+        this.timestamp = timestamp != null ? (double) timestamp.getEpochSecond() : null;
     }
 
     // Getters and Setters
@@ -42,8 +54,27 @@ public class ChatMessage {
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
-    public Instant getTimestamp() { return timestamp; }
-    public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
+    public Double getTimestamp() { return timestamp; }
+    public void setTimestamp(Double timestamp) { this.timestamp = timestamp; }
+    
+    // Convenience method to get timestamp as Instant
+    public Instant getTimestampAsInstant() {
+        return timestamp != null ? Instant.ofEpochSecond(timestamp.longValue()) : null;
+    }
+    
+    // Convenience method to set timestamp from Instant
+    public void setTimestamp(Instant timestamp) {
+        this.timestamp = timestamp != null ? (double) timestamp.getEpochSecond() : null;
+    }
+
+    public String getMessageId() { return messageId; }
+    public void setMessageId(String messageId) { this.messageId = messageId; }
+
+    public String getReplyToMessageId() { return replyToMessageId; }
+    public void setReplyToMessageId(String replyToMessageId) { this.replyToMessageId = replyToMessageId; }
+
+    public Map<String, String> getPayload() { return payload; }
+    public void setPayload(Map<String, String> payload) { this.payload = payload; }
 
     @Override
     public String toString() {
@@ -53,6 +84,9 @@ public class ChatMessage {
                 ", senderId='" + senderId + '\'' +
                 ", content='" + content + '\'' +
                 ", timestamp=" + timestamp +
+                ", messageId='" + messageId + '\'' +
+                ", replyToMessageId='" + replyToMessageId + '\'' +
+                ", payload=" + payload +
                 '}';
     }
 }

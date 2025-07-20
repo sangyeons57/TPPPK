@@ -223,12 +223,22 @@ class DevMenuViewModel @Inject constructor(
                         val connectResult = webSocketClient.connect(SERVER_URL, token)
 
                         if (connectResult.isSuccess) {
-                            addMessage("✅ Connected and authenticated, joining room...")
-                            val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
-                            if (joinResult.isSuccess) {
-                                addMessage("✅ Joined room: $TEST_ROOM_ID")
+                            addMessage("✅ Connected, now authenticating...")
+                            
+                            // 2단계: 명시적 인증
+                            val authResult = webSocketClient.authenticate(userId, token)
+                            if (authResult.isSuccess) {
+                                addMessage("✅ Authentication sent, joining room...")
+                                
+                                // 3단계: 방 입장
+                                val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
+                                if (joinResult.isSuccess) {
+                                    addMessage("✅ Joined room: $TEST_ROOM_ID")
+                                } else {
+                                    addMessage("❌ Failed to join room: ${joinResult.exceptionOrNull()?.message}")
+                                }
                             } else {
-                                addMessage("❌ Failed to join room: ${joinResult.exceptionOrNull()?.message}")
+                                addMessage("❌ Authentication failed: ${authResult.exceptionOrNull()?.message}")
                             }
                         } else {
                             val errorMessage = connectResult.exceptionOrNull()?.message ?: "Unknown error"
@@ -240,12 +250,20 @@ class DevMenuViewModel @Inject constructor(
                                 if (newToken != null) {
                                     val retryResult = webSocketClient.connect(SERVER_URL, newToken)
                                     if (retryResult.isSuccess) {
-                                        addMessage("✅ Connected after token refresh, joining room...")
-                                        val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
-                                        if (joinResult.isSuccess) {
-                                            addMessage("✅ Joined room: $TEST_ROOM_ID")
+                                        addMessage("✅ Connected after token refresh, now authenticating...")
+                                        
+                                        // 재시도 시에도 2단계 인증 적용
+                                        val retryAuthResult = webSocketClient.authenticate(userId, newToken)
+                                        if (retryAuthResult.isSuccess) {
+                                            addMessage("✅ Re-authentication sent, joining room...")
+                                            val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
+                                            if (joinResult.isSuccess) {
+                                                addMessage("✅ Joined room: $TEST_ROOM_ID")
+                                            } else {
+                                                addMessage("❌ Failed to join room after retry: ${joinResult.exceptionOrNull()?.message}")
+                                            }
                                         } else {
-                                            addMessage("❌ Failed to join room after retry: ${joinResult.exceptionOrNull()?.message}")
+                                            addMessage("❌ Re-authentication failed: ${retryAuthResult.exceptionOrNull()?.message}")
                                         }
                                     } else {
                                         addMessage("❌ Connection failed even after token refresh: ${retryResult.exceptionOrNull()?.message}")
