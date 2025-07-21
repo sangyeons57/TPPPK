@@ -155,6 +155,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.compose.activity)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

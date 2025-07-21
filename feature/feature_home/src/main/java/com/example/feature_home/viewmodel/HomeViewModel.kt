@@ -18,6 +18,8 @@ import com.example.feature_home.model.ProjectUiModel
 import com.example.feature_home.viewmodel.service.HomeServiceProvider
 import com.example.feature_home.viewmodel.service.HomeServices
 import com.example.feature_home.viewmodel.service.DialogManagementService
+import com.example.feature_home.viewmodel.service.LoadUserDataService
+import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +38,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeServiceProvider: HomeServiceProvider,
+    private val userUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -46,7 +49,7 @@ class HomeViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     // Service 그룹들
-    private lateinit var services: HomeServices
+    private var services: HomeServices? = null
     
     // 선택된 채널 ID
     private var selectedChannelId: DocumentId? = null
@@ -59,7 +62,7 @@ class HomeViewModel @Inject constructor(
     private var projectStructureJob: Job? = null
     
     // 다이얼로그 상태
-    private lateinit var dialogState: com.example.feature_home.viewmodel.service.DialogManagementService.DialogState
+    private var dialogState: com.example.feature_home.viewmodel.service.DialogManagementService.DialogState? = null
     
     // 현재 사용자 ID
     private var currentUserId: UserId = UserId.EMPTY
@@ -67,22 +70,34 @@ class HomeViewModel @Inject constructor(
             Log.d("HomeViewModel", "Setting currentUserId: $value")
             field = value
             if (value.isNotBlank()) {
-                loadDataForUser()
+                initializeServicesForUser(value)
             }
         }
 
     init {
         Log.d("HomeViewModel", "HomeViewModel initialized")
-        viewModelScope.launch {
-            // Initialize services for current user without project context
-            services = homeServiceProvider.createForCurrentUser()
-        }
-        dialogState = services.dialogManagementService.getInitialDialogState()
-        // Initialize dialog state after services are created
-        dialogState = services.dialogManagementService.getInitialDialogState()
         startUserStream()
     }
 
+    /**
+     * 사용자 ID가 확정된 후 서비스들을 초기화합니다.
+     */
+    private fun initializeServicesForUser(userId: UserId) {
+        Log.d("HomeViewModel", "Initializing services for user: $userId")
+        viewModelScope.launch {
+            try {
+                services = homeServiceProvider.createForCurrentUser(userId)
+                dialogState = services?.dialogManagementService?.getInitialDialogState()
+                Log.d("HomeViewModel", "Services initialized successfully")
+                
+                // 서비스가 성공적으로 초기화된 후 데이터를 로드합니다.
+                loadDataForUser()
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Failed to initialize services", e)
+                _uiState.update { it.copy(errorMessage = "서비스 초기화 실패") }
+            }
+        }
+    }
 
     /**
      * 선택 상태를 초기화합니다.
@@ -106,7 +121,10 @@ class HomeViewModel @Inject constructor(
         userStreamJob?.cancel()
         userStreamJob = viewModelScope.launch {
             Log.d("HomeViewModel", "Starting user stream")
-            services.loadUserDataService.getCurrentUserStream().collectLatest { result ->
+            // Use UserUseCaseProvider directly since we don't have services yet
+            val userUseCases = userUseCaseProvider.createForUser()
+            val loadUserDataService = LoadUserDataService(userUseCases)
+            loadUserDataService.getCurrentUserStream().collectLatest { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val userData = result.data
@@ -167,10 +185,16 @@ class HomeViewModel @Inject constructor(
      * 프로젝트 데이터 로드
      */
     private fun loadProjects() {
+        val currentServices = services
+        if (currentServices == null) {
+            Log.w("HomeViewModel", "Services not initialized, skipping loadProjects")
+            return
+        }
+        
         projectsStreamJob?.cancel()
         projectsStreamJob = viewModelScope.launch {
             Log.d("HomeViewModel", "Loading projects")
-            services.loadProjectsService.getUserParticipatingProjectsStream().collectLatest { result ->
+            currentServices.loadProjectsService.getUserParticipatingProjectsStream().collectLatest { result ->
                 when (result) {
                     is CustomResult.Loading -> {
                         _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
@@ -214,10 +238,16 @@ class HomeViewModel @Inject constructor(
      * DM 데이터 로드
      */
     private fun loadDms() {
+        val currentServices = services
+        if (currentServices == null) {
+            Log.w("HomeViewModel", "Services not initialized, skipping loadDms")
+            return
+        }
+        
         dmsStreamJob?.cancel()
         dmsStreamJob = viewModelScope.launch {
             Log.d("HomeViewModel", "Loading DMs")
-            services.loadDmsService.getUserDmsStream().collectLatest { result ->
+            currentServices.loadDmsService.getUserDmsStream().collectLatest { result ->
                 when (result) {
                     is CustomResult.Loading -> {
                         _uiState.update { it.copy(isLoading = true, errorMessage = "default") }
@@ -278,9 +308,15 @@ class HomeViewModel @Inject constructor(
      * 프로젝트 상세정보 로드
      */
     private fun loadProjectDetails(projectId: DocumentId) {
+        val currentServices = services
+        if (currentServices == null) {
+            Log.w("HomeViewModel", "Services not initialized, skipping loadProjectDetails")
+            return
+        }
+        
         projectDetailsJob?.cancel()
         projectDetailsJob = viewModelScope.launch {
-            services.projectSelectionService.getProjectDetailsStream(projectId).collectLatest { result ->
+            currentServices.projectSelectionService.getProjectDetailsStream(projectId).collectLatest { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val project = result.data
@@ -308,16 +344,22 @@ class HomeViewModel @Inject constructor(
      * 프로젝트 구조 로드
      */
     private fun loadProjectStructure(projectId: DocumentId) {
+        val currentServices = services
+        if (currentServices == null) {
+            Log.w("HomeViewModel", "Services not initialized, skipping loadProjectStructure")
+            return
+        }
+        
         projectStructureJob?.cancel()
         projectStructureJob = viewModelScope.launch {
-            services.projectSelectionService.getProjectStructureStream(projectId).collectLatest { result ->
+            currentServices.projectSelectionService.getProjectStructureStream(projectId).collectLatest { result ->
                 when (result) {
                     is CustomResult.Success -> {
                         val structure = result.data
                         
                         // Apply current expansion states from CategoryManagementService
                         val updatedCategories = structure.categories.map { category ->
-                            val isExpanded = services.categoryManagementService.getCategoryExpansionState(projectId, category.id)
+                            val isExpanded = currentServices.categoryManagementService.getCategoryExpansionState(projectId, category.id)
                             category.copy(isExpanded = isExpanded)
                         }
                         
@@ -374,12 +416,13 @@ class HomeViewModel @Inject constructor(
      */
     fun onCategoryClick(category: CategoryUiModel) {
         val projectId = _uiState.value.selectedProjectId ?: return
+        val currentServices = services ?: return
         
         // CategoryManagementService에서 현재 실제 상태를 먼저 확인
-        val currentStateInService = services.categoryManagementService.getCategoryExpansionState(projectId, category.id)
+        val currentStateInService = currentServices.categoryManagementService.getCategoryExpansionState(projectId, category.id)
         Log.d("HomeViewModel", "Category clicked: ${category.name}, UI shows: ${category.isExpanded}, Service has: $currentStateInService")
         
-        val newExpanded = services.categoryManagementService.toggleCategoryExpansion(projectId, category.id)
+        val newExpanded = currentServices.categoryManagementService.toggleCategoryExpansion(projectId, category.id)
         
         Log.d("HomeViewModel", "CategoryManagementService toggled: $currentStateInService -> $newExpanded")
         
@@ -436,7 +479,8 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Channel clicked: ${channel.name}")
         
         val projectId = _uiState.value.selectedProjectId ?: return
-        services.navigationService.handleChannelClick(projectId, channel)
+        val currentServices = services ?: return
+        currentServices.navigationService.handleChannelClick(projectId, channel)
     }
 
     /**
@@ -444,7 +488,8 @@ class HomeViewModel @Inject constructor(
      */
     fun onDmItemClick(dm: DmUiModel) {
         Log.d("HomeViewModel", "DM item clicked: ${dm.partnerName}")
-        services.navigationService.handleDmItemClick(dm)
+        val currentServices = services ?: return
+        currentServices.navigationService.handleDmItemClick(dm)
     }
 
     /**
@@ -453,12 +498,15 @@ class HomeViewModel @Inject constructor(
     fun onCategoryLongPress(category: CategoryUiModel) {
         Log.d("HomeViewModel", "Category long pressed: ${category.name}")
         
-        val items = services.dialogManagementService.createCategoryLongPressActionSheet(
+        val currentServices = services ?: return
+        val currentDialogState = dialogState ?: return
+        
+        val items = currentServices.dialogManagementService.createCategoryLongPressActionSheet(
             category = category,
             onEditClick = { cat -> onCategoryEditClick(cat) },
             onReorderClick = { onReorderClick() }
         )
-        dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
+        dialogState = currentServices.dialogManagementService.showBottomSheet(currentDialogState, items)
         
         _uiState.update { it.copy(
             showBottomSheet = true,
@@ -472,7 +520,10 @@ class HomeViewModel @Inject constructor(
     fun onChannelLongPress(channel: ChannelUiModel, categoryId: String? = null) {
         Log.d("HomeViewModel", "Channel long pressed: ${channel.name}, categoryId: $categoryId")
         
-        val items = services.dialogManagementService.createChannelLongPressActionSheet(
+        val currentServices = services ?: return
+        val currentDialogState = dialogState ?: return
+        
+        val items = currentServices.dialogManagementService.createChannelLongPressActionSheet(
             channel = channel,
             categoryId = categoryId,
             onEditClick = { ch, catId -> onChannelEditClick(ch, catId) },
@@ -484,7 +535,7 @@ class HomeViewModel @Inject constructor(
                 }
             }
         )
-        dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
+        dialogState = currentServices.dialogManagementService.showBottomSheet(currentDialogState, items)
         
         _uiState.update { it.copy(
             showBottomSheet = true,
@@ -498,8 +549,11 @@ class HomeViewModel @Inject constructor(
     fun onDmLongPress(dm: DmUiModel) {
         Log.d("HomeViewModel", "DM long pressed: ${dm.partnerName}")
         
-        val items = services.dialogManagementService.createDmLongPressActionSheet(dm)
-        dialogState = services.dialogManagementService.showBottomSheet(dialogState, items)
+        val currentServices = services ?: return
+        val currentDialogState = dialogState ?: return
+        
+        val items = currentServices.dialogManagementService.createDmLongPressActionSheet(dm)
+        dialogState = currentServices.dialogManagementService.showBottomSheet(currentDialogState, items)
         
         _uiState.update { it.copy(
             showBottomSheet = true,
@@ -512,7 +566,8 @@ class HomeViewModel @Inject constructor(
      */
     fun onProjectSettingsClicked(projectId: DocumentId) {
         Log.d("HomeViewModel", "Project settings clicked: $projectId")
-        services.navigationService.navigateToProjectSettings(projectId)
+        val currentServices = services ?: return
+        currentServices.navigationService.navigateToProjectSettings(projectId)
     }
 
     /**
@@ -555,7 +610,8 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Reordered structure: $reorderedStructure")
         
         viewModelScope.launch {
-            val result = services.categoryManagementService.reorderUnifiedProjectStructure(
+            val currentServices = services ?: return@launch
+            val result = currentServices.categoryManagementService.reorderUnifiedProjectStructure(
                 projectId = projectId,
                 reorderedStructure = reorderedStructure
             )
@@ -579,7 +635,8 @@ class HomeViewModel @Inject constructor(
     fun refreshProjectStructure(projectId: DocumentId) {
         Log.d("HomeViewModel", "Refreshing project structure: $projectId")
         viewModelScope.launch {
-            services.projectSelectionService.refreshProjectStructure(projectId)
+            val currentServices = services ?: return@launch
+            currentServices.projectSelectionService.refreshProjectStructure(projectId)
             loadProjectStructure(projectId)
         }
     }
@@ -590,7 +647,8 @@ class HomeViewModel @Inject constructor(
     fun restoreExpandedCategories(expandedCategoryIds: List<String>) {
         Log.d("HomeViewModel", "Restoring expanded categories: $expandedCategoryIds")
         val projectId = _uiState.value.selectedProjectId ?: return
-        services.categoryManagementService.restoreExpandedCategories(projectId, expandedCategoryIds)
+        val currentServices = services ?: return
+        currentServices.categoryManagementService.restoreExpandedCategories(projectId, expandedCategoryIds)
     }
 
     /**
@@ -598,7 +656,11 @@ class HomeViewModel @Inject constructor(
      */
     fun onProjectItemActionSheetDismiss() {
         Log.d("HomeViewModel", "Action sheet dismissed")
-        dialogState = services.dialogManagementService.dismissBottomSheet(dialogState)
+        val currentServices = services
+        val currentDialogState = dialogState
+        if (currentServices != null && currentDialogState != null) {
+            dialogState = currentServices.dialogManagementService.dismissBottomSheet(currentDialogState)
+        }
         _uiState.update { it.copy(showBottomSheet = false, showBottomSheetItems = emptyList()) }
     }
 
@@ -631,9 +693,9 @@ class HomeViewModel @Inject constructor(
         
         // 카테고리 상태 정리
         _uiState.value.selectedProjectId?.let { projectId ->
-            if (::services.isInitialized) {
-                services.categoryManagementService.clearCategoryStates(projectId)
-            }
+            services?.let { currentServices ->
+            currentServices.categoryManagementService.clearCategoryStates(projectId)
+        }
         }
         
         Log.d("HomeViewModel", "HomeViewModel cleared")
@@ -719,7 +781,8 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Reordered channels: ${reorderedChannels.map { it.name.value }}")
         
         viewModelScope.launch {
-            val result = services.categoryManagementService.reorderCategoryChannels(
+            val currentServices = services ?: return@launch
+            val result = currentServices.categoryManagementService.reorderCategoryChannels(
                 projectId = projectId,
                 categoryId = categoryId,
                 reorderedChannels = reorderedChannels

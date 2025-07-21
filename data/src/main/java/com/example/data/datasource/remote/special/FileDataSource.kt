@@ -39,6 +39,13 @@ interface FileDataSource {
      * @return A CustomResult indicating success (Unit) or an Exception on failure.
      */
     suspend fun downloadFileToUri(storagePath: String, localFileUri: Uri): CustomResult<Unit, Exception>
+
+    /**
+     * Checks if a file exists at the specified storage path.
+     * @param storagePath The full path in Firebase Storage of the file to check.
+     * @return A CustomResult containing true if the file exists, false otherwise, or an Exception on failure.
+     */
+    suspend fun checkFileExists(storagePath: String): CustomResult<Boolean, Exception>
 }
 /**
  * Implementation of [FileDataSource] using Firebase Storage.
@@ -108,6 +115,17 @@ class FileDataSourceImpl @Inject constructor(
             CustomResult.Success(Unit)
         } catch (e: Exception) {
             CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun checkFileExists(storagePath: String): CustomResult<Boolean, Exception> {
+        return try {
+            storage.getReference(storagePath).metadata.await()
+            CustomResult.Success(true)
+        } catch (e: Exception) {
+            // Typically, an exception (like ObjectNotFoundException) means the file doesn't exist.
+            // We can treat this as a non-failure case, returning false.
+            CustomResult.Success(false)
         }
     }
 }

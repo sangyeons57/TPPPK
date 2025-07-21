@@ -18,8 +18,9 @@ data class ChatUiState(
     val isLoadingHistory: Boolean = false, // ★ 이름 명확화: 과거 메시지 로딩
     val isSendingMessage: Boolean = false, // ★ 이름 명확화: 메시지 전송 중
     val isEditing: Boolean = false,
-    val editingMessageId: Int? = null,
+    val editingMessageId: String? = null, // Fixed: Message IDs are String-based DocumentIds
     val myUserId: String = "", // 실제로는 외부에서 주입 또는 설정 필요
+    val currentUserId: String? = null, // Current authenticated user ID
     val myUserNameDisplay: String? = null, // For optimistic UI updates
     val myUserProfileUrl: String? = null, // For optimistic UI updates
     val isLastPage: Boolean = false,
@@ -32,5 +33,10 @@ data class ChatUiState(
     // WebSocket connection state
     val connectionState: WebSocketConnectionState = WebSocketConnectionState.Disconnected,
     val queuedMessagesCount: Int = 0,
-    val showConnectionError: Boolean = false
+    val showConnectionError: Boolean = false,
+    
+    // Pagination state
+    val hasMoreMessages: Boolean = true,
+    val isLoadingMoreMessages: Boolean = false,
+    val lastMessageTimestamp: java.time.Instant? = null
 ) 

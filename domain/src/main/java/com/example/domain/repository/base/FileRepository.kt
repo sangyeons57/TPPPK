@@ -48,4 +48,11 @@ interface FileRepository : Repository {
      * @return A [CustomResult] indicating success (Unit) or an [Exception] on failure.
      */
     suspend fun downloadFileToUri(storagePath: String, localFileUri: Uri): CustomResult<Unit, Exception>
+    
+    /**
+     * Checks if a file exists at the given path in the remote storage.
+     * @param path The full path of the file in storage (e.g., "user_profiles/userId/profile.webp").
+     * @return True if the file exists, false otherwise.
+     */
+    suspend fun checkFileExists(path: String): Boolean
 }

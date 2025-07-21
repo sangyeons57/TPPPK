@@ -1,5 +1,6 @@
 package com.example.feature_chat.websocket
 
+import com.example.core_common.websocket.GlobalWebSocketService
 import com.example.core_common.websocket.WebSocketManager
 import com.example.core_common.websocket.WebSocketMessage
 import com.example.domain.model.data.UserSession
@@ -19,10 +20,14 @@ import javax.inject.Singleton
 
 @Singleton
 class ChatWebSocketClient @Inject constructor(
-    private val webSocketManager: WebSocketManager
+    private val globalWebSocketService: GlobalWebSocketService
 ) {
     
-    val connectionState = webSocketManager.connectionState
+    // Delegate to global service for connection state
+    val connectionState = globalWebSocketService.globalConnectionState
+    
+    // Get the underlying WebSocketManager for direct operations
+    private val webSocketManager: WebSocketManager = globalWebSocketService.getWebSocketManager()
     val isAuthenticated = webSocketManager.isAuthenticated
     
     fun getChatMessages(roomId: String): Flow<ChatWebSocketEvent> {
@@ -105,27 +110,40 @@ class ChatWebSocketClient @Inject constructor(
         val correlationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
             correlationId = correlationId,
-            message = "WebSocket 연결 시도",
+            message = "WebSocket 연결 시도 (GlobalWebSocketService 사용)",
             metadata = mapOf("serverUrl" to serverUrl)
         ))
         
-        return webSocketManager.connect(serverUrl, authToken).also { result ->
+        // Note: Connection is now managed by GlobalWebSocketService
+        // This method exists for compatibility but the actual connection
+        // should already be established by the global service
+        return try {
+            // Configure the global service if needed
+            globalWebSocketService.configure(serverUrl)
+            
+            // Force reconnect if not already connected
+            if (connectionState.value !is com.example.core_common.websocket.WebSocketConnectionState.Connected) {
+                globalWebSocketService.forceReconnect()
+            }
+            
+            val result = Result.success(Unit)
+            
             val connectionCorrelationId = ChatLogUtils.generateCorrelationId()
-            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
             Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                 correlationId = connectionCorrelationId,
-                message = "WebSocket 연결 $status",
-                metadata = mapOf("serverUrl" to serverUrl, "status" to status)
+                message = "GlobalWebSocketService 연결 위임 완료",
+                metadata = mapOf("serverUrl" to serverUrl, "status" to "DELEGATED")
             ))
             
-            if (result.isFailure) {
-                val errorCorrelationId = ChatLogUtils.generateCorrelationId()
-                Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-                    correlationId = errorCorrelationId,
-                    message = "WebSocket 연결 실패: ${result.exceptionOrNull()?.message}",
-                    metadata = mapOf("serverUrl" to serverUrl)
-                ))
-            }
+            result
+        } catch (e: Exception) {
+            val errorCorrelationId = ChatLogUtils.generateCorrelationId()
+            Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                correlationId = errorCorrelationId,
+                message = "GlobalWebSocketService 연결 위임 실패: ${e.message}",
+                metadata = mapOf("serverUrl" to serverUrl)
+            ))
+            Result.failure(e)
         }
     }
     
@@ -225,12 +243,16 @@ class ChatWebSocketClient @Inject constructor(
         val disconnectCorrelationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
             correlationId = disconnectCorrelationId,
-            message = "WebSocket 연결 해제 시도"
+            message = "WebSocket 연결 해제 시도 (GlobalWebSocketService는 유지)"
         ))
-        webSocketManager.disconnect()
+        
+        // Note: We don't disconnect the global service as it's managed app-wide
+        // Individual chat features should only leave their rooms
+        // The global connection remains for other features to use
+        
         Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
             correlationId = disconnectCorrelationId,
-            message = "WebSocket 연결 해제 완료"
+            message = "개별 채팅 기능 종료 - GlobalWebSocketService는 계속 활성 상태"
         ))
     }
     

@@ -98,6 +98,8 @@ dependencies {
 
     // 테스트 의존성
     testImplementation(libs.junit)
+    testImplementation(libs.mockk) // MockK 의존성 추가
+    testImplementation(libs.kotlinx.coroutines.test) // 코루틴 테스트 의존성 추가
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

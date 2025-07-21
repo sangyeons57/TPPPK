@@ -11,10 +11,15 @@ import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.AuthRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import javax.inject.Inject
@@ -401,21 +406,30 @@ class AuthRepositoryImpl @Inject constructor(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getCurrentUserSessionStream(): Flow<CustomResult<UserSession, Exception>> {
-        return authRemoteDataSource.observeAuthState().flatMapLatest { authStateResult ->
-            when (authStateResult) {
-                is CustomResult.Success -> {
-                    // 사용자가 로그인 상태이면, 토큰을 포함한 전체 세션 정보를 가져옵니다.
-                    // 인증 상태가 변경된 직후이므로 새로운 토큰을 가져오는 것이 안전합니다.
-                    flowOf(getCurrentUserSession(forceRefresh = true))
-                }
-                is CustomResult.Failure -> {
-                    // 로그아웃 상태이거나 사용자가 없는 경우
-                    flowOf(CustomResult.Failure(Exception("No user is currently signed in.")))
-                }
-                else -> {
-                    flowOf(CustomResult.Failure(Exception("Unknown authentication state.")))
+        return authRemoteDataSource.observeAuthState()
+            .distinctUntilChanged() // Prevent rapid fire changes
+            .flatMapLatest { authStateResult ->
+                when (authStateResult) {
+                    is CustomResult.Success -> {
+                        // 사용자가 로그인 상태이면, 토큰을 포함한 전체 세션 정보를 가져옵니다.
+                        // 인증 상태가 변경된 직후이므로 새로운 토큰을 가져오는 것이 안전합니다.
+                        flow<CustomResult<UserSession, Exception>> {
+                            try {
+                                val sessionResult = getCurrentUserSession(forceRefresh = true)
+                                emit(sessionResult)
+                            } catch (e: Exception) {
+                                emit(CustomResult.Failure(e))
+                            }
+                        }
+                    }
+                    is CustomResult.Failure -> {
+                        // 로그아웃 상태이거나 사용자가 없는 경우
+                        flowOf(CustomResult.Failure(Exception("No user is currently signed in.")))
+                    }
+                    else -> {
+                        flowOf(CustomResult.Failure(Exception("Unknown authentication state.")))
+                    }
                 }
             }
-        }
     }
 }

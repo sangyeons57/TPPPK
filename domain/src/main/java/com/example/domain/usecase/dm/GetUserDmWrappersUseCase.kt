@@ -2,6 +2,7 @@ package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMWrapper
+import com.example.domain.model.data.UserSession
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.DMWrapperRepository
 import kotlinx.coroutines.flow.Flow
@@ -35,13 +36,24 @@ class GetUserDmWrappersUseCase @Inject constructor(
                 if (sessionResult !is CustomResult.Success) {
                     flowOf(CustomResult.Failure(Exception("Not authenticated")))
                 } else {
-                    dmWrapperRepository.observeAll().map { dmResult ->
-                        when (dmResult) {
-                            is CustomResult.Success ->
-                                CustomResult.Success(dmResult.data.map { it as DMWrapper })
-                            is CustomResult.Failure ->
-                                CustomResult.Failure(dmResult.error)
-                            else -> CustomResult.Loading
+                    val userSession = sessionResult.data as? UserSession
+                    val userId = userSession?.userId
+                    
+                    // Check if userId is valid before proceeding
+                    if (userId?.internalValue?.isBlank() != false) {
+                        flowOf(CustomResult.Failure(Exception("Invalid user ID: ${userId?.internalValue}")))
+                    } else {
+                        // Log the user ID for debugging
+                        android.util.Log.d("GetUserDmWrappersUseCase", "Loading DMs for user: ${userId.internalValue}")
+                        
+                        dmWrapperRepository.observeAll().map { dmResult ->
+                            when (dmResult) {
+                                is CustomResult.Success ->
+                                    CustomResult.Success(dmResult.data.map { it as DMWrapper })
+                                is CustomResult.Failure ->
+                                    CustomResult.Failure(dmResult.error)
+                                else -> CustomResult.Loading
+                            }
                         }
                     }
                 }

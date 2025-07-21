@@ -84,6 +84,10 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     private var currentRoomId: String? = null
     private var reconnectJob: Job? = null
     
+    // Connection credentials for auto-reconnection
+    private var lastServerUrl: String? = null
+    private var lastAuthToken: String? = null
+    
     // Authentication state tracking
     private val _isAuthenticated = MutableStateFlow(false)
     override val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
@@ -170,6 +174,10 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                     return@withContext Result.success(Unit)
                 }
                 
+                // Store credentials for auto-reconnection
+                lastServerUrl = serverUrl
+                lastAuthToken = authToken
+                
                 _connectionState.value = WebSocketConnectionState.Connecting
                 
                 val request = Request.Builder()
@@ -210,6 +218,11 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
             webSocket?.close(1000, "User disconnection")
             webSocket = null
             currentRoomId = null
+            
+            // Clear stored credentials on manual disconnect
+            lastServerUrl = null
+            lastAuthToken = null
+            
             _connectionState.value = WebSocketConnectionState.Disconnected
             _isAuthenticated.value = false
         }
@@ -268,14 +281,52 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                     return@launch
                 }
                 
-                // Try to reconnect if we have connection details
-                // Note: This would need the original serverUrl and authToken
-                // For now, just update the state to allow manual reconnection
-                _connectionState.value = WebSocketConnectionState.Disconnected
+                // Try to reconnect if we have stored credentials
+                val serverUrl = lastServerUrl
+                val authToken = lastAuthToken
+                
+                if (serverUrl != null && authToken != null) {
+                    Log.d(TAG, "Attempting auto-reconnection with stored credentials")
+                    try {
+                        val result = connect(serverUrl, authToken)
+                        if (result.isSuccess) {
+                            Log.d(TAG, "Auto-reconnection successful")
+                            
+                            // Rejoin the current room if we were in one
+                            currentRoomId?.let { roomId ->
+                                joinRoom(roomId)
+                            }
+                            
+                            return@launch
+                        } else {
+                            Log.w(TAG, "Auto-reconnection failed: ${result.exceptionOrNull()?.message}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Exception during auto-reconnection", e)
+                    }
+                } else {
+                    Log.w(TAG, "No stored credentials for auto-reconnection")
+                    // Set state to disconnected to allow manual reconnection
+                    _connectionState.value = WebSocketConnectionState.Disconnected
+                }
                 
                 delay = minOf(delay * 2, 30_000L) // Exponential backoff, max 30 seconds
             }
+            
+            Log.w(TAG, "Auto-reconnection attempts exhausted")
+            _connectionState.value = WebSocketConnectionState.Error(
+                message = "Connection lost - manual reconnection required",
+                throwable = Exception("Auto-reconnection failed after 5 attempts")
+            )
         }
+    }
+    
+    /**
+     * Update stored authentication token for auto-reconnection
+     */
+    fun updateAuthToken(newAuthToken: String) {
+        Log.d(TAG, "Updating stored auth token for auto-reconnection")
+        lastAuthToken = newAuthToken
     }
     
     companion object {

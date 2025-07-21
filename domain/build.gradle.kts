@@ -57,6 +57,7 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk) // MockK 의존성 추가
     testImplementation(project(":feature:feature_chat")) // Added to resolve ChatViewModel in tests
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -15,13 +15,13 @@ import org.junit.Assert.*
 
 class ChatWebSocketClientTest {
 
-    private lateinit var mockWebSocketManager: WebSocketManager
+    private lateinit var webSocketManager: WebSocketManager
     private lateinit var chatWebSocketClient: ChatWebSocketClient
 
     @Before
     fun setup() {
-        mockWebSocketManager = mockk()
-        chatWebSocketClient = ChatWebSocketClient(mockWebSocketManager)
+        webSocketManager = mockk()
+        client = ChatWebSocketClient(mockk(), webSocketManager, mockk(), mockk())
     }
 
     @Test

@@ -29,4 +29,12 @@ class FileRepositoryImpl @Inject constructor(
     override suspend fun downloadFileToUri(storagePath: String, localFileUri: Uri): CustomResult<Unit, Exception> {
         return fileDataSource.downloadFileToUri(storagePath, localFileUri)
     }
+
+    override suspend fun checkFileExists(path: String): Boolean {
+        return when (val result = fileDataSource.checkFileExists(path)) {
+            is CustomResult.Success -> result.data
+            is CustomResult.Failure -> false
+            else -> false
+        }
+    }
 }
