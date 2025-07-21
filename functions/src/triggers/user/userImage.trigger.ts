@@ -72,6 +72,13 @@ export const onUserProfileImageUpload = onObjectFinalized(
         await originalFile.copy(processedFile);
         logger.info(`📁 Copied ${name} to ${processedFilePath}`);
 
+        // Set cache-control headers for HTTP level caching (1 week for cost optimization)
+        await processedFile.setMetadata({
+          cacheControl: 'public, max-age=604800', // 1 week cache for profile images (cost optimized)
+          contentType: 'image/webp'
+        });
+        logger.info(`🏷️ Set cache headers for ${processedFilePath}`);
+
         // Update user's updatedAt to notify client that image processing is complete
         const db = admin.firestore();
         const userDocRef = db.collection("users").doc(userId);

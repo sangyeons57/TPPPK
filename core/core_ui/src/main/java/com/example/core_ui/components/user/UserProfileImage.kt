@@ -60,10 +60,14 @@ class ProfileImageUpdateEventManager @Inject constructor() {
  */
 @HiltViewModel
 class UserProfileImageViewModel @Inject constructor(
-    private val userUseCaseProvider: com.example.domain.provider.user.UserUseCaseProvider
+    private val userUseCaseProvider: com.example.domain.provider.user.UserUseCaseProvider,
+    private val imageLoader: ImageLoader
 ) : ViewModel() {
     
     private val userUseCases = userUseCaseProvider.createForUser()
+    
+    // ImageLoader를 외부에서 접근할 수 있도록 제공
+    fun getImageLoader(): ImageLoader = imageLoader
     
     private val _imageUrl = MutableStateFlow<String?>(null)
     val imageUrl: StateFlow<String?> = _imageUrl.asStateFlow()
@@ -105,7 +109,7 @@ class UserProfileImageViewModel @Inject constructor(
     /**
      * 특정 사용자의 프로필 이미지 캐시를 지웁니다.
      */
-    fun clearImageCache(userId: String, imageLoader: ImageLoader) {
+    fun clearImageCache(userId: String) {
         viewModelScope.launch {
             try {
                 // 현재 로드된 Firebase Storage URL이 있으면 캐시에서 제거
@@ -187,7 +191,6 @@ fun UserProfileImage(
     viewModel: UserProfileImageViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val imageLoader = remember { ImageLoader(context) }
     
     val userUpdatedAt by viewModel.userUpdatedAt.collectAsState()
     val firebaseImageUrl by viewModel.imageUrl.collectAsState()
@@ -212,7 +215,7 @@ fun UserProfileImage(
     // 사용자 updatedAt이 변경될 때 캐시 클리어 및 이미지 재로드
     LaunchedEffect(userUpdatedAt) {
         if (!userId.isNullOrEmpty() && isUpdated) {
-            viewModel.clearImageCache(userId, imageLoader)
+            viewModel.clearImageCache(userId)
             viewModel.loadUserProfileImageUrl(userId)
             previousUpdatedAt.value = userUpdatedAt
             Log.d("UserProfileImage", "Profile image refreshed for user: $userId due to updatedAt change")
@@ -243,11 +246,15 @@ fun UserProfileImage(
             .placeholder(R.drawable.ic_default_profile_placeholder)
             .error(R.drawable.ic_default_profile_placeholder)
             .crossfade(true)
+            // 강제 새로고침이 아닌 경우 캐시 사용
             .memoryCachePolicy(if (shouldDisableCache) CachePolicy.DISABLED else CachePolicy.ENABLED)
             .diskCachePolicy(if (shouldDisableCache) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            // 네트워크 캐시 정책 - HTTP Cache-Control 헤더 활용
+            .networkCachePolicy(if (shouldDisableCache) CachePolicy.WRITE_ONLY else CachePolicy.ENABLED)
             .build(),
         contentDescription = contentDescription,
         modifier = modifier,
-        contentScale = contentScale
+        contentScale = contentScale,
+        imageLoader = viewModel.getImageLoader()
     )
 }

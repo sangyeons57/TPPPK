@@ -67,9 +67,13 @@ dependencies {
     
     // WebSocket and Networking
     implementation(libs.okhttp.websocket)
+    implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    
+    // Image Loading
+    implementation(libs.androidx.compose.coil)
     
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
