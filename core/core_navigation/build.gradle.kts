@@ -52,8 +52,8 @@ kotlin {
 }
 dependencies {
     // Project modules
-    implementation(project(":core:core_common"))
     implementation(project(":domain"))
+    implementation(project(":core:core_common"))
 
     // Android core
     implementation(libs.androidx.core.ktx)

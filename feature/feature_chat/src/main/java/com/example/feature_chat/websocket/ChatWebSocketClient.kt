@@ -75,7 +75,7 @@ class ChatWebSocketClient @Inject constructor(
                             timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
                         )
                     }
-                    WebSocketMessage.TYPE_SYSTEM -> {
+                    WebSocketMessage.TYPE_SYSTEM, "JOINED_ROOM", "LEFT_ROOM" -> {
                         ChatWebSocketEvent.SystemMessage(
                             content = message.content ?: "",
                             timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
@@ -176,21 +176,34 @@ class ChatWebSocketClient @Inject constructor(
         return connect(serverUrl, authToken)
     }
     
-    suspend fun waitForAuthentication(userId: UserId, timeoutMs: Long = 10000): Result<Unit> {
+    suspend fun waitForAuthentication(userId: UserId, timeoutMs: Long = 15000): Result<Unit> {
         val authCorrelationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
             correlationId = authCorrelationId,
-            message = "WebSocket 인증 확인 대기",
+            message = "WebSocket 인증 확인 대기 (타임아웃: ${timeoutMs}ms)",
             userId = userId.value
         ))
         
-        // Wait for AUTH_SUCCESS message from server
+        // First check if already authenticated
+        if (webSocketManager.isAuthenticated.value) {
+            Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                correlationId = authCorrelationId,
+                message = "이미 인증된 상태",
+                userId = userId.value
+            ))
+            return Result.success(Unit)
+        }
+        
+        // Wait for AUTH_SUCCESS message from server with improved error handling
         return try {
             val authResult = withTimeoutOrNull(timeoutMs) {
                 webSocketManager.incomingMessages
+                    .onEach { message ->
+                        Log.d(ChatLogUtils.TAG_CONNECTION, "수신된 메시지 타입: ${message.type}")
+                    }
                     .filter { message -> 
                         message.type == WebSocketMessage.TYPE_AUTH_SUCCESS || 
-                        message.type == WebSocketMessage.TYPE_ERROR 
+                        message.type == WebSocketMessage.TYPE_ERROR
                     }
                     .first()
             }
@@ -199,16 +212,18 @@ class ChatWebSocketClient @Inject constructor(
                 authResult == null -> {
                     Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                         correlationId = authCorrelationId,
-                        message = "WebSocket 인증 시간 초과",
-                        userId = userId.value
+                        message = "WebSocket 인증 시간 초과 (${timeoutMs}ms)",
+                        userId = userId.value,
+                        metadata = mapOf("connectionState" to (connectionState.value::class.simpleName ?: "unknown"))
                     ))
-                    Result.failure(Exception("Authentication timeout - no AUTH_SUCCESS received"))
+                    Result.failure(Exception("Authentication timeout - no AUTH_SUCCESS received within ${timeoutMs}ms"))
                 }
                 authResult.type == WebSocketMessage.TYPE_AUTH_SUCCESS -> {
                     Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                         correlationId = authCorrelationId,
                         message = "WebSocket 인증 성공",
-                        userId = userId.value
+                        userId = userId.value,
+                        metadata = mapOf("authContent" to (authResult.content ?: "none"))
                     ))
                     Result.success(Unit)
                 }
@@ -234,7 +249,7 @@ class ChatWebSocketClient @Inject constructor(
                 correlationId = authCorrelationId,
                 message = "WebSocket 인증 대기 중 오류 발생: ${e.message}",
                 userId = userId.value
-            ))
+            ), e)
             Result.failure(e)
         }
     }
@@ -266,7 +281,7 @@ class ChatWebSocketClient @Inject constructor(
         ))
         
         // userId가 제공된 경우 직접 메시지를 보내고, 그렇지 않으면 기본 WebSocketManager 사용
-        val result = if (userId != null) {
+        val sendResult = if (userId != null) {
             val joinMessage = WebSocketMessage(
                 type = WebSocketMessage.TYPE_JOIN_ROOM,
                 roomId = roomId,
@@ -278,22 +293,66 @@ class ChatWebSocketClient @Inject constructor(
             webSocketManager.joinRoom(roomId)
         }
         
-        return result.also { result ->
-            if (result.isSuccess) {
-                Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-                    correlationId = joinCorrelationId,
-                    message = "채팅방 입장 성공",
-                    roomId = roomId,
-                    userId = userId?.value
-                ))
-            } else {
+        return if (sendResult.isSuccess) {
+            // Wait for JOINED_ROOM confirmation from server
+            try {
+                val confirmationResult = withTimeoutOrNull(5000) { // 5 second timeout
+                    webSocketManager.incomingMessages
+                        .filter { message -> 
+                            message.type == "JOINED_ROOM" && message.roomId == roomId ||
+                            (message.type == WebSocketMessage.TYPE_ERROR && message.content?.contains("Room") == true)
+                        }
+                        .first()
+                }
+                
+                when {
+                    confirmationResult?.type == "JOINED_ROOM" -> {
+                        Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                            correlationId = joinCorrelationId,
+                            message = "채팅방 입장 확인됨",
+                            roomId = roomId,
+                            userId = userId?.value
+                        ))
+                        Result.success(Unit)
+                    }
+                    confirmationResult?.type == WebSocketMessage.TYPE_ERROR -> {
+                        Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                            correlationId = joinCorrelationId,
+                            message = "채팅방 입장 실패: ${confirmationResult.content}",
+                            roomId = roomId,
+                            userId = userId?.value
+                        ))
+                        Result.failure(Exception("Room join failed: ${confirmationResult.content}"))
+                    }
+                    else -> {
+                        Log.w(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                            correlationId = joinCorrelationId,
+                            message = "채팅방 입장 확인 시간 초과 (메시지는 전송됨)",
+                            roomId = roomId,
+                            userId = userId?.value
+                        ))
+                        // Still return success as message was sent, just no confirmation
+                        Result.success(Unit)
+                    }
+                }
+            } catch (e: Exception) {
                 Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                     correlationId = joinCorrelationId,
-                    message = "채팅방 입장 실패: ${result.exceptionOrNull()?.message}",
+                    message = "채팅방 입장 확인 중 오류: ${e.message}",
                     roomId = roomId,
                     userId = userId?.value
-                ))
+                ), e)
+                // Still return success as message was sent
+                Result.success(Unit)
             }
+        } else {
+            Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                correlationId = joinCorrelationId,
+                message = "채팅방 입장 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}",
+                roomId = roomId,
+                userId = userId?.value
+            ))
+            sendResult
         }
     }
     

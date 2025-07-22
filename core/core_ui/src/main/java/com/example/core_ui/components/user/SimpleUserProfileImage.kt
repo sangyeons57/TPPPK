@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.core_ui.R
+import android.util.Log
 
 /**
  * A simple composable that displays a user profile image from a given URL.
@@ -19,12 +20,25 @@ fun SimpleUserProfileImage(
     contentDescription: String?,
     modifier: Modifier = Modifier
 ) {
+    Log.d("ProfileImageDebug", "SimpleUserProfileImage: loading image URL: $imageUrl")
+    
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(imageUrl)
             .placeholder(R.drawable.ic_default_profile_placeholder)
             .error(R.drawable.ic_default_profile_placeholder)
             .crossfade(true)
+            .listener(
+                onStart = { 
+                    Log.d("ProfileImageDebug", "SimpleUserProfileImage: started loading $imageUrl")
+                },
+                onSuccess = { _, _ ->
+                    Log.d("ProfileImageDebug", "SimpleUserProfileImage: successfully loaded $imageUrl")
+                },
+                onError = { _, error ->
+                    Log.e("ProfileImageDebug", "SimpleUserProfileImage: failed to load $imageUrl", error.throwable)
+                }
+            )
             .build(),
         contentDescription = contentDescription,
         modifier = modifier,

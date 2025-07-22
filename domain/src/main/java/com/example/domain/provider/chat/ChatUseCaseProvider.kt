@@ -6,6 +6,7 @@ import com.example.domain.usecase.message.EditMessageUseCase
 import com.example.domain.usecase.message.DeleteMessageUseCase
 import com.example.domain.usecase.message.GetMessagesStreamUseCase
 import com.example.domain.usecase.message.FetchPastMessagesUseCase
+import com.example.domain.usecase.message.FetchNewerMessagesUseCase
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.MessageRepository
@@ -62,7 +63,8 @@ class ChatUseCaseProvider @Inject constructor(
             editMessageUseCase = EditMessageUseCase(messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(messageRepository),
-            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository)
+            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository),
+            fetchNewerMessagesUseCase = FetchNewerMessagesUseCase(messageRepository)
         )
     }
 
@@ -88,7 +90,8 @@ class ChatUseCaseProvider @Inject constructor(
             editMessageUseCase = EditMessageUseCase(messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(messageRepository),
-            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository)
+            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository),
+            fetchNewerMessagesUseCase = FetchNewerMessagesUseCase(messageRepository)
         )
     }
 
@@ -136,5 +139,6 @@ data class ChatUseCases(
     val editMessageUseCase: EditMessageUseCase,
     val deleteMessageUseCase: DeleteMessageUseCase,
     val getMessagesStreamUseCase: GetMessagesStreamUseCase,
-    val fetchPastMessagesUseCase: FetchPastMessagesUseCase
+    val fetchPastMessagesUseCase: FetchPastMessagesUseCase,
+    val fetchNewerMessagesUseCase: FetchNewerMessagesUseCase
 )

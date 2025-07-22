@@ -38,5 +38,8 @@ data class ChatUiState(
     // Pagination state
     val hasMoreMessages: Boolean = true,
     val isLoadingMoreMessages: Boolean = false,
-    val lastMessageTimestamp: java.time.Instant? = null
+    val lastMessageTimestamp: java.time.Instant? = null,
+    
+    // Profile loading state
+    val loadingProfileUserIds: Set<String> = emptySet()
 ) 

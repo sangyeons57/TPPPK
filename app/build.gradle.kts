@@ -19,16 +19,12 @@ plugins {
 
 android {
     namespace = "com.example.teamnovapersonalprojectprojectingkotlin"
-    compileSdk = 36
-
+    
     defaultConfig {
         applicationId = "com.example.teamnovapersonalprojectprojectingkotlin"
-        minSdk = 29
-        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -40,28 +36,15 @@ android {
         }
         release {
             buildConfigField("String", "APP_CHECK_DEBUG_SECRET", "null")
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
         }
     }
     compileOptions {
-        // sourceCompatibility and targetCompatibility now set globally in root build.gradle.kts
         isCoreLibraryDesugaringEnabled = true
     }
-    // kotlinOptions.jvmTarget now set globally in root build.gradle.kts
+    
     buildFeatures {
-        compose = true
         viewBinding = true
         buildConfig = true
-    }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
     }
 }
 
@@ -79,6 +62,9 @@ configurations.all {
 
 dependencies {
 
+    // Core modules
+    implementation(project(":domain"))
+    implementation(project(":core:core_common"))
 
     // Firebase App Check
     implementation(platform(libs.firebase.bom))
@@ -97,10 +83,8 @@ dependencies {
     // app_api 모듈 추가 - app에서 구현을 제공할 API를 정의
 
     implementation(project(":data"))
-    implementation(project(":domain"))
 
     implementation(project(":core:core_ui"))
-    implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_fcm"))
 
@@ -145,39 +129,24 @@ dependencies {
 
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
-    // Hilt Core
-    ksp(libs.hilt.compiler)
-    implementation(libs.hilt.android)
-    implementation(libs.androidx.compose.hilt.navigation)
 
     implementation(libs.coil) // View 기반 UI
     implementation(libs.androidx.compose.coil) // Jetpack Compose용
 
-    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.compose.activity)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.navigation) // Navigation Compose
+    implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.compose.material.icons.core)
+    // App-specific Material components for MainActivity and AppNavigationGraph
+    implementation(libs.material)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.runtime)
 
 
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // ViewModel
-    implementation(libs.androidx.compose.lifecycle.viewmodel)
-    implementation(libs.androidx.compose.lifecycle.runtime)
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -224,6 +193,3 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
-}

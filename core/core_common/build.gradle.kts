@@ -9,54 +9,17 @@ plugins {
 
 android {
     namespace = "com.example.core_common"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 29
-
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        //jvmTarget = libs.versions.jvmTarget.get()
-    }
-    buildFeatures {
-        compose = true
-    }
-}
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
 
     // Navigation
     implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.compose.hilt.navigation)
     
-    // Compose UI
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
+    // Additional Compose UI
     implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
-    implementation(libs.androidx.compose.material.icons.extended)
     
 
     // Firebase - 최소 필요한 의존성만 추가
@@ -75,10 +38,5 @@ dependencies {
     // Image Loading
     implementation(libs.androidx.compose.coil)
     
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
 
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }

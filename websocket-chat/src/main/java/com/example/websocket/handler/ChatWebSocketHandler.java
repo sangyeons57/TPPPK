@@ -67,7 +67,7 @@ public class ChatWebSocketHandler {
                         this.userId = uid;
                         logger.info("✅ User authenticated successfully: {}", userId);
                         // Send explicit AUTH_SUCCESS message to client
-                        sendSystemMessage("AUTH_SUCCESS", "Authentication successful");
+                        sendAuthSuccessMessage();
                     } else {
                         logger.warn("❌ Authentication failed for token");
                         closeWithError("Authentication failed");
@@ -125,7 +125,14 @@ public class ChatWebSocketHandler {
             case "MESSAGE":
                 handleMessage(message);
                 break;
+            case "EDIT_MESSAGE":
+                handleEditMessage(message);
+                break;
+            case "DELETE_MESSAGE":
+                handleDeleteMessage(message);
+                break;
             case "PING":
+            case "HEARTBEAT":
                 sendPong();
                 break;
             default:
@@ -140,24 +147,37 @@ public class ChatWebSocketHandler {
             return;
         }
 
+        logger.info("🚪 User {} attempting to join room {}", userId, roomId);
+
         // Leave current room if any
         if (currentRoomId != null) {
+            logger.info("🚪 User {} leaving current room {} to join {}", userId, currentRoomId, roomId);
             roomManager.leaveRoom(currentRoomId, userId, this);
         }
 
         // Join new room
         currentRoomId = roomId;
         roomManager.joinRoom(roomId, userId, this);
-        sendSystemMessage("JOINED_ROOM", "Joined room: " + roomId);
-        logger.info("User {} joined room {}", userId, roomId);
+        
+        // Send successful join confirmation
+        sendJoinRoomSuccessMessage(roomId);
+        logger.info("✅ User {} successfully joined room {} (room size: {})", 
+                   userId, roomId, roomManager.getRoomSize(roomId));
     }
 
     private void handleLeaveRoom(String roomId) {
         if (currentRoomId != null && currentRoomId.equals(roomId)) {
+            logger.info("🚪 User {} leaving room {}", userId, roomId);
             roomManager.leaveRoom(roomId, userId, this);
             currentRoomId = null;
-            sendSystemMessage("LEFT_ROOM", "Left room: " + roomId);
-            logger.info("User {} left room {}", userId, roomId);
+            
+            // Send successful leave confirmation
+            sendLeaveRoomSuccessMessage(roomId);
+            logger.info("✅ User {} successfully left room {}", userId, roomId);
+        } else {
+            logger.warn("❌ User {} attempted to leave room {} but is in room {}", 
+                       userId, roomId, currentRoomId);
+            sendErrorMessage("You are not in room: " + roomId);
         }
     }
 
@@ -172,15 +192,71 @@ public class ChatWebSocketHandler {
         message.setTimestampFromInstant(Instant.now());
         message.setRoomId(currentRoomId);
 
-        // Broadcast to room
-        roomManager.broadcastToRoom(currentRoomId, message);
-        logger.info("📤 Message broadcast to room {} by user {} (messageId: {})", 
+        // Broadcast to room with echo prevention
+        roomManager.broadcastToRoom(currentRoomId, message, userId);
+        logger.info("📤 Message broadcast to room {} by user {} (messageId: {}) - echo prevented", 
+                   currentRoomId, userId, message.getMessageId());
+    }
+
+    private void handleEditMessage(ChatMessage message) {
+        if (currentRoomId == null) {
+            sendErrorMessage("Must join a room before editing messages");
+            return;
+        }
+
+        // Set message metadata
+        message.setSenderId(userId);
+        message.setTimestampFromInstant(Instant.now());
+        message.setRoomId(currentRoomId);
+        message.setType("EDIT_MESSAGE");
+
+        // Broadcast edit to room with echo prevention
+        roomManager.broadcastToRoom(currentRoomId, message, userId);
+        logger.info("✏️ Message edit broadcast to room {} by user {} (messageId: {}) - echo prevented", 
+                   currentRoomId, userId, message.getMessageId());
+    }
+
+    private void handleDeleteMessage(ChatMessage message) {
+        if (currentRoomId == null) {
+            sendErrorMessage("Must join a room before deleting messages");
+            return;
+        }
+
+        // Set message metadata
+        message.setSenderId(userId);
+        message.setTimestampFromInstant(Instant.now());
+        message.setRoomId(currentRoomId);
+        message.setType("DELETE_MESSAGE");
+
+        // Broadcast delete to room with echo prevention
+        roomManager.broadcastToRoom(currentRoomId, message, userId);
+        logger.info("🗑️ Message delete broadcast to room {} by user {} (messageId: {}) - echo prevented", 
                    currentRoomId, userId, message.getMessageId());
     }
 
     private void sendPong() {
         ChatMessage pong = new ChatMessage("PONG", null, "server", "pong", Instant.now());
         sendMessage(pong);
+    }
+
+    private void sendAuthSuccessMessage() {
+        ChatMessage authSuccessMessage = new ChatMessage("AUTH_SUCCESS", null, "system", "Authentication successful", Instant.now());
+        sendMessage(authSuccessMessage);
+        logger.info("📤 AUTH_SUCCESS message sent to user {}", userId);
+    }
+
+    private void sendJoinRoomSuccessMessage(String roomId) {
+        ChatMessage joinSuccessMessage = new ChatMessage("JOINED_ROOM", roomId, "system", 
+                                                         "Successfully joined room: " + roomId, Instant.now());
+        sendMessage(joinSuccessMessage);
+        logger.info("📤 JOINED_ROOM confirmation sent to user {} for room {}", userId, roomId);
+    }
+
+    private void sendLeaveRoomSuccessMessage(String roomId) {
+        ChatMessage leaveSuccessMessage = new ChatMessage("LEFT_ROOM", roomId, "system", 
+                                                          "Successfully left room: " + roomId, Instant.now());
+        sendMessage(leaveSuccessMessage);
+        logger.info("📤 LEFT_ROOM confirmation sent to user {} for room {}", userId, roomId);
     }
 
     private void sendSystemMessage(String type, String content) {

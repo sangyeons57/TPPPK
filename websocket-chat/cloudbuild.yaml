@@ -1,8 +1,8 @@
-# Google Cloud Build configuration for WebSocket Chat Server
+# Google Cloud Build configuration for WebSocket Chat Server (Independent Gradle build)
 steps:
-  # Build the Maven project
-  - name: 'gcr.io/cloud-builders/mvn'
-    args: ['clean', 'package', '-DskipTests']
+  # Build standalone websocket-chat with Gradle 8.6-jdk17
+  - name: 'gradle:8.6-jdk17'
+    args: ['gradle', 'clean', 'shadowJar', '--no-daemon']
 
   # Build Docker image
   - name: 'gcr.io/cloud-builders/docker'

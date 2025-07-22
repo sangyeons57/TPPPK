@@ -7,30 +7,6 @@ plugins {
 
 android {
     namespace = "com.example.data"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 29
-
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        //jvmTarget = libs.versions.jvmTarget.get()
-    }
 
     // Disable legacy unit tests that are incompatible with current domain model.
     // To re-enable after migration, move updated tests back to src/test/java and remove this block.
@@ -43,13 +19,10 @@ android {
 }
 
 dependencies {
+
+    // Core modules
     implementation(project(":domain"))
     implementation(project(":core:core_common"))
-
-
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
     
     // OkHttp and Retrofit dependencies
     implementation(libs.okhttp)
@@ -70,12 +43,7 @@ dependencies {
     testImplementation(libs.mockk) // 예: libs.versions.toml에 mockk = "1.13.11" 추가 가정
     // testImplementation(libs.mockk.agent.jvm) // JVM 에이전트, 문제 발생 시 주석 처리 시도
 
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 
-    //hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
 
     //firebase
     implementation(platform(libs.firebase.bom))
@@ -113,6 +81,3 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
-}

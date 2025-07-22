@@ -8,45 +8,11 @@ plugins {
 
 android {
     namespace = "com.example.core_fcm"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 29
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-    
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    
-    kotlinOptions {
-        //jvmTarget = libs.versions.jvmTarget.get()
-    }
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {
     implementation(project(":core:core_navigation"))
     
-    // Android Core Libraries
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
     
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -57,24 +23,12 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     
-    // Hilt
-    ksp(libs.hilt.compiler)
-    implementation(libs.hilt.android)
-    implementation(libs.androidx.compose.hilt.navigation)
 
-    // Compose (for test UI)
-    implementation(platform(libs.androidx.compose.bom))
+    // Module-specific Compose
     implementation(libs.androidx.compose.material3)
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     
-    // Testing
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }
 
-kotlin {
-    jvmToolchain(libs.versions.jvmTarget.get().toInt())
-}

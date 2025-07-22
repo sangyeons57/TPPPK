@@ -7,12 +7,16 @@ import com.google.firebase.firestore.Source
 import java.time.Instant
 import javax.inject.Inject
 
-class FetchPastMessagesUseCase @Inject constructor(
+/**
+ * 특정 시간 이후의 새로운 메시지들을 가져오는 UseCase
+ * 양방향 로딩을 위해 사용됩니다.
+ */
+class FetchNewerMessagesUseCase @Inject constructor(
     private val messageRepository: MessageRepository
 ) {
     suspend operator fun invoke(
+        afterTimestamp: Instant,
         limit: Int = 50,
-        beforeTimestamp: Instant? = null,
         useCache: Boolean = true
     ): CustomResult<List<Message>, Exception> {
         return try {
@@ -20,18 +24,14 @@ class FetchPastMessagesUseCase @Inject constructor(
             
             when (val result = messageRepository.findAll(source)) {
                 is CustomResult.Success -> {
-                    val messages = result.data.filterIsInstance<Message>()
-                        .let { allMessages ->
-                            if (beforeTimestamp != null) {
-                                // Filter messages older than the given timestamp
-                                allMessages.filter { it.createdAt.isBefore(beforeTimestamp) }
-                            } else {
-                                allMessages
-                            }
-                        }
+                    // Client-side filtering for messages newer than the given timestamp
+                    // TODO: Implement proper Firestore query with timestamp-based pagination
+                    val newerMessages = result.data.filterIsInstance<Message>()
+                        .filter { it.createdAt.isAfter(afterTimestamp) }
                         .sortedByDescending { it.createdAt }
                         .take(limit)
-                    CustomResult.Success(messages)
+                    
+                    CustomResult.Success(newerMessages)
                 }
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 is CustomResult.Initial -> CustomResult.Failure(IllegalStateException("Repository returned Initial state"))

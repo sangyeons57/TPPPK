@@ -153,6 +153,7 @@ leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-and
 # Google Cloud libraries
 google-cloud-logging = { group = "com.google.cloud", name = "google-cloud-logging", version.ref = "googleCloudLogging" }
 
+
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
