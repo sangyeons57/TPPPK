@@ -63,6 +63,7 @@ interface UserRemoteDataSource : DefaultDatasource {
      */
     fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>>
 
+    fun observeUsers(userIds: List<String>): Flow<CustomResult<List<UserDTO>, Exception>>
 }
 
 @Singleton
@@ -284,4 +285,27 @@ class UserRemoteDataSourceImpl @Inject constructor(
         awaitClose { listenerRegistration.remove() }
     }
 
+    override fun observeUsers(userIds: List<String>): Flow<CustomResult<List<UserDTO>, Exception>> = callbackFlow {
+        if (userIds.isEmpty()) {
+            trySend(CustomResult.Success(emptyList()))
+            awaitClose { }
+            return@callbackFlow
+        }
+
+        trySend(CustomResult.Loading)
+        val query = collection.whereIn(com.google.firebase.firestore.FieldPath.documentId(), userIds)
+
+        val listenerRegistration = query.addSnapshotListener { snapshots, error ->
+            if (error != null) {
+                trySend(CustomResult.Failure(error))
+                return@addSnapshotListener
+            }
+
+            if (snapshots != null) {
+                val list = snapshots.documents.mapNotNull { it.toDtoSafely() }
+                trySend(CustomResult.Success(list))
+            }
+        }
+        awaitClose { listenerRegistration.remove() }
+    }
 }

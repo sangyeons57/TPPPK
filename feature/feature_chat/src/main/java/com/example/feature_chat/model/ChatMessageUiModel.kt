@@ -21,5 +21,6 @@ data class ChatMessageUiModel(
     val sendFailed: Boolean = false, // 메시지 전송 실패 상태 (UI 피드백용)
     val isDeleted: Boolean = false, // Added to reflect soft delete status in UI
     val deliveryState: MessageDeliveryState = MessageDeliveryState.Sent,
-    val isOptimistic: Boolean = false // 낙관적 업데이트로 추가된 메시지인지
+    val isOptimistic: Boolean = false, // 낙관적 업데이트로 추가된 메시지인지
+    val clientSentAt: Instant? = null // 클라이언트에서 전송한 시간 (메모리 정리 보호용)
 ) 

@@ -114,4 +114,16 @@ class UserRepositoryImpl @Inject constructor(
         return userRemoteDataSource.observeUserUpdatedAt(userId)
     }
 
+    override fun observeUsers(userIds: List<String>): Flow<CustomResult<List<User>, Exception>> {
+        ensureCollection()
+        return userRemoteDataSource.observeUsers(userIds).map { result ->
+            when (result) {
+                is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                is CustomResult.Loading -> CustomResult.Loading
+                is CustomResult.Initial -> CustomResult.Initial
+                is CustomResult.Progress -> CustomResult.Progress(result.progress)
+            }
+        }
+    }
 }

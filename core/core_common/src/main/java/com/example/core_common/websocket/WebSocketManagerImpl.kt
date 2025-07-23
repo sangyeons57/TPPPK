@@ -25,6 +25,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         .writeTimeout(30, TimeUnit.SECONDS)
         .pingInterval(15, TimeUnit.SECONDS) // Cloud Run LB idle-timeout is 30s, so use 15s
         .retryOnConnectionFailure(true)
+        .connectTimeout(10, TimeUnit.SECONDS) // 연결 타임아웃 추가
         .apply {
             // Configure SSL for Google Cloud Run compatibility
             configureSslForCloudRun()
@@ -88,15 +89,32 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     private var lastServerUrl: String? = null
     private var lastAuthToken: String? = null
     
+    // Reconnection management with exponential backoff
+    private var reconnectAttempts = 0
+    private val maxReconnectAttempts = 10
+    private val baseReconnectDelayMs = 1000L // 1초
+    private val maxReconnectDelayMs = 60000L // 60초
+    private var manuallyDisconnected = false
+    
     // Authentication state tracking
     private val _isAuthenticated = MutableStateFlow(false)
     override val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
     
     private val webSocketListener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            Log.d(TAG, "WebSocket connection opened")
+            Log.d(TAG, "WebSocket connection opened successfully")
             _connectionState.value = WebSocketConnectionState.Connected
+            
+            // Reset reconnection attempts on successful connection
+            reconnectAttempts = 0
+            manuallyDisconnected = false
+            
+            // Cancel any pending reconnection job
+            reconnectJob?.cancel()
+            reconnectJob = null
+            
             // OkHttp handles ping/pong automatically with pingInterval
+            Log.d(TAG, "Connection state updated to Connected, reconnect attempts reset")
         }
         
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -132,6 +150,9 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             Log.d(TAG, "WebSocket closed: $code - $reason")
+            
+            // 연결 끄어질 때 모든 방에서 퇴장
+            leaveAllRooms()
             
             when (code) {
                 1000, 1001 -> {
@@ -214,10 +235,21 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     
     override suspend fun disconnect() {
         withContext(Dispatchers.IO) {
+            Log.d(TAG, "Manual disconnect requested")
+            
+            // Set manual disconnect flag to prevent auto-reconnection
+            manuallyDisconnected = true
+            reconnectAttempts = 0
+            
+            // Cancel any pending reconnection attempts
             reconnectJob?.cancel()
+            reconnectJob = null
+            
+            // Leave all rooms before disconnecting
+            leaveAllRooms()
+            
             webSocket?.close(1000, "User disconnection")
             webSocket = null
-            currentRoomId = null
             
             // Clear stored credentials on manual disconnect
             lastServerUrl = null
@@ -225,6 +257,8 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
             
             _connectionState.value = WebSocketConnectionState.Disconnected
             _isAuthenticated.value = false
+            
+            Log.d(TAG, "Manual disconnect completed")
         }
     }
     
@@ -248,76 +282,180 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         }
     }
     
+    // 방 관리를 위한 세트
+    private val joinedRooms = mutableSetOf<String>()
+    
     override suspend fun joinRoom(roomId: String): Result<Unit> {
-        currentRoomId = roomId
-        val message = WebSocketMessage(
-            type = WebSocketMessage.TYPE_JOIN_ROOM,
-            roomId = roomId
-        )
-        return sendMessage(message)
+        return withContext(Dispatchers.IO) {
+            synchronized(joinedRooms) {
+                if (joinedRooms.contains(roomId)) {
+                    Log.d(TAG, "Already joined room: $roomId")
+                    return@withContext Result.success(Unit)
+                }
+                
+                // 연결 상태 확인
+                if (_connectionState.value !is WebSocketConnectionState.Connected) {
+                    Log.w(TAG, "Cannot join room: not connected")
+                    return@withContext Result.failure(Exception("WebSocket not connected"))
+                }
+                
+                currentRoomId = roomId
+                joinedRooms.add(roomId)
+            }
+            
+            val message = WebSocketMessage(
+                type = WebSocketMessage.TYPE_JOIN_ROOM,
+                roomId = roomId
+            )
+            
+            val result = sendMessage(message)
+            if (result.isFailure) {
+                // 실패 시 상태 되돌리기
+                synchronized(joinedRooms) {
+                    joinedRooms.remove(roomId)
+                    if (currentRoomId == roomId) {
+                        currentRoomId = null
+                    }
+                }
+            }
+            
+            result
+        }
     }
     
     override suspend fun leaveRoom(roomId: String): Result<Unit> {
-        if (currentRoomId == roomId) {
+        return withContext(Dispatchers.IO) {
+            synchronized(joinedRooms) {
+                if (!joinedRooms.contains(roomId)) {
+                    Log.d(TAG, "Not in room: $roomId")
+                    return@withContext Result.success(Unit)
+                }
+                
+                joinedRooms.remove(roomId)
+                if (currentRoomId == roomId) {
+                    currentRoomId = null
+                }
+            }
+            
+            val message = WebSocketMessage(
+                type = WebSocketMessage.TYPE_LEAVE_ROOM,
+                roomId = roomId
+            )
+            sendMessage(message)
+        }
+    }
+    
+    /**
+     * 방 입장 상태 확인
+     */
+    fun isRoomJoined(roomId: String): Boolean {
+        synchronized(joinedRooms) {
+            return joinedRooms.contains(roomId)
+        }
+    }
+    
+    /**
+     * 모든 방에서 퇴장 (연결 해제 시 호출)
+     */
+    private fun leaveAllRooms() {
+        synchronized(joinedRooms) {
+            joinedRooms.clear()
             currentRoomId = null
         }
-        val message = WebSocketMessage(
-            type = WebSocketMessage.TYPE_LEAVE_ROOM,
-            roomId = roomId
-        )
-        return sendMessage(message)
     }
     
     
     private fun scheduleReconnect() {
+        // Don't reconnect if manually disconnected
+        if (manuallyDisconnected) {
+            Log.d(TAG, "Skipping reconnection - manually disconnected")
+            return
+        }
+        
+        // Check if we've exceeded max attempts
+        if (reconnectAttempts >= maxReconnectAttempts) {
+            Log.w(TAG, "Maximum reconnection attempts ($maxReconnectAttempts) exceeded")
+            _connectionState.value = WebSocketConnectionState.Error(
+                message = "Connection lost - maximum reconnection attempts exceeded",
+                throwable = Exception("Auto-reconnection failed after $maxReconnectAttempts attempts")
+            )
+            return
+        }
+        
+        // Cancel any existing reconnection job
         reconnectJob?.cancel()
+        
         reconnectJob = scope.launch {
-            var delay = 1000L // Start with 1 second
-            repeat(5) { attempt ->
-                delay(delay)
-                Log.d(TAG, "Attempting reconnection #${attempt + 1}")
-                
-                if (_connectionState.value is WebSocketConnectionState.Connected) {
-                    return@launch
-                }
-                
-                // Try to reconnect if we have stored credentials
-                val serverUrl = lastServerUrl
-                val authToken = lastAuthToken
-                
-                if (serverUrl != null && authToken != null) {
-                    Log.d(TAG, "Attempting auto-reconnection with stored credentials")
-                    try {
-                        val result = connect(serverUrl, authToken)
-                        if (result.isSuccess) {
-                            Log.d(TAG, "Auto-reconnection successful")
-                            
-                            // Rejoin the current room if we were in one
-                            currentRoomId?.let { roomId ->
-                                joinRoom(roomId)
-                            }
-                            
-                            return@launch
-                        } else {
-                            Log.w(TAG, "Auto-reconnection failed: ${result.exceptionOrNull()?.message}")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Exception during auto-reconnection", e)
-                    }
-                } else {
-                    Log.w(TAG, "No stored credentials for auto-reconnection")
-                    // Set state to disconnected to allow manual reconnection
-                    _connectionState.value = WebSocketConnectionState.Disconnected
-                }
-                
-                delay = minOf(delay * 2, 30_000L) // Exponential backoff, max 30 seconds
+            // Calculate delay with exponential backoff: base * 2^attempts, capped at max
+            val delay = minOf(
+                baseReconnectDelayMs * (1L shl reconnectAttempts.coerceAtMost(6)), // 최대 2^6 = 64배까지
+                maxReconnectDelayMs
+            )
+            
+            reconnectAttempts++
+            
+            Log.d(TAG, "Scheduling reconnection attempt #$reconnectAttempts in ${delay}ms")
+            _connectionState.value = WebSocketConnectionState.Connecting
+            
+            delay(delay)
+            
+            // Check if we're still supposed to reconnect
+            if (manuallyDisconnected || _connectionState.value is WebSocketConnectionState.Connected) {
+                Log.d(TAG, "Cancelling reconnection - state changed")
+                return@launch
             }
             
-            Log.w(TAG, "Auto-reconnection attempts exhausted")
-            _connectionState.value = WebSocketConnectionState.Error(
-                message = "Connection lost - manual reconnection required",
-                throwable = Exception("Auto-reconnection failed after 5 attempts")
-            )
+            Log.d(TAG, "Attempting reconnection #$reconnectAttempts")
+            
+            // Try to reconnect if we have stored credentials
+            val serverUrl = lastServerUrl
+            val authToken = lastAuthToken
+            
+            if (serverUrl != null && authToken != null) {
+                try {
+                    val result = connect(serverUrl, authToken)
+                    if (result.isSuccess) {
+                        Log.d(TAG, "Auto-reconnection successful on attempt #$reconnectAttempts")
+                        
+                        // Rejoin all previously joined rooms
+                        val roomsToRejoin = synchronized(joinedRooms) {
+                            joinedRooms.toSet() // 복사본 생성
+                        }
+                        
+                        if (roomsToRejoin.isNotEmpty()) {
+                            Log.d(TAG, "Rejoining ${roomsToRejoin.size} rooms after reconnection")
+                            roomsToRejoin.forEach { roomId ->
+                                try {
+                                    val rejoinResult = joinRoom(roomId)
+                                    if (rejoinResult.isSuccess) {
+                                        Log.d(TAG, "Successfully rejoined room: $roomId")
+                                    } else {
+                                        Log.w(TAG, "Failed to rejoin room: $roomId - ${rejoinResult.exceptionOrNull()?.message}")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Exception rejoining room: $roomId", e)
+                                }
+                            }
+                        }
+                        
+                        return@launch
+                    } else {
+                        Log.w(TAG, "Auto-reconnection attempt #$reconnectAttempts failed: ${result.exceptionOrNull()?.message}")
+                        // Schedule next attempt
+                        scheduleReconnect()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Exception during auto-reconnection attempt #$reconnectAttempts", e)
+                    // Schedule next attempt
+                    scheduleReconnect()
+                }
+            } else {
+                Log.w(TAG, "No stored credentials for auto-reconnection")
+                _connectionState.value = WebSocketConnectionState.Error(
+                    message = "No authentication credentials available for reconnection",
+                    throwable = Exception("Missing credentials for auto-reconnection")
+                )
+            }
         }
     }
     
@@ -327,6 +465,17 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     fun updateAuthToken(newAuthToken: String) {
         Log.d(TAG, "Updating stored auth token for auto-reconnection")
         lastAuthToken = newAuthToken
+    }
+    
+    /**
+     * Reset reconnection state for manual retry
+     */
+    fun resetReconnectionState() {
+        Log.d(TAG, "Resetting reconnection state for manual retry")
+        manuallyDisconnected = false
+        reconnectAttempts = 0
+        reconnectJob?.cancel()
+        reconnectJob = null
     }
     
     companion object {

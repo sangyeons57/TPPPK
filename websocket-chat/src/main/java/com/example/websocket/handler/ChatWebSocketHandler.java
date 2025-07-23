@@ -187,15 +187,25 @@ public class ChatWebSocketHandler {
             return;
         }
 
-        // Set message metadata
-        message.setSenderId(userId);
-        message.setTimestampFromInstant(Instant.now());
-        message.setRoomId(currentRoomId);
+        try {
+            // Set message metadata
+            message.setSenderId(userId);
+            message.setTimestampFromInstant(Instant.now());
+            message.setRoomId(currentRoomId);
 
-        // Broadcast to room with echo prevention
-        roomManager.broadcastToRoom(currentRoomId, message, userId);
-        logger.info("📤 Message broadcast to room {} by user {} (messageId: {}) - echo prevented", 
-                   currentRoomId, userId, message.getMessageId());
+            // Broadcast to room with echo prevention
+            roomManager.broadcastToRoom(currentRoomId, message, userId);
+            logger.info("📤 Message broadcast to room {} by user {} (messageId: {}) - echo prevented", 
+                       currentRoomId, userId, message.getMessageId());
+            
+            // Send acknowledgment back to sender
+            sendMessageAck(message.getMessageId(), "MESSAGE_ACK");
+            logger.info("✅ MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error processing message from user {}: {}", userId, e.getMessage());
+            sendMessageAck(message.getMessageId(), "MESSAGE_FAILED");
+        }
     }
 
     private void handleEditMessage(ChatMessage message) {
@@ -204,16 +214,26 @@ public class ChatWebSocketHandler {
             return;
         }
 
-        // Set message metadata
-        message.setSenderId(userId);
-        message.setTimestampFromInstant(Instant.now());
-        message.setRoomId(currentRoomId);
-        message.setType("EDIT_MESSAGE");
+        try {
+            // Set message metadata
+            message.setSenderId(userId);
+            message.setTimestampFromInstant(Instant.now());
+            message.setRoomId(currentRoomId);
+            message.setType("EDIT_MESSAGE");
 
-        // Broadcast edit to room with echo prevention
-        roomManager.broadcastToRoom(currentRoomId, message, userId);
-        logger.info("✏️ Message edit broadcast to room {} by user {} (messageId: {}) - echo prevented", 
-                   currentRoomId, userId, message.getMessageId());
+            // Broadcast edit to room with echo prevention
+            roomManager.broadcastToRoom(currentRoomId, message, userId);
+            logger.info("✏️ Message edit broadcast to room {} by user {} (messageId: {}) - echo prevented", 
+                       currentRoomId, userId, message.getMessageId());
+            
+            // Send acknowledgment back to sender
+            sendMessageAck(message.getMessageId(), "EDIT_MESSAGE_ACK");
+            logger.info("✅ EDIT_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error processing edit message from user {}: {}", userId, e.getMessage());
+            sendMessageAck(message.getMessageId(), "EDIT_MESSAGE_FAILED");
+        }
     }
 
     private void handleDeleteMessage(ChatMessage message) {
@@ -222,16 +242,26 @@ public class ChatWebSocketHandler {
             return;
         }
 
-        // Set message metadata
-        message.setSenderId(userId);
-        message.setTimestampFromInstant(Instant.now());
-        message.setRoomId(currentRoomId);
-        message.setType("DELETE_MESSAGE");
+        try {
+            // Set message metadata
+            message.setSenderId(userId);
+            message.setTimestampFromInstant(Instant.now());
+            message.setRoomId(currentRoomId);
+            message.setType("DELETE_MESSAGE");
 
-        // Broadcast delete to room with echo prevention
-        roomManager.broadcastToRoom(currentRoomId, message, userId);
-        logger.info("🗑️ Message delete broadcast to room {} by user {} (messageId: {}) - echo prevented", 
-                   currentRoomId, userId, message.getMessageId());
+            // Broadcast delete to room with echo prevention
+            roomManager.broadcastToRoom(currentRoomId, message, userId);
+            logger.info("🗑️ Message delete broadcast to room {} by user {} (messageId: {}) - echo prevented", 
+                       currentRoomId, userId, message.getMessageId());
+            
+            // Send acknowledgment back to sender
+            sendMessageAck(message.getMessageId(), "DELETE_MESSAGE_ACK");
+            logger.info("✅ DELETE_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error processing delete message from user {}: {}", userId, e.getMessage());
+            sendMessageAck(message.getMessageId(), "DELETE_MESSAGE_FAILED");
+        }
     }
 
     private void sendPong() {
@@ -267,6 +297,13 @@ public class ChatWebSocketHandler {
     private void sendErrorMessage(String error) {
         ChatMessage errorMessage = new ChatMessage("ERROR", currentRoomId, "system", error, Instant.now());
         sendMessage(errorMessage);
+    }
+
+    private void sendMessageAck(String originalMessageId, String ackType) {
+        ChatMessage ackMessage = new ChatMessage(ackType, currentRoomId, "system", "Message processed", Instant.now());
+        // Set the messageId to match the original message for correlation
+        ackMessage.setMessageId(originalMessageId);
+        sendMessage(ackMessage);
     }
 
     public void sendMessage(ChatMessage message) {

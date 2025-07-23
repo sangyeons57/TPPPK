@@ -5,7 +5,8 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 # Copy the packaged JAR file (shadow JAR from Gradle build)
-COPY build/libs/websocket-chat-1.0.0.jar app.jar
+# Note: Shadow JAR has empty classifier, so it will be websocket-chat-1.0.0.jar
+COPY build/libs/*.jar app.jar
 
 # Copy Firebase service account key (if needed)
 # COPY firebase-service-account.json .

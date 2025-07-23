@@ -9,6 +9,8 @@ import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.task.TaskType
+import com.example.domain.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain.provider.auth.AuthSessionUseCases
 import com.example.domain.provider.task.TaskUseCaseProvider
 import com.example.domain.provider.task.TaskUseCases
 import com.example.domain.provider.user.UserUseCaseProvider
@@ -19,7 +21,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,6 +36,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TaskListViewModel @Inject constructor(
     private val taskUseCaseProvider: TaskUseCaseProvider,
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger,
     savedStateHandle: SavedStateHandle
@@ -46,6 +52,7 @@ class TaskListViewModel @Inject constructor(
         containerId = containerId
     )
     
+    private val authSessionUseCases: AuthSessionUseCases = authSessionUseCaseProvider.create()
     private val userUseCases: UserUseCases = userUseCaseProvider.createForUser()
 
     private val _uiState = MutableStateFlow(
@@ -57,37 +64,34 @@ class TaskListViewModel @Inject constructor(
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
     
     init {
-        observeTasks()
-    }
-    
-    private fun observeTasks() {
         taskUseCases.observeTasksUseCase()
-            .onEach { result ->
-                result.onSuccess { tasks ->
-                    viewModelScope.launch {
-                        // 사용자 이름을 가져와서 TaskUiModel에 추가
-                        val tasksWithUserNames = tasks.map { task ->
-                            val checkedByName = task.checkedBy?.let { userId ->
-                                when (val userResult = userUseCases.getUserByIdUseCase(DocumentId(userId.internalValue))) {
-                                    is CustomResult.Success -> userResult.data.name.value
-                                    else -> null
-                                }
-                            }
-                            TaskMapper.toUiModel(task, checkedByName)
-                        }
+            .flatMapLatest { taskResult ->
+                if (taskResult is CustomResult.Success) {
+                    val tasks = taskResult.data
+                    val userIds = tasks.mapNotNull { it.checkedBy?.value }.distinct()
 
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            tasks = tasksWithUserNames,
-                            errorMessage = null
-                        )
+                    if (userIds.isEmpty()) {
+                        flowOf(Pair(tasks, emptyMap()))
+                    } else {
+                        userUseCases.getUsersUseCase(userIds).map {
+                            val userMap = if (it is CustomResult.Success) it.data.associateBy { user -> user.id } else emptyMap()
+                            Pair(tasks, userMap)
+                        }
                     }
-                }.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = error.message
-                    )
+                } else {
+                    flowOf(Pair(emptyList(), emptyMap()))
                 }
+            }
+            .onEach { (tasks, userMap) ->
+                val uiTasks = tasks.map { task ->
+                    val checkedByName = task.checkedBy?.let { userMap[DocumentId.from(it)]?.name?.value }
+                    TaskMapper.toUiModel(task, checkedByName)
+                }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    tasks = uiTasks,
+                    errorMessage = null
+                )
             }
             .launchIn(viewModelScope)
     }

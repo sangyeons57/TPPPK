@@ -56,9 +56,19 @@ class ConnectionService(
      */
     suspend fun retryConnection(): Result<Unit> {
         return try {
-            Log.d("ConnectionService", "Retrying connection...")
-            // WebSocket 재연결은 GlobalWebSocketService에서 관리되므로
-            // 여기서는 상태만 확인하고 성공 반환
+            Log.d("ConnectionService", "Manual retry connection requested...")
+            
+            // Reset manual disconnect flag and force reconnection
+            val webSocketManager = webSocketClient.webSocketManager
+            if (webSocketManager is com.example.core_common.websocket.WebSocketManagerImpl) {
+                // Reset reconnection state for manual retry
+                webSocketManager.resetReconnectionState()
+            }
+            
+            // Trigger reconnection through GlobalWebSocketService
+            webSocketClient.globalWebSocketService.forceReconnect()
+            
+            Log.d("ConnectionService", "Manual retry connection initiated")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e("ConnectionService", "Failed to retry connection", e)

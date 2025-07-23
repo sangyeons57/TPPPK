@@ -108,4 +108,11 @@ interface UserRepository : DefaultRepository {
      */
     fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>>
 
+    /**
+     * 주어진 ID 목록에 해당하는 사용자 목록을 스트림으로 반환합니다.
+     *
+     * @param userIds 사용자 ID 리스트
+     * @return 사용자 목록을 담은 Flow
+     */
+    fun observeUsers(userIds: List<String>): Flow<CustomResult<List<User>, Exception>>
 }

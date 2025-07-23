@@ -200,8 +200,14 @@ class GlobalWebSocketService @Inject constructor(
             return
         }
         
-        if (webSocketManager.connectionState.value is WebSocketConnectionState.Connected) {
+        // 연결 중이거나 이미 연결된 경우 중복 방지
+        val currentState = webSocketManager.connectionState.value
+        if (currentState is WebSocketConnectionState.Connected) {
             Log.d(TAG, "Already connected, skipping connection attempt")
+            return
+        }
+        if (currentState is WebSocketConnectionState.Connecting) {
+            Log.d(TAG, "Connection already in progress, skipping duplicate attempt")
             return
         }
         
@@ -212,6 +218,17 @@ class GlobalWebSocketService @Inject constructor(
             
             if (result.isSuccess) {
                 Log.d(TAG, "WebSocket connection successful")
+                
+                // 연결 성공 후 인증 대기
+                val authTimeout = withTimeoutOrNull(15000) { // 15초 대기
+                    webSocketManager.isAuthenticated.first { it }
+                }
+                
+                if (authTimeout == true) {
+                    Log.d(TAG, "WebSocket authentication successful")
+                } else {
+                    Log.w(TAG, "WebSocket authentication timeout or failed")
+                }
             } else {
                 Log.w(TAG, "WebSocket connection failed: ${result.exceptionOrNull()?.message}")
             }
@@ -369,9 +386,37 @@ class GlobalWebSocketService @Inject constructor(
      */
     fun forceReconnect() {
         scope.launch {
-            webSocketManager.disconnect()
+            Log.d(TAG, "Force reconnect requested")
+            
+            // 기존 연결 해제
+            if (webSocketManager.connectionState.value is WebSocketConnectionState.Connected) {
+                webSocketManager.disconnect()
+                // 연결이 완전히 끊어질 때까지 대기
+                withTimeoutOrNull(3000) {
+                    webSocketManager.connectionState.first { it is WebSocketConnectionState.Disconnected }
+                }
+            }
+            
+            // 지연 후 재연결
             delay(1000)
             attemptConnection()
+        }
+    }
+    
+    /**
+     * 연결 상태 강제 리셋 (연결 문제 디버깅용)
+     */
+    fun resetConnectionState() {
+        scope.launch {
+            Log.d(TAG, "Resetting connection state")
+            
+            // WebSocketManagerImpl의 재연결 상태 리셋
+            (webSocketManager as? WebSocketManagerImpl)?.resetReconnectionState()
+            
+            // 연결 시도
+            if (currentAuthToken != null && serverUrl != null) {
+                attemptConnection()
+            }
         }
     }
     

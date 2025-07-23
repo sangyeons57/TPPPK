@@ -76,6 +76,16 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 
 /**
+ * 메시지의 효과적인 타임스탬프를 반환 (임시 메시지는 clientSentAt, 실제 메시지는 actualTimestamp)
+ */
+private fun getEffectiveTimestamp(message: ChatMessageUiModel): Instant {
+    return when {
+        message.isOptimistic && message.clientSentAt != null -> message.clientSentAt
+        else -> message.actualTimestamp
+    }
+}
+
+/**
  * ChatScreen: 채팅 화면 (Stateful)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -284,21 +294,37 @@ fun ChatMessagesList(
 
         items(
             items = uiState.messages,
-            key = { it.localId } 
+            key = { message ->
+                // 임시 메시지는 localId로, 실제 메시지는 chatId로 키 생성
+                if (message.isOptimistic) {
+                    "temp_${message.localId}"
+                } else {
+                    "actual_${message.chatId}"
+                }
+            }
         ) { message ->
             val isFirstInGroup = uiState.messages.indexOfFirst { it.localId == message.localId }
                 .let { index ->
                     val nextMessage = uiState.messages.getOrNull(index + 1)
+                    
+                    // 그룹핑 조건: 다음 메시지가 없거나, 다른 사용자이거나, 시간 차이가 5분 이상
                     nextMessage == null || 
                     nextMessage.userId != message.userId ||
                     kotlin.math.abs(
-                        (nextMessage.actualTimestamp.epochSecond) -
-                        message.actualTimestamp.epochSecond
-                    ) > 300
+                        getEffectiveTimestamp(nextMessage).epochSecond - 
+                        getEffectiveTimestamp(message).epochSecond
+                    ) > 300 // 5분 = 300초
                 }
             
+            // 메시지 전송 상태에 따른 특별 처리
+            val messageWithStatus = when {
+                message.isSending -> message.copy(formattedTimestamp = "전송 중...")
+                message.sendFailed -> message.copy(formattedTimestamp = "전송 실패")
+                else -> message
+            }
+            
             ChatMessageItemComposable(
-                message = message,
+                message = messageWithStatus,
                 isFirstInGroup = isFirstInGroup,
                 onLongClick = { onMessageLongClick(message) },
                 onUserProfileClick = { onUserProfileClick(message.userId) }
@@ -784,7 +810,9 @@ private fun ChatScreenFullPreview() {
                 isMyMessage = isMy,
                 isSending = false,
                 sendFailed = i == 5, // 5번째 메시지 전송 실패 예시
-                actualTimestamp = Instant.now() // 필수 파라미터 추가
+                actualTimestamp = Instant.now(), // 필수 파라미터 추가
+                isOptimistic = false,
+                clientSentAt = if (isMy) Instant.now().minusSeconds((i * 10).toLong()) else null
             )
         }.reversed(), // 최신 메시지가 아래로 가도록 (LazyColumn reverseLayout=true 이므로)
         myUserId = "1", // Int -> String 타입으로 수정

@@ -25,7 +25,8 @@
       "Bash(npx tsc:*)",
       "Bash(export:*)",
       "Bash(export PATH=$JAVA_HOME/bin:$PATH)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(gradle build)"
     ],
     "deny": []
   }

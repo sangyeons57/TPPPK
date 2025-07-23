@@ -3,6 +3,7 @@ package com.example.feature_chat.websocket
 import com.example.core_common.websocket.GlobalWebSocketService
 import com.example.core_common.websocket.WebSocketManager
 import com.example.core_common.websocket.WebSocketMessage
+import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
@@ -20,14 +21,14 @@ import javax.inject.Singleton
 
 @Singleton
 class ChatWebSocketClient @Inject constructor(
-    private val globalWebSocketService: GlobalWebSocketService
+    val globalWebSocketService: GlobalWebSocketService
 ) {
     
     // Delegate to global service for connection state
     val connectionState = globalWebSocketService.globalConnectionState
     
     // Get the underlying WebSocketManager for direct operations
-    private val webSocketManager: WebSocketManager = globalWebSocketService.getWebSocketManager()
+    val webSocketManager: WebSocketManager = globalWebSocketService.getWebSocketManager()
     val isAuthenticated = webSocketManager.isAuthenticated
     
     fun getChatMessages(roomId: String): Flow<ChatWebSocketEvent> {
@@ -90,6 +91,32 @@ class ChatWebSocketClient @Inject constructor(
                         ))
                         ChatWebSocketEvent.Error(
                             message = message.content ?: "Unknown error"
+                        )
+                    }
+                    "MESSAGE_ACK", "EDIT_MESSAGE_ACK", "DELETE_MESSAGE_ACK" -> {
+                        val correlationId = ChatLogUtils.generateCorrelationId()
+                        Log.i(ChatLogUtils.TAG_MESSAGE, ChatLogUtils.formatLogMessage(
+                            correlationId = correlationId,
+                            message = "메시지 처리 성공 확인: ${message.type}",
+                            roomId = roomId,
+                            messageId = message.messageId ?: "unknown"
+                        ))
+                        ChatWebSocketEvent.MessageAck(
+                            messageId = message.messageId ?: "",
+                            ackType = message.type
+                        )
+                    }
+                    "MESSAGE_FAILED", "EDIT_MESSAGE_FAILED", "DELETE_MESSAGE_FAILED" -> {
+                        val correlationId = ChatLogUtils.generateCorrelationId()
+                        Log.e(ChatLogUtils.TAG_MESSAGE, ChatLogUtils.formatLogMessage(
+                            correlationId = correlationId,
+                            message = "메시지 처리 실패 알림: ${message.type}",
+                            roomId = roomId,
+                            messageId = message.messageId ?: "unknown"
+                        ))
+                        ChatWebSocketEvent.MessageFailed(
+                            messageId = message.messageId ?: "",
+                            failureType = message.type
                         )
                     }
                     else -> {
@@ -271,6 +298,10 @@ class ChatWebSocketClient @Inject constructor(
         ))
     }
     
+    // 방 입장 상태 추적을 위한 변수들
+    private val joiningRooms = mutableSetOf<String>()
+    private val joinedRooms = mutableSetOf<String>()
+    
     suspend fun joinRoom(roomId: String, userId: UserId? = null): Result<Unit> {
         val joinCorrelationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
@@ -280,79 +311,145 @@ class ChatWebSocketClient @Inject constructor(
             userId = userId?.value
         ))
         
-        // userId가 제공된 경우 직접 메시지를 보내고, 그렇지 않으면 기본 WebSocketManager 사용
-        val sendResult = if (userId != null) {
-            val joinMessage = WebSocketMessage(
-                type = WebSocketMessage.TYPE_JOIN_ROOM,
-                roomId = roomId,
-                senderId = userId.value,
-                timestamp = Instant.now().epochSecond.toDouble()
-            )
-            webSocketManager.sendMessage(joinMessage)
-        } else {
-            webSocketManager.joinRoom(roomId)
-        }
-        
-        return if (sendResult.isSuccess) {
-            // Wait for JOINED_ROOM confirmation from server
-            try {
-                val confirmationResult = withTimeoutOrNull(5000) { // 5 second timeout
-                    webSocketManager.incomingMessages
-                        .filter { message -> 
-                            message.type == "JOINED_ROOM" && message.roomId == roomId ||
-                            (message.type == WebSocketMessage.TYPE_ERROR && message.content?.contains("Room") == true)
-                        }
-                        .first()
-                }
-                
-                when {
-                    confirmationResult?.type == "JOINED_ROOM" -> {
-                        Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-                            correlationId = joinCorrelationId,
-                            message = "채팅방 입장 확인됨",
-                            roomId = roomId,
-                            userId = userId?.value
-                        ))
-                        Result.success(Unit)
-                    }
-                    confirmationResult?.type == WebSocketMessage.TYPE_ERROR -> {
-                        Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-                            correlationId = joinCorrelationId,
-                            message = "채팅방 입장 실패: ${confirmationResult.content}",
-                            roomId = roomId,
-                            userId = userId?.value
-                        ))
-                        Result.failure(Exception("Room join failed: ${confirmationResult.content}"))
-                    }
-                    else -> {
-                        Log.w(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
-                            correlationId = joinCorrelationId,
-                            message = "채팅방 입장 확인 시간 초과 (메시지는 전송됨)",
-                            roomId = roomId,
-                            userId = userId?.value
-                        ))
-                        // Still return success as message was sent, just no confirmation
-                        Result.success(Unit)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+        // 이미 입장 중이거나 입장한 경우 중복 방지
+        synchronized(joiningRooms) {
+            if (joiningRooms.contains(roomId)) {
+                Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                     correlationId = joinCorrelationId,
-                    message = "채팅방 입장 확인 중 오류: ${e.message}",
+                    message = "이미 채팅방 입장 중",
                     roomId = roomId,
                     userId = userId?.value
-                ), e)
-                // Still return success as message was sent
-                Result.success(Unit)
+                ))
+                return Result.success(Unit)
             }
-        } else {
+            if (joinedRooms.contains(roomId)) {
+                Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                    correlationId = joinCorrelationId,
+                    message = "이미 채팅방에 입장함",
+                    roomId = roomId,
+                    userId = userId?.value
+                ))
+                return Result.success(Unit)
+            }
+            joiningRooms.add(roomId)
+        }
+        
+        try {
+            // WebSocket 연결 상태 확인
+            if (connectionState.value !is com.example.core_common.websocket.WebSocketConnectionState.Connected) {
+                Log.w(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                    correlationId = joinCorrelationId,
+                    message = "WebSocket 연결되지 않음, 연결 대기 중",
+                    roomId = roomId,
+                    userId = userId?.value
+                ))
+                
+                // 연결이 완료될 때까지 대기 (최대 10초)
+                val connectionWaitResult = withTimeoutOrNull(10000) {
+                    connectionState.first { it is com.example.core_common.websocket.WebSocketConnectionState.Connected }
+                }
+                
+                if (connectionWaitResult == null) {
+                    synchronized(joiningRooms) { joiningRooms.remove(roomId) }
+                    return Result.failure(Exception("WebSocket connection timeout while joining room"))
+                }
+            }
+            
+            // userId가 제공된 경우 직접 메시지를 보내고, 그렇지 않으면 기본 WebSocketManager 사용
+            val sendResult = if (userId != null) {
+                val joinMessage = WebSocketMessage(
+                    type = WebSocketMessage.TYPE_JOIN_ROOM,
+                    roomId = roomId,
+                    senderId = userId.value,
+                    timestamp = Instant.now().epochSecond.toDouble()
+                )
+                webSocketManager.sendMessage(joinMessage)
+            } else {
+                webSocketManager.joinRoom(roomId)
+            }
+            
+            return if (sendResult.isSuccess) {
+                // Wait for JOINED_ROOM confirmation from server with improved handling
+                try {
+                    val confirmationResult = withTimeoutOrNull(10000) { // 10초로 연장
+                        webSocketManager.incomingMessages
+                            .filter { message -> 
+                                (message.type == "JOINED_ROOM" && message.roomId == roomId) ||
+                                (message.type == WebSocketMessage.TYPE_ERROR && 
+                                 (message.content?.contains("Room") == true || message.roomId == roomId))
+                            }
+                            .first()
+                    }
+                    
+                    when {
+                        confirmationResult?.type == "JOINED_ROOM" -> {
+                            synchronized(joiningRooms) {
+                                joiningRooms.remove(roomId)
+                                joinedRooms.add(roomId)
+                            }
+                            Log.i(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                                correlationId = joinCorrelationId,
+                                message = "채팅방 입장 확인됨",
+                                roomId = roomId,
+                                userId = userId?.value
+                            ))
+                            Result.success(Unit)
+                        }
+                        confirmationResult?.type == WebSocketMessage.TYPE_ERROR -> {
+                            synchronized(joiningRooms) { joiningRooms.remove(roomId) }
+                            Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                                correlationId = joinCorrelationId,
+                                message = "채팅방 입장 실패: ${confirmationResult.content}",
+                                roomId = roomId,
+                                userId = userId?.value
+                            ))
+                            Result.failure(Exception("Room join failed: ${confirmationResult.content}"))
+                        }
+                        else -> {
+                            // 타임아웃이지만 메시지는 전송됨 - 낙관적으로 성공 처리
+                            synchronized(joiningRooms) {
+                                joiningRooms.remove(roomId)
+                                joinedRooms.add(roomId)
+                            }
+                            Log.w(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                                correlationId = joinCorrelationId,
+                                message = "채팅방 입장 확인 시간 초과 (낙관적 성공)",
+                                roomId = roomId,
+                                userId = userId?.value
+                            ))
+                            Result.success(Unit)
+                        }
+                    }
+                } catch (e: Exception) {
+                    synchronized(joiningRooms) { joiningRooms.remove(roomId) }
+                    Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                        correlationId = joinCorrelationId,
+                        message = "채팅방 입장 확인 중 오류: ${e.message}",
+                        roomId = roomId,
+                        userId = userId?.value
+                    ), e)
+                    // 메시지는 전송되었으므로 성공으로 처리
+                    Result.success(Unit)
+                }
+            } else {
+                synchronized(joiningRooms) { joiningRooms.remove(roomId) }
+                Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
+                    correlationId = joinCorrelationId,
+                    message = "채팅방 입장 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}",
+                    roomId = roomId,
+                    userId = userId?.value
+                ))
+                sendResult
+            }
+        } catch (e: Exception) {
+            synchronized(joiningRooms) { joiningRooms.remove(roomId) }
             Log.e(ChatLogUtils.TAG_CONNECTION, ChatLogUtils.formatLogMessage(
                 correlationId = joinCorrelationId,
-                message = "채팅방 입장 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}",
+                message = "채팅방 입장 중 예외 발생: ${e.message}",
                 roomId = roomId,
                 userId = userId?.value
-            ))
-            sendResult
+            ), e)
+            return Result.failure(e)
         }
     }
     
@@ -363,6 +460,12 @@ class ChatWebSocketClient @Inject constructor(
             message = "채팅방 퇴장 시도",
             roomId = roomId
         ))
+        
+        // 방 상태 정리
+        synchronized(joiningRooms) {
+            joiningRooms.remove(roomId)
+            joinedRooms.remove(roomId)
+        }
         
         return webSocketManager.leaveRoom(roomId).also { result ->
             if (result.isSuccess) {
@@ -378,6 +481,31 @@ class ChatWebSocketClient @Inject constructor(
                     roomId = roomId
                 ))
             }
+        }
+    }
+    
+    /**
+     * 방 입장 상태 확인 메서드
+     */
+    fun isRoomJoined(roomId: String): Boolean {
+        synchronized(joiningRooms) {
+            return joinedRooms.contains(roomId)
+        }
+    }
+    
+    fun isRoomJoining(roomId: String): Boolean {
+        synchronized(joiningRooms) {
+            return joiningRooms.contains(roomId)
+        }
+    }
+    
+    /**
+     * 모든 방에서 퇴장 (연결 해제 시 호출)
+     */
+    fun clearAllRooms() {
+        synchronized(joiningRooms) {
+            joiningRooms.clear()
+            joinedRooms.clear() 
         }
     }
     

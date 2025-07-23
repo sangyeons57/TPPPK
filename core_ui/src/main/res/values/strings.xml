@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- File Upload Status -->
+    <string name="upload_status_pending">업로드 대기 중</string>
+    <string name="upload_status_uploading">업로드 중 %d%%</string>
+    <string name="upload_status_completed">업로드 완료</string>
+    <string name="upload_status_failed">업로드 실패: %s</string>
+    
+    <!-- Progress Descriptions -->
+    <string name="upload_progress_description">업로드 진행률 %d 퍼센트</string>
+    <string name="upload_progress_text">%d%% 업로드됨</string>
+    <string name="loading_in_progress">로딩 중</string>
+    
+    <!-- Status Messages -->
+    <string name="upload_preparing">업로드 준비 중...</string>
+    <string name="upload_completed_message">파일이 성공적으로 업로드되었습니다</string>
+    
+    <!-- Accessibility Content Descriptions -->
+    <string name="upload_completed">업로드 완료</string>
+    <string name="upload_failed">업로드 실패</string>
+    <string name="cancel_upload_description">현재 업로드를 취소합니다</string>
+    <string name="retry_upload_description">실패한 업로드를 다시 시도합니다</string>
+    <string name="view_upload_details">업로드 상세 정보 보기</string>
+    
+    <!-- Action Buttons -->
+    <string name="cancel">취소</string>
+    <string name="retry">재시도</string>
+    
+    <!-- Status Chip Labels -->
+    <string name="status_pending">대기 중</string>
+    <string name="status_uploading">업로드 중 %d%%</string>
+    <string name="status_completed">완료</string>
+    <string name="status_failed">실패</string>
+    
+    <!-- General -->
+    <string name="file_upload">파일 업로드</string>
+    <string name="attachment">첨부파일</string>
+</resources>

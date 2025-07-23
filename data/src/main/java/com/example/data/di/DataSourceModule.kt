@@ -38,6 +38,8 @@ import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.datasource.remote.special.FileDataSource
 import com.example.data.datasource.remote.special.FileDataSourceImpl
+import com.example.data.datasource.remote.special.FileUploadDataSource
+import com.example.data.datasource.remote.special.FileUploadDataSourceImpl
 import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data.datasource.remote.special.FunctionsRemoteDataSourceImpl
 import dagger.Binds
@@ -194,6 +196,16 @@ abstract class DataSourceModule {
     abstract fun bindFileDataSource(
         fileDataSourceImpl: FileDataSourceImpl
     ): FileDataSource
+
+    /**
+     * FileUploadDataSource 인터페이스 요청 시
+     * FileUploadDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindFileUploadDataSource(
+        fileUploadDataSourceImpl: FileUploadDataSourceImpl
+    ): FileUploadDataSource
 
     /**
      * FunctionsRemoteDataSource 인터페이스 요청 시

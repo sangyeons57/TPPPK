@@ -300,6 +300,7 @@ class MessageService(
         val profileUrl = userProfileService.getUserProfileUrl(senderId)
         val userName = userProfileService.getUserDisplayName(senderId)
         
+        val sendTime = Instant.now()
         val tempUiMessage = ChatMessageUiModel(
             localId = generateTempId(),
             chatId = messageId.value,
@@ -312,7 +313,10 @@ class MessageService(
             isModified = false,
             attachmentImageUrls = attachmentUris.map { it.toString() },
             isDeleted = false,
-            actualTimestamp = Instant.now()
+            actualTimestamp = sendTime,
+            isOptimistic = true,
+            isSending = true,
+            clientSentAt = sendTime
         )
         
         val message = Message.create(
@@ -425,13 +429,30 @@ class MessageService(
     }
     
     /**
-     * 새 메시지 이벤트 처리
+     * 새 메시지 이벤트 처리 - 참여 방식 (Participation-based)
+     * 서버에서 브로드캐스트된 모든 메시지를 동일하게 처리
      */
     suspend fun handleNewMessage(
         event: ChatWebSocketEvent.MessageReceived,
         currentUserId: String
     ): MessageResult {
-        Log.d("MessageService", "handleNewMessage: received message from ${event.senderId}")
+        Log.d("MessageService", "handleNewMessage: received message ${event.messageId} from ${event.senderId}")
+        
+        // 중복 메시지 방지 (ID 기반)
+        if (memoryManager.containsMessage(event.messageId)) {
+            Log.d("MessageService", "Message already exists, skipping: ${event.messageId}")
+            val memoryInfo = memoryManager.getMemoryInfo()
+            return MessageResult(
+                messages = memoryManager.messages,
+                hasMoreMessages = memoryInfo.canLoadOlder,
+                hasMoreOlderMessages = memoryInfo.canLoadOlder,
+                hasMoreNewerMessages = memoryInfo.canLoadNewer
+            )
+        }
+        
+        // 참여 방식: 모든 메시지를 동일하게 처리 (내 메시지든 남의 메시지든)
+        Log.d("MessageService", "Adding new message from ${if (event.senderId == currentUserId) "myself" else "other user"}: ${event.senderId}")
+        
         userProfileService.loadUserProfile(event.senderId)
         
         val profileUrl = userProfileService.getUserProfileUrl(event.senderId)
@@ -449,16 +470,21 @@ class MessageService(
             isModified = false,
             attachmentImageUrls = emptyList(),
             isDeleted = false,
-            actualTimestamp = Instant.parse(event.timestamp)
+            actualTimestamp = Instant.parse(event.timestamp),
+            isOptimistic = false, // 서버에서 온 확정된 메시지
+            isSending = false,
+            sendFailed = false
         )
         
         // 메모리 관리자에 새 메시지 추가
         val updatedMessages = memoryManager.addNewestMessage(newMessage)
         val memoryInfo = memoryManager.getMemoryInfo()
         
+        Log.d("MessageService", "Added confirmed message. Total messages in memory: ${updatedMessages.size}")
+        
         return MessageResult(
             messages = updatedMessages,
-            hasMoreMessages = memoryInfo.canLoadOlder, // 레거시 지원
+            hasMoreMessages = memoryInfo.canLoadOlder,
             hasMoreOlderMessages = memoryInfo.canLoadOlder,
             hasMoreNewerMessages = memoryInfo.canLoadNewer
         )
@@ -588,6 +614,9 @@ private suspend fun Message.toUiModel(
         attachmentImageUrls = emptyList(),
         isMyMessage = this.senderId.value == currentUserId,
         isDeleted = this.isDeleted.value,
-        actualTimestamp = this.createdAt
+        actualTimestamp = this.createdAt,
+        isOptimistic = false,
+        isSending = false,
+        clientSentAt = null
     )
 }

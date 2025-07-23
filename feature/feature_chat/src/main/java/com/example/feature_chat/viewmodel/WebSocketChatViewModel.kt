@@ -157,6 +157,12 @@ class WebSocketChatViewModel @Inject constructor(
                     is ChatWebSocketEvent.Error -> {
                         _eventFlow.emit(ChatEvent.Error(event.message))
                     }
+                    is ChatWebSocketEvent.MessageAck -> {
+                        handleMessageAck(event)
+                    }
+                    is ChatWebSocketEvent.MessageFailed -> {
+                        handleMessageFailed(event)
+                    }
                     else -> { /* Handle other events */ }
                 }
             }
@@ -165,14 +171,27 @@ class WebSocketChatViewModel @Inject constructor(
 
     private suspend fun handleNewMessage(event: ChatWebSocketEvent.MessageReceived) {
         currentUserId?.let { userId ->
-            // 서버에서 이미 echo prevention을 처리하므로 모든 메시지를 처리
             Log.d("ViewModel", "Processing WebSocket message: ${event.messageId} from ${event.senderId}")
             
+            // 참여 방식: 모든 메시지를 서버에서 받아서 처리
+            // 내 메시지든 다른 사람 메시지든 동일하게 처리
             val result = services.messageService.handleNewMessage(event, userId)
             
             _uiState.update { state ->
+                // 내가 보낸 메시지인 경우 임시 메시지 제거
+                val filteredMessages = if (event.senderId == userId) {
+                    // 임시 메시지 제거 (서버에서 온 실제 메시지로 대체)
+                    result.messages.filterNot { message ->
+                        message.userId == userId && 
+                        message.isOptimistic && 
+                        message.message.trim() == event.content.trim()
+                    }
+                } else {
+                    result.messages
+                }
+                
                 state.copy(
-                    messages = result.messages,
+                    messages = filteredMessages,
                     hasMoreMessages = result.hasMoreOlderMessages,
                     error = result.error
                 )
@@ -201,6 +220,46 @@ class WebSocketChatViewModel @Inject constructor(
                 hasMoreMessages = result.hasMoreOlderMessages,
                 error = result.error
             )
+        }
+    }
+
+    private fun handleMessageAck(event: ChatWebSocketEvent.MessageAck) {
+        Log.i("ViewModel", "Message ACK received: ${event.messageId} (${event.ackType})")
+        
+        _uiState.update { state ->
+            val updatedMessages = state.messages.map { message ->
+                if (message.chatId == event.messageId && message.isOptimistic) {
+                    Log.d("ViewModel", "Marking message as successfully sent: ${event.messageId}")
+                    message.copy(
+                        isSending = false,
+                        sendFailed = false,
+                        isOptimistic = false
+                    )
+                } else {
+                    message
+                }
+            }
+            state.copy(messages = updatedMessages)
+        }
+    }
+
+    private fun handleMessageFailed(event: ChatWebSocketEvent.MessageFailed) {
+        Log.e("ViewModel", "Message failed: ${event.messageId} (${event.failureType})")
+        
+        _uiState.update { state ->
+            val updatedMessages = state.messages.map { message ->
+                if (message.chatId == event.messageId && message.isOptimistic) {
+                    Log.d("ViewModel", "Marking message as failed: ${event.messageId}")
+                    message.copy(
+                        isSending = false,
+                        sendFailed = true,
+                        formattedTimestamp = "전송 실패"
+                    )
+                } else {
+                    message
+                }
+            }
+            state.copy(messages = updatedMessages)
         }
     }
 
@@ -265,17 +324,26 @@ class WebSocketChatViewModel @Inject constructor(
             val result = services.messageService.sendMessage(text, attachmentUris, senderId)
             
             if (result.success && result.tempMessage != null) {
-                // Add optimistic message to UI
+                // Add optimistic message to UI with isSending = true
                 _uiState.update { state ->
                     state.copy(messages = listOf(result.tempMessage) + state.messages)
                 }
                 
-                // If we have actual message, replace temp message
+                // ACK 기반 메시지 상태 관리: 서버에서 ACK/FAILED 메시지로 상태 업데이트
+                // 30초 타임아웃 제거 - ACK 시스템으로 정확한 성공/실패 판정
+                
+                // If we have actual message, replace temp message immediately
                 result.actualMessage?.let { actualMessage ->
                     _uiState.update { state ->
                         val updatedMessages = state.messages.map {
                             if (it.localId == result.tempMessage.localId) {
-                                actualMessage
+                                Log.d("ViewModel", "Replacing temp message with actual message: ${it.localId}")
+                                actualMessage.copy(
+                                    isOptimistic = false,
+                                    isSending = false,
+                                    sendFailed = false,
+                                    clientSentAt = result.tempMessage.clientSentAt // 원래 전송 시간 유지
+                                )
                             } else {
                                 it
                             }
@@ -288,12 +356,22 @@ class WebSocketChatViewModel @Inject constructor(
                     _eventFlow.emit(ChatEvent.Error(error))
                 }
                 
-                // Remove temp message if it was added
+                // Mark temp message as failed instead of removing it
                 result.tempMessage?.let { tempMessage ->
                     _uiState.update { state ->
-                        state.copy(
-                            messages = state.messages.filter { it.localId != tempMessage.localId }
-                        )
+                        val updatedMessages = state.messages.map {
+                            if (it.localId == tempMessage.localId) {
+                                Log.d("ViewModel", "Marking temp message as failed: ${it.localId}")
+                                it.copy(
+                                    isSending = false,
+                                    sendFailed = true,
+                                    formattedTimestamp = "전송 실패"
+                                )
+                            } else {
+                                it
+                            }
+                        }
+                        state.copy(messages = updatedMessages)
                     }
                 }
             }

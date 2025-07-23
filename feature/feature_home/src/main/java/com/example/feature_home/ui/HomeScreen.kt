@@ -166,7 +166,6 @@ fun HomeContent(
 ) {
     Row(modifier = modifier.fillMaxSize()) {
         // 1. 왼쪽 사이드바: 프로필과 프로젝트 목록
-        Log.d("HomeContent", "projects: ${uiState.projects}")
         ProjectListScreen(
             projects = uiState.projects.map { projectItem -> 
                 //Log.d("HomeContent", "Converting ProjectItem: id=${projectItem.id}, name=${projectItem.name}")

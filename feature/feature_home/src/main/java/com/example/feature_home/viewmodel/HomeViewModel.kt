@@ -676,7 +676,9 @@ class HomeViewModel @Inject constructor(
      */
     fun onClickTopSection() {
         Log.d("HomeViewModel", "Top section clicked")
-        // 추가 처리 필요시 구현
+        _uiState.value.selectedProjectId?.let { projectId ->
+            onProjectSettingsClicked(projectId)
+        }
     }
 
 
