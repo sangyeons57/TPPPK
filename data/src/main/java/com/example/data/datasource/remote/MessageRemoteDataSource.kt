@@ -1,9 +1,11 @@
 package com.example.data.datasource.remote
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.special.DefaultDatasource
 import com.example.data.datasource.remote.special.DefaultDatasourceImpl
 import com.example.data.model.remote.MessageDTO
+import com.example.domain.model.vo.CollectionPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,6 +39,42 @@ interface MessageRemoteDataSource : DefaultDatasource {
      */
     suspend fun sendMessage(channelPath: String, message: MessageDTO): CustomResult<MessageDTO, Exception>
 
+    /**
+     * 특정 시점 이후 업데이트된 메시지들을 가져옴 (증분 동기화용)
+     * updateAt > timestamp 조건으로 변경된 메시지만 효율적으로 가져옴
+     * @param channelId 채널 ID
+     * @param timestamp 마지막 동기화 시간
+     * @return 업데이트된 메시지 목록
+     */
+    suspend fun getMessagesAfterTimestamp(
+        channelId: String,
+        timestamp: java.time.Instant
+    ): CustomResult<List<com.example.domain.model.base.Message>, Exception>
+
+    /**
+     * 채널의 최신 메시지들을 가져옴 (전체 동기화용)
+     * @param channelId 채널 ID
+     * @param limit 가져올 메시지 개수
+     * @return 최신 메시지 목록
+     */
+    suspend fun getRecentMessages(
+        channelId: String,
+        limit: Int
+    ): CustomResult<List<com.example.domain.model.base.Message>, Exception>
+
+    /**
+     * 특정 시점 이전의 과거 메시지들을 가져옴 (페이지네이션용)
+     * @param channelId 채널 ID
+     * @param beforeTimestamp 기준 시간
+     * @param limit 가져올 메시지 개수
+     * @return 과거 메시지 목록
+     */
+    suspend fun getMessagesBeforeTimestamp(
+        channelId: String,
+        beforeTimestamp: java.time.Instant,
+        limit: Int
+    ): CustomResult<List<com.example.domain.model.base.Message>, Exception>
+
 }
 
 @Singleton
@@ -56,7 +95,165 @@ class MessageRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun sendMessage(channelPath: String, message: MessageDTO): CustomResult<MessageDTO, Exception> = withContext(Dispatchers.IO) {
-        return@withContext TODO()
+        return@withContext try {
+            // 메시지를 Firestore에 저장
+            val docRef = firestore.collection(channelPath).document()
+
+            // 메시지 ID 설정 (Firestore 문서 ID 사용)
+            val messageWithId = message.copy(id = docRef.id)
+
+            // Firestore에 저장
+            docRef.set(messageWithId).await()
+
+            Log.d(
+                "MessageRemoteDataSource",
+                "Successfully sent message to Firestore: ${messageWithId.id}"
+            )
+            CustomResult.Success(messageWithId)
+        } catch (e: Exception) {
+            Log.e("MessageRemoteDataSource", "Failed to send message to Firestore", e)
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun getMessagesAfterTimestamp(
+        channelId: String,
+        timestamp: java.time.Instant
+    ): CustomResult<List<com.example.domain.model.base.Message>, Exception> =
+        withContext(Dispatchers.IO) {
+            return@withContext try {
+                // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
+                val messagesCollectionPath = getMessagesCollectionPath(channelId)
+
+                // updateAt > timestamp 조건으로 증분 동기화
+                val query = firestore.collection(messagesCollectionPath.value)
+                    .whereGreaterThan(
+                        "updatedAt",
+                        com.google.firebase.Timestamp(timestamp.epochSecond, timestamp.nano)
+                    )
+                    .orderBy("updatedAt", Query.Direction.ASCENDING)
+                    .limit(100) // 한 번에 최대 100개씩 동기화
+
+                val snapshot = query.get().await()
+                val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
+                val messages = messageDTOs.map { it.toDomain() }
+
+                CustomResult.Success(messages)
+            } catch (e: Exception) {
+                CustomResult.Failure(e)
+            }
+        }
+
+    override suspend fun getRecentMessages(
+        channelId: String,
+        limit: Int
+    ): CustomResult<List<com.example.domain.model.base.Message>, Exception> =
+        withContext(Dispatchers.IO) {
+            return@withContext try {
+                // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
+                val messagesCollectionPath = getMessagesCollectionPath(channelId)
+
+                // 최신 메시지들을 생성시간 기준으로 가져오기
+                val query = firestore.collection(messagesCollectionPath.value)
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(limit.toLong())
+
+                val snapshot = query.get().await()
+                val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
+                val messages = messageDTOs.map { it.toDomain() }
+
+                CustomResult.Success(messages)
+            } catch (e: Exception) {
+                CustomResult.Failure(e)
+            }
+        }
+
+    override suspend fun getMessagesBeforeTimestamp(
+        channelId: String,
+        beforeTimestamp: java.time.Instant,
+        limit: Int
+    ): CustomResult<List<com.example.domain.model.base.Message>, Exception> =
+        withContext(Dispatchers.IO) {
+            return@withContext try {
+                // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
+                val messagesCollectionPath = getMessagesCollectionPath(channelId)
+
+                // 특정 시점 이전의 과거 메시지들 가져오기 (페이지네이션)
+                val query = firestore.collection(messagesCollectionPath.value)
+                    .whereLessThan(
+                        "createdAt",
+                        com.google.firebase.Timestamp(
+                            beforeTimestamp.epochSecond,
+                            beforeTimestamp.nano
+                        )
+                    )
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(limit.toLong())
+
+                val snapshot = query.get().await()
+                val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
+                val messages = messageDTOs.map { it.toDomain() }
+
+                CustomResult.Success(messages)
+            } catch (e: Exception) {
+                CustomResult.Failure(e)
+            }
+        }
+
+    /**
+     * 채널 ID를 기반으로 적절한 메시지 컬렉션 경로를 결정
+     * CollectionPath 헬퍼를 사용하여 DM 채널과 프로젝트 채널을 구분
+     */
+    private fun getMessagesCollectionPath(channelId: String): CollectionPath {
+        return if (channelId.startsWith("dm_")) {
+            // DM 채널: dm_channels/{channelId}/messages
+            CollectionPath.dmChannelMessages(channelId)
+        } else {
+            // 프로젝트 채널: projects/{projectId}/channels/{channelId}/messages
+            // 현재 컨텍스트에서 프로젝트 ID 추출
+            val projectId = extractProjectIdFromContext(channelId)
+            if (projectId != null) {
+                CollectionPath.projectChannelMessages(projectId, channelId)
+            } else {
+                // 프로젝트 ID를 찾을 수 없는 경우 DM 경로로 폴백 (임시)
+                Log.w(
+                    "MessageRemoteDataSource",
+                    "Could not extract projectId for channel: $channelId, using DM path as fallback"
+                )
+                CollectionPath.dmChannelMessages(channelId)
+            }
+        }
+    }
+
+    /**
+     * 채널 ID 또는 현재 컨텍스트에서 프로젝트 ID를 추출
+     * 향후 더 나은 방법으로 개선 필요 (현재는 간단한 폴백 로직)
+     */
+    private fun extractProjectIdFromContext(channelId: String): String? {
+        return try {
+            // TODO: 현재는 간단한 폴백을 사용
+            // 실제로는 채널 문서에서 projectId를 조회하거나,
+            // 별도의 context 매개변수를 통해 전달받아야 함
+
+            // 임시로 채널 ID가 프로젝트 패턴을 포함하는지 확인
+            if (channelId.contains("_project_")) {
+                // 예: "channel123_project_projectId456" 같은 패턴
+                val parts = channelId.split("_project_")
+                if (parts.size >= 2) {
+                    return parts[1]
+                }
+            }
+
+            // 다른 패턴이나 기본값 처리
+            null
+        } catch (e: Exception) {
+            Log.w(
+                "MessageRemoteDataSource",
+                "Failed to extract projectId from context for channel: $channelId",
+                e
+            )
+            null
+        }
     }
 
 }

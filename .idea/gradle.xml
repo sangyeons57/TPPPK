@@ -14,7 +14,6 @@
             <option value="$PROJECT_DIR$/app-api" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/core/core_common" />
-            <option value="$PROJECT_DIR$/core/core_fcm" />
             <option value="$PROJECT_DIR$/core/core_navigation" />
             <option value="$PROJECT_DIR$/core/core_ui" />
             <option value="$PROJECT_DIR$/data" />

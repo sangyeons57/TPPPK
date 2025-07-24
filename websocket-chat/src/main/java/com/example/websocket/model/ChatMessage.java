@@ -76,6 +76,23 @@ public class ChatMessage {
     public Map<String, String> getPayload() { return payload; }
     public void setPayload(Map<String, String> payload) { this.payload = payload; }
 
+    /**
+     * Returns a one-line summary of all fields for logging/debugging.
+     */
+    public String toSummaryString() {
+        return String.format(
+            "type='%s', roomId='%s', senderId='%s', content='%s', timestamp=%s, messageId='%s', replyToMessageId='%s', payload=%s",
+            String.valueOf(type),
+            String.valueOf(roomId),
+            String.valueOf(senderId),
+            String.valueOf(content),
+            String.valueOf(timestamp),
+            String.valueOf(messageId),
+            String.valueOf(replyToMessageId),
+            payload != null ? payload.toString() : "null"
+        );
+    }
+
     @Override
     public String toString() {
         return "ChatMessage{" +

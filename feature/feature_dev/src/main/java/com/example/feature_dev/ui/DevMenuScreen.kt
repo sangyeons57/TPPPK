@@ -236,6 +236,11 @@ fun DevMenuScreen(
                 modifier = Modifier.padding(top = 16.dp)
             )
 
+            // FCM 테스트 버튼 추가
+            DevMenuButton(text = "FCM 테스트 알림 보내기") {
+                viewModel.sendFcmTestNotification()
+            }
+
             // Hello World 테스트 버튼
             if (isLoading) {
                 Button(

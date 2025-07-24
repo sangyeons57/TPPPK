@@ -37,6 +37,4 @@ dependencies {
     
     // Image Loading
     implementation(libs.androidx.compose.coil)
-    
-
 }

@@ -8,6 +8,8 @@ import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import com.example.core_common.websocket.GlobalWebSocketService
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
+import com.example.teamnovapersonalprojectprojectingkotlin.fcm.FcmTokenManager
+import com.example.teamnovapersonalprojectprojectingkotlin.notification.NotificationChannelManager
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
@@ -34,6 +36,12 @@ class MyApp : Application(), LifecycleObserver {
     
     @Inject
     lateinit var authSessionUseCaseProvider: AuthSessionUseCaseProvider
+
+    @Inject
+    lateinit var fcmTokenManager: FcmTokenManager
+
+    @Inject
+    lateinit var notificationChannelManager: NotificationChannelManager
     
     private val applicationScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
@@ -45,9 +53,25 @@ class MyApp : Application(), LifecycleObserver {
         
         // Register lifecycle observer
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+
+        // Initialize notification channels
+        initializeNotificationChannels()
         
         // Initialize global WebSocket service after DI is ready
         initializeGlobalWebSocketService()
+
+        // Initialize FCM token management
+        initializeFcmTokenManager()
+    }
+
+    private fun initializeNotificationChannels() {
+        try {
+            Log.d(TAG, "Initializing notification channels")
+            notificationChannelManager.initializeChannels()
+            Log.d(TAG, "Notification channels initialization completed")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize notification channels", e)
+        }
     }
     
     private fun initializeGlobalWebSocketService() {
@@ -75,6 +99,18 @@ class MyApp : Application(), LifecycleObserver {
             }
         }
     }
+
+    private fun initializeFcmTokenManager() {
+        applicationScope.launch {
+            try {
+                Log.d(TAG, "Initializing FCM token management")
+                fcmTokenManager.initialize()
+                Log.d(TAG, "FCM token management initialization completed")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize FCM token management", e)
+            }
+        }
+    }
     
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onAppForegrounded() {
@@ -89,6 +125,7 @@ class MyApp : Application(), LifecycleObserver {
     override fun onTerminate() {
         super.onTerminate()
         globalWebSocketService.stopService()
+        fcmTokenManager.cleanup()
     }
     
     /**

@@ -64,4 +64,8 @@ export {joinProjectWithInviteFunction as joinProjectWithInvite} from "./triggers
 export {leaveProjectFunction as leaveProject} from "./triggers/member/memberManagement.trigger";
 
 // Chat/Message functions
-export {onMessageMentionNotification} from "./triggers/chat/mentionNotification.trigger";
+export {onMessageMentionNotification as onMessageMentionNotification} from "./triggers/chat/mentionNotification.trigger";
+export {onNewMessageNotification as onNewMessageNotification, updateFcmToken as updateFcmToken} from "./triggers/chat/messageNotification.trigger";
+
+// Simple notification function (testing)
+export {sendCustomNotification as sendCustomNotification} from "./triggers/chat/simpleNotification.trigger";

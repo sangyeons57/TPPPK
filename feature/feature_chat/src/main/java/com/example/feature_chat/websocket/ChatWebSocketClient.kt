@@ -66,6 +66,7 @@ class ChatWebSocketClient @Inject constructor(
                     WebSocketMessage.TYPE_EDIT_MESSAGE -> {
                         ChatWebSocketEvent.MessageEdited(
                             messageId = message.messageId ?: "",
+                            senderId = message.senderId ?: "",
                             newContent = message.content ?: "",
                             timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
                         )
@@ -73,6 +74,7 @@ class ChatWebSocketClient @Inject constructor(
                     WebSocketMessage.TYPE_DELETE_MESSAGE -> {
                         ChatWebSocketEvent.MessageDeleted(
                             messageId = message.messageId ?: "",
+                            senderId = message.senderId ?: "",
                             timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
                         )
                     }

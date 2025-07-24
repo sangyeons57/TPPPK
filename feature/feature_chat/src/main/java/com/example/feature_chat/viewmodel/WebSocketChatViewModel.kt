@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.core_common.util.DateTimeUtil
+import com.example.data.utils.DebugChatLogger
 import com.example.domain.model.vo.MentionType
 import com.example.domain.model.vo.message.MentionInfo
 import com.example.feature_chat.model.ChatEvent
@@ -23,6 +25,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import javax.inject.Inject
 
 /**
@@ -32,7 +36,8 @@ import javax.inject.Inject
 @HiltViewModel
 class WebSocketChatViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val chatServiceProvider: ChatServiceProvider
+    private val chatServiceProvider: ChatServiceProvider,
+    private val debugChatLogger: DebugChatLogger // Inject the logger
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -66,11 +71,24 @@ class WebSocketChatViewModel @Inject constructor(
 
     private var currentUserId: String? = null
 
+    // 메시지 타임아웃 관리를 위한 Job 맵
+    private val messageTimeoutJobs = mutableMapOf<String, Job>()
+
     init {
+        // Log local cache on entry
+        logChannelCacheOnEntry()
+
         initializeAuthentication()
         initializeConnection()
         initializeMessages()
         loadChannelData()
+    }
+
+    private fun logChannelCacheOnEntry() {
+        viewModelScope.launch {
+            Log.i("DebugChatCache", "--- Dumping local cache for channel $channelId upon entry ---")
+            debugChatLogger.printChannelChatMessages(channelId)
+        }
     }
 
     private fun initializeAuthentication() {
@@ -190,11 +208,17 @@ class WebSocketChatViewModel @Inject constructor(
             _uiState.update { state ->
                 // 내가 보낸 메시지인 경우 임시 메시지 제거
                 val filteredMessages = if (event.senderId == userId) {
-                    // 임시 메시지 제거 (서버에서 온 실제 메시지로 대체)
+                    // 타임아웃 Job 취소 (실제 메시지 도착했으므로)
+                    cancelMessageTimeout(event.messageId)
+
+                    // 향상된 중복 메시지 제거: messageId 우선, 내용 기반 백업
                     result.messages.filterNot { message ->
-                        message.userId == userId && 
-                        message.isOptimistic && 
-                        message.message.trim() == event.content.trim()
+                        message.userId == userId && message.isOptimistic && (
+                                // 1순위: messageId 정확한 매칭
+                                message.chatId == event.messageId ||
+                                        // 2순위: 내용 기반 매칭 (백업)
+                                        message.message.trim() == event.content.trim()
+                                )
                     }
                 } else {
                     result.messages
@@ -209,7 +233,7 @@ class WebSocketChatViewModel @Inject constructor(
         }
     }
 
-    private fun handleMessageEdit(event: ChatWebSocketEvent.MessageEdited) {
+    private suspend fun handleMessageEdit(event: ChatWebSocketEvent.MessageEdited) {
         val result = services.messageService.handleMessageEdit(event)
         
         _uiState.update { state ->
@@ -221,7 +245,7 @@ class WebSocketChatViewModel @Inject constructor(
         }
     }
 
-    private fun handleMessageDelete(event: ChatWebSocketEvent.MessageDeleted) {
+    private suspend fun handleMessageDelete(event: ChatWebSocketEvent.MessageDeleted) {
         val result = services.messageService.handleMessageDelete(event)
         
         _uiState.update { state ->
@@ -235,6 +259,9 @@ class WebSocketChatViewModel @Inject constructor(
 
     private fun handleMessageAck(event: ChatWebSocketEvent.MessageAck) {
         Log.i("ViewModel", "Message ACK received: ${event.messageId} (${event.ackType})")
+
+        // 타임아웃 Job 취소
+        cancelMessageTimeout(event.messageId)
         
         _uiState.update { state ->
             val updatedMessages = state.messages.map { message ->
@@ -255,6 +282,9 @@ class WebSocketChatViewModel @Inject constructor(
 
     private fun handleMessageFailed(event: ChatWebSocketEvent.MessageFailed) {
         Log.e("ViewModel", "Message failed: ${event.messageId} (${event.failureType})")
+
+        // 타임아웃 Job 취소
+        cancelMessageTimeout(event.messageId)
         
         _uiState.update { state ->
             val updatedMessages = state.messages.map { message ->
@@ -303,7 +333,11 @@ class WebSocketChatViewModel @Inject constructor(
         }
     }
 
-    private fun sendMessage(text: String, attachmentUris: List<Uri> = emptyList(), mentions: List<MentionInfo> = emptyList()) {
+    private fun sendMessage(
+        text: String,
+        attachmentUris: List<Uri> = emptyList(),
+        replyToMessageId: String? = null
+    ) {
         val senderId = currentUserId
         if (senderId == null) {
             viewModelScope.launch {
@@ -331,7 +365,12 @@ class WebSocketChatViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val result = services.messageService.sendMessage(text, attachmentUris, senderId, mentions)
+            val result = services.messageService.sendMessage(
+                text,
+                attachmentUris,
+                senderId,
+                replyToMessageId
+            )
             
             if (result.success && result.tempMessage != null) {
                 // Add optimistic message to UI with isSending = true
@@ -343,7 +382,8 @@ class WebSocketChatViewModel @Inject constructor(
                 }
                 
                 // ACK 기반 메시지 상태 관리: 서버에서 ACK/FAILED 메시지로 상태 업데이트
-                // 30초 타임아웃 제거 - ACK 시스템으로 정확한 성공/실패 판정
+                // 30초 타임아웃 백업 시스템 - ACK가 도착하지 않을 경우 대비
+                startMessageTimeout(result.tempMessage.chatId)
                 
                 // If we have actual message, replace temp message immediately
                 result.actualMessage?.let { actualMessage ->
@@ -570,8 +610,6 @@ class WebSocketChatViewModel @Inject constructor(
             } else {
                 hideMentionSuggestions()
             }
-        } else {
-            hideMentionSuggestions()
         }
     }
     
@@ -723,8 +761,41 @@ class WebSocketChatViewModel @Inject constructor(
         
         // Convert display format (@displayName) back to internal format ([type:id]) for processing
         val internalMessage = convertDisplayToInternalFormat(message)
-        val (processedText, mentions) = parseMentions(internalMessage)
-        sendMessage(processedText, attachments, mentions)
+        // 멘션/답장 파싱은 이제 MessageService에서 처리하므로 원본 텍스트 그대로 전송
+        sendMessage(internalMessage, attachments)
+
+        _uiState.update {
+            it.copy(
+                pendingMessageText = "",
+                selectedAttachmentUris = emptyList()
+            )
+        }
+
+        // Clear mention mappings after sending
+        currentMentionMappings.clear()
+    }
+
+    /**
+     * 특정 메시지에 답장하기
+     * @param message 답장할 메시지 내용
+     * @param replyToMessageId 답장 대상 메시지 ID
+     * @param attachments 첨부파일 URI 리스트
+     */
+    fun sendReplyMessage(
+        message: String,
+        replyToMessageId: String,
+        attachments: List<Uri> = emptyList()
+    ) {
+        if (message.isBlank() && attachments.isEmpty()) {
+            viewModelScope.launch {
+                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지를 입력해주세요"))
+            }
+            return
+        }
+
+        // Convert display format (@displayName) back to internal format ([type:id]) for processing
+        val internalMessage = convertDisplayToInternalFormat(message)
+        sendMessage(internalMessage, attachments, replyToMessageId)
 
         _uiState.update { 
             it.copy(
@@ -753,7 +824,7 @@ class WebSocketChatViewModel @Inject constructor(
 
     private fun parseMentions(text: String): Pair<String, List<MentionInfo>> {
         // Parse internal format [TYPE:id] that was converted from display format
-        val mentionRegex = "\\[(USER|ROLE):(\\S+?)\\]".toRegex()
+        val mentionRegex = """\[(USER|ROLE):(\S+?)\]""".toRegex()
         val mentions = mutableListOf<MentionInfo>()
         
         val processedText = mentionRegex.replace(text) { matchResult ->
@@ -802,7 +873,7 @@ class WebSocketChatViewModel @Inject constructor(
      * This prevents internal format from being visible to users
      */
     fun convertInternalToDisplayFormat(text: String): String {
-        val mentionRegex = "\\[(USER|ROLE):(\\S+?)\\]".toRegex()
+        val mentionRegex = """\[(USER|ROLE):(\S+?)\]""".toRegex()
         
         return mentionRegex.replace(text) { matchResult ->
             val typeStr = matchResult.groupValues[1]
@@ -934,8 +1005,69 @@ class WebSocketChatViewModel @Inject constructor(
         deleteMessage(messageId)
     }
 
+    /**
+     * 메시지 전송 타임아웃 시작 (30초 후 강제 상태 변경)
+     */
+    private fun startMessageTimeout(messageId: String) {
+        // 기존 타임아웃 Job이 있다면 취소
+        cancelMessageTimeout(messageId)
+
+        val timeoutJob = viewModelScope.launch {
+            try {
+                delay(30000) // 30초 대기
+                Log.w("ViewModel", "Message timeout: $messageId - forcing state update")
+
+                // ACK가 도착하지 않았으므로 강제로 상태 업데이트
+                updateMessageStateIfStillSending(messageId)
+            } catch (e: Exception) {
+                // Job이 취소된 경우 (정상적인 ACK 도착)
+                Log.d("ViewModel", "Message timeout cancelled for: $messageId")
+            }
+        }
+
+        messageTimeoutJobs[messageId] = timeoutJob
+    }
+
+    /**
+     * 메시지 타임아웃 Job 취소
+     */
+    private fun cancelMessageTimeout(messageId: String) {
+        messageTimeoutJobs[messageId]?.cancel()
+        messageTimeoutJobs.remove(messageId)
+    }
+
+    /**
+     * 메시지가 아직 전송 중인 경우 상태 업데이트
+     */
+    private fun updateMessageStateIfStillSending(messageId: String) {
+        _uiState.update { state ->
+            val updatedMessages = state.messages.map { message ->
+                if (message.chatId == messageId && message.isOptimistic && message.isSending) {
+                    Log.d("ViewModel", "Timeout: Marking message as sent (optimistic): $messageId")
+                    message.copy(
+                        isSending = false,
+                        sendFailed = false,
+                        isOptimistic = false, // 더 이상 임시 메시지가 아님
+                        formattedTimestamp = DateTimeUtil.formatChatTime(message.actualTimestamp)
+                    )
+                } else {
+                    message
+                }
+            }
+            state.copy(messages = updatedMessages.applyDisplayFormatConversion())
+        }
+
+        // 타임아웃 Job 정리
+        messageTimeoutJobs.remove(messageId)
+    }
+    
     override fun onCleared() {
         super.onCleared()
+
+        // 모든 타임아웃 Job 취소
+        messageTimeoutJobs.values.forEach { it.cancel() }
+        messageTimeoutJobs.clear()
+        
         viewModelScope.launch {
             // Leave room when ViewModel is cleared
             // Note: The actual room leaving is handled by the WebSocketClient

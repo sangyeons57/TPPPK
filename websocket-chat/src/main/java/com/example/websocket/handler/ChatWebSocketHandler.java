@@ -3,6 +3,7 @@ package com.example.websocket.handler;
 import com.example.websocket.auth.FirebaseAuthService;
 import com.example.websocket.model.ChatMessage;
 import com.example.websocket.service.ChatRoomManager;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
@@ -82,6 +83,8 @@ public class ChatWebSocketHandler {
 
     @OnMessage
     public void onMessage(String message) {
+        // 모든 원본 메시지(문자열) 로깅 (문제가 있는 메시지도 포함)
+        logger.info("[WS-RAW] 수신 메시지 원본 (String):\n{}", message);
         if (userId == null) {
             logger.warn("Received message from unauthenticated user");
             closeWithError("Not authenticated");
@@ -92,7 +95,7 @@ public class ChatWebSocketHandler {
             ChatMessage chatMessage = objectMapper.readValue(message, ChatMessage.class);
             handleChatMessage(chatMessage);
         } catch (Exception e) {
-            logger.error("Error processing message: {}", e.getMessage());
+            logger.error("[WS-RAW] 메시지 파싱 실패: {}", e.getMessage(), e);
             sendErrorMessage("Invalid message format");
         }
     }
@@ -111,6 +114,15 @@ public class ChatWebSocketHandler {
     }
 
     private void handleChatMessage(ChatMessage message) {
+        // 들어온 메시지(ChatMessage 객체)를 pretty print로 보기 좋게 출력
+        try {
+            String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(message);
+            logger.info("[WS-PARSED] 수신 메시지 객체 (Pretty JSON):\n{}", prettyJson);
+        } catch (JsonProcessingException e) {
+            logger.warn("[WS-PARSED] 메시지 객체 JSON 변환 실패: {}", e.getMessage());
+        }
+        // 각 필드별 값 요약 로그
+        logger.info("[WS-FIELDS] {}", message.toSummaryString());
         switch (message.getType()) {
             case "AUTH":
                 // Skip AUTH messages - authentication is handled during handshake

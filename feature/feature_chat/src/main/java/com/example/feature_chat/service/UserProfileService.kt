@@ -346,4 +346,85 @@ class UserProfileService(
             uncachedUserIds.forEach { loadingProfileUserIds.remove(it) }
         }
     }
+
+    // 멘션 기능을 위한 username -> userId 매핑 캐시
+    private val usernameToUserIdCache = mutableMapOf<String, String?>()
+
+    /**
+     * username으로 userId를 찾는 메서드
+     * 멘션 파싱에서 사용되며, 결과를 캐시하여 성능 최적화
+     * @param username 찾을 사용자명
+     * @return userId (찾지 못하면 null)
+     */
+    suspend fun getUserIdByUsername(username: String): String? {
+        // 캐시에서 먼저 확인
+        if (usernameToUserIdCache.containsKey(username)) {
+            val cachedUserId = usernameToUserIdCache[username]
+            Log.d(
+                "UserProfileService",
+                "getUserIdByUsername($username): found in cache: $cachedUserId"
+            )
+            return cachedUserId
+        }
+
+        try {
+            Log.d(
+                "UserProfileService",
+                "getUserIdByUsername($username): searching in user database"
+            )
+
+            // 현재 캐시된 사용자들에서 username 매칭 시도
+            val matchingUser = userProfileCache.values.find { user ->
+                user.name.value.equals(username, ignoreCase = true)
+            }
+
+            if (matchingUser != null) {
+                val userId = matchingUser.id.value
+                Log.d(
+                    "UserProfileService",
+                    "getUserIdByUsername($username): found in profile cache: $userId"
+                )
+
+                // 결과 캐시
+                usernameToUserIdCache[username] = userId
+                return userId
+            }
+
+            // 캐시에서 찾지 못한 경우, 향후 실제 데이터베이스 검색 기능 구현 필요
+            Log.w(
+                "UserProfileService",
+                "getUserIdByUsername($username): user not found in current cache. Database search not implemented yet."
+            )
+
+            // 찾지 못한 결과도 캐시 (중복 검색 방지)
+            usernameToUserIdCache[username] = null
+            return null
+        } catch (e: Exception) {
+            Log.e(
+                "UserProfileService",
+                "getUserIdByUsername($username): exception during search",
+                e
+            )
+
+            // 예외 발생 시에도 null을 캐시하여 재시도 방지
+            usernameToUserIdCache[username] = null
+            return null
+        }
+    }
+
+    /**
+     * username → userId 캐시 클리어
+     */
+    fun clearUsernameCache() {
+        Log.d("UserProfileService", "Clearing username to userId cache")
+        usernameToUserIdCache.clear()
+    }
+
+    /**
+     * 모든 캐시 클리어 (기존 메서드 확장)
+     */
+    fun clearAllCachesIncludingUsername() {
+        clearAllCaches()
+        clearUsernameCache()
+    }
 }

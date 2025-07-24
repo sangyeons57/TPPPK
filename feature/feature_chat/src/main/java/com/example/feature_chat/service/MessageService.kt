@@ -9,6 +9,7 @@ import com.example.domain.model.base.Message
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.model.vo.message.MessageIsDeleted
 import com.example.domain.provider.chat.ChatUseCases
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.config.ChatMemoryConfig
@@ -19,6 +20,8 @@ import com.example.feature_chat.queue.QueuedMessageAction
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import com.example.domain.model.vo.message.MentionInfo
+import com.example.feature_chat.util.MentionParser
+import com.example.feature_chat.util.ReplyParser
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -33,7 +36,8 @@ class MessageService(
     private val webSocketClient: ChatWebSocketClient,
     private val offlineMessageQueue: OfflineMessageQueue,
     private val userProfileService: UserProfileService,
-    private val roomId: String
+    private val roomId: String,
+    private val chatCacheManager: com.example.data.cache.ChatCacheManager? = null // 선택적 의존성으로 점진적 롤아웃 지원
 ) {
     
     // 메모리 관리자
@@ -60,11 +64,20 @@ class MessageService(
     
     /**
      * 초기 메시지들을 로딩
+     * 캐시 매니저가 활성화된 경우 로컬 캐시를 우선 사용하고 백그라운드에서 동기화
      */
     suspend fun loadInitialMessages(currentUserId: String): MessageResult = coroutineScope {
         val startTime = System.currentTimeMillis()
         Log.d("MessageService", "Loading initial messages - PERFORMANCE START")
-        
+
+        // 캐시 매니저가 활성화된 경우 캐시 우선 전략 사용
+        if (chatCacheManager != null) {
+            Log.d("MessageService", "Using cache-first strategy with ChatCacheManager")
+            return@coroutineScope loadInitialMessagesWithCache(currentUserId, startTime)
+        }
+
+        // 기존 방식 (Firestore 직접 접근)
+        Log.d("MessageService", "Using legacy Firestore-direct strategy")
         when (val result = chatUseCases.fetchPastMessagesUseCase(limit = ChatMemoryConfig.PAGINATION_SIZE)) {
             is CustomResult.Success -> {
                 val fetchTime = System.currentTimeMillis()
@@ -88,7 +101,9 @@ class MessageService(
                         tempIdGenerator = ::generateTempId,
                         getUserDisplayName = userProfileService::getUserDisplayName,
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
-                        getCachedProfileUrl = userProfileService::getCachedProfileUrl
+                        getCachedProfileUrl = userProfileService::getCachedProfileUrl,
+                        getUserIdByUsername = userProfileService::getUserIdByUsername,
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
                     )
                 }
                 val uiConversionTime = System.currentTimeMillis() - uiConversionStart
@@ -115,6 +130,143 @@ class MessageService(
             else -> {
                 Log.d("MessageService", "Loading initial messages...")
                 MessageResult()
+            }
+        }
+    }
+
+    /**
+     * 캐시 매니저를 사용한 초기 메시지 로딩
+     * 로컬 캐시에서 즉시 반환 후 백그라운드에서 동기화
+     */
+    private suspend fun loadInitialMessagesWithCache(
+        currentUserId: String,
+        startTime: Long
+    ): MessageResult {
+        return try {
+            // 채널 ID 추출 (roomId에서 "chat_room_" 접두사 제거)
+            val channelId = roomId.removePrefix("chat_room_")
+
+            // 캐시에서 메시지 가져오기 (즉시 반환 + 백그라운드 동기화)
+            val cachedMessages =
+                chatCacheManager!!.getMessagesWithSync(channelId, ChatMemoryConfig.PAGINATION_SIZE)
+
+            val cacheTime = System.currentTimeMillis()
+            Log.d(
+                "MessageService",
+                "CACHE SUCCESS - got ${cachedMessages.size} cached messages in ${cacheTime - startTime}ms"
+            )
+
+            if (cachedMessages.isNotEmpty()) {
+                // 사용자 프로필 로딩
+                val userIds = cachedMessages.map { it.senderId.value }.toSet()
+                userProfileService.loadUserProfiles(userIds)
+
+                // UI 모델로 변환
+                val uiMessages = cachedMessages.map { message ->
+                    message.toUiModel(
+                        currentUserId = currentUserId,
+                        tempIdGenerator = ::generateTempId,
+                        getUserDisplayName = userProfileService::getUserDisplayName,
+                        getUserProfileUrl = userProfileService::getUserProfileUrl,
+                        getCachedProfileUrl = userProfileService::getCachedProfileUrl,
+                        getUserIdByUsername = userProfileService::getUserIdByUsername,
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                    )
+                }
+
+                // 메모리 관리자에 메시지 설정
+                memoryManager.setInitialMessages(uiMessages)
+                val memoryInfo = memoryManager.getMemoryInfo()
+
+                val totalTime = System.currentTimeMillis() - startTime
+                Log.d(
+                    "MessageService",
+                    "CACHE PERFORMANCE COMPLETE - Total: ${totalTime}ms | Messages: ${uiMessages.size}"
+                )
+
+                MessageResult(
+                    messages = uiMessages,
+                    hasMoreMessages = uiMessages.size == ChatMemoryConfig.PAGINATION_SIZE,
+                    hasMoreOlderMessages = memoryInfo.canLoadOlder,
+                    hasMoreNewerMessages = memoryInfo.canLoadNewer,
+                    lastMessageTimestamp = uiMessages.lastOrNull()?.actualTimestamp
+                )
+            } else {
+                // 캐시가 비어있는 경우 기존 방식으로 폴백
+                Log.d("MessageService", "Cache is empty, falling back to Firestore")
+                when (val result =
+                    chatUseCases.fetchPastMessagesUseCase(limit = ChatMemoryConfig.PAGINATION_SIZE)) {
+                    is CustomResult.Success -> {
+                        val messages = result.data.map { message ->
+                            message.toUiModel(
+                                currentUserId = currentUserId,
+                                tempIdGenerator = ::generateTempId,
+                                getUserDisplayName = userProfileService::getUserDisplayName,
+                                getUserProfileUrl = userProfileService::getUserProfileUrl,
+                                getCachedProfileUrl = userProfileService::getCachedProfileUrl,
+                                getUserIdByUsername = userProfileService::getUserIdByUsername,
+                                findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                            )
+                        }
+
+                        memoryManager.setInitialMessages(messages)
+                        val memoryInfo = memoryManager.getMemoryInfo()
+
+                        MessageResult(
+                            messages = messages,
+                            hasMoreMessages = messages.size == ChatMemoryConfig.PAGINATION_SIZE,
+                            hasMoreOlderMessages = memoryInfo.canLoadOlder,
+                            hasMoreNewerMessages = memoryInfo.canLoadNewer,
+                            lastMessageTimestamp = messages.lastOrNull()?.actualTimestamp
+                        )
+                    }
+
+                    is CustomResult.Failure -> {
+                        MessageResult(error = "메시지 로드 실패: ${result.error.message}")
+                    }
+
+                    else -> {
+                        MessageResult()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MessageService", "Cache-based loading failed, falling back to legacy method", e)
+            // 캐시 실패 시 기존 방식으로 완전 폴백
+            when (val result =
+                chatUseCases.fetchPastMessagesUseCase(limit = ChatMemoryConfig.PAGINATION_SIZE)) {
+                is CustomResult.Success -> {
+                    val messages = result.data.map { message ->
+                        message.toUiModel(
+                            currentUserId = currentUserId,
+                            tempIdGenerator = ::generateTempId,
+                            getUserDisplayName = userProfileService::getUserDisplayName,
+                            getUserProfileUrl = userProfileService::getUserProfileUrl,
+                            getCachedProfileUrl = userProfileService::getCachedProfileUrl,
+                            getUserIdByUsername = userProfileService::getUserIdByUsername,
+                            findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                        )
+                    }
+
+                    memoryManager.setInitialMessages(messages)
+                    val memoryInfo = memoryManager.getMemoryInfo()
+
+                    MessageResult(
+                        messages = messages,
+                        hasMoreMessages = messages.size == ChatMemoryConfig.PAGINATION_SIZE,
+                        hasMoreOlderMessages = memoryInfo.canLoadOlder,
+                        hasMoreNewerMessages = memoryInfo.canLoadNewer,
+                        lastMessageTimestamp = messages.lastOrNull()?.actualTimestamp
+                    )
+                }
+
+                is CustomResult.Failure -> {
+                    MessageResult(error = "메시지 로드 실패: ${result.error.message}")
+                }
+
+                else -> {
+                    MessageResult()
+                }
             }
         }
     }
@@ -155,7 +307,9 @@ class MessageService(
                         tempIdGenerator = ::generateTempId,
                         getUserDisplayName = userProfileService::getUserDisplayName,
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
-                        getCachedProfileUrl = userProfileService::getCachedProfileUrl
+                        getCachedProfileUrl = userProfileService::getCachedProfileUrl,
+                        getUserIdByUsername = userProfileService::getUserIdByUsername,
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
                     )
                 }
                 
@@ -236,7 +390,9 @@ class MessageService(
                         tempIdGenerator = ::generateTempId,
                         getUserDisplayName = userProfileService::getUserDisplayName,
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
-                        getCachedProfileUrl = userProfileService::getCachedProfileUrl
+                        getCachedProfileUrl = userProfileService::getCachedProfileUrl,
+                        getUserIdByUsername = userProfileService::getUserIdByUsername,
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
                     )
                 }
                 
@@ -287,7 +443,7 @@ class MessageService(
         text: String,
         attachmentUris: List<Uri>,
         senderId: String,
-        mentions: List<MentionInfo>
+        replyToMessageId: String? = null // 답장 대상 메시지 ID 추가
     ): SendMessageResult {
         if (text.isBlank() && attachmentUris.isEmpty()) {
             Log.w("MessageService", "Attempted to send empty message")
@@ -296,6 +452,25 @@ class MessageService(
         
         val messageId = DocumentId.generate()
         Log.d("MessageService", "Sending message: ${text.take(50)}... by user: $senderId")
+
+        // 답장 정보 파싱 (text에서 >>messageId 패턴 확인 또는 파라미터 사용)
+        val parsedReplyToId =
+            ReplyParser.parseReplyToMessageId(text) ?: replyToMessageId?.let { DocumentId(it) }
+        val actualMessageContent = if (ReplyParser.isReplyMessage(text)) {
+            ReplyParser.extractMessageContent(text)
+        } else {
+            text
+        }
+
+        // 멘션 파싱
+        val mentions = MentionParser.parseAllMentions(actualMessageContent) { username ->
+            userProfileService.getUserIdByUsername(username)
+        }
+
+        Log.d(
+            "MessageService",
+            "Parsed ${mentions.size} mentions and reply to: ${parsedReplyToId?.value}"
+        )
         
         // 사용자 프로필 로딩 (비동기)
         userProfileService.loadUserProfile(senderId)
@@ -303,13 +478,19 @@ class MessageService(
         val userName = userProfileService.getUserDisplayName(senderId)
         
         val sendTime = Instant.now()
+
+        // 답장 대상 메시지 정보 가져오기 (UI 표시용)
+        val replyToMessage = parsedReplyToId?.let { replyId ->
+            memoryManager.messages.find { it.chatId == replyId.value }
+        }
+        
         val tempUiMessage = ChatMessageUiModel(
             localId = generateTempId(),
             chatId = messageId.value,
             userId = senderId,
             userName = userName,
             userProfileUrl = profileUrl,
-            message = text,
+            message = actualMessageContent, // 파싱된 실제 메시지 내용 사용
             formattedTimestamp = "전송 중...",
             isMyMessage = true,
             isModified = false,
@@ -318,14 +499,21 @@ class MessageService(
             actualTimestamp = sendTime,
             isOptimistic = true,
             isSending = true,
-            clientSentAt = sendTime
+            clientSentAt = sendTime,
+            // 답장 정보
+            replyToMessageId = parsedReplyToId?.value,
+            replyToContent = replyToMessage?.message,
+            replyToUserName = replyToMessage?.userName,
+            // 멘션 정보
+            mentions = mentions,
+            isMentionedMessage = false // 내 메시지이므로 false
         )
         
         val message = Message.create(
             id = messageId,
             senderId = UserId(senderId),
-            content = MessageContent(text),
-            replyToMessageId = null,
+            content = MessageContent(actualMessageContent), // 파싱된 실제 내용 사용
+            replyToMessageId = parsedReplyToId,
             mentions = mentions
         )
 
@@ -334,7 +522,7 @@ class MessageService(
                 val result = webSocketClient.sendMessage(
                     roomId = roomId,
                     senderId = UserId(senderId),
-                    content = text,
+                    content = actualMessageContent, // 파싱된 실제 내용 사용
                     messageId = messageId
                 )
                 
@@ -342,9 +530,28 @@ class MessageService(
                     result.isSuccess -> {
                         chatUseCases.sendMessageUseCase(
                             senderId = UserId(senderId),
-                            content = MessageContent(text),
+                            content = MessageContent(actualMessageContent), // 파싱된 실제 내용 사용
                             mentions = mentions
                         )
+
+                        // 로컬 캐시에 저장 (WebSocket 전송 성공 시)
+                        if (chatCacheManager != null) {
+                            try {
+                                val channelId = roomId.removePrefix("chat_room_")
+                                chatCacheManager.addRealtimeMessage(channelId, message)
+                                Log.d(
+                                    "MessageService",
+                                    "Successfully saved sent message to local cache: ${message.id.value}"
+                                )
+                            } catch (e: Exception) {
+                                Log.w(
+                                    "MessageService",
+                                    "Failed to save sent message to local cache: ${message.id.value}",
+                                    e
+                                )
+                            }
+                        }
+                        
                         return SendMessageResult(success = true, tempMessage = tempUiMessage)
                     }
                     result.isFailure -> {
@@ -358,6 +565,25 @@ class MessageService(
                 offlineMessageQueue.queueMessage(
                     QueuedMessageAction.Send(message, roomId)
                 )
+
+                // 오프라인 상태에서도 로컬 캐시에 저장 (오프라인 메시지)
+                if (chatCacheManager != null) {
+                    try {
+                        val channelId = roomId.removePrefix("chat_room_")
+                        chatCacheManager.addRealtimeMessage(channelId, message)
+                        Log.d(
+                            "MessageService",
+                            "Successfully saved offline message to local cache: ${message.id.value}"
+                        )
+                    } catch (e: Exception) {
+                        Log.w(
+                            "MessageService",
+                            "Failed to save offline message to local cache: ${message.id.value}",
+                            e
+                        )
+                    }
+                }
+                
                 return handleSendMessageFallback(message, tempUiMessage, senderId)
             }
         }
@@ -435,6 +661,7 @@ class MessageService(
     /**
      * 새 메시지 이벤트 처리 - 참여 방식 (Participation-based)
      * 서버에서 브로드캐스트된 모든 메시지를 동일하게 처리
+     * 캐시 매니저가 활성화된 경우 로컬 캐시에도 저장
      */
     suspend fun handleNewMessage(
         event: ChatWebSocketEvent.MessageReceived,
@@ -461,6 +688,20 @@ class MessageService(
         
         val profileUrl = userProfileService.getUserProfileUrl(event.senderId)
         val userName = userProfileService.getUserDisplayName(event.senderId)
+
+        // 멘션 파싱
+        val mentions = MentionParser.parseAllMentions(event.content) { username ->
+            userProfileService.getUserIdByUsername(username)
+        }
+
+        // 현재 사용자가 멘션되었는지 확인
+        val isMentionedMessage = MentionParser.isUserMentioned(mentions, currentUserId)
+
+        // TODO: 답장 정보 파싱 (ChatWebSocketEvent.MessageReceived에 답장 정보 추가 필요)
+        // val replyToMessageId = event.replyToMessageId
+        // val replyToMessage = replyToMessageId?.let { replyId ->
+        //     memoryManager.messages.find { it.chatId == replyId }
+        // }
         
         val newMessage = ChatMessageUiModel(
             localId = generateTempId(),
@@ -477,8 +718,37 @@ class MessageService(
             actualTimestamp = Instant.parse(event.timestamp),
             isOptimistic = false, // 서버에서 온 확정된 메시지
             isSending = false,
-            sendFailed = false
+            sendFailed = false,
+            // 멘션 정보
+            mentions = mentions,
+            isMentionedMessage = isMentionedMessage
+            // 답장 정보 (향후 ChatWebSocketEvent 확장 시 추가)
+            // replyToMessageId = replyToMessageId,
+            // replyToContent = replyToMessage?.message,
+            // replyToUserName = replyToMessage?.userName
         )
+
+        // 캐시 매니저가 활성화된 경우 로컬 캐시에도 저장
+        if (chatCacheManager != null) {
+            try {
+                val channelId = roomId.removePrefix("chat_room_")
+                val domainMessage = event.toDomainMessage { username ->
+                    userProfileService.getUserIdByUsername(username)
+                }
+                chatCacheManager.addRealtimeMessage(channelId, domainMessage)
+                Log.d(
+                    "MessageService",
+                    "Successfully saved realtime message to cache: ${event.messageId}"
+                )
+            } catch (e: Exception) {
+                Log.w(
+                    "MessageService",
+                    "Failed to save realtime message to cache: ${event.messageId}",
+                    e
+                )
+                // 캐시 실패는 치명적이지 않으므로 계속 진행
+            }
+        }
         
         // 메모리 관리자에 새 메시지 추가
         val updatedMessages = memoryManager.addNewestMessage(newMessage)
@@ -496,8 +766,10 @@ class MessageService(
     
     /**
      * 메시지 편집 이벤트 처리
+     * 메모리와 캐시를 모두 업데이트
      */
-    fun handleMessageEdit(event: ChatWebSocketEvent.MessageEdited): MessageResult {
+    suspend fun handleMessageEdit(event: ChatWebSocketEvent.MessageEdited): MessageResult {
+        // 1. 메모리에서 메시지 업데이트
         val updatedMessages = memoryManager.updateMessage { message ->
             if (message.chatId == event.messageId) {
                 message.copy(
@@ -507,6 +779,34 @@ class MessageService(
                 )
             } else {
                 null
+            }
+        }
+
+        // 2. 캐시 매니저가 활성화된 경우 로컬 캐시도 업데이트
+        if (chatCacheManager != null) {
+            try {
+                val channelId = roomId.removePrefix("chat_room_")
+                val updatedDomainMessage = Message.fromDataSource(
+                    id = DocumentId(event.messageId),
+                    senderId = UserId(event.senderId),
+                    content = MessageContent(event.newContent),
+                    replyToMessageId = null,
+                    createdAt = Instant.parse(event.timestamp),
+                    updatedAt = Instant.parse(event.timestamp),
+                    isDeleted = MessageIsDeleted.FALSE,
+                    mentions = emptyList()
+                )
+                chatCacheManager.updateRealtimeMessage(channelId, updatedDomainMessage)
+                Log.d(
+                    "MessageService",
+                    "Successfully updated edited message in cache: ${event.messageId}"
+                )
+            } catch (e: Exception) {
+                Log.w(
+                    "MessageService",
+                    "Failed to update edited message in cache: ${event.messageId}",
+                    e
+                )
             }
         }
         
@@ -521,13 +821,43 @@ class MessageService(
     
     /**
      * 메시지 삭제 이벤트 처리
+     * 메모리와 캐시를 모두 업데이트
      */
-    fun handleMessageDelete(event: ChatWebSocketEvent.MessageDeleted): MessageResult {
+    suspend fun handleMessageDelete(event: ChatWebSocketEvent.MessageDeleted): MessageResult {
+        // 1. 메모리에서 메시지 삭제 표시
         val updatedMessages = memoryManager.updateMessage { message ->
             if (message.chatId == event.messageId) {
                 message.copy(isDeleted = true)
             } else {
                 null
+            }
+        }
+
+        // 2. 캐시 매니저가 활성화된 경우 로컬 캐시도 업데이트
+        if (chatCacheManager != null) {
+            try {
+                val channelId = roomId.removePrefix("chat_room_")
+                val deletedDomainMessage = Message.fromDataSource(
+                    id = DocumentId(event.messageId),
+                    senderId = UserId(event.senderId),
+                    content = MessageContent(""), // 삭제된 메시지는 내용 비움
+                    replyToMessageId = null,
+                    createdAt = Instant.parse(event.timestamp),
+                    updatedAt = Instant.parse(event.timestamp),
+                    isDeleted = MessageIsDeleted.TRUE, // 삭제 표시
+                    mentions = emptyList()
+                )
+                chatCacheManager.updateRealtimeMessage(channelId, deletedDomainMessage)
+                Log.d(
+                    "MessageService",
+                    "Successfully updated deleted message in cache: ${event.messageId}"
+                )
+            } catch (e: Exception) {
+                Log.w(
+                    "MessageService",
+                    "Failed to update deleted message in cache: ${event.messageId}",
+                    e
+                )
             }
         }
         
@@ -553,13 +883,33 @@ class MessageService(
             is CustomResult.Success -> {
                 // Ensure profile is loaded for the actual message too
                 userProfileService.loadUserProfile(result.data.senderId.value)
+
+                // 로컬 캐시에 저장 (Firestore 전송 성공 시)
+                if (chatCacheManager != null) {
+                    try {
+                        val channelId = roomId.removePrefix("chat_room_")
+                        chatCacheManager.addRealtimeMessage(channelId, result.data)
+                        Log.d(
+                            "MessageService",
+                            "Successfully saved fallback message to local cache: ${result.data.id.value}"
+                        )
+                    } catch (e: Exception) {
+                        Log.w(
+                            "MessageService",
+                            "Failed to save fallback message to local cache: ${result.data.id.value}",
+                            e
+                        )
+                    }
+                }
                 
                 val actualMessage = result.data.toUiModel(
                     currentUserId = senderId,
                     tempIdGenerator = ::generateTempId,
                     getUserDisplayName = userProfileService::getUserDisplayName,
                     getUserProfileUrl = userProfileService::getUserProfileUrl,
-                    getCachedProfileUrl = userProfileService::getCachedProfileUrl
+                    getCachedProfileUrl = userProfileService::getCachedProfileUrl,
+                    getUserIdByUsername = userProfileService::getUserIdByUsername,
+                    findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
                 )
                 
                 return SendMessageResult(
@@ -601,14 +951,46 @@ class MessageService(
     }
 }
 
+/**
+ * ChatWebSocketEvent.MessageReceived를 도메인 Message로 변환하는 확장 함수
+ */
+private suspend fun ChatWebSocketEvent.MessageReceived.toDomainMessage(
+    getUserIdByUsername: suspend (String) -> String?
+): Message {
+    // 멘션 파싱
+    val mentions = MentionParser.parseAllMentions(content, getUserIdByUsername)
+
+    return Message.fromDataSource(
+        id = DocumentId(messageId),
+        senderId = UserId(senderId),
+        content = MessageContent(content),
+        replyToMessageId = null, // TODO: ChatWebSocketEvent에 답장 정보 추가 필요
+        createdAt = Instant.parse(timestamp),
+        updatedAt = Instant.parse(timestamp),
+        isDeleted = MessageIsDeleted.FALSE,
+        mentions = mentions
+    )
+}
+
 private suspend fun Message.toUiModel(
     currentUserId: String,
     tempIdGenerator: () -> String,
     getUserDisplayName: (String) -> String,
     getUserProfileUrl: suspend (String) -> String?,
-    getCachedProfileUrl: (String) -> String?
+    getCachedProfileUrl: (String) -> String?,
+    getUserIdByUsername: suspend (String) -> String? = { null }, // 멘션 파싱용
+    findReplyToMessage: (String) -> ChatMessageUiModel? = { null } // 답장 대상 메시지 찾기용
 ): ChatMessageUiModel {
     val isModified = this.updatedAt.isAfter(this.createdAt.plusSeconds(1))
+
+    // 멘션 파싱
+    val mentions = MentionParser.parseAllMentions(this.content.value, getUserIdByUsername)
+    val isMentionedMessage = MentionParser.isUserMentioned(mentions, currentUserId)
+
+    // 답장 정보 처리
+    val replyToMessage = this.replyToMessageId?.let { replyId ->
+        findReplyToMessage(replyId.value)
+    }
     
     return ChatMessageUiModel(
         localId = tempIdGenerator(),
@@ -625,6 +1007,13 @@ private suspend fun Message.toUiModel(
         actualTimestamp = this.createdAt,
         isOptimistic = false,
         isSending = false,
-        clientSentAt = null
+        clientSentAt = null,
+        // 답장 정보
+        replyToMessageId = this.replyToMessageId?.value,
+        replyToContent = replyToMessage?.message,
+        replyToUserName = replyToMessage?.userName,
+        // 멘션 정보
+        mentions = mentions,
+        isMentionedMessage = isMentionedMessage
     )
 }

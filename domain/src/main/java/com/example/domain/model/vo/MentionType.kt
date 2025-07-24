@@ -2,5 +2,7 @@ package com.example.domain.model.vo
 
 enum class MentionType {
     USER,
-    ROLE
+    ROLE,
+    EVERYONE,
+    HERE
 }

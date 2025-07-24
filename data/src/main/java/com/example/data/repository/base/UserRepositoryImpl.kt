@@ -110,6 +110,27 @@ class UserRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.callFunctionWithUserData(functionName, userId, customData)
     }
 
+    override suspend fun sendFcmTestNotification(
+        userId: String,
+        channelId: String
+    ): CustomResult<Map<String, Any?>, Exception> {
+        val title = "FCM 테스트 알림"
+        val body = "채널 입장 테스트 알림 (채널ID: $channelId)"
+        val data = mapOf(
+            "type" to "mention",
+            "channelId" to channelId
+        )
+        return functionsRemoteDataSource.callFunction(
+            "sendCustomNotification",
+            mapOf(
+                "userId" to userId,
+                "title" to title,
+                "body" to body,
+                "data" to data
+            )
+        )
+    }
+
     override fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>> {
         return userRemoteDataSource.observeUserUpdatedAt(userId)
     }

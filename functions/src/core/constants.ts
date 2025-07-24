@@ -1,3 +1,5 @@
+import { MemoryOption } from "firebase-functions/v2/options";
+
 export const DATABASE_ID = "(default)" as const;
 
 // Storage Configuration
@@ -28,7 +30,7 @@ export const IMAGE_PROCESSING = {
 // Runtime Configuration
 export const RUNTIME_CONFIG = {
   REGION: "asia-northeast3" as const,
-  MEMORY: "512MiB" as const,
+  MEMORY: "512MiB" as MemoryOption,
   TIMEOUT_SECONDS: 60 as const,
 } as const;
 

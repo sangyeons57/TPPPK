@@ -86,7 +86,6 @@ dependencies {
 
     implementation(project(":core:core_ui"))
     implementation(project(":core:core_navigation"))
-    implementation(project(":core:core_fcm"))
 
 
     // ★ 네비게이션 그래프에서 직접 호출하는 모든 Feature 모듈 의존성 추가

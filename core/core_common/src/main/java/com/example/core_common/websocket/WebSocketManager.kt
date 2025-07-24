@@ -1,10 +1,11 @@
 package com.example.core_common.websocket
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 interface WebSocketManager {
     val connectionState: StateFlow<WebSocketConnectionState>
-    val incomingMessages: kotlinx.coroutines.flow.Flow<WebSocketMessage>
+    val incomingMessages: Flow<WebSocketMessage>
     val isAuthenticated: StateFlow<Boolean>
     
     suspend fun connect(serverUrl: String, authToken: String): Result<Unit>

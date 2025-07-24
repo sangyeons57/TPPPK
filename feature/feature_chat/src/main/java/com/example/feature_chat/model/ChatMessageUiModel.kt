@@ -1,5 +1,6 @@
 package com.example.feature_chat.model
 
+import com.example.domain.model.vo.message.MentionInfo
 import java.time.Instant // Import Instant
 
 /**
@@ -22,5 +23,12 @@ data class ChatMessageUiModel(
     val isDeleted: Boolean = false, // Added to reflect soft delete status in UI
     val deliveryState: MessageDeliveryState = MessageDeliveryState.Sent,
     val isOptimistic: Boolean = false, // 낙관적 업데이트로 추가된 메시지인지
-    val clientSentAt: Instant? = null // 클라이언트에서 전송한 시간 (메모리 정리 보호용)
+    val clientSentAt: Instant? = null, // 클라이언트에서 전송한 시간 (메모리 정리 보호용)
+    // 답장 기능
+    val replyToMessageId: String? = null, // 답장 대상 메시지 ID
+    val replyToContent: String? = null, // 답장 대상 메시지 내용 (UI 표시용)
+    val replyToUserName: String? = null, // 답장 대상 메시지 작성자
+    // 멘션 기능
+    val mentions: List<MentionInfo> = emptyList(), // 메시지에 포함된 멘션들
+    val isMentionedMessage: Boolean = false // 현재 사용자가 멘션된 메시지인지
 ) 

@@ -115,4 +115,12 @@ interface UserRepository : DefaultRepository {
      * @return 사용자 목록을 담은 Flow
      */
     fun observeUsers(userIds: List<String>): Flow<CustomResult<List<User>, Exception>>
+
+    /**
+     * FCM 테스트용 Functions 호출
+     */
+    suspend fun sendFcmTestNotification(
+        userId: String,
+        channelId: String
+    ): CustomResult<Map<String, Any?>, Exception>
 }

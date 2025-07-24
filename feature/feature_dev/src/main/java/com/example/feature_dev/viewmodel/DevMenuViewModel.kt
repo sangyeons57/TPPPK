@@ -9,6 +9,8 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
+import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
+import com.example.domain.provider.dev.DevMenuUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DevMenuViewModel @Inject constructor(
     private val webSocketClient: ChatWebSocketClient,
-    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
+    private val devMenuUseCaseProvider: DevMenuUseCaseProvider
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -369,5 +372,51 @@ class DevMenuViewModel @Inject constructor(
 
     fun getWebSocketStatusText(): String {
         return getConnectionStateText(_webSocketConnectionState.value)
+    }
+
+    /**
+     * FCM 테스트용 Functions 호출 (UseCaseProvider 경유)
+     */
+    fun sendFcmTestNotification(channelId: String = "test_channel_id") {
+        if (!_isLoggedIn.value) {
+            Log.d("DevMenuViewModel-FCM", "❌ 로그인이 필요합니다.")
+            return
+        }
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                when (val sessionResult = authUseCases.getCurrentUserSessionUseCase()) {
+                    is CustomResult.Success -> {
+                        val userId = sessionResult.data.userId.value
+                        val useCases = devMenuUseCaseProvider.create()
+                        val result = useCases.sendFcmTestNotificationUseCase(userId, channelId)
+                        when (result) {
+                            is CustomResult.Success -> Log.d(
+                                "DevMenuViewModel-FCM",
+                                "✅ FCM 테스트 알림 전송 성공: ${result.data}"
+                            )
+
+                            is CustomResult.Failure -> Log.d(
+                                "DevMenuViewModel-FCM",
+                                "❌ FCM 테스트 알림 실패: ${result.error.message}"
+                            )
+
+                            else -> Log.d("DevMenuViewModel-FCM", "⚠️ FCM 테스트 알림 결과: $result")
+                        }
+                    }
+
+                    is CustomResult.Failure -> Log.d(
+                        "DevMenuViewModel-FCM",
+                        "❌ 유저 정보 조회 실패: ${sessionResult.error.message}"
+                    )
+
+                    else -> Log.d("DevMenuViewModel-FCM", "⚠️ 유저 정보 조회 결과: $sessionResult")
+                }
+            } catch (e: Exception) {
+                Log.d("DevMenuViewModel-FCM", "❌ FCM 테스트 알림 예외: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 }

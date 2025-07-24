@@ -26,7 +26,13 @@
       "Bash(export:*)",
       "Bash(export PATH=$JAVA_HOME/bin:$PATH)",
       "mcp__ide__getDiagnostics",
-      "Bash(gradle build)"
+      "Bash(gradle build)",
+      "Bash(npm run deploy:*)",
+      "Bash(firebase functions:list:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(node:*)",
+      "Bash(firebase emulators:start:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

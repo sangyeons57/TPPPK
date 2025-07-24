@@ -1,53 +1,48 @@
-import * as functions from "firebase-functions/v1";
+import * as functions from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
+import {RUNTIME_CONFIG} from "../../core/constants";
 
-/**
- * Firebase Function trigger for handling mention notifications
- * Triggers when a new message is created and processes any mentions to send notifications
- */
-export const onMessageMentionNotification = functions.firestore
-  .document("messages/{messageId}")
-  .onCreate(async (snapshot, context) => {
-    const messageId = context.params.messageId;
-    const messageData = snapshot.data();
-    
-    if (!messageData) {
-      console.log(`No data found for message ${messageId}`);
-      return null;
-    }
 
-    // Extract mentions from the message
-    const mentions = messageData.mentions || [];
-    if (mentions.length === 0) {
-      console.log(`No mentions found in message ${messageId}`);
-      return null;
-    }
+export const onMessageMentionNotification = functions.onDocumentCreated({
+  document: "messages/{messageId}",
+  region: RUNTIME_CONFIG.REGION,
+  memory: RUNTIME_CONFIG.MEMORY,
+  timeoutSeconds: RUNTIME_CONFIG.TIMEOUT_SECONDS,
+}, async (event) => {
+  const messageId = event.params?.messageId;
+  const messageData = event.data?.data();
 
-    console.log(`Processing ${mentions.length} mentions for message ${messageId}`);
+  if (!messageData || !messageId) {
+    console.log(`No data found for message ${messageId}`);
+    return null;
+  }
 
-    try {
-      // Process each mention
-      const notificationPromises = mentions.map(async (mention: any) => {
-        return processMention(mention, messageData, messageId);
-      });
+  const mentions = messageData.mentions || [];
+  if (mentions.length === 0) {
+    console.log(`No mentions found in message ${messageId}`);
+    return null;
+  }
 
-      // Wait for all notification processing to complete
-      await Promise.all(notificationPromises);
-      
-      console.log(`Successfully processed all mentions for message ${messageId}`);
-      return null;
-    } catch (error) {
-      console.error(`Error processing mentions for message ${messageId}:`, error);
-      throw error;
-    }
-  });
+  console.log(`Processing ${mentions.length} mentions for message ${messageId}`);
 
-/**
- * Process a single mention and send appropriate notifications
- */
+  try {
+    const notificationPromises = mentions.map(async (mention: any) => {
+      return processMention(mention, messageData, messageId);
+    });
+
+    await Promise.all(notificationPromises);
+
+    console.log(`Successfully processed all mentions for message ${messageId}`);
+    return null;
+  } catch (error) {
+    console.error(`Error processing mentions for message ${messageId}:`, error);
+    throw error;
+  }
+});
+
 async function processMention(
-  mention: any, 
-  messageData: any, 
+  mention: any,
+  messageData: any,
   messageId: string
 ): Promise<void> {
   const mentionType = mention.type;
@@ -70,9 +65,6 @@ async function processMention(
   }
 }
 
-/**
- * Process a user mention - send notification to the mentioned user
- */
 async function procesUserMention(
   userId: string,
   messageData: any,
@@ -81,14 +73,12 @@ async function procesUserMention(
 ): Promise<void> {
   console.log(`Processing user mention for userId: ${userId}`);
 
-  // Don't send notification if user mentions themselves
   if (userId === messageData.senderId) {
     console.log(`User ${userId} mentioned themselves, skipping notification`);
     return;
   }
 
   try {
-    // Get user's FCM token
     const userDoc = await admin.firestore()
       .collection("users")
       .doc(userId)
@@ -107,22 +97,20 @@ async function procesUserMention(
       return;
     }
 
-    // Get sender information
     const senderDoc = await admin.firestore()
       .collection("users")
       .doc(messageData.senderId)
       .get();
-    
+
     const senderData = senderDoc.exists ? senderDoc.data() : null;
     const senderName = senderData?.name || "Someone";
 
-    // Create notification payload
     const notificationPayload = {
       notification: {
         title: `${senderName}님이 회원님을 멘션했습니다`,
         body: truncateMessage(messageData.content, 100),
         icon: "ic_stat_ic_notification",
-        sound: "default"
+        sound: "default",
       },
       data: {
         type: "mention",
@@ -132,23 +120,18 @@ async function procesUserMention(
         channelId: messageData.channelId || "",
         projectId: messageData.projectId || "",
         mentionType: "USER",
-        mentionId: userId
-      }
+        mentionId: userId,
+      },
     };
 
-    // Send notification
     await admin.messaging().sendToDevice(fcmToken, notificationPayload);
     console.log(`Sent mention notification to user ${userId}`);
-
   } catch (error) {
     console.error(`Error sending notification to user ${userId}:`, error);
     throw error;
   }
 }
 
-/**
- * Process a role mention - send notifications to all users with the mentioned role
- */
 async function processRoleMention(
   roleId: string,
   messageData: any,
@@ -158,20 +141,17 @@ async function processRoleMention(
   console.log(`Processing role mention for roleId: ${roleId}`);
 
   try {
-    // Handle special @everyone role
     if (roleId === "everyone") {
       await processEveryoneMention(messageData, messageId, displayName);
       return;
     }
 
-    // Get project members with the specific role
     const projectId = messageData.projectId;
     if (!projectId) {
       console.warn(`No projectId found for role mention ${roleId}`);
       return;
     }
 
-    // Query members with this role using array-contains since roleIds is an array
     const membersQuery = await admin.firestore()
       .collection("projects")
       .doc(projectId)
@@ -184,12 +164,10 @@ async function processRoleMention(
       return;
     }
 
-    // Get FCM tokens for all members with this role
     const memberNotificationPromises = membersQuery.docs.map(async (memberDoc) => {
       const memberData = memberDoc.data();
       const userId = memberData.userId;
 
-      // Don't notify the sender
       if (userId === messageData.senderId) {
         return;
       }
@@ -199,16 +177,12 @@ async function processRoleMention(
 
     await Promise.all(memberNotificationPromises);
     console.log(`Sent role mention notifications for role ${roleId}`);
-
   } catch (error) {
     console.error(`Error processing role mention ${roleId}:`, error);
     throw error;
   }
 }
 
-/**
- * Process @everyone mention - send notifications to all project members
- */
 async function processEveryoneMention(
   messageData: any,
   messageId: string,
@@ -223,7 +197,6 @@ async function processEveryoneMention(
   }
 
   try {
-    // Get all project members
     const membersQuery = await admin.firestore()
       .collection("projects")
       .doc(projectId)
@@ -235,12 +208,10 @@ async function processEveryoneMention(
       return;
     }
 
-    // Send notifications to all members (except sender)
     const memberNotificationPromises = membersQuery.docs.map(async (memberDoc) => {
       const memberData = memberDoc.data();
       const userId = memberData.userId;
 
-      // Don't notify the sender
       if (userId === messageData.senderId) {
         return;
       }
@@ -250,16 +221,12 @@ async function processEveryoneMention(
 
     await Promise.all(memberNotificationPromises);
     console.log("Sent @everyone mention notifications");
-
   } catch (error) {
     console.error("Error processing @everyone mention:", error);
     throw error;
   }
 }
 
-/**
- * Send role mention notification to a specific user
- */
 async function sendRoleNotificationToUser(
   userId: string,
   roleId: string,
@@ -268,7 +235,6 @@ async function sendRoleNotificationToUser(
   messageId: string
 ): Promise<void> {
   try {
-    // Get user's FCM token
     const userDoc = await admin.firestore()
       .collection("users")
       .doc(userId)
@@ -287,22 +253,20 @@ async function sendRoleNotificationToUser(
       return;
     }
 
-    // Get sender information
     const senderDoc = await admin.firestore()
       .collection("users")
       .doc(messageData.senderId)
       .get();
-    
+
     const senderData = senderDoc.exists ? senderDoc.data() : null;
     const senderName = senderData?.name || "Someone";
 
-    // Create notification payload
     const notificationPayload = {
       notification: {
         title: `${senderName}님이 @${roleName}을 멘션했습니다`,
         body: truncateMessage(messageData.content, 100),
         icon: "ic_stat_ic_notification",
-        sound: "default"
+        sound: "default",
       },
       data: {
         type: "mention",
@@ -313,29 +277,23 @@ async function sendRoleNotificationToUser(
         projectId: messageData.projectId || "",
         mentionType: "ROLE",
         mentionId: roleId,
-        roleName: roleName
-      }
+        roleName: roleName,
+      },
     };
 
-    // Send notification
     await admin.messaging().sendToDevice(fcmToken, notificationPayload);
     console.log(`Sent role mention notification to user ${userId} for role ${roleId}`);
-
   } catch (error) {
     console.error(`Error sending role notification to user ${userId}:`, error);
-    // Don't throw here to prevent other notifications from failing
   }
 }
 
-/**
- * Truncate message content for notification body
- */
 function truncateMessage(content: string, maxLength: number): string {
   if (!content) return "";
-  
+
   if (content.length <= maxLength) {
     return content;
   }
-  
+
   return content.substring(0, maxLength - 3) + "...";
 }

@@ -11,12 +11,14 @@ sealed class ChatWebSocketEvent {
     
     data class MessageEdited(
         val messageId: String,
+        val senderId: String,
         val newContent: String,
         val timestamp: String
     ) : ChatWebSocketEvent()
     
     data class MessageDeleted(
         val messageId: String,
+        val senderId: String,
         val timestamp: String
     ) : ChatWebSocketEvent()
     
