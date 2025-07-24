@@ -25,6 +25,7 @@ import com.example.core_navigation.core.SplashRoute
 import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigationGraph
+import com.example.teamnovapersonalprojectprojectingkotlin.fcm.FcmTokenManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -34,6 +35,9 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var navigationManger: NavigationManger
+    
+    @Inject
+    lateinit var fcmTokenManager: FcmTokenManager
 
     private var backPressedTime: Long = 0
     private var backToast: Toast? = null
@@ -50,6 +54,9 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         
         setupBackPressHandler()
+        
+        // Initialize FCM token management
+        fcmTokenManager.initialize()
         
         
         setContent {
@@ -217,6 +224,9 @@ class MainActivity : ComponentActivity() {
     }
     
     override fun onDestroy() {
+        // Cleanup FCM token management
+        fcmTokenManager.cleanup()
+        
         // App destroyed
         super.onDestroy()
     }

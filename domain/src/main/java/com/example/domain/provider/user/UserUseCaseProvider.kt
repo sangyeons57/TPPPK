@@ -29,6 +29,8 @@ import com.example.domain.usecase.user.UpdateUserMemoUseCase
 import com.example.domain.usecase.user.UpdateUserMemoUseCaseImpl
 import com.example.domain.usecase.user.UpdateUserStatusUseCase
 import com.example.domain.usecase.user.UpdateUserStatusUseCaseImpl
+import com.example.domain.usecase.user.UpdateFcmTokenUseCase
+import com.example.domain.usecase.user.UpdateFcmTokenUseCaseImpl
 import com.example.domain.usecase.user.UploadProfileImageUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -103,6 +105,10 @@ class UserUseCaseProvider @Inject constructor(
                 userRepository = userRepository,
                 authRepository = authRepository
             ),
+            updateFcmTokenUseCase = UpdateFcmTokenUseCaseImpl(
+                userRepository = userRepository,
+                authRepository = authRepository
+            ),
 
 
             checkNicknameAvailabilityUseCase = CheckNicknameAvailabilityUseCaseImpl(
@@ -140,6 +146,7 @@ data class UserUseCases(
     val updateUserStatusUseCase: UpdateUserStatusUseCase,
     val updateUserMemoUseCase: UpdateUserMemoUseCase,
     val updateNameUseCase: UpdateNameUseCase,
+    val updateFcmTokenUseCase: UpdateFcmTokenUseCase,
 
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
     val removeProfileImageUseCase: RemoveProfileImageUseCase,

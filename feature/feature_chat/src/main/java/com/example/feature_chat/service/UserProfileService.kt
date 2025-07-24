@@ -82,11 +82,8 @@ class UserProfileService(
                     is CustomResult.Failure -> {
                         Log.e("UserProfileService", "loadUserProfileAsync($userId): FAILURE - ${result.error.message}", result.error)
                         
-                        // Create a fallback user for display purposes
-                        val fallbackUser = createFallbackUser(userId)
-                        userProfileCache[userId] = fallbackUser
-                        Log.d("UserProfileService", "loadUserProfileAsync($userId): created fallback user: ${fallbackUser.name.value}")
-                        fallbackUser
+                        // Don't create fallback - return null to indicate user not found
+                        null
                     }
                     is CustomResult.Loading -> {
                         Log.d("UserProfileService", "loadUserProfileAsync($userId): still loading")
@@ -110,10 +107,8 @@ class UserProfileService(
                 }
             } catch (e: Exception) {
                 Log.e("UserProfileService", "loadUserProfileAsync($userId): exception during profile fetch", e)
-                // Create a fallback user for display purposes
-                val fallbackUser = createFallbackUser(userId)
-                userProfileCache[userId] = fallbackUser
-                fallbackUser
+                // Don't create fallback - return null to indicate user not found
+                null
             }
         }
         
@@ -154,7 +149,7 @@ class UserProfileService(
         val result = when {
             cachedUser != null -> cachedUser.name.value
             isLoading -> "로딩 중..."
-            else -> "사용자"
+            else -> "알 수 없는 사용자" // More descriptive name for unknown users
         }
         
         Log.d("UserProfileService", "getUserDisplayName($userId): cached=${cachedUser?.name?.value}, loading=$isLoading, result='$result'")
@@ -300,17 +295,6 @@ class UserProfileService(
         }
     }
     
-    private fun createFallbackUser(userId: String): User {
-        Log.d("UserProfileService", "createFallbackUser($userId): creating fallback user")
-        // This is a simplified fallback - you may need to adjust based on your User model structure
-        // For now, we'll create a user with a generic name
-        return User.create(
-            id = DocumentId(userId),
-            name = com.example.domain.model.vo.user.UserName("사용자 ${userId.take(8)}"),
-            email = com.example.domain.model.vo.user.UserEmail("unknown@example.com"),
-            consentTimeStamp = java.time.Instant.now()
-        )
-    }
     
     /**
      * 사용자 프로필이 캐시되어 있는지 확인

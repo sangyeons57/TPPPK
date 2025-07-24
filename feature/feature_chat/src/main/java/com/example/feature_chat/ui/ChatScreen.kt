@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.items // LazyVerticalGrid items
 import androidx.compose.foundation.lazy.items // LazyColumn items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Close // 수정 취소, 제거 아
 import androidx.compose.material.icons.filled.ErrorOutline // 전송 실패 아이콘 (예시)
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,7 +63,12 @@ import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.GalleryImageUiModel
+import com.example.feature_chat.model.MentionSuggestion
+import com.example.feature_chat.model.ChatParticipant
+import com.example.feature_chat.model.ProjectMember
+import com.example.feature_chat.model.ProjectRole
 import com.example.feature_chat.viewmodel.WebSocketChatViewModel
+import com.example.domain.model.vo.MentionType
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
@@ -74,6 +81,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.text.input.TextFieldValue
+import com.example.feature_chat.ui.components.MentionStyledInputField
 
 /**
  * 메시지의 효과적인 타임스탬프를 반환 (임시 메시지는 clientSentAt, 실제 메시지는 actualTimestamp)
@@ -83,6 +92,175 @@ private fun getEffectiveTimestamp(message: ChatMessageUiModel): Instant {
         message.isOptimistic && message.clientSentAt != null -> message.clientSentAt
         else -> message.actualTimestamp
     }
+}
+
+/**
+ * Data class to represent a parsed mention in the text
+ */
+private data class ParsedMention(
+    val type: String,
+    val id: String,
+    val displayName: String,
+    val start: Int,
+    val end: Int
+)
+
+/**
+ * Data class to hold processed text with mentions
+ */
+private data class ProcessedText(
+    val text: String,
+    val mentions: List<ParsedMention>
+)
+
+/**
+ * Mention Display Gateway System
+ * Handles conversion between internal [type:id] format and user-visible @name format
+ */
+object MentionDisplayGateway {
+    
+    /**
+     * Converts internal [type:id] format to user-visible @name format for display
+     */
+    fun convertToDisplayFormat(
+        internalText: String, 
+        participants: List<ChatParticipant> = emptyList(),
+        projectMembers: List<ProjectMember> = emptyList(),
+        projectRoles: List<ProjectRole> = emptyList()
+    ): String {
+        val mentionRegex = """\[(user|role):([^\]]+)\]""".toRegex()
+        
+        return mentionRegex.replace(internalText) { matchResult ->
+            val type = matchResult.groupValues[1]
+            val id = matchResult.groupValues[2]
+            
+            when (type) {
+                "user" -> {
+                    // Try to find actual name in participants/members
+                    val userName = participants.find { participant -> participant.userId == id }?.displayName
+                        ?: projectMembers.find { member -> member.userId == id }?.displayName
+                        ?: id // fallback to id if name not found
+                    "@$userName"
+                }
+                "role" -> {
+                    // Try to find actual role name
+                    val roleName = projectRoles.find { role -> role.roleId == id }?.roleName
+                        ?: id // fallback to id if role name not found
+                    "@$roleName"
+                }
+                else -> "@$id"
+            }
+        }
+    }
+    
+    /**
+     * Converts user-visible @name format back to internal [type:id] format for storage
+     */
+    fun convertToInternalFormat(
+        displayText: String,
+        participants: List<ChatParticipant> = emptyList(),
+        projectMembers: List<ProjectMember> = emptyList(),
+        projectRoles: List<ProjectRole> = emptyList()
+    ): String {
+        // This would be used when user types @name and we need to convert it back
+        // For now, we handle this through the suggestion system
+        return displayText
+    }
+    
+    /**
+     * Extracts mentions from internal format and returns display names
+     */
+    fun extractMentionDisplayNames(
+        internalText: String,
+        participants: List<ChatParticipant> = emptyList(),
+        projectMembers: List<ProjectMember> = emptyList(),
+        projectRoles: List<ProjectRole> = emptyList()
+    ): Map<String, String> {
+        val mentionRegex = """\[(user|role):([^\]]+)\]""".toRegex()
+        val mentionMap = mutableMapOf<String, String>()
+        
+        mentionRegex.findAll(internalText).forEach { matchResult ->
+            val type = matchResult.groupValues[1] 
+            val id = matchResult.groupValues[2]
+            val key = "[$type:$id]"
+            
+            val displayName = when (type) {
+                "user" -> {
+                    participants.find { participant -> participant.userId == id }?.displayName
+                        ?: projectMembers.find { member -> member.userId == id }?.displayName
+                        ?: id
+                }
+                "role" -> {
+                    projectRoles.find { role -> role.roleId == id }?.roleName ?: id
+                }
+                else -> id
+            }
+            
+            mentionMap[key] = displayName
+        }
+        
+        return mentionMap
+    }
+}
+
+/**
+ * Parses mention format [type:id] and converts to @displayName for display
+ * Returns processed text with mention position information for styling
+ */
+private fun parseMentionsForDisplay(
+    originalText: String,
+    participants: List<ChatParticipant> = emptyList(),
+    projectMembers: List<ProjectMember> = emptyList(),
+    projectRoles: List<ProjectRole> = emptyList()
+): ProcessedText {
+    val mentionRegex = """\[(user|role):([^\]]+)\]""".toRegex()
+    val mentions = mutableListOf<ParsedMention>()
+    var processedText = originalText
+    var offset = 0
+    
+    mentionRegex.findAll(originalText).forEach { matchResult ->
+        val fullMatch = matchResult.value
+        val mentionType = matchResult.groupValues[1]
+        val mentionId = matchResult.groupValues[2]
+        
+        // Use MentionDisplayGateway to get proper display name
+        val displayName = when (mentionType) {
+            "user" -> {
+                val userName = participants.find { participant -> participant.userId == mentionId }?.displayName
+                    ?: projectMembers.find { member -> member.userId == mentionId }?.displayName
+                    ?: mentionId
+                "@$userName"
+            }
+            "role" -> {
+                val roleName = projectRoles.find { role -> role.roleId == mentionId }?.roleName
+                    ?: mentionId
+                "@$roleName"
+            }
+            else -> "@$mentionId"
+        }
+        
+        // Calculate positions in the processed text
+        val mentionStart = matchResult.range.first - offset
+        val mentionEnd = mentionStart + displayName.length
+        
+        // Replace the [type:id] format with @displayName
+        processedText = processedText.replaceFirst(fullMatch, displayName)
+        
+        mentions.add(
+            ParsedMention(
+                type = mentionType,
+                id = mentionId,
+                displayName = displayName,
+                start = mentionStart,
+                end = mentionEnd
+            )
+        )
+        
+        // Update offset for next replacements
+        offset += fullMatch.length - displayName.length
+    }
+    
+    return ProcessedText(processedText, mentions)
 }
 
 /**
@@ -192,7 +370,8 @@ fun ChatScreen(
                 onImageSelected = viewModel::onImageSelected,
                 onImageDeselected = viewModel::onImageDeselected,
                 onCancelEdit = viewModel::cancelEdit,
-                onPickImages = { imagePickerLauncher.launch("image/*") }
+                onPickImages = { imagePickerLauncher.launch("image/*") },
+                onMentionSuggestionClick = viewModel::onMentionSuggestionClick
             )
             } else {
                 Log.d("ChatScreen", "Chat input area hidden as chat is pending WebSocket implementation.")
@@ -327,7 +506,19 @@ fun ChatMessagesList(
                 message = messageWithStatus,
                 isFirstInGroup = isFirstInGroup,
                 onLongClick = { onMessageLongClick(message) },
-                onUserProfileClick = { onUserProfileClick(message.userId) }
+                onUserProfileClick = { onUserProfileClick(message.userId) },
+                onMentionClick = { type, id ->
+                    when (type) {
+                        "user" -> onUserProfileClick(id)
+                        "role" -> {
+                            // Handle role mention click - could show role members or role details
+                            // For now, no action
+                        }
+                    }
+                },
+                participants = uiState.participants,
+                projectMembers = uiState.projectMembers,
+                projectRoles = uiState.projectRoles
             )
             
             Spacer(modifier = Modifier.height(if (isFirstInGroup) 16.dp else 0.dp))
@@ -342,6 +533,10 @@ fun ChatMessageItemComposable(
     isFirstInGroup: Boolean = true,
     onLongClick: () -> Unit,
     onUserProfileClick: () -> Unit,
+    onMentionClick: (String, String) -> Unit = { _, _ -> }, // (type, id) -> Unit
+    participants: List<ChatParticipant> = emptyList(),
+    projectMembers: List<ProjectMember> = emptyList(),
+    projectRoles: List<ProjectRole> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -390,9 +585,47 @@ fun ChatMessageItemComposable(
 
             val displayMessage = message.message
             val annotatedString = buildAnnotatedString {
-                append(displayMessage)
+                val processedText = parseMentionsForDisplay(
+                    displayMessage,
+                    participants,
+                    projectMembers,
+                    projectRoles
+                )
+                append(processedText.text)
+                
+                // Handle mention styling with enhanced visibility
+                processedText.mentions.forEach { mention ->
+                    addStringAnnotation("MENTION", "${mention.type}:${mention.id}", mention.start, mention.end)
+                    
+                    // Apply different styles for user and role mentions
+                    val mentionStyle = when (mention.type) {
+                        "user" -> SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            background = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        "role" -> SpanStyle(
+                            color = MaterialTheme.colorScheme.tertiary,
+                            background = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        else -> SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            background = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    
+                    addStyle(
+                        style = mentionStyle,
+                        start = mention.start,
+                        end = mention.end
+                    )
+                }
+                
+                // Handle URL styling
                 val urlRegex = """(https?://\S+)""".toRegex()
-                urlRegex.findAll(displayMessage).forEach { matchResult ->
+                urlRegex.findAll(processedText.text).forEach { matchResult ->
                     val url = matchResult.value
                     val startIndex = matchResult.range.first
                     val endIndex = matchResult.range.last + 1
@@ -408,9 +641,32 @@ fun ChatMessageItemComposable(
                 }
             }
 
-            Text(
+            ClickableText(
                 text = annotatedString,
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                onClick = { position ->
+                    // Handle mention clicks
+                    annotatedString.getStringAnnotations("MENTION", position, position)
+                        .firstOrNull()?.let { annotation ->
+                            val parts = annotation.item.split(":")
+                            if (parts.size == 2) {
+                                val type = parts[0]
+                                val id = parts[1]
+                                onMentionClick(type, id)
+                            }
+                        }
+                    
+                    // Handle URL clicks
+                    annotatedString.getStringAnnotations("URL", position, position)
+                        .firstOrNull()?.let { annotation ->
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(annotation.item))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Handle error opening URL
+                            }
+                        }
+                }
             )
 
             if (message.attachmentImageUrls.isNotEmpty()) {
@@ -478,7 +734,8 @@ fun ChatInputArea(
     onImageSelected: (Uri) -> Unit,
     onImageDeselected: (Uri) -> Unit,
     onCancelEdit: () -> Unit,
-    onPickImages: () -> Unit
+    onPickImages: () -> Unit,
+    onMentionSuggestionClick: (MentionSuggestion) -> Unit = {}
 ) {
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
@@ -537,6 +794,15 @@ fun ChatInputArea(
             )
         }
 
+        // Mention suggestions popup - moved above input field
+        AnimatedVisibility(visible = uiState.isMentionSuggestionVisible) {
+            MentionSuggestionsPopup(
+                suggestions = uiState.mentionSuggestions,
+                onSuggestionClick = onMentionSuggestionClick,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         Surface(tonalElevation = 3.dp) {
             Row(
                 modifier = Modifier
@@ -548,24 +814,20 @@ fun ChatInputArea(
                     Icon(Icons.Default.AddPhotoAlternate, contentDescription = "이미지 첨부")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                OutlinedTextField(
+                MentionStyledInputField(
                     value = uiState.pendingMessageText,
                     onValueChange = onMessageChange,
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(max = 120.dp) // 최대 높이 제한
+                        .heightIn(max = 100.dp) // 최대 높이 줄임
                         .focusRequester(focusRequester)
                         .testTag("message_input_field"),
                     interactionSource = interactionSource,
-                    placeholder = { Text("메시지 입력...") },
-                    maxLines = 4, 
-                    colors = TextFieldDefaults.colors( 
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent, 
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
+                    placeholder = "메시지 입력...",
+                    maxLines = 3, // 줄 수 줄임
+                    participants = uiState.participants,
+                    projectMembers = uiState.projectMembers,
+                    projectRoles = uiState.projectRoles
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
@@ -582,6 +844,106 @@ fun ChatInputArea(
                 }
             }
         }
+    }
+}
+
+/**
+ * Mention suggestions popup component
+ */
+@Composable
+fun MentionSuggestionsPopup(
+    suggestions: List<MentionSuggestion>,
+    onSuggestionClick: (MentionSuggestion) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp,
+        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 200.dp)
+                .padding(vertical = 8.dp)
+        ) {
+            items(suggestions) { suggestion ->
+                MentionSuggestionItem(
+                    suggestion = suggestion,
+                    onClick = { onSuggestionClick(suggestion) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Individual mention suggestion item
+ */
+@Composable
+fun MentionSuggestionItem(
+    suggestion: MentionSuggestion,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Profile or role icon
+        if (suggestion.type == MentionType.USER) {
+            SimpleUserProfileImage(
+                imageUrl = suggestion.profileUrl,
+                contentDescription = "${suggestion.displayName} 프로필",
+                modifier = Modifier.size(32.dp)
+            )
+        } else {
+            // Role icon
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "@",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Name and subtitle
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = suggestion.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (suggestion.subtitle != null) {
+                Text(
+                    text = suggestion.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Type indicator
+        Text(
+            text = if (suggestion.type == MentionType.USER) "사용자" else "역할",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline
+        )
     }
 }
 

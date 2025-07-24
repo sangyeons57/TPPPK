@@ -18,7 +18,8 @@ object MessageConverter {
             replyToMessageId = event.replyToMessageId?.let { DocumentId(it) },
             createdAt = parseTimestamp(event.timestamp),
             updatedAt = parseTimestamp(event.timestamp),
-            isDeleted = MessageIsDeleted.FALSE
+            isDeleted = MessageIsDeleted.FALSE,
+            mentions = emptyList() // TODO: Parse mentions from WebSocket event
         )
     }
     
@@ -33,7 +34,8 @@ object MessageConverter {
             replyToMessageId = existingMessage.replyToMessageId,
             createdAt = existingMessage.createdAt,
             updatedAt = parseTimestamp(event.timestamp),
-            isDeleted = existingMessage.isDeleted
+            isDeleted = existingMessage.isDeleted,
+            mentions = existingMessage.mentions // Keep existing mentions when editing
         )
     }
     

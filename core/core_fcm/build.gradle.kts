@@ -12,6 +12,7 @@ android {
 
 dependencies {
     implementation(project(":core:core_navigation"))
+    implementation(project(":core:core_ui"))
     
     
     // Firebase

@@ -6,6 +6,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.repository.base.MessageRepository
+import com.example.domain.model.vo.message.MentionInfo
 import javax.inject.Inject
 
 class SendMessageUseCase @Inject constructor(
@@ -14,7 +15,8 @@ class SendMessageUseCase @Inject constructor(
     suspend operator fun invoke(
         senderId: UserId,
         content: MessageContent,
-        replyToMessageId: DocumentId? = null
+        replyToMessageId: DocumentId? = null,
+        mentions: List<MentionInfo> = emptyList()
     ): CustomResult<Message, Exception> {
         return try {
             val messageId = DocumentId.generate()
@@ -22,7 +24,8 @@ class SendMessageUseCase @Inject constructor(
                 id = messageId,
                 senderId = senderId,
                 content = content,
-                replyToMessageId = replyToMessageId
+                replyToMessageId = replyToMessageId,
+                mentions = mentions
             )
             
             when (val saveResult = messageRepository.save(message)) {

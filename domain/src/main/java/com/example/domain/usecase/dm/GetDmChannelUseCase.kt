@@ -2,8 +2,11 @@ package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.UserId
 import com.example.domain.repository.base.DMChannelRepository
 import javax.inject.Inject
+import kotlin.text.isBlank
 
 /**
  * 특정 사용자와의 DM 채널 ID를 가져오는 UseCase
@@ -13,16 +16,19 @@ import javax.inject.Inject
 class GetDmChannelUseCase @Inject constructor(
     private val dmRepository: DMChannelRepository
 ) {
-    /**
-     * 특정 사용자와의 DM 채널 ID를 가져옵니다.
-     *
-     * @param targetUserId 상대방 사용자 ID
-     * @return 성공 시 채널 ID (없으면 null)가 포함된 Result, 실패 시 에러 정보가 포함된 Result
-     */
-    suspend operator fun invoke(targetUserId: String): CustomResult<DMChannel, Exception> {
+    suspend operator fun invoke(dmChannelId: DocumentId): CustomResult<DMChannel, Exception> {
+        if (dmChannelId.isBlank()) {
+            return CustomResult.Failure(IllegalArgumentException("Target user ID cannot be blank."))
+        }
+        return dmRepository.findById(dmChannelId).successProcess {
+            it as DMChannel
+        }
+    }
+
+    suspend fun findByOtherUserId(targetUserId: UserId): CustomResult<DMChannel, Exception> {
         if (targetUserId.isBlank()) {
             return CustomResult.Failure(IllegalArgumentException("Target user ID cannot be blank."))
         }
-        return dmRepository.findByOtherUserId(targetUserId)
+        return dmRepository.findByOtherUserId(targetUserId.value)
     }
 } 

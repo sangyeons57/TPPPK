@@ -1,22 +1,21 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import java.time.Instant
-
-import com.example.domain.model.AggregateRoot
 import com.example.domain.event.message.MessageContentUpdatedEvent
-import com.example.domain.event.message.MessageDeletedEvent
-import com.example.domain.event.message.MessageSentEvent
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
+import com.example.domain.model.vo.message.MentionInfo
+import java.time.Instant
 
 class Message private constructor(
     initialSenderId: UserId,
     initialContent: MessageContent,
     initialReplyToMessageId: DocumentId?,
     initialIsDeleted: MessageIsDeleted,
+    initialMentions: List<MentionInfo>,
     override val id: DocumentId,
     override var isNew: Boolean,
     override val createdAt: Instant,
@@ -25,6 +24,7 @@ class Message private constructor(
 
     val senderId: UserId = initialSenderId
     val replyToMessageId: DocumentId? = initialReplyToMessageId
+    val mentions: List<MentionInfo> = initialMentions
 
     var content: MessageContent = initialContent
         private set
@@ -42,7 +42,14 @@ class Message private constructor(
             KEY_REPLY_TO_MESSAGE_ID to this.replyToMessageId?.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
-            KEY_IS_DELETED to this.isDeleted.value
+            KEY_IS_DELETED to this.isDeleted.value,
+            KEY_MENTIONS to this.mentions.map { 
+                mapOf(
+                    "type" to it.type.name,
+                    "id" to it.id,
+                    "displayName" to it.displayName
+                )
+            }
         )
     }
 
@@ -71,6 +78,8 @@ class Message private constructor(
         const val KEY_SEND_MESSAGE = "content"
         const val KEY_REPLY_TO_MESSAGE_ID = "replyToMessageId"
         const val KEY_IS_DELETED = "isDeleted"
+        const val KEY_MENTIONS = "mentions"
+
         /**
          * Factory method for sending a new message.
          */
@@ -78,7 +87,8 @@ class Message private constructor(
             id: DocumentId,
             senderId: UserId,
             content: MessageContent,
-            replyToMessageId: DocumentId?
+            replyToMessageId: DocumentId?,
+            mentions: List<MentionInfo>
         ): Message {
             val message = Message(
                 initialSenderId = senderId,
@@ -87,6 +97,7 @@ class Message private constructor(
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 initialIsDeleted = MessageIsDeleted.FALSE,
+                initialMentions = mentions,
                 id = id,
                 isNew = true
             )
@@ -103,7 +114,8 @@ class Message private constructor(
             replyToMessageId: DocumentId?,
             createdAt: Instant?,
             updatedAt: Instant?,
-            isDeleted: MessageIsDeleted
+            isDeleted: MessageIsDeleted,
+            mentions: List<MentionInfo>
         ): Message {
             return Message(
                 initialSenderId = senderId,
@@ -112,6 +124,7 @@ class Message private constructor(
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 initialIsDeleted = isDeleted,
+                initialMentions = mentions,
                 id = id,
                 isNew = false
             )

@@ -5,18 +5,24 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.vo.MentionType
+import com.example.domain.model.vo.message.MentionInfo
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
-import com.example.core_common.websocket.WebSocketConnectionState
+import com.example.feature_chat.model.MentionSuggestion
+import com.example.feature_chat.model.ChatParticipant
+import com.example.feature_chat.model.ProjectMember
+import com.example.feature_chat.model.ProjectRole
 import com.example.feature_chat.service.ChatServiceProvider
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.Instant
+import kotlinx.coroutines.async
 import javax.inject.Inject
 
 /**
@@ -42,6 +48,9 @@ class WebSocketChatViewModel @Inject constructor(
             chatServiceProvider.createForDMChannel(channelId)
         }
     }
+    
+    // Mention display gateway - maps user-visible @displayName to internal [type:id] format
+    private var currentMentionMappings = mutableMapOf<String, String>()
 
     private val _uiState = MutableStateFlow(
         ChatUiState(
@@ -61,6 +70,7 @@ class WebSocketChatViewModel @Inject constructor(
         initializeAuthentication()
         initializeConnection()
         initializeMessages()
+        loadChannelData()
     }
 
     private fun initializeAuthentication() {
@@ -191,7 +201,7 @@ class WebSocketChatViewModel @Inject constructor(
                 }
                 
                 state.copy(
-                    messages = filteredMessages,
+                    messages = filteredMessages.applyDisplayFormatConversion(),
                     hasMoreMessages = result.hasMoreOlderMessages,
                     error = result.error
                 )
@@ -204,7 +214,7 @@ class WebSocketChatViewModel @Inject constructor(
         
         _uiState.update { state ->
             state.copy(
-                messages = result.messages,
+                messages = result.messages.applyDisplayFormatConversion(),
                 hasMoreMessages = result.hasMoreOlderMessages,
                 error = result.error
             )
@@ -216,7 +226,7 @@ class WebSocketChatViewModel @Inject constructor(
         
         _uiState.update { state ->
             state.copy(
-                messages = result.messages,
+                messages = result.messages.applyDisplayFormatConversion(),
                 hasMoreMessages = result.hasMoreOlderMessages,
                 error = result.error
             )
@@ -239,7 +249,7 @@ class WebSocketChatViewModel @Inject constructor(
                     message
                 }
             }
-            state.copy(messages = updatedMessages)
+            state.copy(messages = updatedMessages.applyDisplayFormatConversion())
         }
     }
 
@@ -259,7 +269,7 @@ class WebSocketChatViewModel @Inject constructor(
                     message
                 }
             }
-            state.copy(messages = updatedMessages)
+            state.copy(messages = updatedMessages.applyDisplayFormatConversion())
         }
     }
 
@@ -283,7 +293,7 @@ class WebSocketChatViewModel @Inject constructor(
             
             _uiState.update { state ->
                 state.copy(
-                    messages = result.messages,
+                    messages = result.messages.applyDisplayFormatConversion(),
                     isLoadingHistory = false,
                     hasMoreMessages = result.hasMoreOlderMessages,
                     lastMessageTimestamp = result.lastMessageTimestamp,
@@ -293,7 +303,7 @@ class WebSocketChatViewModel @Inject constructor(
         }
     }
 
-    fun sendMessage(text: String, attachmentUris: List<Uri> = emptyList()) {
+    private fun sendMessage(text: String, attachmentUris: List<Uri> = emptyList(), mentions: List<MentionInfo> = emptyList()) {
         val senderId = currentUserId
         if (senderId == null) {
             viewModelScope.launch {
@@ -321,12 +331,15 @@ class WebSocketChatViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val result = services.messageService.sendMessage(text, attachmentUris, senderId)
+            val result = services.messageService.sendMessage(text, attachmentUris, senderId, mentions)
             
             if (result.success && result.tempMessage != null) {
                 // Add optimistic message to UI with isSending = true
                 _uiState.update { state ->
-                    state.copy(messages = listOf(result.tempMessage) + state.messages)
+                    val tempMessageWithDisplayFormat = result.tempMessage.copy(
+                        message = convertInternalToDisplayFormat(result.tempMessage.message)
+                    )
+                    state.copy(messages = listOf(tempMessageWithDisplayFormat) + state.messages)
                 }
                 
                 // ACK 기반 메시지 상태 관리: 서버에서 ACK/FAILED 메시지로 상태 업데이트
@@ -348,7 +361,7 @@ class WebSocketChatViewModel @Inject constructor(
                                 it
                             }
                         }
-                        state.copy(messages = updatedMessages)
+                        state.copy(messages = updatedMessages.applyDisplayFormatConversion())
                     }
                 }
             } else if (!result.success) {
@@ -371,7 +384,7 @@ class WebSocketChatViewModel @Inject constructor(
                                 it
                             }
                         }
-                        state.copy(messages = updatedMessages)
+                        state.copy(messages = updatedMessages.applyDisplayFormatConversion())
                     }
                 }
             }
@@ -423,7 +436,7 @@ class WebSocketChatViewModel @Inject constructor(
                 
                 _uiState.update { state ->
                     state.copy(
-                        messages = result.messages,
+                        messages = result.messages.applyDisplayFormatConversion(),
                         isLoadingMoreMessages = false,
                         hasMoreMessages = result.hasMoreOlderMessages,
                         lastMessageTimestamp = result.lastMessageTimestamp,
@@ -438,10 +451,250 @@ class WebSocketChatViewModel @Inject constructor(
             }
         }
     }
+    
+    private fun loadChannelData() {
+        if (projectId == null) {
+            // DM channel - load participants
+            loadDMParticipants()
+        } else {
+            // Project channel - load members and roles
+            loadProjectMembersAndRoles()
+        }
+    }
+    
+    private fun loadDMParticipants() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingParticipants = true) }
+            
+            try {
+                val participantService = services.participantService
+                if (participantService != null) {
+                    Log.d("ViewModel", "Loading DM participants using ParticipantService")
+                    val participants = participantService.loadParticipants()
+                    
+                    _uiState.update { 
+                        it.copy(
+                            participants = participants,
+                            isLoadingParticipants = false
+                        )
+                    }
+                    
+                    Log.d("ViewModel", "Successfully loaded ${participants.size} DM participants")
+                } else {
+                    Log.e("ViewModel", "ParticipantService is null for DM channel")
+                    _uiState.update { it.copy(isLoadingParticipants = false) }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Failed to load DM participants", e)
+                _uiState.update { 
+                    it.copy(
+                        participants = emptyList(),
+                        isLoadingParticipants = false
+                    ) 
+                }
+            }
+        }
+    }
+    
+    private fun loadProjectMembersAndRoles() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingProjectData = true) }
+            
+            try {
+                val memberService = services.memberService
+                val roleService = services.roleService
+                
+                if (memberService != null && roleService != null) {
+                    Log.d("ViewModel", "Loading project members and roles using MemberService and RoleService")
+                    
+                    // Load members and roles concurrently
+                    val membersDeferred = async { memberService.loadMembers() }
+                    val rolesDeferred = async { roleService.loadRoles() }
+                    
+                    val projectMembers = membersDeferred.await()
+                    val projectRoles = rolesDeferred.await()
+                    
+                    // Update role member counts with total member count
+                    val updatedRoles = roleService.updateRoleMemberCounts(projectRoles, projectMembers.size)
+                    
+                    _uiState.update { 
+                        it.copy(
+                            projectMembers = projectMembers,
+                            projectRoles = updatedRoles,
+                            isLoadingProjectData = false
+                        )
+                    }
+                    
+                    Log.d("ViewModel", "Successfully loaded ${projectMembers.size} members and ${updatedRoles.size} roles")
+                } else {
+                    Log.e("ViewModel", "MemberService or RoleService is null for project channel")
+                    _uiState.update { it.copy(isLoadingProjectData = false) }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Failed to load project data", e)
+                _uiState.update { 
+                    it.copy(
+                        projectMembers = emptyList(),
+                        projectRoles = emptyList(),
+                        isLoadingProjectData = false
+                    )
+                }
+            }
+        }
+    }
 
     // UI Action Methods
     fun onMessageInputChange(text: String) {
         _uiState.update { it.copy(pendingMessageText = text) }
+        
+        // Clean up mention mappings for mentions that are no longer in the text
+        val keysToRemove = currentMentionMappings.keys.filter { displayFormat ->
+            !text.contains(displayFormat)
+        }
+        keysToRemove.forEach { key ->
+            currentMentionMappings.remove(key)
+        }
+        
+        handleMentionSuggestions(text)
+    }
+    
+    private fun handleMentionSuggestions(text: String) {
+        // Find if there's an @ symbol followed by text at the cursor position
+        val cursorPosition = text.length // Assuming cursor is at the end
+        val mentionMatch = findMentionQuery(text, cursorPosition)
+        
+        if (mentionMatch != null) {
+            val (startPos, query) = mentionMatch
+            if (query.length >= 0) { // Show suggestions immediately after @
+                showMentionSuggestions(query, startPos)
+            } else {
+                hideMentionSuggestions()
+            }
+        } else {
+            hideMentionSuggestions()
+        }
+    }
+    
+    private fun findMentionQuery(text: String, cursorPosition: Int): Pair<Int, String>? {
+        // Find the last @ symbol before cursor position
+        val beforeCursor = text.substring(0, cursorPosition)
+        val lastAtIndex = beforeCursor.lastIndexOf('@')
+        
+        if (lastAtIndex == -1) return null
+        
+        // Check if there's a space between @ and cursor (which would break the mention)
+        val textAfterAt = beforeCursor.substring(lastAtIndex + 1)
+        if (textAfterAt.contains(' ')) return null
+        
+        return Pair(lastAtIndex, textAfterAt)
+    }
+    
+    private fun showMentionSuggestions(query: String, startPosition: Int) {
+        val currentState = _uiState.value
+        
+        // Generate suggestions based on participants/members/roles
+        val suggestions = mutableListOf<MentionSuggestion>()
+        
+        // Add user suggestions
+        if (projectId == null) {
+            // DM channel - use participants
+            Log.d ("WebSocketChatViewModel", currentState.participants.toString())
+            suggestions.addAll(
+                currentState.participants
+                    .filter { it.displayName.contains(query, ignoreCase = true) }
+                    .map { participant ->
+                        MentionSuggestion(
+                            type = MentionType.USER,
+                            id = participant.userId,
+                            displayName = participant.displayName,
+                            profileUrl = participant.profileUrl,
+                            subtitle = if (participant.isOnline) "온라인" else "오프라인"
+                        )
+                    }
+            )
+        } else {
+            // Project channel - use project members
+            suggestions.addAll(
+                currentState.projectMembers
+                    .filter { it.displayName.contains(query, ignoreCase = true) }
+                    .map { member ->
+                        MentionSuggestion(
+                            type = MentionType.USER,
+                            id = member.userId,
+                            displayName = member.displayName,
+                            profileUrl = member.profileUrl,
+                            subtitle = member.roleName
+                        )
+                    }
+            )
+            
+            // Add role suggestions
+            suggestions.addAll(
+                currentState.projectRoles
+                    .filter { it.roleName.contains(query, ignoreCase = true) }
+                    .map { role ->
+                        MentionSuggestion(
+                            type = MentionType.ROLE,
+                            id = role.roleId,
+                            displayName = role.roleName,
+                            subtitle = "${role.memberCount}명"
+                        )
+                    }
+            )
+        }
+        
+        _uiState.update { 
+            it.copy(
+                mentionSuggestions = suggestions.take(8), // Limit to 8 suggestions
+                isMentionSuggestionVisible = suggestions.isNotEmpty(),
+                mentionQueryText = query,
+                mentionQueryStartPosition = startPosition
+            )
+        }
+    }
+    
+    private fun hideMentionSuggestions() {
+        _uiState.update { 
+            it.copy(
+                mentionSuggestions = emptyList(),
+                isMentionSuggestionVisible = false,
+                mentionQueryText = "",
+                mentionQueryStartPosition = -1
+            )
+        }
+    }
+    
+    fun onMentionSuggestionClick(suggestion: MentionSuggestion) {
+        val currentState = _uiState.value
+        val currentText = currentState.pendingMessageText
+        val startPos = currentState.mentionQueryStartPosition
+        
+        if (startPos >= 0) {
+            // Replace @query with @displayName format for user-friendly display with automatic spacing
+            val beforeMention = currentText.substring(0, startPos)
+            val afterMention = currentText.substring(startPos + currentState.mentionQueryText.length + 1) // +1 for @
+            val mentionText = "@${suggestion.displayName} " // Add space after mention for convenience
+            
+            val newText = beforeMention + mentionText + afterMention
+            
+            // Store the internal mention mapping for conversion during send
+            // Use uppercase type name to match Firebase function expectations
+            // Map both with and without space to handle different scenarios
+            val mentionMapping = currentMentionMappings.toMutableMap()
+            mentionMapping["@${suggestion.displayName}"] = "[${suggestion.type.name}:${suggestion.id}]"
+            mentionMapping["@${suggestion.displayName} "] = "[${suggestion.type.name}:${suggestion.id}]"
+            currentMentionMappings = mentionMapping
+            
+            _uiState.update { 
+                it.copy(
+                    pendingMessageText = newText,
+                    mentionSuggestions = emptyList(),
+                    isMentionSuggestionVisible = false,
+                    mentionQueryText = "",
+                    mentionQueryStartPosition = -1
+                )
+            }
+        }
     }
 
     fun onSendMessageClick() {
@@ -468,12 +721,110 @@ class WebSocketChatViewModel @Inject constructor(
             return
         }
         
-        sendMessage(message, attachments)
+        // Convert display format (@displayName) back to internal format ([type:id]) for processing
+        val internalMessage = convertDisplayToInternalFormat(message)
+        val (processedText, mentions) = parseMentions(internalMessage)
+        sendMessage(processedText, attachments, mentions)
+
         _uiState.update { 
             it.copy(
                 pendingMessageText = "", 
                 selectedAttachmentUris = emptyList()
             ) 
+        }
+        
+        // Clear mention mappings after sending
+        currentMentionMappings.clear()
+    }
+    
+    /**
+     * Converts display format (@displayName) to internal format ([type:id]) using stored mappings
+     */
+    private fun convertDisplayToInternalFormat(displayText: String): String {
+        var result = displayText
+        
+        // Apply all stored mention mappings
+        currentMentionMappings.forEach { (displayFormat, internalFormat) ->
+            result = result.replace(displayFormat, internalFormat)
+        }
+        
+        return result
+    }
+
+    private fun parseMentions(text: String): Pair<String, List<MentionInfo>> {
+        // Parse internal format [TYPE:id] that was converted from display format
+        val mentionRegex = "\\[(USER|ROLE):(\\S+?)\\]".toRegex()
+        val mentions = mutableListOf<MentionInfo>()
+        
+        val processedText = mentionRegex.replace(text) { matchResult ->
+            val typeStr = matchResult.groupValues[1]
+            val id = matchResult.groupValues[2]
+            
+            val mentionType = when (typeStr) {
+                "USER" -> MentionType.USER
+                "ROLE" -> MentionType.ROLE
+                else -> MentionType.USER // Default fallback
+            }
+            
+            // Get the original display name from the mappings
+            val displayName = currentMentionMappings.entries.find { 
+                it.value == matchResult.value 
+            }?.key ?: "@$id"
+            
+            mentions.add(
+                MentionInfo(
+                    type = mentionType,
+                    id = id,
+                    displayName = displayName
+                )
+            )
+            
+            // Return the original internal format for the processed text
+            matchResult.value
+        }
+        
+        return Pair(processedText, mentions)
+    }
+
+    /**
+     * Applies display format conversion to a list of messages
+     */
+    private fun List<ChatMessageUiModel>.applyDisplayFormatConversion(): List<ChatMessageUiModel> {
+        return this.map { message ->
+            message.copy(
+                message = convertInternalToDisplayFormat(message.message)
+            )
+        }
+    }
+
+    /**
+     * Converts internal mention format ([TYPE:id]) to display format (@displayName) for UI display
+     * This prevents internal format from being visible to users
+     */
+    fun convertInternalToDisplayFormat(text: String): String {
+        val mentionRegex = "\\[(USER|ROLE):(\\S+?)\\]".toRegex()
+        
+        return mentionRegex.replace(text) { matchResult ->
+            val typeStr = matchResult.groupValues[1]
+            val id = matchResult.groupValues[2]
+            
+            // Try to find display name from current participants/members/roles
+            val currentState = _uiState.value
+            
+            val displayName = when (typeStr) {
+                "USER" -> {
+                    // First check participants (chat members)
+                    currentState.participants.find { it.userId == id }?.displayName
+                        ?: currentState.projectMembers.find { it.userId == id }?.displayName
+                        ?: id // Fallback to ID if display name not found
+                }
+                "ROLE" -> {
+                    currentState.projectRoles.find { it.roleId == id }?.roleName ?: id
+                }
+                else -> id
+            }
+            
+            "@$displayName"
         }
     }
 

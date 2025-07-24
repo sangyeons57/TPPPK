@@ -18,6 +18,7 @@ import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.feature_chat.queue.QueuedMessageAction
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
+import com.example.domain.model.vo.message.MentionInfo
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -285,7 +286,8 @@ class MessageService(
     suspend fun sendMessage(
         text: String,
         attachmentUris: List<Uri>,
-        senderId: String
+        senderId: String,
+        mentions: List<MentionInfo>
     ): SendMessageResult {
         if (text.isBlank() && attachmentUris.isEmpty()) {
             Log.w("MessageService", "Attempted to send empty message")
@@ -323,7 +325,8 @@ class MessageService(
             id = messageId,
             senderId = UserId(senderId),
             content = MessageContent(text),
-            replyToMessageId = null
+            replyToMessageId = null,
+            mentions = mentions
         )
 
         when (webSocketClient.connectionState.value) {
@@ -338,8 +341,9 @@ class MessageService(
                 when {
                     result.isSuccess -> {
                         chatUseCases.sendMessageUseCase(
-                            UserId(senderId),
-                            MessageContent(text)
+                            senderId = UserId(senderId),
+                            content = MessageContent(text),
+                            mentions = mentions
                         )
                         return SendMessageResult(success = true, tempMessage = tempUiMessage)
                     }
@@ -541,7 +545,11 @@ class MessageService(
         tempUiMessage: ChatMessageUiModel,
         senderId: String
     ): SendMessageResult {
-        when (val result = chatUseCases.sendMessageUseCase(message.senderId, message.content)) {
+        when (val result = chatUseCases.sendMessageUseCase(
+            senderId = message.senderId, 
+            content = message.content, 
+            mentions = message.mentions
+        )) {
             is CustomResult.Success -> {
                 // Ensure profile is loaded for the actual message too
                 userProfileService.loadUserProfile(result.data.senderId.value)

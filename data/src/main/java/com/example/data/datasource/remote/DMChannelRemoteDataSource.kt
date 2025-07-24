@@ -1,5 +1,6 @@
 package com.example.data.datasource.remote
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.data.datasource.remote.special.DefaultDatasource
@@ -30,8 +31,10 @@ class DMChannelRemoteDataSourceImpl @Inject constructor(
         checkCollectionInitialized("findByParticipants")
         resultTry {
             // Firestore에서는 배열 전체 일치 쿼리를 위해 whereEqualTo 사용 (저장 시 정렬 일관성 전제)
+            val sortedParticipants = participants.sorted()
+            Log.d("DMChannelRemoteDataSourceImpl", "findByParticipants: $sortedParticipants")
             val snapshot = collection
-                .whereEqualTo(DMChannelDTO.PARTICIPANTS, participants)
+                .whereEqualTo(DMChannelDTO.PARTICIPANTS, sortedParticipants)
                 .limit(1)
                 .get()
                 .await()

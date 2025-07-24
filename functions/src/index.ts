@@ -62,3 +62,6 @@ export {joinProjectWithInviteFunction as joinProjectWithInvite} from "./triggers
 
 // Project member management functions
 export {leaveProjectFunction as leaveProject} from "./triggers/member/memberManagement.trigger";
+
+// Chat/Message functions
+export {onMessageMentionNotification} from "./triggers/chat/mentionNotification.trigger";

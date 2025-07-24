@@ -229,7 +229,7 @@ export class DMChannelEntity implements BaseEntity {
     status: DMChannelStatus = DMChannelStatus.ACTIVE
   ): DMChannelEntity {
     // Ensure participants are distinct
-    const distinctParticipants = [...new Set(participants)];
+    const distinctParticipants = [...new Set(participants)].sort();
 
     return new DMChannelEntity(
       id,

@@ -1,5 +1,6 @@
 package com.example.data.repository.base
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.DMChannelRemoteDataSource
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
@@ -30,7 +31,9 @@ class DMChannelRepositoryImpl @Inject constructor(
         }
         ensureCollection()
 
-        val channelIdResult = dmChannelRemoteDataSource.findByParticipants(listOf(currentUserId, otherUserId))
+        val participants  = listOf(currentUserId, otherUserId)
+        Log.d("DMChannelRepositoryImpl", "participants: $participants")
+        val channelIdResult = dmChannelRemoteDataSource.findByParticipants(participants)
         return when (channelIdResult) {
             is CustomResult.Success -> {
                 val dmChannelDTO = channelIdResult.data
