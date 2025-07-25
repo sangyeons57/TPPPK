@@ -11,19 +11,15 @@ import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
 import com.example.domain.provider.chat.ChatUseCases
-import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.config.ChatMemoryConfig
 import com.example.feature_chat.memory.MessageMemoryManager
-import com.example.feature_chat.memory.MemoryUpdateResult
+import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.feature_chat.queue.QueuedMessageAction
-import com.example.feature_chat.websocket.ChatWebSocketClient
-import com.example.feature_chat.websocket.ChatWebSocketEvent
-import com.example.domain.model.vo.message.MentionInfo
 import com.example.feature_chat.util.MentionParser
 import com.example.feature_chat.util.ReplyParser
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import com.example.feature_chat.websocket.ChatWebSocketClient
+import com.example.feature_chat.websocket.ChatWebSocketEvent
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 
@@ -37,6 +33,8 @@ class MessageService(
     private val offlineMessageQueue: OfflineMessageQueue,
     private val userProfileService: UserProfileService,
     private val roomId: String,
+    private val projectId: String? = null,
+    private val channelType: String,
     private val chatCacheManager: com.example.data.cache.ChatCacheManager? = null // 선택적 의존성으로 점진적 롤아웃 지원
 ) {
     
@@ -103,7 +101,7 @@ class MessageService(
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
                         getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                         getUserIdByUsername = userProfileService::getUserIdByUsername,
-                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
                     )
                 }
                 val uiConversionTime = System.currentTimeMillis() - uiConversionStart
@@ -143,8 +141,8 @@ class MessageService(
         startTime: Long
     ): MessageResult {
         return try {
-            // 채널 ID 추출 (roomId에서 "chat_room_" 접두사 제거)
-            val channelId = roomId.removePrefix("chat_room_")
+            // roomId는 이제 순수한 channelId
+            val channelId = roomId
 
             // 캐시에서 메시지 가져오기 (즉시 반환 + 백그라운드 동기화)
             val cachedMessages =
@@ -170,7 +168,7 @@ class MessageService(
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
                         getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                         getUserIdByUsername = userProfileService::getUserIdByUsername,
-                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
                     )
                 }
 
@@ -205,7 +203,7 @@ class MessageService(
                                 getUserProfileUrl = userProfileService::getUserProfileUrl,
                                 getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                                 getUserIdByUsername = userProfileService::getUserIdByUsername,
-                                findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                                findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
                             )
                         }
 
@@ -244,7 +242,7 @@ class MessageService(
                             getUserProfileUrl = userProfileService::getUserProfileUrl,
                             getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                             getUserIdByUsername = userProfileService::getUserIdByUsername,
-                            findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                            findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
                         )
                     }
 
@@ -309,7 +307,7 @@ class MessageService(
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
                         getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                         getUserIdByUsername = userProfileService::getUserIdByUsername,
-                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
                     )
                 }
                 
@@ -392,7 +390,7 @@ class MessageService(
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
                         getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                         getUserIdByUsername = userProfileService::getUserIdByUsername,
-                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
                     )
                 }
                 
@@ -437,7 +435,8 @@ class MessageService(
     ): MessageResult = loadOlderMessages(currentUserId)
     
     /**
-     * 메시지 전송
+     * 메시지 전송 - 낙관적 UI 패턴 적용
+     * 클라이언트가 생성한 고유 ID를 사용하여 중복 저장 방지
      */
     suspend fun sendMessage(
         text: String,
@@ -449,9 +448,13 @@ class MessageService(
             Log.w("MessageService", "Attempted to send empty message")
             return SendMessageResult(success = false, error = "빈 메시지는 전송할 수 없습니다")
         }
-        
+
+        // 클라이언트 주도 ID 생성 - UUID 기반으로 전역 고유성 보장
         val messageId = DocumentId.generate()
-        Log.d("MessageService", "Sending message: ${text.take(50)}... by user: $senderId")
+        Log.d(
+            "MessageService",
+            "Sending message with client-generated ID: ${messageId.value} by user: $senderId"
+        )
 
         // 답장 정보 파싱 (text에서 >>messageId 패턴 확인 또는 파라미터 사용)
         val parsedReplyToId =
@@ -481,12 +484,11 @@ class MessageService(
 
         // 답장 대상 메시지 정보 가져오기 (UI 표시용)
         val replyToMessage = parsedReplyToId?.let { replyId ->
-            memoryManager.messages.find { it.chatId == replyId.value }
+            memoryManager.messages.find { it.messageId == replyId.value }
         }
         
         val tempUiMessage = ChatMessageUiModel(
-            localId = generateTempId(),
-            chatId = messageId.value,
+            messageId = messageId.value,
             userId = senderId,
             userName = userName,
             userProfileUrl = profileUrl,
@@ -517,40 +519,27 @@ class MessageService(
             mentions = mentions
         )
 
+        // 서버 중심 저장: 낙관적 로컬 저장 제거
+        // 서버에서 Firestore 저장 후 WebSocket으로 브로드캐스트하면 handleNewMessage에서 처리
+
         when (webSocketClient.connectionState.value) {
             is WebSocketConnectionState.Connected -> {
                 val result = webSocketClient.sendMessage(
                     roomId = roomId,
                     senderId = UserId(senderId),
                     content = actualMessageContent, // 파싱된 실제 내용 사용
-                    messageId = messageId
+                    messageId = messageId,
+                    projectId = projectId,
+                    channelType = channelType
                 )
                 
                 when {
                     result.isSuccess -> {
-                        chatUseCases.sendMessageUseCase(
-                            senderId = UserId(senderId),
-                            content = MessageContent(actualMessageContent), // 파싱된 실제 내용 사용
-                            mentions = mentions
+                        // 서버 중심 저장: WebSocket으로만 전송하고 서버에서 Firestore 저장
+                        Log.d(
+                            "MessageService",
+                            "Message sent via WebSocket successfully: ${message.id.value}"
                         )
-
-                        // 로컬 캐시에 저장 (WebSocket 전송 성공 시)
-                        if (chatCacheManager != null) {
-                            try {
-                                val channelId = roomId.removePrefix("chat_room_")
-                                chatCacheManager.addRealtimeMessage(channelId, message)
-                                Log.d(
-                                    "MessageService",
-                                    "Successfully saved sent message to local cache: ${message.id.value}"
-                                )
-                            } catch (e: Exception) {
-                                Log.w(
-                                    "MessageService",
-                                    "Failed to save sent message to local cache: ${message.id.value}",
-                                    e
-                                )
-                            }
-                        }
                         
                         return SendMessageResult(success = true, tempMessage = tempUiMessage)
                     }
@@ -562,28 +551,17 @@ class MessageService(
             is WebSocketConnectionState.Disconnected,
             is WebSocketConnectionState.Connecting,
             is WebSocketConnectionState.Error -> {
+                Log.d(
+                    "MessageService",
+                    "WebSocket unavailable, queuing message and using Firestore: ${message.id.value}"
+                )
+
+                // 오프라인 큐에 추가 (WebSocket 복구 시 재시도용)
                 offlineMessageQueue.queueMessage(
                     QueuedMessageAction.Send(message, roomId)
                 )
 
-                // 오프라인 상태에서도 로컬 캐시에 저장 (오프라인 메시지)
-                if (chatCacheManager != null) {
-                    try {
-                        val channelId = roomId.removePrefix("chat_room_")
-                        chatCacheManager.addRealtimeMessage(channelId, message)
-                        Log.d(
-                            "MessageService",
-                            "Successfully saved offline message to local cache: ${message.id.value}"
-                        )
-                    } catch (e: Exception) {
-                        Log.w(
-                            "MessageService",
-                            "Failed to save offline message to local cache: ${message.id.value}",
-                            e
-                        )
-                    }
-                }
-                
+                // Firestore 직접 저장 (fallback)
                 return handleSendMessageFallback(message, tempUiMessage, senderId)
             }
         }
@@ -592,68 +570,75 @@ class MessageService(
     }
     
     /**
-     * 메시지 편집
+     * 메시지 편집 - 서버 중심 저장
      */
     suspend fun editMessage(messageId: String, newContent: String): Result<Unit> {
         if (newContent.isBlank()) {
             Log.w("MessageService", "Attempted to edit message with empty content")
             return Result.failure(Exception("빈 내용으로 메시지를 편집할 수 없습니다"))
         }
-        
-        Log.d("MessageService", "Editing message: $messageId")
-        
-        when (webSocketClient.connectionState.value) {
+
+        Log.d("MessageService", "Editing message via WebSocket only: $messageId")
+
+        return when (webSocketClient.connectionState.value) {
             is WebSocketConnectionState.Connected -> {
-                Log.d("MessageService", "Editing message via WebSocket")
-                webSocketClient.editMessage(
+                Log.d("MessageService", "Sending edit message to server via WebSocket")
+                val result = webSocketClient.editMessage(
                     roomId = roomId,
                     messageId = DocumentId(messageId),
-                    newContent = newContent
+                    newContent = newContent,
+                    projectId = projectId,
+                    channelType = channelType
                 )
+
+                if (result.isSuccess) {
+                    Log.d("MessageService", "Edit message sent successfully via WebSocket")
+                    Result.success(Unit)
+                } else {
+                    Log.w("MessageService", "Failed to send edit message via WebSocket")
+                    Result.failure(Exception("메시지 수정 전송 실패"))
+                }
             }
             else -> {
-                Log.d("MessageService", "Queueing message edit for offline processing")
+                Log.d("MessageService", "WebSocket unavailable, queuing message edit")
                 offlineMessageQueue.queueMessage(
                     QueuedMessageAction.Edit(messageId, newContent, roomId)
                 )
-            }
-        }
-        
-        return when (val result = chatUseCases.editMessageUseCase(DocumentId(messageId), MessageContent(newContent))) {
-            is CustomResult.Failure -> {
-                Result.failure(Exception("메시지 수정 실패: ${result.error.message}"))
-            }
-            else -> {
-                Result.success(Unit)
+                Result.success(Unit) // 큐에 저장되었으므로 성공으로 처리
             }
         }
     }
     
     /**
-     * 메시지 삭제
+     * 메시지 삭제 - 서버 중심 저장
      */
     suspend fun deleteMessage(messageId: String): Result<Unit> {
-        Log.d("MessageService", "Deleting message: $messageId")
-        
-        when (webSocketClient.connectionState.value) {
+        Log.d("MessageService", "Deleting message via WebSocket only: $messageId")
+
+        return when (webSocketClient.connectionState.value) {
             is WebSocketConnectionState.Connected -> {
-                Log.d("MessageService", "Deleting message via WebSocket")
-                webSocketClient.deleteMessage(roomId, DocumentId(messageId))
+                Log.d("MessageService", "Sending delete message to server via WebSocket")
+                val result = webSocketClient.deleteMessage(
+                    roomId = roomId,
+                    messageId = DocumentId(messageId),
+                    projectId = projectId,
+                    channelType = channelType
+                )
+
+                if (result.isSuccess) {
+                    Log.d("MessageService", "Delete message sent successfully via WebSocket")
+                    Result.success(Unit)
+                } else {
+                    Log.w("MessageService", "Failed to send delete message via WebSocket")
+                    Result.failure(Exception("메시지 삭제 전송 실패"))
+                }
             }
             else -> {
-                Log.d("MessageService", "Queueing message delete for offline processing")
+                Log.d("MessageService", "WebSocket unavailable, queuing message delete")
                 offlineMessageQueue.queueMessage(
                     QueuedMessageAction.Delete(messageId, roomId)
                 )
-            }
-        }
-        
-        return when (val result = chatUseCases.deleteMessageUseCase(DocumentId(messageId))) {
-            is CustomResult.Failure -> {
-                Result.failure(Exception("메시지 삭제 실패: ${result.error.message}"))
-            }
-            else -> {
-                Result.success(Unit)
+                Result.success(Unit) // 큐에 저장되었으므로 성공으로 처리
             }
         }
     }
@@ -704,8 +689,7 @@ class MessageService(
         // }
         
         val newMessage = ChatMessageUiModel(
-            localId = generateTempId(),
-            chatId = event.messageId,
+            messageId = event.messageId,
             userId = event.senderId,
             userName = userName,
             userProfileUrl = profileUrl,
@@ -731,7 +715,7 @@ class MessageService(
         // 캐시 매니저가 활성화된 경우 로컬 캐시에도 저장
         if (chatCacheManager != null) {
             try {
-                val channelId = roomId.removePrefix("chat_room_")
+                val channelId = roomId  // roomId는 이제 순수한 channelId
                 val domainMessage = event.toDomainMessage { username ->
                     userProfileService.getUserIdByUsername(username)
                 }
@@ -771,7 +755,7 @@ class MessageService(
     suspend fun handleMessageEdit(event: ChatWebSocketEvent.MessageEdited): MessageResult {
         // 1. 메모리에서 메시지 업데이트
         val updatedMessages = memoryManager.updateMessage { message ->
-            if (message.chatId == event.messageId) {
+            if (message.messageId == event.messageId) {
                 message.copy(
                     message = event.newContent,
                     isModified = true,
@@ -785,7 +769,7 @@ class MessageService(
         // 2. 캐시 매니저가 활성화된 경우 로컬 캐시도 업데이트
         if (chatCacheManager != null) {
             try {
-                val channelId = roomId.removePrefix("chat_room_")
+                val channelId = roomId  // roomId는 이제 순수한 channelId
                 val updatedDomainMessage = Message.fromDataSource(
                     id = DocumentId(event.messageId),
                     senderId = UserId(event.senderId),
@@ -826,7 +810,7 @@ class MessageService(
     suspend fun handleMessageDelete(event: ChatWebSocketEvent.MessageDeleted): MessageResult {
         // 1. 메모리에서 메시지 삭제 표시
         val updatedMessages = memoryManager.updateMessage { message ->
-            if (message.chatId == event.messageId) {
+            if (message.messageId == event.messageId) {
                 message.copy(isDeleted = true)
             } else {
                 null
@@ -836,7 +820,7 @@ class MessageService(
         // 2. 캐시 매니저가 활성화된 경우 로컬 캐시도 업데이트
         if (chatCacheManager != null) {
             try {
-                val channelId = roomId.removePrefix("chat_room_")
+                val channelId = roomId  // roomId는 이제 순수한 channelId
                 val deletedDomainMessage = Message.fromDataSource(
                     id = DocumentId(event.messageId),
                     senderId = UserId(event.senderId),
@@ -875,19 +859,23 @@ class MessageService(
         tempUiMessage: ChatMessageUiModel,
         senderId: String
     ): SendMessageResult {
-        when (val result = chatUseCases.sendMessageUseCase(
-            senderId = message.senderId, 
-            content = message.content, 
-            mentions = message.mentions
-        )) {
+        Log.d(
+            "MessageService",
+            "WebSocket failed, using Firestore fallback for: ${message.id.value}"
+        )
+
+        // WebSocket 실패 시 Firestore로 직접 전송 (fallback)
+        when (val result = chatUseCases.sendMessageUseCase(message)) {
             is CustomResult.Success -> {
+                Log.d("MessageService", "Message sent via Firestore fallback: ${message.id.value}")
+                
                 // Ensure profile is loaded for the actual message too
                 userProfileService.loadUserProfile(result.data.senderId.value)
 
                 // 로컬 캐시에 저장 (Firestore 전송 성공 시)
                 if (chatCacheManager != null) {
                     try {
-                        val channelId = roomId.removePrefix("chat_room_")
+                        val channelId = roomId  // roomId는 이제 순수한 channelId
                         chatCacheManager.addRealtimeMessage(channelId, result.data)
                         Log.d(
                             "MessageService",
@@ -909,7 +897,7 @@ class MessageService(
                     getUserProfileUrl = userProfileService::getUserProfileUrl,
                     getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                     getUserIdByUsername = userProfileService::getUserIdByUsername,
-                    findReplyToMessage = { messageId -> memoryManager.messages.find { it.chatId == messageId } }
+                    findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
                 )
                 
                 return SendMessageResult(
@@ -933,6 +921,136 @@ class MessageService(
     
     private fun generateTempId(): String = "temp_${++tempMessageCounter}"
     
+    /**
+     * 실패한 메시지를 재전송합니다.
+     */
+    suspend fun retryMessage(
+        messageId: String,
+        content: String,
+        senderId: String,
+        roomId: String,
+        attachmentUris: List<Uri> = emptyList(),
+        replyToMessageId: String? = null
+    ): SendMessageResult {
+        Log.d("MessageService", "Retrying message: $messageId")
+
+        // 현재는 첨부파일과 답장 미지원으로 단순한 텍스트 메시지만 재전송
+        if (attachmentUris.isNotEmpty()) {
+            return SendMessageResult(
+                success = false,
+                error = "첨부파일이 있는 메시지의 재전송은 현재 지원되지 않습니다"
+            )
+        }
+
+        return try {
+            // WebSocket 연결 상태 확인
+            when (webSocketClient.connectionState.value) {
+                is WebSocketConnectionState.Connected -> {
+                    // WebSocket으로 재전송 시도
+                    val result = webSocketClient.sendMessage(
+                        roomId = roomId,
+                        senderId = UserId(senderId),
+                        content = content,
+                        messageId = DocumentId(messageId),
+                        projectId = projectId,
+                        channelType = channelType
+                    )
+                    if (result.isSuccess) {
+                        Log.d("MessageService", "Message retry sent via WebSocket: $messageId")
+                        SendMessageResult(success = true)
+                    } else {
+                        val error = result.exceptionOrNull()
+                        Log.w(
+                            "MessageService",
+                            "WebSocket retry failed for: $messageId, error: $error"
+                        )
+
+                        // WebSocket 실패 시 Firestore로 폴백
+                        retryViaFirestore(messageId, content, senderId)
+                    }
+                }
+
+                else -> {
+                    Log.d(
+                        "MessageService",
+                        "WebSocket disconnected, retrying via Firestore: $messageId"
+                    )
+
+                    // WebSocket 연결 안됨 - Firestore로 직접 재전송
+                    retryViaFirestore(messageId, content, senderId)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MessageService", "Error retrying message: $messageId", e)
+            SendMessageResult(
+                success = false,
+                error = "재전송 중 오류 발생: ${e.message}"
+            )
+        }
+    }
+
+    /**
+     * Firestore를 통한 메시지 재전송
+     */
+    private suspend fun retryViaFirestore(
+        messageId: String,
+        content: String,
+        senderId: String
+    ): SendMessageResult {
+        return try {
+            // 멘션 파싱
+            val mentions = MentionParser.parseAllMentions(content) { null }
+
+            // Firestore에 직접 저장
+            val result = chatUseCases.sendMessageUseCase(
+                senderId = UserId(senderId),
+                content = MessageContent(content),
+                mentions = mentions
+            )
+
+            when (result) {
+                is CustomResult.Success -> {
+                    Log.d("MessageService", "Message retry succeeded via Firestore: $messageId")
+
+                    // 성공시 로컬 캐시에도 저장
+                    if (chatCacheManager != null) {
+                        try {
+                            val channelId = roomId  // roomId는 이제 순수한 channelId
+                            chatCacheManager.addRealtimeMessage(channelId, result.data)
+                        } catch (e: Exception) {
+                            Log.w("MessageService", "Failed to cache retry message: $messageId", e)
+                        }
+                    }
+
+                    SendMessageResult(
+                        success = true
+                    )
+                }
+
+                is CustomResult.Failure -> {
+                    Log.w(
+                        "MessageService",
+                        "Firestore retry failed for: $messageId, error: ${result.error}"
+                    )
+                    SendMessageResult(
+                        success = false,
+                        error = "Firestore 재전송 실패: ${result.error}"
+                    )
+                }
+
+                else -> {
+                    SendMessageResult(success = false, error = "재전송 처리 중...")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MessageService", "Firestore retry error for: $messageId", e)
+            SendMessageResult(
+                success = false,
+                error = "Firestore 재전송 오류: ${e.message}"
+            )
+        }
+    }
+
     /**
      * 현재 메모리 상태 정보 조회
      */
@@ -993,8 +1111,7 @@ private suspend fun Message.toUiModel(
     }
     
     return ChatMessageUiModel(
-        localId = tempIdGenerator(),
-        chatId = this.id.value,
+        messageId = this.id.value,
         userId = this.senderId.value,
         userName = getUserDisplayName(this.senderId.value),
         userProfileUrl = getCachedProfileUrl(this.senderId.value) ?: getUserProfileUrl(this.senderId.value),

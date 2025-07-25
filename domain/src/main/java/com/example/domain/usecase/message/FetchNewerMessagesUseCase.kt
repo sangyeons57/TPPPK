@@ -2,8 +2,7 @@ package com.example.domain.usecase.message
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
-import com.example.domain.repository.base.MessageRepository
-import com.google.firebase.firestore.Source
+import com.example.domain.repository.base.ChatCacheRepository
 import java.time.Instant
 import javax.inject.Inject
 
@@ -12,7 +11,7 @@ import javax.inject.Inject
  * 양방향 로딩을 위해 사용됩니다.
  */
 class FetchNewerMessagesUseCase @Inject constructor(
-    private val messageRepository: MessageRepository
+    private val chatCacheRepository: ChatCacheRepository
 ) {
     suspend operator fun invoke(
         afterTimestamp: Instant,
@@ -20,24 +19,18 @@ class FetchNewerMessagesUseCase @Inject constructor(
         useCache: Boolean = true
     ): CustomResult<List<Message>, Exception> {
         return try {
-            val source = if (useCache) Source.DEFAULT else Source.SERVER
-            
-            when (val result = messageRepository.findAll(source)) {
-                is CustomResult.Success -> {
-                    // Client-side filtering for messages newer than the given timestamp
-                    // TODO: Implement proper Firestore query with timestamp-based pagination
-                    val newerMessages = result.data.filterIsInstance<Message>()
-                        .filter { it.createdAt.isAfter(afterTimestamp) }
-                        .sortedByDescending { it.createdAt }
-                        .take(limit)
-                    
-                    CustomResult.Success(newerMessages)
-                }
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                is CustomResult.Initial -> CustomResult.Failure(IllegalStateException("Repository returned Initial state"))
-                is CustomResult.Loading -> CustomResult.Failure(IllegalStateException("Repository returned Loading state"))
-                is CustomResult.Progress -> CustomResult.Failure(IllegalStateException("Repository returned Progress state"))
-            }
+            // Force incremental sync to get newer messages
+            chatCacheRepository.syncChannelIncremental(forceSync = !useCache)
+
+            // Get messages with sync and filter for newer messages
+            val allMessages =
+                chatCacheRepository.getMessagesWithSync(limit * 2) // Get more to filter
+            val newerMessages = allMessages
+                .filter { it.createdAt.isAfter(afterTimestamp) }
+                .sortedByDescending { it.createdAt }
+                .take(limit)
+
+            CustomResult.Success(newerMessages)
         } catch (e: Exception) {
             CustomResult.Failure(e)
         }

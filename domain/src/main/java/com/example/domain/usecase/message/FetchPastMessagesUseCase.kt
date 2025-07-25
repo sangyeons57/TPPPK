@@ -2,13 +2,12 @@ package com.example.domain.usecase.message
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
-import com.example.domain.repository.base.MessageRepository
-import com.google.firebase.firestore.Source
+import com.example.domain.repository.base.ChatCacheRepository
 import java.time.Instant
 import javax.inject.Inject
 
 class FetchPastMessagesUseCase @Inject constructor(
-    private val messageRepository: MessageRepository
+    private val chatCacheRepository: ChatCacheRepository
 ) {
     suspend operator fun invoke(
         limit: Int = 50,
@@ -16,28 +15,15 @@ class FetchPastMessagesUseCase @Inject constructor(
         useCache: Boolean = true
     ): CustomResult<List<Message>, Exception> {
         return try {
-            val source = if (useCache) Source.DEFAULT else Source.SERVER
-            
-            when (val result = messageRepository.findAll(source)) {
-                is CustomResult.Success -> {
-                    val messages = result.data.filterIsInstance<Message>()
-                        .let { allMessages ->
-                            if (beforeTimestamp != null) {
-                                // Filter messages older than the given timestamp
-                                allMessages.filter { it.createdAt.isBefore(beforeTimestamp) }
-                            } else {
-                                allMessages
-                            }
-                        }
-                        .sortedByDescending { it.createdAt }
-                        .take(limit)
-                    CustomResult.Success(messages)
-                }
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                is CustomResult.Initial -> CustomResult.Failure(IllegalStateException("Repository returned Initial state"))
-                is CustomResult.Loading -> CustomResult.Failure(IllegalStateException("Repository returned Loading state"))
-                is CustomResult.Progress -> CustomResult.Failure(IllegalStateException("Repository returned Progress state"))
+            val messages = if (beforeTimestamp != null) {
+                // Load more past messages before the specified timestamp
+                chatCacheRepository.loadMoreMessages(beforeTimestamp, limit)
+            } else {
+                // Get messages with sync (cache-first approach)
+                chatCacheRepository.getMessagesWithSync(limit)
             }
+
+            CustomResult.Success(messages.sortedByDescending { it.createdAt })
         } catch (e: Exception) {
             CustomResult.Failure(e)
         }

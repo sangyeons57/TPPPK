@@ -5,6 +5,7 @@ sealed class MessageDeliveryState {
     data object Sent : MessageDeliveryState()
     data object Delivered : MessageDeliveryState()
     data class Failed(val error: String) : MessageDeliveryState()
+    data object Retry : MessageDeliveryState() // 재전송 대기 상태
 }
 
 data class OptimisticMessage(

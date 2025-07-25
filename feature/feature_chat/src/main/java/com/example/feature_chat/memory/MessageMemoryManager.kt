@@ -20,12 +20,9 @@ class MessageMemoryManager {
     // 현재 메모리에 있는 메시지 목록 (timestamp 기준 내림차순 정렬)
     private val _messages = mutableListOf<ChatMessageUiModel>()
     val messages: List<ChatMessageUiModel> get() = _messages.toList()
-    
-    // 빠른 중복 검사를 위한 Set (chatId 기반)
+
+    // 빠른 중복 검사를 위한 Set (messageId 기반)
     private val _messageIds = mutableSetOf<String>()
-    
-    // 빠른 로컬 ID 검색을 위한 Map
-    private val _localIdToMessageMap = mutableMapOf<String, ChatMessageUiModel>()
     
     // 메시지 윈도우 경계 추적
     private var oldestMessageTimestamp: Instant? = null
@@ -44,7 +41,6 @@ class MessageMemoryManager {
         // Clear all data structures
         _messages.clear()
         _messageIds.clear()
-        _localIdToMessageMap.clear()
         
         // Add sorted messages and update indices
         val sortedMessages = messages.sortedByDescending { it.actualTimestamp }
@@ -52,8 +48,7 @@ class MessageMemoryManager {
         
         // Build indices for fast lookups
         sortedMessages.forEach { message ->
-            _messageIds.add(message.chatId)
-            _localIdToMessageMap[message.localId] = message
+            _messageIds.add(message.messageId)
         }
         
         updateBoundaries()
@@ -65,26 +60,24 @@ class MessageMemoryManager {
      * 새로운 실시간 메시지 추가 (가장 최신 메시지로 추가)
      */
     fun addNewestMessage(message: ChatMessageUiModel): List<ChatMessageUiModel> {
-        Log.d("MessageMemoryManager", "Adding newest message: ${message.chatId}")
+        Log.d("MessageMemoryManager", "Adding newest message: ${message.messageId}")
         
         // 빠른 중복 검사
-        if (_messageIds.contains(message.chatId)) {
+        if (_messageIds.contains(message.messageId)) {
             Log.d("MessageMemoryManager", "Message already exists, skipping")
             return messages
         }
         
         // 최신 메시지로 추가 (리스트 맨 앞에)
         _messages.add(0, message)
-        _messageIds.add(message.chatId)
-        _localIdToMessageMap[message.localId] = message
+        _messageIds.add(message.messageId)
         
         // 메모리 정리 수행
         val removedMessages = performMemoryCleanupIfNeeded(CleanupDirection.REMOVE_OLDEST)
         
         // 제거된 메시지들의 인덱스도 업데이트
         removedMessages.forEach { removedMessage ->
-            _messageIds.remove(removedMessage.chatId)
-            _localIdToMessageMap.remove(removedMessage.localId)
+            _messageIds.remove(removedMessage.messageId)
         }
         
         updateBoundaries()
@@ -110,7 +103,7 @@ class MessageMemoryManager {
         
         // 빠른 중복 제거 및 정렬
         val newMessages = olderMessages
-            .filter { newMsg -> !_messageIds.contains(newMsg.chatId) }
+            .filter { newMsg -> !_messageIds.contains(newMsg.messageId) }
             .sortedByDescending { it.actualTimestamp }
         
         // 기존 메시지 뒤에 추가
@@ -119,8 +112,7 @@ class MessageMemoryManager {
         
         // 인덱스 업데이트
         newMessages.forEach { message ->
-            _messageIds.add(message.chatId)
-            _localIdToMessageMap[message.localId] = message
+            _messageIds.add(message.messageId)
         }
         
         // 메모리 정리 수행
@@ -158,7 +150,7 @@ class MessageMemoryManager {
         
         // 빠른 중복 제거 및 정렬
         val newMessages = newerMessages
-            .filter { newMsg -> !_messageIds.contains(newMsg.chatId) }
+            .filter { newMsg -> !_messageIds.contains(newMsg.messageId) }
             .sortedByDescending { it.actualTimestamp }
         
         // 기존 메시지 앞에 추가
@@ -166,8 +158,7 @@ class MessageMemoryManager {
         
         // 인덱스 업데이트
         newMessages.forEach { message ->
-            _messageIds.add(message.chatId)
-            _localIdToMessageMap[message.localId] = message
+            _messageIds.add(message.messageId)
         }
         
         // 메모리 정리 수행
@@ -200,18 +191,12 @@ class MessageMemoryManager {
                 _messages[i] = updated
                 
                 // 인덱스 업데이트 (ID가 변경된 경우)
-                if (original.chatId != updated.chatId) {
-                    _messageIds.remove(original.chatId)
-                    _messageIds.add(updated.chatId)
+                if (original.messageId != updated.messageId) {
+                    _messageIds.remove(original.messageId)
+                    _messageIds.add(updated.messageId)
                 }
-                if (original.localId != updated.localId) {
-                    _localIdToMessageMap.remove(original.localId)
-                    _localIdToMessageMap[updated.localId] = updated
-                } else {
-                    _localIdToMessageMap[updated.localId] = updated
-                }
-                
-                Log.d("MessageMemoryManager", "Message updated: ${updated.chatId}")
+
+                Log.d("MessageMemoryManager", "Message updated: ${updated.messageId}")
                 break
             }
         }
@@ -219,17 +204,10 @@ class MessageMemoryManager {
     }
     
     /**
-     * 로컬 ID를 통한 빠른 메시지 검색
+     * 메시지 ID를 통한 메시지 존재 여부 확인
      */
-    fun findMessageByLocalId(localId: String): ChatMessageUiModel? {
-        return _localIdToMessageMap[localId]
-    }
-    
-    /**
-     * 채팅 ID를 통한 메시지 존재 여부 확인
-     */
-    fun containsMessage(chatId: String): Boolean {
-        return _messageIds.contains(chatId)
+    fun containsMessage(messageId: String): Boolean {
+        return _messageIds.contains(messageId)
     }
     
     /**
@@ -241,10 +219,9 @@ class MessageMemoryManager {
         
         while (iterator.hasNext()) {
             val message = iterator.next()
-            if (message.chatId == messageId) {
+            if (message.messageId == messageId) {
                 iterator.remove()
-                _messageIds.remove(message.chatId)
-                _localIdToMessageMap.remove(message.localId)
+                _messageIds.remove(message.messageId)
                 removed = true
                 Log.d("MessageMemoryManager", "Message removed: $messageId")
                 break // 중복이 없으므로 첫 번째 매치에서 중단
@@ -284,14 +261,16 @@ class MessageMemoryManager {
                         val message = _messages[index]
                         
                         if (shouldProtectMessage(message)) {
-                            Log.d("MessageMemoryManager", "Protecting message from cleanup: ${message.localId} (recent or sending)")
+                            Log.d(
+                                "MessageMemoryManager",
+                                "Protecting message from cleanup: ${message.messageId} (recent or sending)"
+                            )
                             index--
                             continue
                         }
                         
                         val removedMessage = _messages.removeAt(index)
-                        _messageIds.remove(removedMessage.chatId)
-                        _localIdToMessageMap.remove(removedMessage.localId)
+                        _messageIds.remove(removedMessage.messageId)
                         removedMessages.add(removedMessage)
                         removed++
                         index--
@@ -309,14 +288,16 @@ class MessageMemoryManager {
                         val message = _messages[index]
                         
                         if (shouldProtectMessage(message)) {
-                            Log.d("MessageMemoryManager", "Protecting message from cleanup: ${message.localId} (recent or sending)")
+                            Log.d(
+                                "MessageMemoryManager",
+                                "Protecting message from cleanup: ${message.messageId} (recent or sending)"
+                            )
                             index++
                             continue
                         }
                         
                         val removedMessage = _messages.removeAt(index)
-                        _messageIds.remove(removedMessage.chatId)
-                        _localIdToMessageMap.remove(removedMessage.localId)
+                        _messageIds.remove(removedMessage.messageId)
                         removedMessages.add(removedMessage)
                         removed++
                         // index는 증가시키지 않음 (제거된 다음 메시지가 같은 인덱스로 이동)

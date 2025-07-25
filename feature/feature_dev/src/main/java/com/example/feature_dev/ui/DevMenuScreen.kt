@@ -301,7 +301,7 @@ fun DevMenuScreen(
             ) {
                 if (!isLoggedIn) {
                     Button(
-                        onClick = { navigationManger.navigateTo(com.example.core_navigation.core.LoginRoute) },
+                        onClick = { navigationManger.navigateTo(LoginRoute) },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("로그인하기")
@@ -502,6 +502,61 @@ fun DevMenuScreen(
             }
 
             Spacer(modifier = Modifier.height(30.dp)) // 하단 여백
+
+            /* ----------------------------------------- */
+            /* 로컬 채팅 캐시 전체 삭제 테스트              */
+            /* ----------------------------------------- */
+            Text(
+                "--- 로컬 채팅 캐시 ---",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            if (viewModel.isLocalChatCacheClearing.collectAsState().value) {
+                Button(
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("로컬 채팅 캐시 삭제 중...")
+                }
+            } else {
+                DevMenuButton(text = "로컬 채팅 캐시 전체 삭제") {
+                    viewModel.clearAllLocalChatCache()
+                }
+            }
+
+            // 삭제 결과 표시
+            val localChatCacheClearResult =
+                viewModel.localChatCacheClearResult.collectAsState().value
+            if (localChatCacheClearResult.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (localChatCacheClearResult.startsWith("성공"))
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "결과:",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = localChatCacheClearResult,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
         }
     }
 }

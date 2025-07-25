@@ -84,6 +84,11 @@ interface ChatCacheManager {
      */
     suspend fun clearChannelCache(channelId: String)
 
+    /**
+     * 모든 채널의 로컬 채팅 캐시 전체 삭제 (앱 데이터 초기화)
+     */
+    suspend fun clearAllCache()
+
 
     /**
      * WebSocket 연결 복구 시 동기화

@@ -1,7 +1,7 @@
 package com.example.core_common.websocket
 
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 @Serializable
 data class WebSocketMessage(
@@ -12,7 +12,9 @@ data class WebSocketMessage(
     @SerialName("timestamp") val timestamp: Double? = null,
     @SerialName("messageId") val messageId: String? = null,
     @SerialName("replyToMessageId") val replyToMessageId: String? = null,
-    @SerialName("payload") val payload: Map<String, String>? = null
+    @SerialName("payload") val payload: Map<String, String>? = null,
+    @SerialName("projectId") val projectId: String? = null,
+    @SerialName("channelType") val channelType: String? = null
 ) {
     companion object {
         // Message Types
@@ -27,5 +29,9 @@ data class WebSocketMessage(
         const val TYPE_ACK = "ACK"
         const val TYPE_ERROR = "ERROR"
         const val TYPE_HEARTBEAT = "HEARTBEAT"
+
+        // Channel Types
+        const val CHANNEL_TYPE_DM = "DM"
+        const val CHANNEL_TYPE_PROJECT = "PROJECT"
     }
 }

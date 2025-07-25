@@ -1,16 +1,16 @@
 package com.example.feature_dev.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.websocket.WebSocketConnectionState
+import com.example.data.cache.ChatCacheManager
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain.provider.dev.DevMenuUseCaseProvider
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
-import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
-import com.example.domain.provider.dev.DevMenuUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +23,8 @@ import javax.inject.Inject
 class DevMenuViewModel @Inject constructor(
     private val webSocketClient: ChatWebSocketClient,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
-    private val devMenuUseCaseProvider: DevMenuUseCaseProvider
+    private val devMenuUseCaseProvider: DevMenuUseCaseProvider,
+    private val chatCacheManager: ChatCacheManager // 추가
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -90,6 +91,14 @@ class DevMenuViewModel @Inject constructor(
 
     private val TEST_ROOM_ID = "test_websocket_room"
     private val SERVER_URL = "wss://websocket-chat-wizwlraydq-du.a.run.app/chat"
+
+    // 로컬 채팅 캐시 삭제 진행 상태
+    private val _isLocalChatCacheClearing = MutableStateFlow(false)
+    val isLocalChatCacheClearing: StateFlow<Boolean> = _isLocalChatCacheClearing.asStateFlow()
+
+    // 로컬 채팅 캐시 삭제 결과
+    private val _localChatCacheClearResult = MutableStateFlow("")
+    val localChatCacheClearResult: StateFlow<String> = _localChatCacheClearResult.asStateFlow()
 
     init {
         // 로그인 상태 확인
@@ -189,6 +198,24 @@ class DevMenuViewModel @Inject constructor(
             _cacheClearResult.value = "정보: Firestore는 네이티브 캐싱을 사용합니다. 수동 캐시 삭제가 필요하지 않습니다."
 
             _isCacheClearing.value = false
+        }
+    }
+
+    /**
+     * 로컬 채팅 캐시 전체 삭제
+     */
+    fun clearAllLocalChatCache() {
+        viewModelScope.launch {
+            _isLocalChatCacheClearing.value = true
+            _localChatCacheClearResult.value = "로컬 채팅 캐시 삭제 중..."
+            try {
+                chatCacheManager.clearAllCache()
+                _localChatCacheClearResult.value = "성공: 모든 채팅 캐시가 삭제되었습니다."
+            } catch (e: Exception) {
+                _localChatCacheClearResult.value = "실패: ${e.message ?: "알 수 없는 오류"}"
+            } finally {
+                _isLocalChatCacheClearing.value = false
+            }
         }
     }
 

@@ -5,10 +5,10 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
-import com.example.core_common.util.DateTimeUtil
 import com.example.data.utils.DebugChatLogger
 import com.example.domain.model.vo.MentionType
 import com.example.domain.model.vo.message.MentionInfo
@@ -16,17 +16,20 @@ import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.MentionSuggestion
-import com.example.feature_chat.model.ChatParticipant
-import com.example.feature_chat.model.ProjectMember
-import com.example.feature_chat.model.ProjectRole
 import com.example.feature_chat.service.ChatServiceProvider
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -142,7 +145,7 @@ class WebSocketChatViewModel @Inject constructor(
                 }
                 
                 when (connectionInfo.state) {
-                    is com.example.core_common.websocket.WebSocketConnectionState.Error -> {
+                    is WebSocketConnectionState.Error -> {
                         _eventFlow.emit(ChatEvent.Error("연결 오류: ${connectionInfo.state.message}"))
                     }
                     else -> { /* Handle other states if needed */ }
@@ -167,7 +170,7 @@ class WebSocketChatViewModel @Inject constructor(
 
     private fun observeWebSocketMessages() {
         viewModelScope.launch {
-            val roomId = "chat_room_$channelId"
+            val roomId = channelId  // 접두사 제거 - 단순히 channelId만 사용
             services.connectionService.getChatMessageEvents(roomId).collect { event ->
                 when (event) {
                     is ChatWebSocketEvent.MessageReceived -> {
@@ -215,7 +218,7 @@ class WebSocketChatViewModel @Inject constructor(
                     result.messages.filterNot { message ->
                         message.userId == userId && message.isOptimistic && (
                                 // 1순위: messageId 정확한 매칭
-                                message.chatId == event.messageId ||
+                                message.messageId == event.messageId ||
                                         // 2순위: 내용 기반 매칭 (백업)
                                         message.message.trim() == event.content.trim()
                                 )
@@ -265,7 +268,7 @@ class WebSocketChatViewModel @Inject constructor(
         
         _uiState.update { state ->
             val updatedMessages = state.messages.map { message ->
-                if (message.chatId == event.messageId && message.isOptimistic) {
+                if (message.messageId == event.messageId && message.isOptimistic) {
                     Log.d("ViewModel", "Marking message as successfully sent: ${event.messageId}")
                     message.copy(
                         isSending = false,
@@ -288,11 +291,14 @@ class WebSocketChatViewModel @Inject constructor(
         
         _uiState.update { state ->
             val updatedMessages = state.messages.map { message ->
-                if (message.chatId == event.messageId && message.isOptimistic) {
+                if (message.messageId == event.messageId && message.isOptimistic) {
                     Log.d("ViewModel", "Marking message as failed: ${event.messageId}")
                     message.copy(
                         isSending = false,
                         sendFailed = true,
+                        canRetry = true,
+                        deliveryState = com.example.feature_chat.model.MessageDeliveryState.Failed("전송 실패"),
+                        errorMessage = "메시지 전송에 실패했습니다",
                         formattedTimestamp = "전송 실패"
                     )
                 } else {
@@ -348,14 +354,14 @@ class WebSocketChatViewModel @Inject constructor(
 
         // 웹소켓 연결 상태 확인
         val connectionState = _uiState.value.connectionState
-        if (connectionState !is com.example.core_common.websocket.WebSocketConnectionState.Connected) {
+        if (connectionState !is WebSocketConnectionState.Connected) {
             viewModelScope.launch {
                 val statusMessage = when (connectionState) {
-                    is com.example.core_common.websocket.WebSocketConnectionState.Connecting -> 
+                    is WebSocketConnectionState.Connecting ->
                         "연결 중입니다. 잠시만 기다려주세요."
-                    is com.example.core_common.websocket.WebSocketConnectionState.Disconnected -> 
+                    is WebSocketConnectionState.Disconnected ->
                         "서버와 연결이 끊어져 있습니다. 연결을 다시 시도해주세요."
-                    is com.example.core_common.websocket.WebSocketConnectionState.Error -> 
+                    is WebSocketConnectionState.Error ->
                         "연결 오류가 발생했습니다: ${connectionState.message}"
                     else -> "메시지 전송이 불가능한 상태입니다."
                 }
@@ -373,29 +379,37 @@ class WebSocketChatViewModel @Inject constructor(
             )
             
             if (result.success && result.tempMessage != null) {
-                // Add optimistic message to UI with isSending = true
+                // 낙관적 UI 업데이트: 전송 중 상태로 메시지 즉시 표시
                 _uiState.update { state ->
                     val tempMessageWithDisplayFormat = result.tempMessage.copy(
-                        message = convertInternalToDisplayFormat(result.tempMessage.message)
+                        message = convertInternalToDisplayFormat(result.tempMessage.message),
+                        isSending = true,
+                        sendFailed = false,
+                        deliveryState = com.example.feature_chat.model.MessageDeliveryState.Sending
                     )
                     state.copy(messages = listOf(tempMessageWithDisplayFormat) + state.messages)
                 }
                 
                 // ACK 기반 메시지 상태 관리: 서버에서 ACK/FAILED 메시지로 상태 업데이트
                 // 30초 타임아웃 백업 시스템 - ACK가 도착하지 않을 경우 대비
-                startMessageTimeout(result.tempMessage.chatId)
-                
-                // If we have actual message, replace temp message immediately
+                startMessageTimeout(result.tempMessage.messageId)
+
+                // 실제 메시지가 있는 경우 즉시 성공 상태로 변경 (Firestore 경로)
                 result.actualMessage?.let { actualMessage ->
                     _uiState.update { state ->
                         val updatedMessages = state.messages.map {
-                            if (it.localId == result.tempMessage.localId) {
-                                Log.d("ViewModel", "Replacing temp message with actual message: ${it.localId}")
+                            if (it.messageId == result.tempMessage.messageId) {
+                                Log.d(
+                                    "ViewModel",
+                                    "Message sent successfully via Firestore: ${it.messageId}"
+                                )
                                 actualMessage.copy(
                                     isOptimistic = false,
                                     isSending = false,
                                     sendFailed = false,
-                                    clientSentAt = result.tempMessage.clientSentAt // 원래 전송 시간 유지
+                                    deliveryState = com.example.feature_chat.model.MessageDeliveryState.Sent,
+                                    clientSentAt = result.tempMessage.clientSentAt, // 원래 전송 시간 유지
+                                    formattedTimestamp = DateTimeUtil.formatChatTime(actualMessage.actualTimestamp)
                                 )
                             } else {
                                 it
@@ -413,11 +427,19 @@ class WebSocketChatViewModel @Inject constructor(
                 result.tempMessage?.let { tempMessage ->
                     _uiState.update { state ->
                         val updatedMessages = state.messages.map {
-                            if (it.localId == tempMessage.localId) {
-                                Log.d("ViewModel", "Marking temp message as failed: ${it.localId}")
+                            if (it.messageId == tempMessage.messageId) {
+                                Log.d(
+                                    "ViewModel",
+                                    "Marking temp message as failed: ${it.messageId}"
+                                )
                                 it.copy(
                                     isSending = false,
                                     sendFailed = true,
+                                    canRetry = true,
+                                    deliveryState = com.example.feature_chat.model.MessageDeliveryState.Failed(
+                                        "전송 실패"
+                                    ),
+                                    errorMessage = result.error ?: "메시지 전송에 실패했습니다",
                                     formattedTimestamp = "전송 실패"
                                 )
                             } else {
@@ -743,14 +765,14 @@ class WebSocketChatViewModel @Inject constructor(
         
         // 웹소켓 연결 상태 확인 후 전송
         val connectionState = _uiState.value.connectionState
-        if (connectionState !is com.example.core_common.websocket.WebSocketConnectionState.Connected) {
+        if (connectionState !is WebSocketConnectionState.Connected) {
             viewModelScope.launch {
                 val statusMessage = when (connectionState) {
-                    is com.example.core_common.websocket.WebSocketConnectionState.Connecting -> 
+                    is WebSocketConnectionState.Connecting ->
                         "연결 중입니다. 잠시만 기다려주세요."
-                    is com.example.core_common.websocket.WebSocketConnectionState.Disconnected -> 
+                    is WebSocketConnectionState.Disconnected ->
                         "서버와 연결이 끊어져 있습니다."
-                    is com.example.core_common.websocket.WebSocketConnectionState.Error -> 
+                    is WebSocketConnectionState.Error ->
                         "연결 오류: ${connectionState.message}"
                     else -> "메시지 전송이 불가능합니다."
                 }
@@ -1042,7 +1064,7 @@ class WebSocketChatViewModel @Inject constructor(
     private fun updateMessageStateIfStillSending(messageId: String) {
         _uiState.update { state ->
             val updatedMessages = state.messages.map { message ->
-                if (message.chatId == messageId && message.isOptimistic && message.isSending) {
+                if (message.messageId == messageId && message.isOptimistic && message.isSending) {
                     Log.d("ViewModel", "Timeout: Marking message as sent (optimistic): $messageId")
                     message.copy(
                         isSending = false,
@@ -1060,6 +1082,127 @@ class WebSocketChatViewModel @Inject constructor(
         // 타임아웃 Job 정리
         messageTimeoutJobs.remove(messageId)
     }
+
+    /**
+     * 실패한 메시지를 재전송합니다.
+     */
+    fun retryMessage(messageId: String) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val failedMessage = currentState.messages.find {
+                it.messageId == messageId && it.sendFailed
+            }
+
+            if (failedMessage == null) {
+                Log.w("ViewModel", "Failed message not found for retry: $messageId")
+                return@launch
+            }
+
+            // 재전송 횟수 체크 (최대 3회)
+            if (failedMessage.retryCount >= 3) {
+                _eventFlow.emit(ChatEvent.Error("최대 재전송 횟수를 초과했습니다"))
+                return@launch
+            }
+
+            Log.d(
+                "ViewModel",
+                "Retrying message: $messageId (attempt ${failedMessage.retryCount + 1})"
+            )
+
+            // 메시지 상태를 재전송 대기로 변경
+            _uiState.update { state ->
+                val updatedMessages = state.messages.map { message ->
+                    if (message.messageId == messageId) {
+                        message.copy(
+                            deliveryState = com.example.feature_chat.model.MessageDeliveryState.Retry,
+                            sendFailed = false,
+                            retryCount = message.retryCount + 1,
+                            canRetry = false
+                        )
+                    } else {
+                        message
+                    }
+                }
+                state.copy(messages = updatedMessages.applyDisplayFormatConversion())
+            }
+
+            delay(1000) // 1초 대기 후 재전송
+
+            // 다시 전송 시도
+            try {
+                val result = services.messageService.retryMessage(
+                    messageId = messageId,
+                    content = failedMessage.message,
+                    senderId = currentUserId ?: return@launch,
+                    roomId = channelId,  // 단순히 channelId만 사용
+                    attachmentUris = emptyList(), // 현재는 첨부파일 재전송 미지원
+                    replyToMessageId = failedMessage.replyToMessageId
+                )
+
+                if (result.success) {
+                    // 성공 시 전송 중 상태로 변경
+                    _uiState.update { state ->
+                        val updatedMessages = state.messages.map { message ->
+                            if (message.messageId == messageId) {
+                                message.copy(
+                                    deliveryState = com.example.feature_chat.model.MessageDeliveryState.Sending,
+                                    isSending = true
+                                )
+                            } else {
+                                message
+                            }
+                        }
+                        state.copy(messages = updatedMessages.applyDisplayFormatConversion())
+                    }
+
+                    // 재전송 타임아웃 시작
+                    startMessageTimeout(messageId)
+                } else {
+                    // 실패 시 다시 실패 상태로 변경
+                    _uiState.update { state ->
+                        val updatedMessages = state.messages.map { message ->
+                            if (message.messageId == messageId) {
+                                message.copy(
+                                    deliveryState = com.example.feature_chat.model.MessageDeliveryState.Failed(
+                                        "재전송 실패"
+                                    ),
+                                    sendFailed = true,
+                                    canRetry = message.retryCount < 3,
+                                    errorMessage = "재전송에 실패했습니다"
+                                )
+                            } else {
+                                message
+                            }
+                        }
+                        state.copy(messages = updatedMessages.applyDisplayFormatConversion())
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error retrying message: $messageId", e)
+
+                // 예외 발생 시 실패 상태로 변경
+                _uiState.update { state ->
+                    val updatedMessages = state.messages.map { message ->
+                        if (message.messageId == messageId) {
+                            message.copy(
+                                deliveryState = com.example.feature_chat.model.MessageDeliveryState.Failed(
+                                    e.message ?: "알 수 없는 오류"
+                                ),
+                                sendFailed = true,
+                                canRetry = message.retryCount < 3,
+                                errorMessage = e.message ?: "재전송 중 오류가 발생했습니다"
+                            )
+                        } else {
+                            message
+                        }
+                    }
+                    state.copy(messages = updatedMessages.applyDisplayFormatConversion())
+                }
+
+                _eventFlow.emit(ChatEvent.Error("메시지 재전송에 실패했습니다: ${e.message}"))
+            }
+        }
+    }
     
     override fun onCleared() {
         super.onCleared()
@@ -1071,7 +1214,7 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             // Leave room when ViewModel is cleared
             // Note: The actual room leaving is handled by the WebSocketClient
-            Log.d("ViewModel", "Left chat room: chat_room_$channelId (GlobalWebSocketService remains active)")
+            Log.d("ViewModel", "Left chat room: $channelId (GlobalWebSocketService remains active)")
         }
     }
 }

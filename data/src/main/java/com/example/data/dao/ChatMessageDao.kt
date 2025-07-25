@@ -1,6 +1,10 @@
 package com.example.data.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.example.data.model.local.ChatMessageEntity
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -173,6 +177,12 @@ interface ChatMessageDao {
      */
     @Query("DELETE FROM chat_messages WHERE channelId = :channelId")
     suspend fun deleteAllMessages(channelId: String)
+
+    /**
+     * 모든 채널의 모든 메시지 삭제 (앱 데이터 초기화용)
+     */
+    @Query("DELETE FROM chat_messages")
+    suspend fun deleteAllMessagesFromAllChannels()
 
     /**
      * 특정 메시지 존재 여부 확인

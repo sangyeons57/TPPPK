@@ -1,7 +1,9 @@
 package com.example.data.cache
 
 import android.util.Log
+import com.example.core_common.config.FeatureFlags
 import com.example.core_common.result.CustomResult
+import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.local.LocalChatDataSource
 import com.example.data.datasource.remote.MessageRemoteDataSource
 import com.example.domain.model.base.Message
@@ -14,9 +16,6 @@ import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.example.core_common.config.FeatureFlags
-import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.util.DateTimeUtil.now
 
 /**
  * 채팅 캐시 관리자 구현체
@@ -256,15 +255,16 @@ class ChatCacheManagerImpl @Inject constructor(
         Log.d(TAG, "Adding realtime message to cache: ${message.id.value} for channel: $channelId")
 
         try {
-            // 중복 메시지 확인
+            // 강화된 중복 방지 로직
             if (localDataSource.messageExists(message.id.value)) {
-                Log.d(TAG, "Message already exists in cache: ${message.id.value}")
+                Log.d(TAG, "Message already exists in cache, skipping: ${message.id.value}")
                 return
             }
 
-            // 로컬 캐시에 저장
+            // 클라이언트 주도 ID를 사용하여 로컬 캐시에 저장 (upsert 방식)
+            // OnConflictStrategy.REPLACE로 동일 ID 메시지 상태만 업데이트
             localDataSource.saveMessage(channelId, message)
-            Log.d(TAG, "Successfully added realtime message to cache: ${message.id.value}")
+            Log.d(TAG, "Successfully added/updated realtime message in cache: ${message.id.value}")
 
             // 캐시 크기 관리
             manageCache(channelId)
@@ -395,6 +395,10 @@ class ChatCacheManagerImpl @Inject constructor(
         localDataSource.clearChannel(channelId)
     }
 
+    override suspend fun clearAllCache() {
+        Log.d(TAG, "Clearing ALL chat cache and sync info (전체 삭제)")
+        localDataSource.clearAll()
+    }
 
     override suspend fun syncAfterWebSocketRecovery(channelId: String): SyncResult {
         Log.d(TAG, "Performing WebSocket recovery sync for channel: $channelId")

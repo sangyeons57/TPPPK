@@ -1,15 +1,27 @@
 package com.example.feature_chat.ui.components
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.feature_chat.model.MessageDeliveryState
@@ -40,6 +52,11 @@ fun MessageDeliveryIndicator(
             MaterialTheme.colorScheme.error,
             true
         )
+        is MessageDeliveryState.Retry -> Triple(
+            Icons.Default.Refresh,
+            MaterialTheme.colorScheme.tertiary,
+            true
+        )
     }
 
     AnimatedVisibility(
@@ -59,6 +76,7 @@ fun MessageDeliveryIndicator(
                     is MessageDeliveryState.Sent -> "전송됨"
                     is MessageDeliveryState.Delivered -> "전달됨"
                     is MessageDeliveryState.Failed -> "전송 실패"
+                    is MessageDeliveryState.Retry -> "재전송 대기"
                 },
                 tint = color,
                 modifier = Modifier.size(12.dp)
@@ -117,9 +135,18 @@ fun OptimisticMessageOverlay(
                 }
                 is MessageDeliveryState.Failed -> {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "재시도",
+                        imageVector = Icons.Default.Error,
+                        contentDescription = "전송 실패",
                         tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                is MessageDeliveryState.Retry -> {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "재전송 대기",
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(16.dp)
                     )
                 }

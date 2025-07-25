@@ -110,6 +110,11 @@ interface LocalChatDataSource {
      * @param channelId 채널 ID
      */
     suspend fun clearChannel(channelId: String)
+
+    /**
+     * 모든 채널의 메시지 및 동기화 정보 전체 삭제 (로컬 캐시 초기화)
+     */
+    suspend fun clearAll()
 }
 
 /**

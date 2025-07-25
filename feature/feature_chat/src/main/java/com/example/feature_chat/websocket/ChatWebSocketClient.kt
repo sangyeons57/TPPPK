@@ -1,19 +1,18 @@
 package com.example.feature_chat.websocket
 
+import android.util.Log
 import com.example.core_common.websocket.GlobalWebSocketService
 import com.example.core_common.websocket.WebSocketManager
 import com.example.core_common.websocket.WebSocketMessage
-import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import android.util.Log
 import com.example.feature_chat.utils.ChatLogUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import javax.inject.Inject
@@ -516,7 +515,9 @@ class ChatWebSocketClient @Inject constructor(
         senderId: UserId,
         content: String,
         messageId: DocumentId,
-        replyToMessageId: DocumentId? = null
+        replyToMessageId: DocumentId? = null,
+        projectId: String? = null,
+        channelType: String? = null
     ): Result<Unit> {
         val sendCorrelationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_MESSAGE, ChatLogUtils.formatLogMessage(
@@ -535,7 +536,9 @@ class ChatWebSocketClient @Inject constructor(
             content = content,
             messageId = messageId.value,
             replyToMessageId = replyToMessageId?.value,
-            timestamp = Instant.now().epochSecond.toDouble()
+            timestamp = Instant.now().epochSecond.toDouble(),
+            projectId = projectId,
+            channelType = channelType
         )
         
         return webSocketManager.sendMessage(message).also { result ->
@@ -564,7 +567,9 @@ class ChatWebSocketClient @Inject constructor(
     suspend fun editMessage(
         roomId: String,
         messageId: DocumentId,
-        newContent: String
+        newContent: String,
+        projectId: String? = null,
+        channelType: String? = null
     ): Result<Unit> {
         val editCorrelationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_MESSAGE, ChatLogUtils.formatLogMessage(
@@ -580,7 +585,9 @@ class ChatWebSocketClient @Inject constructor(
             roomId = roomId,
             messageId = messageId.value,
             content = newContent,
-            timestamp = Instant.now().epochSecond.toDouble()
+            timestamp = Instant.now().epochSecond.toDouble(),
+            projectId = projectId,
+            channelType = channelType
         )
         
         return webSocketManager.sendMessage(message).also { result ->
@@ -606,7 +613,9 @@ class ChatWebSocketClient @Inject constructor(
     
     suspend fun deleteMessage(
         roomId: String,
-        messageId: DocumentId
+        messageId: DocumentId,
+        projectId: String? = null,
+        channelType: String? = null
     ): Result<Unit> {
         val deleteCorrelationId = ChatLogUtils.generateCorrelationId()
         Log.i(ChatLogUtils.TAG_MESSAGE, ChatLogUtils.formatLogMessage(
@@ -620,7 +629,9 @@ class ChatWebSocketClient @Inject constructor(
             type = WebSocketMessage.TYPE_DELETE_MESSAGE,
             roomId = roomId,
             messageId = messageId.value,
-            timestamp = Instant.now().epochSecond.toDouble()
+            timestamp = Instant.now().epochSecond.toDouble(),
+            projectId = projectId,
+            channelType = channelType
         )
         
         return webSocketManager.sendMessage(message).also { result ->

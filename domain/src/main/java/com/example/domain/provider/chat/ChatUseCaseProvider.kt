@@ -1,17 +1,19 @@
 package com.example.domain.provider.chat
 
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.usecase.message.SendMessageUseCase
-import com.example.domain.usecase.message.EditMessageUseCase
-import com.example.domain.usecase.message.DeleteMessageUseCase
-import com.example.domain.usecase.message.GetMessagesStreamUseCase
-import com.example.domain.usecase.message.FetchPastMessagesUseCase
-import com.example.domain.usecase.message.FetchNewerMessagesUseCase
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.base.ChatCacheRepository
 import com.example.domain.repository.base.MessageRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
+import com.example.domain.repository.factory.context.ChatCacheRepositoryFactoryContext
 import com.example.domain.repository.factory.context.MessageRepositoryFactoryContext
+import com.example.domain.usecase.message.DeleteMessageUseCase
+import com.example.domain.usecase.message.EditMessageUseCase
+import com.example.domain.usecase.message.FetchNewerMessagesUseCase
+import com.example.domain.usecase.message.FetchPastMessagesUseCase
+import com.example.domain.usecase.message.GetMessagesStreamUseCase
+import com.example.domain.usecase.message.SendMessageUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,6 +39,7 @@ enum class ChannelType {
 @Singleton
 class ChatUseCaseProvider @Inject constructor(
     private val messageRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MessageRepositoryFactoryContext, MessageRepository>,
+    private val chatCacheRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ChatCacheRepositoryFactoryContext, ChatCacheRepository>,
     private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
 ) {
 
@@ -48,13 +51,17 @@ class ChatUseCaseProvider @Inject constructor(
      * @return 채팅 관련 UseCase 그룹
      */
     fun createForChannel(projectId: String, channelId: String): ChatUseCases {
+        val collectionPath = CollectionPath.projectChannelMessages(projectId, channelId)
+        
         val messageRepository = messageRepositoryFactory.create(
-            MessageRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectChannelMessages(projectId, channelId)
-            )
+            MessageRepositoryFactoryContext(collectionPath = collectionPath)
         )
 
-        val authRepository = authRepositoryFactory.create(
+        val chatCacheRepository = chatCacheRepositoryFactory.create(
+            ChatCacheRepositoryFactoryContext(collectionPath = collectionPath)
+        )
+
+        authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
 
@@ -62,9 +69,9 @@ class ChatUseCaseProvider @Inject constructor(
             sendMessageUseCase = SendMessageUseCase(messageRepository),
             editMessageUseCase = EditMessageUseCase(messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(messageRepository),
-            getMessagesStreamUseCase = GetMessagesStreamUseCase(messageRepository),
-            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository),
-            fetchNewerMessagesUseCase = FetchNewerMessagesUseCase(messageRepository)
+            getMessagesStreamUseCase = GetMessagesStreamUseCase(chatCacheRepository),
+            fetchPastMessagesUseCase = FetchPastMessagesUseCase(chatCacheRepository),
+            fetchNewerMessagesUseCase = FetchNewerMessagesUseCase(chatCacheRepository)
         )
     }
 
@@ -75,13 +82,17 @@ class ChatUseCaseProvider @Inject constructor(
      * @return 채팅 관련 UseCase 그룹
      */
     fun createForDMChannel(dmChannelId: String): ChatUseCases {
+        val collectionPath = CollectionPath.dmChannelMessages(dmChannelId)
+        
         val messageRepository = messageRepositoryFactory.create(
-            MessageRepositoryFactoryContext(
-                collectionPath = CollectionPath.dmChannelMessages(dmChannelId)
-            )
+            MessageRepositoryFactoryContext(collectionPath = collectionPath)
         )
 
-        val authRepository = authRepositoryFactory.create(
+        val chatCacheRepository = chatCacheRepositoryFactory.create(
+            ChatCacheRepositoryFactoryContext(collectionPath = collectionPath)
+        )
+
+        authRepositoryFactory.create(
             AuthRepositoryFactoryContext()
         )
 
@@ -89,9 +100,9 @@ class ChatUseCaseProvider @Inject constructor(
             sendMessageUseCase = SendMessageUseCase(messageRepository),
             editMessageUseCase = EditMessageUseCase(messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(messageRepository),
-            getMessagesStreamUseCase = GetMessagesStreamUseCase(messageRepository),
-            fetchPastMessagesUseCase = FetchPastMessagesUseCase(messageRepository),
-            fetchNewerMessagesUseCase = FetchNewerMessagesUseCase(messageRepository)
+            getMessagesStreamUseCase = GetMessagesStreamUseCase(chatCacheRepository),
+            fetchPastMessagesUseCase = FetchPastMessagesUseCase(chatCacheRepository),
+            fetchNewerMessagesUseCase = FetchNewerMessagesUseCase(chatCacheRepository)
         )
     }
 

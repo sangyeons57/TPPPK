@@ -50,7 +50,7 @@ object NetworkModule {
                 // 그대로 사용하되, 헤더가 없는 경우 기본 캐시 정책 적용
                 if (originalResponse.header("Cache-Control").isNullOrEmpty()) {
                     originalResponse.newBuilder()
-                        .header("Cache-Control", "public, max-age=300") // 5분 기본 캐시
+                        .header("Cache-Control", "public, max-age=3600") // 1시간 기본 캐시 (개선된 캐싱)
                         .build()
                 } else {
                     originalResponse
@@ -79,11 +79,12 @@ object NetworkModule {
             .diskCache {
                 DiskCache.Builder()
                     .directory(File(context.cacheDir, "image_cache"))
-                    .maxSizeBytes(50L * 1024L * 1024L) // 50MB (cost optimized)
+                    .maxSizeBytes(100L * 1024L * 1024L) // 100MB (enhanced caching for better performance)
                     .build()
             }
             .respectCacheHeaders(true) // HTTP Cache-Control 헤더 존중
             .logger(DebugLogger()) // 디버그 모드에서만 로깅
             .build()
     }
+
 }

@@ -1,6 +1,9 @@
 package com.example.feature_chat.service
 
+import com.example.core_common.config.FeatureFlags
+import com.example.core_common.websocket.WebSocketMessage
 import com.example.core_navigation.core.NavigationManger
+import com.example.data.cache.ChatCacheManager
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain.provider.chat.ChatUseCaseProvider
 import com.example.domain.provider.dm.DMUseCaseProvider
@@ -10,8 +13,6 @@ import com.example.domain.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.feature_chat.websocket.ChatWebSocketClient
-import com.example.core_common.config.FeatureFlags
-import com.example.data.cache.ChatCacheManager
 import javax.inject.Inject
 
 /**
@@ -54,8 +55,9 @@ class ChatServiceProvider @Inject constructor(
         val authUseCases = authSessionUseCaseProvider.create()
         val userUseCases = userUseCaseProvider.createForUser()
         val fileUseCases = fileUseCaseProvider.create()
-        
-        val roomId = "chat_room_$channelId"
+
+        val roomId = channelId  // 접두사 제거 - 단순히 channelId만 사용
+        val channelType = WebSocketMessage.CHANNEL_TYPE_PROJECT
         
         val authenticationService = AuthenticationService(
             authUseCases = authUseCases,
@@ -74,6 +76,8 @@ class ChatServiceProvider @Inject constructor(
             offlineMessageQueue = offlineMessageQueue,
             userProfileService = userProfileService,
             roomId = roomId,
+            projectId = projectId,
+            channelType = channelType,
             chatCacheManager = if (FeatureFlags.ENABLE_LOCAL_CHAT_CACHE) chatCacheManager else null
         )
         
@@ -115,8 +119,9 @@ class ChatServiceProvider @Inject constructor(
         val authUseCases = authSessionUseCaseProvider.create()
         val userUseCases = userUseCaseProvider.createForUser()
         val fileUseCases = fileUseCaseProvider.create()
-        
-        val roomId = "chat_room_$channelId"
+
+        val roomId = channelId  // 접두사 제거 - 단순히 channelId만 사용
+        val channelType = WebSocketMessage.CHANNEL_TYPE_DM
         
         val authenticationService = AuthenticationService(
             authUseCases = authUseCases,
@@ -135,6 +140,8 @@ class ChatServiceProvider @Inject constructor(
             offlineMessageQueue = offlineMessageQueue,
             userProfileService = userProfileService,
             roomId = roomId,
+            projectId = null,
+            channelType = channelType,
             chatCacheManager = if (FeatureFlags.ENABLE_LOCAL_CHAT_CACHE) chatCacheManager else null
         )
         

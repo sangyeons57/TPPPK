@@ -30,6 +30,12 @@ public class ChatMessage {
     
     @JsonProperty("payload")
     private Map<String, String> payload;
+    
+    @JsonProperty("projectId")
+    private String projectId;
+    
+    @JsonProperty("channelType")
+    private String channelType;
 
     public ChatMessage() {}
 
@@ -76,12 +82,18 @@ public class ChatMessage {
     public Map<String, String> getPayload() { return payload; }
     public void setPayload(Map<String, String> payload) { this.payload = payload; }
 
+    public String getProjectId() { return projectId; }
+    public void setProjectId(String projectId) { this.projectId = projectId; }
+
+    public String getChannelType() { return channelType; }
+    public void setChannelType(String channelType) { this.channelType = channelType; }
+
     /**
      * Returns a one-line summary of all fields for logging/debugging.
      */
     public String toSummaryString() {
         return String.format(
-            "type='%s', roomId='%s', senderId='%s', content='%s', timestamp=%s, messageId='%s', replyToMessageId='%s', payload=%s",
+            "type='%s', roomId='%s', senderId='%s', content='%s', timestamp=%s, messageId='%s', replyToMessageId='%s', payload=%s, projectId='%s', channelType='%s'",
             String.valueOf(type),
             String.valueOf(roomId),
             String.valueOf(senderId),
@@ -89,7 +101,9 @@ public class ChatMessage {
             String.valueOf(timestamp),
             String.valueOf(messageId),
             String.valueOf(replyToMessageId),
-            payload != null ? payload.toString() : "null"
+            payload != null ? payload.toString() : "null",
+            String.valueOf(projectId),
+            String.valueOf(channelType)
         );
     }
 
@@ -104,6 +118,8 @@ public class ChatMessage {
                 ", messageId='" + messageId + '\'' +
                 ", replyToMessageId='" + replyToMessageId + '\'' +
                 ", payload=" + payload +
+                ", projectId='" + projectId + '\'' +
+                ", channelType='" + channelType + '\'' +
                 '}';
     }
 }

@@ -1,8 +1,8 @@
 package com.example.data.datasource.local
 
 import android.util.Log
-import com.example.data.dao.ChatMessageDao
 import com.example.data.dao.ChannelSyncDao
+import com.example.data.dao.ChatMessageDao
 import com.example.data.mapper.ChatMessageMapper
 import com.example.data.model.local.ChannelSyncEntity
 import com.example.domain.model.base.Message
@@ -158,6 +158,12 @@ class LocalChatDataSourceImpl @Inject constructor(
     override suspend fun clearChannel(channelId: String) {
         chatMessageDao.deleteAllMessages(channelId)
         channelSyncDao.deleteSyncInfo(channelId)
+    }
+
+    override suspend fun clearAll() {
+        chatMessageDao.deleteAllMessagesFromAllChannels()
+        channelSyncDao.deleteAllSyncInfo()
+        Log.d("LocalChatDataSource", "Cleared all chat messages and sync info (전체 삭제)")
     }
 
     /**

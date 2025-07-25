@@ -1,88 +1,124 @@
 package com.example.feature_chat.ui
 
+// R import might be removed if UserProfileImage handles it all and no other direct R.drawable is used.
+// For now, assume it might still be needed for fallbacks in UserProfileImage or other icons.
+// ViewModel 및 관련 모델 Import
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.ExperimentalFoundationApi // combinedClickable 사용
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable // 롱클릭 사용
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items // LazyVerticalGrid items
-import androidx.compose.foundation.lazy.items // LazyColumn items
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AddPhotoAlternate // 이미지 첨부 아이콘
-import androidx.compose.material.icons.filled.Check // 체크 아이콘 추가
-import androidx.compose.material.icons.filled.Close // 수정 취소, 제거 아이콘
-import androidx.compose.material.icons.filled.ErrorOutline // 전송 실패 아이콘 (예시)
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage // Coil 라이브러리 사용 for attachments
-import coil.request.ImageRequest // Used by AsyncImage for attachments
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.SimpleUserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-// R import might be removed if UserProfileImage handles it all and no other direct R.drawable is used.
-// For now, assume it might still be needed for fallbacks in UserProfileImage or other icons.
-import com.example.core_ui.R
-import com.example.feature_chat.ui.components.ConnectionStatusBar
-// ViewModel 및 관련 모델 Import
+import com.example.domain.model.vo.MentionType
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
+import com.example.feature_chat.model.ChatParticipant
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.GalleryImageUiModel
 import com.example.feature_chat.model.MentionSuggestion
-import com.example.feature_chat.model.ChatParticipant
 import com.example.feature_chat.model.ProjectMember
 import com.example.feature_chat.model.ProjectRole
+import com.example.feature_chat.ui.components.ConnectionStatusBar
+import com.example.feature_chat.ui.components.MentionStyledInputField
 import com.example.feature_chat.viewmodel.WebSocketChatViewModel
-import com.example.domain.model.vo.MentionType
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
-import com.example.core_navigation.core.NavigationManger
-import java.util.Locale
-import android.util.Log // Added for logging
-import com.example.core_ui.components.buttons.DebouncedBackButton
 import java.time.Instant
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.text.input.TextFieldValue
-import com.example.feature_chat.ui.components.MentionStyledInputField
+import java.util.Locale
 
 /**
  * 메시지의 효과적인 타임스탬프를 반환 (임시 메시지는 clientSentAt, 실제 메시지는 actualTimestamp)
@@ -303,7 +339,7 @@ fun ChatScreen(
                 is ChatEvent.ClearFocus -> focusManager.clearFocus()
                 is ChatEvent.Error -> snackbarHostState.showSnackbar(event.message)
                 is ChatEvent.ShowMessageActions -> {
-                    val message = uiState.messages.find { it.chatId == event.messageId }
+                    val message = uiState.messages.find { it.messageId == event.messageId }
                     message?.let { showEditDeleteDialog = it }
                 }
                 is ChatEvent.ImagesSelected -> {}
@@ -356,7 +392,9 @@ fun ChatScreen(
         bottomBar = {
             if (uiState.error == null || uiState.error?.contains("WebSocket 구현 예정") == false) {
             ChatInputArea(
-                modifier = Modifier.navigationBarsPadding().imePadding(),
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .imePadding(),
                 uiState = uiState,
                 onMessageChange = viewModel::onMessageInputChange,
                 onSendMessage = { 
@@ -407,8 +445,9 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxSize(),
                     uiState = uiState,
                     listState = listState,
-                    onMessageLongClick = viewModel::onMessageLongClick, 
-                    onUserProfileClick = viewModel::onUserProfileClick 
+                    onMessageLongClick = viewModel::onMessageLongClick,
+                    onUserProfileClick = viewModel::onUserProfileClick,
+                    onRetryMessage = viewModel::retryMessage
                 )
             }
         }
@@ -420,11 +459,11 @@ fun ChatScreen(
             isMyMessage = message.isMyMessage, 
             onDismiss = { showEditDeleteDialog = null },
             onEdit = {
-                viewModel.startEditMessage(message.chatId, message.message) 
+                viewModel.startEditMessage(message.messageId, message.message) 
                 showEditDeleteDialog = null
             },
             onDelete = {
-                viewModel.confirmDeleteMessage(message.chatId) 
+                viewModel.confirmDeleteMessage(message.messageId) 
                 showEditDeleteDialog = null
             }
         )
@@ -452,8 +491,9 @@ fun ChatMessagesList(
     modifier: Modifier = Modifier,
     uiState: ChatUiState,
     listState: LazyListState,
-    onMessageLongClick: (ChatMessageUiModel) -> Unit, 
-    onUserProfileClick: (String) -> Unit 
+    onMessageLongClick: (ChatMessageUiModel) -> Unit,
+    onUserProfileClick: (String) -> Unit,
+    onRetryMessage: (String) -> Unit = { _ -> }
 ) {
     LazyColumn(
         modifier = modifier
@@ -465,7 +505,9 @@ fun ChatMessagesList(
     ) {
         if (uiState.isLoadingHistory) {
             item {
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
                 }
             }
@@ -476,16 +518,25 @@ fun ChatMessagesList(
             key = { message ->
                 // 임시 메시지는 localId로, 실제 메시지는 chatId로 키 생성
                 if (message.isOptimistic) {
-                    "temp_${message.localId}"
+                    "temp_${message.messageId}"
                 } else {
-                    "actual_${message.chatId}"
+                    "actual_${message.messageId}"
                 }
             }
         ) { message ->
-            val isFirstInGroup = uiState.messages.indexOfFirst { it.localId == message.localId }
+            val isFirstInGroup = uiState.messages.indexOfFirst { it.messageId == message.messageId }
                 .let { index ->
                     val nextMessage = uiState.messages.getOrNull(index + 1)
-                    
+
+                    Log.d(
+                        "ChatScreen", """ 
+                        index: ${index}
+                        currentMessage: ${uiState.messages.getOrNull(index)}
+                        nextMessage: ${nextMessage}
+                        nextMessage == null : ${nextMessage == null} 
+                        nextMessage.userId != message.userId : ${nextMessage?.userId != message.userId} 
+                    """
+                    )
                     // 그룹핑 조건: 다음 메시지가 없거나, 다른 사용자이거나, 시간 차이가 5분 이상
                     nextMessage == null || 
                     nextMessage.userId != message.userId ||
@@ -501,12 +552,13 @@ fun ChatMessagesList(
                 message.sendFailed -> message.copy(formattedTimestamp = "전송 실패")
                 else -> message
             }
-            
+            Log.d("ChatMessageItemComposable", "isFirstInGroup: $isFirstInGroup")
             ChatMessageItemComposable(
                 message = messageWithStatus,
                 isFirstInGroup = isFirstInGroup,
                 onLongClick = { onMessageLongClick(message) },
                 onUserProfileClick = { onUserProfileClick(message.userId) },
+                onRetryMessage = onRetryMessage,
                 onMentionClick = { type, id ->
                     when (type) {
                         "user" -> onUserProfileClick(id)
@@ -534,6 +586,7 @@ fun ChatMessageItemComposable(
     onLongClick: () -> Unit,
     onUserProfileClick: () -> Unit,
     onMentionClick: (String, String) -> Unit = { _, _ -> }, // (type, id) -> Unit
+    onRetryMessage: (String) -> Unit = { _ -> }, // 재전송 콜백 추가
     participants: List<ChatParticipant> = emptyList(),
     projectMembers: List<ProjectMember> = emptyList(),
     projectRoles: List<ProjectRole> = emptyList(),
@@ -551,6 +604,7 @@ fun ChatMessageItemComposable(
             ),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Log.d("ChatMessageItemComposable", "isFirstInGroup: $isFirstInGroup")
         if (isFirstInGroup) {
             SimpleUserProfileImage(
                 imageUrl = message.userProfileUrl,
@@ -660,7 +714,7 @@ fun ChatMessageItemComposable(
                     annotatedString.getStringAnnotations("URL", position, position)
                         .firstOrNull()?.let { annotation ->
                             try {
-                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(annotation.item))
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(annotation.item))
                                 context.startActivity(intent)
                             } catch (e: Exception) {
                                 // Handle error opening URL
@@ -699,22 +753,59 @@ fun ChatMessageItemComposable(
                 }
                 
                 if(message.isMyMessage) {
-                    if (message.isSending) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .testTag("delivery_indicator"),
-                            strokeWidth = 1.dp
-                        )
-                    } else if (message.sendFailed) {
-                        Icon(
-                            Icons.Default.ErrorOutline,
-                            contentDescription = "전송 실패",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier
-                                .size(12.dp)
-                                .testTag("delivery_indicator")
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        when {
+                            message.isSending -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .testTag("delivery_indicator"),
+                                    strokeWidth = 1.dp
+                                )
+                            }
+
+                            message.sendFailed -> {
+                                Icon(
+                                    Icons.Default.ErrorOutline,
+                                    contentDescription = "전송 실패",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .testTag("delivery_indicator")
+                                )
+                                if (message.canRetry) {
+                                    IconButton(
+                                        onClick = { onRetryMessage(message.messageId) },
+                                        modifier = Modifier.size(16.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Refresh,
+                                            contentDescription = "재전송",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            message.deliveryState is com.example.feature_chat.model.MessageDeliveryState.Retry -> {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = "재전송 대기",
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .testTag("delivery_indicator")
+                                )
+                            }
+
+                            else -> {
+                                // 성공적으로 전송된 경우 시간만 표시 (기존 로직 유지)
+                            }
+                        }
                     }
                 }
             }
@@ -790,7 +881,9 @@ fun ChatInputArea(
                 selectedImages = uiState.selectedAttachmentUris.toSet(),
                 onImageSelected = onImageSelected,
                 onImageDeselected = onImageDeselected,
-                modifier = Modifier.fillMaxWidth().heightIn(max=200.dp) 
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp)
             )
         }
 
@@ -958,7 +1051,9 @@ fun SelectedImagePreview(
         AsyncImage(
             model = uri,
             contentDescription = "선택된 이미지",
-            modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(MaterialTheme.shapes.small),
             contentScale = ContentScale.Crop
         )
         IconButton(
@@ -986,7 +1081,9 @@ fun ImageSelectionGrid(
     onImageDeselected: (Uri) -> Unit
 ) {
     if (images.isEmpty()) {
-        Box(modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) { // 높이 지정
+        Box(modifier
+            .fillMaxSize()
+            .height(200.dp), contentAlignment = Alignment.Center) { // 높이 지정
             // TODO: 갤러리 로딩 상태 표시
             Text("갤러리 이미지를 불러오는 중이거나 이미지가 없습니다.")
         }
@@ -1161,8 +1258,7 @@ private fun ChatScreenFullPreview() {
         messages = List(15) { i ->
             val isMy = i % 3 == 0
             ChatMessageUiModel(
-                localId = (100 + i).toString(),
-                chatId = "100$i",
+                messageId = "100$i",
                 userId = (if (isMy) "1" else "${i + 2}"), // Int -> String 타입으로 수정
                 userName = "사용자 ${if (isMy) 1 else i + 2}",
                 userProfileUrl = null,

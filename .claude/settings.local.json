@@ -32,7 +32,8 @@
       "Bash(firebase deploy:*)",
       "Bash(node:*)",
       "Bash(firebase emulators:start:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(gcloud run deploy:*)"
     ],
     "deny": []
   }

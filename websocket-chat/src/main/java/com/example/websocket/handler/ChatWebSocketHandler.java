@@ -3,6 +3,7 @@ package com.example.websocket.handler;
 import com.example.websocket.auth.FirebaseAuthService;
 import com.example.websocket.model.ChatMessage;
 import com.example.websocket.service.ChatRoomManager;
+import com.example.websocket.service.FirestoreMessageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -23,6 +24,7 @@ public class ChatWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final FirebaseAuthService authService;
     private final ChatRoomManager roomManager;
+    private final FirestoreMessageService firestoreService;
     
     private String userId;
     private String currentRoomId;
@@ -31,6 +33,7 @@ public class ChatWebSocketHandler {
     public ChatWebSocketHandler(FirebaseAuthService authService, ChatRoomManager roomManager) {
         this.authService = authService;
         this.roomManager = roomManager;
+        this.firestoreService = new FirestoreMessageService();
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
@@ -200,17 +203,35 @@ public class ChatWebSocketHandler {
         }
 
         try {
-            // Set message metadata
+            // Set message metadata (클라이언트에서 보낸 channelType, projectId는 유지)
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
+            
+            logger.info("📨 Processing message: channelType={}, projectId={}, roomId={}", 
+                       message.getChannelType(), message.getProjectId(), currentRoomId);
 
-            // Broadcast to room with echo prevention
+            // 1. 먼저 Firestore에 저장
+            firestoreService.saveMessage(currentRoomId, message)
+                .thenAccept(success -> {
+                    if (success) {
+                        logger.info("💾 Message saved to Firestore: messageId={}", message.getMessageId());
+                    } else {
+                        logger.warn("⚠️ Failed to save message to Firestore: messageId={}", message.getMessageId());
+                    }
+                })
+                .exceptionally(throwable -> {
+                    logger.error("❌ Error saving message to Firestore: messageId={}, error={}", 
+                               message.getMessageId(), throwable.getMessage());
+                    return null;
+                });
+
+            // 2. WebSocket으로 다른 클라이언트들에게 브로드캐스트
             roomManager.broadcastToRoom(currentRoomId, message, userId);
             logger.info("📤 Message broadcast to room {} by user {} (messageId: {}) - echo prevented", 
                        currentRoomId, userId, message.getMessageId());
             
-            // Send acknowledgment back to sender
+            // 3. 송신자에게 ACK 전송
             sendMessageAck(message.getMessageId(), "MESSAGE_ACK");
             logger.info("✅ MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
             
@@ -227,18 +248,36 @@ public class ChatWebSocketHandler {
         }
 
         try {
-            // Set message metadata
+            // Set message metadata (클라이언트에서 보낸 channelType, projectId는 유지)
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
             message.setType("EDIT_MESSAGE");
+            
+            logger.info("✏️ Processing edit message: channelType={}, projectId={}, roomId={}", 
+                       message.getChannelType(), message.getProjectId(), currentRoomId);
 
-            // Broadcast edit to room with echo prevention
+            // 1. Firestore에서 메시지 업데이트
+            firestoreService.updateMessage(currentRoomId, message)
+                .thenAccept(success -> {
+                    if (success) {
+                        logger.info("✏️ Message updated in Firestore: messageId={}", message.getMessageId());
+                    } else {
+                        logger.warn("⚠️ Failed to update message in Firestore: messageId={}", message.getMessageId());
+                    }
+                })
+                .exceptionally(throwable -> {
+                    logger.error("❌ Error updating message in Firestore: messageId={}, error={}", 
+                               message.getMessageId(), throwable.getMessage());
+                    return null;
+                });
+
+            // 2. WebSocket으로 편집 알림 브로드캐스트
             roomManager.broadcastToRoom(currentRoomId, message, userId);
             logger.info("✏️ Message edit broadcast to room {} by user {} (messageId: {}) - echo prevented", 
                        currentRoomId, userId, message.getMessageId());
             
-            // Send acknowledgment back to sender
+            // 3. 송신자에게 ACK 전송
             sendMessageAck(message.getMessageId(), "EDIT_MESSAGE_ACK");
             logger.info("✅ EDIT_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
             
@@ -255,18 +294,36 @@ public class ChatWebSocketHandler {
         }
 
         try {
-            // Set message metadata
+            // Set message metadata (클라이언트에서 보낸 channelType, projectId는 유지)
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
             message.setType("DELETE_MESSAGE");
+            
+            logger.info("🗑️ Processing delete message: channelType={}, projectId={}, roomId={}", 
+                       message.getChannelType(), message.getProjectId(), currentRoomId);
 
-            // Broadcast delete to room with echo prevention
+            // 1. Firestore에서 메시지 삭제 표시
+            firestoreService.deleteMessage(currentRoomId, message)
+                .thenAccept(success -> {
+                    if (success) {
+                        logger.info("🗑️ Message marked as deleted in Firestore: messageId={}", message.getMessageId());
+                    } else {
+                        logger.warn("⚠️ Failed to delete message in Firestore: messageId={}", message.getMessageId());
+                    }
+                })
+                .exceptionally(throwable -> {
+                    logger.error("❌ Error deleting message in Firestore: messageId={}, error={}", 
+                               message.getMessageId(), throwable.getMessage());
+                    return null;
+                });
+
+            // 2. WebSocket으로 삭제 알림 브로드캐스트
             roomManager.broadcastToRoom(currentRoomId, message, userId);
             logger.info("🗑️ Message delete broadcast to room {} by user {} (messageId: {}) - echo prevented", 
                        currentRoomId, userId, message.getMessageId());
             
-            // Send acknowledgment back to sender
+            // 3. 송신자에게 ACK 전송
             sendMessageAck(message.getMessageId(), "DELETE_MESSAGE_ACK");
             logger.info("✅ DELETE_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
             
