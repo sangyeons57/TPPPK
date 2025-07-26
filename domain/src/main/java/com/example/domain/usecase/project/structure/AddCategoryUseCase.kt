@@ -1,6 +1,5 @@
 package com.example.domain.usecase.project.structure
 
-import com.example.core_common.constants.Constants
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
@@ -10,7 +9,6 @@ import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
 
 /**
  * 프로젝트에 새 카테고리를 추가하는 유스케이스 인터페이스입니다.
@@ -97,7 +95,7 @@ class AddCategoryUseCaseImpl(
 
         // 3. Create new Category object
         val newCategory = Category.create(
-            name = CategoryName(categoryName.value.trim()),
+            name = categoryName,
             order = CategoryOrder(nextOrder),
             createdBy = OwnerId.from(currentUserSession.userId),
         )

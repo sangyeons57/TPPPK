@@ -1,10 +1,10 @@
 package com.example.feature_chat.service
 
 import android.util.Log
-import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
+import com.example.websocket.WebSocketConnectionState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -58,14 +58,8 @@ class ConnectionService(
         return try {
             Log.d("ConnectionService", "Manual retry connection requested...")
             
-            // Reset manual disconnect flag and force reconnection
-            val webSocketManager = webSocketClient.webSocketManager
-            if (webSocketManager is com.example.core_common.websocket.WebSocketManagerImpl) {
-                // Reset reconnection state for manual retry
-                webSocketManager.resetReconnectionState()
-            }
-            
             // Trigger reconnection through GlobalWebSocketService
+            // (forceReconnect now handles state reset internally)
             webSocketClient.globalWebSocketService.forceReconnect()
             
             Log.d("ConnectionService", "Manual retry connection initiated")

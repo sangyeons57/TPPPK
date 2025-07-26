@@ -8,6 +8,9 @@ import com.example.domain.model.vo.Name
 @JvmInline
 value class CategoryName(val value: String) {
     init {
+        require(value.isNotBlank()) { "Category name cannot be blank" }
+        require(value.length <= MAX_LENGTH) { "Category name cannot exceed $MAX_LENGTH characters" }
+        require(value.trim() == value) { "Category name cannot have leading or trailing whitespace" }
     }
 
     fun getName() : Name{
@@ -23,6 +26,7 @@ value class CategoryName(val value: String) {
     }
 
     companion object {
+        const val MAX_LENGTH = 50
         val NO_CATEGORY_NAME = CategoryName("카테고리 없음")
 
         fun from(name: Name): CategoryName {

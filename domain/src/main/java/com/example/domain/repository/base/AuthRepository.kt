@@ -67,4 +67,12 @@ interface AuthRepository : Repository {
      * @return 사용자 세션 정보의 Flow
      */
     fun getCurrentUserSessionStream(): Flow<CustomResult<UserSession, Exception>>
+
+    /**
+     * 토큰을 강제로 갱신합니다.
+     * 토큰 만료 임박 시나 인증 오류 발생 시 사용됩니다.
+     *
+     * @return 갱신된 사용자 세션 정보
+     */
+    suspend fun refreshToken(): CustomResult<UserSession, Exception>
 }

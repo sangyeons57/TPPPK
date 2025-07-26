@@ -1,7 +1,6 @@
 package com.example.core_common.dispatcher
 
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 
 /**
  * 코루틴 디스패처를 제공하는 인터페이스입니다.

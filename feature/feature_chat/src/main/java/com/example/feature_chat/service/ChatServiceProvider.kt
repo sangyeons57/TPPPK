@@ -1,7 +1,6 @@
 package com.example.feature_chat.service
 
 import com.example.core_common.config.FeatureFlags
-import com.example.core_common.websocket.WebSocketMessage
 import com.example.core_navigation.core.NavigationManger
 import com.example.data.cache.ChatCacheManager
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
@@ -13,6 +12,7 @@ import com.example.domain.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.feature_chat.websocket.ChatWebSocketClient
+import com.example.websocket.WebSocketMessage
 import javax.inject.Inject
 
 /**

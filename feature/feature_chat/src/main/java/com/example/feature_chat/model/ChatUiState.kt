@@ -1,8 +1,8 @@
 package com.example.feature_chat.model
 
 import android.net.Uri
-import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.domain.model.vo.MentionType
+import com.example.websocket.WebSocketConnectionState
 
 /**
  * ChatViewModel의 UI 상태를 관리하는 데이터 클래스

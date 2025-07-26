@@ -27,14 +27,7 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.storage.ktx)
-    
-    // WebSocket and Networking
-    implementation(libs.okhttp.websocket)
-    implementation(libs.okhttp)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.android)
-    
+
     // Image Loading
     implementation(libs.androidx.compose.coil)
 }

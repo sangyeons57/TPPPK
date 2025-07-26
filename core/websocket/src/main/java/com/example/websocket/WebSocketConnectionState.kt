@@ -1,4 +1,4 @@
-package com.example.core_common.websocket
+package com.example.websocket
 
 sealed class WebSocketConnectionState {
     data object Disconnected : WebSocketConnectionState()

@@ -4,7 +4,6 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.repository.base.CategoryRepository
@@ -60,9 +59,9 @@ class UpdateCategoryUseCaseImpl @Inject constructor(
                 return CustomResult.Failure(IllegalArgumentException("No_Category order cannot be changed from ${Category.NO_CATEGORY_ORDER}"))
             }
         } else {
-            // Other categories cannot have order 0.0 (reserved for No_Category)
+            // Other categories can start from MIN_CATEGORY_ORDER (now 0)
             if (newOrder.value < Category.MIN_CATEGORY_ORDER) {
-                return CustomResult.Failure(IllegalArgumentException("Category order must be ${Category.MIN_CATEGORY_ORDER} or greater (${Category.NO_CATEGORY_ORDER} is reserved for No_Category)"))
+                return CustomResult.Failure(IllegalArgumentException("Category order must be ${Category.MIN_CATEGORY_ORDER} or greater"))
             }
         }
 

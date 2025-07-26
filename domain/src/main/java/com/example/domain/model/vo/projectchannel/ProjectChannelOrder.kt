@@ -1,7 +1,5 @@
 package com.example.domain.model.vo.projectchannel
 
-import java.text.DecimalFormat
-
 @JvmInline
 value class ProjectChannelOrder(val value: Int) {
     init {

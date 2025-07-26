@@ -11,15 +11,12 @@ import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.base.AuthRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import javax.inject.Inject
@@ -378,8 +375,12 @@ class AuthRepositoryImpl @Inject constructor(
                             email = firebaseUser.email?.let { UserEmail(it) },
                             displayName = firebaseUser.displayName?.let { UserName.from(it) },
                             idToken = Token(token),
+                            tokenExpiresAt = expiresAt
                         )
-                        Log.d("AuthRepositoryImpl", "Session with token created successfully.")
+                        Log.d(
+                            "AuthRepositoryImpl",
+                            "Session with token created successfully. Expires at: $expiresAt"
+                        )
                         CustomResult.Success(userSession)
                     }
                 } catch (e: Exception) {
@@ -431,5 +432,14 @@ class AuthRepositoryImpl @Inject constructor(
                     }
                 }
             }
+    }
+
+    /**
+     * 토큰을 강제로 갱신합니다.
+     * 내부적으로 getCurrentUserSession(forceRefresh = true)를 호출합니다.
+     */
+    override suspend fun refreshToken(): CustomResult<UserSession, Exception> {
+        Log.d("AuthRepositoryImpl", "Token refresh requested")
+        return getCurrentUserSession(forceRefresh = true)
     }
 }

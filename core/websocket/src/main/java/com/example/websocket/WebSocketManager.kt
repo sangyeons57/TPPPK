@@ -1,9 +1,13 @@
-package com.example.core_common.websocket
+package com.example.websocket
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 interface WebSocketManager {
+    companion object {
+        const val SERVER_URL = "wss://websocket-chat-wizwlraydq-du.a.run.app/chat"
+    }
+
     val connectionState: StateFlow<WebSocketConnectionState>
     val incomingMessages: Flow<WebSocketMessage>
     val isAuthenticated: StateFlow<Boolean>

@@ -6,10 +6,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.example.core_common.websocket.GlobalWebSocketService
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.teamnovapersonalprojectprojectingkotlin.fcm.FcmTokenManager
 import com.example.teamnovapersonalprojectprojectingkotlin.notification.NotificationChannelManager
+import com.example.websocket.GlobalWebSocketService
+import com.example.websocket.WebSocketManager
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
@@ -17,6 +18,7 @@ import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -77,25 +79,57 @@ class MyApp : Application(), LifecycleObserver {
     private fun initializeGlobalWebSocketService() {
         applicationScope.launch {
             try {
-                Log.d(TAG, "Initializing GlobalWebSocketService")
+                Log.i(TAG, "🚀 === Starting GlobalWebSocketService Initialization ===")
 
                 // Configure WebSocket server URL (서버 중심 저장 아키텍처)
-                val serverUrl = "wss://websocket-chat-wizwlraydq-du.a.run.app/chat"
-                globalWebSocketService.configure(serverUrl)
+                Log.d(TAG, "🌐 Configuring WebSocket server: ${WebSocketManager.SERVER_URL}")
+                globalWebSocketService.configure()
                 
                 // Set up authentication monitoring
+                Log.d(TAG, "🔑 Setting up authentication monitoring")
                 val authUseCases = authSessionUseCaseProvider.create()
-                globalWebSocketService.initializeWithAuth(
-                    authUseCases.getCurrentUserSessionStreamUseCase()
-                )
+                val authStream = authUseCases.getCurrentUserSessionStreamUseCase()
+
+                Log.d(TAG, "🔍 Initializing auth stream monitoring")
+                globalWebSocketService.initializeWithAuth(authStream)
                 
                 // Start the service
+                Log.d(TAG, "▶️ Starting GlobalWebSocketService")
                 globalWebSocketService.startService()
-                
-                Log.d(TAG, "GlobalWebSocketService initialization completed")
+
+                Log.i(TAG, "✅ GlobalWebSocketService initialization completed successfully")
+
+                // Test auth stream immediately
+                Log.d(TAG, "🧪 Testing initial auth state...")
+                launch {
+                    authStream.take(1).collect { authResult ->
+                        Log.d(
+                            TAG,
+                            "📲 Initial auth stream emitted: ${authResult.javaClass.simpleName}"
+                        )
+                        when (authResult) {
+                            is com.example.core_common.result.CustomResult.Success -> {
+                                Log.i(TAG, "✅ Initial auth success detected - user is logged in")
+                            }
+
+                            is com.example.core_common.result.CustomResult.Failure -> {
+                                Log.w(TAG, "⚠️ Initial auth failure detected - user needs to login")
+                            }
+
+                            else -> {
+                                Log.d(
+                                    TAG,
+                                    "🔄 Initial auth state: ${authResult.javaClass.simpleName}"
+                                )
+                            }
+                        }
+                    }
+                }
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize GlobalWebSocketService", e)
+                Log.e(TAG, "❌ Failed to initialize GlobalWebSocketService", e)
+                Log.e(TAG, "Error details: ${e.message}")
+                e.printStackTrace()
             }
         }
     }

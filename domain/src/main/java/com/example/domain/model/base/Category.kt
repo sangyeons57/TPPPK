@@ -1,17 +1,16 @@
 package com.example.domain.model.base
 
+import com.example.core_common.util.DateTimeUtil
+import com.example.domain.event.category.CategoryCreatedEvent
+import com.example.domain.event.category.CategoryNameChangedEvent
+import com.example.domain.event.category.CategoryOrderChangedEvent
 import com.example.domain.model.AggregateRoot
-import com.example.domain.event.category.CategoryCreatedEvent // These will be defined in the next step
-import com.example.domain.event.category.CategoryNameChangedEvent // These will be defined in the next step
-import com.example.domain.event.category.CategoryOrderChangedEvent // These will be defined in the next step
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
 import com.example.domain.model.vo.category.IsCategoryFlag
 import java.time.Instant
-import com.example.core_common.util.DateTimeUtil
 
 /**
  * Represents a Category aggregate in the domain.
@@ -151,7 +150,7 @@ class Category private constructor(
          * Minimum order value for regular categories (non-NoCategory).
          * Regular categories must have order >= MIN_CATEGORY_ORDER
          */
-        const val MIN_CATEGORY_ORDER = 1
+        const val MIN_CATEGORY_ORDER = 0
         
         /**
          * Default increment value for category ordering

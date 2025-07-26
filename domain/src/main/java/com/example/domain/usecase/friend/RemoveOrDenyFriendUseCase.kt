@@ -25,7 +25,7 @@ class RemoveOrDenyFriendUseCase @Inject constructor(
         val session = authRepository.getCurrentUserSession()
         when (session) {
             is CustomResult.Success -> {
-                val currentUserId = session.data.userId
+                session.data.userId
                 return friendRepository.delete(DocumentId.from(friendId))
             }
             else -> {

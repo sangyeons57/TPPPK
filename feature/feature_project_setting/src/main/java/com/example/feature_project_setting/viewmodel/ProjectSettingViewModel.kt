@@ -1,4 +1,4 @@
-package com.example.feature_project_setting_screen.viewmodel.viewmodel
+package com.example.feature_project_setting.viewmodel.viewmodel
 
 // Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
 // import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
@@ -9,8 +9,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.exceptionOrNull
+import com.example.core_navigation.core.CreateCategoryRoute
+import com.example.core_navigation.core.CreateChannelRoute
+import com.example.core_navigation.core.EditCategoryRoute
+import com.example.core_navigation.core.EditChannelRoute
+import com.example.core_navigation.core.MemberListRoute
+import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.RoleListRoute
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.core_ui.components.project.ProjectImageUpdateEventManager
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.project.ProjectName
@@ -20,14 +28,6 @@ import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
-import com.example.core_navigation.core.NavigationManger
-import com.example.core_navigation.core.EditCategoryRoute
-import com.example.core_navigation.core.CreateCategoryRoute
-import com.example.core_navigation.core.EditChannelRoute
-import com.example.core_navigation.core.CreateChannelRoute
-import com.example.core_navigation.core.MemberListRoute
-import com.example.core_navigation.core.RoleListRoute
-import com.example.core_ui.components.project.ProjectImageUpdateEventManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,12 +78,17 @@ class ProjectSettingViewModel @Inject constructor(
         .let { DocumentId.from((it)) }
 
     // Create UseCase groups via providers
-    private val coreProjectUseCases = coreProjectUseCaseProvider.createForProject(projectId, UserId.EMPTY)
-    private val projectStructureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
-    // Note: projectChannelUseCases는 특정 채널 작업 시 필요한 categoryId와 함께 동적으로 생성됨
-    private val projectAssetsUseCases = projectAssetsUseCaseProvider.createForProject(projectId.value)
+    private val coreProjectUseCases =
+        coreProjectUseCaseProvider.createForProject(projectId, UserId.EMPTY)
+    private val projectStructureUseCases =
+        projectStructureUseCaseProvider.createForProject(projectId)
 
-    private val _uiState = MutableStateFlow(ProjectSettingUiState(projectId = projectId, isLoading = true))
+    // Note: projectChannelUseCases는 특정 채널 작업 시 필요한 categoryId와 함께 동적으로 생성됨
+    private val projectAssetsUseCases =
+        projectAssetsUseCaseProvider.createForProject(projectId.value)
+
+    private val _uiState =
+        MutableStateFlow(ProjectSettingUiState(projectId = projectId, isLoading = true))
     val uiState: StateFlow<ProjectSettingUiState> = _uiState.asStateFlow()
 
     private val _eventFlow = MutableSharedFlow<ProjectSettingEvent>()
@@ -99,7 +104,8 @@ class ProjectSettingViewModel @Inject constructor(
             println("ViewModel: Loading structure for project $projectId (UseCase)")
 
             // Load project details to get name and image URL
-            when (val projectResult = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
+            when (val projectResult =
+                coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
                 is CustomResult.Success -> {
                     val project = projectResult.data
                     _uiState.update {
@@ -109,9 +115,11 @@ class ProjectSettingViewModel @Inject constructor(
                         )
                     }
                 }
+
                 is CustomResult.Failure -> {
                     println("Failed to load project details: ${projectResult.error}")
                 }
+
                 else -> {
                     println("Unknown result for project details")
                 }
@@ -120,7 +128,8 @@ class ProjectSettingViewModel @Inject constructor(
             // Load project structure (categories)
             when (val result = projectStructureUseCases.getProjectAllCategoriesUseCase().first()) {
                 is CustomResult.Success -> {
-                    val domainCategories = result.data // This is List<com.example.domain.model.base.Category>
+                    val domainCategories =
+                        result.data // This is List<com.example.domain.model.base.Category>
                     val uiCategories = domainCategories.map { domainCategory ->
                         // TODO: Fetch actual channels for this domainCategory.id using another use case if needed.
                         // For now, placeholder:
@@ -148,6 +157,7 @@ class ProjectSettingViewModel @Inject constructor(
                     }
                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 구조 로딩 실패")) // Notify user               }
                 }
+
                 else -> {
                     _uiState.update { it.copy(isLoading = false) }
                 }
@@ -161,29 +171,36 @@ class ProjectSettingViewModel @Inject constructor(
             EditCategoryRoute(projectId.value, categoryId)
         )
     }
+
     fun requestDeleteCategory(category: CategoryUiModel) { // Changed to CategoryUiModel
-        viewModelScope.launch { _eventFlow.emit(
-            ProjectSettingEvent.ShowDeleteCategoryConfirm(
-                category
+        viewModelScope.launch {
+            _eventFlow.emit(
+                ProjectSettingEvent.ShowDeleteCategoryConfirm(
+                    category
+                )
             )
-        ) }
+        }
     }
+
     fun confirmDeleteCategory(category: CategoryUiModel) { // Changed to CategoryUiModel
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // Show loading
             // TODO: DeleteCategoryUseCase 호출
             println("Deleting Category: ${category.id} (UseCase)") // Used category.id
-            val result = projectStructureUseCases.deleteCategoryUseCase(category.id) // Used category.id
+            val result =
+                projectStructureUseCases.deleteCategoryUseCase(category.id) // Used category.id
             // delay(500) // Remove delay
             when (result) {
                 is CustomResult.Success -> {
                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리가 삭제되었습니다."))
                     loadProjectStructure() // Refresh structure
                 }
+
                 is CustomResult.Failure -> {
                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리 삭제 실패: ${result.error.message}"))
                     _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
                 }
+
                 else -> {
                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("카테고리 삭제 실패: 알수 없는 에러"))
                     _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
@@ -192,6 +209,7 @@ class ProjectSettingViewModel @Inject constructor(
             // isLoading will be turned off by loadProjectStructure on success
         }
     }
+
     fun requestCreateCategory() {
         navigationManger.navigateTo(
             CreateCategoryRoute(projectId.value)
@@ -204,34 +222,37 @@ class ProjectSettingViewModel @Inject constructor(
             EditChannelRoute(projectId.value, channelId)
         )
     }
+
     fun requestDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel
         viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowDeleteChannelConfirm(channel)) }
     }
+
     fun confirmDeleteChannel(channel: ChannelUiModel) { // Changed to ChannelUiModel
         /** 잠시 멈춰두기
         viewModelScope.launch {
-             _uiState.update { it.copy(isLoading = true) } // Show loading
-            // TODO: DeleteChannelUseCase 호출
-            println("Deleting Channel: ${channel.id} (UseCase)") // Used channel.id
-             val result = projectChannelUseCases.deleteChannelUseCase(projectId, channel.categoryId, channel.id) // Used channel.id
-            // delay(500) // Remove delay
-            when (result) {
-                is CustomResult.Success -> {
-                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널이 삭제되었습니다."))
-                     loadProjectStructure() // Refresh structure
-                }
-                is CustomResult.Failure -> {
-                     _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널 삭제 실패: ${result.error}"))
-                     _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
-                 }
-                else-> {
-                    Log.e("ProjectSettingViewModel", "Unknown result type: $result")
-                }
-            }
-             // isLoading will be turned off by loadProjectStructure on success
+        _uiState.update { it.copy(isLoading = true) } // Show loading
+        // TODO: DeleteChannelUseCase 호출
+        println("Deleting Channel: ${channel.id} (UseCase)") // Used channel.id
+        val result = projectChannelUseCases.deleteChannelUseCase(projectId, channel.categoryId, channel.id) // Used channel.id
+        // delay(500) // Remove delay
+        when (result) {
+        is CustomResult.Success -> {
+        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널이 삭제되었습니다."))
+        loadProjectStructure() // Refresh structure
         }
-        **/
+        is CustomResult.Failure -> {
+        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("채널 삭제 실패: ${result.error}"))
+        _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+        }
+        else-> {
+        Log.e("ProjectSettingViewModel", "Unknown result type: $result")
+        }
+        }
+        // isLoading will be turned off by loadProjectStructure on success
+        }
+         **/
     }
+
     fun requestCreateChannel(categoryId: String) {
         navigationManger.navigateTo(
             CreateChannelRoute(projectId.value, categoryId)
@@ -244,6 +265,7 @@ class ProjectSettingViewModel @Inject constructor(
             MemberListRoute(projectId.value)
         )
     }
+
     fun requestManageRoles() {
         navigationManger.navigateTo(
             RoleListRoute(projectId.value)
@@ -253,10 +275,17 @@ class ProjectSettingViewModel @Inject constructor(
     // --- 프로젝트 이름 변경 ---
     fun requestRenameProject() {
         viewModelScope.launch {
-            when (val result = coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()){
+            when (val result =
+                coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
                 is CustomResult.Success -> {
-                    _uiState.update { it.copy(projectName = result.data.name, showRenameProjectDialog = true) }
+                    _uiState.update {
+                        it.copy(
+                            projectName = result.data.name,
+                            showRenameProjectDialog = true
+                        )
+                    }
                 }
+
                 else -> {
                     _uiState.update {
                         it.copy(
@@ -279,21 +308,21 @@ class ProjectSettingViewModel @Inject constructor(
             return
         }
         if (trimmedNewName == _uiState.value.projectName) {
-             viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("현재 이름과 동일합니다.")) }
+            viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("현재 이름과 동일합니다.")) }
             return
         }
 
         viewModelScope.launch {
-             _uiState.update { it.copy(isLoading = true) } // Show loading
+            _uiState.update { it.copy(isLoading = true) } // Show loading
             println("Renaming Project $projectId to '$trimmedNewName' (UseCase)")
             val result = coreProjectUseCases.renameProjectUseCase(projectId, trimmedNewName)
             if (result.isSuccess) {
-                 // Update UI state directly for immediate feedback, structure reload might not be needed
-                 _uiState.update { it.copy(projectName = trimmedNewName, isLoading = false) }
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이름이 변경되었습니다."))
+                // Update UI state directly for immediate feedback, structure reload might not be needed
+                _uiState.update { it.copy(projectName = trimmedNewName, isLoading = false) }
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이름이 변경되었습니다."))
             } else {
-                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이름 변경 실패: ${result.exceptionOrNull()?.message}"))
-                 _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이름 변경 실패: ${result.exceptionOrNull()?.message}"))
+                _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
             }
         }
     }
@@ -308,11 +337,11 @@ class ProjectSettingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // Show loading
             Log.d("ProjectSettingViewModel", "Deleting Project $projectId (UseCase)")
-            
+
             try {
                 val result = coreProjectUseCases.deleteProjectUseCase(projectId)
                 Log.d("ProjectSettingViewModel", "Delete result: $result")
-                
+
                 when (result) {
                     is CustomResult.Success -> {
                         Log.d("ProjectSettingViewModel", "Project deletion successful")
@@ -320,26 +349,41 @@ class ProjectSettingViewModel @Inject constructor(
                         navigationManger.navigateBack() // Navigate back on success
                         // No need to turn off loading as we are navigating away
                     }
+
                     is CustomResult.Failure -> {
-                        Log.e("ProjectSettingViewModel", "Project deletion failed: ${result.error.message}", result.error)
+                        Log.e(
+                            "ProjectSettingViewModel",
+                            "Project deletion failed: ${result.error.message}",
+                            result.error
+                        )
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: ${result.error.message}"))
                         _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
                     }
+
                     is CustomResult.Loading -> {
                         Log.d("ProjectSettingViewModel", "Project deletion is loading...")
                         // Keep loading state
                     }
+
                     is CustomResult.Initial -> {
                         Log.w("ProjectSettingViewModel", "Project deletion returned Initial state")
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: 초기 상태"))
                         _uiState.update { it.copy(isLoading = false) }
                     }
+
                     is CustomResult.Progress -> {
-                        Log.d("ProjectSettingViewModel", "Project deletion progress: ${result.progress}")
+                        Log.d(
+                            "ProjectSettingViewModel",
+                            "Project deletion progress: ${result.progress}"
+                        )
                         // Keep loading state and show progress if needed
                     }
+
                     else -> {
-                        Log.e("ProjectSettingViewModel", "Project deletion returned unknown result type: $result")
+                        Log.e(
+                            "ProjectSettingViewModel",
+                            "Project deletion returned unknown result type: $result"
+                        )
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 삭제 실패: 알 수 없는 오류"))
                         _uiState.update { it.copy(isLoading = false) } // Hide loading on failure
                     }
@@ -353,7 +397,12 @@ class ProjectSettingViewModel @Inject constructor(
     }
 
     fun dismiss() {
-        _uiState.update { it.copy(showRenameProjectDialog = false, showDeleteProjectDialog = false) }
+        _uiState.update {
+            it.copy(
+                showRenameProjectDialog = false,
+                showDeleteProjectDialog = false
+            )
+        }
     }
 
     // --- 프로젝트 이미지 관련 ---
@@ -387,7 +436,7 @@ class ProjectSettingViewModel @Inject constructor(
                 error = null
             )
         }
-        
+
         viewModelScope.launch {
             _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이미지가 선택되었습니다. 저장 버튼을 눌러 적용하세요."))
         }
@@ -396,7 +445,7 @@ class ProjectSettingViewModel @Inject constructor(
     private fun validateImageUri(uri: Uri): ValidationResult {
         // 여기서는 기본적인 검증만 수행
         // 실제 파일 크기와 형식 검증은 Firebase Storage Rules에서 처리됨
-        
+
         val scheme = uri.scheme
         if (scheme != "content" && scheme != "file") {
             return ValidationResult(false, "지원되지 않는 이미지 형식입니다.")
@@ -414,7 +463,7 @@ class ProjectSettingViewModel @Inject constructor(
         viewModelScope.launch {
             val currentState = _uiState.value
             val selectedImageUri = currentState.selectedImageUri
-            
+
             if (selectedImageUri == null) {
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("선택된 이미지가 없습니다."))
                 return@launch
@@ -428,31 +477,36 @@ class ProjectSettingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val imageResult = projectAssetsUseCases.uploadProjectProfileImageUseCase(projectId, selectedImageUri)
+                val imageResult = projectAssetsUseCases.uploadProjectProfileImageUseCase(
+                    projectId,
+                    selectedImageUri
+                )
                 when (imageResult) {
                     is CustomResult.Success -> {
-                        _uiState.update { 
+                        _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 // 이미지 업로드는 완료되었지만, Functions 가 Storage -> Firestore 업데이트를
-                            // 완료하기 전까지는 기존 Storage 이미지를 그대로 보여줄 수 있다.
-                            // 따라서 로컬에서 선택한 이미지 URI를 유지하여 사용자에게 즉시 적용된 것처럼 보여준다.
-                            hasImageChanges = false // 더 이상 저장 버튼은 필요 없음
-                        )
+                                // 완료하기 전까지는 기존 Storage 이미지를 그대로 보여줄 수 있다.
+                                // 따라서 로컬에서 선택한 이미지 URI를 유지하여 사용자에게 즉시 적용된 것처럼 보여준다.
+                                hasImageChanges = false // 더 이상 저장 버튼은 필요 없음
+                            )
                         }
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지가 성공적으로 업데이트되었습니다."))
-                        
+
                         // 전역 이벤트 발생으로 모든 화면들에 알림
                         projectImageUpdateEventManager.notifyProjectImageUpdated(projectId.value)
-                        
+
                         // 프로젝트 정보 다시 로드하여 새 이미지 URL 가져오기
                         loadProjectStructure()
                     }
+
                     is CustomResult.Failure -> {
                         _uiState.update { it.copy(isLoading = false) }
                         val errorMessage = getHumanReadableErrorMessage(imageResult.error)
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(errorMessage))
                     }
+
                     else -> {
                         _uiState.update { it.copy(isLoading = false) }
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("이미지 업로드 중 알 수 없는 오류가 발생했습니다."))
@@ -472,20 +526,26 @@ class ProjectSettingViewModel @Inject constructor(
 
     private fun getHumanReadableErrorMessage(error: Exception): String {
         val errorMessage = error.message?.lowercase() ?: ""
-        
+
         return when {
-            errorMessage.contains("network") || errorMessage.contains("timeout") -> 
+            errorMessage.contains("network") || errorMessage.contains("timeout") ->
                 "네트워크 연결을 확인해주세요."
-            errorMessage.contains("permission") || errorMessage.contains("access") -> 
+
+            errorMessage.contains("permission") || errorMessage.contains("access") ->
                 "파일 접근 권한이 없습니다."
-            errorMessage.contains("size") || errorMessage.contains("large") -> 
+
+            errorMessage.contains("size") || errorMessage.contains("large") ->
                 "파일 크기가 너무 큽니다. 5MB 이하의 이미지를 선택해주세요."
-            errorMessage.contains("format") || errorMessage.contains("invalid") -> 
+
+            errorMessage.contains("format") || errorMessage.contains("invalid") ->
                 "지원되지 않는 이미지 형식입니다. JPG, PNG 파일을 선택해주세요."
-            errorMessage.contains("storage") -> 
+
+            errorMessage.contains("storage") ->
                 "서버 저장 공간에 문제가 있습니다. 잠시 후 다시 시도해주세요."
-            errorMessage.contains("quota") || errorMessage.contains("limit") -> 
+
+            errorMessage.contains("quota") || errorMessage.contains("limit") ->
                 "업로드 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
+
             else -> "이미지 업로드에 실패했습니다. 다시 시도해주세요."
         }
     }
@@ -501,12 +561,12 @@ class ProjectSettingViewModel @Inject constructor(
 
     fun confirmRemoveProjectImage() {
         viewModelScope.launch {
-            _uiState.update { 
+            _uiState.update {
                 it.copy(
-                    isLoading = true, 
+                    isLoading = true,
                     error = null,
                     showRemoveImageDialog = false
-                ) 
+                )
             }
 
             try {
@@ -514,27 +574,29 @@ class ProjectSettingViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지가 제거되었습니다"))
-                        
+
                         // 전역 이벤트 발생으로 모든 화면들에 알림
                         projectImageUpdateEventManager.notifyProjectImageUpdated(projectId.value)
-                        
-                        _uiState.update { 
+
+                        _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 selectedImageUri = null,
                                 hasImageChanges = false,
                                 projectImageUrl = null
-                            ) 
+                            )
                         }
-                        
+
                         // 프로젝트 정보 다시 로드하여 UI 갱신
                         loadProjectStructure()
                     }
+
                     is CustomResult.Failure -> {
                         _uiState.update { it.copy(isLoading = false) }
                         val errorMessage = getHumanReadableErrorMessage(result.error)
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(errorMessage))
                     }
+
                     else -> {
                         _uiState.update { it.copy(isLoading = false) }
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 이미지 제거 중 알 수 없는 오류가 발생했습니다."))
@@ -557,11 +619,11 @@ class ProjectSettingViewModel @Inject constructor(
      */
     fun onSetDefaultProjectProfileClicked() {
         viewModelScope.launch {
-            _uiState.update { 
+            _uiState.update {
                 it.copy(
-                    isRemovingImage = true, 
+                    isRemovingImage = true,
                     error = null
-                ) 
+                )
             }
 
             try {
@@ -569,27 +631,29 @@ class ProjectSettingViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("기본 프로젝트 프로필로 설정되었습니다"))
-                        
+
                         // 전역 이벤트 발생으로 모든 화면들에 알림
                         projectImageUpdateEventManager.notifyProjectImageUpdated(projectId.value)
-                        
-                        _uiState.update { 
+
+                        _uiState.update {
                             it.copy(
                                 isRemovingImage = false,
                                 selectedImageUri = null,
                                 hasImageChanges = false,
                                 projectImageUrl = null
-                            ) 
+                            )
                         }
-                        
+
                         // 프로젝트 정보 다시 로드하여 UI 갱신
                         loadProjectStructure()
                     }
+
                     is CustomResult.Failure -> {
                         _uiState.update { it.copy(isRemovingImage = false) }
                         val errorMessage = getHumanReadableErrorMessage(result.error)
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("기본 프로젝트 프로필 설정 실패: $errorMessage"))
                     }
+
                     else -> {
                         _uiState.update { it.copy(isRemovingImage = false) }
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("기본 프로젝트 프로필 설정 중 알 수 없는 오류가 발생했습니다."))

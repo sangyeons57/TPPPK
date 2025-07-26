@@ -1,13 +1,11 @@
-package com.example.domain.provider.websocket
+package com.example.websocket
 
-import com.example.domain.usecase.websocket.ControlGlobalWebSocketUseCase
-import com.example.domain.usecase.websocket.GetGlobalWebSocketStatusUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * 글로벌 WebSocket 관련 UseCase들을 제공하는 Provider
- * 
+ *
  * 앱 전체의 WebSocket 연결 상태 모니터링 및 제어 기능을 담당합니다.
  */
 @Singleton
@@ -15,10 +13,10 @@ class GlobalWebSocketUseCaseProvider @Inject constructor(
     private val getGlobalWebSocketStatusUseCase: GetGlobalWebSocketStatusUseCase,
     private val controlGlobalWebSocketUseCase: ControlGlobalWebSocketUseCase
 ) {
-    
+
     /**
      * 글로벌 WebSocket 관련 UseCase들을 생성합니다.
-     * 
+     *
      * @return 글로벌 WebSocket UseCase 그룹
      */
     fun create(): GlobalWebSocketUseCases {

@@ -1,6 +1,6 @@
 package com.example.feature_chat.model
 
-import com.example.core_common.websocket.WebSocketConnectionState
+import com.example.websocket.WebSocketConnectionState
 
 /**
  * WebSocket 연결 상태와 관련된 UI 상태를 관리하는 데이터 클래스

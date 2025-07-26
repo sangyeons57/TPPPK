@@ -1,17 +1,17 @@
 package com.example.feature_chat.websocket
 
-import com.example.core_common.websocket.WebSocketConnectionState
-import com.example.core_common.websocket.WebSocketManager
-import com.example.core_common.websocket.WebSocketMessage
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import com.example.websocket.WebSocketConnectionState
+import com.example.websocket.WebSocketManager
+import com.example.websocket.WebSocketMessage
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
 class ChatWebSocketClientTest {
 

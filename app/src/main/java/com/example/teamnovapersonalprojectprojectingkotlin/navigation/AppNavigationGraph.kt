@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,38 +25,67 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import com.example.core_navigation.core.*
+import com.example.core_navigation.core.AcceptFriendsRoute
+import com.example.core_navigation.core.AddProjectRoute
+import com.example.core_navigation.core.AddRoleRoute
+import com.example.core_navigation.core.AddScheduleRoute
+import com.example.core_navigation.core.AppSettingsRoute
+import com.example.core_navigation.core.Calendar24HourRoute
+import com.example.core_navigation.core.ChatRoute
+import com.example.core_navigation.core.DevMenuRoute
+import com.example.core_navigation.core.EditCategoryRoute
+import com.example.core_navigation.core.EditChannelRoute
+import com.example.core_navigation.core.EditMemberRoute
+import com.example.core_navigation.core.EditMyProfileRoute
+import com.example.core_navigation.core.EditRoleRoute
+import com.example.core_navigation.core.EditScheduleRoute
+import com.example.core_navigation.core.FindPasswordRoute
+import com.example.core_navigation.core.FriendsListRoute
+import com.example.core_navigation.core.JoinProjectRoute
+import com.example.core_navigation.core.LoginRoute
+import com.example.core_navigation.core.MainContainerRoute
+import com.example.core_navigation.core.MemberListRoute
+import com.example.core_navigation.core.NavigationManger
+import com.example.core_navigation.core.PrivacyPolicyRoute
+import com.example.core_navigation.core.ProjectDetailRoute
+import com.example.core_navigation.core.ProjectSettingsRoute
+import com.example.core_navigation.core.RoleListRoute
+import com.example.core_navigation.core.ScheduleDetailRoute
+import com.example.core_navigation.core.SignUpRoute
+import com.example.core_navigation.core.SplashRoute
+import com.example.core_navigation.core.TaskListRoute
+import com.example.core_navigation.core.TermsOfServiceRoute
 import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
-import com.example.domain.model.vo.DocumentId
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.extractProjectArguments
 import com.example.core_navigation.extension.safeComposable
+import com.example.domain.model.vo.DocumentId
+import com.example.feature_accept_friend.ui.AcceptFriendsScreen
 import com.example.feature_add_project.ui.AddProjectScreen
+import com.example.feature_add_role.ui.AddRoleScreen
 import com.example.feature_auth.ui.SplashScreen
 import com.example.feature_calendar_24hour.ui.Calendar24HourScreen
+import com.example.feature_chat.ui.ChatScreen
+import com.example.feature_dev.ui.DevMenuScreen
+import com.example.feature_edit_member.ui.EditMemberScreen
+import com.example.feature_edit_role.ui.EditRoleScreen
 import com.example.feature_edit_schedule.ui.EditScheduleScreen
 import com.example.feature_find_password.ui.FindPasswordScreen
-import com.example.feature_accept_friend.ui.AcceptFriendsScreen
-import com.example.feature_dev.ui.DevMenuScreen
 import com.example.feature_friends.ui.FriendsScreen
 import com.example.feature_home.viewmodel.HomeViewModel
 import com.example.feature_join_project.ui.JoinProjectScreen
 import com.example.feature_login.ui.LoginScreen
 import com.example.feature_main.MainContainerScreen
+import com.example.feature_member_list.ui.MemberListScreen
 import com.example.feature_privacy_policy.ui.PrivacyPolicyScreen
 import com.example.feature_profile.ui.EditProfileScreen
-import com.example.feature_project_setting_screen.viewmodel.ui.ProjectSettingScreen
+import com.example.feature_project_setting.viewmodel.ui.ProjectSettingScreen
+import com.example.feature_role_list.ui.RoleListScreen
 import com.example.feature_schedule_detail.ui.ScheduleDetailScreen
 import com.example.feature_settings.ui.SettingsScreen
 import com.example.feature_signup.ui.SignUpScreen
-import com.example.feature_terms_of_service.ui.TermsOfServiceScreen
-import com.example.feature_member_list.ui.MemberListScreen
-import com.example.feature_role_list.ui.RoleListScreen
-import com.example.feature_add_role.ui.AddRoleScreen
-import com.example.feature_edit_role.ui.EditRoleScreen
-import com.example.feature_edit_member.ui.EditMemberScreen
 import com.example.feature_task.ui.TaskListScreen
-import com.example.feature_chat.ui.ChatScreen
+import com.example.feature_terms_of_service.ui.TermsOfServiceScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -269,7 +297,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
             route = ProjectSettingsRoute.ROUTE_PATTERN,
             arguments = ProjectSettingsRoute.arguments
         ) { backStackEntry ->
-            val args = backStackEntry.extractProjectArguments()
+            backStackEntry.extractProjectArguments()
             ProjectSettingScreen()
         }
         
