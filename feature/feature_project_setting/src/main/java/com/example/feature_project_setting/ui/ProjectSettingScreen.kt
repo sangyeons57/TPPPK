@@ -1,7 +1,6 @@
-package com.example.feature_project_setting_screen.viewmodel.ui
+package com.example.feature_project_setting.viewmodel.ui
 
 import android.net.Uri
-import com.example.core_ui.picker.ImagePicker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,14 +58,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.project.ProjectProfileImage
+import com.example.core_ui.picker.ImagePicker
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.project.ProjectName
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
-import com.example.feature_project_setting_screen.viewmodel.viewmodel.ProjectSettingEvent
-import com.example.feature_project_setting_screen.viewmodel.viewmodel.ProjectSettingUiState
-import com.example.feature_project_setting_screen.viewmodel.viewmodel.ProjectSettingViewModel
+import com.example.feature_project_setting.viewmodel.viewmodel.ProjectSettingEvent
+import com.example.feature_project_setting.viewmodel.viewmodel.ProjectSettingUiState
+import com.example.feature_project_setting.viewmodel.viewmodel.ProjectSettingViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -105,8 +105,11 @@ fun ProjectSettingScreen(
             when (event) {
                 is ProjectSettingEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
                 is ProjectSettingEvent.RequestImagePick -> launchImagePicker()
-                is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog = event.category
-                is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog = event.channel
+                is ProjectSettingEvent.ShowDeleteCategoryConfirm -> showDeleteCategoryDialog =
+                    event.category
+
+                is ProjectSettingEvent.ShowDeleteChannelConfirm -> showDeleteChannelDialog =
+                    event.channel
             }
         }
     }
@@ -126,15 +129,19 @@ fun ProjectSettingScreen(
     ) { paddingValues ->
         // 로딩 상태 처리
         if (uiState.isLoading) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
         } else if (uiState.error != null) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), contentAlignment = Alignment.Center
+            ) {
                 Text("오류: ${uiState.error}", color = MaterialTheme.colorScheme.error)
             }
         } else {
@@ -173,7 +180,11 @@ fun ProjectSettingScreen(
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("삭제") }
             },
-            dismissButton = { TextButton(onClick = { showDeleteCategoryDialog = null }) { Text("취소") } }
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteCategoryDialog = null
+                }) { Text("취소") }
+            }
         )
     }
 
@@ -192,7 +203,11 @@ fun ProjectSettingScreen(
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("삭제") }
             },
-            dismissButton = { TextButton(onClick = { showDeleteChannelDialog = null }) { Text("취소") } }
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteChannelDialog = null
+                }) { Text("취소") }
+            }
         )
     }
 
@@ -391,29 +406,29 @@ fun ProjectProfileSection(
                         contentScale = ContentScale.Crop
                     )
                 }
-                
+
                 Column {
                     Text(
                         text = "프로젝트 이미지",
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = if (uiState.selectedImageUri != null) "새 이미지 선택됨" 
-                               else if (uiState.projectImageUrl != null) "현재 이미지" 
-                               else "이미지 없음",
+                        text = if (uiState.selectedImageUri != null) "새 이미지 선택됨"
+                        else if (uiState.projectImageUrl != null) "현재 이미지"
+                        else "이미지 없음",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            
+
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.outline
             )
         }
-        
+
         // 저장 버튼 (이미지가 선택되었을 때만 표시)
         if (uiState.hasImageChanges) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -436,7 +451,7 @@ fun ProjectProfileSection(
                 }
             }
         }
-        
+
         // 기본 프로젝트 프로필 사용 버튼
         Spacer(modifier = Modifier.height(12.dp))
         Button(
@@ -459,7 +474,7 @@ fun ProjectProfileSection(
             }
         }
     }
-    
+
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 }
 
@@ -492,7 +507,12 @@ fun CategoryHeader(
             Icon(Icons.Filled.Add, contentDescription = "채널 추가", modifier = Modifier.size(20.dp))
         }
         IconButton(onClick = onDeleteClick, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.Delete, contentDescription = "카테고리 삭제", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+            Icon(
+                Icons.Filled.Delete,
+                contentDescription = "카테고리 삭제",
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -509,7 +529,12 @@ fun ChannelItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onEditClick) // 채널 클릭 시 편집으로 이동
-            .padding(start = 32.dp, end = 4.dp, top = 12.dp, bottom = 12.dp), // 카테고리보다 들여쓰기, 오른쪽 아이콘 패딩 줄임
+            .padding(
+                start = 32.dp,
+                end = 4.dp,
+                top = 12.dp,
+                bottom = 12.dp
+            ), // 카테고리보다 들여쓰기, 오른쪽 아이콘 패딩 줄임
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 채널 아이콘 (텍스트/음성 구분)
@@ -529,7 +554,12 @@ fun ChannelItem(
         )
         // 편집 버튼은 Row 클릭으로 대체하고 삭제 버튼만 표시
         IconButton(onClick = onDeleteClick, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Filled.Delete, contentDescription = "채널 삭제", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+            Icon(
+                Icons.Filled.Delete,
+                contentDescription = "채널 삭제",
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
     HorizontalDivider(modifier = Modifier.padding(start = 32.dp, end = 16.dp)) // 구분선
@@ -562,7 +592,11 @@ fun RenameProjectDialog(
                     isError = error != null
                 )
                 if (error != null) {
-                    Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         },

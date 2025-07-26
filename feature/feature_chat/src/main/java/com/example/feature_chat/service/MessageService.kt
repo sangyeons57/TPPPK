@@ -4,7 +4,6 @@ import android.net.Uri
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.domain.model.base.Message
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
@@ -20,6 +19,7 @@ import com.example.feature_chat.util.MentionParser
 import com.example.feature_chat.util.ReplyParser
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
+import com.example.websocket.WebSocketConnectionState
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 

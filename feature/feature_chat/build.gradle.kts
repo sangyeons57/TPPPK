@@ -17,6 +17,7 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui")) // 공통 유틸리티 사용
+    implementation(project(":core:websocket")) // WebSocket 기능
     implementation(project(":data"))
 
     // Module-specific dependencies

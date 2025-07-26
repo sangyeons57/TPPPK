@@ -1,17 +1,20 @@
 package com.example.feature_chat.queue
 
-import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.domain.model.base.Message
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.feature_chat.websocket.ChatWebSocketClient
-import io.mockk.*
+import com.example.websocket.WebSocketConnectionState
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
 class OfflineMessageQueueTest {
 
@@ -56,7 +59,7 @@ class OfflineMessageQueueTest {
             content = MessageContent("test message 1"),
             replyToMessageId = null
         )
-        val message2 = Message.create(
+        Message.create(
             id = DocumentId("test2"),
             senderId = UserId("user1"),
             content = MessageContent("test message 2"),

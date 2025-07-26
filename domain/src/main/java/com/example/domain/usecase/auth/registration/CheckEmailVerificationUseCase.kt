@@ -3,7 +3,6 @@ package com.example.domain.usecase.auth
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.base.AuthRepository
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * 현재 인증된 사용자의 이메일 인증 상태를 확인하는 UseCase.

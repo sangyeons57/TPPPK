@@ -4,13 +4,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.data.cache.ChatCacheManager
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain.provider.dev.DevMenuUseCaseProvider
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
+import com.example.websocket.WebSocketConnectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

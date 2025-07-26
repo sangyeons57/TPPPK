@@ -1,21 +1,35 @@
-package com.example.core_common.websocket
+package com.example.websocket
 
 import android.util.Log
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.*
-import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import okhttp3.*
-import okio.ByteString
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
-import javax.net.ssl.HostnameVerifier
 
 @Singleton
 class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
@@ -54,7 +68,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
             }
 
             val sslContext = SSLContext.getInstance("SSL")
-            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            sslContext.init(null, trustAllCerts, SecureRandom())
             
             sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
             hostnameVerifier(hostnameVerifier)
@@ -70,8 +84,10 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     }
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
-    private val _connectionState = MutableStateFlow<WebSocketConnectionState>(WebSocketConnectionState.Disconnected)
+
+    private val _connectionState = MutableStateFlow<WebSocketConnectionState>(
+        WebSocketConnectionState.Disconnected
+    )
     override val connectionState: StateFlow<WebSocketConnectionState> = _connectionState.asStateFlow()
     
     private val _incomingMessages = MutableSharedFlow<WebSocketMessage>(
@@ -83,17 +99,8 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     
     private var webSocket: WebSocket? = null
     private var currentRoomId: String? = null
-    private var reconnectJob: Job? = null
-    
-    // Connection credentials for auto-reconnection
-    private var lastServerUrl: String? = null
-    private var lastAuthToken: String? = null
-    
-    // Reconnection management with exponential backoff
-    private var reconnectAttempts = 0
-    private val maxReconnectAttempts = 10
-    private val baseReconnectDelayMs = 1000L // 1초
-    private val maxReconnectDelayMs = 60000L // 60초
+
+    // Simple disconnection flag
     private var manuallyDisconnected = false
     
     // Authentication state tracking
@@ -104,14 +111,9 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             Log.d(TAG, "WebSocket connection opened successfully")
             _connectionState.value = WebSocketConnectionState.Connected
-            
-            // Reset reconnection attempts on successful connection
-            reconnectAttempts = 0
+
+            // Reset manual disconnect flag
             manuallyDisconnected = false
-            
-            // Cancel any pending reconnection job
-            reconnectJob?.cancel()
-            reconnectJob = null
             
             // OkHttp handles ping/pong automatically with pingInterval
             Log.d(TAG, "Connection state updated to Connected, reconnect attempts reset")
@@ -170,10 +172,9 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                     Log.w(TAG, "Authentication error (1008): $reason - Manual token refresh required")
                 }
                 else -> {
-                    // Other unexpected closures - attempt reconnection
+                    // Other unexpected closures
                     _connectionState.value = WebSocketConnectionState.Disconnected
                     _isAuthenticated.value = false
-                    scheduleReconnect()
                 }
             }
         }
@@ -184,7 +185,6 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                 message = "Connection failed: ${t.message}",
                 throwable = t
             )
-            scheduleReconnect()
         }
     }
     
@@ -194,10 +194,9 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                 if (_connectionState.value is WebSocketConnectionState.Connected) {
                     return@withContext Result.success(Unit)
                 }
-                
-                // Store credentials for auto-reconnection
-                lastServerUrl = serverUrl
-                lastAuthToken = authToken
+
+                // Reset manual disconnect flag
+                manuallyDisconnected = false
                 
                 _connectionState.value = WebSocketConnectionState.Connecting
                 
@@ -236,14 +235,9 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     override suspend fun disconnect() {
         withContext(Dispatchers.IO) {
             Log.d(TAG, "Manual disconnect requested")
-            
-            // Set manual disconnect flag to prevent auto-reconnection
+
+            // Set manual disconnect flag
             manuallyDisconnected = true
-            reconnectAttempts = 0
-            
-            // Cancel any pending reconnection attempts
-            reconnectJob?.cancel()
-            reconnectJob = null
             
             // Leave all rooms before disconnecting
             leaveAllRooms()
@@ -251,9 +245,6 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
             webSocket?.close(1000, "User disconnection")
             webSocket = null
             
-            // Clear stored credentials on manual disconnect
-            lastServerUrl = null
-            lastAuthToken = null
             
             _connectionState.value = WebSocketConnectionState.Disconnected
             _isAuthenticated.value = false
@@ -363,122 +354,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
             currentRoomId = null
         }
     }
-    
-    
-    private fun scheduleReconnect() {
-        // Don't reconnect if manually disconnected
-        if (manuallyDisconnected) {
-            Log.d(TAG, "Skipping reconnection - manually disconnected")
-            return
-        }
-        
-        // Check if we've exceeded max attempts
-        if (reconnectAttempts >= maxReconnectAttempts) {
-            Log.w(TAG, "Maximum reconnection attempts ($maxReconnectAttempts) exceeded")
-            _connectionState.value = WebSocketConnectionState.Error(
-                message = "Connection lost - maximum reconnection attempts exceeded",
-                throwable = Exception("Auto-reconnection failed after $maxReconnectAttempts attempts")
-            )
-            return
-        }
-        
-        // Cancel any existing reconnection job
-        reconnectJob?.cancel()
-        
-        reconnectJob = scope.launch {
-            // Calculate delay with exponential backoff: base * 2^attempts, capped at max
-            val delay = minOf(
-                baseReconnectDelayMs * (1L shl reconnectAttempts.coerceAtMost(6)), // 최대 2^6 = 64배까지
-                maxReconnectDelayMs
-            )
-            
-            reconnectAttempts++
-            
-            Log.d(TAG, "Scheduling reconnection attempt #$reconnectAttempts in ${delay}ms")
-            _connectionState.value = WebSocketConnectionState.Connecting
-            
-            delay(delay)
-            
-            // Check if we're still supposed to reconnect
-            if (manuallyDisconnected || _connectionState.value is WebSocketConnectionState.Connected) {
-                Log.d(TAG, "Cancelling reconnection - state changed")
-                return@launch
-            }
-            
-            Log.d(TAG, "Attempting reconnection #$reconnectAttempts")
-            
-            // Try to reconnect if we have stored credentials
-            val serverUrl = lastServerUrl
-            val authToken = lastAuthToken
-            
-            if (serverUrl != null && authToken != null) {
-                try {
-                    val result = connect(serverUrl, authToken)
-                    if (result.isSuccess) {
-                        Log.d(TAG, "Auto-reconnection successful on attempt #$reconnectAttempts")
-                        
-                        // Rejoin all previously joined rooms
-                        val roomsToRejoin = synchronized(joinedRooms) {
-                            joinedRooms.toSet() // 복사본 생성
-                        }
-                        
-                        if (roomsToRejoin.isNotEmpty()) {
-                            Log.d(TAG, "Rejoining ${roomsToRejoin.size} rooms after reconnection")
-                            roomsToRejoin.forEach { roomId ->
-                                try {
-                                    val rejoinResult = joinRoom(roomId)
-                                    if (rejoinResult.isSuccess) {
-                                        Log.d(TAG, "Successfully rejoined room: $roomId")
-                                    } else {
-                                        Log.w(TAG, "Failed to rejoin room: $roomId - ${rejoinResult.exceptionOrNull()?.message}")
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Exception rejoining room: $roomId", e)
-                                }
-                            }
-                        }
-                        
-                        return@launch
-                    } else {
-                        Log.w(TAG, "Auto-reconnection attempt #$reconnectAttempts failed: ${result.exceptionOrNull()?.message}")
-                        // Schedule next attempt
-                        scheduleReconnect()
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Exception during auto-reconnection attempt #$reconnectAttempts", e)
-                    // Schedule next attempt
-                    scheduleReconnect()
-                }
-            } else {
-                Log.w(TAG, "No stored credentials for auto-reconnection")
-                _connectionState.value = WebSocketConnectionState.Error(
-                    message = "No authentication credentials available for reconnection",
-                    throwable = Exception("Missing credentials for auto-reconnection")
-                )
-            }
-        }
-    }
-    
-    /**
-     * Update stored authentication token for auto-reconnection
-     */
-    fun updateAuthToken(newAuthToken: String) {
-        Log.d(TAG, "Updating stored auth token for auto-reconnection")
-        lastAuthToken = newAuthToken
-    }
-    
-    /**
-     * Reset reconnection state for manual retry
-     */
-    fun resetReconnectionState() {
-        Log.d(TAG, "Resetting reconnection state for manual retry")
-        manuallyDisconnected = false
-        reconnectAttempts = 0
-        reconnectJob?.cancel()
-        reconnectJob = null
-    }
-    
     companion object {
-        private const val TAG = "WebSocketManager"
+        private const val TAG = "WebSocketManagerImpl"
     }
 }

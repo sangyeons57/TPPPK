@@ -1,4 +1,4 @@
-package com.example.core_common.websocket
+package com.example.websocket
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

@@ -41,7 +41,7 @@ class MigrationTest {
     @Throws(IOException::class)
     fun migrate6To7() {
         // 버전 6 DB 생성
-        val db = helper.createDatabase(TEST_DB, 6).apply {
+        helper.createDatabase(TEST_DB, 6).apply {
             // 테스트용 Invite 데이터 추가
             execSQL("""
                 INSERT INTO invites (token, type, inviterId, projectId, expiresAt, createdAt, cachedAt) 

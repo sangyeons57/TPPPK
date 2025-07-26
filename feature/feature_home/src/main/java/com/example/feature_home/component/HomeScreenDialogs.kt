@@ -1,14 +1,13 @@
 package com.example.feature_home.ui.component
 
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.core_ui.components.reorder.SimpleReorderDialog
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureUiState
-import com.example.feature_home.model.toUnifiedDialogItems
 import com.example.feature_home.model.toProjectStructureItems
+import com.example.feature_home.model.toUnifiedDialogItems
 import com.example.feature_home.viewmodel.HomeViewModel
 
 /**
@@ -25,7 +24,7 @@ fun HomeScreenDialogs(
     // AddProjectElementDialog
     if (dialogStates.showAddProjectElementDialog && dialogStates.currentProjectIdForDialog != null) {
         AddProjectElementDialog(
-            projectId = dialogStates.currentProjectIdForDialog?.value ?: "",
+            projectId = dialogStates.currentProjectIdForDialog.value ?: "",
             onDismissRequest = {
                 onDialogStateChange(
                     dialogStates.copy(

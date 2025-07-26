@@ -8,7 +8,6 @@ import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -124,26 +123,12 @@ class AddProjectElementDialogViewModel @Inject constructor(
         val currentState = _uiState.value
         val projectId = this.projectId ?: return
 
-        // 카테고리 이름 검증
-        if (currentState.categoryName.isBlank()) {
-            _uiState.value = currentState.copy(
-                categoryNameError = "카테고리 이름을 입력해주세요."
-            )
-            return
-        }
-
-        if (currentState.categoryName.length > 50) {
-            _uiState.value = currentState.copy(
-                categoryNameError = "카테고리 이름은 50자 이하로 입력해주세요."
-            )
-            return
-        }
-
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true)
+            _uiState.value = currentState.copy(isLoading = true, categoryNameError = null)
 
             try {
                 val structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
+                // Let domain validation handle the validation - trim first to ensure clean input
                 val categoryName = CategoryName(currentState.categoryName.trim())
                 
                 when (val result = structureUseCases.addCategoryUseCase(projectId, categoryName)) {
@@ -165,6 +150,12 @@ class AddProjectElementDialogViewModel @Inject constructor(
                         )
                     }
                 }
+            } catch (e: IllegalArgumentException) {
+                // Domain validation errors (from CategoryName validation)
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    categoryNameError = e.message ?: "카테고리 이름이 올바르지 않습니다."
+                )
             } catch (e: Exception) {
                 _uiState.value = currentState.copy(
                     isLoading = false,
@@ -205,7 +196,7 @@ class AddProjectElementDialogViewModel @Inject constructor(
                 
                 // 카테고리 ID 처리 (null이면 NO_CATEGORY_ID 사용)
                 val categoryId = currentState.selectedCategoryId 
-                    ?: com.example.domain.model.base.Category.NO_CATEGORY_ID
+                    ?: Category.NO_CATEGORY_ID
                 
                 when (val result = channelUseCases.addProjectChannelUseCase(
                     projectId = projectId,
@@ -267,8 +258,8 @@ class AddProjectElementDialogViewModel @Inject constructor(
                         val hasNoCategory = categories.any { it.id.value == Category.NO_CATEGORY_ID }
                         if (!hasNoCategory) {
                             val noCategory = Category.fromDataSource(
-                                id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
-                                name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                                id = DocumentId(Category.NO_CATEGORY_ID),
+                                name = CategoryName.NO_CATEGORY_NAME,
                                 order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
                                 createdBy = com.example.domain.model.vo.OwnerId("system"),
                                 createdAt = java.time.Instant.now(),
@@ -285,8 +276,8 @@ class AddProjectElementDialogViewModel @Inject constructor(
                     is CustomResult.Failure -> {
                         // 카테고리 로드 실패 시 NoCategory만 표시
                         val noCategory = Category.fromDataSource(
-                            id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
-                            name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                            id = DocumentId(Category.NO_CATEGORY_ID),
+                            name = CategoryName.NO_CATEGORY_NAME,
                             order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
                             createdBy = com.example.domain.model.vo.OwnerId("system"),
                             createdAt = java.time.Instant.now(),
@@ -300,8 +291,8 @@ class AddProjectElementDialogViewModel @Inject constructor(
                     else -> {
                         // 다른 상태의 경우 NoCategory만 표시
                         val noCategory = Category.fromDataSource(
-                            id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
-                            name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                            id = DocumentId(Category.NO_CATEGORY_ID),
+                            name = CategoryName.NO_CATEGORY_NAME,
                             order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
                             createdBy = com.example.domain.model.vo.OwnerId("system"),
                             createdAt = java.time.Instant.now(),
@@ -316,8 +307,8 @@ class AddProjectElementDialogViewModel @Inject constructor(
             } catch (e: Exception) {
                 // 예외 발생 시 NoCategory만 표시
                 val noCategory = Category.fromDataSource(
-                    id = com.example.domain.model.vo.DocumentId(Category.NO_CATEGORY_ID),
-                    name = com.example.domain.model.vo.category.CategoryName.NO_CATEGORY_NAME,
+                    id = DocumentId(Category.NO_CATEGORY_ID),
+                    name = CategoryName.NO_CATEGORY_NAME,
                     order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
                     createdBy = com.example.domain.model.vo.OwnerId("system"),
                     createdAt = java.time.Instant.now(),

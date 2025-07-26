@@ -65,6 +65,7 @@ dependencies {
     // Core modules
     implementation(project(":domain"))
     implementation(project(":core:core_common"))
+    implementation(project(":core:websocket")) // WebSocket 서비스
 
     // Firebase App Check
     implementation(platform(libs.firebase.bom))
@@ -86,6 +87,7 @@ dependencies {
 
     implementation(project(":core:core_ui"))
     implementation(project(":core:core_navigation"))
+    implementation(project(":core:websocket"))
 
 
     // ★ 네비게이션 그래프에서 직접 호출하는 모든 Feature 모듈 의존성 추가

@@ -6,7 +6,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
-import com.example.core_common.websocket.WebSocketConnectionState
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.data.utils.DebugChatLogger
@@ -18,6 +17,7 @@ import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.MentionSuggestion
 import com.example.feature_chat.service.ChatServiceProvider
 import com.example.feature_chat.websocket.ChatWebSocketEvent
+import com.example.websocket.WebSocketConnectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async

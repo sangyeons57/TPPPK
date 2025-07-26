@@ -1,19 +1,14 @@
 package com.example.feature_chat.integration
 
-import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.core_common.websocket.WebSocketManager
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import android.util.Log
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
+import com.example.websocket.WebSocketManager
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout

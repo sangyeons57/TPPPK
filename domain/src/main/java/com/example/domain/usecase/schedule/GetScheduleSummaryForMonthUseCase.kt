@@ -1,6 +1,5 @@
 package com.example.domain.usecase.schedule
 
-import android.os.PerformanceHintManager.Session
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.ScheduleRepository

@@ -332,9 +332,10 @@ fun DevMenuScreen(
                     .padding(vertical = 8.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = when (webSocketConnectionState) {
-                        is com.example.core_common.websocket.WebSocketConnectionState.Connected -> 
+                        is com.example.websocket.WebSocketConnectionState.Connected -> 
                             MaterialTheme.colorScheme.primaryContainer
-                        is com.example.core_common.websocket.WebSocketConnectionState.Error -> 
+
+                        is com.example.websocket.WebSocketConnectionState.Error ->
                             MaterialTheme.colorScheme.errorContainer
                         else -> MaterialTheme.colorScheme.surfaceVariant
                     }
@@ -373,7 +374,7 @@ fun DevMenuScreen(
                     Button(
                         onClick = viewModel::connectWebSocket,
                         modifier = Modifier.weight(1f),
-                        enabled = isLoggedIn && webSocketConnectionState !is com.example.core_common.websocket.WebSocketConnectionState.Connected
+                        enabled = isLoggedIn && webSocketConnectionState !is com.example.websocket.WebSocketConnectionState.Connected
                     ) {
                         Text("연결")
                     }
@@ -382,7 +383,7 @@ fun DevMenuScreen(
                 Button(
                     onClick = viewModel::sendHelloWorldTest,
                     modifier = Modifier.weight(1f),
-                    enabled = isLoggedIn && webSocketConnectionState is com.example.core_common.websocket.WebSocketConnectionState.Connected
+                    enabled = isLoggedIn && webSocketConnectionState is com.example.websocket.WebSocketConnectionState.Connected
                 ) {
                     Text("Hello World 전송")
                 }
@@ -395,7 +396,7 @@ fun DevMenuScreen(
                 Button(
                     onClick = viewModel::disconnectWebSocket,
                     modifier = Modifier.weight(1f),
-                    enabled = isLoggedIn && webSocketConnectionState is com.example.core_common.websocket.WebSocketConnectionState.Connected
+                    enabled = isLoggedIn && webSocketConnectionState is com.example.websocket.WebSocketConnectionState.Connected
                 ) {
                     Text("연결 해제")
                 }
