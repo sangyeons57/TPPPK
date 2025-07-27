@@ -54,26 +54,13 @@ class User private constructor(
     var accountStatus: UserAccountStatus = initialAccountStatus
         private set
 
-    init {
-        setOriginalState()
-    }
 
     /**
      * Returns and clears the accumulated domain events.
      */
 
     override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_EMAIL to email.value,
-            KEY_NAME to name.value,
-            KEY_CONSENT_TIMESTAMP to consentTimeStamp,
-            KEY_MEMO to memo?.value,
-            KEY_USER_STATUS to userStatus,
-            KEY_CREATED_AT to createdAt,
-            KEY_UPDATED_AT to updatedAt,
-            KEY_FCM_TOKEN to fcmToken?.value,
-            KEY_ACCOUNT_STATUS to accountStatus
-        )
+        return emptyMap()
     }
 
     // Secondary constructor for convenience if some fields can be truly optional at creation

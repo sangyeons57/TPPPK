@@ -30,13 +30,61 @@ class ControlGlobalWebSocketUseCase @Inject constructor(
     }
 
     /**
-     * 기본 WebSocketManager에 접근합니다.
+     * 방에 입장합니다.
      *
-     * 메시지 전송 등의 작업을 위해 기본 WebSocketManager를 반환합니다.
-     *
-     * @return WebSocketManager 인스턴스
+     * @param roomId 입장할 방 ID
+     * @return 입장 결과
      */
-    fun getWebSocketManager(): WebSocketManager {
-        return globalWebSocketService.getWebSocketManager()
+    suspend fun joinRoom(roomId: String): Result<Unit> {
+        return globalWebSocketService.joinRoom(roomId)
+    }
+
+    /**
+     * 방에서 퇴장합니다.
+     *
+     * @param roomId 퇴장할 방 ID
+     * @return 퇴장 결과
+     */
+    suspend fun leaveRoom(roomId: String): Result<Unit> {
+        return globalWebSocketService.leaveRoom(roomId)
+    }
+
+    /**
+     * 현재 입장한 방 목록을 가져옵니다.
+     *
+     * @return 입장한 방 ID 집합
+     */
+    fun getJoinedRooms(): Set<String> {
+        return globalWebSocketService.getJoinedRooms()
+    }
+
+    /**
+     * 특정 방에 입장했는지 확인합니다.
+     *
+     * @param roomId 확인할 방 ID
+     * @return 입장 여부
+     */
+    fun isJoinedToRoom(roomId: String): Boolean {
+        return globalWebSocketService.isJoinedToRoom(roomId)
+    }
+
+    /**
+     * WebSocket 연결 상태를 가져옵니다.
+     */
+    fun getConnectionState() = globalWebSocketService.globalConnectionState
+
+    /**
+     * WebSocket 메시지 스트림을 가져옵니다.
+     */
+    fun getIncomingMessages() = globalWebSocketService.getWebSocketManager().incomingMessages
+
+    /**
+     * WebSocket 메시지를 전송합니다.
+     *
+     * @param message 전송할 메시지
+     * @return 전송 결과
+     */
+    suspend fun sendMessage(message: WebSocketMessage): Result<Unit> {
+        return globalWebSocketService.getWebSocketManager().sendMessage(message)
     }
 }

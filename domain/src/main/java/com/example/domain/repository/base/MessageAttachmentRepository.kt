@@ -7,7 +7,6 @@ import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.repository.DefaultRepository
 import com.example.domain.repository.factory.context.MessageAttachmentRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
 
@@ -29,8 +28,33 @@ sealed class FileUploadResultData {
     data class Failure(val exception: Exception) : FileUploadResultData()
 }
 
-interface MessageAttachmentRepository : DefaultRepository {
-    override val factoryContext: MessageAttachmentRepositoryFactoryContext
+/**
+ * Remote MessageAttachment Repository Interface (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
+ */
+interface MessageAttachmentRepository {
+    val factoryContext: MessageAttachmentRepositoryFactoryContext
+
+    // === 동기화 메서드 ===
+
+    suspend fun syncFromServer(
+        lastSyncCursor: Long? = null,
+        messageId: String? = null
+    ): CustomResult<SyncResult<MessageAttachment>, Exception>
+
+    suspend fun syncToServer(
+        messageId: String? = null
+    ): CustomResult<Int, Exception>
+
+    suspend fun forceSyncAll(
+        messageId: String? = null
+    ): CustomResult<Int, Exception>
+
+    suspend fun resolveConflicts(
+        conflictedAttachmentIds: List<String>
+    ): CustomResult<Int, Exception>
+
+    // === Firebase Storage 작업 ===
     
     /**
      * 파일을 업로드하고 MessageAttachment를 생성합니다.

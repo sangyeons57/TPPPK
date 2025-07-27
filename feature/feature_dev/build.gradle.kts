@@ -16,11 +16,7 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui"))
-    implementation(project(":core:websocket")) // WebSocket 기능
     implementation(project(":data"))
-    
-    // Feature module dependencies
-    implementation(project(":feature:feature_chat"))
 
     // Module-specific dependencies
     implementation(libs.androidx.compose.navigation)

@@ -3,7 +3,6 @@ package com.example.data.di
 import com.example.data.repository.base.ProjectInvitationRepositoryImpl
 import com.example.data.repository.factory.AuthRepositoryFactoryImpl
 import com.example.data.repository.factory.CategoryRepositoryFactoryImpl
-import com.example.data.repository.factory.ChatCacheRepositoryFactoryImpl
 import com.example.data.repository.factory.DMChannelRepositoryFactoryImpl
 import com.example.data.repository.factory.DMWrapperRepositoryFactoryImpl
 import com.example.data.repository.factory.FileRepositoryFactoryImpl
@@ -25,7 +24,6 @@ import com.example.data.repository.factory.UserRepositoryFactoryImpl
 import com.example.domain.repository.RepositoryFactory
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.CategoryRepository
-import com.example.domain.repository.base.ChatCacheRepository
 import com.example.domain.repository.base.DMChannelRepository
 import com.example.domain.repository.base.DMWrapperRepository
 import com.example.domain.repository.base.FileRepository
@@ -46,7 +44,6 @@ import com.example.domain.repository.base.TaskRepository
 import com.example.domain.repository.base.UserRepository
 import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
 import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ChatCacheRepositoryFactoryContext
 import com.example.domain.repository.factory.context.DMChannelRepositoryFactoryContext
 import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryContext
 import com.example.domain.repository.factory.context.FileRepositoryFactoryContext
@@ -86,10 +83,6 @@ abstract class RepositoryFactoryModule {
     @Binds
     @Singleton
         abstract fun bindCategoryRepositoryFactory(impl: CategoryRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>
-
-    @Binds
-    @Singleton
-    abstract fun bindChatCacheRepositoryFactory(impl: ChatCacheRepositoryFactoryImpl): @JvmSuppressWildcards RepositoryFactory<ChatCacheRepositoryFactoryContext, ChatCacheRepository>
 
     @Binds
     @Singleton

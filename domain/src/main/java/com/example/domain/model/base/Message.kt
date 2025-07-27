@@ -31,27 +31,6 @@ class Message private constructor(
     var isDeleted: MessageIsDeleted = initialIsDeleted
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_SENDER_ID to this.senderId.value,
-            KEY_SEND_MESSAGE to this.content.value,
-            KEY_REPLY_TO_MESSAGE_ID to this.replyToMessageId?.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_IS_DELETED to this.isDeleted.value,
-            KEY_MENTIONS to this.mentions.map { 
-                mapOf(
-                    "type" to it.type.name,
-                    "id" to it.id,
-                    "displayName" to it.displayName
-                )
-            }
-        )
-    }
 
     /**
      * Updates the content of the message.

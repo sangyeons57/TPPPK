@@ -2,37 +2,46 @@ package com.example.data.repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.TaskRemoteDataSource
-import com.example.data.datasource.remote.TaskRemoteDataSourceImpl
-import com.example.data.model.remote.toDto
-import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Task
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.TaskRepository
+import com.example.domain.repository.base.SyncResult
 import com.example.domain.repository.factory.context.TaskRepositoryFactoryContext
-import com.google.firebase.firestore.FieldValue
 import javax.inject.Inject
 
+/**
+ * Remote Task Repository Implementation (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
+ */
 class TaskRepositoryImpl @Inject constructor(
     private val taskRemoteDataSource: TaskRemoteDataSource,
     override val factoryContext: TaskRepositoryFactoryContext,
-) : DefaultRepositoryImpl(taskRemoteDataSource, factoryContext), TaskRepository {
+) : TaskRepository {
 
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Task)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Task"))
-        ensureCollection()
-        return if (entity.isNew) {
-            taskRemoteDataSource.create(entity.toDto())
-        } else {
-            val changedFields = entity.getChangedFields().toMutableMap()
-            
-            // checkedAt이 서버 타임스탬프 마커인 경우 FieldValue.serverTimestamp()로 변환
-            if (entity.isCheckedAtServerTimestamp()) {
-                changedFields[Task.KEY_CHECKED_AT] = FieldValue.serverTimestamp()
-            }
-            
-            taskRemoteDataSource.update(entity.id, changedFields)
-        }
+    override suspend fun syncFromServer(
+        lastSyncCursor: Long?,
+        projectId: String?,
+        userId: String?
+    ): CustomResult<SyncResult<Task>, Exception> {
+        return taskRemoteDataSource.syncFromServer(lastSyncCursor, projectId, userId)
+    }
+
+    override suspend fun syncToServer(
+        projectId: String?,
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return taskRemoteDataSource.syncToServer(projectId, userId)
+    }
+
+    override suspend fun forceSyncAll(
+        projectId: String?,
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return taskRemoteDataSource.forceSyncAll(projectId, userId)
+    }
+
+    override suspend fun resolveConflicts(
+        conflictedTaskIds: List<String>
+    ): CustomResult<Int, Exception> {
+        return taskRemoteDataSource.resolveConflicts(conflictedTaskIds)
     }
 }

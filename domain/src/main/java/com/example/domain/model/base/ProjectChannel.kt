@@ -37,21 +37,6 @@ class ProjectChannel private constructor(
     var categoryId: DocumentId = initialCategoryId
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_CHANNEL_NAME to this.channelName.value,
-            KEY_CHANNEL_TYPE to this.channelType.value,
-            KEY_ORDER to this.order.value,
-            KEY_STATUS to this.status.value,
-            KEY_CATEGORY_ID to this.categoryId.value,
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_CREATED_AT to this.createdAt
-        )
-    }
 
     /**
      * Updates the name of the channel after validation.

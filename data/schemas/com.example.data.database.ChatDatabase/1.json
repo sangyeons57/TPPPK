@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "2507081a413a107d0c7a3b786c948b32",
+    "identityHash": "e7162fd73bbc27a33f3305e6f932cbcc",
     "entities": [
       {
-        "tableName": "chat_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`messageId` TEXT NOT NULL, `channelId` TEXT NOT NULL, `userId` TEXT NOT NULL, `content` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `replyToMessageId` TEXT, `mentions` TEXT, `attachments` TEXT, `isDeleted` INTEGER NOT NULL, `localSavedAt` INTEGER NOT NULL, PRIMARY KEY(`messageId`))",
+        "tableName": "chats",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`messageId` TEXT NOT NULL, `channelId` TEXT NOT NULL, `userId` TEXT NOT NULL, `content` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `replyToMessageId` TEXT, `mentions` TEXT, `attachments` TEXT, `isDeleted` INTEGER NOT NULL, PRIMARY KEY(`messageId`))",
         "fields": [
           {
             "fieldPath": "messageId",
@@ -64,12 +64,6 @@
             "columnName": "isDeleted",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "localSavedAt",
-            "columnName": "localSavedAt",
-            "affinity": "INTEGER",
-            "notNull": true
           }
         ],
         "primaryKey": {
@@ -80,50 +74,44 @@
         },
         "indices": [
           {
-            "name": "index_chat_messages_channelId_createdAt",
+            "name": "index_chats_channelId_createdAt",
             "unique": false,
             "columnNames": [
               "channelId",
               "createdAt"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_channelId_createdAt` ON `${TABLE_NAME}` (`channelId`, `createdAt`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chats_channelId_createdAt` ON `${TABLE_NAME}` (`channelId`, `createdAt`)"
           },
           {
-            "name": "index_chat_messages_channelId_updatedAt",
+            "name": "index_chats_channelId_updatedAt",
             "unique": false,
             "columnNames": [
               "channelId",
               "updatedAt"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_channelId_updatedAt` ON `${TABLE_NAME}` (`channelId`, `updatedAt`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chats_channelId_updatedAt` ON `${TABLE_NAME}` (`channelId`, `updatedAt`)"
           },
           {
-            "name": "index_chat_messages_messageId",
+            "name": "index_chats_messageId",
             "unique": true,
             "columnNames": [
               "messageId"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_chat_messages_messageId` ON `${TABLE_NAME}` (`messageId`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_chats_messageId` ON `${TABLE_NAME}` (`messageId`)"
           }
         ]
       },
       {
-        "tableName": "channel_sync_info",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`channelId` TEXT NOT NULL, `lastSyncTimestamp` INTEGER NOT NULL, `messageCount` INTEGER NOT NULL, `hasMoreOlderMessages` INTEGER NOT NULL, `oldestMessageTimestamp` INTEGER, `newestMessageTimestamp` INTEGER, `lastSyncAt` INTEGER NOT NULL, `syncFailureCount` INTEGER NOT NULL, PRIMARY KEY(`channelId`))",
+        "tableName": "channels",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`channelId` TEXT NOT NULL, `messageCount` INTEGER NOT NULL, `hasMoreOlderMessages` INTEGER NOT NULL, `oldestMessageTimestamp` INTEGER, `newestMessageTimestamp` INTEGER, `lastSyncAt` INTEGER NOT NULL, `syncFailureCount` INTEGER NOT NULL, PRIMARY KEY(`channelId`))",
         "fields": [
           {
             "fieldPath": "channelId",
             "columnName": "channelId",
             "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "lastSyncTimestamp",
-            "columnName": "lastSyncTimestamp",
-            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -171,7 +159,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2507081a413a107d0c7a3b786c948b32')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e7162fd73bbc27a33f3305e6f932cbcc')"
     ]
   }
 }

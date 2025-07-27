@@ -1,576 +1,269 @@
 package com.example.websocket
 
 import android.util.Log
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.data.UserSession
-import com.example.domain.repository.base.AuthRepository
+import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Global WebSocket service that manages a single WebSocket connection throughout the app lifecycle.
- * This service automatically handles:
- * - Authentication state monitoring and token refresh
- * - Network connectivity monitoring
- * - Automatic reconnection with proper credentials
+ * 단순화된 WebSocket 동기화 서비스
+ * Single source of truth 아키텍처에서 백그라운드 동기화만 담당
+ * UI와 직접 연결되지 않고, Repository 패턴을 통해 Room DB와 동기화
  */
 @Singleton
 class GlobalWebSocketService @Inject constructor(
     private val webSocketManager: WebSocketManager,
-    private val authRepository: AuthRepository
-) {
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
+) : DefaultLifecycleObserver {
+
+    companion object {
+        private const val TAG = "GlobalWebSocketService"
+    }
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
-    // Connection configuration
-    private var serverUrl: String? = null
-    private var currentAuthToken: String? = null
+
+    // 연결 상태 (읽기 전용)
+    private val _connectionState =
+        MutableStateFlow<WebSocketConnectionState>(WebSocketConnectionState.Disconnected)
+    val connectionState: StateFlow<WebSocketConnectionState> = _connectionState.asStateFlow()
+
     private var isServiceActive = false
+    private var currentAuthToken: String? = null
+    
+    /**
+     * 서비스 초기화 - MyApp에서 한 번만 호출
+     */
+    suspend fun initialize() {
+        if (isServiceActive) {
+            Log.d(TAG, "Service already active, skipping initialization")
+            return
+        }
 
-    // Reconnection management with exponential backoff
-    private var reconnectAttempts = 0
-    private val maxReconnectAttempts = 10
-    private val baseReconnectDelayMs = 1000L // 1초
-    private val maxReconnectDelayMs = 60000L // 60초
-    private var manuallyDisconnected = false
-    private var reconnectJob: Job? = null
-    
-    // State management
-    private val _globalConnectionState = MutableStateFlow<WebSocketConnectionState>(
-        WebSocketConnectionState.Disconnected
-    )
-    val globalConnectionState: StateFlow<WebSocketConnectionState> = _globalConnectionState.asStateFlow()
-    
-    private val _isInForeground = MutableStateFlow(true)
-    val isInForeground: StateFlow<Boolean> = _isInForeground.asStateFlow()
-    
-    // Authentication monitoring
-    private var authMonitoringJob: Job? = null
-    private var connectionMaintenanceJob: Job? = null
+        Log.i(TAG, "🚀 Starting WebSocket sync service initialization")
+        
+        isServiceActive = true
 
-    // Token refresh state
-    private var currentUserSession: UserSession? = null
-    private var isRefreshingToken = false
-    
-    init {
-        // Start connection state monitoring
+        // 인증 상태 모니터링 시작
+        startAuthenticationMonitoring()
+
+        // WebSocket 연결 상태 모니터링
         startConnectionStateMonitoring()
+
+        Log.i(TAG, "✅ WebSocket sync service initialized")
     }
     
     /**
-     * Initialize the service with authentication monitoring
+     * 인증 상태 변경 모니터링
      */
-    fun initializeWithAuth(authStateFlow: Flow<CustomResult<UserSession, Exception>>) {
-        
-        authMonitoringJob?.cancel()
-        authMonitoringJob = scope.launch {
-            authStateFlow.collectLatest { authResult ->
-                when (authResult) {
+    private fun startAuthenticationMonitoring() {
+        scope.launch {
+            val authUseCases = authSessionUseCaseProvider.create()
+            authUseCases.getCurrentUserSessionStreamUseCase().collectLatest { result ->
+                when (result) {
                     is CustomResult.Success -> {
-                        currentUserSession = authResult.data
-                        extractAndUpdateAuthToken(authResult.data)
+                        val userSession = result.data
+                        val newToken = userSession.idToken?.value
+
+                        if (newToken != null && newToken != currentAuthToken) {
+                            Log.d(TAG, "🔑 New authentication token received, updating connection")
+                            currentAuthToken = newToken
+                            attemptConnection()
+                        } else if (newToken == null && currentAuthToken != null) {
+                            Log.d(TAG, "🔓 User logged out, disconnecting")
+                            currentAuthToken = null
+                            disconnect()
+                        }
                     }
+
                     is CustomResult.Failure -> {
-                        currentUserSession = null
-                        handleAuthenticationFailure()
+                        Log.w(TAG, "Authentication failed: ${result.error}")
+                        currentAuthToken = null
+                        disconnect()
                     }
+
                     else -> {
-                        // Other authentication states
+                        Log.d(TAG, "Authentication state: $result")
                     }
                 }
             }
         }
     }
-    
+
     /**
-     * Configure the WebSocket connection
+     * WebSocket 연결 상태 모니터링
      */
-    fun configure(serverUrl: String = WebSocketManager.SERVER_URL) {
-        this.serverUrl = serverUrl
-        Log.d(TAG, "GlobalWebSocketService configured with server: $serverUrl")
-        
-        // If we have auth token and are in foreground, connect
-        if (currentAuthToken != null && _isInForeground.value) {
-            scope.launch {
-                attemptConnection()
-            }
-        }
-    }
-    
-    /**
-     * Start the service (typically called from Application.onCreate)
-     */
-    fun startService() {
-        if (isServiceActive) {
-            Log.d(TAG, "Service already active")
-            return
-        }
-        
-        isServiceActive = true
-        Log.d(TAG, "GlobalWebSocketService started")
-        
-        // Start connection maintenance
-        startConnectionMaintenance()
-    }
-    
-    /**
-     * Stop the service (typically called from Application.onTerminate or onDestroy)
-     */
-    fun stopService() {
-        if (!isServiceActive) return
-        
-        isServiceActive = false
-        Log.d(TAG, "GlobalWebSocketService stopped")
-        
-        // Cancel all jobs
-        authMonitoringJob?.cancel()
-        connectionMaintenanceJob?.cancel()
-        reconnectJob?.cancel()
-        
-        // Disconnect WebSocket
-        scope.launch {
-            webSocketManager.disconnect()
-        }
-    }
-    
-    /**
-     * Get the underlying WebSocketManager for sending messages
-     */
-    fun getWebSocketManager(): WebSocketManager = webSocketManager
-    
-    fun onAppForegrounded() {
-        Log.d(TAG, "App entered foreground")
-        _isInForeground.value = true
-        manuallyDisconnected = false // Reset manual disconnect when app comes to foreground
-        
-        if (isServiceActive && currentAuthToken != null && serverUrl != null) {
-            scope.launch {
-                attemptConnection()
-            }
-        }
-    }
-    
-    fun onAppBackgrounded() {
-        Log.d(TAG, "App entered background")
-        _isInForeground.value = false
-        
-        // Optionally disconnect in background to save resources
-        // For chat apps, you might want to keep connection alive for push notifications
-        // For now, we'll keep the connection alive but log the state change
-        Log.d(TAG, "Maintaining WebSocket connection in background for real-time updates")
-    }
-    
     private fun startConnectionStateMonitoring() {
         scope.launch {
             webSocketManager.connectionState.collect { state ->
-                _globalConnectionState.value = state
-                Log.d(TAG, "Global connection state updated: ${state::class.simpleName}")
-            }
-        }
-    }
-    
-    private fun startConnectionMaintenance() {
-        connectionMaintenanceJob?.cancel()
-        connectionMaintenanceJob = scope.launch {
-            // Monitor connection state and handle reconnection
-            combine(
-                _isInForeground,
-                _globalConnectionState
-            ) { isInForeground, connectionState ->
-                Pair(isInForeground, connectionState)
-            }.collectLatest { (isInForeground, connectionState) ->
-                
-                when {
-                    // App in foreground, should be connected, but disconnected
-                    isInForeground &&
-                            connectionState is WebSocketConnectionState.Disconnected &&
-                    currentAuthToken != null && 
-                    serverUrl != null -> {
-                        Log.d(TAG, "App in foreground but disconnected, attempting reconnection")
-                        delay(1000) // Brief delay before reconnection
-                        attemptConnection()
+                _connectionState.value = state
+                Log.d(TAG, "Connection state changed: $state")
+
+                when (state) {
+                    is WebSocketConnectionState.Connected -> {
+                        Log.i(TAG, "✅ WebSocket connected, ready for sync")
+                        // TODO: 여기서 Repository에게 동기화 시작 신호를 보낼 수 있음
                     }
-                    
-                    // Connection error with valid auth - try to reconnect
-                    connectionState is WebSocketConnectionState.Error &&
-                    currentAuthToken != null && 
-                    serverUrl != null &&
-                    !connectionState.message.contains("Authentication") -> {
-                        Log.d(TAG, "Connection error detected, scheduling reconnection")
+
+                    is WebSocketConnectionState.Disconnected -> {
+                        Log.w(TAG, "⚠️ WebSocket disconnected")
+                        // 자동 재연결 시도 (인증 토큰이 있는 경우)
+                        if (currentAuthToken != null) {
+                            scheduleReconnect()
+                        }
+                    }
+
+                    is WebSocketConnectionState.Error -> {
+                        Log.e(TAG, "❌ WebSocket error: ${state.message}")
                         scheduleReconnect()
                     }
 
-                    // Handle disconnection by scheduling reconnect
-                    connectionState is WebSocketConnectionState.Disconnected &&
-                            !manuallyDisconnected &&
-                            currentAuthToken != null &&
-                            serverUrl != null -> {
-                        Log.d(TAG, "Unexpected disconnection, scheduling reconnection")
-                        scheduleReconnect()
+                    is WebSocketConnectionState.Connecting -> {
+                        Log.d(TAG, "🔄 WebSocket connecting...")
                     }
                 }
             }
         }
     }
 
-    private suspend fun attemptConnection(): Result<Unit>? {
-        val url = serverUrl
-
-        // Check token validity before attempting connection
-        val session = currentUserSession
-        if (session == null) {
-            Log.w(TAG, "Cannot connect: no user session available")
-            return null
-        }
-
-        if (!session.hasValidToken()) {
-            Log.w(TAG, "Cannot connect: token is invalid or expired")
-            return null
-        }
-
-        // Refresh token if expiring soon (on-demand check)
-        if (session.isTokenExpiringSoon()) {
-            Log.i(TAG, "Token expiring soon, refreshing before connection")
-            refreshTokenIfNeeded(session)
-        }
-        
-        val token = currentAuthToken
-        if (url == null || token == null) {
-            Log.w(TAG, "Cannot connect: missing server URL or auth token")
-            return null
-        }
-        
-        // 연결 중이거나 이미 연결된 경우 중복 방지
-        val currentState = webSocketManager.connectionState.value
-        if (currentState is WebSocketConnectionState.Connected) {
-            Log.d(TAG, "Already connected, skipping connection attempt")
-            return Result.success(Unit)
-        }
-        if (currentState is WebSocketConnectionState.Connecting) {
-            Log.d(TAG, "Connection already in progress, skipping duplicate attempt")
-            return null
-        }
-        
-        Log.d(TAG, "Attempting WebSocket connection to: $url")
-
-        return try {
-            val result = webSocketManager.connect(url, token)
-            
-            if (result.isSuccess) {
-                Log.d(TAG, "WebSocket connection successful")
-                
-                // 연결 성공 후 인증 대기
-                val authTimeout = withTimeoutOrNull(15000) { // 15초 대기
-                    webSocketManager.isAuthenticated.first { it }
-                }
-                
-                if (authTimeout == true) {
-                    Log.d(TAG, "WebSocket authentication successful")
-                } else {
-                    Log.w(TAG, "WebSocket authentication timeout or failed")
-                }
-                result
-            } else {
-                Log.w(TAG, "WebSocket connection failed: ${result.exceptionOrNull()?.message}")
-                result
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception during WebSocket connection", e)
-            Result.failure(e)
-        }
-    }
-
-    private fun extractAndUpdateAuthToken(userSession: UserSession) {
-        Log.d(TAG, "🔑 Starting token extraction and update process")
-        Log.d(
-            TAG,
-            "Current token status: ${if (currentAuthToken != null) "has token" else "no token"}"
-        )
-        Log.d(TAG, "Service active: $isServiceActive, In foreground: ${_isInForeground.value}")
-
-        // Check token validity first
-        if (!userSession.hasValidToken()) {
-            Log.w(TAG, "⚠️ UserSession has invalid or expired token")
-            if (userSession.isTokenExpired()) {
-                Log.w(TAG, "❌ Token is expired - requiring token refresh")
-            }
-            currentAuthToken = null
-            return
-        }
-
-        // Check and refresh token if expiring soon (on-demand)
-        if (userSession.isTokenExpiringSoon()) {
-            val remainingTime = userSession.getTokenRemainingTimeSeconds() ?: 0
-            Log.w(
-                TAG,
-                "⏰ Token will expire soon (${remainingTime}s remaining) - triggering refresh"
-            )
-            scope.launch {
-                refreshTokenIfNeeded(userSession)
-            }
-        }
-
-        val newToken: String? = userSession.idToken?.value
-
-        when {
-            newToken != null && newToken != currentAuthToken -> {
-                Log.i(TAG, "✅ Auth token updated successfully")
-                Log.d(
-                    TAG,
-                    "New token preview: ${newToken.substring(0, minOf(15, newToken.length))}..."
-                )
-                Log.d(TAG, "Previous token: ${if (currentAuthToken != null) "existed" else "none"}")
-
-                val remainingTime = userSession.getTokenRemainingTimeSeconds()
-                if (remainingTime != null) {
-                    Log.d(
-                        TAG,
-                        "Token valid for ${remainingTime}s (${remainingTime / 60}m ${remainingTime % 60}s)"
-                    )
-                }
-
-                currentAuthToken = newToken
-
-                // If we're in foreground and have server URL, connect/reconnect
-                if (_isInForeground.value && serverUrl != null && isServiceActive) {
-                    Log.d(TAG, "🚀 Triggering WebSocket connection due to token update")
-                    scope.launch {
-                        val result = attemptConnection()
-                        Log.d(
-                            TAG,
-                            "Connection attempt result: ${if (result?.isSuccess == true) "success" else "failed"}"
-                        )
-                    }
-                } else {
-                    Log.w(
-                        TAG,
-                        "⏸️ Not connecting - foreground: ${_isInForeground.value}, serverUrl: ${serverUrl != null}, serviceActive: $isServiceActive"
-                    )
-                }
-            }
-
-            newToken == null -> {
-                Log.e(TAG, "❌ No valid auth token found in auth data")
-                Log.d(TAG, "This may indicate authentication failure or token extraction issues")
-            }
-
-            newToken == currentAuthToken -> {
-                Log.d(TAG, "🔄 Token unchanged, skipping update")
-            }
-        }
-
-        Log.d(TAG, "🏁 Token extraction and update process completed")
-    }
-    
-
-    private fun handleAuthenticationFailure() {
-        currentAuthToken = null
-        scope.launch {
-            webSocketManager.disconnect()
-        }
-    }
-    
     /**
-     * Force reconnection with state reset (unified method)
+     * WebSocket 연결 시도
      */
-    fun forceReconnect() {
-        scope.launch {
-            Log.d(TAG, "Force reconnect with state reset requested")
-
-            // Reset reconnection state first
-            resetReconnectionState()
-
-            // Disconnect if currently connected
-            if (webSocketManager.connectionState.value is WebSocketConnectionState.Connected) {
-                webSocketManager.disconnect()
-                // Wait for disconnection
-                withTimeoutOrNull(3000) {
-                    webSocketManager.connectionState.first { it is WebSocketConnectionState.Disconnected }
-                }
-            }
-
-            // Attempt reconnection if credentials available
-            if (currentAuthToken != null && serverUrl != null) {
-                delay(1000) // Brief delay before reconnection
-                attemptConnection()
-            } else {
-                Log.w(TAG, "Cannot reconnect: missing credentials")
-            }
-        }
-    }
-    
-    /**
-     * Manual disconnection
-     */
-    fun forceDisconnect() {
-        manuallyDisconnected = true
-        reconnectJob?.cancel()
-        scope.launch {
-            webSocketManager.disconnect()
-        }
-    }
-
-    private fun scheduleReconnect() {
-        // Don't reconnect if manually disconnected or service not active
-        if (manuallyDisconnected || !isServiceActive) {
-            Log.d(TAG, "Skipping reconnection - manually disconnected or service inactive")
+    private suspend fun attemptConnection() {
+        if (currentAuthToken == null) {
+            Log.w(TAG, "No auth token available, skipping connection")
             return
         }
-
-        // Check if we've exceeded max attempts
-        if (reconnectAttempts >= maxReconnectAttempts) {
-            Log.w(TAG, "Maximum reconnection attempts ($maxReconnectAttempts) exceeded")
-            _globalConnectionState.value = WebSocketConnectionState.Error(
-                message = "Connection lost - maximum reconnection attempts exceeded",
-                throwable = Exception("Auto-reconnection failed after $maxReconnectAttempts attempts")
-            )
-            return
-        }
-
-        // Cancel any existing reconnection job
-        reconnectJob?.cancel()
-
-        reconnectJob = scope.launch {
-            // Calculate delay with exponential backoff: base * 2^attempts, capped at max
-            val delay = minOf(
-                baseReconnectDelayMs * (1L shl reconnectAttempts.coerceAtMost(6)), // 최대 2^6 = 64배까지
-                maxReconnectDelayMs
-            )
-
-            reconnectAttempts++
-
-            Log.d(TAG, "Scheduling reconnection attempt #$reconnectAttempts in ${delay}ms")
-
-            delay(delay)
-
-            // Check if we're still supposed to reconnect
-            if (manuallyDisconnected || !isServiceActive ||
-                _globalConnectionState.value is WebSocketConnectionState.Connected
-            ) {
-                Log.d(TAG, "Cancelling reconnection - state changed")
-                return@launch
-            }
-
-            Log.d(TAG, "Attempting reconnection #$reconnectAttempts")
-
-            try {
-                attemptConnection()
-                if (webSocketManager.connectionState.value is WebSocketConnectionState.Connected) {
-                    Log.d(TAG, "Auto-reconnection successful on attempt #$reconnectAttempts")
-                    reconnectAttempts = 0 // Reset on success
-
-                    // Re-join previously joined rooms if needed
-                    rejoinRoomsAfterReconnection()
-
-                } else {
-                    Log.w(TAG, "Auto-reconnection attempt #$reconnectAttempts failed")
-                    // Schedule next attempt
-                    scheduleReconnect()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception during auto-reconnection attempt #$reconnectAttempts", e)
-                scheduleReconnect()
-            }
-        }
-    }
-
-    private suspend fun rejoinRoomsAfterReconnection() {
-        // This could be enhanced to track joined rooms if needed
-        // For now, leave it as a placeholder for room re-joining logic
-        Log.d(TAG, "Room re-joining after reconnection (placeholder)")
-    }
-
-    /**
-     * Reset reconnection state for manual retry
-     */
-    fun resetReconnectionState() {
-        Log.d(TAG, "Resetting reconnection state for manual retry")
-        manuallyDisconnected = false
-        reconnectAttempts = 0
-        reconnectJob?.cancel()
-        reconnectJob = null
-    }
-
-    /**
-     * Refresh token if needed and not already in progress
-     */
-    private suspend fun refreshTokenIfNeeded(userSession: UserSession) {
-        if (isRefreshingToken) {
-            Log.d(TAG, "Token refresh already in progress, skipping")
-            return
-        }
-
-        if (!userSession.isTokenExpiringSoon(thresholdMinutes = 10)) {
-            Log.d(TAG, "Token is still valid for more than 10 minutes, skipping refresh")
-            return
-        }
-
-        isRefreshingToken = true
-        Log.i(TAG, "🔄 Starting automatic token refresh")
 
         try {
-            when (val refreshResult = authRepository.refreshToken()) {
-                is CustomResult.Success -> {
-                    val newSession = refreshResult.data
-                    currentUserSession = newSession
-
-                    val newToken = newSession.idToken?.value
-                    if (newToken != null && newToken != currentAuthToken) {
-                        Log.i(TAG, "✅ Token refresh successful")
-                        currentAuthToken = newToken
-
-                        val remainingTime = newSession.getTokenRemainingTimeSeconds() ?: 0
-                        Log.d(
-                            TAG,
-                            "New token valid for ${remainingTime}s (${remainingTime / 60}m ${remainingTime % 60}s)"
-                        )
-
-                        // Reconnect WebSocket with new token if needed
-                        if (_globalConnectionState.value !is WebSocketConnectionState.Connected) {
-                            Log.d(TAG, "🚀 Reconnecting WebSocket with refreshed token")
-                            attemptConnection()
-                        }
-                    } else {
-                        Log.w(TAG, "⚠️ Token refresh returned same or null token")
-                    }
-                }
-
-                is CustomResult.Failure -> {
-                    Log.e(
-                        TAG,
-                        "❌ Token refresh failed: ${refreshResult.error.message}",
-                        refreshResult.error
-                    )
-                    // Don't retry immediately to avoid infinite loops
-                    delay(60_000) // Wait 1 minute before allowing next refresh attempt
-                }
-
-                else -> {
-                    Log.e(TAG, "❌ Unexpected token refresh result: $refreshResult")
-                }
+            Log.d(TAG, "🔄 Attempting WebSocket connection...")
+            val result = webSocketManager.connect(WebSocketManager.SERVER_URL, currentAuthToken!!)
+            
+            if (result.isSuccess) {
+                Log.i(TAG, "✅ WebSocket connection successful")
+            } else {
+                Log.e(TAG, "❌ WebSocket connection failed: ${result.exceptionOrNull()?.message}")
+                scheduleReconnect()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Exception during token refresh", e)
-        } finally {
-            isRefreshingToken = false
+            Log.e(TAG, "❌ Exception during connection attempt", e)
+            scheduleReconnect()
+        }
+    }
+
+    /**
+     * 재연결 스케줄링 (단순한 재시도)
+     */
+    private fun scheduleReconnect() {
+        if (!isServiceActive || currentAuthToken == null) return
+
+        scope.launch {
+            Log.d(TAG, "⏰ Scheduling reconnect in 5 seconds...")
+            kotlinx.coroutines.delay(5000) // 5초 후 재시도
+            attemptConnection()
+        }
+    }
+
+    /**
+     * 연결 해제
+     */
+    private suspend fun disconnect() {
+        try {
+            webSocketManager.disconnect()
+            Log.d(TAG, "🔌 WebSocket disconnected")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during disconnect", e)
         }
     }
     
-    companion object {
-        private const val TAG = "GlobalWebSocketService"
+    /**
+     * 서비스 종료
+     */
+    fun shutdown() {
+        Log.i(TAG, "🛑 Shutting down WebSocket sync service")
+        isServiceActive = false
+        scope.launch {
+            disconnect()
+        }
+    }
+
+    // Lifecycle callbacks
+    override fun onResume(owner: LifecycleOwner) {
+        Log.d(TAG, "📱 App resumed, ensuring connection")
+        if (currentAuthToken != null) {
+            scope.launch { attemptConnection() }
+        }
+    }
+
+    override fun onPause(owner: LifecycleOwner) {
+        Log.d(TAG, "📱 App paused")
+        // 연결은 유지하되 필요시 최적화 가능
+    }
+
+    // Legacy compatibility methods (기존 코드 호환성을 위해 유지)
+    fun getWebSocketManager(): WebSocketManager = webSocketManager
+
+    val globalConnectionState: StateFlow<WebSocketConnectionState> = connectionState
+
+    suspend fun forceReconnect() {
+        Log.d(TAG, "🔄 Force reconnect requested")
+        attemptConnection()
+    }
+    
+    fun forceDisconnect() {
+        Log.d(TAG, "🔌 Force disconnect requested")
+        scope.launch { disconnect() }
+    }
+
+    // Message sending functionality
+    suspend fun sendMessage(message: WebSocketMessage): Result<Unit> {
+        if (connectionState.value !is WebSocketConnectionState.Connected) {
+            Log.w(TAG, "Cannot send message: WebSocket not connected")
+            return Result.failure(Exception("WebSocket not connected"))
+        }
+
+        Log.d(TAG, "Sending message via WebSocket: ${message.type} to room ${message.roomId}")
+        return webSocketManager.sendMessage(message)
+    }
+
+    // Room management stubs (향후 Repository에서 처리될 예정)
+    suspend fun joinRoom(roomId: String): Result<Unit> {
+        Log.d(TAG, "Room join requested: $roomId")
+        if (connectionState.value !is WebSocketConnectionState.Connected) {
+            Log.w(TAG, "Cannot join room: WebSocket not connected")
+            return Result.failure(Exception("WebSocket not connected"))
+        }
+
+        return webSocketManager.joinRoom(roomId)
+    }
+
+    suspend fun leaveRoom(roomId: String): Result<Unit> {
+        Log.d(TAG, "Room leave requested: $roomId")
+        if (connectionState.value !is WebSocketConnectionState.Connected) {
+            Log.w(TAG, "Cannot leave room: WebSocket not connected")
+            return Result.failure(Exception("WebSocket not connected"))
+        }
+
+        return webSocketManager.leaveRoom(roomId)
+    }
+
+    fun getJoinedRooms(): Set<String> {
+        Log.d(TAG, "Joined rooms requested (will be handled by Repository)")
+        return emptySet()
+    }
+
+    fun isJoinedToRoom(roomId: String): Boolean {
+        Log.d(TAG, "Room join status requested: $roomId (will be handled by Repository)")
+        return false
     }
 }

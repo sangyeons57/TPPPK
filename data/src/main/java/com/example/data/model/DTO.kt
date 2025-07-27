@@ -5,7 +5,7 @@ import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 
-interface DTO {
+interface DTO<Domain : AggregateRoot> {
     @get:com.google.firebase.firestore.DocumentId
     val id: String
 
@@ -18,5 +18,5 @@ interface DTO {
     @get:ServerTimestamp
     val updatedAt: Date?
 
-    fun toDomain() : AggregateRoot
+    fun toDomain(): Domain
 }

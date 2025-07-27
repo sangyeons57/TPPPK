@@ -34,9 +34,6 @@ class ProjectInvitation private constructor(
     var expiresAt: Instant? = initialExpiresAt
         private set
 
-    init {
-        setOriginalState()
-    }
 
     /**
      * Gets the invite code (which is the same as the document ID)
@@ -44,17 +41,6 @@ class ProjectInvitation private constructor(
     val inviteCode: InviteCode
         get() = InviteCode(id.value)
 
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_INVITE_CODE to this.inviteCode.value,
-            KEY_STATUS to this.status.value,
-            KEY_INVITER_ID to this.inviterId.value,
-            KEY_PROJECT_ID to this.projectId.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_EXPIRES_AT to this.expiresAt,
-            KEY_UPDATED_AT to this.updatedAt
-        )
-    }
 
     // Business methods for invite link management
     fun changeStatus(newStatus: InviteStatus) {

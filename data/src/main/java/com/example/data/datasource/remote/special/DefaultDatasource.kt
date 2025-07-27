@@ -11,30 +11,46 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import kotlin.collections.emptyList
 
 interface Datasource {
 
 }
 
-interface DefaultDatasource : Datasource {
-    fun setCollection(collectionPath: CollectionPath) : DefaultDatasource
+interface DefaultDatasource<D> : Datasource where D : DTO {
+    fun setCollection(collectionPath: CollectionPath): DefaultDatasource<D>
 
-    fun observe(id: DocumentId): Flow<CustomResult<DTO, Exception>>
-    fun observeAll(): Flow<CustomResult<List<DTO>, Exception>>
+    fun observe(id: DocumentId): Flow<CustomResult<D, Exception>>
+    fun observeAll(): Flow<CustomResult<List<D>, Exception>>
+    fun observeNByUpdatedAt(
+        n: Long,
+        updatedAt: Instant,
+        direction: Query.Direction = Query.Direction.DESCENDING
+    ): Flow<CustomResult<List<D>, Exception>>
+
     suspend fun findById(
         id: DocumentId,
         source: Source = Source.DEFAULT,
-    ): CustomResult<DTO, Exception>
-    suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<DTO>, Exception>
+    ): CustomResult<D, Exception>
 
-    suspend fun create(dto: DTO): CustomResult<DocumentId, Exception>
+    suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<D>, Exception>
+    suspend fun findNByUpdatedAt(
+        n: Long,
+        updatedAt: Instant,
+        direction: Query.Direction = Query.Direction.DESCENDING
+    ): CustomResult<List<D>, Exception>
+
+    suspend fun create(dto: D): CustomResult<DocumentId, Exception>
     suspend fun update(id: DocumentId, data: Map<String, Any?>): CustomResult<DocumentId, Exception>
     suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
 }
@@ -51,10 +67,10 @@ interface DefaultDatasource : Datasource {
  *
  * @param firestore Firestore instance injected from DI container.
  */
-abstract class DefaultDatasourceImpl <Dto> (
+abstract class DefaultDatasourceImpl<D>(
     private val firestore: FirebaseFirestore,
-    val clazz: Class<Dto>
-) : DefaultDatasource where Dto: DTO {
+    val clazz: Class<D>
+) : DefaultDatasource<D> where D : DTO {
 
     /** Firestore collection reference – must be set via [setCollection] */
     lateinit var collection: CollectionReference
@@ -64,7 +80,7 @@ abstract class DefaultDatasourceImpl <Dto> (
      * Default implementation: treat the passed segments as a single collection path.
      * Most concrete datasources will **override** this to build nested paths.
      */
-    override fun setCollection(collectionPath: CollectionPath): DefaultDatasource {
+    override fun setCollection(collectionPath: CollectionPath): DefaultDatasource<D> {
         collection = firestore.collection(collectionPath.value)
         Log.d("DefaultDatasourceImpl", collection.path)
         return this
@@ -78,22 +94,6 @@ abstract class DefaultDatasourceImpl <Dto> (
         }
     }
 
-    // endregion
-
-    // region —— Safe deserialization support ——
-
-    /**
-     * Creates a default DTO instance when deserialization fails.
-     * Concrete datasources should override this to provide appropriate default values.
-     * 
-     * @param documentId The document ID (if available)
-     * @param data The raw Firestore data map (if available)
-     * @return A default DTO instance or null if no default can be created
-     */
-    protected open fun createDefaultDto(documentId: String? = null, data: Map<String, Any?>? = null): Dto? {
-        return null // Base implementation returns null - subclasses should override
-    }
-
     /**
      * Safely converts DocumentSnapshot to DTO with fallback to default creation.
      * Uses standard toObject() first, then falls back to createDefaultDto() if that fails.
@@ -101,18 +101,12 @@ abstract class DefaultDatasourceImpl <Dto> (
      * @param snapshot The DocumentSnapshot to convert
      * @return Converted DTO or null if both standard conversion and fallback fail
      */
-    protected fun DocumentSnapshot.toDtoSafely(): Dto? {
+    protected fun DocumentSnapshot.toDtoSafely(): D? {
         return try {
             // First try standard Firestore toObject conversion
             this.toObject(clazz)
         } catch (e: Exception) {
-            // If standard conversion fails, try fallback with default creation
-            try {
-                createDefaultDto(this.id, this.data)
-            } catch (fallbackError: Exception) {
-                // If everything fails, return null
-                null
-            }
+            null
         }
     }
 
@@ -120,8 +114,10 @@ abstract class DefaultDatasourceImpl <Dto> (
 
     // region —— CRUD & observe implementation ——
 
-    override fun observe(id: DocumentId): Flow<CustomResult<DTO, Exception>> = callbackFlow{
+    override fun observe(id: DocumentId): Flow<CustomResult<D, Exception>> = callbackFlow {
+        trySend(CustomResult.Initial)
         checkCollectionInitialized("observe")
+        trySend(CustomResult.Loading)
         val listener = collection.document(id.value).addSnapshotListener{ snapshot, error ->
             if(error != null) {
                 trySend(CustomResult.Failure(error))
@@ -135,55 +131,86 @@ abstract class DefaultDatasourceImpl <Dto> (
                 } else {
                     trySend(CustomResult.Failure(Exception("${clazz.simpleName} not found or failed to deserialize")))
                 }
+            } else {
+                trySend(CustomResult.Failure(Exception("${clazz.simpleName} not found or failed to deserialize")))
             }
         }
         awaitClose { listener.remove() }
     }
 
-    override fun observeAll(): Flow<CustomResult<List<DTO>, Exception>> = callbackFlow{
+    override fun observeAll(): Flow<CustomResult<List<D>, Exception>> = callbackFlow {
+        trySend(CustomResult.Initial)
         checkCollectionInitialized("observeAll")
-        
+
         // 초기 로딩 상태 전송
         trySend(CustomResult.Loading)
-        
         val listener = collection.addSnapshotListener{ snapshot, error ->
             if(error != null) {
                 Log.e("DefaultDatasourceImpl", "observeAll listener error: ${error.message}", error)
                 trySend(CustomResult.Failure(error))
-                // 에러 발생 시 리스너를 닫지 않고 재시도 가능하도록 유지
+                close(error)
                 return@addSnapshotListener
             }
             if(snapshot != null) {
-                try {
-                    val dtos = snapshot.documents.mapNotNull { document ->
-                        val dto = document.toDtoSafely()
-                        if (dto == null) {
-                            Log.w("DefaultDatasourceImpl", "Failed to deserialize document: ${document.id}")
-                        }
-                        dto
-                    }
-                    Log.d("DefaultDatasourceImpl", "observeAll success: ${dtos.size} items from collection ${collection.path}")
-                    trySend(CustomResult.Success(dtos))
-                } catch (e: Exception) {
-                    Log.e("DefaultDatasourceImpl", "observeAll processing error: ${e.message}", e)
-                    trySend(CustomResult.Failure(e))
-                }
+                trySend(resultTry {
+                    snapshot.documents.mapNotNull { it.toDtoSafely() }
+                })
             } else {
                 Log.w("DefaultDatasourceImpl", "observeAll received null snapshot")
                 trySend(CustomResult.Success(emptyList()))
             }
         }
-        
-        awaitClose { 
+
+        awaitClose {
             Log.d("DefaultDatasourceImpl", "observeAll listener closed for collection: ${collection.path}")
-            listener.remove() 
+            listener.remove()
         }
     }
+
+    override fun observeNByUpdatedAt(
+        n: Long,
+        updatedAt: Instant,
+        direction: Query.Direction
+    ): Flow<CustomResult<List<D>, Exception>> = callbackFlow {
+        trySend(CustomResult.Initial)
+        checkCollectionInitialized("observeNByUpdatedAt")
+
+        trySend(CustomResult.Loading)
+        val listener = collection
+            .whereLessThan(AggregateRoot.KEY_UPDATED_AT, updatedAt)
+            .orderBy(AggregateRoot.KEY_UPDATED_AT, Query.Direction.DESCENDING)
+            .orderBy(AggregateRoot.KEY_CREATED_AT, direction)
+            .limit(n)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(CustomResult.Failure(error))
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    trySend(resultTry {
+                        snapshot.documents.mapNotNull { it.toDtoSafely() }
+                    })
+                } else {
+                    trySend(CustomResult.Success(emptyList()))
+                }
+            }
+
+        awaitClose {
+            Log.d(
+                "DefaultDatasourceImpl",
+                "observeNByUpdatedAt listener closed for collection: ${collection.path}"
+            )
+            listener.remove()
+        }
+    }
+
 
     override suspend fun findById(
         id: DocumentId,
         source: Source,
-    ): CustomResult<DTO, Exception> = withContext(Dispatchers.IO) {
+    ): CustomResult<D, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("findById")
         resultTry {
             val snapshot = collection.document(id.value).get(source).await()
@@ -191,7 +218,8 @@ abstract class DefaultDatasourceImpl <Dto> (
         }
     }
 
-    override suspend fun findAll(source: Source): CustomResult<List<DTO>, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun findAll(source: Source): CustomResult<List<D>, Exception> =
+        withContext(Dispatchers.IO) {
         checkCollectionInitialized("findAll")
         resultTry {
             val snapshot = collection.get(source).await()
@@ -199,7 +227,26 @@ abstract class DefaultDatasourceImpl <Dto> (
         }
     }
 
-    override suspend fun create(dto: DTO): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun findNByUpdatedAt(
+        n: Long,
+        updatedAt: Instant,
+        direction: Query.Direction
+    ): CustomResult<List<D>, Exception> = resultTry {
+        checkCollectionInitialized("findNByUpdatedAt")
+
+        val snapshot = collection
+            .whereLessThan(AggregateRoot.KEY_UPDATED_AT, updatedAt)
+            .orderBy(AggregateRoot.KEY_UPDATED_AT, Query.Direction.DESCENDING)
+            .orderBy(AggregateRoot.KEY_CREATED_AT, direction)
+            .limit(n)
+            .get()
+            .await()
+
+        snapshot.documents.mapNotNull { it.toDtoSafely() }
+    }
+
+    override suspend fun create(dto: D): CustomResult<DocumentId, Exception> =
+        withContext(Dispatchers.IO) {
         checkCollectionInitialized("create")
         resultTry {
             if(DocumentId.isAssigned(dto.id)) {

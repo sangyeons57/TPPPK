@@ -35,20 +35,6 @@ class DMWrapper private constructor(
     var lastMessagePreview: DMChannelLastMessagePreview? = initialLastMessagePreview
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_OTHER_USER_ID to otherUserId.value,
-            KEY_OTHER_USER_NAME to otherUserName.value,
-            KEY_OTHER_USER_IMAGE_URL to otherUserImageUrl?.value,
-            KEY_LAST_MESSAGE_PREVIEW to lastMessagePreview?.value,
-            KEY_CREATED_AT to createdAt,
-            KEY_UPDATED_AT to updatedAt,
-        )
-    }
 
     fun changeOtherUser(newOtherUserId: UserId) {
         if (this.otherUserId == newOtherUserId) return

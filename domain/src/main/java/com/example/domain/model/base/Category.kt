@@ -46,21 +46,6 @@ class Category private constructor(
     var isCategory: IsCategoryFlag = initialIsCategory
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_NAME to name.value,
-            KEY_ORDER to order.value,
-            KEY_CREATED_BY to createdBy.value,
-            KEY_CREATED_AT to createdAt,
-            KEY_UPDATED_AT to updatedAt,
-            KEY_IS_CATEGORY to isCategory.value
-        )
-    }
-
 
     /**
      * Updates mutable fields (name and/or order). If any field actually changes, `updatedAt` is refreshed and

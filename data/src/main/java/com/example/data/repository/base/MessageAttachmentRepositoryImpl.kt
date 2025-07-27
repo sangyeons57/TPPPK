@@ -5,47 +5,60 @@ import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.MessageAttachmentRemoteDataSource
 import com.example.data.datasource.remote.special.FileUploadDataSource
 import com.example.data.datasource.remote.special.FileUploadResult
-import com.example.data.model.remote.MessageAttachmentDTO
-import com.example.data.model.remote.toDto
-import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.enum.MessageAttachmentUploadStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.model.vo.messageattachment.MessageAttachmentThumbnailUrl
 import com.example.domain.model.vo.messageattachment.MessageAttachmentUploadProgress
 import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
-import com.example.domain.repository.factory.context.MessageAttachmentRepositoryFactoryContext
 import com.example.domain.repository.base.MessageAttachmentRepository
+import com.example.domain.repository.base.SyncResult
 import com.example.domain.repository.base.FileUploadProgressData
 import com.example.domain.repository.base.FileUploadResultData
+import com.example.domain.repository.factory.context.MessageAttachmentRepositoryFactoryContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
-// import java.io.File // 안드로이드 Uri 대신 File 객체를 사용한다면
 import javax.inject.Inject
 
+/**
+ * Remote MessageAttachment Repository Implementation (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
+ */
 class MessageAttachmentRepositoryImpl @Inject constructor(
     private val messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource,
     private val fileUploadDataSource: FileUploadDataSource,
     override val factoryContext: MessageAttachmentRepositoryFactoryContext
-    // private val localMediaDataSource: LocalMediaDataSource, // 파일 업로드 전처리 등에 사용 가능
-    // TODO: 필요한 Mapper 주입
-) : DefaultRepositoryImpl(messageAttachmentRemoteDataSource, factoryContext), MessageAttachmentRepository {
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is MessageAttachment)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type MessageAttachment"))
-        ensureCollection()
-        return if (entity.isNew) {
-            messageAttachmentRemoteDataSource.create(entity.toDto())
-        } else {
-            messageAttachmentRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
+) : MessageAttachmentRepository {
+
+    override suspend fun syncFromServer(
+        lastSyncCursor: Long?,
+        messageId: String?
+    ): CustomResult<SyncResult<MessageAttachment>, Exception> {
+        return messageAttachmentRemoteDataSource.syncFromServer(lastSyncCursor, messageId)
     }
+
+    override suspend fun syncToServer(
+        messageId: String?
+    ): CustomResult<Int, Exception> {
+        return messageAttachmentRemoteDataSource.syncToServer(messageId)
+    }
+
+    override suspend fun forceSyncAll(
+        messageId: String?
+    ): CustomResult<Int, Exception> {
+        return messageAttachmentRemoteDataSource.forceSyncAll(messageId)
+    }
+
+    override suspend fun resolveConflicts(
+        conflictedAttachmentIds: List<String>
+    ): CustomResult<Int, Exception> {
+        return messageAttachmentRemoteDataSource.resolveConflicts(conflictedAttachmentIds)
+    }
+
+    // === Firebase Storage 작업 ===
 
     override fun uploadFile(
         fileUri: Uri,
@@ -69,7 +82,6 @@ class MessageAttachmentRepositoryImpl @Inject constructor(
                     )
                 }
                 is FileUploadResult.Success -> {
-                    // MessageAttachment 엔티티 생성
                     val attachmentId = DocumentId(UUID.randomUUID().toString())
                     val attachment = MessageAttachment.create(
                         id = attachmentId,
@@ -90,10 +102,6 @@ class MessageAttachmentRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * Firebase Storage 경로를 생성합니다.
-     * 예: "messages/{messageId}/attachments/{fileName}"
-     */
     private fun generateStoragePath(messageId: DocumentId, attachmentType: MessageAttachmentType, fileName: String): String {
         val timestamp = System.currentTimeMillis()
         val sanitizedFileName = fileName.replace("[^a-zA-Z0-9._-]".toRegex(), "_")

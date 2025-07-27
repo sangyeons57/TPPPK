@@ -1,34 +1,70 @@
 package com.example.data.repository.base
 
 import com.example.core_common.result.CustomResult
-import com.example.data.datasource.remote.ProjectChannelRemoteDataSource // 프로젝트 채널 데이터 소스 import
-import com.example.data.model.DTO
-import com.example.data.model.remote.ProjectChannelDTO
-import com.example.data.model.remote.toDto
-import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
+import com.example.data.datasource.remote.ProjectChannelRemoteDataSource
+import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import com.example.domain.repository.base.ProjectChannelRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import com.example.domain.repository.base.SyncResult
+import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
 import javax.inject.Inject
 
+/**
+ * Remote ProjectChannel Repository Implementation (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
+ */
 class ProjectChannelRepositoryImpl @Inject constructor(
-    private val projectChannelRemoteDataSource: ProjectChannelRemoteDataSource // 프로젝트 채널 데이터 소스 주입
-    , override val factoryContext: ProjectChannelRepositoryFactoryContext
-    // 필요한 경우 LocalDataSource 등 다른 의존성 추가
-) : DefaultRepositoryImpl(projectChannelRemoteDataSource, factoryContext), ProjectChannelRepository {
+    private val projectChannelRemoteDataSource: ProjectChannelRemoteDataSource,
+    private val functionsRemoteDataSource: FunctionsRemoteDataSource,
+    override val factoryContext: ProjectChannelRepositoryFactoryContext
+) : ProjectChannelRepository {
 
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is ProjectChannel)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type ProjectChannel"))
-        ensureCollection()
-        return if (entity.isNew) {
-            projectChannelRemoteDataSource.create(entity.toDto())
-        } else {
-            projectChannelRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
+    override suspend fun syncFromServer(
+        lastSyncCursor: Long?,
+        projectId: String?
+    ): CustomResult<SyncResult<ProjectChannel>, Exception> {
+        return projectChannelRemoteDataSource.syncFromServer(lastSyncCursor, projectId)
+    }
+
+    override suspend fun syncToServer(
+        projectId: String?
+    ): CustomResult<Int, Exception> {
+        return projectChannelRemoteDataSource.syncToServer(projectId)
+    }
+
+    override suspend fun forceSyncAll(
+        projectId: String?
+    ): CustomResult<Int, Exception> {
+        return projectChannelRemoteDataSource.forceSyncAll(projectId)
+    }
+
+    override suspend fun resolveConflicts(
+        conflictedChannelIds: List<String>
+    ): CustomResult<Int, Exception> {
+        return projectChannelRemoteDataSource.resolveConflicts(conflictedChannelIds)
+    }
+
+    // === Firebase Functions (서버 작업) ===
+
+    override suspend fun createChannel(
+        projectId: String,
+        name: String,
+        description: String?,
+        categoryId: String?
+    ): CustomResult<ProjectChannel, Exception> {
+        return functionsRemoteDataSource.createChannel(projectId, name, description, categoryId)
+    }
+
+    override suspend fun updateChannel(
+        channelId: String,
+        name: String?,
+        description: String?,
+        categoryId: String?
+    ): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.updateChannel(channelId, name, description, categoryId)
+    }
+
+    override suspend fun deleteChannel(channelId: String): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.deleteChannel(channelId)
     }
 }

@@ -2,111 +2,52 @@ package com.example.data.repository.base
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.core_common.result.CustomResult.Initial.getOrThrow
-import com.example.core_common.result.getOrNull
-import com.example.core_common.result.resultTry
-import com.example.core_common.util.DateTimeUtil
 import com.example.data.datasource.remote.FriendRemoteDataSource
-import com.example.data.datasource.remote.UserRemoteDataSource // 사용자 검색 및 정보 업데이트 시 필요
 import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
-import com.example.data.model.remote.FriendDTO
-import com.example.data.model.remote.toDto
-import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.base.Friend
-import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.CollectionPath
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.factory.context.FriendRepositoryFactoryContext
 import com.example.domain.repository.base.FriendRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import com.example.domain.repository.base.SyncResult
+import com.example.domain.repository.factory.context.FriendRepositoryFactoryContext
 import javax.inject.Inject
 
 /**
- * 친구 관련 기능을 제공하는 Repository 구현체
- * Firebase를 사용하여 친구 관계 데이터를 관리합니다.
+ * Remote Friend Repository Implementation (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
  */
 class FriendRepositoryImpl @Inject constructor(
     private val friendRemoteDataSource: FriendRemoteDataSource,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource,
     override val factoryContext: FriendRepositoryFactoryContext
-) : DefaultRepositoryImpl(friendRemoteDataSource, factoryContext), FriendRepository {
+) : FriendRepository {
 
     private val TAG = "FriendRepository"
 
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Friend)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Friend"))
-        ensureCollection()
-        return if (entity.isNew) {
-            friendRemoteDataSource.create(entity.toDto())
-        } else {
-            friendRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
+    override suspend fun syncFromServer(
+        lastSyncCursor: Long?,
+        userId: String?
+    ): CustomResult<SyncResult<Friend>, Exception> {
+        return friendRemoteDataSource.syncFromServer(lastSyncCursor, userId)
     }
-    
-    override suspend fun findFriendsByUserId(userId: String): CustomResult<List<Friend>, Exception> {
-        return resultTry {
-            ensureCollection(CollectionPath.users)
-            friendRemoteDataSource.observeFriendsList().first().getOrThrow().map { it.toDomain() }
-        }
+
+    override suspend fun syncToServer(
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return friendRemoteDataSource.syncToServer(userId)
     }
-    
-    override suspend fun findFriendRequestsByUserId(userId: String): CustomResult<List<Friend>, Exception> {
-        return resultTry {
-            ensureCollection()
-            friendRemoteDataSource.observeFriendRequests().first().getOrThrow().map { it.toDomain() }
-        }
+
+    override suspend fun forceSyncAll(
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return friendRemoteDataSource.forceSyncAll(userId)
     }
-    
-    override suspend fun findFriendByUserIdAndFriendId(userId: String, friendId: String): CustomResult<Friend?, Exception> {
-        return resultTry {
-            ensureCollection()
-            friendRemoteDataSource.findById(DocumentId.from(friendId)).getOrNull()?.toDomain() as Friend?
-        }
+
+    override suspend fun resolveConflicts(
+        conflictedFriendIds: List<String>
+    ): CustomResult<Int, Exception> {
+        return friendRemoteDataSource.resolveConflicts(conflictedFriendIds)
     }
-    
-    override suspend fun searchFriendsByUsername(username: String): CustomResult<List<Friend>, Exception> {
-        return when (val result = friendRemoteDataSource.searchFriendsByUsername(username)){
-            is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
-            is CustomResult.Initial -> CustomResult.Initial
-            is CustomResult.Loading -> CustomResult.Loading
-            is CustomResult.Progress -> CustomResult.Progress(result.progress)
-        }
-    }
-    
-    override fun observeFriendRequests(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        friendRemoteDataSource.setCollection(CollectionPath.userFriends(userId))
-        return friendRemoteDataSource.observeFriendRequests()
-            .map { result ->
-                when(result) {
-                    is CustomResult.Success -> CustomResult.Success(result.data.map { it.toDomain() })
-                    is CustomResult.Failure -> CustomResult.Failure(result.error)
-                    is CustomResult.Initial -> CustomResult.Initial
-                    is CustomResult.Loading -> CustomResult.Loading
-                    is CustomResult.Progress -> CustomResult.Progress(result.progress)
-                }
-            }
-    }
-    
-    override fun observeFriendsList(userId: String): Flow<CustomResult<List<Friend>, Exception>> {
-        friendRemoteDataSource.setCollection(CollectionPath.userFriends(userId))
-        return friendRemoteDataSource.observeFriendsList()
-            .map { result ->
-                when(result) {
-                    is CustomResult.Success -> CustomResult.Success(result.data.map { dto -> dto.toDomain()})
-                    is CustomResult.Failure ->
-                        CustomResult.Failure(result.error)
-                    is CustomResult.Initial -> CustomResult.Initial
-                    is CustomResult.Loading -> CustomResult.Loading
-                    is CustomResult.Progress -> CustomResult.Progress(progress = result.progress)
-                }
-            }
-    }
+
+    // === Firebase Functions (서버 작업) ===
     
     override suspend fun sendFriendRequest(fromUserId: String, toUserId: String): CustomResult<Unit, Exception> {
         Log.d(TAG, "sendFriendRequest called: fromUserId=$fromUserId, toUserId=$toUserId")
@@ -158,8 +99,6 @@ class FriendRepositoryImpl @Inject constructor(
     }
     
     override suspend fun blockUser(userId: String, friendId: String): CustomResult<Unit, Exception> {
-        // Note: blocking functionality may need to be implemented as a separate Firebase Function
-        // For now, keeping the original implementation
         return friendRemoteDataSource.blockUser(userId, friendId)
     }
     

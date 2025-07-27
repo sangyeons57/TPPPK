@@ -37,19 +37,10 @@ class Project private constructor(
     var status: ProjectStatus = initialStatus
         private set
 
-    init {
-        setOriginalState()
-    }
 
     // Implementation of abstract method from AggregateRoot
     override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_NAME to this.name.value,
-            KEY_STATUS to this.status.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_OWNER_ID to this.ownerId.value
-        )
+        return emptyMap()
     }
 
     /**

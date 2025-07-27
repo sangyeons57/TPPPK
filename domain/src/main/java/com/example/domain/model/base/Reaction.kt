@@ -22,21 +22,13 @@ class Reaction private constructor(
     val userId: UserId = initialUserId
     val emoji: Emoji = initialEmoji
 
-    init {
-        setOriginalState()
-    }
 
     /**
      * A Reaction's state is immutable once created.
      * There are no properties to update, so this map is empty.
      */
     override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_USER_ID to this.userId.value,
-            KEY_EMOJI to this.emoji.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt,
-        )
+        return emptyMap()
     }
 
     companion object {

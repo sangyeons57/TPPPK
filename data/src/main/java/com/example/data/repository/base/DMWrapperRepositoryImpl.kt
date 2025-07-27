@@ -2,35 +2,43 @@ package com.example.data.repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.DMWrapperRemoteDataSource
-import com.example.data.model.remote.DMWrapperDTO // Assuming DMWrapperDTO is in this package
-import com.example.data.model.remote.toDto
-import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMWrapper
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryContext
 import com.example.domain.repository.base.DMWrapperRepository
-import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-// import java.util.Date // For initial timestamp if needed, though serverTimestamp is preferred
+import com.example.domain.repository.base.SyncResult
+import com.example.domain.repository.factory.context.DMWrapperRepositoryFactoryContext
 import javax.inject.Inject
 
+/**
+ * Remote DMWrapper Repository Implementation (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
+ */
 class DMWrapperRepositoryImpl @Inject constructor(
     private val dmWrapperRemoteDataSource: DMWrapperRemoteDataSource,
     override val factoryContext: DMWrapperRepositoryFactoryContext
-) : DefaultRepositoryImpl(dmWrapperRemoteDataSource, factoryContext), DMWrapperRepository {
+) : DMWrapperRepository {
 
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is DMWrapper)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMWrapper"))
-        ensureCollection()
+    override suspend fun syncFromServer(
+        lastSyncCursor: Long?,
+        userId: String?
+    ): CustomResult<SyncResult<DMWrapper>, Exception> {
+        return dmWrapperRemoteDataSource.syncFromServer(lastSyncCursor, userId)
+    }
 
-        return if (entity.isNew) {
-            dmWrapperRemoteDataSource.create(entity.toDto())
-        } else {
-            dmWrapperRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
+    override suspend fun syncToServer(
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return dmWrapperRemoteDataSource.syncToServer(userId)
+    }
+
+    override suspend fun forceSyncAll(
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return dmWrapperRemoteDataSource.forceSyncAll(userId)
+    }
+
+    override suspend fun resolveConflicts(
+        conflictedWrapperIds: List<String>
+    ): CustomResult<Int, Exception> {
+        return dmWrapperRemoteDataSource.resolveConflicts(conflictedWrapperIds)
     }
 }

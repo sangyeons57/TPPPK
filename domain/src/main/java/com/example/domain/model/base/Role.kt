@@ -31,18 +31,10 @@ class Role private constructor(
     var isDefault: RoleIsDefault = initialIsDefault
         private set
 
-    init {
-        setOriginalState()
-    }
 
     // Implementation of abstract method from AggregateRoot
     override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_NAME to this.name.value,
-            KEY_IS_DEFAULT to this.isDefault.value,
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_CREATED_AT to this.createdAt,
-        )
+        return emptyMap()
     }
 
     /**

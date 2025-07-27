@@ -5,22 +5,49 @@ import com.example.core_common.result.CustomResult
 import com.example.data.datasource.remote.DMChannelRemoteDataSource
 import com.example.data.datasource.remote.special.AuthRemoteDataSource
 import com.example.data.datasource.remote.special.FunctionsRemoteDataSource
-import com.example.data.model.remote.toDto
-import com.example.data.repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMChannel
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.DMChannelRepository
+import com.example.domain.repository.base.SyncResult
 import com.example.domain.repository.factory.context.DMChannelRepositoryFactoryContext
 import javax.inject.Inject
 
+/**
+ * Remote DMChannel Repository Implementation (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
+ */
 class DMChannelRepositoryImpl @Inject constructor(
     private val dmChannelRemoteDataSource: DMChannelRemoteDataSource,
     private val authRemoteDataSource: AuthRemoteDataSource,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource,
     override val factoryContext: DMChannelRepositoryFactoryContext
-) : DefaultRepositoryImpl(dmChannelRemoteDataSource, factoryContext), DMChannelRepository {
+) : DMChannelRepository {
 
+    override suspend fun syncFromServer(
+        lastSyncCursor: Long?,
+        userId: String?
+    ): CustomResult<SyncResult<DMChannel>, Exception> {
+        return dmChannelRemoteDataSource.syncFromServer(lastSyncCursor, userId)
+    }
+
+    override suspend fun syncToServer(
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return dmChannelRemoteDataSource.syncToServer(userId)
+    }
+
+    override suspend fun forceSyncAll(
+        userId: String?
+    ): CustomResult<Int, Exception> {
+        return dmChannelRemoteDataSource.forceSyncAll(userId)
+    }
+
+    override suspend fun resolveConflicts(
+        conflictedChannelIds: List<String>
+    ): CustomResult<Int, Exception> {
+        return dmChannelRemoteDataSource.resolveConflicts(conflictedChannelIds)
+    }
+
+    // === Firebase Functions (서버 작업) ===
 
     override suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMChannel, Exception> {
         val currentUserId = authRemoteDataSource.getCurrentUserId()
@@ -29,9 +56,8 @@ class DMChannelRepositoryImpl @Inject constructor(
         if (currentUserId == otherUserId) {
             return CustomResult.Failure(Exception("Cannot create DM channel with oneself."))
         }
-        ensureCollection()
 
-        val participants  = listOf(currentUserId, otherUserId)
+        val participants = listOf(currentUserId, otherUserId)
         Log.d("DMChannelRepositoryImpl", "participants: $participants")
         val channelIdResult = dmChannelRemoteDataSource.findByParticipants(participants)
         return when (channelIdResult) {
@@ -40,20 +66,9 @@ class DMChannelRepositoryImpl @Inject constructor(
                 CustomResult.Success(dmChannelDTO.toDomain())
             }
             is CustomResult.Failure -> CustomResult.Failure(channelIdResult.error)
-            is CustomResult.Loading -> CustomResult.Loading // Propagate loading
-            is CustomResult.Initial -> CustomResult.Initial // Propagate initial
-            is CustomResult.Progress -> CustomResult.Progress(channelIdResult.progress) // Propagate progress
-        }
-    }
-
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is DMChannel)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMChannel"))
-        ensureCollection()
-        if (entity.isNew) {
-            return dmChannelRemoteDataSource.create(entity.toDto())
-        } else {
-            return dmChannelRemoteDataSource.update(entity.id, entity.getChangedFields())
+            is CustomResult.Loading -> CustomResult.Loading
+            is CustomResult.Initial -> CustomResult.Initial
+            is CustomResult.Progress -> CustomResult.Progress(channelIdResult.progress)
         }
     }
     

@@ -56,6 +56,7 @@
             <option value="$PROJECT_DIR$/feature/feature_splash" />
             <option value="$PROJECT_DIR$/feature/feature_tasks" />
             <option value="$PROJECT_DIR$/feature/feature_terms_of_service" />
+            <option value="$PROJECT_DIR$/mapper" />
             <option value="$PROJECT_DIR$/navigation" />
           </set>
         </option>

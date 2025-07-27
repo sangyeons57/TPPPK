@@ -3,38 +3,65 @@ package com.example.domain.repository.base
 import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.DefaultRepository
 import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
-import kotlinx.coroutines.flow.Flow
 
 /**
- * 사용자 정보 조회, 업데이트, 계정 관리 등과 관련된 데이터 처리를 위한 인터페이스입니다.
+ * Remote User Repository Interface (Sync-Only)
+ * 클라이언트 주도 동기화 전용 - 직접 읽기/쓰기 불가능
+ *
+ * 🔒 제약사항:
+ * - Room 접근 금지 (LocalUserRepository 사용)
+ * - Flow/LiveData 반환 금지 (비동기 fetch-only)
+ * - 직접적인 CRUD 작업 불가능
+ *
+ * ✅ 역할:
+ * - 서버에서 증분 데이터 가져오기 (updatedAt > cursor)
+ * - 로컬 변경사항을 서버에 반영 (Outbox → Firestore)
+ * - 동기화 충돌 해결 (서버 vs 로컬)
+ * - 커서 기반 동기화 메타데이터 관리
+ * - Firebase Functions 호출 (프로필 업데이트, 이미지 업로드 등)
  */
-interface UserRepository : DefaultRepository {
+interface UserRepository {
+    val factoryContext: UserRepositoryFactoryContext
 
-    override val factoryContext: UserRepositoryFactoryContext
-    /**
-     * 주어진 이름(닉네임)과 정확히 일치하는 사용자 1명을 스트림으로 반환합니다.
-     */
-    fun observeByName(name: UserName): Flow<CustomResult<User, Exception>>
+    // === 동기화 메서드 ===
 
     /**
-     * 주어진 이름(닉네임)을 포함하는 사용자 목록을 스트림으로 반환합니다.
+     * 서버에서 증분 데이터 가져오기 (Client-driven Sync)
+     * @param lastSyncCursor 마지막 동기화 커서 (null이면 전체 동기화)
+     * @param userIds 특정 사용자들만 동기화 (null이면 전체 사용자)
+     * @return 새로운 사용자 목록과 다음 커서
      */
-    fun observeAllByName(name: String, limit: Int = 10): Flow<CustomResult<List<User>, Exception>>
+    suspend fun syncFromServer(
+        lastSyncCursor: Long? = null,
+        userIds: List<String>? = null
+    ): CustomResult<SyncResult<User>, Exception>
 
     /**
-     * 주어진 이메일과 정확히 일치하는 사용자 1명을 스트림으로 반환합니다.
+     * 로컬 변경사항을 서버에 반영 (Outbox Processing)
+     * @param userIds 특정 사용자들의 Outbox만 처리 (null이면 전체)
+     * @return 처리된 Outbox 작업 수
      */
-    fun observeByEmail(email: String): Flow<CustomResult<User, Exception>>
+    suspend fun syncToServer(
+        userIds: List<String>? = null
+    ): CustomResult<Int, Exception>
 
     /**
-     * 사용자 ID로 해당 사용자가 참여하고 있는 프로젝트들의 요약 정보(ProjectsWrapper) 스트림을 가져옵니다.
-     *
-     * @param userId 사용자 ID
-     * @return ProjectsWrapper 목록을 담은 Flow
+     * 강제 전체 동기화 (예: 첫 로그인, 데이터 불일치 해결)
+     * @return 동기화된 사용자 수
      */
+    suspend fun forceSyncAll(): CustomResult<Int, Exception>
+
+    /**
+     * 동기화 충돌 해결 (서버 우선 정책)
+     * @param conflictedUserIds 충돌이 발생한 사용자 ID 목록
+     * @return 해결된 충돌 수
+     */
+    suspend fun resolveConflicts(
+        conflictedUserIds: List<String>
+    ): CustomResult<Int, Exception>
+
+    // === Firebase Functions 호출 (서버 작업) ===
 
     /**
      * 사용자 프로필 이미지를 업로드합니다.
@@ -100,23 +127,6 @@ interface UserRepository : DefaultRepository {
     ): CustomResult<Map<String, Any?>, Exception>
 
     /**
-     * 특정 사용자의 updatedAt 필드 변경을 실시간으로 감지합니다.
-     * 프로필 이미지 업데이트 등으로 인한 사용자 정보 변경을 감지하는 데 사용됩니다.
-     * 
-     * @param userId 감지할 사용자의 ID
-     * @return updatedAt 타임스탬프 값을 담은 Flow (updatedAt이 변경될 때마다 emit)
-     */
-    fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>>
-
-    /**
-     * 주어진 ID 목록에 해당하는 사용자 목록을 스트림으로 반환합니다.
-     *
-     * @param userIds 사용자 ID 리스트
-     * @return 사용자 목록을 담은 Flow
-     */
-    fun observeUsers(userIds: List<String>): Flow<CustomResult<List<User>, Exception>>
-
-    /**
      * FCM 테스트용 Functions 호출
      */
     suspend fun sendFcmTestNotification(
@@ -124,3 +134,12 @@ interface UserRepository : DefaultRepository {
         channelId: String
     ): CustomResult<Map<String, Any?>, Exception>
 }
+
+/**
+ * 동기화 결과 데이터 클래스
+ */
+data class SyncResult<T>(
+    val data: List<T>,
+    val nextCursor: Long?,
+    val hasMore: Boolean = false
+)
