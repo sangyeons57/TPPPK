@@ -1,16 +1,18 @@
 package com.example.mapper
 
 import com.example.data.model.remote.ReactionDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Reaction
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.reaction.Emoji
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface ReactionMapper : BaseMapper<Reaction, ReactionDTO>
 
 class ReactionMapperImpl : ReactionMapper {
-    override fun fromDto(dto: ReactionDTO): Reaction {
+    override fun toDomain(dto: ReactionDTO): Reaction {
         return Reaction.fromDataSource(
             id = DocumentId(dto.id),
             userId = UserId(dto.userId),
@@ -41,6 +43,16 @@ class ReactionMapperImpl : ReactionMapper {
         return mapOf(
             Reaction.KEY_USER_ID to data.userId,
             Reaction.KEY_EMOJI to data.emoji,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): ReactionDTO {
+        return ReactionDTO(
+            id = map["id"] as? String ?: "",
+            userId = map[Reaction.KEY_USER_ID] as? String ?: "",
+            emoji = map[Reaction.KEY_EMOJI] as? String ?: "",
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

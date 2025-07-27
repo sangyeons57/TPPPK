@@ -3,7 +3,6 @@ package com.example.domain.repository.base
 import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
 
 /**
  * Remote User Repository Interface (Sync-Only)
@@ -22,7 +21,6 @@ import com.example.domain.repository.factory.context.UserRepositoryFactoryContex
  * - Firebase Functions 호출 (프로필 업데이트, 이미지 업로드 등)
  */
 interface UserRepository {
-    val factoryContext: UserRepositoryFactoryContext
 
     // === 동기화 메서드 ===
 

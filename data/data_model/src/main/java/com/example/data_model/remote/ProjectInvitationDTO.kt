@@ -1,0 +1,71 @@
+package com.example.data.model.remote
+
+import com.example.domain.model.AggregateRoot
+import com.example.domain.model.DTO
+import com.example.domain.model.base.ProjectInvitation
+import com.example.domain.model.enum.InviteStatus
+import com.google.firebase.firestore.PropertyName
+import com.google.firebase.firestore.ServerTimestamp
+import java.util.Date
+import com.google.firebase.firestore.DocumentId as FirestoreDocumentId
+
+/**
+ * 프로젝트 초대 정보를 나타내는 DTO 클래스
+ * Firestore document 구조와 매핑
+ */
+data class ProjectInvitationDTO(
+    @get:FirestoreDocumentId 
+    override val id: String = "",
+    @get:PropertyName(ProjectInvitation.KEY_INVITER_ID)
+    val inviterId: String = "",
+    @get:PropertyName(ProjectInvitation.KEY_PROJECT_ID)
+    val projectId: String = "",
+    @get:PropertyName(ProjectInvitation.KEY_STATUS)
+    val status: String = InviteStatus.ACTIVE.value,
+    @get:PropertyName(ProjectInvitation.KEY_EXPIRES_AT)
+    val expiresAt: Date? = null,
+    @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
+    @get:ServerTimestamp
+    override val createdAt: Date? = null,
+    @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
+    @get:ServerTimestamp
+    override val updatedAt: Date? = null
+) : DTO {
+
+    companion object {
+        /**
+         * 도메인 모델을 DTO로 변환
+         */
+        fun fromDomain(projectInvitation: ProjectInvitation): ProjectInvitationDTO {
+            return ProjectInvitationDTO(
+                id = projectInvitation.id.value,
+                inviterId = projectInvitation.inviterId.value,
+                projectId = projectInvitation.projectId.value,
+                status = projectInvitation.status.value,
+                expiresAt = projectInvitation.expiresAt?.let { Date.from(it) },
+                createdAt = Date.from(projectInvitation.createdAt),
+                updatedAt = Date.from(projectInvitation.updatedAt)
+            )
+        }
+
+        /**
+         * 새로운 초대 생성을 위한 팩토리 메서드
+         */
+        fun createNew(
+            inviteCodeId: String,
+            inviterId: String,
+            projectId: String,
+            expiresAt: Date? = null
+        ): ProjectInvitationDTO {
+            return ProjectInvitationDTO(
+                id = inviteCodeId,
+                inviterId = inviterId,
+                projectId = projectId,
+                status = InviteStatus.ACTIVE.value,
+                expiresAt = expiresAt,
+                createdAt = null, // Will be set by @ServerTimestamp
+                updatedAt = null  // Will be set by @ServerTimestamp
+            )
+        }
+    }
+}

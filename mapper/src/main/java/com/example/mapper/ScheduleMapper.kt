@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.ScheduleDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.OwnerId
@@ -13,7 +14,7 @@ import java.util.Date
 interface ScheduleMapper : BaseMapper<Schedule, ScheduleDTO>
 
 class ScheduleMapperImpl : ScheduleMapper {
-    override fun fromDto(dto: ScheduleDTO): Schedule {
+    override fun toDomain(dto: ScheduleDTO): Schedule {
         requireNotNull(dto.startTime) { "startTime is null in ScheduleDTO with id=${dto.id}" }
         requireNotNull(dto.endTime) { "endTime is null in ScheduleDTO with id=${dto.id}" }
 
@@ -67,6 +68,22 @@ class ScheduleMapperImpl : ScheduleMapper {
             Schedule.KEY_START_TIME to data.startTime,
             Schedule.KEY_END_TIME to data.endTime,
             Schedule.KEY_STATUS to data.status,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): ScheduleDTO {
+        return ScheduleDTO(
+            id = map["id"] as? String ?: "",
+            title = map[Schedule.KEY_TITLE] as? String ?: "",
+            content = map[Schedule.KEY_CONTENT] as? String ?: "",
+            startTime = (map[Schedule.KEY_START_TIME] as? Date),
+            endTime = (map[Schedule.KEY_END_TIME] as? Date),
+            projectId = map[Schedule.KEY_PROJECT_ID] as? String,
+            creatorId = map[Schedule.KEY_CREATOR_ID] as? String ?: "",
+            status = (map[Schedule.KEY_STATUS] as? String)?.let { ScheduleStatus.valueOf(it) }
+                ?: ScheduleStatus.UPCOMING,
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

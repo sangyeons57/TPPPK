@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.FriendDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Friend
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
@@ -11,7 +12,7 @@ import java.util.Date
 interface FriendMapper : BaseMapper<Friend, FriendDTO>
 
 class FriendMapperImpl : FriendMapper {
-    override fun fromDto(dto: FriendDTO): Friend {
+    override fun toDomain(dto: FriendDTO): Friend {
         return Friend.fromDataSource(
             id = DocumentId(dto.id),
             status = dto.status,
@@ -54,6 +55,20 @@ class FriendMapperImpl : FriendMapper {
             Friend.KEY_ACCEPTED_AT to data.acceptedAt,
             Friend.KEY_NAME to data.name,
             Friend.KEY_PROFILE_IMAGE_URL to data.profileImageUrl,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): FriendDTO {
+        return FriendDTO(
+            id = map["id"] as? String ?: "",
+            status = (map[Friend.KEY_STATUS] as? String)?.let { FriendStatus.valueOf(it) }
+                ?: FriendStatus.PENDING,
+            requestedAt = (map[Friend.KEY_REQUESTED_AT] as? Date),
+            acceptedAt = (map[Friend.KEY_ACCEPTED_AT] as? Date),
+            name = map[Friend.KEY_NAME] as? String ?: "",
+            profileImageUrl = map[Friend.KEY_PROFILE_IMAGE_URL] as? String,
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

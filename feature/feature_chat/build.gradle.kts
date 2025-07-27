@@ -16,8 +16,8 @@ dependencies {
     implementation(project(":domain"))
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
-    implementation(project(":core:core_ui")) // 공통 유틸리티 사용
-    implementation(project(":data"))
+    implementation(project(":core:core_ui"))
+    implementation(project(":data:data_core"))
 
     // Module-specific dependencies
     // Coil (Image Loading)

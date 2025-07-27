@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.TaskDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
@@ -8,11 +9,12 @@ import com.example.domain.model.vo.task.TaskContent
 import com.example.domain.model.vo.task.TaskOrder
 import com.example.domain.model.vo.task.TaskType
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface TaskMapper : BaseMapper<Task, TaskDTO>
 
 class TaskMapperImpl : TaskMapper {
-    override fun fromDto(dto: TaskDTO): Task {
+    override fun toDomain(dto: TaskDTO): Task {
         return Task.fromDataSource(
             id = DocumentId(dto.id),
             taskType = TaskType.fromValue(dto.taskType),
@@ -35,7 +37,7 @@ class TaskMapperImpl : TaskMapper {
             content = domain.content.value,
             order = domain.order.value,
             checkedBy = domain.checkedBy?.internalValue,
-            checkedAt = domain.checkedAt?.let { java.util.Date.from(it) },
+            checkedAt = domain.checkedAt?.let { Date.from(it) },
             createdAt = null,
             updatedAt = null
         )
@@ -60,6 +62,22 @@ class TaskMapperImpl : TaskMapper {
             Task.KEY_ORDER to data.order,
             Task.KEY_CHECKED_BY to data.checkedBy,
             Task.KEY_CHECKED_AT to data.checkedAt
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): TaskDTO {
+        return TaskDTO(
+            id = map["id"] as? String ?: "",
+            type = map["type"] as? String ?: TaskDTO.TYPE_TASK,
+            taskType = map[Task.KEY_TASK_TYPE] as? String ?: TaskType.ETC.value,
+            status = (map[Task.KEY_STATUS] as? String)?.let { TaskStatus.valueOf(it) }
+                ?: TaskStatus.PENDING,
+            content = map[Task.KEY_CONTENT] as? String ?: "",
+            order = map[Task.KEY_ORDER] as? Long ?: 0L,
+            checkedBy = map[Task.KEY_CHECKED_BY] as? String,
+            checkedAt = (map[Task.KEY_CHECKED_AT] as? Date),
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

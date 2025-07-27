@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.MessageDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Message
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.MentionType
@@ -9,11 +10,12 @@ import com.example.domain.model.vo.message.MentionInfo
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface MessageMapper : BaseMapper<Message, MessageDTO>
 
 class MessageMapperImpl : MessageMapper {
-    override fun fromDto(dto: MessageDTO): Message {
+    override fun toDomain(dto: MessageDTO): Message {
         val domainMentions = dto.mentions.mapNotNull { map ->
             try {
                 val type = MentionType.valueOf(map[MentionInfo.KEY_TYPE] as String)
@@ -81,6 +83,19 @@ class MessageMapperImpl : MessageMapper {
             Message.KEY_REPLY_TO_MESSAGE_ID to data.replyToMessageId,
             Message.KEY_IS_DELETED to data.isDeleted,
             Message.KEY_MENTIONS to data.mentions
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): MessageDTO {
+        return MessageDTO(
+            id = map["id"] as? String ?: "",
+            senderId = map[Message.KEY_SENDER_ID] as? String ?: "",
+            content = map[Message.KEY_SEND_MESSAGE] as? String ?: "",
+            replyToMessageId = map[Message.KEY_REPLY_TO_MESSAGE_ID] as? String,
+            isDeleted = map[Message.KEY_IS_DELETED] as? Boolean ?: false,
+            mentions = map[Message.KEY_MENTIONS] as? List<Map<String, String>> ?: emptyList(),
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

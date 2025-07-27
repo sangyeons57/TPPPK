@@ -1,17 +1,19 @@
 package com.example.mapper
 
 import com.example.data.model.remote.MessageAttachmentDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
 import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface MessageAttachmentMapper : BaseMapper<MessageAttachment, MessageAttachmentDTO>
 
 class MessageAttachmentMapperImpl : MessageAttachmentMapper {
-    override fun fromDto(dto: MessageAttachmentDTO): MessageAttachment {
+    override fun toDomain(dto: MessageAttachmentDTO): MessageAttachment {
         return MessageAttachment.fromDataSource(
             id = DocumentId(dto.id),
             attachmentType = dto.attachmentType,
@@ -57,6 +59,22 @@ class MessageAttachmentMapperImpl : MessageAttachmentMapper {
             MessageAttachment.KEY_THUMBNAIL_URL to null,
             MessageAttachment.KEY_UPLOAD_STATUS to null,
             MessageAttachment.KEY_UPLOAD_PROGRESS to null,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): MessageAttachmentDTO {
+        return MessageAttachmentDTO(
+            id = map["id"] as? String ?: "",
+            attachmentType = (map[MessageAttachment.KEY_ATTACHMENT_TYPE] as? String)?.let {
+                MessageAttachmentType.valueOf(
+                    it
+                )
+            } ?: MessageAttachmentType.FILE,
+            attachmentUrl = map[MessageAttachment.KEY_ATTACHMENT_URL] as? String ?: "",
+            fileName = map[MessageAttachment.KEY_FILE_NAME] as? String,
+            fileSize = map[MessageAttachment.KEY_FILE_SIZE] as? Long,
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

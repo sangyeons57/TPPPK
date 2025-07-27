@@ -1,16 +1,18 @@
 package com.example.mapper
 
 import com.example.data.model.remote.RoleDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface RoleMapper : BaseMapper<Role, RoleDTO>
 
 class RoleMapperImpl : RoleMapper {
-    override fun fromDto(dto: RoleDTO): Role {
+    override fun toDomain(dto: RoleDTO): Role {
         return Role.fromDataSource(
             id = DocumentId(dto.id),
             name = Name(dto.name),
@@ -41,6 +43,16 @@ class RoleMapperImpl : RoleMapper {
         return mapOf(
             Role.KEY_NAME to data.name,
             Role.KEY_IS_DEFAULT to data.isDefault,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): RoleDTO {
+        return RoleDTO(
+            id = map["id"] as? String ?: "",
+            name = map[Role.KEY_NAME] as? String ?: "",
+            isDefault = map[Role.KEY_IS_DEFAULT] as? Boolean ?: false,
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

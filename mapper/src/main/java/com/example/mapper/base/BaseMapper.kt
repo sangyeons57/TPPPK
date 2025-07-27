@@ -10,7 +10,7 @@ interface BaseMapper<D, E> {
     /**
      * Maps a DTO to a Domain model.
      */
-    fun fromDto(dto: E): D
+    fun toDomain(dto: E): D
 
     /**
      * Maps a Domain model to a DTO.
@@ -26,4 +26,9 @@ interface BaseMapper<D, E> {
      * Maps a DTO to a Map for database operations.
      */
     fun dataToMap(data: E): Map<String, Any?>
+
+    /**
+     * Maps a Map to a DTO.
+     */
+    fun mapToDto(map: Map<String, Any?>): E
 }

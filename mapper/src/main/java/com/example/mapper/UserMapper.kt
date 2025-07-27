@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.UserDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserEmail
@@ -14,7 +15,7 @@ import java.util.Date
 interface UserMapper : BaseMapper<User, UserDTO>
 
 class UserMapperImpl : UserMapper {
-    override fun fromDto(dto: UserDTO): User {
+    override fun toDomain(dto: UserDTO): User {
         return User.fromDataSource(
             id = DocumentId(dto.id),
             email = UserEmail(dto.email), // Wrap in Value Object
@@ -64,6 +65,26 @@ class UserMapperImpl : UserMapper {
             User.KEY_USER_STATUS to data.status,
             User.KEY_FCM_TOKEN to data.fcmToken,
             User.KEY_ACCOUNT_STATUS to data.accountStatus
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): UserDTO {
+        return UserDTO(
+            id = map["id"] as? String ?: "",
+            email = map[User.KEY_EMAIL] as? String ?: "",
+            name = map[User.KEY_NAME] as? String ?: "",
+            consentTimeStamp = (map[User.KEY_CONSENT_TIMESTAMP] as? Date),
+            memo = map[User.KEY_MEMO] as? String,
+            status = (map[User.KEY_USER_STATUS] as? String)?.let { UserStatus.valueOf(it) }
+                ?: UserStatus.OFFLINE,
+            fcmToken = map[User.KEY_FCM_TOKEN] as? String,
+            accountStatus = (map[User.KEY_ACCOUNT_STATUS] as? String)?.let {
+                UserAccountStatus.valueOf(
+                    it
+                )
+            } ?: UserAccountStatus.ACTIVE,
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

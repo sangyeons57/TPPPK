@@ -1,16 +1,18 @@
 package com.example.mapper
 
 import com.example.data.model.remote.ProjectChannelDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface ProjectChannelMapper : BaseMapper<ProjectChannel, ProjectChannelDTO>
 
 class ProjectChannelMapperImpl : ProjectChannelMapper {
-    override fun fromDto(dto: ProjectChannelDTO): ProjectChannel {
+    override fun toDomain(dto: ProjectChannelDTO): ProjectChannel {
         return ProjectChannel.fromDataSource(
             id = DocumentId(dto.id),
             channelName = Name(dto.channelName),
@@ -53,6 +55,27 @@ class ProjectChannelMapperImpl : ProjectChannelMapper {
             ProjectChannel.KEY_ORDER to data.order,
             ProjectChannel.KEY_STATUS to data.status,
             ProjectChannel.KEY_CATEGORY_ID to data.categoryId,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): ProjectChannelDTO {
+        return ProjectChannelDTO(
+            id = map["id"] as? String ?: "",
+            channelName = map[ProjectChannel.KEY_CHANNEL_NAME] as? String ?: "",
+            channelType = (map[ProjectChannel.KEY_CHANNEL_TYPE] as? String)?.let {
+                ProjectChannelType.valueOf(
+                    it
+                )
+            } ?: ProjectChannelType.TEXT,
+            order = map[ProjectChannel.KEY_ORDER] as? Double ?: 0.0,
+            status = (map[ProjectChannel.KEY_STATUS] as? String)?.let {
+                ProjectChannelStatus.valueOf(
+                    it
+                )
+            } ?: ProjectChannelStatus.ACTIVE,
+            categoryId = map[ProjectChannel.KEY_CATEGORY_ID] as? String ?: "",
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

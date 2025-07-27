@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.DMWrapperDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
@@ -8,11 +9,12 @@ import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
 import com.example.domain.model.vo.user.UserName
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface DMWrapperMapper : BaseMapper<DMWrapper, DMWrapperDTO>
 
 class DMWrapperMapperImpl : DMWrapperMapper {
-    override fun fromDto(dto: DMWrapperDTO): DMWrapper {
+    override fun toDomain(dto: DMWrapperDTO): DMWrapper {
         return DMWrapper.fromDataSource(
             id = DocumentId(dto.id),
             otherUserId = UserId(dto.otherUserId),
@@ -49,6 +51,18 @@ class DMWrapperMapperImpl : DMWrapperMapper {
             DMWrapper.KEY_OTHER_USER_NAME to data.otherUserName,
             DMWrapper.KEY_OTHER_USER_IMAGE_URL to data.otherUserImageUrl,
             DMWrapper.KEY_LAST_MESSAGE_PREVIEW to data.lastMessagePreview,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): DMWrapperDTO {
+        return DMWrapperDTO(
+            id = map["id"] as? String ?: "",
+            otherUserId = map[DMWrapper.KEY_OTHER_USER_ID] as? String ?: "",
+            otherUserName = map[DMWrapper.KEY_OTHER_USER_NAME] as? String ?: "",
+            otherUserImageUrl = map[DMWrapper.KEY_OTHER_USER_IMAGE_URL] as? String,
+            lastMessagePreview = map[DMWrapper.KEY_LAST_MESSAGE_PREVIEW] as? String,
+            createdAt = map[AggregateRoot.KEY_CREATED_AT] as? Date,
+            updatedAt = map[AggregateRoot.KEY_UPDATED_AT] as? Date
         )
     }
 }

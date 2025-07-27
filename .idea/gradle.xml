@@ -18,6 +18,8 @@
             <option value="$PROJECT_DIR$/core/core_ui" />
             <option value="$PROJECT_DIR$/core/websocket" />
             <option value="$PROJECT_DIR$/data" />
+            <option value="$PROJECT_DIR$/data/data_core" />
+            <option value="$PROJECT_DIR$/data/data_model" />
             <option value="$PROJECT_DIR$/domain" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/feature_accept_friend" />

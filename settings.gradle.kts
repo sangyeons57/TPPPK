@@ -27,11 +27,16 @@ rootProject.name = "TeamnovaPersonalProjectProjectingKotlin"
 include(":app")
 include(":app-api")
 include(":navigation")
-include(":data")
 include(":domain")
+include(":mapper")
 
+include(":data:data_core")
+include(":data:data_model")
+
+include(":core:websocket")
 include(":core:core_common")
 include(":core:core_ui")
+
 include(":core:core_navigation")
 include(":feature:feature_chat")
 include(":feature:feature_splash")
@@ -69,5 +74,3 @@ include(":feature:feature_set_project_name")
 include(":feature:feature_accept_friend")
 include(":feature:feature_add_role")
 include(":feature:feature_tasks")
-include(":core:websocket")
-include(":mapper")

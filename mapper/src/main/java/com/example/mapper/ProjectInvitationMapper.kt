@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.ProjectInvitationDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.enum.InviteStatus
 import com.example.domain.model.vo.DocumentId
@@ -11,7 +12,7 @@ import java.util.Date
 interface ProjectInvitationMapper : BaseMapper<ProjectInvitation, ProjectInvitationDTO>
 
 class ProjectInvitationMapperImpl : ProjectInvitationMapper {
-    override fun fromDto(dto: ProjectInvitationDTO): ProjectInvitation {
+    override fun toDomain(dto: ProjectInvitationDTO): ProjectInvitation {
         return ProjectInvitation.fromDataSource(
             id = DocumentId(dto.id),
             status = InviteStatus.fromString(dto.status),
@@ -52,6 +53,22 @@ class ProjectInvitationMapperImpl : ProjectInvitationMapper {
             ProjectInvitation.KEY_INVITER_ID to data.inviterId,
             ProjectInvitation.KEY_PROJECT_ID to data.projectId,
             ProjectInvitation.KEY_EXPIRES_AT to data.expiresAt,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): ProjectInvitationDTO {
+        return ProjectInvitationDTO(
+            id = map["id"] as? String ?: "",
+            status = (map[ProjectInvitation.KEY_STATUS] as? String)?.let {
+                InviteStatus.fromString(
+                    it
+                )
+            } ?: InviteStatus.EXPIRED,
+            inviterId = map[ProjectInvitation.KEY_INVITER_ID] as? String ?: "",
+            projectId = map[ProjectInvitation.KEY_PROJECT_ID] as? String ?: "",
+            expiresAt = (map[ProjectInvitation.KEY_EXPIRES_AT] as? Date),
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

@@ -1,6 +1,7 @@
 package com.example.mapper
 
 import com.example.data.model.remote.ProjectDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
@@ -8,11 +9,12 @@ import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.project.ProjectStatus
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface ProjectMapper : BaseMapper<Project, ProjectDTO>
 
 class ProjectMapperImpl : ProjectMapper {
-    override fun fromDto(dto: ProjectDTO): Project {
+    override fun toDomain(dto: ProjectDTO): Project {
         return Project.fromDataSource(
             id = DocumentId(dto.id),
             name = ProjectName(dto.name),
@@ -49,6 +51,18 @@ class ProjectMapperImpl : ProjectMapper {
             Project.KEY_NAME to data.name,
             Project.KEY_STATUS to data.status,
             Project.KEY_OWNER_ID to data.ownerId
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): ProjectDTO {
+        return ProjectDTO(
+            id = map["id"] as? String ?: "",
+            name = map[Project.KEY_NAME] as? String ?: "",
+            imageUrl = map[Project.KEY_IMAGE_URL] as? String,
+            status = map[Project.KEY_STATUS] as? String ?: ProjectStatus.UNKNOWN.value,
+            ownerId = map[Project.KEY_OWNER_ID] as? String ?: "",
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }

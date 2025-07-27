@@ -1,17 +1,19 @@
 package com.example.mapper
 
 import com.example.data.model.remote.ProjectsWrapperDTO
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.projectwrapper.ProjectWrapperOrder
 import com.example.mapper.base.BaseMapper
+import java.util.Date
 
 interface ProjectsWrapperMapper : BaseMapper<ProjectsWrapper, ProjectsWrapperDTO>
 
 class ProjectsWrapperMapperImpl : ProjectsWrapperMapper {
-    override fun fromDto(dto: ProjectsWrapperDTO): ProjectsWrapper {
+    override fun toDomain(dto: ProjectsWrapperDTO): ProjectsWrapper {
         return ProjectsWrapper.fromDataSource(
             id = DocumentId(dto.id),
             order = ProjectWrapperOrder.from(dto.order),
@@ -46,6 +48,17 @@ class ProjectsWrapperMapperImpl : ProjectsWrapperMapper {
             ProjectsWrapper.KEY_ORDER to data.order,
             ProjectsWrapper.KEY_PROJECT_NAME to data.projectName,
             ProjectsWrapper.KEY_PROJECT_IMAGE_URL to data.projectImageUrl,
+        )
+    }
+
+    override fun mapToDto(map: Map<String, Any?>): ProjectsWrapperDTO {
+        return ProjectsWrapperDTO(
+            id = map["id"] as? String ?: "",
+            order = map[ProjectsWrapper.KEY_ORDER] as? Double ?: 0.0,
+            projectName = map[ProjectsWrapper.KEY_PROJECT_NAME] as? String ?: "",
+            projectImageUrl = map[ProjectsWrapper.KEY_PROJECT_IMAGE_URL] as? String,
+            createdAt = (map[AggregateRoot.KEY_CREATED_AT] as? Date),
+            updatedAt = (map[AggregateRoot.KEY_UPDATED_AT] as? Date)
         )
     }
 }
