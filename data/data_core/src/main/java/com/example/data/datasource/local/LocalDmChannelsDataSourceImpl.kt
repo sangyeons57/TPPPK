@@ -1,8 +1,8 @@
 package com.example.data.datasource.local
 
 import com.example.data.dao.DmChannelsDao
-import com.example.data.dao.SyncMetadataDao
 import com.example.data.dao.OutboxDao
+import com.example.data.dao.SyncMetadataDao
 import com.example.data.mapper.DmChannelsMapper
 import com.example.data.model.local.OutboxEntity
 import com.example.domain.model.base.DMChannel
