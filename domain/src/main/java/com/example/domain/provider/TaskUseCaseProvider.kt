@@ -1,5 +1,6 @@
 package com.example.domain.provider
 
+import com.example.domain.repository.local.LocalTaskRepository
 import com.example.domain.repository.local.TaskLocalRepository
 import com.example.domain.usecase.local.task.CreateTaskLocalUseCase
 import com.example.domain.usecase.local.task.CreateTaskLocalUseCaseImpl
@@ -27,7 +28,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class TaskUseCaseProvider @Inject constructor(
-    private val taskLocalRepository: TaskLocalRepository
+    private val taskLocalRepository: LocalTaskRepository
 ) {
 
     /**

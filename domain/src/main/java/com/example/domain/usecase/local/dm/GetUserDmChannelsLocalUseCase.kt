@@ -2,8 +2,8 @@ package com.example.domain.usecase.local.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
-import com.example.domain.repository.local.DMChannelLocalRepository
 import com.example.domain.repository.local.AuthLocalRepository
+import com.example.domain.repository.local.DMChannelLocalRepository
 import com.example.domain.repository.local.DMWrapperLocalRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -14,7 +14,7 @@ interface GetUserDmChannelsLocalUseCase {
 
 class GetUserDmChannelsLocalUseCaseImpl @Inject constructor(
     private val dmChannelLocalRepository: DMChannelLocalRepository,
-    private val authLocalRepository: AuthLocalRepository,
+    private val authRepository: AuthLocalRepository,
     private val dmWrapperLocalRepository: DMWrapperLocalRepository
 ) : GetUserDmChannelsLocalUseCase {
 

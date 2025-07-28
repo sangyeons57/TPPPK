@@ -1,8 +1,8 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.AuthLocalRepository
-import com.example.domain.repository.local.DMChannelLocalRepository
-import com.example.domain.repository.local.DMWrapperLocalRepository
+import com.example.domain.repository.local.LocalDMChannelRepository
+import com.example.domain.repository.local.LocalDMWrapperRepository
+import com.example.domain.repository.remote.AuthRepository
 import com.example.domain.usecase.local.dm.AddDmChannelLocalUseCase
 import com.example.domain.usecase.local.dm.AddDmChannelLocalUseCaseImpl
 import com.example.domain.usecase.local.dm.BlockDMChannelLocalUseCase
@@ -23,9 +23,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class DMUseCaseProvider @Inject constructor(
-    private val dmChannelLocalRepository: DMChannelLocalRepository,
-    private val dmWrapperLocalRepository: DMWrapperLocalRepository,
-    private val authLocalRepository: AuthLocalRepository
+    private val dmChannelLocalRepository: LocalDMChannelRepository,
+    private val dmWrapperLocalRepository: LocalDMWrapperRepository,
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -42,19 +42,19 @@ class DMUseCaseProvider @Inject constructor(
             
             getUserDmChannelsLocalUseCase = GetUserDmChannelsLocalUseCaseImpl(
                 dmChannelLocalRepository = dmChannelLocalRepository,
-                authLocalRepository = authLocalRepository,
+                authRepository = authRepository,
                 dmWrapperLocalRepository = dmWrapperLocalRepository
             ),
             
             // 채널 생성
             addDmChannelLocalUseCase = AddDmChannelLocalUseCaseImpl(
                 dmChannelLocalRepository = dmChannelLocalRepository,
-                authLocalRepository = authLocalRepository
+                authRepository = authRepository
             ),
             
             dmChannelLocalRepository = dmChannelLocalRepository,
             dmWrapperLocalRepository = dmWrapperLocalRepository,
-            authLocalRepository = authLocalRepository
+            authRepository = authRepository
         )
     }
 
@@ -68,16 +68,16 @@ class DMUseCaseProvider @Inject constructor(
             // 차단 관리
             blockDMChannelLocalUseCase = BlockDMChannelLocalUseCaseImpl(
                 dmChannelLocalRepository = dmChannelLocalRepository,
-                authLocalRepository = authLocalRepository
+                authRepository = authRepository
             ),
             
             unblockDMChannelLocalUseCase = UnblockDMChannelLocalUseCaseImpl(
                 dmChannelLocalRepository = dmChannelLocalRepository,
-                authLocalRepository = authLocalRepository
+                authRepository = authRepository
             ),
             
             dmChannelLocalRepository = dmChannelLocalRepository,
-            authLocalRepository = authLocalRepository
+            authRepository = authRepository
         )
     }
 }
@@ -92,10 +92,10 @@ data class DMLocalChannelUseCases(
     
     // 채널 생성
     val addDmChannelLocalUseCase: AddDmChannelLocalUseCase,
-    
-    val dmChannelLocalRepository: DMChannelLocalRepository,
-    val dmWrapperLocalRepository: DMWrapperLocalRepository,
-    val authLocalRepository: AuthLocalRepository
+
+    val dmChannelLocalRepository: LocalDMChannelRepository,
+    val dmWrapperLocalRepository: LocalDMWrapperRepository,
+    val authRepository: AuthRepository
 )
 
 /**
@@ -105,7 +105,7 @@ data class DMLocalBlockingUseCases(
     // 차단 관리
     val blockDMChannelLocalUseCase: BlockDMChannelLocalUseCase,
     val unblockDMChannelLocalUseCase: UnblockDMChannelLocalUseCase,
-    
-    val dmChannelLocalRepository: DMChannelLocalRepository,
-    val authLocalRepository: AuthLocalRepository
+
+    val dmChannelLocalRepository: LocalDMChannelRepository,
+    val authRepository: AuthRepository
 ) 

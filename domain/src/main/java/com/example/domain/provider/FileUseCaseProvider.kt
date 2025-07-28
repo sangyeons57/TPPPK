@@ -1,7 +1,9 @@
 package com.example.domain.provider
 
 import com.example.domain.repository.local.FileLocalRepository
+import com.example.domain.repository.local.LocalMessageAttachmentRepository
 import com.example.domain.repository.local.MessageAttachmentLocalRepository
+import com.example.domain.repository.remote.FileRepository
 import com.example.domain.usecase.local.file.CheckFileExistenceLocalUseCase
 import com.example.domain.usecase.local.file.CheckFileExistenceLocalUseCaseImpl
 import com.example.domain.usecase.local.file.DeleteFileLocalUseCase
@@ -22,8 +24,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class FileUseCaseProvider @Inject constructor(
-    private val fileLocalRepository: FileLocalRepository,
-    private val messageAttachmentLocalRepository: MessageAttachmentLocalRepository
+    private val fileLocalRepository: FileRepository,
+    private val messageAttachmentLocalRepository: LocalMessageAttachmentRepository
 ) {
 
     /**

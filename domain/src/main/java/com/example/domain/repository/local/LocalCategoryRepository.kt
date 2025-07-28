@@ -36,6 +36,14 @@ import java.time.Instant
  */
 interface LocalCategoryRepository : BaseLocalRepository<Category> {
 
+    // === SyncableRepository 구현 ===
+
+    /**
+     * Firestore 컬렉션 이름
+     */
+    override val collectionName: String
+        get() = "categories"
+
 
     /**
      * 주어진 이름과 정확히 일치하는 카테고리를 실시간 관찰

@@ -19,34 +19,34 @@ import kotlinx.coroutines.flow.Flow
  * - save: 생성/수정 작업 (Outbox 포함)
  * - delete: 삭제 작업 (Soft Delete + Outbox)
  *
- * @param T 엔티티 타입 (Category, Project, User 등)
+ * @param T 도메인 모델 타입 (Category, Project, User 등)
  */
-interface BaseLocalRepository<T> : SyncableRepository<T> {
+interface BaseLocalRepository<T> : SyncableRepository<T> where T : AggregateRoot {
 
     // === 관찰자 패턴 (UI 반응형) ===
 
     /**
-     * 특정 엔티티를 실시간 관찰
+     * 특정 도메인 모델을 실시간 관찰
      * UI에서 데이터 변경사항을 즉시 반영
      *
-     * @param entityId 엔티티 ID
-     * @return 엔티티 Flow (null 가능)
+     * @param entityId 도메인 모델 ID
+     * @return 도메인 모델 Flow (null 가능)
      */
     fun observeEntityById(entityId: String): Flow<T?>
 
     /**
-     * 모든 엔티티를 실시간 관찰
+     * 모든 도메인 모델을 실시간 관찰
      * 목록 UI에서 데이터 변경사항을 즉시 반영
      *
-     * @return 엔티티 목록 Flow
+     * @return 도메인 모델 목록 Flow
      */
     fun observeAllEntities(): Flow<List<T>>
 
     /**
-     * 특정 엔티티의 updatedAt 필드 변경을 실시간 관찰
+     * 특정 도메인 모델의 updatedAt 필드 변경을 실시간 관찰
      * 동기화 상태 모니터링용
      *
-     * @param entityId 엔티티 ID
+     * @param entityId 도메인 모델 ID
      * @return updatedAt 타임스탬프 Flow
      */
     fun observeEntityUpdatedAt(entityId: String): Flow<Long?>
@@ -56,7 +56,7 @@ interface BaseLocalRepository<T> : SyncableRepository<T> {
     /**
      * 엔티티 ID로 조회
      *
-     * @param entityId 엔티티 ID
+     * @param entityId 도메인 모델 ID
      * @return 엔티티 (없으면 null)
      */
     suspend fun getEntityById(entityId: String): CustomResult<T?, Exception>
@@ -101,7 +101,7 @@ interface BaseLocalRepository<T> : SyncableRepository<T> {
      * 엔티티 삭제 (Soft Delete)
      * Outbox에 삭제 작업 자동 추가
      *
-     * @param entityId 엔티티 ID
+     * @param entityId 도메인 모델 ID
      * @return 성공 여부
      */
     suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception>

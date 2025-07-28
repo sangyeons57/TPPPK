@@ -50,6 +50,13 @@ class LocalCategoryRepositoryImpl @Inject constructor(
         private const val TAG = "LocalCategoryRepository"
     }
 
+    // === SyncableRepository 구현 ===
+
+    /**
+     * Firestore 컬렉션 이름
+     */
+    override val collectionName: String = "categories"
+
     // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
 
     override fun observeEntityById(entityId: String): Flow<Category?> = 

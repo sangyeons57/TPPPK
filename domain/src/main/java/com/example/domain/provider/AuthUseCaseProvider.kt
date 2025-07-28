@@ -1,7 +1,7 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.AuthLocalRepository
-import com.example.domain.repository.local.UserLocalRepository
+import com.example.domain.repository.local.LocalUserRepository
+import com.example.domain.repository.remote.AuthRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,8 +12,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class AuthUseCaseProvider @Inject constructor(
-    private val authLocalRepository: AuthLocalRepository,
-    private val userLocalRepository: UserLocalRepository
+    private val authRepository: AuthRepository,
+    private val localUserRepository: LocalUserRepository
 ) {
 
     /**
@@ -24,8 +24,8 @@ class AuthUseCaseProvider @Inject constructor(
     fun createSessionUseCases(): AuthLocalSessionUseCases {
         return AuthLocalSessionUseCases(
             // TODO: 향후 local auth session use cases 추가
-            authLocalRepository = authLocalRepository,
-            userLocalRepository = userLocalRepository
+            authRepository = authRepository,
+            localUserRepository = localUserRepository
         )
     }
 
@@ -37,8 +37,8 @@ class AuthUseCaseProvider @Inject constructor(
     fun createAccountUseCases(): AuthLocalAccountUseCases {
         return AuthLocalAccountUseCases(
             // TODO: 향후 local auth account use cases 추가
-            authLocalRepository = authLocalRepository,
-            userLocalRepository = userLocalRepository
+            authRepository = authRepository,
+            localUserRepository = localUserRepository
         )
     }
 
@@ -50,8 +50,8 @@ class AuthUseCaseProvider @Inject constructor(
     fun createValidationUseCases(): AuthLocalValidationUseCases {
         return AuthLocalValidationUseCases(
             // TODO: 향후 local auth validation use cases 추가
-            authLocalRepository = authLocalRepository,
-            userLocalRepository = userLocalRepository
+            authRepository = authRepository,
+            localUserRepository = localUserRepository
         )
     }
 }
@@ -60,22 +60,22 @@ class AuthUseCaseProvider @Inject constructor(
  * 세션 관리 Local UseCase 그룹
  */
 data class AuthLocalSessionUseCases(
-    val authLocalRepository: AuthLocalRepository,
-    val userLocalRepository: UserLocalRepository
+    val authRepository: AuthRepository,
+    val localUserRepository: LocalUserRepository
 )
 
 /**
  * 계정 관리 Local UseCase 그룹
  */
 data class AuthLocalAccountUseCases(
-    val authLocalRepository: AuthLocalRepository,
-    val userLocalRepository: UserLocalRepository
+    val authRepository: AuthRepository,
+    val localUserRepository: LocalUserRepository
 )
 
 /**
  * 유효성 검사 Local UseCase 그룹
  */
 data class AuthLocalValidationUseCases(
-    val authLocalRepository: AuthLocalRepository,
-    val userLocalRepository: UserLocalRepository
+    val authRepository: AuthRepository,
+    val localUserRepository: LocalUserRepository
 ) 

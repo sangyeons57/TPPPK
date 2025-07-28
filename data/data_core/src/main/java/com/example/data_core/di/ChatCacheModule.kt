@@ -1,6 +1,8 @@
 package com.example.data_core.di
 
 import android.content.Context
+import com.example.data_core.dao.OutboxDao
+import com.example.data_core.dao.SyncMetadataDao
 import com.example.data_core.database.AppDatabase
 import com.example.data_core.util.DebugChatLogger
 import dagger.Module
@@ -27,6 +29,26 @@ object DatabaseModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
         return AppDatabase.getDatabase(context)
+    }
+
+    /**
+     * OutboxDao 제공
+     * @param database AppDatabase 인스턴스
+     * @return OutboxDao
+     */
+    @Provides
+    fun provideOutboxDao(database: AppDatabase): OutboxDao {
+        return database.outboxDao()
+    }
+
+    /**
+     * SyncMetadataDao 제공
+     * @param database AppDatabase 인스턴스
+     * @return SyncMetadataDao
+     */
+    @Provides
+    fun provideSyncMetadataDao(database: AppDatabase): SyncMetadataDao {
+        return database.syncMetadataDao()
     }
 
     /**
