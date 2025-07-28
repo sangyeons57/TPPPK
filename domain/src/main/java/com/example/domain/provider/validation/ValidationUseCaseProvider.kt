@@ -1,9 +1,8 @@
 package com.example.domain.provider.validation
 
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.UserRepository
-import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.model.base.User
+import com.example.domain.repository.remote.DefaultRepository
 import com.example.domain.usecase.auth.validation.ValidateEmailFormatUseCase
 import com.example.domain.usecase.auth.validation.ValidateEmailForSignUpUseCase
 import com.example.domain.usecase.auth.validation.ValidateEmailUseCase
@@ -22,7 +21,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ValidationUseCaseProvider @Inject constructor(
-    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
+    private val userRepository: DefaultRepository<User>
 ) {
 
     /**
@@ -31,11 +30,7 @@ class ValidationUseCaseProvider @Inject constructor(
      * @return 유효성 검사 관련 UseCase 그룹
      */
     fun create(): ValidationUseCases {
-        val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext(
-                collectionPath = CollectionPath.users
-            )
-        )
+        userRepository.setCollection(CollectionPath.users)
 
         val validateEmailFormatUseCase = ValidateEmailFormatUseCase()
         
@@ -58,6 +53,7 @@ class ValidationUseCaseProvider @Inject constructor(
                 userRepository = userRepository
             ),
             
+            userRepository= userRepository
         )
     }
 }
@@ -79,5 +75,5 @@ data class ValidationUseCases(
     
     // 닉네임 유효성 검사
     val validateNicknameForSignUpUseCase: ValidateNicknameForSignUpUseCase,
-    
+    val userRepository: DefaultRepository<User>
 )

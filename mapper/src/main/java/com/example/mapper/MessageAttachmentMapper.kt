@@ -1,6 +1,6 @@
 package com.example.mapper
 
-import com.example.data.model.remote.MessageAttachmentDTO
+import com.example.data_core.model.remote.MessageAttachmentDTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.vo.DocumentId

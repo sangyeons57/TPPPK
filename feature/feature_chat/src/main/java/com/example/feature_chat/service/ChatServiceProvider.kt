@@ -2,7 +2,7 @@ package com.example.feature_chat.service
 
 import com.example.core_common.config.FeatureFlags
 import com.example.core_navigation.core.NavigationManger
-import com.example.data.cache.ChatCacheManager
+import com.example.data_core.cache.ChatCacheManager
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain.provider.chat.ChatUseCaseProvider
 import com.example.domain.provider.dm.DMUseCaseProvider

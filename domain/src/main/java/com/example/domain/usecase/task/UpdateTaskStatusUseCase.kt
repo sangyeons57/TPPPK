@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.task.TaskStatus
-import com.example.domain.repository.base.TaskRepository
+import com.example.domain.repository.remote.TaskRepository
 import javax.inject.Inject
 
 /**

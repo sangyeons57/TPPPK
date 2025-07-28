@@ -2,7 +2,7 @@ package com.example.domain.usecase.media
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.MediaRepository
+import com.example.domain.repository.remote.MediaRepository
 import javax.inject.Inject
 
 /**

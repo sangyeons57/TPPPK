@@ -6,7 +6,7 @@ import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.remote.MemberRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

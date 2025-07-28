@@ -3,8 +3,8 @@ package com.example.domain.usecase.friend
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Friend
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.FriendRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.FriendRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map

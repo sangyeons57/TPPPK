@@ -6,7 +6,7 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
-import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.remote.CategoryRepository
 import javax.inject.Inject
 
 /**

@@ -2,9 +2,9 @@ package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.DMChannelRepository
-import com.example.domain.repository.base.DMWrapperRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DMChannelRepository
+import com.example.domain.repository.remote.DMWrapperRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

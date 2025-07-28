@@ -23,7 +23,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.firestore)
 
     // Room Database 의존성 추가
     implementation(libs.androidx.room.runtime) // 또는 implementation "androidx.room:room-runtime:2.6.1"

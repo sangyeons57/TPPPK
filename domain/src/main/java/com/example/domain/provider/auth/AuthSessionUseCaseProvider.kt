@@ -1,10 +1,8 @@
 package com.example.domain.provider.auth
 
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.model.base.User
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DefaultRepository
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.usecase.auth.CheckAuthenticationStatusUseCaseImpl
 import com.example.domain.usecase.auth.session.CheckSessionUseCase
@@ -22,8 +20,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class AuthSessionUseCaseProvider @Inject constructor(
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
+    private val authRepository: AuthRepository,
+    private val userRepository: DefaultRepository<User>
 ) {
 
     /**
@@ -32,13 +30,7 @@ class AuthSessionUseCaseProvider @Inject constructor(
      * @return 인증 세션 관리 UseCase 그룹
      */
     fun create(): AuthSessionUseCases {
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
-        
-        val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext(CollectionPath.users)
-        )
+        userRepository.setCollection(CollectionPath.users)
 
         return AuthSessionUseCases(
             // 로그인/로그아웃
@@ -88,4 +80,6 @@ data class AuthSessionUseCases(
     // 세션 관리
     val getCurrentUserSessionUseCase: GetCurrentUserSessionUseCase,
     val getCurrentUserSessionStreamUseCase: GetCurrentUserSessionStreamUseCase,
+    val authRepository: AuthRepository,
+    val userRepository: DefaultRepository<User>
 )

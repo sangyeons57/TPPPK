@@ -3,6 +3,7 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalCategoriesDataSource
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
@@ -14,25 +15,102 @@ import javax.inject.Singleton
 
 /**
  * Local Category Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - Category 도메인 특화 기능만 구현 (20%)
  * - LocalDataSource를 통한 Room DB 접근
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeCategoryById로 위임
+ * - observeAllEntities -> observeAllCategories로 위임
+ * - observeEntityUpdatedAt -> observeCategoryUpdatedAt로 위임
+ * - getEntityById -> getCategoryById로 위임
+ * - getEntitiesByIds -> getCategoriesByIds로 위임
+ * - getAllEntities -> getAllCategories로 위임
+ * - saveEntity -> saveCategory로 위임
+ * - saveEntities -> saveCategories로 위임
+ * - deleteEntity -> deleteCategory로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalCategoryRepositoryImpl @Inject constructor(
     private val localCategoriesDataSource: LocalCategoriesDataSource
-) : LocalCategoryRepository {
+) : BaseLocalRepositoryImpl<Category>(), LocalCategoryRepository {
 
     companion object {
         private const val TAG = "LocalCategoryRepository"
+    }
+
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<Category?> = 
+        observeCategoryById(entityId)
+
+    override fun observeAllEntities(): Flow<List<Category>> = 
+        observeAllCategories()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeCategoryUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<Category?, Exception> = 
+        handleOperation("getCategoryById($entityId)", TAG) {
+            getCategoryById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<Category>, Exception> = 
+        handleOperation("getCategoriesByIds(${entityIds.size})", TAG) {
+            getCategoriesByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<Category>, Exception> = 
+        handleOperation("getAllCategories($limit)", TAG) {
+            getAllCategories(limit)
+        }
+
+    override suspend fun saveEntity(entity: Category): CustomResult<Unit, Exception> = 
+        saveCategory(entity, entity.projectId ?: throw IllegalArgumentException("Category must have projectId"))
+
+    override suspend fun saveEntities(entities: List<Category>): CustomResult<Unit, Exception> = 
+        saveCategories(entities, entities.firstOrNull()?.projectId ?: throw IllegalArgumentException("Categories must have projectId"))
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteCategory(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<Category>, Exception> = 
+        handleOperation("getCategoriesUpdatedAfter($timestamp)", TAG) {
+            getCategoriesUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllCategories()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalCategoryCount", TAG) {
+            getTotalCategoryCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("categoryExists($entityId)", TAG) {
+            categoryExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            localCategoriesDataSource.addToOutbox(entityId, operation, payload)
+        }
     }
 
     // === 관찰자 패턴 (UI 반응형) ===

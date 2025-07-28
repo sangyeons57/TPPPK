@@ -2,7 +2,6 @@ package com.example.domain.repository.remote
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.remote.Repository
 
 /**
  * Interface for handling file operations.

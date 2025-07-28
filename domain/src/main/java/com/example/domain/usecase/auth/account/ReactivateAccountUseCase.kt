@@ -4,8 +4,8 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.UserRepository
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import javax.inject.Inject

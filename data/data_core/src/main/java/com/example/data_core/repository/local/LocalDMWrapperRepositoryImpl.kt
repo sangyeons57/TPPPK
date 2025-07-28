@@ -3,6 +3,7 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalDMWrapperDataSource
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
@@ -15,148 +16,225 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Local DM Wrapper Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * Local DMWrapper Repository Implementation (SSOT)
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - DMWrapper 도메인 특화 기능만 구현 (20%)
  * - LocalDataSource를 통한 Room DB 접근
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeDMWrapperById로 위임
+ * - observeAllEntities -> observeAllDMWrappers로 위임
+ * - observeEntityUpdatedAt -> observeDMWrapperUpdatedAt로 위임
+ * - getEntityById -> getDMWrapperById로 위임
+ * - getEntitiesByIds -> getDMWrappersByIds로 위임
+ * - getAllEntities -> getAllDMWrappers로 위임
+ * - saveEntity -> saveDMWrapper로 위임
+ * - saveEntities -> saveDMWrappers로 위임
+ * - deleteEntity -> deleteDMWrapper로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalDMWrapperRepositoryImpl @Inject constructor(
     private val localDmWrapperDataSource: LocalDMWrapperDataSource
-) : LocalDMWrapperRepository {
+) : BaseLocalRepositoryImpl<DMWrapper>(), LocalDMWrapperRepository {
 
     companion object {
         private const val TAG = "LocalDMWrapperRepository"
     }
 
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<DMWrapper?> = 
+        observeDMWrapperById(entityId)
+
+    override fun observeAllEntities(): Flow<List<DMWrapper>> = 
+        observeAllDMWrappers()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeDMWrapperUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<DMWrapper?, Exception> = 
+        handleOperation("getDMWrapperById($entityId)", TAG) {
+            getDMWrapperById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<DMWrapper>, Exception> = 
+        handleOperation("getDMWrappersByIds(${entityIds.size})", TAG) {
+            getDMWrappersByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<DMWrapper>, Exception> = 
+        handleOperation("getAllDMWrappers($limit)", TAG) {
+            getAllDMWrappers(limit)
+        }
+
+    override suspend fun saveEntity(entity: DMWrapper): CustomResult<Unit, Exception> = 
+        saveDMWrapper(entity)
+
+    override suspend fun saveEntities(entities: List<DMWrapper>): CustomResult<Unit, Exception> = 
+        saveDMWrappers(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteDMWrapper(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<DMWrapper>, Exception> = 
+        handleOperation("getDMWrappersUpdatedAfter($timestamp)", TAG) {
+            getDMWrappersUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllDMWrappers()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalDMWrapperCount", TAG) {
+            getTotalDMWrapperCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("dmWrapperExists($entityId)", TAG) {
+            dmWrapperExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            localDmWrapperDataSource.addToOutbox(entityId, operation, payload)
+        }
+    }
+
     // === 관찰자 패턴 (UI 반응형) ===
 
     override fun observeDMWrapperById(wrapperId: String): Flow<DMWrapper?> {
-        Log.d(TAG, "observeDMWrapperById: $wrapperId")
+        logDebug("observeDMWrapperById: $wrapperId", TAG)
         return localDmWrapperDataSource.observeDMWrapperById(wrapperId)
     }
 
     override fun observeDMWrappersByUser(currentUserId: String): Flow<List<DMWrapper>> {
-        Log.d(TAG, "observeDMWrappersByUser: $currentUserId")
+        logDebug("observeDMWrappersByUser: $currentUserId", TAG)
         return localDmWrapperDataSource.observeDMWrappersByUser(currentUserId)
     }
 
     override fun observeDMWrapperByOtherUser(otherUserId: String): Flow<DMWrapper?> {
-        Log.d(TAG, "observeDMWrapperByOtherUser: $otherUserId")
+        logDebug("observeDMWrapperByOtherUser: $otherUserId", TAG)
         return localDmWrapperDataSource.observeDMWrapperByOtherUser(otherUserId)
     }
 
     override fun observeDMWrappersByUserName(userName: String, limit: Int): Flow<List<DMWrapper>> {
-        Log.d(TAG, "observeDMWrappersByUserName: userName='$userName', limit=$limit")
+        logDebug("observeDMWrappersByUserName: userName='$userName', limit=$limit", TAG)
         return localDmWrapperDataSource.observeDMWrappersByUserName(userName, limit)
     }
 
     override fun observeAllDMWrappers(): Flow<List<DMWrapper>> {
-        Log.d(TAG, "observeAllDMWrappers")
+        logDebug("observeAllDMWrappers", TAG)
         return localDmWrapperDataSource.observeAllDMWrappers()
     }
 
     override fun observeDMWrapperUpdatedAt(wrapperId: String): Flow<Long?> {
-        Log.d(TAG, "observeDMWrapperUpdatedAt: $wrapperId")
+        logDebug("observeDMWrapperUpdatedAt: $wrapperId", TAG)
         return localDmWrapperDataSource.observeDMWrapperUpdatedAt(wrapperId)
     }
 
     override fun observeDMWrappersWithRecentMessages(): Flow<List<DMWrapper>> {
-        Log.d(TAG, "observeDMWrappersWithRecentMessages")
+        logDebug("observeDMWrappersWithRecentMessages", TAG)
         return localDmWrapperDataSource.observeDMWrappersWithRecentMessages()
     }
 
     override fun observeDMWrappers(wrapperIds: List<String>): Flow<List<DMWrapper>> {
-        Log.d(TAG, "observeDMWrappers: ${wrapperIds.size} wrappers")
+        logDebug("observeDMWrappers: ${wrapperIds.size} wrappers", TAG)
         return localDmWrapperDataSource.observeDMWrappers(wrapperIds)
     }
 
     // === 단순 읽기 작업 ===
 
     override suspend fun getDMWrapperById(wrapperId: String): DMWrapper? {
-        Log.d(TAG, "getDMWrapperById: $wrapperId")
+        logDebug("getDMWrapperById: $wrapperId", TAG)
         return try {
             localDmWrapperDataSource.getDMWrapperById(wrapperId)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrapperById failed", e)
+            logError("getDMWrapperById failed", e, TAG)
             null
         }
     }
 
     override suspend fun getDMWrappersByUser(currentUserId: String): List<DMWrapper> {
-        Log.d(TAG, "getDMWrappersByUser: $currentUserId")
+        logDebug("getDMWrappersByUser: $currentUserId", TAG)
         return try {
             localDmWrapperDataSource.getDMWrappersByUser(currentUserId)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrappersByUser failed", e)
+            logError("getDMWrappersByUser failed", e)
             emptyList()
         }
     }
 
     override suspend fun getDMWrapperByOtherUser(otherUserId: String): DMWrapper? {
-        Log.d(TAG, "getDMWrapperByOtherUser: $otherUserId")
+        logDebug("getDMWrapperByOtherUser: $otherUserId")
         return try {
             localDmWrapperDataSource.getDMWrapperByOtherUser(otherUserId)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrapperByOtherUser failed", e)
+            logError("getDMWrapperByOtherUser failed", e)
             null
         }
     }
 
     override suspend fun searchDMWrappersByUserName(userName: String, limit: Int): List<DMWrapper> {
-        Log.d(TAG, "searchDMWrappersByUserName: userName='$userName', limit=$limit")
+        logDebug("searchDMWrappersByUserName: userName='$userName', limit=$limit")
         return try {
             localDmWrapperDataSource.searchDMWrappersByUserName(userName, limit)
         } catch (e: Exception) {
-            Log.e(TAG, "searchDMWrappersByUserName failed", e)
+            logError("searchDMWrappersByUserName failed", e)
             emptyList()
         }
     }
 
     override suspend fun getAllDMWrappers(limit: Int?): List<DMWrapper> {
-        Log.d(TAG, "getAllDMWrappers: limit=$limit")
+        logDebug("getAllDMWrappers: limit=$limit")
         return try {
             localDmWrapperDataSource.getAllDMWrappers()
         } catch (e: Exception) {
-            Log.e(TAG, "getAllDMWrappers failed", e)
+            logError("getAllDMWrappers failed", e)
             emptyList()
         }
     }
 
     override suspend fun getDMWrappersByIds(wrapperIds: List<String>): List<DMWrapper> {
-        Log.d(TAG, "getDMWrappersByIds: ${wrapperIds.size} wrappers")
+        logDebug("getDMWrappersByIds: ${wrapperIds.size} wrappers")
         return try {
             localDmWrapperDataSource.getDMWrappersByIds(wrapperIds)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrappersByIds failed", e)
+            logError("getDMWrappersByIds failed", e)
             emptyList()
         }
     }
 
     override suspend fun getDMWrappersWithRecentMessages(): List<DMWrapper> {
-        Log.d(TAG, "getDMWrappersWithRecentMessages")
+        logDebug("getDMWrappersWithRecentMessages")
         return try {
             localDmWrapperDataSource.getDMWrappersWithRecentMessages()
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrappersWithRecentMessages failed", e)
+            logError("getDMWrappersWithRecentMessages failed", e)
             emptyList()
         }
     }
 
     override suspend fun getDMWrappersByOtherUsers(otherUserIds: List<String>): List<DMWrapper> {
-        Log.d(TAG, "getDMWrappersByOtherUsers: ${otherUserIds.size} users")
+        logDebug("getDMWrappersByOtherUsers: ${otherUserIds.size} users")
         return try {
             localDmWrapperDataSource.getDMWrappersByOtherUsers(otherUserIds)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrappersByOtherUsers failed", e)
+            logError("getDMWrappersByOtherUsers failed", e)
             emptyList()
         }
     }
@@ -164,9 +242,7 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
     // === 쓰기 작업 (Outbox 포함) ===
 
     override suspend fun saveDMWrapper(dmWrapper: DMWrapper): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "saveDMWrapper: ${dmWrapper.id}")
-
+        return handleOperation("saveDMWrapper(${dmWrapper.id})", TAG) {
             // 1. Room DB에 저장
             localDmWrapperDataSource.saveDMWrapper(dmWrapper)
 
@@ -177,40 +253,22 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
                 operation = operation,
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
-
-            Log.d(TAG, "DM Wrapper saved and added to outbox: ${dmWrapper.id}")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "saveDMWrapper failed", e)
-            CustomResult.Failure(e)
         }
     }
 
     override suspend fun saveDMWrappers(dmWrappers: List<DMWrapper>): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "saveDMWrappers: ${dmWrappers.size} wrappers")
-
+        return handleOperation("saveDMWrappers(${dmWrappers.size} wrappers)", TAG) {
             if (dmWrappers.isEmpty()) {
-                return CustomResult.Success(Unit)
+                return@handleOperation
             }
 
             // 대량 저장 (동기화용 - Outbox 추가 안 함)
             localDmWrapperDataSource.saveDMWrappers(dmWrappers)
-
-            Log.d(TAG, "Bulk DM wrappers saved: ${dmWrappers.size}")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "saveDMWrappers failed", e)
-            CustomResult.Failure(e)
         }
     }
 
     override suspend fun deleteDMWrapper(wrapperId: String): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "deleteDMWrapper: $wrapperId")
-
+        return handleOperation("deleteDMWrapper($wrapperId)", TAG) {
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             localDmWrapperDataSource.deleteDMWrapper(wrapperId)
 
@@ -220,27 +278,20 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
                 operation = "DELETE",
                 payload = null
             )
-
-            Log.d(TAG, "DM Wrapper deleted and added to outbox: $wrapperId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "deleteDMWrapper failed", e)
-            CustomResult.Failure(e)
         }
     }
 
     override suspend fun deleteDMWrappersByUser(currentUserId: String): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "deleteDMWrappersByUser: $currentUserId")
+            logDebug("deleteDMWrappersByUser: $currentUserId")
 
             localDmWrapperDataSource.deleteDMWrappersByUser(currentUserId)
 
-            Log.d(TAG, "DM Wrappers deleted for user: $currentUserId")
+            logDebug("DM Wrappers deleted for user: $currentUserId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "deleteDMWrappersByUser failed", e)
+            logError("deleteDMWrappersByUser failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -252,7 +303,7 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
         lastMessagePreview: DMChannelLastMessagePreview?
     ): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "updateDMWrapper: wrapperId=$wrapperId")
+            logDebug("updateDMWrapper: wrapperId=$wrapperId")
 
             // 1. 현재 wrapper 조회
             val currentWrapper = localDmWrapperDataSource.getDMWrapperById(wrapperId)
@@ -279,11 +330,11 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
             // 3. 저장 (Outbox 포함)
             saveDMWrapper(updatedWrapper)
 
-            Log.d(TAG, "DM Wrapper updated: $wrapperId")
+            logDebug("DM Wrapper updated: $wrapperId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "updateDMWrapper failed", e)
+            logError("updateDMWrapper failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -308,11 +359,11 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
             // 3. 저장 (Outbox 포함)
             saveDMWrapper(updatedWrapper)
 
-            Log.d(TAG, "DM Wrapper other user updated: $wrapperId -> $newOtherUserId")
+            logDebug("DM Wrapper other user updated: $wrapperId -> $newOtherUserId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "updateDMWrapperOtherUser failed", e)
+            logError("updateDMWrapperOtherUser failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -330,7 +381,7 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
         return try {
             localDmWrapperDataSource.dmWrapperExists(wrapperId)
         } catch (e: Exception) {
-            Log.e(TAG, "dmWrapperExists failed", e)
+            logError("dmWrapperExists failed", e)
             false
         }
     }
@@ -339,7 +390,7 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
         return try {
             localDmWrapperDataSource.dmWrapperExistsWithOtherUser(otherUserId)
         } catch (e: Exception) {
-            Log.e(TAG, "dmWrapperExistsWithOtherUser failed", e)
+            logError("dmWrapperExistsWithOtherUser failed", e)
             false
         }
     }
@@ -348,7 +399,7 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
         return try {
             localDmWrapperDataSource.getDMWrapperCount(currentUserId)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrapperCountByUser failed", e)
+            logError("getDMWrapperCountByUser failed", e)
             0
         }
     }
@@ -357,7 +408,7 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
         return try {
             localDmWrapperDataSource.getTotalDMWrapperCount()
         } catch (e: Exception) {
-            Log.e(TAG, "getTotalDMWrapperCount failed", e)
+            logError("getTotalDMWrapperCount failed", e)
             0
         }
     }
@@ -366,23 +417,14 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
         return try {
             localDmWrapperDataSource.getDMWrapperCountWithRecentMessages()
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrapperCountWithRecentMessages failed", e)
+            logError("getDMWrapperCountWithRecentMessages failed", e)
             0
         }
     }
 
     override suspend fun clearAllDMWrappers(): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "clearAllDMWrappers")
-
+        return handleOperation("clearAllDMWrappers", TAG) {
             localDmWrapperDataSource.clearAllDMWrappers()
-
-            Log.d(TAG, "All DM wrappers cleared")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "clearAllDMWrappers failed", e)
-            CustomResult.Failure(e)
         }
     }
 
@@ -392,27 +434,10 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
         return try {
             localDmWrapperDataSource.getDMWrappersUpdatedAfter(timestamp)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMWrappersUpdatedAfter failed", e)
+            logError("getDMWrappersUpdatedAfter failed", e)
             emptyList()
         }
     }
 
-    override suspend fun addToOutbox(
-        wrapperId: String,
-        operation: String,
-        payload: String?
-    ): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "addToOutbox: wrapperId=$wrapperId, operation=$operation")
-
-            localDmWrapperDataSource.addToOutbox(wrapperId, operation, payload)
-
-            Log.d(TAG, "Added to outbox: $wrapperId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "addToOutbox failed", e)
-            CustomResult.Failure(e)
-        }
-    }
+    // Note: addToOutbox is already implemented above as a BaseLocalRepository method
 }

@@ -3,6 +3,7 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalDMChannelsDataSource
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.enum.DMChannelStatus
 import com.example.domain.model.vo.UserId
@@ -13,153 +14,230 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Local DM Channel Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * Local DMChannel Repository Implementation (SSOT)
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - DMChannel 도메인 특화 기능만 구현 (20%)
  * - LocalDataSource를 통한 Room DB 접근
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeDMChannelById로 위임
+ * - observeAllEntities -> observeAllDMChannels로 위임
+ * - observeEntityUpdatedAt -> observeDMChannelUpdatedAt로 위임
+ * - getEntityById -> getDMChannelById로 위임
+ * - getEntitiesByIds -> getDMChannelsByIds로 위임
+ * - getAllEntities -> getAllDMChannels로 위임
+ * - saveEntity -> saveDMChannel로 위임
+ * - saveEntities -> saveDMChannels로 위임
+ * - deleteEntity -> deleteDMChannel로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalDMChannelRepositoryImpl @Inject constructor(
     private val localDmChannelsDataSource: LocalDMChannelsDataSource
-) : LocalDMChannelRepository {
+) : BaseLocalRepositoryImpl<DMChannel>(), LocalDMChannelRepository {
 
     companion object {
         private const val TAG = "LocalDMChannelRepository"
     }
 
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<DMChannel?> = 
+        observeDMChannelById(entityId)
+
+    override fun observeAllEntities(): Flow<List<DMChannel>> = 
+        observeAllDMChannels()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeDMChannelUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<DMChannel?, Exception> = 
+        handleOperation("getDMChannelById($entityId)", TAG) {
+            getDMChannelById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<DMChannel>, Exception> = 
+        handleOperation("getDMChannelsByIds(${entityIds.size})", TAG) {
+            getDMChannelsByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<DMChannel>, Exception> = 
+        handleOperation("getAllDMChannels($limit)", TAG) {
+            getAllDMChannels(limit)
+        }
+
+    override suspend fun saveEntity(entity: DMChannel): CustomResult<Unit, Exception> = 
+        saveDMChannel(entity)
+
+    override suspend fun saveEntities(entities: List<DMChannel>): CustomResult<Unit, Exception> = 
+        saveDMChannels(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteDMChannel(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<DMChannel>, Exception> = 
+        handleOperation("getDMChannelsUpdatedAfter($timestamp)", TAG) {
+            getDMChannelsUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllDMChannels()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalDMChannelCount", TAG) {
+            getTotalDMChannelCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("dmChannelExists($entityId)", TAG) {
+            dmChannelExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            localDmChannelsDataSource.addToOutbox(entityId, operation, payload)
+        }
+    }
+
     // === 관찰자 패턴 (UI 반응형) ===
 
     override fun observeDMChannelById(channelId: String): Flow<DMChannel?> {
-        Log.d(TAG, "observeDMChannelById: $channelId")
+        logDebug("observeDMChannelById: $channelId", TAG)
         return localDmChannelsDataSource.observeDMChannelById(channelId)
     }
 
     override fun observeDMChannelsByUser(userId: String): Flow<List<DMChannel>> {
-        Log.d(TAG, "observeDMChannelsByUser: $userId")
+        logDebug("observeDMChannelsByUser: $userId", TAG)
         return localDmChannelsDataSource.observeDMChannelsByUser(userId)
     }
 
     override fun observeDMChannelBetweenUsers(user1Id: String, user2Id: String): Flow<DMChannel?> {
-        Log.d(TAG, "observeDMChannelBetweenUsers: $user1Id <-> $user2Id")
+        logDebug("observeDMChannelBetweenUsers: $user1Id <-> $user2Id", TAG)
         return localDmChannelsDataSource.observeDMChannelBetweenUsers(user1Id, user2Id)
     }
 
     override fun observeDMChannelsByStatus(status: DMChannelStatus): Flow<List<DMChannel>> {
-        Log.d(TAG, "observeDMChannelsByStatus: $status")
+        logDebug("observeDMChannelsByStatus: $status", TAG)
         return localDmChannelsDataSource.observeDMChannelsByStatus(status)
     }
 
     override fun observeDMChannelsByActiveStatus(isActive: Boolean): Flow<List<DMChannel>> {
-        Log.d(TAG, "observeDMChannelsByActiveStatus: $isActive")
+        logDebug("observeDMChannelsByActiveStatus: $isActive", TAG)
         return localDmChannelsDataSource.observeDMChannelsByActiveStatus(isActive)
     }
 
     override fun observeAllDMChannels(): Flow<List<DMChannel>> {
-        Log.d(TAG, "observeAllDMChannels")
+        logDebug("observeAllDMChannels", TAG)
         return localDmChannelsDataSource.observeAllDMChannels()
     }
 
     override fun observeDMChannelUpdatedAt(channelId: String): Flow<Long?> {
-        Log.d(TAG, "observeDMChannelUpdatedAt: $channelId")
+        logDebug("observeDMChannelUpdatedAt: $channelId", TAG)
         return localDmChannelsDataSource.observeDMChannelUpdatedAt(channelId)
     }
 
     override fun observeBlockedDMChannelsByUser(userId: String): Flow<List<DMChannel>> {
-        Log.d(TAG, "observeBlockedDMChannelsByUser: $userId")
+        logDebug("observeBlockedDMChannelsByUser: $userId", TAG)
         return localDmChannelsDataSource.observeBlockedDMChannelsByUser(userId)
     }
 
     override fun observeCategories(categoryIds: List<String>): Flow<List<DMChannel>> {
-        Log.d(TAG, "observeCategories: ${categoryIds.size} categories")
+        logDebug("observeCategories: ${categoryIds.size} categories", TAG)
         return localDmChannelsDataSource.observeCategories(categoryIds)
     }
 
     // === 단순 읽기 작업 ===
 
     override suspend fun getDMChannelById(channelId: String): DMChannel? {
-        Log.d(TAG, "getDMChannelById: $channelId")
+        logDebug("getDMChannelById: $channelId", TAG)
         return try {
             localDmChannelsDataSource.getDMChannelById(channelId)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelById failed", e)
+            logError("getDMChannelById failed", e, TAG)
             null
         }
     }
 
     override suspend fun getDMChannelsByUser(userId: String): List<DMChannel> {
-        Log.d(TAG, "getDMChannelsByUser: $userId")
+        logDebug("getDMChannelsByUser: $userId", TAG)
         return try {
             localDmChannelsDataSource.getDMChannelsByUser(userId)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelsByUser failed", e)
+            logError("getDMChannelsByUser failed", e, TAG)
             emptyList()
         }
     }
 
     override suspend fun getDMChannelBetweenUsers(user1Id: String, user2Id: String): DMChannel? {
-        Log.d(TAG, "getDMChannelBetweenUsers: $user1Id <-> $user2Id")
+        logDebug("getDMChannelBetweenUsers: $user1Id <-> $user2Id", TAG)
         return try {
             localDmChannelsDataSource.getDMChannelBetweenUsers(user1Id, user2Id)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelBetweenUsers failed", e)
+            logError("getDMChannelBetweenUsers failed", e, TAG)
             null
         }
     }
 
     override suspend fun getDMChannelsByStatus(status: DMChannelStatus): List<DMChannel> {
-        Log.d(TAG, "getDMChannelsByStatus: $status")
+        logDebug("getDMChannelsByStatus: $status", TAG)
         return try {
             localDmChannelsDataSource.getDMChannelsByStatus(status)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelsByStatus failed", e)
+            logError("getDMChannelsByStatus failed", e, TAG)
             emptyList()
         }
     }
 
     override suspend fun getDMChannelsByActiveStatus(isActive: Boolean): List<DMChannel> {
-        Log.d(TAG, "getDMChannelsByActiveStatus: $isActive")
+        logDebug("getDMChannelsByActiveStatus: $isActive", TAG)
         return try {
             localDmChannelsDataSource.getDMChannelsByActiveStatus(isActive)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelsByActiveStatus failed", e)
+            logError("getDMChannelsByActiveStatus failed", e, TAG)
             emptyList()
         }
     }
 
     override suspend fun getAllDMChannels(limit: Int?): List<DMChannel> {
-        Log.d(TAG, "getAllDMChannels: limit=$limit")
+        logDebug("getAllDMChannels: limit=$limit", TAG)
         return try {
             localDmChannelsDataSource.getAllDMChannels()
         } catch (e: Exception) {
-            Log.e(TAG, "getAllDMChannels failed", e)
+            logError("getAllDMChannels failed", e, TAG)
             emptyList()
         }
     }
 
     override suspend fun getDMChannelsByIds(channelIds: List<String>): List<DMChannel> {
-        Log.d(TAG, "getDMChannelsByIds: ${channelIds.size} channels")
+        logDebug("getDMChannelsByIds: ${channelIds.size} channels", TAG)
         return try {
             localDmChannelsDataSource.getDMChannelsByIds(channelIds)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelsByIds failed", e)
+            logError("getDMChannelsByIds failed", e, TAG)
             emptyList()
         }
     }
 
     override suspend fun getBlockedDMChannelsByUser(userId: String): List<DMChannel> {
-        Log.d(TAG, "getBlockedDMChannelsByUser: $userId")
+        logDebug("getBlockedDMChannelsByUser: $userId", TAG)
         return try {
             localDmChannelsDataSource.getBlockedDMChannelsByUser(userId)
         } catch (e: Exception) {
-            Log.e(TAG, "getBlockedDMChannelsByUser failed", e)
+            logError("getBlockedDMChannelsByUser failed", e, TAG)
             emptyList()
         }
     }
@@ -167,9 +245,7 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
     // === 쓰기 작업 (Outbox 포함) ===
 
     override suspend fun saveDMChannel(dmChannel: DMChannel): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "saveDMChannel: ${dmChannel.id}")
-
+        return handleOperation("saveDMChannel(${dmChannel.id})", TAG) {
             // 1. Room DB에 저장
             localDmChannelsDataSource.saveDMChannel(dmChannel)
 
@@ -180,40 +256,22 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
                 operation = operation,
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
-
-            Log.d(TAG, "DM Channel saved and added to outbox: ${dmChannel.id}")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "saveDMChannel failed", e)
-            CustomResult.Failure(e)
         }
     }
 
     override suspend fun saveDMChannels(dmChannels: List<DMChannel>): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "saveDMChannels: ${dmChannels.size} channels")
-
+        return handleOperation("saveDMChannels(${dmChannels.size} channels)", TAG) {
             if (dmChannels.isEmpty()) {
-                return CustomResult.Success(Unit)
+                return@handleOperation
             }
 
             // 대량 저장 (동기화용 - Outbox 추가 안 함)
             localDmChannelsDataSource.saveDMChannels(dmChannels)
-
-            Log.d(TAG, "Bulk DM channels saved: ${dmChannels.size}")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "saveDMChannels failed", e)
-            CustomResult.Failure(e)
         }
     }
 
     override suspend fun deleteDMChannel(channelId: String): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "deleteDMChannel: $channelId")
-
+        return handleOperation("deleteDMChannel($channelId)", TAG) {
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             localDmChannelsDataSource.deleteDMChannel(channelId)
 
@@ -223,28 +281,12 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
                 operation = "DELETE",
                 payload = null
             )
-
-            Log.d(TAG, "DM Channel deleted and added to outbox: $channelId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "deleteDMChannel failed", e)
-            CustomResult.Failure(e)
         }
     }
 
     override suspend fun deleteDMChannelsByUser(userId: String): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "deleteDMChannelsByUser: $userId")
-
+        return handleOperation("deleteDMChannelsByUser($userId)", TAG) {
             localDmChannelsDataSource.deleteDMChannelsByUser(userId)
-
-            Log.d(TAG, "DM Channels deleted for user: $userId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "deleteDMChannelsByUser failed", e)
-            CustomResult.Failure(e)
         }
     }
 
@@ -252,12 +294,10 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         channelId: String,
         status: DMChannelStatus
     ): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "updateDMChannelStatus: channelId=$channelId, status=$status")
-
+        return handleOperation("updateDMChannelStatus(channelId=$channelId, status=$status)", TAG) {
             // 1. 현재 채널 조회
             val currentChannel = localDmChannelsDataSource.getDMChannelById(channelId)
-                ?: return CustomResult.Failure(IllegalArgumentException("DM Channel not found: $channelId"))
+                ?: throw IllegalArgumentException("DM Channel not found: $channelId")
 
             // 2. 상태별 업데이트 로직
             val updatedChannel = when (status) {
@@ -268,14 +308,10 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
             }
 
             // 3. 저장 (Outbox 포함)
-            saveDMChannel(updatedChannel)
-
-            Log.d(TAG, "DM Channel status updated: $channelId -> $status")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "updateDMChannelStatus failed", e)
-            CustomResult.Failure(e)
+            val result = saveDMChannel(updatedChannel)
+            if (result is CustomResult.Failure) {
+                throw result.exception
+            }
         }
     }
 
@@ -291,26 +327,20 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         channelId: String,
         blockerUserId: String
     ): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "blockDMChannel: channelId=$channelId, blockerUserId=$blockerUserId")
-
+        return handleOperation("blockDMChannel(channelId=$channelId, blockerUserId=$blockerUserId)", TAG) {
             // 1. 현재 채널 조회
             val currentChannel = localDmChannelsDataSource.getDMChannelById(channelId)
-                ?: return CustomResult.Failure(IllegalArgumentException("DM Channel not found: $channelId"))
+                ?: throw IllegalArgumentException("DM Channel not found: $channelId")
 
             // 2. 사용자별 차단 처리
             val blockerUser = UserId(blockerUserId)
             val updatedChannel = currentChannel.blockByUser(blockerUser)
 
             // 3. 저장 (Outbox 포함)
-            saveDMChannel(updatedChannel)
-
-            Log.d(TAG, "DM Channel blocked: $channelId by $blockerUserId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "blockDMChannel failed", e)
-            CustomResult.Failure(e)
+            val result = saveDMChannel(updatedChannel)
+            if (result is CustomResult.Failure) {
+                throw result.exception
+            }
         }
     }
 
@@ -318,26 +348,20 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         channelId: String,
         unblockerUserId: String
     ): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "unblockDMChannel: channelId=$channelId, unblockerUserId=$unblockerUserId")
-
+        return handleOperation("unblockDMChannel(channelId=$channelId, unblockerUserId=$unblockerUserId)", TAG) {
             // 1. 현재 채널 조회
             val currentChannel = localDmChannelsDataSource.getDMChannelById(channelId)
-                ?: return CustomResult.Failure(IllegalArgumentException("DM Channel not found: $channelId"))
+                ?: throw IllegalArgumentException("DM Channel not found: $channelId")
 
             // 2. 사용자별 차단 해제 처리
             val unblockerUser = UserId(unblockerUserId)
             val updatedChannel = currentChannel.unblockByUser(unblockerUser)
 
             // 3. 저장 (Outbox 포함)
-            saveDMChannel(updatedChannel)
-
-            Log.d(TAG, "DM Channel unblocked: $channelId by $unblockerUserId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "unblockDMChannel failed", e)
-            CustomResult.Failure(e)
+            val result = saveDMChannel(updatedChannel)
+            if (result is CustomResult.Failure) {
+                throw result.exception
+            }
         }
     }
 
@@ -347,7 +371,7 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         return try {
             localDmChannelsDataSource.dmChannelExists(channelId)
         } catch (e: Exception) {
-            Log.e(TAG, "dmChannelExists failed", e)
+            logError("dmChannelExists failed", e, TAG)
             false
         }
     }
@@ -356,7 +380,7 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         return try {
             localDmChannelsDataSource.dmChannelExistsBetweenUsers(user1Id, user2Id)
         } catch (e: Exception) {
-            Log.e(TAG, "dmChannelExistsBetweenUsers failed", e)
+            logError("dmChannelExistsBetweenUsers failed", e, TAG)
             false
         }
     }
@@ -365,7 +389,7 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         return try {
             localDmChannelsDataSource.getDMChannelCount(userId)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelCountByUser failed", e)
+            logError("getDMChannelCountByUser failed", e, TAG)
             0
         }
     }
@@ -374,7 +398,7 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         return try {
             localDmChannelsDataSource.getTotalDMChannelCount()
         } catch (e: Exception) {
-            Log.e(TAG, "getTotalDMChannelCount failed", e)
+            logError("getTotalDMChannelCount failed", e, TAG)
             0
         }
     }
@@ -383,7 +407,7 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         return try {
             localDmChannelsDataSource.getActiveDMChannelCount()
         } catch (e: Exception) {
-            Log.e(TAG, "getActiveDMChannelCount failed", e)
+            logError("getActiveDMChannelCount failed", e, TAG)
             0
         }
     }
@@ -392,23 +416,14 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         return try {
             localDmChannelsDataSource.getDMChannelCountByStatus(status)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelCountByStatus failed", e)
+            logError("getDMChannelCountByStatus failed", e, TAG)
             0
         }
     }
 
     override suspend fun clearAllDMChannels(): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "clearAllDMChannels")
-
+        return handleOperation("clearAllDMChannels", TAG) {
             localDmChannelsDataSource.clearAllDMChannels()
-
-            Log.d(TAG, "All DM channels cleared")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "clearAllDMChannels failed", e)
-            CustomResult.Failure(e)
         }
     }
 
@@ -418,27 +433,10 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
         return try {
             localDmChannelsDataSource.getDMChannelsUpdatedAfter(timestamp)
         } catch (e: Exception) {
-            Log.e(TAG, "getDMChannelsUpdatedAfter failed", e)
+            logError("getDMChannelsUpdatedAfter failed", e, TAG)
             emptyList()
         }
     }
 
-    override suspend fun addToOutbox(
-        channelId: String,
-        operation: String,
-        payload: String?
-    ): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "addToOutbox: channelId=$channelId, operation=$operation")
-
-            localDmChannelsDataSource.addToOutbox(channelId, operation, payload)
-
-            Log.d(TAG, "Added to outbox: $channelId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "addToOutbox failed", e)
-            CustomResult.Failure(e)
-        }
-    }
+    // Note: addToOutbox is already implemented above as a BaseLocalRepository method
 }

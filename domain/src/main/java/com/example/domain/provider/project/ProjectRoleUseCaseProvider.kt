@@ -2,13 +2,8 @@ package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.PermissionRepository
-import com.example.domain.repository.base.ProjectRoleRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.PermissionRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
+
+import com.example.domain.repository.remote.AuthRepository
 import com.example.domain.usecase.project.role.CreateProjectRoleUseCase
 import com.example.domain.usecase.project.role.CreateProjectRoleUseCaseImpl
 import com.example.domain.usecase.project.role.CreateRoleUseCase
@@ -27,6 +22,9 @@ import com.example.domain.usecase.project.role.UpdateProjectRoleUseCase
 import com.example.domain.usecase.project.role.UpdateProjectRoleUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.model.base.Role
+import com.example.domain.model.base.Permission
 
 /**
  * 프로젝트 역할 관리 UseCase들을 제공하는 Provider
@@ -35,9 +33,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectRoleUseCaseProvider @Inject constructor(
-    private val projectRoleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
-    private val permissionRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<PermissionRepositoryFactoryContext, PermissionRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val projectRoleRepository: DefaultRepository<Role>,
+    private val permissionRepository: DefaultRepository<Permission>,
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -47,21 +45,8 @@ class ProjectRoleUseCaseProvider @Inject constructor(
      * @return 프로젝트 역할 관리 UseCase 그룹
      */
     fun createForProject(projectId: DocumentId): ProjectRoleUseCases {
-        val projectRoleRepository = projectRoleRepositoryFactory.create(
-            ProjectRoleRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectRoles(projectId.value)
-            )
-        )
-
-        val permissionRepository = permissionRepositoryFactory.create(
-            PermissionRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectRolePermissions(projectId.value, "")
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
+        projectRoleRepository.setCollection(CollectionPath.projectRoles(projectId.value))
+        permissionRepository.setCollection(CollectionPath.projectRolePermissions(projectId.value, ""))
 
         return ProjectRoleUseCases(
             // 역할 기본 CRUD
@@ -98,7 +83,11 @@ class ProjectRoleUseCaseProvider @Inject constructor(
             // 권한 관리
             getRolePermissionsUseCase = GetRolePermissionsUseCaseImpl(
                 permissionRepository = permissionRepository
-            )
+            ),
+
+            projectRoleRepository= projectRoleRepository,
+            permissionRepository= permissionRepository,
+            authRepository= authRepository
         )
     }
 
@@ -140,5 +129,9 @@ data class ProjectRoleUseCases(
     val getRoleDetailsUseCase: GetRoleDetailsUseCase,
     
     // 권한 관리
-    val getRolePermissionsUseCase: GetRolePermissionsUseCase
+    val getRolePermissionsUseCase: GetRolePermissionsUseCase,
+
+    val projectRoleRepository: DefaultRepository<Role>,
+    val permissionRepository: DefaultRepository<Permission>,
+    val authRepository: AuthRepository
 )

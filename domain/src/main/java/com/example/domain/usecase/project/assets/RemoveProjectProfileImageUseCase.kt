@@ -2,7 +2,7 @@ package com.example.domain.usecase.project.assets
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.remote.ProjectRepository
 import javax.inject.Inject
 
 /**

@@ -3,8 +3,8 @@ package com.example.domain.usecase.dm
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.DMChannelRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DMChannelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow

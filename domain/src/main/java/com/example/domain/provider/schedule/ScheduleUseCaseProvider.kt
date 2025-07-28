@@ -1,11 +1,9 @@
 package com.example.domain.provider.schedule
 
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.ScheduleRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ScheduleRepositoryFactoryContext
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.model.base.Schedule
+import com.example.domain.repository.remote.AuthRepository
 import com.example.domain.usecase.schedule.AddScheduleUseCase
 import com.example.domain.usecase.schedule.AddScheduleUseCaseImpl
 import com.example.domain.usecase.schedule.DeleteScheduleUseCase
@@ -27,8 +25,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ScheduleUseCaseProvider @Inject constructor(
-    private val scheduleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ScheduleRepositoryFactoryContext, ScheduleRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val scheduleRepository: DefaultRepository<Schedule>,
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -38,15 +36,7 @@ class ScheduleUseCaseProvider @Inject constructor(
      * @return 일정 관련 UseCase 그룹
      */
     fun createForUser(userId: String): ScheduleUseCases {
-        val scheduleRepository = scheduleRepositoryFactory.create(
-            ScheduleRepositoryFactoryContext(
-                collectionPath = CollectionPath.userSchedules(userId)
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
+        scheduleRepository.setCollection(CollectionPath.userSchedules(userId))
 
         return ScheduleUseCases(
             addScheduleUseCase = AddScheduleUseCaseImpl(
@@ -89,16 +79,9 @@ class ScheduleUseCaseProvider @Inject constructor(
      * @return 일정 관련 UseCase 그룹 (현재 사용자 기준)
      */
     fun createForCurrentUser(): ScheduleUseCases {
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
 
         // 현재 사용자 ID를 기반으로 ScheduleRepository 생성 (AuthRepository에서 가져오도록 구성)
-        val scheduleRepository = scheduleRepositoryFactory.create(
-            ScheduleRepositoryFactoryContext(
-                collectionPath = CollectionPath.schedules // 전역 스케줄 컬렉션 사용
-            )
-        )
+        scheduleRepository.setCollection(CollectionPath.schedules) // 전역 스케줄 컬렉션 사용
 
         return ScheduleUseCases(
             addScheduleUseCase = AddScheduleUseCaseImpl(
@@ -149,5 +132,5 @@ data class ScheduleUseCases(
     
     // 공통 Repository
     val authRepository: AuthRepository,
-    val scheduleRepository: ScheduleRepository
+    val scheduleRepository: DefaultRepository<Schedule>
 )

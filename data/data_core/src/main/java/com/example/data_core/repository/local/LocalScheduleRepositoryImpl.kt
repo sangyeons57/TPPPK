@@ -3,6 +3,7 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalSchedulesDataSource
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.enum.ScheduleStatus
 import com.example.domain.model.vo.schedule.ScheduleContent
@@ -15,46 +16,123 @@ import javax.inject.Singleton
 
 /**
  * Local Schedule Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
- * - LocalDataSource를 통한 Room DB 접근
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - Schedule 도메인 특화 기능만 구현 (20%)
+ * - LocalDataSource를 통한 Room DB 접궼
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeScheduleById로 위임
+ * - observeAllEntities -> observeAllSchedules로 위임
+ * - observeEntityUpdatedAt -> observeScheduleUpdatedAt로 위임
+ * - getEntityById -> getScheduleById로 위임
+ * - getEntitiesByIds -> getSchedulesByIds로 위임
+ * - getAllEntities -> getAllSchedules로 위임
+ * - saveEntity -> saveSchedule로 위임
+ * - saveEntities -> saveSchedules로 위임
+ * - deleteEntity -> deleteSchedule로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalScheduleRepositoryImpl @Inject constructor(
     private val localSchedulesDataSource: LocalSchedulesDataSource
-) : LocalScheduleRepository {
+) : BaseLocalRepositoryImpl<Schedule>(), LocalScheduleRepository {
 
     companion object {
         private const val TAG = "LocalScheduleRepository"
     }
 
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<Schedule?> = 
+        observeScheduleById(entityId)
+
+    override fun observeAllEntities(): Flow<List<Schedule>> = 
+        observeAllSchedules()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeScheduleUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<Schedule?, Exception> = 
+        handleOperation("getScheduleById($entityId)", TAG) {
+            getScheduleById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<Schedule>, Exception> = 
+        handleOperation("getSchedulesByIds(${entityIds.size})", TAG) {
+            getSchedulesByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<Schedule>, Exception> = 
+        handleOperation("getAllSchedules($limit)", TAG) {
+            getAllSchedules(limit)
+        }
+
+    override suspend fun saveEntity(entity: Schedule): CustomResult<Unit, Exception> = 
+        saveSchedule(entity)
+
+    override suspend fun saveEntities(entities: List<Schedule>): CustomResult<Unit, Exception> = 
+        saveSchedules(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteSchedule(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<Schedule>, Exception> = 
+        handleOperation("getSchedulesUpdatedAfter($timestamp)", TAG) {
+            getSchedulesUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllSchedules()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalScheduleCount", TAG) {
+            getTotalScheduleCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("scheduleExists($entityId)", TAG) {
+            scheduleExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            localSchedulesDataSource.addToOutbox(entityId, operation, payload)
+        }
+    }
+
     // === 관찰자 패턴 (UI 반응형) ===
 
     override fun observeScheduleById(scheduleId: String): Flow<Schedule?> {
-        Log.d(TAG, "observeScheduleById: $scheduleId")
+        logDebug( "observeScheduleById: $scheduleId")
         return localSchedulesDataSource.observeScheduleById(scheduleId)
     }
 
     override fun observeSchedulesByProject(projectId: String): Flow<List<Schedule>> {
-        Log.d(TAG, "observeSchedulesByProject: $projectId")
+        logDebug( "observeSchedulesByProject: $projectId")
         return localSchedulesDataSource.observeSchedulesByProject(projectId)
     }
 
     override fun observeSchedulesByOwner(ownerId: String): Flow<List<Schedule>> {
-        Log.d(TAG, "observeSchedulesByOwner: $ownerId")
+        logDebug( "observeSchedulesByOwner: $ownerId")
         return localSchedulesDataSource.observeSchedulesByOwner(ownerId)
     }
 
     override fun observeSchedulesByStatus(status: ScheduleStatus): Flow<List<Schedule>> {
-        Log.d(TAG, "observeSchedulesByStatus: $status")
+        logDebug( "observeSchedulesByStatus: $status")
         return localSchedulesDataSource.observeSchedulesByStatus(status)
     }
 
@@ -62,83 +140,83 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         startTime: Instant,
         endTime: Instant
     ): Flow<List<Schedule>> {
-        Log.d(TAG, "observeSchedulesByTimeRange: $startTime to $endTime")
+        logDebug( "observeSchedulesByTimeRange: $startTime to $endTime")
         return localSchedulesDataSource.observeSchedulesByTimeRange(startTime, endTime)
     }
 
     override fun observeSchedulesByDate(date: Instant): Flow<List<Schedule>> {
-        Log.d(TAG, "observeSchedulesByDate: $date")
+        logDebug( "observeSchedulesByDate: $date")
         return localSchedulesDataSource.observeSchedulesByDate(date)
     }
 
     override fun observeSchedulesByTitle(title: String, limit: Int): Flow<List<Schedule>> {
-        Log.d(TAG, "observeSchedulesByTitle: title='$title', limit=$limit")
+        logDebug( "observeSchedulesByTitle: title='$title', limit=$limit")
         return localSchedulesDataSource.observeSchedulesByTitle(title, limit)
     }
 
     override fun observeAllSchedules(): Flow<List<Schedule>> {
-        Log.d(TAG, "observeAllSchedules")
+        logDebug( "observeAllSchedules")
         return localSchedulesDataSource.observeAllSchedules()
     }
 
     override fun observeScheduleUpdatedAt(scheduleId: String): Flow<Long?> {
-        Log.d(TAG, "observeScheduleUpdatedAt: $scheduleId")
+        logDebug( "observeScheduleUpdatedAt: $scheduleId")
         return localSchedulesDataSource.observeScheduleUpdatedAt(scheduleId)
     }
 
     override fun observeSchedules(scheduleIds: List<String>): Flow<List<Schedule>> {
-        Log.d(TAG, "observeSchedules: ${scheduleIds.size} schedules")
+        logDebug( "observeSchedules: ${scheduleIds.size} schedules")
         return localSchedulesDataSource.observeSchedules(scheduleIds)
     }
 
     override fun observeUpcomingSchedules(): Flow<List<Schedule>> {
-        Log.d(TAG, "observeUpcomingSchedules")
+        logDebug( "observeUpcomingSchedules")
         return localSchedulesDataSource.observeUpcomingSchedules()
     }
 
     override fun observeTodaySchedules(): Flow<List<Schedule>> {
-        Log.d(TAG, "observeTodaySchedules")
+        logDebug( "observeTodaySchedules")
         return localSchedulesDataSource.observeTodaySchedules()
     }
 
     // === 단순 읽기 작업 ===
 
     override suspend fun getScheduleById(scheduleId: String): Schedule? {
-        Log.d(TAG, "getScheduleById: $scheduleId")
+        logDebug( "getScheduleById: $scheduleId")
         return try {
             localSchedulesDataSource.getScheduleById(scheduleId)
         } catch (e: Exception) {
-            Log.e(TAG, "getScheduleById failed", e)
+            logError( "getScheduleById failed", e)
             null
         }
     }
 
     override suspend fun getSchedulesByProject(projectId: String): List<Schedule> {
-        Log.d(TAG, "getSchedulesByProject: $projectId")
+        logDebug( "getSchedulesByProject: $projectId")
         return try {
             localSchedulesDataSource.getSchedulesByProject(projectId)
         } catch (e: Exception) {
-            Log.e(TAG, "getSchedulesByProject failed", e)
+            logError( "getSchedulesByProject failed", e)
             emptyList()
         }
     }
 
     override suspend fun getSchedulesByOwner(ownerId: String): List<Schedule> {
-        Log.d(TAG, "getSchedulesByOwner: $ownerId")
+        logDebug( "getSchedulesByOwner: $ownerId")
         return try {
             localSchedulesDataSource.getSchedulesByOwner(ownerId)
         } catch (e: Exception) {
-            Log.e(TAG, "getSchedulesByOwner failed", e)
+            logError( "getSchedulesByOwner failed", e)
             emptyList()
         }
     }
 
     override suspend fun getSchedulesByStatus(status: ScheduleStatus): List<Schedule> {
-        Log.d(TAG, "getSchedulesByStatus: $status")
+        logDebug( "getSchedulesByStatus: $status")
         return try {
             localSchedulesDataSource.getSchedulesByStatus(status)
         } catch (e: Exception) {
-            Log.e(TAG, "getSchedulesByStatus failed", e)
+            logError( "getSchedulesByStatus failed", e)
             emptyList()
         }
     }
@@ -147,62 +225,62 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         startTime: Instant,
         endTime: Instant
     ): List<Schedule> {
-        Log.d(TAG, "getSchedulesByTimeRange: $startTime to $endTime")
+        logDebug( "getSchedulesByTimeRange: $startTime to $endTime")
         return try {
             localSchedulesDataSource.getSchedulesByTimeRange(startTime, endTime)
         } catch (e: Exception) {
-            Log.e(TAG, "getSchedulesByTimeRange failed", e)
+            logError( "getSchedulesByTimeRange failed", e)
             emptyList()
         }
     }
 
     override suspend fun getSchedulesByDate(date: Instant): List<Schedule> {
-        Log.d(TAG, "getSchedulesByDate: $date")
+        logDebug( "getSchedulesByDate: $date")
         return localSchedulesDataSource.getSchedulesByDate(date)
     }
 
     override suspend fun searchSchedulesByTitle(title: String, limit: Int): List<Schedule> {
-        Log.d(TAG, "searchSchedulesByTitle: title='$title', limit=$limit")
+        logDebug( "searchSchedulesByTitle: title='$title', limit=$limit")
         return try {
             localSchedulesDataSource.searchSchedulesByTitle(title, limit)
         } catch (e: Exception) {
-            Log.e(TAG, "searchSchedulesByTitle failed", e)
+            logError( "searchSchedulesByTitle failed", e)
             emptyList()
         }
     }
 
     override suspend fun getAllSchedules(limit: Int?): List<Schedule> {
-        Log.d(TAG, "getAllSchedules: limit=$limit")
+        logDebug( "getAllSchedules: limit=$limit")
         return try {
             localSchedulesDataSource.getAllSchedules(limit)
         } catch (e: Exception) {
-            Log.e(TAG, "getAllSchedules failed", e)
+            logError( "getAllSchedules failed", e)
             emptyList()
         }
     }
 
     override suspend fun getSchedulesByIds(scheduleIds: List<String>): List<Schedule> {
-        Log.d(TAG, "getSchedulesByIds: ${scheduleIds.size} schedules")
+        logDebug( "getSchedulesByIds: ${scheduleIds.size} schedules")
         return try {
             localSchedulesDataSource.getSchedulesByIds(scheduleIds)
         } catch (e: Exception) {
-            Log.e(TAG, "getSchedulesByIds failed", e)
+            logError( "getSchedulesByIds failed", e)
             emptyList()
         }
     }
 
     override suspend fun getUpcomingSchedules(): List<Schedule> {
-        Log.d(TAG, "getUpcomingSchedules")
+        logDebug( "getUpcomingSchedules")
         return try {
             localSchedulesDataSource.getUpcomingSchedules()
         } catch (e: Exception) {
-            Log.e(TAG, "getUpcomingSchedules failed", e)
+            logError( "getUpcomingSchedules failed", e)
             emptyList()
         }
     }
 
     override suspend fun getTodaySchedules(): List<Schedule> {
-        Log.d(TAG, "getTodaySchedules")
+        logDebug( "getTodaySchedules")
         return localSchedulesDataSource.getTodaySchedules()
     }
 
@@ -210,11 +288,11 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         startTime: Instant,
         endTime: Instant
     ): List<Schedule> {
-        Log.d(TAG, "getCompletedSchedulesInRange: $startTime to $endTime")
+        logDebug( "getCompletedSchedulesInRange: $startTime to $endTime")
         return try {
             localSchedulesDataSource.getCompletedSchedulesInRange(startTime, endTime)
         } catch (e: Exception) {
-            Log.e(TAG, "getCompletedSchedulesInRange failed", e)
+            logError( "getCompletedSchedulesInRange failed", e)
             emptyList()
         }
     }
@@ -223,7 +301,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
 
     override suspend fun saveSchedule(schedule: Schedule): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "saveSchedule: ${schedule.id}")
+            logDebug( "saveSchedule: ${schedule.id}")
 
             // 1. Room DB에 저장
             localSchedulesDataSource.saveSchedule(schedule)
@@ -236,18 +314,18 @@ class LocalScheduleRepositoryImpl @Inject constructor(
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
 
-            Log.d(TAG, "Schedule saved and added to outbox: ${schedule.id}")
+            logDebug( "Schedule saved and added to outbox: ${schedule.id}")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "saveSchedule failed", e)
+            logError( "saveSchedule failed", e)
             CustomResult.Failure(e)
         }
     }
 
     override suspend fun saveSchedules(schedules: List<Schedule>): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "saveSchedules: ${schedules.size} schedules")
+            logDebug( "saveSchedules: ${schedules.size} schedules")
 
             if (schedules.isEmpty()) {
                 return CustomResult.Success(Unit)
@@ -256,18 +334,18 @@ class LocalScheduleRepositoryImpl @Inject constructor(
             // 대량 저장 (동기화용 - Outbox 추가 안 함)
             localSchedulesDataSource.saveSchedules(schedules)
 
-            Log.d(TAG, "Bulk schedules saved: ${schedules.size}")
+            logDebug( "Bulk schedules saved: ${schedules.size}")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "saveSchedules failed", e)
+            logError( "saveSchedules failed", e)
             CustomResult.Failure(e)
         }
     }
 
     override suspend fun deleteSchedule(scheduleId: String): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "deleteSchedule: $scheduleId")
+            logDebug( "deleteSchedule: $scheduleId")
 
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             localSchedulesDataSource.deleteSchedule(scheduleId)
@@ -279,26 +357,26 @@ class LocalScheduleRepositoryImpl @Inject constructor(
                 payload = null
             )
 
-            Log.d(TAG, "Schedule deleted and added to outbox: $scheduleId")
+            logDebug( "Schedule deleted and added to outbox: $scheduleId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "deleteSchedule failed", e)
+            logError( "deleteSchedule failed", e)
             CustomResult.Failure(e)
         }
     }
 
     override suspend fun deleteSchedulesByProject(projectId: String): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "deleteSchedulesByProject: $projectId")
+            logDebug( "deleteSchedulesByProject: $projectId")
 
             localSchedulesDataSource.deleteSchedulesByProject(projectId)
 
-            Log.d(TAG, "Schedules deleted for project: $projectId")
+            logDebug( "Schedules deleted for project: $projectId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "deleteSchedulesByProject failed", e)
+            logError( "deleteSchedulesByProject failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -312,7 +390,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         status: ScheduleStatus?
     ): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "updateSchedule: scheduleId=$scheduleId")
+            logDebug( "updateSchedule: scheduleId=$scheduleId")
 
             // 1. 현재 일정 조회
             val currentSchedule = localSchedulesDataSource.getScheduleById(scheduleId)
@@ -335,11 +413,11 @@ class LocalScheduleRepositoryImpl @Inject constructor(
             // 3. 저장 (Outbox 포함)
             saveSchedule(updatedSchedule)
 
-            Log.d(TAG, "Schedule updated: $scheduleId")
+            logDebug( "Schedule updated: $scheduleId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "updateSchedule failed", e)
+            logError( "updateSchedule failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -373,7 +451,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         return try {
             localSchedulesDataSource.scheduleExists(scheduleId)
         } catch (e: Exception) {
-            Log.e(TAG, "scheduleExists failed", e)
+            logError( "scheduleExists failed", e)
             false
         }
     }
@@ -388,7 +466,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
                 schedule.title == title && schedule.id.value != excludeScheduleId
             }
         } catch (e: Exception) {
-            Log.e(TAG, "titleExistsInProject failed", e)
+            logError( "titleExistsInProject failed", e)
             false
         }
     }
@@ -397,7 +475,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         return try {
             localSchedulesDataSource.getScheduleCountByProject(projectId)
         } catch (e: Exception) {
-            Log.e(TAG, "getScheduleCountByProject failed", e)
+            logError( "getScheduleCountByProject failed", e)
             0
         }
     }
@@ -406,7 +484,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         return try {
             localSchedulesDataSource.getScheduleCountByOwner(ownerId)
         } catch (e: Exception) {
-            Log.e(TAG, "getScheduleCountByOwner failed", e)
+            logError( "getScheduleCountByOwner failed", e)
             0
         }
     }
@@ -415,7 +493,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         return try {
             localSchedulesDataSource.getScheduleCountByStatus(status)
         } catch (e: Exception) {
-            Log.e(TAG, "getScheduleCountByStatus failed", e)
+            logError( "getScheduleCountByStatus failed", e)
             0
         }
     }
@@ -424,7 +502,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         return try {
             localSchedulesDataSource.getTotalScheduleCount()
         } catch (e: Exception) {
-            Log.e(TAG, "getTotalScheduleCount failed", e)
+            logError( "getTotalScheduleCount failed", e)
             0
         }
     }
@@ -433,22 +511,22 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         return try {
             getSchedulesByDate(date).size
         } catch (e: Exception) {
-            Log.e(TAG, "getScheduleCountByDate failed", e)
+            logError( "getScheduleCountByDate failed", e)
             0
         }
     }
 
     override suspend fun clearAllSchedules(): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "clearAllSchedules")
+            logDebug( "clearAllSchedules")
 
             localSchedulesDataSource.clearAllSchedules()
 
-            Log.d(TAG, "All schedules cleared")
+            logDebug( "All schedules cleared")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "clearAllSchedules failed", e)
+            logError( "clearAllSchedules failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -459,7 +537,7 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         return try {
             localSchedulesDataSource.getSchedulesUpdatedAfter(timestamp)
         } catch (e: Exception) {
-            Log.e(TAG, "getSchedulesUpdatedAfter failed", e)
+            logError( "getSchedulesUpdatedAfter failed", e)
             emptyList()
         }
     }
@@ -470,15 +548,15 @@ class LocalScheduleRepositoryImpl @Inject constructor(
         payload: String?
     ): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "addToOutbox: scheduleId=$scheduleId, operation=$operation")
+            logDebug( "addToOutbox: scheduleId=$scheduleId, operation=$operation")
 
             localSchedulesDataSource.addToOutbox(scheduleId, operation, payload)
 
-            Log.d(TAG, "Added to outbox: $scheduleId")
+            logDebug( "Added to outbox: $scheduleId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "addToOutbox failed", e)
+            logError( "addToOutbox failed", e)
             CustomResult.Failure(e)
         }
     }

@@ -4,7 +4,7 @@ package com.example.domain.usecase.project.core
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.remote.ProjectRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch

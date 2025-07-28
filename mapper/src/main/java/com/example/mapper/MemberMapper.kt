@@ -1,6 +1,6 @@
 package com.example.mapper
 
-import com.example.data.model.remote.MemberDTO
+import com.example.data_core.model.remote.MemberDTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId

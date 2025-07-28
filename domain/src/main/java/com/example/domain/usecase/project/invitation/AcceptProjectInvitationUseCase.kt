@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.invitation
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.ProjectInvitationRepository
+import com.example.domain.repository.remote.ProjectInvitationRepository
 import javax.inject.Inject
 
 /**

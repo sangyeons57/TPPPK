@@ -6,7 +6,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MentionInfo
 import com.example.domain.model.vo.message.MessageContent
-import com.example.domain.repository.base.MessageRepository
+import com.example.domain.repository.remote.MessageRepository
 import javax.inject.Inject
 
 class SendMessageUseCase @Inject constructor(

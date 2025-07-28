@@ -1,11 +1,9 @@
 package com.example.domain.provider.task
 
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.TaskRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.TaskRepositoryFactoryContext
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.model.base.Task
 import com.example.domain.usecase.task.CreateTaskUseCase
 import com.example.domain.usecase.task.CreateTaskUseCaseImpl
 import com.example.domain.usecase.task.DeleteTaskUseCase
@@ -32,8 +30,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class TaskUseCaseProvider @Inject constructor(
-    private val taskRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<TaskRepositoryFactoryContext, TaskRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
+    private val taskRepository: DefaultRepository<Task>,
+    private val authRepository: AuthRepository,
 ) {
 
 
@@ -48,15 +46,7 @@ class TaskUseCaseProvider @Inject constructor(
      * @return 태스크 관련 UseCase 그룹
      */
     fun createForTasks(projectId: String, channelId: String, containerId: String): TaskUseCases {
-        val taskRepository = taskRepositoryFactory.create(
-            TaskRepositoryFactoryContext(
-                collectionPath = CollectionPath.tasks(projectId, channelId)
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
+        taskRepository.setCollection(CollectionPath.tasks(projectId, channelId))
 
         return TaskUseCases(
             createTaskUseCase = CreateTaskUseCaseImpl(
@@ -92,6 +82,8 @@ class TaskUseCaseProvider @Inject constructor(
                 taskRepository = taskRepository
             ),
             
+            taskRepository= taskRepository,
+            authRepository= authRepository
         )
     }
 }
@@ -109,5 +101,6 @@ data class TaskUseCases(
     val getTasksUseCase: GetTasksUseCase,
     val observeTasksUseCase: ObserveTasksUseCase,
     val reorderTaskUseCase: ReorderTaskUseCase,
-    
+    val taskRepository: DefaultRepository<Task>,
+    val authRepository: AuthRepository
 )

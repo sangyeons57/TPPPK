@@ -1,10 +1,10 @@
 package com.example.data_core.repository.local
-
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.dao.OutboxDao
 import com.example.data_core.dao.TasksDao
 import com.example.data_core.model.local.OutboxEntity
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.task.TaskContent
@@ -39,11 +39,82 @@ class LocalTaskRepositoryImpl @Inject constructor(
     private val tasksDao: TasksDao,
     private val outboxDao: OutboxDao,
     private val mapper: TaskEntityMapper
-) : LocalTaskRepository {
+) : BaseLocalRepositoryImpl<Task>(), LocalTaskRepository {
 
     companion object {
         private const val TAG = "LocalTaskRepository"
         private const val COLLECTION_NAME = "tasks"
+    }
+
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<Task?> = 
+        observeTaskById(entityId)
+
+    override fun observeAllEntities(): Flow<List<Task>> = 
+        observeAllTasks()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeTaskUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<Task?, Exception> = 
+        handleOperation("getTaskById($entityId)", TAG) {
+            getTaskById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<Task>, Exception> = 
+        handleOperation("getTasksByIds(${entityIds.size})", TAG) {
+            getTasksByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<Task>, Exception> = 
+        handleOperation("getAllTasks($limit)", TAG) {
+            getAllTasks(limit)
+        }
+
+    override suspend fun saveEntity(entity: Task): CustomResult<Unit, Exception> = 
+        saveTask(entity)
+
+    override suspend fun saveEntities(entities: List<Task>): CustomResult<Unit, Exception> = 
+        saveTasks(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteTask(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<Task>, Exception> = 
+        handleOperation("getTasksUpdatedAfter($timestamp)", TAG) {
+            getTasksUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllTasks()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalTaskCount", TAG) {
+            getTotalTaskCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("taskExists($entityId)", TAG) {
+            taskExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            val outboxEntity = OutboxEntity(
+                id = UUID.randomUUID().toString(),
+                collectionName = COLLECTION_NAME,
+                documentId = entityId,
+                operation = operation,
+                payload = payload,
+                createdAt = System.currentTimeMillis()
+            )
+            outboxDao.insertOutboxEntry(outboxEntity)
+        }
     }
 
     // === 관찰자 패턴 (UI 반응형) ===

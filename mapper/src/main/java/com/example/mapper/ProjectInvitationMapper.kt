@@ -1,6 +1,6 @@
 package com.example.mapper
 
-import com.example.data.model.remote.ProjectInvitationDTO
+import com.example.data_core.model.remote.ProjectInvitationDTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.enum.InviteStatus

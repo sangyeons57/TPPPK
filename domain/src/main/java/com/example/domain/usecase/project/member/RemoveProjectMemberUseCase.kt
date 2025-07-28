@@ -2,7 +2,7 @@ package com.example.domain.usecase.project.member
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.remote.MemberRepository
 import javax.inject.Inject
 import kotlin.Result
 

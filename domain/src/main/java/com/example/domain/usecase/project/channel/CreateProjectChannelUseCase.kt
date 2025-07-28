@@ -5,8 +5,8 @@ import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.ProjectChannelRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.ProjectChannelRepository
 import javax.inject.Inject
 
 /**

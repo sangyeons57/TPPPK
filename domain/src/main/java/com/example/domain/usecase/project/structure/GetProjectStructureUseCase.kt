@@ -5,8 +5,8 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.CategoryRepository
-import com.example.domain.repository.base.ProjectChannelRepository
+import com.example.domain.repository.remote.CategoryRepository
+import com.example.domain.repository.remote.ProjectChannelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map

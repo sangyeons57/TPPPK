@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.repository.base.CategoryRepository
+import com.example.domain.repository.remote.CategoryRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

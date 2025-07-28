@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.repository.base.DMChannelRepository
+import com.example.domain.repository.remote.DMChannelRepository
 import javax.inject.Inject
 import kotlin.text.isBlank
 

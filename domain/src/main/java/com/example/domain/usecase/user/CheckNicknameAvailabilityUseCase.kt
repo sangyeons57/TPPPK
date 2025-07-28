@@ -4,7 +4,7 @@ package com.example.domain.usecase.user
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.remote.UserRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map

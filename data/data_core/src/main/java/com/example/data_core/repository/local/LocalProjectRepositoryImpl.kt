@@ -1,10 +1,10 @@
 package com.example.data_core.repository.local
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.dao.OutboxDao
 import com.example.data_core.dao.ProjectsDao
 import com.example.data_core.model.local.OutboxEntity
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Project
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.project.ProjectStatus
@@ -16,31 +16,117 @@ import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 
 /**
  * Local Project Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
- * - LocalDataSource를 통한 Room DB 접근
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - Project 도메인 특화 기능만 구현 (20%)
+ * - Room DB 직접 접근 (DAO 사용)
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeProjectById로 위임
+ * - observeAllEntities -> observeAllProjects로 위임
+ * - observeEntityUpdatedAt -> observeProjectUpdatedAt로 위임
+ * - getEntityById -> getProjectById로 위임
+ * - getEntitiesByIds -> getProjectsByIds로 위임
+ * - getAllEntities -> getAllProjects로 위임
+ * - saveEntity -> saveProject로 위임
+ * - saveEntities -> saveProjects로 위임
+ * - deleteEntity -> deleteProject로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalProjectRepositoryImpl @Inject constructor(
     private val projectsDao: ProjectsDao,
     private val outboxDao: OutboxDao,
     private val mapper: ProjectEntityMapper
-) : LocalProjectRepository {
+) : BaseLocalRepositoryImpl<Project>(), LocalProjectRepository {
 
     companion object {
         private const val TAG = "LocalProjectRepository"
         private const val COLLECTION_NAME = "projects"
+    }
+
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<Project?> = 
+        observeProjectById(entityId)
+
+    override fun observeAllEntities(): Flow<List<Project>> = 
+        observeAllProjects()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeProjectUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<Project?, Exception> = 
+        handleOperation("getProjectById($entityId)", TAG) {
+            getProjectById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<Project>, Exception> = 
+        handleOperation("getProjectsByIds(${entityIds.size})", TAG) {
+            getProjectsByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<Project>, Exception> = 
+        handleOperation("getAllProjects($limit)", TAG) {
+            getAllProjects(limit)
+        }
+
+    override suspend fun saveEntity(entity: Project): CustomResult<Unit, Exception> = 
+        saveProject(entity)
+
+    override suspend fun saveEntities(entities: List<Project>): CustomResult<Unit, Exception> = 
+        saveProjects(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteProject(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<Project>, Exception> = 
+        handleOperation("getProjectsUpdatedAfter($timestamp)", TAG) {
+            getProjectsUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllProjects()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalProjectCount", TAG) {
+            getTotalProjectCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("projectExists($entityId)", TAG) {
+            projectExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            val outboxEntity = OutboxEntity(
+                id = UUID.randomUUID().toString(),
+                collectionName = COLLECTION_NAME,
+                documentId = entityId,
+                operation = operation,
+                payload = payload,
+                createdAt = System.currentTimeMillis()
+            )
+            outboxDao.insertOutboxEntry(outboxEntity)
+        }
     }
 
     // === 관찰자 패턴 (UI 반응형) ===

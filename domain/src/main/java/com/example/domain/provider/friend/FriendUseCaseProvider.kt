@@ -2,13 +2,8 @@ package com.example.domain.provider.friend
 
 import com.example.core_common.result.getOrNull
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.FriendRepository
-import com.example.domain.repository.base.UserRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.FriendRepositoryFactoryContext
-import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.model.base.User
+import com.example.domain.repository.remote.DefaultRepository
 import com.example.domain.usecase.friend.AcceptFriendRequestUseCase
 import com.example.domain.usecase.friend.GetFriendsListStreamUseCase
 import com.example.domain.usecase.friend.GetPendingFriendRequestsUseCase
@@ -20,17 +15,20 @@ import com.example.domain.usecase.friend.ValidateSearchQueryUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.util.Log
+import com.example.domain.model.base.Friend
+import com.example.domain.repository.remote.AuthRepository
 
 /**
  * 친구 관련 UseCase들을 제공하는 Provider
  * 
  * 친구 요청, 수락, 거절, 친구 목록 조회 등의 기능을 담당합니다.
  */
+
 @Singleton
 class FriendUseCaseProvider @Inject constructor(
-    private val friendRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<FriendRepositoryFactoryContext, FriendRepository>,
-    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val friendRepository: DefaultRepository<Friend>,
+    private val userRepository: DefaultRepository<User>,
+    private val authRepository: AuthRepository
 ) {
 
     private val TAG = "FriendUseCaseProvider"
@@ -43,21 +41,8 @@ class FriendUseCaseProvider @Inject constructor(
      */
     fun createForUser(userId: String): FriendUseCases {
         Log.d(TAG, "createForUser called with userId=$userId")
-        val friendRepository = friendRepositoryFactory.create(
-            FriendRepositoryFactoryContext(
-                collectionPath = CollectionPath.userFriends(userId)
-            )
-        )
-
-        val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext(
-                collectionPath = CollectionPath.users
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
+        friendRepository.setCollection(CollectionPath.userFriends(userId))
+        userRepository.setCollection(CollectionPath.users)
 
         val useCases = FriendUseCases(
             sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
@@ -112,26 +97,15 @@ class FriendUseCaseProvider @Inject constructor(
      */
     suspend fun createForCurrentUser(): FriendUseCases {
         Log.d(TAG, "createForCurrentUser called")
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
 
-        val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext(
-                collectionPath = CollectionPath.users
-            )
-        )
+        userRepository.setCollection(CollectionPath.users)
 
         // 현재 사용자 ID를 가져와서 FriendRepository 생성
         val currentUserResult = authRepository.getCurrentUserSession()
         val currentUserId = currentUserResult.getOrNull()?.userId?.value 
             ?: throw IllegalStateException("User not authenticated")
         
-        val friendRepository = friendRepositoryFactory.create(
-            FriendRepositoryFactoryContext(
-                collectionPath = CollectionPath.userFriends(currentUserId)
-            )
-        )
+        friendRepository.setCollection(CollectionPath.userFriends(currentUserId))
 
         val useCases = FriendUseCases(
             sendFriendRequestUseCase = SendFriendRequestUseCaseImpl(
@@ -195,6 +169,6 @@ data class FriendUseCases(
     
     // 공통 Repository
     val authRepository: AuthRepository,
-    val friendRepository: FriendRepository,
-    val userRepository: UserRepository
+    val friendRepository: DefaultRepository<Friend>,
+    val userRepository: DefaultRepository<User>
 )

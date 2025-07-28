@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.member
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.remote.MemberRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

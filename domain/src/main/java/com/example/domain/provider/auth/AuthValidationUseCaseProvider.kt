@@ -1,8 +1,7 @@
 package com.example.domain.provider.auth
 
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.UserRepository
-import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.model.base.User
+import com.example.domain.repository.remote.DefaultRepository
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.usecase.auth.validation.GetAuthErrorMessageUseCase
 import com.example.domain.usecase.auth.validation.GetAuthErrorMessageUseCaseImpl
@@ -20,7 +19,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class AuthValidationUseCaseProvider @Inject constructor(
-    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
+    private val userRepository: DefaultRepository<User>
 ) {
 
     /**
@@ -29,29 +28,28 @@ class AuthValidationUseCaseProvider @Inject constructor(
      * @return 유효성 검사 UseCase 그룹
      */
     fun create(): AuthValidationUseCases {
-        val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext(CollectionPath.users)
-        )
+        userRepository.setCollection(CollectionPath.users)
 
         val validateEmailFormatUseCase = ValidateEmailFormatUseCase()
         
         return AuthValidationUseCases(
             // 이메일 유효성 검사
             validateEmailUseCase = ValidateEmailUseCase(),
-            
+
             validateEmailFormatUseCase = validateEmailFormatUseCase,
-            
+
             validateEmailForSignUpUseCase = ValidateEmailForSignUpUseCase(
                 validateEmailFormatUseCase = validateEmailFormatUseCase
             ),
-            
+
             // 닉네임 유효성 검사
             validateNicknameForSignUpUseCase = ValidateNicknameForSignUpUseCase(
                 userRepository = userRepository
             ),
 
             // 오류 메시지 처리
-            getAuthErrorMessageUseCase = GetAuthErrorMessageUseCaseImpl()
+            getAuthErrorMessageUseCase = GetAuthErrorMessageUseCaseImpl(),
+            userRepository = userRepository
         )
     }
 }
@@ -69,5 +67,6 @@ data class AuthValidationUseCases(
     val validateNicknameForSignUpUseCase: ValidateNicknameForSignUpUseCase,
 
     // 오류 메시지 처리
-    val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase
+    val getAuthErrorMessageUseCase: GetAuthErrorMessageUseCase,
+    val userRepository: DefaultRepository<User>
 )

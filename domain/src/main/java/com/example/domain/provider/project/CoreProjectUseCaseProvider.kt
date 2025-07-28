@@ -4,26 +4,19 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Initial.getOrThrow
 import com.example.core_common.result.exceptionOrNull
 import com.example.core_common.result.getOrNull
+import com.example.domain.model.base.Category
+import com.example.domain.model.base.Member
+import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectInvitation
+import com.example.domain.model.base.ProjectsWrapper
+import com.example.domain.model.base.Role
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.CategoryRepository
-import com.example.domain.repository.base.MemberRepository
-import com.example.domain.repository.base.ProjectInvitationRepository
-import com.example.domain.repository.base.ProjectRepository
-import com.example.domain.repository.base.ProjectRoleRepository
-import com.example.domain.repository.base.ProjectsWrapperRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
-import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectInvitationRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectRoleRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectsWrapperRepositoryFactoryContext
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.repository.remote.ProjectInvitationRepository
 import com.example.domain.usecase.project.JoinProjectWithCodeUseCase
 import com.example.domain.usecase.project.core.JoinProjectWithTokenUseCase
 import com.example.domain.usecase.project.core.CreateProjectUseCase
@@ -47,13 +40,13 @@ import javax.inject.Singleton
  */
 @Singleton
 class CoreProjectUseCaseProvider @Inject constructor(
-    private val projectRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
-    private val projectsWrapperRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectsWrapperRepositoryFactoryContext, ProjectsWrapperRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
-    private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
-    private val roleRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRoleRepositoryFactoryContext, ProjectRoleRepository>,
-    private val projectInvitationRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectInvitationRepositoryFactoryContext, ProjectInvitationRepository>
+    private val projectRepository: DefaultRepository<Project>,
+    private val projectsWrapperRepository: DefaultRepository<ProjectsWrapper>,
+    private val authRepository: AuthRepository,
+    private val categoryRepository: DefaultRepository<Category>,
+    private val memberRepository: DefaultRepository<Member>,
+    private val roleRepository: DefaultRepository<Role>,
+    private val projectInvitationRepository: ProjectInvitationRepository
 ) {
 
     /**
@@ -67,43 +60,11 @@ class CoreProjectUseCaseProvider @Inject constructor(
         projectId: DocumentId,
         userId: UserId
     ): CoreProjectUseCases {
-        val projectRepository = projectRepositoryFactory.create(
-            ProjectRepositoryFactoryContext(
-                collectionPath = CollectionPath.projects
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
-
-        val projectsWrapperRepository = projectsWrapperRepositoryFactory.create(
-                ProjectsWrapperRepositoryFactoryContext(
-                    collectionPath = CollectionPath.userProjectWrappers(userId.value)
-                )
-            )
-
-        val categoryRepository = categoryRepositoryFactory.create(
-                CategoryRepositoryFactoryContext(
-                    collectionPath = CollectionPath.projectCategories(projectId.value)
-                )
-            )
-
-        val memberRepository = memberRepositoryFactory.create(
-                MemberRepositoryFactoryContext(
-                    collectionPath = CollectionPath.projectMembers(projectId.value)
-                )
-            )
-
-        val roleRepository = roleRepositoryFactory.create(
-            ProjectRoleRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectRoles(projectId.value)
-            )
-        )
-
-        val projectInvitationRepository = projectInvitationRepositoryFactory.create(
-            ProjectInvitationRepositoryFactoryContext()
-        )
+        projectRepository.setCollection(CollectionPath.projects)
+        projectsWrapperRepository.setCollection(CollectionPath.userProjectWrappers(userId.value))
+        categoryRepository.setCollection(CollectionPath.projectCategories(projectId.value))
+        memberRepository.setCollection(CollectionPath.projectMembers(projectId.value))
+        roleRepository.setCollection(CollectionPath.projectRoles(projectId.value))
 
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
@@ -114,34 +75,34 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 memberRepository = memberRepository,
                 roleRepository = roleRepository
             ),
-            
+
             deleteProjectUseCase = DeleteProjectUseCaseImpl(
                 projectRepository = projectRepository,
                 authRepository = authRepository,
                 projWrapperRepository = projectsWrapperRepository
             ),
-            
+
             renameProjectUseCase = RenameProjectUseCaseImpl(
                 projectRepository = projectRepository
             ),
-            
+
             getProjectDetailsStreamUseCase = GetProjectDetailsStreamUseCase(
                 projectRepository = projectRepository
             ),
-            
+
             getUserParticipatingProjectsUseCase = GetUserParticipatingProjectsUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository,
                 projectRepository = projectRepository
             ),
-            
+
             joinProjectWithCodeUseCase = JoinProjectWithCodeUseCase(
                 projectInvitationRepository = projectInvitationRepository
             ),
-            
+
             joinProjectWithTokenUseCase = JoinProjectWithTokenUseCase(
                 projectRepository = projectRepository
             ),
-            
+
             generateInviteLinkUseCase = GenerateInviteLinkUseCase(
                 projectInvitationRepository = projectInvitationRepository
             ),
@@ -151,10 +112,17 @@ class CoreProjectUseCaseProvider @Inject constructor(
             validateInviteCodeUseCase = ValidateInviteCodeUseCase(
                 projectInvitationRepository = projectInvitationRepository
             ),
-            
+
             deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository
-            )
+            ),
+            projectRepository = projectRepository,
+            projectsWrapperRepository = projectsWrapperRepository,
+            authRepository = authRepository,
+            categoryRepository = categoryRepository,
+            memberRepository = memberRepository,
+            roleRepository = roleRepository,
+            projectInvitationRepository = projectInvitationRepository
         )
     }
 
@@ -164,48 +132,21 @@ class CoreProjectUseCaseProvider @Inject constructor(
      * @return 사용자별 핵심 프로젝트 관리 UseCase 그룹
      */
     suspend fun createForCurrentUser(): CoreProjectUseCases {
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
 
         val session = authRepository.getCurrentUserSession().getOrThrow()
 
-        val projectRepository = projectRepositoryFactory.create(
-            ProjectRepositoryFactoryContext(
-                collectionPath = CollectionPath.projects
-            )
-        )
+        projectRepository.setCollection(CollectionPath.projects)
 
         // 현재 사용자 기반으로 ProjectsWrapperRepository 생성
         // Note: 현재 사용자 ID가 필요하므로 실제로는 createForProject를 사용해야 함
-        val projectsWrapperRepository = projectsWrapperRepositoryFactory.create(
-            ProjectsWrapperRepositoryFactoryContext(
-                collectionPath = CollectionPath.userProjectWrappers(session.userId.value)
-            )
-        )
+        projectsWrapperRepository.setCollection(CollectionPath.userProjectWrappers(session.userId.value))
 
         // 임시로 "temp-project" ID 사용
-        val categoryRepository = categoryRepositoryFactory.create(
-            CategoryRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories("temp-project")
-            )
-        )
+        categoryRepository.setCollection(CollectionPath.projectCategories("temp-project"))
 
-        val memberRepository = memberRepositoryFactory.create(
-            MemberRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectMembers("temp-project")
-            )
-        )
+        memberRepository.setCollection(CollectionPath.projectMembers("temp-project"))
 
-        val roleRepository = roleRepositoryFactory.create(
-            ProjectRoleRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectRoles("temp-project")
-            )
-        )
-
-        val projectInvitationRepository = projectInvitationRepositoryFactory.create(
-            ProjectInvitationRepositoryFactoryContext()
-        )
+        roleRepository.setCollection(CollectionPath.projectRoles("temp-project"))
 
         return CoreProjectUseCases(
             createProjectUseCase = CreateProjectUseCase(
@@ -255,7 +196,14 @@ class CoreProjectUseCaseProvider @Inject constructor(
             deleteProjectsWrapperUseCase = DeleteProjectsWrapperUseCaseImpl(
                 projectsWrapperRepository = projectsWrapperRepository
             ),
-            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase()
+            generateInviteLinkFromIdUseCase = GenerateInviteLinkFromIdUseCase(),
+            projectRepository = projectRepository,
+            projectsWrapperRepository = projectsWrapperRepository,
+            authRepository = authRepository,
+            categoryRepository = categoryRepository,
+            memberRepository = memberRepository,
+            roleRepository = roleRepository,
+            projectInvitationRepository = projectInvitationRepository
         )
     }
 }
@@ -274,5 +222,12 @@ data class CoreProjectUseCases(
     val generateInviteLinkUseCase: GenerateInviteLinkUseCase,
     val validateInviteCodeUseCase: ValidateInviteCodeUseCase,
     val deleteProjectsWrapperUseCase: DeleteProjectsWrapperUseCase,
-    val generateInviteLinkFromIdUseCase : GenerateInviteLinkFromIdUseCase
+    val generateInviteLinkFromIdUseCase : GenerateInviteLinkFromIdUseCase,
+    val projectRepository: DefaultRepository<Project>,
+    val projectsWrapperRepository: DefaultRepository<ProjectsWrapper>,
+    val authRepository: AuthRepository,
+    val categoryRepository: DefaultRepository<Category>,
+    val memberRepository: DefaultRepository<Member>,
+    val roleRepository: DefaultRepository<Role>,
+    val projectInvitationRepository: ProjectInvitationRepository
 )

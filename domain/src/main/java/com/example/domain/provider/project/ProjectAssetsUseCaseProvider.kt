@@ -1,11 +1,9 @@
 package com.example.domain.provider.project
 
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.model.base.Project
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.MediaRepository
-import com.example.domain.repository.base.ProjectRepository
-import com.example.domain.repository.factory.context.MediaRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
+import com.example.domain.repository.remote.MediaRepository
 import com.example.domain.usecase.project.assets.UploadProjectProfileImageUseCase
 import com.example.domain.usecase.project.assets.RemoveProjectProfileImageUseCase
 import com.example.domain.usecase.project.assets.RemoveProjectProfileImageUseCaseImpl
@@ -19,8 +17,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectAssetsUseCaseProvider @Inject constructor(
-    private val projectRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>,
-    private val mediaRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>,
+    private val projectRepository: DefaultRepository<Project>,
+    private val mediaRepository: MediaRepository,
 ) {
 
     /**
@@ -30,15 +28,7 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
      * @return 프로젝트 자산 관리 UseCase 그룹
      */
     fun createForProject(projectId: String): ProjectAssetsUseCases {
-        val projectRepository = projectRepositoryFactory.create(
-            ProjectRepositoryFactoryContext(
-                collectionPath = CollectionPath.projects
-            )
-        )
-
-        val mediaRepository = mediaRepositoryFactory.create(
-            MediaRepositoryFactoryContext()
-        )
+        projectRepository.setCollection(CollectionPath.projects)
 
         return ProjectAssetsUseCases(
             // 프로젝트 이미지/파일 관리
@@ -47,7 +37,10 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
             ),
             removeProjectProfileImageUseCase = RemoveProjectProfileImageUseCaseImpl(
                 projectRepository = projectRepository
-            )
+            ),
+
+            projectRepository= projectRepository,
+            mediaRepository= mediaRepository
         )
     }
 
@@ -68,5 +61,7 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
 data class ProjectAssetsUseCases(
     // 프로젝트 이미지/파일 관리
     val uploadProjectProfileImageUseCase: UploadProjectProfileImageUseCase,
-    val removeProjectProfileImageUseCase: RemoveProjectProfileImageUseCase
+    val removeProjectProfileImageUseCase: RemoveProjectProfileImageUseCase,
+    val projectRepository: DefaultRepository<Project>,
+    val mediaRepository: MediaRepository
 )

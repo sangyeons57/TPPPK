@@ -8,8 +8,8 @@ import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.schedule.ScheduleContent
 import com.example.domain.model.vo.schedule.ScheduleTitle
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.ScheduleRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.ScheduleRepository
 import java.time.Instant
 import javax.inject.Inject
 

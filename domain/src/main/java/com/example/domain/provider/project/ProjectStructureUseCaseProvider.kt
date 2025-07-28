@@ -2,14 +2,12 @@ package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.CategoryRepository
-import com.example.domain.repository.base.ProjectChannelRepository
 
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.CategoryRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectChannelRepositoryFactoryContext
+import com.example.domain.repository.remote.AuthRepository
+
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.model.base.Category
+import com.example.domain.model.base.ProjectChannel
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCase
 import com.example.domain.usecase.project.category.GetCategoryDetailsUseCaseImpl
 import com.example.domain.usecase.project.category.ReorderCategoriesUseCase
@@ -40,9 +38,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectStructureUseCaseProvider @Inject constructor(
-    private val categoryRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<CategoryRepositoryFactoryContext, CategoryRepository>,
-    private val projectChannelRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectChannelRepositoryFactoryContext, ProjectChannelRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val categoryRepository: DefaultRepository<Category>,
+    private val projectChannelRepository: DefaultRepository<ProjectChannel>,
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -54,21 +52,8 @@ class ProjectStructureUseCaseProvider @Inject constructor(
     fun createForProject(projectId: DocumentId): ProjectStructureUseCases {
         // repository 생성은 viewmodel 에서 해야함
         // 정확히는 provider 에서 해야함 provider를 viemodel 에서 주입받고
-        val categoryRepository = categoryRepositoryFactory.create(
-            CategoryRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectCategories(projectId.value)
-            )
-        )
-
-        val projectChannelRepository = projectChannelRepositoryFactory.create(
-            ProjectChannelRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectChannels(projectId.value)
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
+        categoryRepository.setCollection(CollectionPath.projectCategories(projectId.value))
+        projectChannelRepository.setCollection(CollectionPath.projectChannels(projectId.value))
 
         return ProjectStructureUseCases(
             // 카테고리 관리
@@ -121,7 +106,11 @@ class ProjectStructureUseCaseProvider @Inject constructor(
             reorderUnifiedProjectStructureUseCase = ReorderUnifiedProjectStructureUseCaseImpl(
                 categoryRepository = categoryRepository,
                 projectChannelRepository = projectChannelRepository
-            )
+            ),
+
+            categoryRepository= categoryRepository,
+            projectChannelRepository= projectChannelRepository,
+            authRepository= authRepository
         )
     }
 
@@ -160,5 +149,9 @@ data class ProjectStructureUseCases(
     val reorderChannelsUseCase: ReorderChannelsUseCase,
     
     // 통합 구조 관리 UseCases
-    val reorderUnifiedProjectStructureUseCase: ReorderUnifiedProjectStructureUseCase
+    val reorderUnifiedProjectStructureUseCase: ReorderUnifiedProjectStructureUseCase,
+
+    val categoryRepository: DefaultRepository<Category>,
+    val projectChannelRepository: DefaultRepository<ProjectChannel>,
+    val authRepository: AuthRepository
 )

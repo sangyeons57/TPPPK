@@ -5,7 +5,7 @@ import com.example.domain.model.base.Message
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
-import com.example.domain.repository.base.MessageRepository
+import com.example.domain.repository.remote.MessageRepository
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.Before

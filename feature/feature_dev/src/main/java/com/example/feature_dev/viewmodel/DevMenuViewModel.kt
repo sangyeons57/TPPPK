@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.data.cache.ChatCacheManager
+import com.example.data_core.cache.ChatCacheManager
 import com.example.domain.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain.provider.dev.DevMenuUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel

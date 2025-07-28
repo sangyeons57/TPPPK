@@ -6,24 +6,52 @@ import com.example.domain.model.enum.ProjectChannelStatus
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.repository.local.base.BaseLocalRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 /**
  * Local Project Channel Repository Interface (SSOT)
- * Room Database 전용 - UI에 직접 데이터 제공
+ * BaseLocalRepository 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지 (Remote ProjectChannelRepository 사용)
  *
  * ✅ 역할:
+ * - BaseLocalRepository의 공통 CRUD 기능 상속 (80%)
+ * - ProjectChannel 도메인 특화 기능만 추가 정의 (20%)
  * - Flow로 UI에 실시간 데이터 제공 (Observer Pattern)
- * - 로컬 CRUD 작업 (Insert/Update/Delete)
- * - 로컬 검색 및 필터링
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 상속 메서드:
+ * - observeEntityById -> observeChannelById
+ * - observeAllEntities -> observeAllChannels
+ * - observeEntityUpdatedAt -> observeChannelUpdatedAt
+ * - getEntityById -> getChannelById
+ * - getEntitiesByIds -> getChannelsByIds
+ * - getAllEntities -> getAllChannels
+ * - saveEntity -> saveChannel
+ * - saveEntities -> saveChannels
+ * - deleteEntity -> deleteChannel
+ * - Plus SyncableRepository methods (addToOutbox, clearAllEntities, etc.)
  */
-interface LocalProjectChannelRepository {
+interface LocalProjectChannelRepository : BaseLocalRepository<ProjectChannel> {
+
+    // === BaseLocalRepository 메서드 (구현체에서 채널 전용 메서드로 매핑) ===
+    // observeEntityById -> observeChannelById
+    // observeAllEntities -> observeAllChannels  
+    // observeEntityUpdatedAt -> observeChannelUpdatedAt
+    // getEntityById -> getChannelById
+    // getEntitiesByIds -> getChannelsByIds
+    // getAllEntities -> getAllChannels
+    // saveEntity -> saveChannel
+    // saveEntities -> saveChannels
+    // deleteEntity -> deleteChannel
+    // getEntitiesUpdatedAfter -> getChannelsUpdatedAfter
+    // clearAllEntities -> clearAllChannels
+    // getTotalEntityCount -> getTotalChannelCount
+    // entityExists -> channelExists
 
     // === 관찰자 패턴 (UI 반응형) ===
 

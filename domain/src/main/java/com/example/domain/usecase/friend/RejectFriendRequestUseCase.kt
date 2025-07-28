@@ -3,8 +3,8 @@ package com.example.domain.usecase.friend
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.exceptionOrNull
 import com.example.core_common.result.getOrNull
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.FriendRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.FriendRepository
 import javax.inject.Inject
 
 /**

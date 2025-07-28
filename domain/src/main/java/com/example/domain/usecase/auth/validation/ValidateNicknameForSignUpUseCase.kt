@@ -3,7 +3,7 @@ package com.example.domain.usecase.auth.validation
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.ui.sealed_class.UserNameResult
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.remote.UserRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

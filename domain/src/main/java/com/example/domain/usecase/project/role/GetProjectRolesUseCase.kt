@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.ui.project.RoleSortOption
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.ProjectRoleRepository
+import com.example.domain.repository.remote.ProjectRoleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

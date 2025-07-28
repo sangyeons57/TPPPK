@@ -5,8 +5,8 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.TaskRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.TaskRepository
 import javax.inject.Inject
 
 /**

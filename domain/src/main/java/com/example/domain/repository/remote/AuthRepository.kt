@@ -4,7 +4,6 @@ package com.example.domain.repository.remote
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.repository.remote.Repository
 import kotlinx.coroutines.flow.Flow
 
 /**

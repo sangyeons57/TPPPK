@@ -1,10 +1,8 @@
 package com.example.domain.provider.auth
 
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.model.base.User
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DefaultRepository
 import com.example.domain.usecase.auth.DeleteAuthUserUseCase
 import com.example.domain.usecase.auth.account.ReactivateAccountUseCase
 import com.example.domain.usecase.auth.account.WithdrawMembershipUseCase
@@ -20,8 +18,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class AuthAccountUseCaseProvider @Inject constructor(
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>
+    private val authRepository: AuthRepository,
+    private val userRepository: DefaultRepository<User>
 ) {
 
     /**
@@ -30,13 +28,7 @@ class AuthAccountUseCaseProvider @Inject constructor(
      * @return 계정 관리 UseCase 그룹
      */
     fun create(): AuthAccountUseCases {
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
-        
-        val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext(CollectionPath.users)
-        )
+        userRepository.setCollection(CollectionPath.users)
 
         return AuthAccountUseCases(
             // 계정 관리
@@ -64,5 +56,7 @@ data class AuthAccountUseCases(
     // 계정 관리
     val deleteAuthUserUseCase: DeleteAuthUserUseCase,
     val reactivateAccountUseCase: ReactivateAccountUseCase,
-    val withdrawMembershipUseCase: WithdrawMembershipUseCase
+    val withdrawMembershipUseCase: WithdrawMembershipUseCase,
+    val authRepository: AuthRepository,
+    val userRepository: DefaultRepository<User>
 )

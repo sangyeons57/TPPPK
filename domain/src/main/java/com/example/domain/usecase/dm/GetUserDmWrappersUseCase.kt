@@ -3,8 +3,8 @@ package com.example.domain.usecase.dm
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.data.UserSession
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.DMWrapperRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DMWrapperRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import javax.inject.Inject

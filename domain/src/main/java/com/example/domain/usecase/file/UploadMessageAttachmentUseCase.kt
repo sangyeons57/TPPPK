@@ -7,8 +7,8 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.repository.base.MessageAttachmentRepository
-import com.example.domain.repository.base.FileUploadResultData
+import com.example.domain.repository.remote.MessageAttachmentRepository
+import com.example.domain.repository.remote.FileUploadResultData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -64,11 +64,11 @@ class UploadMessageAttachmentUseCaseImpl @Inject constructor(
                 }
                 is CustomResult.Loading -> {
                     // 로딩 상태는 진행률로 처리
-                    emit(FileUploadResultData.Progress(com.example.domain.repository.base.FileUploadProgressData(0.0f, 0L, 0L)))
+                    emit(FileUploadResultData.Progress(com.example.domain.repository.remote.FileUploadProgressData(0.0f, 0L, 0L)))
                 }
                 is CustomResult.Progress -> {
                     // 진행률 업데이트
-                    emit(FileUploadResultData.Progress(com.example.domain.repository.base.FileUploadProgressData(validationResult.progress.toFloat(), 0L, 0L)))
+                    emit(FileUploadResultData.Progress(com.example.domain.repository.remote.FileUploadProgressData(validationResult.progress.toFloat(), 0L, 0L)))
                 }
             }
         } catch (e: Exception) {

@@ -5,6 +5,7 @@ import com.example.core_common.result.CustomResult
 import com.example.data_core.dao.OutboxDao
 import com.example.data_core.dao.ProjectChannelsDao
 import com.example.data_core.model.local.OutboxEntity
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelStatus
 import com.example.domain.model.enum.ProjectChannelType
@@ -22,28 +23,113 @@ import javax.inject.Singleton
 
 /**
  * Local Project Channel Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
- * - LocalDataSource를 통한 Room DB 접근
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - ProjectChannel 도메인 특화 기능만 구현 (20%)
+ * - Room DB 직접 접근 (DAO 사용)
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeChannelById로 위임
+ * - observeAllEntities -> observeAllChannels로 위임
+ * - observeEntityUpdatedAt -> observeChannelUpdatedAt로 위임
+ * - getEntityById -> getChannelById로 위임
+ * - getEntitiesByIds -> getChannelsByIds로 위임
+ * - getAllEntities -> getAllChannels로 위임
+ * - saveEntity -> saveChannel로 위임
+ * - saveEntities -> saveChannels로 위임
+ * - deleteEntity -> deleteChannel로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalProjectChannelRepositoryImpl @Inject constructor(
     private val projectChannelsDao: ProjectChannelsDao,
     private val outboxDao: OutboxDao,
     private val mapper: ProjectChannelEntityMapper
-) : LocalProjectChannelRepository {
+) : BaseLocalRepositoryImpl<ProjectChannel>(), LocalProjectChannelRepository {
 
     companion object {
         private const val TAG = "LocalProjectChannelRepository"
         private const val COLLECTION_NAME = "project_channels"
+    }
+
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<ProjectChannel?> = 
+        observeChannelById(entityId)
+
+    override fun observeAllEntities(): Flow<List<ProjectChannel>> = 
+        observeAllChannels()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeChannelUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<ProjectChannel?, Exception> = 
+        handleOperation("getChannelById($entityId)", TAG) {
+            getChannelById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<ProjectChannel>, Exception> = 
+        handleOperation("getChannelsByIds(${entityIds.size})", TAG) {
+            getChannelsByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<ProjectChannel>, Exception> = 
+        handleOperation("getAllChannels($limit)", TAG) {
+            getAllChannels(limit)
+        }
+
+    override suspend fun saveEntity(entity: ProjectChannel): CustomResult<Unit, Exception> = 
+        saveChannel(entity)
+
+    override suspend fun saveEntities(entities: List<ProjectChannel>): CustomResult<Unit, Exception> = 
+        saveChannels(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteChannel(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<ProjectChannel>, Exception> = 
+        handleOperation("getChannelsUpdatedAfter($timestamp)", TAG) {
+            getChannelsUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllChannels()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalChannelCount", TAG) {
+            getTotalChannelCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("channelExists($entityId)", TAG) {
+            channelExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            val outboxEntity = OutboxEntity(
+                id = UUID.randomUUID().toString(),
+                collectionName = COLLECTION_NAME,
+                documentId = entityId,
+                operation = operation,
+                payload = payload,
+                createdAt = System.currentTimeMillis()
+            )
+            outboxDao.insertOutboxEntry(outboxEntity)
+        }
     }
 
     // === 관찰자 패턴 (UI 반응형) ===

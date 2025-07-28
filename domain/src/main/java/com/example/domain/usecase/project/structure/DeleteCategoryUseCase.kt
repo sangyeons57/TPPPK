@@ -3,8 +3,8 @@ package com.example.domain.usecase.project.structure
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.CategoryRepository
-import com.example.domain.repository.base.ProjectChannelRepository
+import com.example.domain.repository.remote.CategoryRepository
+import com.example.domain.repository.remote.ProjectChannelRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

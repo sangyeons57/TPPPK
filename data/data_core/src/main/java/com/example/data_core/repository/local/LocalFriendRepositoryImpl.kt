@@ -3,6 +3,7 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalFriendsDataSource
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Friend
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.vo.ImageUrl
@@ -15,188 +16,265 @@ import javax.inject.Singleton
 
 /**
  * Local Friend Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
- * - LocalDataSource를 통한 Room DB 접근
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - Friend 도메인 특화 기능만 구현 (20%)
+ * - LocalDataSource를 통한 Room DB 접궼
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeFriendById로 위임
+ * - observeAllEntities -> observeAllFriends로 위임
+ * - observeEntityUpdatedAt -> observeFriendUpdatedAt로 위임
+ * - getEntityById -> getFriendById로 위임
+ * - getEntitiesByIds -> getFriendsByIds로 위임
+ * - getAllEntities -> getAllFriends로 위임
+ * - saveEntity -> saveFriend로 위임
+ * - saveEntities -> saveFriends로 위임
+ * - deleteEntity -> deleteFriend로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalFriendRepositoryImpl @Inject constructor(
     private val localFriendsDataSource: LocalFriendsDataSource
-) : LocalFriendRepository {
+) : BaseLocalRepositoryImpl<Friend>(), LocalFriendRepository {
 
     companion object {
         private const val TAG = "LocalFriendRepository"
     }
 
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<Friend?> = 
+        observeFriendById(entityId)
+
+    override fun observeAllEntities(): Flow<List<Friend>> = 
+        observeAllFriends()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeFriendUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<Friend?, Exception> = 
+        handleOperation("getFriendById($entityId)", TAG) {
+            getFriendById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<Friend>, Exception> = 
+        handleOperation("getFriendsByIds(${entityIds.size})", TAG) {
+            getFriendsByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<Friend>, Exception> = 
+        handleOperation("getAllFriends($limit)", TAG) {
+            getAllFriends(limit)
+        }
+
+    override suspend fun saveEntity(entity: Friend): CustomResult<Unit, Exception> = 
+        saveFriend(entity)
+
+    override suspend fun saveEntities(entities: List<Friend>): CustomResult<Unit, Exception> = 
+        saveFriends(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteFriend(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<Friend>, Exception> = 
+        handleOperation("getFriendsUpdatedAfter($timestamp)", TAG) {
+            getFriendsUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllFriends()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalFriendCount", TAG) {
+            getTotalFriendCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("friendExists($entityId)", TAG) {
+            friendExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            localFriendsDataSource.addToOutbox(entityId, operation, payload)
+        }
+    }
+
     // === 관찰자 패턴 (UI 반응형) ===
 
     override fun observeFriendById(friendId: String): Flow<Friend?> {
-        Log.d(TAG, "observeFriendById: $friendId")
+        logDebug( "observeFriendById: $friendId")
         return localFriendsDataSource.observeFriendById(friendId)
     }
 
     override fun observeFriendByName(name: UserName): Flow<Friend?> {
-        Log.d(TAG, "observeFriendByName: ${name.value}")
+        logDebug( "observeFriendByName: ${name.value}")
         return localFriendsDataSource.observeFriendByName(name.value)
     }
 
     override fun observeFriendsByName(name: String, limit: Int): Flow<List<Friend>> {
-        Log.d(TAG, "observeFriendsByName: name='$name', limit=$limit")
+        logDebug( "observeFriendsByName: name='$name', limit=$limit")
         return localFriendsDataSource.observeFriendsByName(name, limit)
     }
 
     override fun observeFriendsByStatus(status: FriendStatus): Flow<List<Friend>> {
-        Log.d(TAG, "observeFriendsByStatus: $status")
+        logDebug( "observeFriendsByStatus: $status")
         return localFriendsDataSource.observeFriendsByStatus(status)
     }
 
     override fun observeAcceptedFriends(): Flow<List<Friend>> {
-        Log.d(TAG, "observeAcceptedFriends")
+        logDebug( "observeAcceptedFriends")
         return observeFriendsByStatus(FriendStatus.ACCEPTED)
     }
 
     override fun observeSentFriendRequests(): Flow<List<Friend>> {
-        Log.d(TAG, "observeSentFriendRequests")
+        logDebug( "observeSentFriendRequests")
         return observeFriendsByStatus(FriendStatus.REQUESTED)
     }
 
     override fun observeReceivedFriendRequests(): Flow<List<Friend>> {
-        Log.d(TAG, "observeReceivedFriendRequests")
+        logDebug( "observeReceivedFriendRequests")
         return observeFriendsByStatus(FriendStatus.PENDING)
     }
 
     override fun observeBlockedFriends(): Flow<List<Friend>> {
-        Log.d(TAG, "observeBlockedFriends")
+        logDebug( "observeBlockedFriends")
         return observeFriendsByStatus(FriendStatus.BLOCKED)
     }
 
     override fun observeAllFriends(): Flow<List<Friend>> {
-        Log.d(TAG, "observeAllFriends")
+        logDebug( "observeAllFriends")
         return localFriendsDataSource.observeAllFriends()
     }
 
     override fun observeFriendUpdatedAt(friendId: String): Flow<Long?> {
-        Log.d(TAG, "observeFriendUpdatedAt: $friendId")
+        logDebug( "observeFriendUpdatedAt: $friendId")
         return kotlinx.coroutines.flow.map(observeFriendById(friendId)) { friend ->
             friend?.updatedAt?.toEpochMilli()
         }
     }
 
     override fun observeFriends(friendIds: List<String>): Flow<List<Friend>> {
-        Log.d(TAG, "observeFriends: ${friendIds.size} friends")
+        logDebug( "observeFriends: ${friendIds.size} friends")
         return localFriendsDataSource.observeFriends(friendIds)
     }
 
     // === 단순 읽기 작업 ===
 
     override suspend fun getFriendById(friendId: String): Friend? {
-        Log.d(TAG, "getFriendById: $friendId")
+        logDebug( "getFriendById: $friendId")
         return try {
             localFriendsDataSource.getFriendById(friendId)
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendById failed", e)
+            logError( "getFriendById failed", e)
             null
         }
     }
 
     override suspend fun getFriendByName(name: UserName): Friend? {
-        Log.d(TAG, "getFriendByName: ${name.value}")
+        logDebug( "getFriendByName: ${name.value}")
         return try {
             localFriendsDataSource.getFriendByName(name.value)
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendByName failed", e)
+            logError( "getFriendByName failed", e)
             null
         }
     }
 
     override suspend fun searchFriendsByName(name: String, limit: Int): List<Friend> {
-        Log.d(TAG, "searchFriendsByName: name='$name', limit=$limit")
+        logDebug( "searchFriendsByName: name='$name', limit=$limit")
         return try {
             localFriendsDataSource.searchFriendsByName(name, limit)
         } catch (e: Exception) {
-            Log.e(TAG, "searchFriendsByName failed", e)
+            logError( "searchFriendsByName failed", e)
             emptyList()
         }
     }
 
     override suspend fun getFriendsByStatus(status: FriendStatus): List<Friend> {
-        Log.d(TAG, "getFriendsByStatus: $status")
+        logDebug( "getFriendsByStatus: $status")
         return try {
             localFriendsDataSource.getFriendsByStatus(status)
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendsByStatus failed", e)
+            logError( "getFriendsByStatus failed", e)
             emptyList()
         }
     }
 
     override suspend fun getAcceptedFriends(): List<Friend> {
-        Log.d(TAG, "getAcceptedFriends")
+        logDebug( "getAcceptedFriends")
         return getFriendsByStatus(FriendStatus.ACCEPTED)
     }
 
     override suspend fun getSentFriendRequests(): List<Friend> {
-        Log.d(TAG, "getSentFriendRequests")
+        logDebug( "getSentFriendRequests")
         return getFriendsByStatus(FriendStatus.REQUESTED)
     }
 
     override suspend fun getReceivedFriendRequests(): List<Friend> {
-        Log.d(TAG, "getReceivedFriendRequests")
+        logDebug( "getReceivedFriendRequests")
         return getFriendsByStatus(FriendStatus.PENDING)
     }
 
     override suspend fun getBlockedFriends(): List<Friend> {
-        Log.d(TAG, "getBlockedFriends")
+        logDebug( "getBlockedFriends")
         return getFriendsByStatus(FriendStatus.BLOCKED)
     }
 
     override suspend fun getAllFriends(limit: Int?): List<Friend> {
-        Log.d(TAG, "getAllFriends: limit=$limit")
+        logDebug( "getAllFriends: limit=$limit")
         return try {
             localFriendsDataSource.getAllFriends(limit)
         } catch (e: Exception) {
-            Log.e(TAG, "getAllFriends failed", e)
+            logError( "getAllFriends failed", e)
             emptyList()
         }
     }
 
     override suspend fun getFriendsByIds(friendIds: List<String>): List<Friend> {
-        Log.d(TAG, "getFriendsByIds: ${friendIds.size} friends")
+        logDebug( "getFriendsByIds: ${friendIds.size} friends")
         return try {
             localFriendsDataSource.getFriendsByIds(friendIds)
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendsByIds failed", e)
+            logError( "getFriendsByIds failed", e)
             emptyList()
         }
     }
 
     override suspend fun getFriendsRequestedAfter(timestamp: Instant): List<Friend> {
-        Log.d(TAG, "getFriendsRequestedAfter: $timestamp")
+        logDebug( "getFriendsRequestedAfter: $timestamp")
         return try {
             getAllFriends().filter { friend ->
                 friend.requestedAt?.isAfter(timestamp) == true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendsRequestedAfter failed", e)
+            logError( "getFriendsRequestedAfter failed", e)
             emptyList()
         }
     }
 
     override suspend fun getFriendsAcceptedAfter(timestamp: Instant): List<Friend> {
-        Log.d(TAG, "getFriendsAcceptedAfter: $timestamp")
+        logDebug( "getFriendsAcceptedAfter: $timestamp")
         return try {
             getAllFriends().filter { friend ->
                 friend.acceptedAt?.isAfter(timestamp) == true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendsAcceptedAfter failed", e)
+            logError( "getFriendsAcceptedAfter failed", e)
             emptyList()
         }
     }
@@ -205,7 +283,7 @@ class LocalFriendRepositoryImpl @Inject constructor(
 
     override suspend fun saveFriend(friend: Friend): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "saveFriend: ${friend.id}")
+            logDebug( "saveFriend: ${friend.id}")
 
             // 1. Room DB에 저장
             localFriendsDataSource.saveFriend(friend)
@@ -218,18 +296,18 @@ class LocalFriendRepositoryImpl @Inject constructor(
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
 
-            Log.d(TAG, "Friend saved and added to outbox: ${friend.id}")
+            logDebug( "Friend saved and added to outbox: ${friend.id}")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "saveFriend failed", e)
+            logError( "saveFriend failed", e)
             CustomResult.Failure(e)
         }
     }
 
     override suspend fun saveFriends(friends: List<Friend>): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "saveFriends: ${friends.size} friends")
+            logDebug( "saveFriends: ${friends.size} friends")
 
             if (friends.isEmpty()) {
                 return CustomResult.Success(Unit)
@@ -238,18 +316,18 @@ class LocalFriendRepositoryImpl @Inject constructor(
             // 대량 저장 (동기화용 - Outbox 추가 안 함)
             localFriendsDataSource.saveFriends(friends)
 
-            Log.d(TAG, "Bulk friends saved: ${friends.size}")
+            logDebug( "Bulk friends saved: ${friends.size}")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "saveFriends failed", e)
+            logError( "saveFriends failed", e)
             CustomResult.Failure(e)
         }
     }
 
     override suspend fun deleteFriend(friendId: String): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "deleteFriend: $friendId")
+            logDebug( "deleteFriend: $friendId")
 
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             localFriendsDataSource.deleteFriend(friendId)
@@ -261,11 +339,11 @@ class LocalFriendRepositoryImpl @Inject constructor(
                 payload = null
             )
 
-            Log.d(TAG, "Friend deleted and added to outbox: $friendId")
+            logDebug( "Friend deleted and added to outbox: $friendId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "deleteFriend failed", e)
+            logError( "deleteFriend failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -277,7 +355,7 @@ class LocalFriendRepositoryImpl @Inject constructor(
         status: FriendStatus?
     ): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "updateFriend: friendId=$friendId")
+            logDebug( "updateFriend: friendId=$friendId")
 
             // 1. 현재 친구 조회
             val currentFriend = localFriendsDataSource.getFriendById(friendId)
@@ -302,11 +380,11 @@ class LocalFriendRepositoryImpl @Inject constructor(
             // 3. 저장 (Outbox 포함)
             saveFriend(updatedFriend)
 
-            Log.d(TAG, "Friend updated: $friendId")
+            logDebug( "Friend updated: $friendId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "updateFriend failed", e)
+            logError( "updateFriend failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -351,7 +429,7 @@ class LocalFriendRepositoryImpl @Inject constructor(
         return try {
             localFriendsDataSource.friendExists(friendId)
         } catch (e: Exception) {
-            Log.e(TAG, "friendExists failed", e)
+            logError( "friendExists failed", e)
             false
         }
     }
@@ -360,7 +438,7 @@ class LocalFriendRepositoryImpl @Inject constructor(
         return try {
             localFriendsDataSource.nameExists(name.value, excludeFriendId)
         } catch (e: Exception) {
-            Log.e(TAG, "nameExists failed", e)
+            logError( "nameExists failed", e)
             false
         }
     }
@@ -369,7 +447,7 @@ class LocalFriendRepositoryImpl @Inject constructor(
         return try {
             localFriendsDataSource.getFriendCountByStatus(status)
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendCountByStatus failed", e)
+            logError( "getFriendCountByStatus failed", e)
             0
         }
     }
@@ -378,7 +456,7 @@ class LocalFriendRepositoryImpl @Inject constructor(
         return try {
             localFriendsDataSource.getTotalFriendCount()
         } catch (e: Exception) {
-            Log.e(TAG, "getTotalFriendCount failed", e)
+            logError( "getTotalFriendCount failed", e)
             0
         }
     }
@@ -401,15 +479,15 @@ class LocalFriendRepositoryImpl @Inject constructor(
 
     override suspend fun clearAllFriends(): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "clearAllFriends")
+            logDebug( "clearAllFriends")
 
             localFriendsDataSource.clearAllFriends()
 
-            Log.d(TAG, "All friends cleared")
+            logDebug( "All friends cleared")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "clearAllFriends failed", e)
+            logError( "clearAllFriends failed", e)
             CustomResult.Failure(e)
         }
     }
@@ -420,7 +498,7 @@ class LocalFriendRepositoryImpl @Inject constructor(
         return try {
             localFriendsDataSource.getFriendsUpdatedAfter(timestamp)
         } catch (e: Exception) {
-            Log.e(TAG, "getFriendsUpdatedAfter failed", e)
+            logError( "getFriendsUpdatedAfter failed", e)
             emptyList()
         }
     }
@@ -431,15 +509,15 @@ class LocalFriendRepositoryImpl @Inject constructor(
         payload: String?
     ): CustomResult<Unit, Exception> {
         return try {
-            Log.d(TAG, "addToOutbox: friendId=$friendId, operation=$operation")
+            logDebug( "addToOutbox: friendId=$friendId, operation=$operation")
 
             localFriendsDataSource.addToOutbox(friendId, operation, payload)
 
-            Log.d(TAG, "Added to outbox: $friendId")
+            logDebug( "Added to outbox: $friendId")
             CustomResult.Success(Unit)
 
         } catch (e: Exception) {
-            Log.e(TAG, "addToOutbox failed", e)
+            logError( "addToOutbox failed", e)
             CustomResult.Failure(e)
         }
     }

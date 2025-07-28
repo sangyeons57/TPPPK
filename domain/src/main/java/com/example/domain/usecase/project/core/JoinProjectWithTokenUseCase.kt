@@ -1,7 +1,7 @@
 package com.example.domain.usecase.project.core
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.remote.ProjectRepository
 import javax.inject.Inject
 
 /**

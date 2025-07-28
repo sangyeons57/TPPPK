@@ -1,7 +1,7 @@
 package com.example.domain.usecase.user
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.remote.UserRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

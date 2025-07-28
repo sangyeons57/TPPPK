@@ -2,7 +2,6 @@ package com.example.domain.repository.remote
 
 import com.example.domain.model.data.search.SearchResult
 import com.example.domain.model.ui.search.SearchScope
-import com.example.domain.repository.remote.Repository
 
 /**
  * Search Repository Interface (Firebase Functions Only)

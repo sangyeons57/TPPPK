@@ -1,4 +1,4 @@
-package com.example.data.model.remote
+package com.example.data_core.model.remote
 
 import com.example.domain.model.DTO
 import com.example.domain.model.base.Member

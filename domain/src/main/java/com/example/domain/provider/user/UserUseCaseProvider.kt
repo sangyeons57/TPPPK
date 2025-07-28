@@ -1,12 +1,9 @@
 package com.example.domain.provider.user
 
 import com.example.domain.model.vo.CollectionPath
-import com.example.domain.provider.context.ContextDependentUseCaseProvider
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.UserRepositoryFactoryContext
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.model.base.User
 import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCase
 import com.example.domain.usecase.user.CheckNicknameAvailabilityUseCaseImpl
 import com.example.domain.usecase.user.GetCurrentUserStreamUseCase
@@ -42,9 +39,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class UserUseCaseProvider @Inject constructor(
-    private val userRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<UserRepositoryFactoryContext, UserRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val contextDependentUseCaseProvider: ContextDependentUseCaseProvider // Context가 필요한 UseCase들의 Provider
+    private val userRepository: DefaultRepository<User>,
+    private val authRepository: AuthRepository,
 ) {
 
     /**
@@ -54,18 +50,7 @@ class UserUseCaseProvider @Inject constructor(
      * @return 사용자 관련 UseCase 그룹
      */
     fun createForUser(userId: String? = null): UserUseCases {
-        val userRepository = userRepositoryFactory.create(
-            UserRepositoryFactoryContext(
-                collectionPath = CollectionPath.users
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
-
-        // Get context-dependent UseCases
-        contextDependentUseCaseProvider.create()
+        userRepository.setCollection(CollectionPath.users)
 
         return UserUseCases(
             getUserStreamUseCase = GetUserStreamUseCaseImpl(
@@ -125,7 +110,8 @@ class UserUseCaseProvider @Inject constructor(
                 userRepository = userRepository
             ),
 
-
+            userRepository= userRepository,
+            authRepository= authRepository,
         )
     }
 }
@@ -150,5 +136,7 @@ data class UserUseCases(
 
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
     val removeProfileImageUseCase: RemoveProfileImageUseCase,
-    val uploadProfileImageUseCase: UploadProfileImageUseCase
+    val uploadProfileImageUseCase: UploadProfileImageUseCase,
+    val userRepository: DefaultRepository<User>,
+    val authRepository: AuthRepository,
 )

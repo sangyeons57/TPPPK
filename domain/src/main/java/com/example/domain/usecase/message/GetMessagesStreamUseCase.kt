@@ -2,7 +2,7 @@ package com.example.domain.usecase.message
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
-import com.example.domain.repository.base.ChatCacheRepository
+import com.example.domain.repository.remote.ChatCacheRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map

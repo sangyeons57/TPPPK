@@ -3,6 +3,7 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalUsersDataSource
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
 import com.example.domain.repository.local.LocalUserRepository
@@ -13,25 +14,102 @@ import javax.inject.Singleton
 
 /**
  * Local User Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - User 도메인 특화 기능만 구현 (20%)
  * - LocalDataSource를 통한 Room DB 접근
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeUserById로 위임
+ * - observeAllEntities -> observeAllUsers로 위임
+ * - observeEntityUpdatedAt -> observeUserUpdatedAt로 위임
+ * - getEntityById -> getUserById로 위임
+ * - getEntitiesByIds -> getUsersByIds로 위임
+ * - getAllEntities -> getAllUsers로 위임
+ * - saveEntity -> saveUser로 위임
+ * - saveEntities -> saveUsers로 위임
+ * - deleteEntity -> deleteUser로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalUserRepositoryImpl @Inject constructor(
     private val localUsersDataSource: LocalUsersDataSource
-) : LocalUserRepository {
+) : BaseLocalRepositoryImpl<User>(), LocalUserRepository {
 
     companion object {
         private const val TAG = "LocalUserRepository"
+    }
+
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<User?> = 
+        observeUserById(entityId)
+
+    override fun observeAllEntities(): Flow<List<User>> = 
+        observeAllUsers()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeUserUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<User?, Exception> = 
+        handleOperation("getUserById($entityId)", TAG) {
+            getUserById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<User>, Exception> = 
+        handleOperation("getUsersByIds(${entityIds.size})", TAG) {
+            getUsersByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<User>, Exception> = 
+        handleOperation("getAllUsers($limit)", TAG) {
+            getAllUsers(limit)
+        }
+
+    override suspend fun saveEntity(entity: User): CustomResult<Unit, Exception> = 
+        saveUser(entity)
+
+    override suspend fun saveEntities(entities: List<User>): CustomResult<Unit, Exception> = 
+        saveUsers(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteUser(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<User>, Exception> = 
+        handleOperation("getUsersUpdatedAfter($timestamp)", TAG) {
+            getUsersUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllUsers()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalUserCount", TAG) {
+            getTotalUserCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("userExists($entityId)", TAG) {
+            userExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            localUsersDataSource.addToOutbox(entityId, operation, payload)
+        }
     }
 
     // === 관찰자 패턴 (UI 반응형) ===

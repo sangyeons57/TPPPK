@@ -1,6 +1,6 @@
 package com.example.mapper
 
-import com.example.data.model.remote.PermissionDTO
+import com.example.data_core.model.remote.PermissionDTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Permission
 import com.example.domain.model.data.project.RolePermission

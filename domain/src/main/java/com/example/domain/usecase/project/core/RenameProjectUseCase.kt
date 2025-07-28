@@ -5,7 +5,7 @@ import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.project.ProjectName
-import com.example.domain.repository.base.ProjectRepository
+import com.example.domain.repository.remote.ProjectRepository
 import javax.inject.Inject
 
 /**

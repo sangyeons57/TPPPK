@@ -2,8 +2,8 @@ package com.example.domain.usecase.schedule
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.ScheduleRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.ScheduleRepository
 import javax.inject.Inject
 
 /**

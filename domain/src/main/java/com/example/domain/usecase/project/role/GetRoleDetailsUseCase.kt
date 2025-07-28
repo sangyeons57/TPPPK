@@ -3,7 +3,7 @@ package com.example.domain.usecase.project.role
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.ProjectRoleRepository
+import com.example.domain.repository.remote.ProjectRoleRepository
 import javax.inject.Inject
 
 interface GetRoleDetailsUseCase {

@@ -6,7 +6,7 @@ import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
-import com.example.domain.repository.base.ProjectRoleRepository
+import com.example.domain.repository.remote.ProjectRoleRepository
 import javax.inject.Inject
 
 /**

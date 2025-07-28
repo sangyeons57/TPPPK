@@ -7,25 +7,53 @@ import com.example.domain.model.enum.MessageAttachmentUploadStatus
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
 import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
 import com.example.domain.model.vo.messageattachment.MessageAttachmentUploadProgress
+import com.example.domain.repository.local.base.BaseLocalRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 /**
  * Local Message Attachment Repository Interface (SSOT)
- * Room Database 전용 - UI에 직접 데이터 제공
+ * BaseLocalRepository 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지 (Remote MessageAttachmentRepository 사용)
  *
  * ✅ 역할:
+ * - BaseLocalRepository의 공통 CRUD 기능 상속 (80%)
+ * - MessageAttachment 도메인 특화 기능만 추가 정의 (20%)
  * - Flow로 UI에 실시간 데이터 제공 (Observer Pattern)
- * - 로컬 CRUD 작업 (Insert/Update/Delete)
- * - 로컬 검색 및 필터링
  * - Outbox 관리 (동기화 대상 저장)
  * - 업로드 상태 관리 및 추적
+ *
+ * 📋 BaseLocalRepository 상속 메서드:
+ * - observeEntityById -> observeAttachmentById
+ * - observeAllEntities -> observeAllAttachments
+ * - observeEntityUpdatedAt -> observeAttachmentUpdatedAt
+ * - getEntityById -> getAttachmentById
+ * - getEntitiesByIds -> getAttachmentsByIds
+ * - getAllEntities -> getAllAttachments
+ * - saveEntity -> saveAttachment
+ * - saveEntities -> saveAttachments
+ * - deleteEntity -> deleteAttachment
+ * - Plus SyncableRepository methods (addToOutbox, clearAllEntities, etc.)
  */
-interface LocalMessageAttachmentRepository {
+interface LocalMessageAttachmentRepository : BaseLocalRepository<MessageAttachment> {
+
+    // === BaseLocalRepository 메서드 (구현체에서 첨부파일 전용 메서드로 매핑) ===
+    // observeEntityById -> observeAttachmentById
+    // observeAllEntities -> observeAllAttachments  
+    // observeEntityUpdatedAt -> observeAttachmentUpdatedAt
+    // getEntityById -> getAttachmentById
+    // getEntitiesByIds -> getAttachmentsByIds
+    // getAllEntities -> getAllAttachments
+    // saveEntity -> saveAttachment
+    // saveEntities -> saveAttachments
+    // deleteEntity -> deleteAttachment
+    // getEntitiesUpdatedAfter -> getAttachmentsUpdatedAfter
+    // clearAllEntities -> clearAllAttachments
+    // getTotalEntityCount -> getTotalAttachmentCount
+    // entityExists -> attachmentExists
 
     // === 관찰자 패턴 (UI 반응형) ===
 

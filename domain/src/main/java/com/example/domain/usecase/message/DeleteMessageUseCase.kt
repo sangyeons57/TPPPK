@@ -3,7 +3,7 @@ package com.example.domain.usecase.message
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.MessageRepository
+import com.example.domain.repository.remote.MessageRepository
 import javax.inject.Inject
 
 class DeleteMessageUseCase @Inject constructor(

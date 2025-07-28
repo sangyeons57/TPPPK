@@ -3,8 +3,8 @@ package com.example.domain.usecase.user
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.UserRepository
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

@@ -1,6 +1,6 @@
 package com.example.domain.usecase.file
 
-import com.example.domain.repository.base.FileRepository
+import com.example.domain.repository.remote.FileRepository
 import javax.inject.Inject
 
 /**

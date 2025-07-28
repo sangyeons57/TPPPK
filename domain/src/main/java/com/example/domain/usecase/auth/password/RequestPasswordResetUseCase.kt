@@ -1,7 +1,7 @@
 package com.example.domain.usecase.auth.password
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.remote.AuthRepository
 import javax.inject.Inject
 
 /**

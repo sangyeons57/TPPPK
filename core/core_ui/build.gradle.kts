@@ -19,8 +19,8 @@ dependencies {
     
     // Firebase
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
     
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.compose.activity)

@@ -8,9 +8,11 @@ import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.repository.remote.UserRepository
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.firestore.core.UserData
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import javax.inject.Inject
@@ -23,7 +25,7 @@ import javax.inject.Inject
  */
 class SignUpUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: DefaultRepository<User>
 ) {
     // Centralized TAG for Logcat filtering
     companion object {

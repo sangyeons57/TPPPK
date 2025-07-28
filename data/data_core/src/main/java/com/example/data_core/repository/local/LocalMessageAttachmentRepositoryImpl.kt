@@ -3,6 +3,7 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalMessageAttachmentsDataSource
+import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.enum.MessageAttachmentUploadStatus
@@ -17,26 +18,103 @@ import javax.inject.Singleton
 
 /**
  * Local Message Attachment Repository Implementation (SSOT)
- * Room Database 전용 구현체 - UI에 직접 데이터 제공
+ * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
  * - Firestore 직접 접근 금지
  *
  * ✅ 역할:
+ * - BaseLocalRepositoryImpl의 공통 CRUD 기능 상속 (80%)
+ * - MessageAttachment 도메인 특화 기능만 구현 (20%)
  * - LocalDataSource를 통한 Room DB 접근
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
  * - Outbox 관리 (동기화 대상 저장)
  * - 업로드 상태 관리 및 추적
+ *
+ * 📋 BaseLocalRepository 메서드 구현:
+ * - observeEntityById -> observeAttachmentById로 위임
+ * - observeAllEntities -> observeAllAttachments로 위임
+ * - observeEntityUpdatedAt -> observeAttachmentUpdatedAt로 위임
+ * - getEntityById -> getAttachmentById로 위임
+ * - getEntitiesByIds -> getAttachmentsByIds로 위임
+ * - getAllEntities -> getAllAttachments로 위임
+ * - saveEntity -> saveAttachment로 위임
+ * - saveEntities -> saveAttachments로 위임
+ * - deleteEntity -> deleteAttachment로 위임
+ * - Plus SyncableRepository methods
  */
 @Singleton
 class LocalMessageAttachmentRepositoryImpl @Inject constructor(
     private val localMessageAttachmentsDataSource: LocalMessageAttachmentsDataSource
-) : LocalMessageAttachmentRepository {
+) : BaseLocalRepositoryImpl<MessageAttachment>(), LocalMessageAttachmentRepository {
 
     companion object {
         private const val TAG = "LocalMessageAttachmentRepository"
+    }
+
+    // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
+
+    override fun observeEntityById(entityId: String): Flow<MessageAttachment?> = 
+        observeAttachmentById(entityId)
+
+    override fun observeAllEntities(): Flow<List<MessageAttachment>> = 
+        observeAllAttachments()
+
+    override fun observeEntityUpdatedAt(entityId: String): Flow<Long?> = 
+        observeAttachmentUpdatedAt(entityId)
+
+    override suspend fun getEntityById(entityId: String): CustomResult<MessageAttachment?, Exception> = 
+        handleOperation("getAttachmentById($entityId)", TAG) {
+            getAttachmentById(entityId)
+        }
+
+    override suspend fun getEntitiesByIds(entityIds: List<String>): CustomResult<List<MessageAttachment>, Exception> = 
+        handleOperation("getAttachmentsByIds(${entityIds.size})", TAG) {
+            getAttachmentsByIds(entityIds)
+        }
+
+    override suspend fun getAllEntities(limit: Int?): CustomResult<List<MessageAttachment>, Exception> = 
+        handleOperation("getAllAttachments($limit)", TAG) {
+            getAllAttachments(limit)
+        }
+
+    override suspend fun saveEntity(entity: MessageAttachment): CustomResult<Unit, Exception> = 
+        saveAttachment(entity)
+
+    override suspend fun saveEntities(entities: List<MessageAttachment>): CustomResult<Unit, Exception> = 
+        saveAttachments(entities)
+
+    override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
+        deleteAttachment(entityId)
+
+    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<MessageAttachment>, Exception> = 
+        handleOperation("getAttachmentsUpdatedAfter($timestamp)", TAG) {
+            getAttachmentsUpdatedAfter(timestamp)
+        }
+
+    override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
+        clearAllAttachments()
+
+    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
+        handleOperation("getTotalAttachmentCount", TAG) {
+            getTotalAttachmentCount()
+        }
+
+    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
+        handleOperation("attachmentExists($entityId)", TAG) {
+            attachmentExists(entityId)
+        }
+
+    override suspend fun addToOutbox(
+        entityId: String,
+        operation: String,
+        payload: String?
+    ): CustomResult<Unit, Exception> {
+        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
+            localMessageAttachmentsDataSource.addToOutbox(entityId, operation, payload)
+        }
     }
 
     // === 관찰자 패턴 (UI 반응형) ===

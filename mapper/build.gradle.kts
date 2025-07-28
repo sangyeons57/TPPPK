@@ -17,7 +17,7 @@ dependencies {
     // 비즈니스 로직과 엔티티, 리포지토리 인터페이스만 포함
     implementation(libs.kotlinx.coroutines.core)
 
-    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.auth)
 
     // 테스트 라이브러리
     testImplementation(libs.junit)
@@ -29,7 +29,7 @@ dependencies {
 
     //firebase
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
 }

@@ -2,7 +2,7 @@ package com.example.domain.usecase.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
-import com.example.domain.repository.base.DMChannelRepository
+import com.example.domain.repository.remote.DMChannelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

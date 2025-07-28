@@ -6,8 +6,8 @@ import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.UserRepository
 import javax.inject.Inject
 
 /**

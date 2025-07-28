@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.data"
+    namespace = "com.example.data_core"
 
     // Disable legacy unit tests that are incompatible with current domain model.
     // To re-enable after migration, move updated tests back to src/test/java and remove this block.
@@ -49,10 +49,10 @@ dependencies {
 
     //firebase
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.functions.ktx)
-    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.functions)
+    implementation(libs.firebase.storage)
     // Task.await() 사용을 위한 의존성 추가
     implementation(libs.kotlinx.coroutines.play.services) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
 
@@ -65,7 +65,7 @@ dependencies {
     // Firebase BoM (Bill of Materials) - Firebase 라이브러리 버전 관리를 위한 BOM
 
     // 테스트 환경에서도 Timestamp 등을 사용하기 위해 추가
-    testImplementation(libs.firebase.firestore.ktx)
+    testImplementation(libs.firebase.firestore)
 
     // 테스트 전용 의존성
     testImplementation(libs.kotlinx.coroutines.test) // 코루틴 테스트

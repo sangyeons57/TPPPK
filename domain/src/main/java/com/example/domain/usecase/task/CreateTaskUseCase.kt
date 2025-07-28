@@ -6,7 +6,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.task.TaskContent
 import com.example.domain.model.vo.task.TaskOrder
 import com.example.domain.model.vo.task.TaskType
-import com.example.domain.repository.base.TaskRepository
+import com.example.domain.repository.remote.TaskRepository
 import javax.inject.Inject
 
 /**

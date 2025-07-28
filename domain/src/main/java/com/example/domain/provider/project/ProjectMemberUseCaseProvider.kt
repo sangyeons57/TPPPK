@@ -2,13 +2,8 @@ package com.example.domain.provider.project
 
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.MemberRepository
-import com.example.domain.repository.base.ProjectRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
-import com.example.domain.repository.factory.context.ProjectRepositoryFactoryContext
+
+import com.example.domain.repository.remote.AuthRepository
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.DeleteProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
@@ -29,6 +24,9 @@ import com.example.domain.usecase.project.member.TransferOwnershipUseCase
 import com.example.domain.usecase.project.member.TransferOwnershipUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.example.domain.repository.remote.DefaultRepository
+import com.example.domain.model.base.Member
+import com.example.domain.model.base.Project
 
 /**
  * 프로젝트 멤버 관리 UseCase들을 제공하는 Provider
@@ -37,9 +35,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectMemberUseCaseProvider @Inject constructor(
-    private val memberRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MemberRepositoryFactoryContext, MemberRepository>,
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>,
-    private val projectRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<ProjectRepositoryFactoryContext, ProjectRepository>
+    private val memberRepository: DefaultRepository<Member>,
+    private val authRepository: AuthRepository,
+    private val projectRepository: DefaultRepository<Project>
 ) {
 
     /**
@@ -49,21 +47,8 @@ class ProjectMemberUseCaseProvider @Inject constructor(
      * @return 프로젝트 멤버 관리 UseCase 그룹
      */
     fun createForProject(projectId: DocumentId): ProjectMemberUseCases {
-        val memberRepository = memberRepositoryFactory.create(
-            MemberRepositoryFactoryContext(
-                collectionPath = CollectionPath.projectMembers(projectId.value)
-            )
-        )
-
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
-
-        val projectRepository = projectRepositoryFactory.create(
-            ProjectRepositoryFactoryContext(
-                CollectionPath.project(projectId.value)
-            )
-        )
+        memberRepository.setCollection(CollectionPath.projectMembers(projectId.value))
+        projectRepository.setCollection(CollectionPath.project(projectId.value))
 
         return ProjectMemberUseCases(
             // 멤버 기본 CRUD
@@ -106,7 +91,11 @@ class ProjectMemberUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository,
                 memberRepository= memberRepository,
                 authRepository= authRepository,
-            )
+            ),
+
+            memberRepository= memberRepository,
+            authRepository= authRepository,
+            projectRepository= projectRepository
         )
     }
 
@@ -151,5 +140,9 @@ data class ProjectMemberUseCases(
     
     // 프로젝트 나가기 및 소유권 전달
     val leaveProjectUseCase: LeaveProjectUseCase,
-    val transferOwnershipUseCase: TransferOwnershipUseCase
+    val transferOwnershipUseCase: TransferOwnershipUseCase,
+
+    val memberRepository: DefaultRepository<Member>,
+    val authRepository: AuthRepository,
+    val projectRepository: DefaultRepository<Project>,
 )

@@ -1,10 +1,8 @@
 package com.example.domain.provider.file
 
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.FileRepository
-import com.example.domain.repository.base.MediaRepository
-import com.example.domain.repository.factory.context.FileRepositoryFactoryContext
-import com.example.domain.repository.factory.context.MediaRepositoryFactoryContext
+
+import com.example.domain.repository.remote.FileRepository
+import com.example.domain.repository.remote.MediaRepository
 import com.example.domain.usecase.file.DeleteFileUseCase
 import com.example.domain.usecase.file.DeleteFileUseCaseImpl
 import com.example.domain.usecase.file.DownloadFileUseCase
@@ -28,16 +26,14 @@ import javax.inject.Singleton
  */
 @Singleton
 class FileManagementUseCaseProvider @Inject constructor(
-    private val fileRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<FileRepositoryFactoryContext, FileRepository>,
-    private val mediaRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<MediaRepositoryFactoryContext, MediaRepository>
+    private val fileRepository: FileRepository,
+    private val mediaRepository: MediaRepository,
 ) {
 
     /**
      * 파일 관리 관련 UseCase들을 생성합니다.
      */
     fun create(): FileManagementUseCases {
-        val fileRepository = fileRepositoryFactory.create(FileRepositoryFactoryContext())
-        val mediaRepository = mediaRepositoryFactory.create(MediaRepositoryFactoryContext())
 
         return FileManagementUseCases(
             uploadFileUseCase = UploadFileUseCaseImpl(fileRepository),
@@ -46,6 +42,8 @@ class FileManagementUseCaseProvider @Inject constructor(
             downloadFileUseCase = DownloadFileUseCaseImpl(fileRepository),
             uploadMediaUseCase = UploadMediaUseCaseImpl(mediaRepository),
             deleteMediaUseCase = DeleteMediaUseCaseImpl(mediaRepository),
+            fileRepository = fileRepository,
+            mediaRepository = mediaRepository,
         )
     }
 }
@@ -60,4 +58,6 @@ data class FileManagementUseCases(
     val downloadFileUseCase: DownloadFileUseCase,
     val uploadMediaUseCase: UploadMediaUseCase,
     val deleteMediaUseCase: DeleteMediaUseCase,
+    val fileRepository: FileRepository,
+    val mediaRepository: MediaRepository
 )

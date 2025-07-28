@@ -1,8 +1,6 @@
 package com.example.domain.provider.auth
 
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
+import com.example.domain.repository.remote.AuthRepository
 import com.example.domain.usecase.auth.password.RequestPasswordResetUseCase
 import com.example.domain.usecase.auth.password.ValidateNewPasswordUseCase
 import com.example.domain.usecase.auth.password.ValidatePasswordFormatUseCase
@@ -18,7 +16,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class AuthPasswordUseCaseProvider @Inject constructor(
-    private val authRepositoryFactory: @JvmSuppressWildcards RepositoryFactory<AuthRepositoryFactoryContext, AuthRepository>
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -27,24 +25,24 @@ class AuthPasswordUseCaseProvider @Inject constructor(
      * @return 비밀번호 관리 UseCase 그룹
      */
     fun create(): AuthPasswordUseCases {
-        val authRepository = authRepositoryFactory.create(
-            AuthRepositoryFactoryContext()
-        )
+        
 
         return AuthPasswordUseCases(
             // 비밀번호 재설정
+            authRepository= authRepository,
+
             requestPasswordResetUseCase = RequestPasswordResetUseCase(
                 authRepository = authRepository
             ),
-            
+
             validatePasswordResetCodeUseCase = ValidatePasswordResetCodeUseCase(),
-            
+
             // 비밀번호 유효성 검사
             validateNewPasswordUseCase = ValidateNewPasswordUseCase(),
-            
+
             validatePasswordFormatUseCase = ValidatePasswordFormatUseCase(),
-            
-            validatePasswordForSignUpUseCase = ValidatePasswordForSignUpUseCase()
+
+            validatePasswordForSignUpUseCase = ValidatePasswordForSignUpUseCase(),
         )
     }
 }
@@ -60,5 +58,6 @@ data class AuthPasswordUseCases(
     // 비밀번호 유효성 검사
     val validateNewPasswordUseCase: ValidateNewPasswordUseCase,
     val validatePasswordFormatUseCase: ValidatePasswordFormatUseCase,
-    val validatePasswordForSignUpUseCase: ValidatePasswordForSignUpUseCase
+    val validatePasswordForSignUpUseCase: ValidatePasswordForSignUpUseCase,
+    val authRepository: AuthRepository
 )
