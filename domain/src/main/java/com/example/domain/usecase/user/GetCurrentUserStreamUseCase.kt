@@ -5,9 +5,7 @@ import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
-import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

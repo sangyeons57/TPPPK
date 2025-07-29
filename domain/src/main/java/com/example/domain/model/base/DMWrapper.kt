@@ -1,11 +1,9 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.AggregateRoot
-import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.event.dmwrapper.DMWrapperCreatedEvent
 import com.example.domain.event.dmwrapper.DMWrapperOtherUserChangedEvent
+import com.example.domain.model.AggregateRoot
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview

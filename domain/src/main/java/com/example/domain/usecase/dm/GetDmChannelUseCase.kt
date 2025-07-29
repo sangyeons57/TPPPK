@@ -6,7 +6,6 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.repository.base.DMChannelRepository
 import javax.inject.Inject
-import kotlin.text.isBlank
 
 /**
  * 특정 사용자와의 DM 채널 ID를 가져오는 UseCase

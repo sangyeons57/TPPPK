@@ -3,20 +3,16 @@ package com.example.domain.usecase.project.core
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.core_common.result.resultTry
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
+import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.ProjectRepository
 import com.example.domain.repository.base.ProjectsWrapperRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.catch
-import javax.inject.Inject
-import com.example.domain.model.vo.DocumentId
 import com.google.firebase.firestore.FirebaseFirestoreException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 /**
  * 사용자가 참여하고 있는 프로젝트 목록을 가져오는 UseCase

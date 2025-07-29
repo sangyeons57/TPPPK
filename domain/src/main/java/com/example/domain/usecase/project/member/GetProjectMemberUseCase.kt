@@ -4,13 +4,10 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.MemberRepository
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * UseCase for retrieving a specific project member.

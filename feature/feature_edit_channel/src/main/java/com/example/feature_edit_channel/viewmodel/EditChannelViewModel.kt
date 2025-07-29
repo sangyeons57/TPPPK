@@ -3,20 +3,25 @@ package com.example.feature_edit_channel.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Category
+import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
-import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain.provider.project.ProjectChannelUseCaseProvider
-import com.example.core_common.result.CustomResult
-import com.example.core_navigation.core.NavigationManger
-import com.example.domain.model.base.ProjectChannel
+import com.example.domain.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -226,8 +231,8 @@ class EditChannelViewModel @Inject constructor(
                                 originalCategoryId = currentChannel.categoryId.value,
                                 currentOrder = currentChannel.order.value,
                                 originalOrder = currentChannel.order.value,
-                                canMoveUp = currentChannelIndex > 0 && currentChannel.categoryId.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
-                                canMoveDown = currentChannelIndex < allChannels.size - 1 && currentChannel.categoryId.value != com.example.domain.model.base.Category.NO_CATEGORY_ID,
+                                canMoveUp = currentChannelIndex > 0 && currentChannel.categoryId.value != Category.NO_CATEGORY_ID,
+                                canMoveDown = currentChannelIndex < allChannels.size - 1 && currentChannel.categoryId.value != Category.NO_CATEGORY_ID,
                                 totalChannels = allChannels.size,
                                 allChannelIds = allChannelIds
                             )
@@ -382,7 +387,7 @@ class EditChannelViewModel @Inject constructor(
         if (!currentState.canMoveUp || currentState.isLoading) return
         
         // No_Category 채널은 이동 불가
-        if (currentState.currentCategoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
+        if (currentState.currentCategoryId == Category.NO_CATEGORY_ID) return
         
         val currentIndex = currentState.currentOrder.toInt()
         val newIndex = currentIndex - 1
@@ -398,7 +403,7 @@ class EditChannelViewModel @Inject constructor(
         if (!currentState.canMoveDown || currentState.isLoading) return
         
         // No_Category 채널은 이동 불가
-        if (currentState.currentCategoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) return
+        if (currentState.currentCategoryId == Category.NO_CATEGORY_ID) return
         
         val currentIndex = currentState.currentOrder.toInt()
         val newIndex = currentIndex + 1
@@ -426,14 +431,14 @@ class EditChannelViewModel @Inject constructor(
                 newChannelIds.add(currentOrderIndex, channelId)
                 
                 // No_Category 채널이 포함된 경우 항상 첫 번째 위치로 이동
-                if (newChannelIds.contains(com.example.domain.model.base.Category.NO_CATEGORY_ID)) {
-                    newChannelIds.remove(com.example.domain.model.base.Category.NO_CATEGORY_ID)
-                    newChannelIds.add(0, com.example.domain.model.base.Category.NO_CATEGORY_ID)
+                if (newChannelIds.contains(Category.NO_CATEGORY_ID)) {
+                    newChannelIds.remove(Category.NO_CATEGORY_ID)
+                    newChannelIds.add(0, Category.NO_CATEGORY_ID)
                 }
                 
                 when (val reorderResult = channelUseCases.reorderChannelsUseCase(
                     DocumentId(projectId),
-                    if (currentState.currentCategoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) null else DocumentId(currentState.currentCategoryId),
+                    if (currentState.currentCategoryId == Category.NO_CATEGORY_ID) null else DocumentId(currentState.currentCategoryId),
                     newChannelIds
                 )) {
                     is CustomResult.Success -> {

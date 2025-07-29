@@ -57,7 +57,6 @@ import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
 import com.example.feature_profile.viewmodel.EditProfileEvent

@@ -1,7 +1,6 @@
 package com.example.domain.usecase.auth
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.base.User
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository
 import javax.inject.Inject

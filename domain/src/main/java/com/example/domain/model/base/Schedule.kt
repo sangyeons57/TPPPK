@@ -1,19 +1,17 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.enum.ScheduleStatus
-import com.google.firebase.firestore.DocumentId as FirestoreDocumentId
-import java.time.Instant
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.schedule.ScheduleTitle
-import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.event.schedule.ScheduleCreatedEvent
 import com.example.domain.event.schedule.ScheduleDetailsUpdatedEvent
 import com.example.domain.event.schedule.ScheduleRescheduledEvent
 import com.example.domain.event.schedule.ScheduleStatusChangedEvent
+import com.example.domain.model.AggregateRoot
+import com.example.domain.model.enum.ScheduleStatus
+import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.OwnerId
+import com.example.domain.model.vo.ProjectId
+import com.example.domain.model.vo.schedule.ScheduleContent
+import com.example.domain.model.vo.schedule.ScheduleTitle
+import java.time.Instant
 
 /**
  * 일정 정보를 나타내는 도메인 모델 클래스

@@ -16,7 +16,7 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui"))
-    implementation(project(":data"))
+    implementation(project(":data:data_core"))
 
     // Module-specific dependencies
     implementation(libs.androidx.compose.navigation)

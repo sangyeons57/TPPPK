@@ -4,13 +4,9 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.ProjectRepository
-import com.example.domain.repository.base.MemberRepository
 import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.RepositoryFactory
-import com.example.domain.repository.factory.context.MemberRepositoryFactoryContext
-import com.example.domain.repository.factory.context.AuthRepositoryFactoryContext
-import com.example.domain.model.vo.CollectionPath
+import com.example.domain.repository.base.MemberRepository
+import com.example.domain.repository.base.ProjectRepository
 import javax.inject.Inject
 
 /**

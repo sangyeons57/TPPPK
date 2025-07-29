@@ -1,6 +1,5 @@
 package com.example.domain.usecase.project.structure
 
-import com.example.core_common.constants.Constants
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel

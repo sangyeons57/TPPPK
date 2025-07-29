@@ -16,9 +16,9 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui"))
-    implementation(project(":core:websocket")) // WebSocket 기능
-    implementation(project(":data"))
-    
+    implementation(project(":core:websocket"))
+    implementation(project(":data:data_core")) // WebSocket 기능
+
     // Feature module dependencies
     implementation(project(":feature:feature_chat"))
 

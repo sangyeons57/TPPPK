@@ -4,7 +4,6 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
 import com.example.domain.repository.DefaultRepository
 import com.example.domain.repository.factory.context.DMChannelRepositoryFactoryContext
-import kotlinx.coroutines.flow.Flow
 
 interface DMChannelRepository : DefaultRepository {
     override val factoryContext: DMChannelRepositoryFactoryContext

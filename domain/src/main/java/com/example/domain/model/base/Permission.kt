@@ -1,12 +1,11 @@
 package com.example.domain.model.base
 
 
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
 import java.time.Instant
-import com.example.core_common.util.DateTimeUtil
 
 class Permission private constructor(
     override val id: DocumentId,

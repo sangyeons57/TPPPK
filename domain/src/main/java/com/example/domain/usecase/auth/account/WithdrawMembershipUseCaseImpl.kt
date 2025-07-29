@@ -2,7 +2,6 @@ package com.example.domain.usecase.auth.account
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
-import com.example.domain.event.user.UserAccountWithdrawnEvent
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository

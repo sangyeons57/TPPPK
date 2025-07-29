@@ -2,7 +2,6 @@ package com.example.domain.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.CategoryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

@@ -1,17 +1,13 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.data.project.RolePermission // Added import
-
-import com.example.domain.model.AggregateRoot
-import com.example.domain.event.role.RoleCreatedEvent
 import com.example.domain.event.role.RoleDefaultStatusChangedEvent
 import com.example.domain.event.role.RoleNameChangedEvent
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
 import java.time.Instant
-import java.util.Date
 
 class Role private constructor(
     // Constructor parameters to initialize the state

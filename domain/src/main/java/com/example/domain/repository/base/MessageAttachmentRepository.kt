@@ -1,7 +1,6 @@
 package com.example.domain.repository.base
 
 import android.net.Uri
-import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.vo.DocumentId

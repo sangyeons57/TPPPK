@@ -1,13 +1,10 @@
 package com.example.domain.usecase.user
 
 import com.example.core_common.result.CustomResult
-import com.example.core_common.result.CustomResult.Loading.getOrDefault
-import com.example.core_common.result.CustomResult.Loading.getOrElse
 import com.example.core_common.result.CustomResult.Loading.getOrThrow
 import com.example.core_common.result.resultTry
 import com.example.domain.event.DomainEventPublisher
 import com.example.domain.model.base.User
-import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.repository.base.AuthRepository
 import com.example.domain.repository.base.UserRepository

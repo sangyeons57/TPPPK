@@ -10,7 +10,6 @@ import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.example.domain.repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
 
 /**
  * 지정된 카테고리에 새 프로젝트 채널을 추가하는 유스케이스 인터페이스입니다.

@@ -1,18 +1,15 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.enum.ProjectChannelStatus
-import java.time.Instant
-
-import com.example.domain.model.AggregateRoot
-import com.example.domain.event.projectchannel.ProjectChannelCreatedEvent
 import com.example.domain.event.projectchannel.ProjectChannelNameUpdatedEvent
 import com.example.domain.event.projectchannel.ProjectChannelOrderChangedEvent
+import com.example.domain.model.AggregateRoot
+import com.example.domain.model.enum.ProjectChannelStatus
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import java.time.Instant
 
 class ProjectChannel private constructor(
     initialChannelName: Name,

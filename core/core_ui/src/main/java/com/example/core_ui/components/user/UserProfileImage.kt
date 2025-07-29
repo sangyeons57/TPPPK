@@ -1,32 +1,37 @@
 package com.example.core_ui.components.user
 
 import android.util.Log
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import coil.request.CachePolicy
-import coil.ImageLoader
-import coil.memory.MemoryCache
-import com.example.core_ui.R
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
-import kotlinx.coroutines.tasks.await
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.viewModelScope
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.memory.MemoryCache
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import com.example.core_ui.R
+import com.google.firebase.Firebase
+import com.google.firebase.storage.storage
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * 프로필 이미지 업로드 완료 이벤트
@@ -147,7 +152,7 @@ class UserProfileImageViewModel @Inject constructor(
                 val imageRef = storage.reference.child(pathString)
                 
                 // 파일 존재 여부를 먼저 확인 (404 ERROR 로그 방지)
-                val metadata = imageRef.metadata.await()
+                imageRef.metadata.await()
                 
                 // 파일이 존재하면 URL 요청
                 val uri = imageRef.downloadUrl.await()

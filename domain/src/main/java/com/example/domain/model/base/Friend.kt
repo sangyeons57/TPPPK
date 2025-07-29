@@ -1,17 +1,13 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.AggregateRoot
-import com.example.domain.event.DomainEvent
-import com.example.domain.event.friend.FriendCreatedEvent
 import com.example.domain.event.friend.FriendNameChangedEvent
 import com.example.domain.event.friend.FriendProfileImageChangedEvent
 import com.example.domain.event.friend.FriendStatusChangedEvent
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserName
 import java.time.Instant
 
