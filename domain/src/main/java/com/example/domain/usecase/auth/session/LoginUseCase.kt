@@ -1,14 +1,10 @@
 package com.example.domain.usecase.auth.session
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.enum.UserAccountStatus
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
-import com.google.firebase.firestore.Source
+import com.example.domain.repository.local.LocalUserRepository
+import com.example.domain.repository.remote.AuthRepository
 import javax.inject.Inject
 
 /**
@@ -24,7 +20,7 @@ class WithdrawnAccountException(message: String) : Exception(message)
 
 class LoginUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: LocalUserRepository
 ) {
     // Centralized TAG for consistent Logcat filtering during debugging
     companion object {
@@ -41,65 +37,16 @@ class LoginUseCase @Inject constructor(
         email: UserEmail,
         password: String
     ): CustomResult<UserSession, Exception> {
-        // 시작 로그 – 입력된 이메일 기준으로 로그인 시도
-        android.util.Log.d(TAG, "Attempting login for email=${email.value}")
-        return when (val loginResult = authRepository.login(email, password)) {
-            is CustomResult.Success -> {
-                val userSession = loginResult.data
-                // AuthRepository 에서 세션 획득 성공
-                android.util.Log.d(TAG, "Auth success. Session=${userSession}")
-                // After successful authentication, fetch user details to check account status
-                android.util.Log.d(TAG, "Fetching user details from server for userId=${userSession.userId}")
-                when (val userResult = userRepository.findById(DocumentId.from(userSession.userId), Source.SERVER)) {
-                    is CustomResult.Success -> {
-                        // Firestore 에서 가져온 사용자 정보 (서버)
-                        val user = userResult.data as User
-                        android.util.Log.d(TAG, "Fetched User from server: accountStatus=${user.accountStatus}")
-                        if (user.accountStatus == UserAccountStatus.WITHDRAWN) {
-                            android.util.Log.w(TAG, "Account is WITHDRAWN, logging out completely")
-                            authRepository.logoutCompletely()
-                            CustomResult.Failure(WithdrawnAccountException("탈퇴한 계정입니다. (서버 확인)"))
-                        } else {
-                            // Account is active, return the original success result with session
-                            android.util.Log.d(TAG, "Account is active, login successful")
-                            loginResult
-                        }
-                    }
-                    is CustomResult.Failure -> {
-                        // Failed to fetch user details – sign out to avoid stale session and propagate failure
-                        val errorMessage = when {
-                            userResult.error.message?.contains("client has already been terminated", ignoreCase = true) == true -> 
-                                "로그인 처리 중 시스템 상태가 변경되었습니다. 잠시 후 다시 시도해주세요."
-                            userResult.error.message?.contains("network", ignoreCase = true) == true -> 
-                                "네트워크 연결을 확인해주세요."
-                            userResult.error.message?.contains("timeout", ignoreCase = true) == true -> 
-                                "서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요."
-                            userResult.error.message?.contains("permission", ignoreCase = true) == true -> 
-                                "사용자 정보 접근 권한이 없습니다. 관리자에게 문의하세요."
-                            else -> 
-                                "사용자 정보를 가져오는 중 오류가 발생했습니다. 다시 시도해주세요."
-                        }
-                        android.util.Log.e(TAG, "Failed to fetch user details after login: ${userResult.error.message}", userResult.error)
-                        authRepository.logoutCompletely()
-                        CustomResult.Failure(Exception(errorMessage))
-                    }
-                    else -> {
-                        android.util.Log.e(TAG, "Unexpected userDetailsResult state: $userResult")
-                        authRepository.logoutCompletely()
-                        CustomResult.Failure(Exception("사용자 정보 조회 중 예상치 못한 오류가 발생했습니다."))
-                    }
-                }
-            }
-            is CustomResult.Failure -> {
-                // Login authentication failed, log failure reason
-                android.util.Log.e(TAG, "Authentication failed: ${loginResult.error.message}", loginResult.error)
-                // Login authentication failed, return the original failure
-                loginResult
-            }
-            else -> {
-                android.util.Log.e(TAG, "Unexpected login result state: $loginResult")
-                CustomResult.Failure(Exception("로그인 처리 중 예상치 못한 오류가 발생했습니다."))
-            }
-        }
+        // TODO: Implement LoginUseCase using LocalUserRepository
+        // This should:
+        // 1. Authenticate user using authRepository.login(email, password)
+        // 2. After successful authentication, fetch user details from local storage using userRepository.findById()
+        // 3. Check user account status (active/withdrawn) from local data
+        // 4. Handle withdrawn accounts by logging out and returning appropriate error
+        // 5. Return successful UserSession for active accounts
+        // 6. Implement proper error handling with localized messages
+        // 7. Use proper logging with TAG for debugging
+        // Note: This implementation should work with LocalUserRepository instead of remote server calls
+        TODO("LoginUseCase implementation pending - convert to use LocalUserRepository for SSOT pattern")
     }
 }

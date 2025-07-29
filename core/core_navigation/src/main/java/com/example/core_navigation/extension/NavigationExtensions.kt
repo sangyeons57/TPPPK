@@ -3,10 +3,10 @@ package com.example.core_navigation.extension
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
-import androidx.lifecycle.SavedStateHandle
 import com.example.core_navigation.core.NavigationResultManager
 import com.example.core_navigation.core.TypeSafeRoute
 import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath

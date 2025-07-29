@@ -1,13 +1,8 @@
 package com.example.domain.usecase.auth.account
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.event.EventDispatcher
-import com.example.domain.event.user.UserAccountWithdrawnEvent
-import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
-import kotlinx.coroutines.flow.first
+import com.example.domain.repository.local.LocalUserRepository
+import com.example.domain.repository.remote.AuthRepository
 import javax.inject.Inject
 
 /**
@@ -30,52 +25,21 @@ interface WithdrawMembershipUseCase {
  */
 class WithdrawMembershipUseCaseImpl @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: LocalUserRepository
 ) : WithdrawMembershipUseCase {
 
     override suspend operator fun invoke(): CustomResult<Unit, Exception> {
-        // "Attempting user withdrawal process.")
-        // 1. Get current user's UID
-        val currentUserResult = authRepository.getCurrentUserSession()
-        val session = when (currentUserResult) {
-            is CustomResult.Success -> currentUserResult.data
-            is CustomResult.Failure -> {
-                // Failed to get current user: ${currentUserResult.error}
-                return CustomResult.Failure(currentUserResult.error ?: Exception("Failed to get current user information."))
-            }
-            else -> {
-                // Unknown error while fetching current user
-                return CustomResult.Failure(Exception("Unknown error fetching user information."))
-            }
-        }
-
-        val uid = session.userId
-        // Current user UID: $uid. Proceeding with data anonymization.
-
-        // 2. Process user data withdrawal (anonymize in Firestore)
-        when ( val userResult = userRepository.observe(DocumentId.from(uid)).first()) {
-            is CustomResult.Success -> {
-                val user = userResult.data as User
-                user.markAsWithdrawn()
-                val result = userRepository.save(user)
-                return when (result) {
-                    is CustomResult.Success -> {
-                        // User data withdrawal successful for UID: $uid.
-                        EventDispatcher.publish(user)
-                        CustomResult.Success(Unit)
-                    }
-                    is CustomResult.Failure -> CustomResult.Failure(result.error)
-                    else -> CustomResult.Failure(Exception("Unknown error during data processing."))
-                }
-            }
-            is CustomResult.Failure -> {
-                // "Failed to process user data withdrawal for UID: $uid.", userResult.error)
-                return CustomResult.Failure(userResult.error)
-            }
-            else -> {
-                 // "Unknown error during data processing for UID: $uid.")
-                return CustomResult.Failure(Exception("Unknown error during data processing."))
-            }
-        }
+        // TODO: Implement WithdrawMembershipUseCaseImpl using LocalUserRepository
+        // This should:
+        // 1. Get current user session using authRepository.getCurrentUserSession()
+        // 2. Extract user ID from session and handle authentication errors
+        // 3. Observe user data from local storage using userRepository.observe(DocumentId.from(uid)).first()
+        // 4. Mark user as withdrawn using user.markAsWithdrawn()
+        // 5. Save updated user data using userRepository.save(user)
+        // 6. Publish user withdrawal event using EventDispatcher.publish(user)
+        // 7. Handle all CustomResult states appropriately
+        // 8. Return CustomResult.Success(Unit) on successful withdrawal
+        // Note: This should work with LocalUserRepository for local data consistency
+        TODO("WithdrawMembershipUseCaseImpl implementation pending - convert to use LocalUserRepository for SSOT pattern")
     }
 }

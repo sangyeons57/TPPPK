@@ -45,21 +45,6 @@ class Friend private constructor(
     var status: FriendStatus = initialStatus
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_STATUS to status,
-            KEY_REQUESTED_AT to requestedAt,
-            KEY_ACCEPTED_AT to acceptedAt,
-            KEY_NAME to name.value,
-            KEY_PROFILE_IMAGE_URL to profileImageUrl?.value,
-            KEY_CREATED_AT to createdAt,
-            KEY_UPDATED_AT to updatedAt
-        )
-    }
 
     // --- Business Methods ---
 

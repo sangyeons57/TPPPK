@@ -63,30 +63,28 @@ configurations.all {
 dependencies {
 
     // Core modules
-    implementation(project(":domain"))
-    implementation(project(":core:core_common"))
 
     // Firebase App Check
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.appcheck.debug)
     debugImplementation(libs.firebase.appcheck.debug)
-    implementation(libs.firebase.messaging.ktx)
-
-    implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
     // Task.await() 사용을 위한 의존성 추가
     implementation(libs.kotlinx.coroutines.play.services)
-    implementation(project(":app-api")) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
+    implementation(project(":app-api"))
+    implementation(project(":data:data_core")) // 버전은 libs.versions.toml 또는 직접 지정 (예: "1.7.3")
 
     // app_api 모듈 추가 - app에서 구현을 제공할 API를 정의
 
-    implementation(project(":data"))
-
+    implementation(project(":domain"))
     implementation(project(":core:core_ui"))
     implementation(project(":core:core_navigation"))
-
+    implementation(project(":core:websocket"))
+    implementation(project(":core:core_common"))
 
     // ★ 네비게이션 그래프에서 직접 호출하는 모든 Feature 모듈 의존성 추가
     implementation(project(":feature:feature_main"))

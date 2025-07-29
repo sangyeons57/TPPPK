@@ -2,7 +2,7 @@ package com.example.feature_settings.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.migration.ChannelMigrationTool
+import com.example.data_core.migration.ChannelMigrationTool
 import com.example.feature_settings.ui.MigrationStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

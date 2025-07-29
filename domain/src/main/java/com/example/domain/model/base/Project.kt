@@ -1,18 +1,15 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import java.time.Instant
-
-import com.example.domain.model.AggregateRoot
-import com.example.domain.event.project.ProjectCreatedEvent
-import com.example.domain.event.project.ProjectImageUrlChangedEvent
 import com.example.domain.event.project.ProjectNameChangedEvent
 import com.example.domain.event.project.ProjectStatusChangedEvent
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.OwnerId
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.project.ProjectStatus
+import java.time.Instant
 
 class Project private constructor(
     initialName: ProjectName,
@@ -37,20 +34,6 @@ class Project private constructor(
     var status: ProjectStatus = initialStatus
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    // Implementation of abstract method from AggregateRoot
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_NAME to this.name.value,
-            KEY_STATUS to this.status.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_OWNER_ID to this.ownerId.value
-        )
-    }
 
     /**
      * Changes the name of the project, firing a domain event if the name is different.

@@ -1,17 +1,13 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.data.project.RolePermission // Added import
-
-import com.example.domain.model.AggregateRoot
-import com.example.domain.event.role.RoleCreatedEvent
 import com.example.domain.event.role.RoleDefaultStatusChangedEvent
 import com.example.domain.event.role.RoleNameChangedEvent
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.role.RoleIsDefault
 import java.time.Instant
-import java.util.Date
 
 class Role private constructor(
     // Constructor parameters to initialize the state
@@ -31,19 +27,6 @@ class Role private constructor(
     var isDefault: RoleIsDefault = initialIsDefault
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    // Implementation of abstract method from AggregateRoot
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_NAME to this.name.value,
-            KEY_IS_DEFAULT to this.isDefault.value,
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_CREATED_AT to this.createdAt,
-        )
-    }
 
     /**
      * Changes the name of the role, firing a domain event if the name is actually different.

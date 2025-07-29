@@ -1,9 +1,8 @@
-package com.example.domain.usecase.auth
+package com.example.domain.usecase.auth.registration
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.base.AuthRepository
+import com.example.domain.repository.remote.AuthRepository
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * 현재 인증된 사용자에게 이메일 인증 메일을 발송하는 UseCase.

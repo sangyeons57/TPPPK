@@ -38,23 +38,7 @@ class Task private constructor(
     var checkedAt: Instant? = initialCheckedAt
         private set
 
-    init {
-        setOriginalState()
-    }
 
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_TASK_TYPE to this.taskType.value,
-            KEY_STATUS to this.status.value,
-            KEY_CONTENT to this.content.value,
-            KEY_ORDER to this.order.value,
-            KEY_CHECKED_BY to this.checkedBy?.internalValue,
-            KEY_CHECKED_AT to this.checkedAt,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt
-        )
-    }
-    
     /**
      * checkedAt이 서버 타임스탬프 마커인지 확인
      */

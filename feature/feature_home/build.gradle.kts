@@ -16,8 +16,8 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui"))
-    implementation(project(":data"))
-    
+    implementation(project(":data:data_core"))
+
     // --- Feature 모듈 의존성 ---
     implementation(project(":feature:feature_edit_category"))
     implementation(project(":feature:feature_edit_channel"))

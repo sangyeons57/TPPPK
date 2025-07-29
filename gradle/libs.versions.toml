@@ -9,7 +9,7 @@ pluginGms = "4.4.3"
 hilt = "2.57"
 coil = "2.7.0"
 converterGson = "3.0.0"
-firebaseBom = "33.16.0"
+firebaseBom = "34.0.0"
 gson = "2.13.1"
 coreKtx = "1.16.0"
 junit = "4.13.2"
@@ -36,8 +36,8 @@ workRuntime = "2.10.2"
 accompanistPermissions = "0.37.3"
 foundationAndroid = "1.8.3"
 leakcanary = "2.14"
-paging = "3.3.5"
-googleCloudLogging = "3.15.6"
+paging = "3.3.6"
+googleCloudLogging = "3.23.0"
 
 [libraries]
 # Core Android libraries
@@ -81,7 +81,6 @@ coil = { module = "io.coil-kt:coil", version.ref = "coil" }
 
 # Network libraries
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
-okhttp-websocket = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
 
@@ -94,11 +93,11 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 
 # Firebase libraries
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx" }
-firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
-firebase-functions-ktx = { group = "com.google.firebase", name = "firebase-functions-ktx" }
-firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
-firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx"}
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage"}
 firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity" }
 firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" }
 

@@ -15,20 +15,11 @@ class Permission private constructor(
     override val updatedAt: Instant,
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
 
     fun getPermissionRole() : RolePermission {
         return RolePermission.valueOf(this.id.value)
     }
 
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_CREATED_AT to this.createdAt,
-        )
-    }
 
     companion object {
         const val COLLECTION_NAME = "permissions" // Sub-collection of Role

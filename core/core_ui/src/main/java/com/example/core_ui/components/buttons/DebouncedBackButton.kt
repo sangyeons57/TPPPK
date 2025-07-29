@@ -12,8 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import com.example.core_ui.R
 import com.example.core_common.constants.Constants
+import com.example.core_ui.R
 
 /**
  * 중복 클릭 방지 기능이 있는 뒤로 가기 아이콘 버튼입니다.

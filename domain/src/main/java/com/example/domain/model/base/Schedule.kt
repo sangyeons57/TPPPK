@@ -49,23 +49,6 @@ class Schedule private constructor(
     var status: ScheduleStatus = initialStatus
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_PROJECT_ID to this.projectId?.value,
-            KEY_CREATOR_ID to this.creatorId.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_TITLE to this.title.value,
-            KEY_CONTENT to this.content.value,
-            KEY_START_TIME to this.startTime,
-            KEY_END_TIME to this.endTime,
-            KEY_STATUS to this.status,
-            KEY_UPDATED_AT to this.updatedAt,
-        )
-    }
 
     /**
      * Updates the schedule's main information.

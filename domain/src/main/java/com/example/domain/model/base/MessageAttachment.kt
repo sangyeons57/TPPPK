@@ -39,9 +39,6 @@ class MessageAttachment private constructor(
     private val stateMachine: UploadStateMachine = UploadStateMachine()
 ) : AggregateRoot() {
 
-    init {
-        setOriginalState()
-    }
 
     val attachmentType: MessageAttachmentType = initialAttachmentType
     val attachmentUrl: MessageAttachmentUrl = initialAttachmentUrl
@@ -70,20 +67,6 @@ class MessageAttachment private constructor(
     val uploadProgress: MessageAttachmentUploadProgress
         get() = _uploadState.value.progress
 
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        val currentUploadState = _uploadState.value
-        return mapOf(
-            KEY_ATTACHMENT_TYPE to this.attachmentType.value,
-            KEY_ATTACHMENT_URL to this.attachmentUrl.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt,
-            KEY_FILE_NAME to this.fileName?.value,
-            KEY_FILE_SIZE to this.fileSize?.value,
-            KEY_THUMBNAIL_URL to this.thumbnailUrl?.value,
-            KEY_UPLOAD_STATUS to currentUploadState.status.value,
-            KEY_UPLOAD_PROGRESS to currentUploadState.progress.value,
-        )
-    }
 
     /**
      * 업로드 진행률을 업데이트합니다.

@@ -114,7 +114,7 @@ import com.example.feature_chat.model.ProjectMember
 import com.example.feature_chat.model.ProjectRole
 import com.example.feature_chat.ui.components.ConnectionStatusBar
 import com.example.feature_chat.ui.components.MentionStyledInputField
-import com.example.feature_chat.viewmodel.WebSocketChatViewModel
+import com.example.feature_chat.viewmodel.ChatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -309,7 +309,7 @@ fun ChatScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: WebSocketChatViewModel = hiltViewModel()
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }

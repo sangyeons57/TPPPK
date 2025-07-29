@@ -43,9 +43,6 @@ class DMChannel private constructor(
     var blockedByMap: Map<UserId, UserId> = initialBlockedByMap
         private set
 
-    init {
-        setOriginalState()
-    }
 
     /**
      * Updates the preview and timestamp of the last message in this DM channel.
@@ -220,15 +217,6 @@ class DMChannel private constructor(
      */
     fun getBlockerUsers(): List<UserId> = blockedByMap.keys.toList()
 
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_PARTICIPANTS to participants.map { it.value },
-            KEY_STATUS to status.value,
-            KEY_BLOCKED_BY_MAP to blockedByMap.mapKeys { it.key.value }.mapValues { it.value.value },
-            KEY_CREATED_AT to createdAt,
-            KEY_UPDATED_AT to updatedAt,
-        )
-    }
 
     // fun addParticipant(participantId: DocumentId, currentTime: Instant)
     // fun removeParticipant(participantId: DocumentId, currentTime: Instant)

@@ -6,21 +6,19 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.Category
-import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
 import com.example.feature_home.model.ProjectStructureItem
 import com.example.feature_home.model.ProjectStructureUiState
-import com.example.feature_home.model.ProjectUiModel
 import com.example.feature_home.viewmodel.service.HomeServiceProvider
 import com.example.feature_home.viewmodel.service.HomeServices
-import com.example.feature_home.viewmodel.service.DialogManagementService
 import com.example.feature_home.viewmodel.service.LoadUserDataService
-import com.example.domain.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +27,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
 import javax.inject.Inject
 
 /**
@@ -53,6 +50,9 @@ class HomeViewModel @Inject constructor(
     
     // 선택된 채널 ID
     private var selectedChannelId: DocumentId? = null
+
+    // 마지막으로 로드된 프로젝트 ID (구조 중복 로드 방지용)
+    private var lastProjectId: DocumentId? = null
     
     // Job management for Flow collectors to prevent memory leaks
     private var userStreamJob: Job? = null
@@ -349,64 +349,81 @@ class HomeViewModel @Inject constructor(
             Log.w("HomeViewModel", "Services not initialized, skipping loadProjectStructure")
             return
         }
-        
-        projectStructureJob?.cancel()
-        projectStructureJob = viewModelScope.launch {
-            currentServices.projectSelectionService.getProjectStructureStream(projectId).collectLatest { result ->
-                when (result) {
-                    is CustomResult.Success -> {
-                        val structure = result.data
-                        
-                        // Apply current expansion states from CategoryManagementService
-                        val updatedCategories = structure.categories.map { category ->
-                            val isExpanded = currentServices.categoryManagementService.getCategoryExpansionState(projectId, category.id)
-                            category.copy(isExpanded = isExpanded)
-                        }
-                        
-                        // Rebuild unified structure items with updated expansion states
-                        val updatedUnifiedItems = mutableListOf<com.example.feature_home.model.ProjectStructureItem>()
-                        
-                        // Add updated categories
-                        updatedCategories.forEach { category ->
-                            updatedUnifiedItems.add(
-                                com.example.feature_home.model.ProjectStructureItem.CategoryItem(
-                                    category = category,
-                                    globalOrder = category.order
+
+        // Only cancel if we're switching to a different project or if no job exists
+        if (projectStructureJob?.isActive != true || lastProjectId != projectId) {
+            projectStructureJob?.cancel()
+            lastProjectId = projectId
+            projectStructureJob = viewModelScope.launch {
+                currentServices.projectSelectionService.getProjectStructureStream(projectId)
+                    .collect { result ->
+                        when (result) {
+                            is CustomResult.Success -> {
+                                val structure = result.data
+
+                                // Apply current expansion states from CategoryManagementService
+                                val updatedCategories = structure.categories.map { category ->
+                                    val isExpanded =
+                                        currentServices.categoryManagementService.getCategoryExpansionState(
+                                            projectId,
+                                            category.id
+                                        )
+                                    category.copy(isExpanded = isExpanded)
+                                }
+
+                                // Rebuild unified structure items with updated expansion states
+                                val updatedUnifiedItems =
+                                    mutableListOf<ProjectStructureItem>()
+
+                                // Add updated categories
+                                updatedCategories.forEach { category ->
+                                    updatedUnifiedItems.add(
+                                        ProjectStructureItem.CategoryItem(
+                                            category = category,
+                                            globalOrder = category.order
+                                        )
+                                    )
+                                }
+
+                                // Add direct channels
+                                structure.directChannel.forEach { channel ->
+                                    val globalOrder = channel.order.value
+                                    updatedUnifiedItems.add(
+                                        ProjectStructureItem.DirectChannelItem(
+                                            channel = channel,
+                                            globalOrder = globalOrder
+                                        )
+                                    )
+                                }
+
+                                val updatedStructure = structure.copy(
+                                    categories = updatedCategories,
+                                    unifiedStructureItems = updatedUnifiedItems.sortedBy { it.globalOrder }
                                 )
-                            )
-                        }
-                        
-                        // Add direct channels
-                        structure.directChannel.forEach { channel ->
-                            val globalOrder = channel.order.value
-                            updatedUnifiedItems.add(
-                                ProjectStructureItem.DirectChannelItem(
-                                    channel = channel,
-                                    globalOrder = globalOrder
+
+                                _uiState.update { state ->
+                                    state.copy(projectStructure = updatedStructure)
+                                }
+
+                                Log.d(
+                                    "HomeViewModel",
+                                    "Project structure loaded with ${updatedCategories.size} categories, expansion states preserved"
                                 )
-                            )
+                            }
+
+                            is CustomResult.Failure -> {
+                                Log.e(
+                                    "HomeViewModel",
+                                    "Failed to load project structure",
+                                    result.error
+                                )
+                            }
+
+                            else -> {
+                                Log.d("HomeViewModel", "Loading project structure...")
+                            }
                         }
-                        
-                        val updatedStructure = structure.copy(
-                            categories = updatedCategories,
-                            unifiedStructureItems = updatedUnifiedItems.sortedBy { it.globalOrder }
-                        )
-                        
-                        _uiState.update { state ->
-                            state.copy(projectStructure = updatedStructure)
-                        }
-                        
-                        Log.d("HomeViewModel", "Project structure loaded with ${updatedCategories.size} categories, expansion states preserved")
                     }
-                    
-                    is CustomResult.Failure -> {
-                        Log.e("HomeViewModel", "Failed to load project structure", result.error)
-                    }
-                    
-                    else -> {
-                        Log.d("HomeViewModel", "Loading project structure...")
-                    }
-                }
             }
         }
     }
@@ -437,12 +454,12 @@ class HomeViewModel @Inject constructor(
         }
         
         // Rebuild unified structure items with updated expansion states
-        val updatedUnifiedItems = mutableListOf<com.example.feature_home.model.ProjectStructureItem>()
+        val updatedUnifiedItems = mutableListOf<ProjectStructureItem>()
         
         // Add updated categories
         updatedCategories.forEach { cat ->
             updatedUnifiedItems.add(
-                com.example.feature_home.model.ProjectStructureItem.CategoryItem(
+                ProjectStructureItem.CategoryItem(
                     category = cat,
                     globalOrder = cat.order
                 )
@@ -453,7 +470,7 @@ class HomeViewModel @Inject constructor(
         _uiState.value.projectStructure.directChannel.forEachIndexed { index, channel ->
             val globalOrder = index
             updatedUnifiedItems.add(
-                com.example.feature_home.model.ProjectStructureItem.DirectChannelItem(
+                ProjectStructureItem.DirectChannelItem(
                     channel = channel,
                     globalOrder = globalOrder
                 )
@@ -696,8 +713,8 @@ class HomeViewModel @Inject constructor(
         // 카테고리 상태 정리
         _uiState.value.selectedProjectId?.let { projectId ->
             services?.let { currentServices ->
-            currentServices.categoryManagementService.clearCategoryStates(projectId)
-        }
+                currentServices.categoryManagementService.clearCategoryStates(projectId)
+            }
         }
         
         Log.d("HomeViewModel", "HomeViewModel cleared")

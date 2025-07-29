@@ -1,14 +1,11 @@
 package com.example.domain.model.base
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.ServerTimestamp
-import java.time.Instant
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.AggregateRoot
-import com.example.domain.event.reaction.ReactionAddedEvent
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.reaction.Emoji
-import com.example.core_common.util.DateTimeUtil
+import java.time.Instant
 
 class Reaction private constructor(
     initialUserId: UserId, // The user who reacted
@@ -22,22 +19,7 @@ class Reaction private constructor(
     val userId: UserId = initialUserId
     val emoji: Emoji = initialEmoji
 
-    init {
-        setOriginalState()
-    }
 
-    /**
-     * A Reaction's state is immutable once created.
-     * There are no properties to update, so this map is empty.
-     */
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_USER_ID to this.userId.value,
-            KEY_EMOJI to this.emoji.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt,
-        )
-    }
 
     companion object {
         const val COLLECTION_NAME = "reactions"

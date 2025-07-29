@@ -13,7 +13,7 @@ pluginManagement {
 }
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.10.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -27,11 +27,16 @@ rootProject.name = "TeamnovaPersonalProjectProjectingKotlin"
 include(":app")
 include(":app-api")
 include(":navigation")
-include(":data")
 include(":domain")
+include(":mapper")
 
+include(":data:data_core")
+include(":data:data_model")
+
+include(":core:websocket")
 include(":core:core_common")
 include(":core:core_ui")
+
 include(":core:core_navigation")
 include(":feature:feature_chat")
 include(":feature:feature_splash")

@@ -8,9 +8,27 @@ import com.example.domain.model.base.*
  * corresponding domain model, providing a single source of truth for collection names.
  */
 @JvmInline
-value class CollectionPath(val value: String) {
+value class CollectionPath(private val value: String) {
+
+    fun getPath() : String {
+        return value
+    }
+
+    fun isEmpty(): Boolean {
+        return this == EMPTY
+    }
+
+    fun checkEmptyAndThrow() {
+        if (this == EMPTY) {
+            throw EMPTY_EXCEPTION
+        }
+    }
+
     companion object {
-        
+
+        val EMPTY: CollectionPath get() = CollectionPath("")
+        val EMPTY_EXCEPTION : Exception get() = Exception("Empty collection path")
+
         /* -------------------- Static Root Collections -------------------- */
         val users: CollectionPath get() = CollectionPath(User.COLLECTION_NAME)
         val dmChannels: CollectionPath get() = CollectionPath(DMChannel.COLLECTION_NAME)

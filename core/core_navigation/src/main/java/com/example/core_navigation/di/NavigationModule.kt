@@ -1,7 +1,7 @@
 package com.example.core_navigation.di
 
-import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationManagerImpl
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationResultManager
 import dagger.Binds
 import dagger.Module

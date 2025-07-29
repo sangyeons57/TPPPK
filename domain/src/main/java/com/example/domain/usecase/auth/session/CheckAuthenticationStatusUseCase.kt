@@ -1,9 +1,8 @@
-package com.example.domain.usecase.auth
+package com.example.domain.usecase.auth.session
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.base.User
-import com.example.domain.repository.base.AuthRepository
-import com.example.domain.repository.base.UserRepository
+import com.example.domain.repository.local.LocalUserRepository
+import com.example.domain.repository.remote.AuthRepository
 import javax.inject.Inject
 
 /**
@@ -19,7 +18,7 @@ interface CheckAuthenticationStatusUseCase {
  * @param authRepository 인증 관련 기능을 제공하는 Repository
  */
 class CheckAuthenticationStatusUseCaseImpl @Inject constructor(
-    private val userRepository: UserRepository,
+    private val userRepository: LocalUserRepository,
     private val authRepository: AuthRepository
 ) : CheckAuthenticationStatusUseCase {
 
@@ -28,40 +27,19 @@ class CheckAuthenticationStatusUseCaseImpl @Inject constructor(
      * @return CustomResult<Boolean, Exception> 로그인되고 이메일 인증이 완료된 경우 true
      */
     override suspend fun invoke(): CustomResult<Boolean, Exception> {
-        return try {
-            // Step 1: Check if user is logged in
-            if (!authRepository.isLoggedIn()) {
-                return CustomResult.Success(false)
-            }
-
-            // Step 2: Check email verification status
-            val emailVerificationResult = authRepository.checkEmailVerification()
-            when (emailVerificationResult) {
-                is CustomResult.Success -> {
-                    // Return true only if email is verified
-                    CustomResult.Success(emailVerificationResult.data)
-                }
-                is CustomResult.Failure -> {
-                    // Handle email verification check failure
-                    // Check if it's a network/timeout issue vs authentication issue
-                    val errorMessage = emailVerificationResult.error.message ?: ""
-                    
-                    if (errorMessage.contains("timed out", ignoreCase = true) || 
-                        errorMessage.contains("network", ignoreCase = true)) {
-                        // For network issues, try to proceed with cached status
-                        // but mark as not fully verified for safety
-                        CustomResult.Success(false)
-                    } else {
-                        // For authentication errors, the user should re-login
-                        CustomResult.Failure(emailVerificationResult.error)
-                    }
-                }
-                else -> {
-                    CustomResult.Success(false)
-                }
-            }
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
+        // TODO: Implement CheckAuthenticationStatusUseCase using LocalUserRepository
+        // This should:
+        // 1. Check if user is logged in using authRepository.isLoggedIn()
+        // 2. Return Success(false) if not logged in
+        // 3. Check email verification status using authRepository.checkEmailVerification()
+        // 4. Handle email verification CustomResult states:
+        //    - Success: return the email verification status
+        //    - Failure: distinguish between network/timeout vs authentication errors
+        //    - For network issues: return Success(false) for safety
+        //    - For auth errors: propagate the failure
+        //    - Other states: return Success(false)
+        // 5. Wrap entire operation in try-catch for exception handling
+        // Note: This should work with LocalUserRepository for consistent data access
+        TODO("CheckAuthenticationStatusUseCase implementation pending - convert to use LocalUserRepository for SSOT pattern")
     }
 } 

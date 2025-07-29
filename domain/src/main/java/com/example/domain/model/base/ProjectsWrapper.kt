@@ -26,19 +26,6 @@ class ProjectsWrapper(
     var projectImageUrl: ImageUrl? = initialProjectImageUrl
         private set
 
-    init {
-        setOriginalState()
-    }
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return mapOf(
-            KEY_ORDER to this.order.value,
-            KEY_PROJECT_NAME to this.projectName.value,
-            KEY_PROJECT_IMAGE_URL to this.projectImageUrl?.value,
-            KEY_CREATED_AT to this.createdAt,
-            KEY_UPDATED_AT to this.updatedAt
-        )
-    }
 
     companion object {
         const val COLLECTION_NAME = "projects_wrapper"
