@@ -19,7 +19,6 @@ import com.example.data_core.dao.FriendsDao
 import com.example.data_core.dao.MembersDao
 import com.example.data_core.dao.MessageAttachmentsDao
 import com.example.data_core.dao.MessagesDao
-import com.example.data_core.dao.OutboxDao
 import com.example.data_core.dao.PermissionsDao
 import com.example.data_core.dao.ProjectChannelsDao
 import com.example.data_core.dao.ProjectInvitationsDao
@@ -31,26 +30,26 @@ import com.example.data_core.dao.SchedulesDao
 import com.example.data_core.dao.SyncMetadataDao
 import com.example.data_core.dao.TasksDao
 import com.example.data_core.dao.UsersDao
-import com.example.data_core.model.local.CategoriesEntity
-import com.example.data_core.model.local.DmChannelsEntity
-import com.example.data_core.model.local.DmWrapperEntity
-import com.example.data_core.model.local.FriendsEntity
-import com.example.data_core.model.local.MembersEntity
-import com.example.data_core.model.local.MessageAttachmentsEntity
-import com.example.data_core.model.local.MessagesEntity
-import com.example.data_core.model.local.OutboxEntity
-import com.example.data_core.model.local.PermissionsEntity
-import com.example.data_core.model.local.ProjectChannelsEntity
-import com.example.data_core.model.local.ProjectInvitationsEntity
-import com.example.data_core.model.local.ProjectsEntity
-import com.example.data_core.model.local.ProjectsWrapperEntity
-import com.example.data_core.model.local.ReactionsEntity
-import com.example.data_core.model.local.RolesEntity
-import com.example.data_core.model.local.SchedulesEntity
-import com.example.data_core.model.local.SyncMetadataEntity
-import com.example.data_core.model.local.TasksEntity
-import com.example.data_core.model.local.UsersEntity
 import com.example.data_core.util.InstantConverter
+import com.example.data_model.local.CategoriesEntity
+import com.example.data_model.local.DmChannelsEntity
+import com.example.data_model.local.DmWrapperEntity
+import com.example.data_model.local.FriendsEntity
+import com.example.data_model.local.MembersEntity
+import com.example.data_model.local.MessageAttachmentsEntity
+import com.example.data_model.local.MessagesEntity
+import com.example.data_model.local.OutboxEntity
+import com.example.data_model.local.PermissionsEntity
+import com.example.data_model.local.ProjectChannelsEntity
+import com.example.data_model.local.ProjectInvitationsEntity
+import com.example.data_model.local.ProjectsEntity
+import com.example.data_model.local.ProjectsWrapperEntity
+import com.example.data_model.local.ReactionsEntity
+import com.example.data_model.local.RolesEntity
+import com.example.data_model.local.SchedulesEntity
+import com.example.data_model.local.SyncMetadataEntity
+import com.example.data_model.local.TasksEntity
+import com.example.data_model.local.UsersEntity
 
 /**
  * 애플리케이션 메인 Room Database
@@ -91,6 +90,8 @@ import com.example.data_core.util.InstantConverter
 )
 @TypeConverters(InstantConverter::class)
 abstract class AppDatabase : RoomDatabase() {
+
+    abstract val ProjectsEntity: Any
 
     // === Domain DAOs (17) ===
     abstract fun usersDao(): UsersDao

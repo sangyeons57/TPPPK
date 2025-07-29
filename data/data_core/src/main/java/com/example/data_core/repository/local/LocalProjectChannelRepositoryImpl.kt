@@ -2,16 +2,15 @@ package com.example.data_core.repository.local
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.data_core.dao.OutboxDao
 import com.example.data_core.dao.ProjectChannelsDao
 import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
-import com.example.data_model.local.OutboxEntity
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelStatus
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.repository.infrastructure.OutboxRepository
 import com.example.domain.repository.local.LocalProjectChannelRepository
 import com.example.mapper.ProjectChannelEntityMapper
 import kotlinx.coroutines.flow.Flow
@@ -52,7 +51,7 @@ import javax.inject.Singleton
 @Singleton
 class LocalProjectChannelRepositoryImpl @Inject constructor(
     private val projectChannelsDao: ProjectChannelsDao,
-    private val outboxDao: OutboxDao,
+    private val outboxRepository: OutboxRepository,
     private val mapper: ProjectChannelEntityMapper
 ) : BaseLocalRepositoryImpl<ProjectChannel>(), LocalProjectChannelRepository {
 
@@ -327,16 +326,28 @@ class LocalProjectChannelRepositoryImpl @Inject constructor(
             // 1. Room DB에 저장
             projectChannelsDao.insertChannel(mapper.toEntity(channel))
 
-            // 2. Outbox에 동기화 작업 추가
+            // 2. OutboxRepository를 통한 동기화 작업 추가
             val operation = if (channel.isNew) "CREATE" else "UPDATE"
-            addToOutbox(
-                channelId = channel.id.value,
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = channel.id.value,
                 operation = operation,
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
 
-            Log.d(TAG, "Channel saved and added to outbox: ${channel.id}")
-            CustomResult.Success(Unit)
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    Log.d(TAG, "Channel saved and added to outbox: ${channel.id}")
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "Failed to add channel to outbox", outboxResult.error)
+                    // DB 저장은 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
+
 
         } catch (e: Exception) {
             Log.e(TAG, "saveChannel failed", e)
@@ -371,15 +382,27 @@ class LocalProjectChannelRepositoryImpl @Inject constructor(
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             projectChannelsDao.deleteChannel(channelId)
 
-            // 2. Outbox에 삭제 작업 추가
-            addToOutbox(
-                channelId = channelId,
+            // 2. OutboxRepository를 통한 삭제 작업 추가
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = channelId,
                 operation = "DELETE",
                 payload = null
             )
 
-            Log.d(TAG, "Channel deleted and added to outbox: $channelId")
-            CustomResult.Success(Unit)
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    Log.d(TAG, "Channel deleted and added to outbox: $channelId")
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "Failed to add delete operation to outbox", outboxResult.error)
+                    // DB 삭제는 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
+
 
         } catch (e: Exception) {
             Log.e(TAG, "deleteChannel failed", e)
@@ -576,31 +599,13 @@ class LocalProjectChannelRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addToOutbox(
-        channelId: String,
-        operation: String,
-        payload: String?
-    ): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "addToOutbox: channelId=$channelId, operation=$operation")
+    // === BaseLocalRepositoryImpl 추상 메서드 구현 ===
 
-            val outboxEntity = OutboxEntity(
-                id = UUID.randomUUID().toString(),
-                collectionName = COLLECTION_NAME,
-                documentId = channelId,
-                operation = operation,
-                payload = payload,
-                localTimestamp = System.currentTimeMillis(),
-                retries = 0
-            )
-            outboxDao.insertOutbox(outboxEntity)
+    override suspend fun getTotalEntityCountInternal(): Int {
+        return getTotalChannelCount()
+    }
 
-            Log.d(TAG, "Added to outbox: $channelId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "addToOutbox failed", e)
-            CustomResult.Failure(e)
-        }
+    override suspend fun entityExistsInternal(entityId: String): Boolean {
+        return channelExists(entityId)
     }
 }

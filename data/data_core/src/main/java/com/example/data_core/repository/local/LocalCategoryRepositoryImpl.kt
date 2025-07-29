@@ -3,13 +3,11 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalProjectCategoriesDataSource
-import com.example.data_core.datasource.local.SyncMetadataDataSource
-import com.example.data_core.datasource.local.SyncOutboxDataSource
 import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.OutboxCollectionType
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.category.CategoryOrder
+import com.example.domain.repository.infrastructure.OutboxRepository
 import com.example.domain.repository.local.LocalCategoryRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -17,8 +15,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Local Category Repository Implementation (SSOT)
+ * Local Category Repository Implementation (Clean Architecture)
  * BaseLocalRepositoryImpl 상속으로 공통 CRUD 기능 자동 제공
+ * OutboxRepository를 통한 동기화 처리 분리
  *
  * 🔒 제약사항:
  * - 외부 네트워크 호출 절대 금지
@@ -30,7 +29,7 @@ import javax.inject.Singleton
  * - LocalDataSource를 통한 Room DB 접근
  * - Flow로 UI에 실시간 데이터 제공
  * - 로컬 CRUD 작업 처리
- * - Outbox 관리 (동기화 대상 저장)
+ * - OutboxRepository를 통한 동기화 작업 위임
  *
  * 📋 BaseLocalRepository 메서드 구현:
  * - observeEntityById -> observeCategoryById로 위임
@@ -39,25 +38,20 @@ import javax.inject.Singleton
  * - getEntityById -> getCategoryById로 위임
  * - getEntitiesByIds -> getCategoriesByIds로 위임
  * - getAllEntities -> getAllCategories로 위임
- * - saveEntity -> saveCategory로 위임
+ * - saveEntity -> saveCategory로 위임 (+ OutboxRepository.enqueue)
  * - saveEntities -> saveCategories로 위임
- * - deleteEntity -> deleteCategory로 위임
- * - Plus SyncableRepository methods
+ * - deleteEntity -> deleteCategory로 위임 (+ OutboxRepository.enqueue)
  */
 @Singleton
 class LocalCategoryRepositoryImpl @Inject constructor(
     private val localProjectCategoriesDataSource: LocalProjectCategoriesDataSource,
-    override val syncOutboxDataSource: SyncOutboxDataSource,
-    override val syncMetadataDataSource: SyncMetadataDataSource
+    private val outboxRepository: OutboxRepository
 ) : BaseLocalRepositoryImpl<Category>(), LocalCategoryRepository {
 
     companion object {
         private const val TAG = "LocalCategoryRepository"
+        private const val COLLECTION_NAME = "categories"
     }
-
-    // === BaseLocalRepositoryImpl 구현 ===
-
-    override val collectionType: OutboxCollectionType = OutboxCollectionType.PROJECT_CATEGORIES
 
     // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
 
@@ -94,23 +88,19 @@ class LocalCategoryRepositoryImpl @Inject constructor(
     override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception> = 
         deleteCategory(entityId)
 
-    override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<Category>, Exception> = 
-        handleOperation("getCategoriesUpdatedAfter($timestamp)", TAG) {
-            getCategoriesUpdatedAfter(timestamp)
-        }
 
     override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
         clearAllCategories()
 
-    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
-        handleOperation("getTotalCategoryCount", TAG) {
-            getTotalCategoryCount()
-        }
+    // === BaseLocalRepositoryImpl 추상 메서드 구현 ===
 
-    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
-        handleOperation("categoryExists($entityId)", TAG) {
-            categoryExists(entityId)
-        }
+    override suspend fun getTotalEntityCountInternal(): Int {
+        return getTotalCategoryCount()
+    }
+
+    override suspend fun entityExistsInternal(entityId: String): Boolean {
+        return categoryExists(entityId)
+    }
 
     // === 관찰자 패턴 (UI 반응형) ===
 
@@ -245,16 +235,27 @@ class LocalCategoryRepositoryImpl @Inject constructor(
             // 1. Room DB에 저장
             localProjectCategoriesDataSource.saveCategory(category, projectId)
 
-            // 2. Outbox에 동기화 작업 추가
+            // 2. OutboxRepository를 통한 동기화 작업 추가
             val operation = if (category.isNew) "CREATE" else "UPDATE"
-            localProjectCategoriesDataSource.addToOutbox(
-                categoryId = category.id.value,
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = category.id.value,
                 operation = operation,
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
 
-            Log.d(TAG, "Category saved and added to outbox: ${category.id}")
-            CustomResult.Success(Unit)
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    Log.d(TAG, "Category saved and added to outbox: ${category.id}")
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "Failed to add category to outbox", outboxResult.error)
+                    // DB 저장은 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "saveCategory failed", e)
@@ -289,15 +290,26 @@ class LocalCategoryRepositoryImpl @Inject constructor(
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             localProjectCategoriesDataSource.deleteCategory(categoryId)
 
-            // 2. Outbox에 삭제 작업 추가
-            localProjectCategoriesDataSource.addToOutbox(
-                categoryId = categoryId,
+            // 2. OutboxRepository를 통한 삭제 작업 추가
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = categoryId,
                 operation = "DELETE",
                 payload = null
             )
 
-            Log.d(TAG, "Category deleted and added to outbox: $categoryId")
-            CustomResult.Success(Unit)
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    Log.d(TAG, "Category deleted and added to outbox: $categoryId")
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "Failed to add delete operation to outbox", outboxResult.error)
+                    // DB 삭제는 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "deleteCategory failed", e)

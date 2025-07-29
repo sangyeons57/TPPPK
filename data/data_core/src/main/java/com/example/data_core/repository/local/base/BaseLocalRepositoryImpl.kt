@@ -2,60 +2,33 @@ package com.example.data_core.repository.local.base
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.data_core.datasource.local.SyncMetadataDataSource
-import com.example.data_core.datasource.local.SyncOutboxDataSource
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.OutboxCollectionType
 import com.example.domain.repository.local.base.BaseLocalRepository
-import com.example.domain.repository.local.base.OutboxOperation
-import com.example.domain.repository.local.base.SyncableRepository
 import kotlinx.coroutines.flow.Flow
-import java.time.Instant
 
 /**
- * Base Local Repository Implementation (SSOT Pattern)
- * BaseLocalRepository와 SyncableRepository 모두 구현
+ * Base Local Repository Implementation (Clean SSOT Pattern)
+ * BaseLocalRepository만 구현하여 순수 CRUD 기능에 집중
  *
  * 🎯 역할:
  * - BaseLocalRepository: 기본 CRUD 기능 구현
- * - SyncableRepository: 동기화 전용 기능 구현
  * - 로그 처리 및 예외 처리 표준화
  * - 하위 클래스에서 도메인 특화 메서드만 구현하도록 강제
+ * - 동기화는 OutboxRepository를 통해 별도 처리
  *
  * 📋 구현 전략:
- * - Abstract class로 공통 기능 제공
- * - CRUD와 Sync 기능을 명확히 분리
+ * - Abstract class로 공통 CRUD 기능 제공
  * - Template Method Pattern 적용
+ * - 동기화 로직은 완전히 분리하여 인프라 Repository로 위임
  * - 하위 클래스는 도메인 특화 메서드만 오버라이드
  *
  * @param T 엔티티 타입 (Category, Project, User 등)
  */
-abstract class BaseLocalRepositoryImpl<T> : BaseLocalRepository<T>,
-    SyncableRepository<T> where T : AggregateRoot {
+abstract class BaseLocalRepositoryImpl<T> : BaseLocalRepository<T> where T : AggregateRoot {
 
     companion object {
         private const val TAG = "BaseLocalRepository"
     }
-
-    // === 동기화 관련 추상 속성 ===
-
-    /**
-     * Sync Outbox DataSource - Outbox 작업 관리를 위한 데이터 소스
-     * Repository → DataSource → DAO 아키텍처 준수
-     */
-    abstract val syncOutboxDataSource: SyncOutboxDataSource
-
-    /**
-     * Sync Metadata DataSource - 동기화 메타데이터 관리를 위한 데이터 소스
-     * 동기화 커서 및 상태 관리
-     */
-    abstract val syncMetadataDataSource: SyncMetadataDataSource
-
-    /**
-     * Collection Type - OutboxCollectionType enum 사용으로 타입 안전성 보장
-     * 각 하위 클래스에서 OutboxCollectionType.fromDomainType<T>()로 구현
-     */
-    abstract val collectionType: OutboxCollectionType
 
     // === BaseLocalRepository 인터페이스 구현 ===
     // 하위 클래스에서 도메인 특화 메서드로 위임
@@ -114,42 +87,16 @@ abstract class BaseLocalRepositoryImpl<T> : BaseLocalRepository<T>,
      */
     abstract override suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception>
 
-    // === SyncableRepository 인터페이스 구현 ===
-    // 하위 클래스에서 도메인 특화 메서드로 위임
-
+    // === BaseLocalRepository 공통 구현 메서드들 ===
+    
     /**
-     * SyncableRepository.getEntitiesUpdatedAfter 구현
-     * 하위 클래스의 도메인 특화 메서드로 위임
-     */
-    abstract override suspend fun getEntitiesUpdatedAfter(timestamp: Instant): CustomResult<List<T>, Exception>
-
-    /**
-     * SyncableRepository.addToOutbox 공통 구현
-     * SyncOutboxDataSource를 통한 일관된 동기화 작업 관리
-     */
-    override suspend fun addToOutbox(
-        entityId: String,
-        operation: String,
-        payload: String?
-    ): CustomResult<Unit, Exception> {
-        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
-            syncOutboxDataSource.addToOutbox(
-                entityId = entityId,
-                collectionName = collectionType.collectionName,
-                operation = operation,
-                payload = payload
-            )
-        }
-    }
-
-    /**
-     * SyncableRepository.clearAllEntities 구현
+     * BaseLocalRepository.clearAllEntities 구현
      * 하위 클래스의 도메인 특화 메서드로 위임
      */
     abstract override suspend fun clearAllEntities(): CustomResult<Unit, Exception>
 
     /**
-     * SyncableRepository.getTotalEntityCount 구현
+     * BaseLocalRepository.getTotalEntityCount 구현
      * 하위 클래스의 도메인 특화 메서드로 위임 (필요시 오버라이드)
      */
     override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> {
@@ -159,7 +106,7 @@ abstract class BaseLocalRepositoryImpl<T> : BaseLocalRepository<T>,
     }
 
     /**
-     * SyncableRepository.entityExists 구현
+     * BaseLocalRepository.entityExists 구현
      * 하위 클래스의 도메인 특화 메서드로 위임 (필요시 오버라이드)
      */
     override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> {
@@ -223,90 +170,6 @@ abstract class BaseLocalRepositoryImpl<T> : BaseLocalRepository<T>,
         } catch (exception: Exception) {
             logError("$operation - 실패", exception, tag)
             CustomResult.Failure(exception)
-        }
-    }
-
-    // === 새로운 SyncableRepository 메서드 구현 ===
-
-    /**
-     * 대기 중인 Outbox 작업 목록 조회
-     */
-    override suspend fun getPendingOutboxOperations(): CustomResult<List<OutboxOperation>, Exception> {
-        return handleOperation("getPendingOutboxOperations", TAG) {
-            val outboxEntities =
-                syncOutboxDataSource.getPendingOperationsByCollection(collectionType.collectionName)
-            outboxEntities.map { entity ->
-                OutboxOperation(
-                    id = entity.id,
-                    entityId = entity.documentId,
-                    operation = entity.operation,
-                    payload = entity.payload,
-                    localTimestamp = entity.localTimestamp,
-                    retries = entity.retries
-                )
-            }
-        }
-    }
-
-    /**
-     * Outbox 작업 완료 처리
-     */
-    override suspend fun markOutboxOperationComplete(operationId: String): CustomResult<Unit, Exception> {
-        return handleOperation("markOutboxOperationComplete($operationId)", TAG) {
-            syncOutboxDataSource.markOperationComplete(operationId)
-        }
-    }
-
-    /**
-     * 실패한 Outbox 작업 목록 조회
-     */
-    override suspend fun getFailedOutboxOperations(): CustomResult<List<OutboxOperation>, Exception> {
-        return handleOperation("getFailedOutboxOperations", TAG) {
-            val outboxEntities = syncOutboxDataSource.getFailedOperations()
-            outboxEntities.map { entity ->
-                OutboxOperation(
-                    id = entity.id,
-                    entityId = entity.documentId,
-                    operation = entity.operation,
-                    payload = entity.payload,
-                    localTimestamp = entity.localTimestamp,
-                    retries = entity.retries
-                )
-            }
-        }
-    }
-
-    /**
-     * 마지막 동기화 커서 조회
-     */
-    override suspend fun getLastSyncCursor(): CustomResult<Long?, Exception> {
-        return handleOperation("getLastSyncCursor", TAG) {
-            syncMetadataDataSource.getLastSyncCursor(collectionType.collectionName)
-        }
-    }
-
-    /**
-     * 동기화 커서 업데이트
-     */
-    override suspend fun updateSyncCursor(
-        cursor: Long,
-        timestamp: Long
-    ): CustomResult<Unit, Exception> {
-        return handleOperation("updateSyncCursor($cursor, $timestamp)", TAG) {
-            syncMetadataDataSource.updateSyncCursor(
-                collectionType.collectionName,
-                cursor,
-                timestamp
-            )
-        }
-    }
-
-    /**
-     * 마지막 성공 동기화 시간 조회
-     */
-    override suspend fun getLastSuccessfulSyncTime(): CustomResult<Long?, Exception> {
-        return handleOperation("getLastSuccessfulSyncTime", TAG) {
-            syncMetadataDataSource.getLastSuccessfulSyncTime(collectionType.collectionName)
         }
     }
 }

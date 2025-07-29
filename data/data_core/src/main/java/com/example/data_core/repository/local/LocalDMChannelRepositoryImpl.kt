@@ -7,6 +7,7 @@ import com.example.domain.model.base.DMChannel
 import com.example.domain.model.enum.DMChannelStatus
 import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.UserId
+import com.example.domain.repository.infrastructure.OutboxRepository
 import com.example.domain.repository.local.LocalDMChannelRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -44,11 +45,13 @@ import javax.inject.Singleton
 @Singleton
 class LocalDMChannelRepositoryImpl @Inject constructor(
     private val localDmChannelsDataSource: LocalDMChannelsDataSource,
+    private val outboxRepository: OutboxRepository
 ) : BaseLocalRepositoryImpl<DMChannel>(), LocalDMChannelRepository {
 
     override lateinit var collectionPath: CollectionPath
     companion object {
         private const val TAG = "LocalDMChannelRepository"
+        private const val COLLECTION_NAME = "dm_channels"
     }
 
     // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
@@ -104,14 +107,14 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
             dmChannelExists(entityId)
         }
 
-    override suspend fun addToOutbox(
-        entityId: String,
-        operation: String,
-        payload: String?
-    ): CustomResult<Unit, Exception> {
-        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
-            localDmChannelsDataSource.addToOutbox(entityId, operation, payload)
-        }
+    // === BaseLocalRepositoryImpl 추상 메서드 구현 ===
+
+    override suspend fun getTotalEntityCountInternal(): Int {
+        return getTotalDMChannelCount()
+    }
+
+    override suspend fun entityExistsInternal(entityId: String): Boolean {
+        return dmChannelExists(entityId)
     }
 
     // === 관찰자 패턴 (UI 반응형) ===
@@ -246,17 +249,37 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
     // === 쓰기 작업 (Outbox 포함) ===
 
     override suspend fun saveDMChannel(dmChannel: DMChannel): CustomResult<Unit, Exception> {
-        return handleOperation("saveDMChannel(${dmChannel.id})", TAG) {
+        return try {
+            logDebug("saveDMChannel: ${dmChannel.id}", TAG)
+
             // 1. Room DB에 저장
             localDmChannelsDataSource.saveDMChannel(dmChannel)
 
-            // 2. Outbox에 동기화 작업 추가
+            // 2. OutboxRepository를 통한 동기화 작업 추가
             val operation = if (dmChannel.isNew) "CREATE" else "UPDATE"
-            localDmChannelsDataSource.addToOutbox(
-                channelId = dmChannel.id.value,
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = dmChannel.id.value,
                 operation = operation,
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
+
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    logDebug("DMChannel saved and added to outbox: ${dmChannel.id}", TAG)
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    logError("Failed to add DMChannel to outbox", outboxResult.error, TAG)
+                    // DB 저장은 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
+
+        } catch (e: Exception) {
+            logError("saveDMChannel failed", e, TAG)
+            CustomResult.Failure(e)
         }
     }
 
@@ -272,16 +295,36 @@ class LocalDMChannelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteDMChannel(channelId: String): CustomResult<Unit, Exception> {
-        return handleOperation("deleteDMChannel($channelId)", TAG) {
+        return try {
+            logDebug("deleteDMChannel: $channelId", TAG)
+
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             localDmChannelsDataSource.deleteDMChannel(channelId)
 
-            // 2. Outbox에 삭제 작업 추가
-            localDmChannelsDataSource.addToOutbox(
-                channelId = channelId,
+            // 2. OutboxRepository를 통한 삭제 작업 추가
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = channelId,
                 operation = "DELETE",
                 payload = null
             )
+
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    logDebug("DMChannel deleted and added to outbox: $channelId", TAG)
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    logError("Failed to add delete operation to outbox", outboxResult.error, TAG)
+                    // DB 삭제는 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
+
+        } catch (e: Exception) {
+            logError("deleteDMChannel failed", e, TAG)
+            CustomResult.Failure(e)
         }
     }
 

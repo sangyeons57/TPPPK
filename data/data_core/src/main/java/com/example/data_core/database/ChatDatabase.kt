@@ -1,1 +1,0 @@
-// This file has been removed - ChatDatabase replaced with AppDatabase for SSOT architecture

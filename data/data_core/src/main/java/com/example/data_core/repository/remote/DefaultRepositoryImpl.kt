@@ -15,7 +15,6 @@ import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
-
 class DefaultRepositoryImpl<Domain, Data>(
     private val defaultDatasource: DefaultDatasource<Domain, Data>,
     private val mapper: BaseMapper<Domain, Data>,

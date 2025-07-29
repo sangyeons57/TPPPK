@@ -3,13 +3,11 @@ package com.example.data_core.repository.local
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.dao.ProjectsDao
-import com.example.data_core.datasource.local.SyncMetadataDataSource
-import com.example.data_core.datasource.local.SyncOutboxDataSource
 import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Project
-import com.example.domain.model.vo.OutboxCollectionType
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.project.ProjectStatus
+import com.example.domain.repository.infrastructure.OutboxRepository
 import com.example.domain.repository.local.LocalProjectRepository
 import com.example.mapper.ProjectEntityMapper
 import kotlinx.coroutines.flow.Flow
@@ -49,18 +47,14 @@ import javax.inject.Singleton
 @Singleton
 class LocalProjectRepositoryImpl @Inject constructor(
     private val projectsDao: ProjectsDao,
-    override val syncOutboxDataSource: SyncOutboxDataSource,
-    override val syncMetadataDataSource: SyncMetadataDataSource,
+    private val outboxRepository: OutboxRepository,
     private val mapper: ProjectEntityMapper
 ) : BaseLocalRepositoryImpl<Project>(), LocalProjectRepository {
 
     companion object {
         private const val TAG = "LocalProjectRepository"
+        private const val COLLECTION_NAME = "projects"
     }
-
-    // === BaseLocalRepositoryImpl 구현 ===
-
-    override val collectionType: OutboxCollectionType = OutboxCollectionType.PROJECTS
 
     // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
 
@@ -105,32 +99,14 @@ class LocalProjectRepositoryImpl @Inject constructor(
     override suspend fun clearAllEntities(): CustomResult<Unit, Exception> = 
         clearAllProjects()
 
-    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception> = 
-        handleOperation("getTotalProjectCount", TAG) {
-            getTotalProjectCount()
-        }
+    // === BaseLocalRepositoryImpl 추상 메서드 구현 ===
 
-    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception> = 
-        handleOperation("projectExists($entityId)", TAG) {
-            projectExists(entityId)
-        }
+    override suspend fun getTotalEntityCountInternal(): Int {
+        return getTotalProjectCount()
+    }
 
-    override suspend fun addToOutbox(
-        entityId: String,
-        operation: String,
-        payload: String?
-    ): CustomResult<Unit, Exception> {
-        return handleOperation("addToOutbox($entityId, $operation)", TAG) {
-            val outboxEntity = OutboxEntity(
-                id = UUID.randomUUID().toString(),
-                collectionName = COLLECTION_NAME,
-                documentId = entityId,
-                operation = operation,
-                payload = payload,
-                createdAt = System.currentTimeMillis()
-            )
-            outboxDao.insertOutboxEntry(outboxEntity)
-        }
+    override suspend fun entityExistsInternal(entityId: String): Boolean {
+        return projectExists(entityId)
     }
 
     // === 관찰자 패턴 (UI 반응형) ===
@@ -302,16 +278,27 @@ class LocalProjectRepositoryImpl @Inject constructor(
             // 1. Room DB에 저장
             projectsDao.insertProject(mapper.toEntity(project))
 
-            // 2. Outbox에 동기화 작업 추가
+            // 2. OutboxRepository를 통한 동기화 작업 추가
             val operation = if (project.isNew) "CREATE" else "UPDATE"
-            addToOutbox(
-                projectId = project.id.value,
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = project.id.value,
                 operation = operation,
                 payload = null // 필요시 JSON 직렬화된 변경사항
             )
 
-            Log.d(TAG, "Project saved and added to outbox: ${project.id}")
-            CustomResult.Success(Unit)
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    Log.d(TAG, "Project saved and added to outbox: ${project.id}")
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "Failed to add project to outbox", outboxResult.error)
+                    // DB 저장은 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "saveProject failed", e)
@@ -346,15 +333,26 @@ class LocalProjectRepositoryImpl @Inject constructor(
             // 1. Room DB에서 삭제 (실제로는 soft delete)
             projectsDao.deleteProject(projectId)
 
-            // 2. Outbox에 삭제 작업 추가
-            addToOutbox(
-                projectId = projectId,
+            // 2. OutboxRepository를 통한 삭제 작업 추가
+            val outboxResult = outboxRepository.enqueue(
+                collectionName = COLLECTION_NAME,
+                documentId = projectId,
                 operation = "DELETE",
                 payload = null
             )
 
-            Log.d(TAG, "Project deleted and added to outbox: $projectId")
-            CustomResult.Success(Unit)
+            when (outboxResult) {
+                is CustomResult.Success -> {
+                    Log.d(TAG, "Project deleted and added to outbox: $projectId")
+                    CustomResult.Success(Unit)
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "Failed to add delete operation to outbox", outboxResult.error)
+                    // DB 삭제는 성공했지만 Outbox 추가 실패 - 경고만 출력하고 성공 처리
+                    CustomResult.Success(Unit)
+                }
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "deleteProject failed", e)
@@ -499,31 +497,4 @@ class LocalProjectRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addToOutbox(
-        projectId: String,
-        operation: String,
-        payload: String?
-    ): CustomResult<Unit, Exception> {
-        return try {
-            Log.d(TAG, "addToOutbox: projectId=$projectId, operation=$operation")
-
-            val outboxEntity = OutboxEntity(
-                id = UUID.randomUUID().toString(),
-                collectionName = COLLECTION_NAME,
-                documentId = projectId,
-                operation = operation,
-                payload = payload,
-                localTimestamp = System.currentTimeMillis(),
-                retries = 0
-            )
-            outboxDao.insertOutbox(outboxEntity)
-
-            Log.d(TAG, "Added to outbox: $projectId")
-            CustomResult.Success(Unit)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "addToOutbox failed", e)
-            CustomResult.Failure(e)
-        }
-    }
 }

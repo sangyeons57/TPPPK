@@ -1,6 +1,8 @@
 package com.example.data_core.datasource.local
 
 import com.example.data_model.local.OutboxEntity
+import com.example.domain.repository.infrastructure.OrderingKeyStatus
+import com.example.domain.repository.infrastructure.OutboxStatistics
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -24,17 +26,21 @@ interface SyncOutboxDataSource {
     // === Basic Operations ===
 
     /**
-     * Outbox에 동기화 작업 추가
+     * Outbox에 동기화 작업 추가 (고도화된 버전)
      * @param entityId 엔티티 ID
      * @param collectionName 컬렉션 이름
      * @param operation 작업 타입 (CREATE, UPDATE, DELETE)
      * @param payload 작업 데이터 (JSON 직렬화된 변경사항)
+     * @param idempotencyKey 중복 방지키 (선택적)
+     * @param orderingKey 순서 보장키 (선택적)
      */
     suspend fun addToOutbox(
         entityId: String,
         collectionName: String,
         operation: String,
-        payload: String? = null
+        payload: String? = null,
+        idempotencyKey: String? = null,
+        orderingKey: String? = null
     )
 
     /**
@@ -176,4 +182,85 @@ interface SyncOutboxDataSource {
      * 모든 작업 삭제 (전체 초기화)
      */
     suspend fun deleteAllOperations()
+
+    // === OutboxRepository 지원을 위한 추가 메서드들 ===
+
+    /**
+     * 처리 가능한 작업들을 임대 (lease)
+     * @param batchSize 배치 크기
+     * @param leaseTimeoutMs 임대 만료 시간
+     * @return 임대된 작업 목록
+     */
+    suspend fun leasePendingOperations(batchSize: Int, leaseTimeoutMs: Long): List<OutboxEntity>
+
+    /**
+     * 특정 orderingKey의 다음 작업 임대
+     */
+    suspend fun leaseNextByOrderingKey(orderingKey: String, leaseTimeoutMs: Long): OutboxEntity?
+
+    /**
+     * 작업 처리 실패 처리
+     */
+    suspend fun markOperationFailed(
+        operationId: String,
+        errorMessage: String,
+        scheduleRetry: Boolean
+    )
+
+    /**
+     * 특정 컬렉션의 대기 중인 작업 수 조회
+     */
+    suspend fun getPendingCountByCollection(collectionName: String): Int
+
+    /**
+     * 전체 대기 중인 작업 수 조회
+     */
+    suspend fun getTotalPendingCount(): Int
+
+    /**
+     * 특정 엔티티의 대기 중인 작업들 조회
+     */
+    suspend fun getPendingOperationsForEntity(
+        collectionName: String,
+        documentId: String
+    ): List<OutboxEntity>
+
+    /**
+     * 가장 오래된 처리되지 않은 작업 조회
+     */
+    suspend fun getOldestPendingOperation(): OutboxEntity?
+
+    /**
+     * 완료된 오래된 작업들 정리
+     * @param olderThanMs 이 시간보다 오래된 작업들 정리
+     * @return 정리된 작업 수
+     */
+    suspend fun cleanupCompletedOperations(olderThanMs: Long): Int
+
+    /**
+     * 임대 시간이 만료된 작업들을 PENDING 상태로 되돌리기
+     * @return 리셋된 작업 수
+     */
+    suspend fun resetExpiredLeases(): Int
+
+    /**
+     * 최대 재시도 횟수를 초과한 작업들을 FAILED로 표시
+     * @return 실패로 표시된 작업 수
+     */
+    suspend fun markExceededRetriesAsFailed(): Int
+
+    /**
+     * 모든 작업 제거 (개발/테스트용)
+     */
+    suspend fun clearAllOperations()
+
+    /**
+     * Outbox 상태 통계 조회
+     */
+    suspend fun getStatistics(): OutboxStatistics
+
+    /**
+     * 특정 orderingKey의 처리 상태 확인
+     */
+    suspend fun getOrderingKeyStatus(orderingKey: String): OrderingKeyStatus
 }
