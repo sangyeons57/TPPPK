@@ -2,7 +2,7 @@ package com.example.domain.usecase.local.users
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.local.UserLocalRepository
+import com.example.domain.repository.local.LocalUserRepository
 import javax.inject.Inject
 
 interface UploadProfileImageLocalUseCase {
@@ -10,7 +10,7 @@ interface UploadProfileImageLocalUseCase {
 }
 
 class UploadProfileImageLocalUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) : UploadProfileImageLocalUseCase {
 
     override suspend operator fun invoke(imageUri: Uri): CustomResult<String, Exception> {

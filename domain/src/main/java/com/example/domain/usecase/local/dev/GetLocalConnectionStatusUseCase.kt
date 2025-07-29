@@ -2,7 +2,7 @@ package com.example.domain.usecase.local.dev
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
-import com.example.domain.repository.local.AuthLocalRepository
+import com.example.domain.repository.remote.AuthRepository
 import javax.inject.Inject
 
 interface GetLocalConnectionStatusUseCase {
@@ -11,7 +11,7 @@ interface GetLocalConnectionStatusUseCase {
 }
 
 class GetLocalConnectionStatusUseCaseImpl @Inject constructor(
-    private val authLocalRepository: AuthLocalRepository
+    private val authRepository: AuthRepository
 ) : GetLocalConnectionStatusUseCase {
 
     override suspend operator fun invoke(): CustomResult<UserSession, Exception> {

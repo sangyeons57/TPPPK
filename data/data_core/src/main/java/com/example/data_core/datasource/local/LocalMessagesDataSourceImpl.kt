@@ -139,7 +139,7 @@ class LocalMessagesDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             MessageOutboxOperation(
                 id = entity.id,
-                messageId = entity.entityId,
+                messageId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

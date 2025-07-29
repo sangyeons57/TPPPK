@@ -113,7 +113,7 @@ class LocalSchedulesDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             ScheduleOutboxOperation(
                 id = entity.id,
-                scheduleId = entity.entityId,
+                scheduleId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

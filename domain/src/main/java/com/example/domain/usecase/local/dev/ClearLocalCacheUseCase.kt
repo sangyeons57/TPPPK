@@ -1,7 +1,6 @@
 package com.example.domain.usecase.local.dev
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.local.CacheLocalRepository
 import javax.inject.Inject
 
 interface ClearLocalCacheUseCase {
@@ -9,7 +8,7 @@ interface ClearLocalCacheUseCase {
 }
 
 class ClearLocalCacheUseCaseImpl @Inject constructor(
-    private val cacheLocalRepository: CacheLocalRepository
+    // private val cacheLocalRepository: CacheLocalRepository
 ) : ClearLocalCacheUseCase {
 
     override suspend operator fun invoke(): CustomResult<String, Exception> {

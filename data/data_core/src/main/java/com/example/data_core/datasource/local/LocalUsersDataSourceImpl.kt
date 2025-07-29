@@ -107,7 +107,7 @@ class LocalUsersDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             UserOutboxOperation(
                 id = entity.id,
-                userId = entity.entityId,
+                userId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

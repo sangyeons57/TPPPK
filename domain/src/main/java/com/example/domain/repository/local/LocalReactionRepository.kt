@@ -373,17 +373,4 @@ interface LocalReactionRepository : BaseLocalRepository<Reaction> {
      * @return 업데이트된 반응 목록
      */
     suspend fun getReactionsUpdatedAfter(timestamp: Instant): List<Reaction>
-
-    /**
-     * Outbox에 작업 추가 (서버 동기화 대기열)
-     * @param reactionId 반응 ID
-     * @param operation 작업 타입 (CREATE, DELETE)
-     * @param payload 작업 데이터 (JSON)
-     * @return 성공 여부
-     */
-    suspend fun addToOutbox(
-        reactionId: String,
-        operation: String,
-        payload: String? = null
-    ): CustomResult<Unit, Exception>
 }

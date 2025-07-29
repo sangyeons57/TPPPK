@@ -1,9 +1,9 @@
 package com.example.domain.usecase.local.search
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.local.UserLocalRepository
-import com.example.domain.repository.local.ProjectLocalRepository
+import com.example.domain.repository.local.LocalUserRepository
 import com.example.domain.repository.local.MessageLocalRepository
+import com.example.domain.repository.local.ProjectLocalRepository
 import javax.inject.Inject
 
 interface SearchLocalUseCase {
@@ -14,7 +14,7 @@ interface SearchLocalUseCase {
 }
 
 class SearchLocalUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository,
+    private val localUserRepository: LocalUserRepository,
     private val projectLocalRepository: ProjectLocalRepository,
     private val messageLocalRepository: MessageLocalRepository
 ) : SearchLocalUseCase {

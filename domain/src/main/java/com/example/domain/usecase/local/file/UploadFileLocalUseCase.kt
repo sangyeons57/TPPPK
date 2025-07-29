@@ -2,7 +2,7 @@ package com.example.domain.usecase.local.file
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.local.FileLocalRepository
+import com.example.domain.repository.remote.FileRepository
 import javax.inject.Inject
 
 interface UploadFileLocalUseCase {
@@ -10,7 +10,7 @@ interface UploadFileLocalUseCase {
 }
 
 class UploadFileLocalUseCaseImpl @Inject constructor(
-    private val fileLocalRepository: FileLocalRepository
+    private val fileLocalRepository: FileRepository
 ) : UploadFileLocalUseCase {
 
     override suspend operator fun invoke(

@@ -158,7 +158,7 @@ class LocalReactionsDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             ReactionOutboxOperation(
                 id = entity.id,
-                reactionId = entity.entityId,
+                reactionId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

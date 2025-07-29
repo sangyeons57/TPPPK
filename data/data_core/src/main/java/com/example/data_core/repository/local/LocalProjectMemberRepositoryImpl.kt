@@ -5,7 +5,7 @@ import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalMembersDataSource
 import com.example.domain.model.base.Member
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.local.LocalMemberRepository
+import com.example.domain.repository.local.LocalProjectMemberRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
@@ -26,9 +26,9 @@ import javax.inject.Singleton
  * - Outbox 관리 (동기화 대상 저장)
  */
 @Singleton
-class LocalMemberRepositoryImpl @Inject constructor(
+class LocalProjectMemberRepositoryImpl @Inject constructor(
     private val localMembersDataSource: LocalMembersDataSource
-) : LocalMemberRepository {
+) : LocalProjectMemberRepository {
 
     companion object {
         private const val TAG = "LocalMemberRepository"

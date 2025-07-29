@@ -6,8 +6,8 @@ import com.example.data_core.dao.SyncMetadataDao
 import com.example.data_core.model.local.OutboxEntity
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.enum.InviteStatus
-import com.example.domain.model.vo.invite.InviteCode
 import com.example.domain.model.vo.UserId
+import com.example.domain.model.vo.invite.InviteCode
 import com.example.mapper.ProjectInvitationEntityMapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -76,7 +76,7 @@ class LocalProjectInvitationsDataSourceImpl @Inject constructor(
         outboxDao.getPendingOperationsByCollection(COLLECTION_NAME).map {
             ProjectInvitationOutboxOperation(
                 it.id,
-                it.entityId,
+                it.documentId,
                 it.operation,
                 it.payload,
                 it.localTimestamp,

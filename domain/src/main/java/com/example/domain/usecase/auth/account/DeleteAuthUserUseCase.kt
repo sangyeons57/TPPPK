@@ -1,4 +1,4 @@
-package com.example.domain.usecase.auth
+package com.example.domain.usecase.auth.account
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.remote.AuthRepository

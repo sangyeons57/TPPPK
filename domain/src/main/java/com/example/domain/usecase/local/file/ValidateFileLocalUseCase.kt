@@ -2,9 +2,7 @@ package com.example.domain.usecase.local.file
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.domain.usecase.file.FileValidationError
-import com.example.domain.usecase.file.FileValidationResult
-import com.example.domain.repository.local.FileLocalRepository
+import com.example.domain.repository.remote.FileRepository
 import javax.inject.Inject
 
 interface ValidateFileLocalUseCase {
@@ -12,7 +10,7 @@ interface ValidateFileLocalUseCase {
 }
 
 class ValidateFileLocalUseCaseImpl @Inject constructor(
-    private val fileLocalRepository: FileLocalRepository
+    private val fileLocalRepository: FileRepository
 ) : ValidateFileLocalUseCase {
 
     override suspend operator fun invoke(fileUri: Uri): CustomResult<FileValidationResult, FileValidationError> {

@@ -117,7 +117,7 @@ class LocalProjectsDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             ProjectOutboxOperation(
                 id = entity.id,
-                projectId = entity.entityId,
+                projectId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

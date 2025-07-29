@@ -1,6 +1,7 @@
 package com.example.domain.repository.local.base
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.AggregateRoot
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -15,13 +16,16 @@ import kotlinx.coroutines.flow.Flow
  *
  * 📋 공통 CRUD 메서드:
  * - observe: Flow 기반 실시간 관찰
- * - get: 단순 읽기 작업
- * - save: 생성/수정 작업 (Outbox 포함)
- * - delete: 삭제 작업 (Soft Delete + Outbox)
+ * - get/save/delete: 기본 CRUD 작업
+ * - 통계 및 유틸리티 메서드
+ *
+ * ✅ SyncableRepository와 독립적으로 운영
+ * - 동기화 기능은 SyncableRepository에서 별도 관리
+ * - 순수 CRUD 기능만 담당
  *
  * @param T 도메인 모델 타입 (Category, Project, User 등)
  */
-interface BaseLocalRepository<T> : SyncableRepository<T> where T : AggregateRoot {
+interface BaseLocalRepository<T> where T : AggregateRoot {
 
     // === 관찰자 패턴 (UI 반응형) ===
 
@@ -54,14 +58,6 @@ interface BaseLocalRepository<T> : SyncableRepository<T> where T : AggregateRoot
     // === 단순 읽기 작업 ===
 
     /**
-     * 엔티티 ID로 조회
-     *
-     * @param entityId 도메인 모델 ID
-     * @return 엔티티 (없으면 null)
-     */
-    suspend fun getEntityById(entityId: String): CustomResult<T?, Exception>
-
-    /**
      * 여러 엔티티 ID로 조회
      *
      * @param entityIds 엔티티 ID 목록
@@ -77,16 +73,34 @@ interface BaseLocalRepository<T> : SyncableRepository<T> where T : AggregateRoot
      */
     suspend fun getAllEntities(limit: Int? = null): CustomResult<List<T>, Exception>
 
-    // === 쓰기 작업 (Outbox 포함) ===
+    // === 기본 CRUD 작업 ===
 
     /**
-     * 엔티티 저장 (생성/수정)
-     * Outbox에 동기화 작업 자동 추가
+     * 도메인 모델 저장/업데이트
+     * UI 및 UseCase에서 사용하는 기본 저장 기능
      *
-     * @param entity 저장할 엔티티
+     * @param entity 저장할 도메인 모델
      * @return 성공 여부
      */
     suspend fun saveEntity(entity: T): CustomResult<Unit, Exception>
+
+    /**
+     * ID로 도메인 모델 조회
+     * 기본 조회 기능
+     *
+     * @param entityId 도메인 모델 ID
+     * @return 조회된 도메인 모델 (nullable)
+     */
+    suspend fun getEntityById(entityId: String): CustomResult<T?, Exception>
+
+    /**
+     * 도메인 모델 삭제
+     * 기본 삭제 기능
+     *
+     * @param entityId 삭제할 도메인 모델 ID
+     * @return 성공 여부
+     */
+    suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception>
 
     /**
      * 엔티티 대량 저장 (동기화용)
@@ -97,45 +111,36 @@ interface BaseLocalRepository<T> : SyncableRepository<T> where T : AggregateRoot
      */
     suspend fun saveEntities(entities: List<T>): CustomResult<Unit, Exception>
 
+    // === 통계 및 유틸리티 ===
+
     /**
-     * 엔티티 삭제 (Soft Delete)
-     * Outbox에 삭제 작업 자동 추가
+     * 모든 도메인 모델 삭제 (초기화)
+     * 테스트나 전체 재동기화시 사용
      *
-     * @param entityId 도메인 모델 ID
      * @return 성공 여부
      */
-    suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception>
-
-    // === SyncableRepository 구체적 구현 ===
+    suspend fun clearAllEntities(): CustomResult<Unit, Exception>
 
     /**
-     * findUpdatedAfter 편의 메서드 추가
-     * Sync UseCase에서 사용하는 메서드명과 일치
-     */
-    suspend fun findUpdatedAfter(timestamp: Instant): CustomResult<List<T>, Exception> = 
-        getEntitiesUpdatedAfter(timestamp)
-
-    /**
-     * deleteAllEntities 편의 메서드 추가
+     * deleteAllEntities 편의 메서드 (clearAllEntities와 동일)
      * Sync UseCase에서 사용하는 메서드명과 일치
      */
     suspend fun deleteAllEntities(): CustomResult<Unit, Exception> = clearAllEntities()
 
     /**
-     * clearAllEntities의 구체적 구현
-     * (SyncableRepository에서 상속)
+     * 전체 도메인 모델 수 조회
+     * 통계 및 검증용
+     *
+     * @return 도메인 모델 수
      */
-    override suspend fun clearAllEntities(): CustomResult<Unit, Exception>
+    suspend fun getTotalEntityCount(): CustomResult<Int, Exception>
 
     /**
-     * getTotalEntityCount의 구체적 구현
-     * (SyncableRepository에서 상속)
+     * 도메인 모델 존재 여부 확인
+     * 중복 방지 및 검증용
+     *
+     * @param entityId 도메인 모델 ID
+     * @return 존재 여부
      */
-    override suspend fun getTotalEntityCount(): CustomResult<Int, Exception>
-
-    /**
-     * entityExists의 구체적 구현
-     * (SyncableRepository에서 상속)
-     */
-    override suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception>
+    suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception>
 }

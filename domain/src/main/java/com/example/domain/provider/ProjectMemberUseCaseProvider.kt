@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.ProjectMemberLocalRepository
+import com.example.domain.repository.local.LocalProjectMemberRepository
 import com.example.domain.usecase.local.project.member.AddProjectMemberLocalUseCase
 import com.example.domain.usecase.local.project.member.AddProjectMemberLocalUseCaseImpl
 import com.example.domain.usecase.local.project.member.GetProjectMemberLocalUseCase
@@ -19,7 +19,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectMemberUseCaseProvider @Inject constructor(
-    private val projectMemberLocalRepository: ProjectMemberLocalRepository
+    private val projectMemberLocalRepository: LocalProjectMemberRepository
 ) {
 
     /**
@@ -95,20 +95,20 @@ data class ProjectMemberLocalBasicUseCases(
     // 멤버 조회
     val getProjectMemberLocalUseCase: GetProjectMemberLocalUseCase,
     val observeProjectMembersLocalUseCase: ObserveProjectMembersLocalUseCase,
-    
-    val projectMemberLocalRepository: ProjectMemberLocalRepository
+
+    val projectMemberLocalRepository: LocalProjectMemberRepository
 )
 
 /**
  * 프로젝트 멤버 고급 관리 Local UseCase 그룹
  */
 data class ProjectMemberLocalAdvancedUseCases(
-    val projectMemberLocalRepository: ProjectMemberLocalRepository
+    val projectMemberLocalRepository: LocalProjectMemberRepository
 )
 
 /**
  * 프로젝트 멤버 권한 관리 Local UseCase 그룹
  */
 data class ProjectMemberLocalPermissionUseCases(
-    val projectMemberLocalRepository: ProjectMemberLocalRepository
+    val projectMemberLocalRepository: LocalProjectMemberRepository
 ) 

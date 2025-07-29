@@ -1,8 +1,8 @@
 package com.example.domain.usecase.local.users
 
-import com.example.domain.model.User
-import com.example.domain.repository.local.UserLocalRepository
-import com.example.domain.util.CustomResult
+import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.User
+import com.example.domain.repository.local.LocalUserRepository
 import javax.inject.Inject
 
 interface InsertUserUseCase {
@@ -10,7 +10,7 @@ interface InsertUserUseCase {
 }
 
 class InsertUserUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) : InsertUserUseCase {
 
     override suspend operator fun invoke(user: User): CustomResult<Unit, Exception> {

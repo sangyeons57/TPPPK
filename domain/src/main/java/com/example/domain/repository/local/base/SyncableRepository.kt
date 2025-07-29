@@ -6,62 +6,25 @@ import java.time.Instant
 
 /**
  * Syncable Repository Interface (SSOT Pattern)
- * 모든 Local Repository의 공통 동기화 기능 정의
+ * 순수 동기화 전용 인터페이스 - Outbox 패턴과 증분 동기화 지원
  *
  * 🎯 역할:
- * - 서버 동기화를 위한 공통 인터페이스 제공
+ * - 서버 동기화를 위한 전용 인터페이스 제공
  * - Outbox 패턴 지원 (오프라인 우선 아키텍처)
  * - 증분 동기화 지원 (타임스탬프 기반)
- * - 일관된 동기화 API 보장
- * - 제네릭 Sync UseCase 지원
+ * - SyncMetadata 관리 (동기화 커서 및 상태)
+ * - 동기화 관련 작업만 담당
  *
- * 📋 공통 동기화 메서드:
- * - getXXXUpdatedAfter: 증분 동기화용 데이터 조회
- * - addToOutbox: 로컬 변경사항을 동기화 대기열에 추가
- * - clearAll: 초기화 (테스트/재동기화용)
- * - getCount: 통계/검증용
- * - saveEntity/getEntityById: 제네릭 UseCase용 CRUD
+ * 📋 순수 동기화 메서드:
+ * - 증분 동기화: getEntitiesUpdatedAfter
+ * - Outbox 관리: addToOutbox, getPendingOutboxOperations 등
+ * - SyncMetadata 관리: getLastSyncCursor, updateSyncCursor 등
+ *
+ * ❌ 일반 CRUD는 BaseLocalRepository에서 담당
  *
  * @param T 도메인 모델 타입 (Category, Project, User 등)
  */
 interface SyncableRepository<T> where T : AggregateRoot {
-
-    // === 컬렉션 이름 정의 ===
-
-    /**
-     * Firestore 컬렉션 이름 반환
-     * 제네릭 UseCase에서 동적으로 컬렉션 설정용
-     */
-    val collectionName: String
-
-    // === 기본 CRUD (제네릭 UseCase용) ===
-
-    /**
-     * 도메인 모델 저장/업데이트
-     * 제네릭 UseCase에서 사용
-     *
-     * @param entity 저장할 도메인 모델
-     * @return 성공 여부
-     */
-    suspend fun saveEntity(entity: T): CustomResult<Unit, Exception>
-
-    /**
-     * ID로 도메인 모델 조회
-     * 제네릭 UseCase에서 사용
-     *
-     * @param entityId 도메인 모델 ID
-     * @return 조회된 도메인 모델 (nullable)
-     */
-    suspend fun getEntityById(entityId: String): CustomResult<T?, Exception>
-
-    /**
-     * 도메인 모델 삭제
-     * 제네릭 UseCase에서 사용
-     *
-     * @param entityId 삭제할 도메인 모델 ID
-     * @return 성공 여부
-     */
-    suspend fun deleteEntity(entityId: String): CustomResult<Unit, Exception>
 
     // === 증분 동기화 지원 ===
 
@@ -91,32 +54,69 @@ interface SyncableRepository<T> where T : AggregateRoot {
         payload: String? = null
     ): CustomResult<Unit, Exception>
 
-    // === 초기화 및 통계 ===
+    /**
+     * 대기 중인 Outbox 작업 목록 조회
+     * 동기화 처리를 위한 대기 작업 확인
+     *
+     * @return 대기 중인 Outbox 작업 목록
+     */
+    suspend fun getPendingOutboxOperations(): CustomResult<List<OutboxOperation>, Exception>
 
     /**
-     * 모든 도메인 모델 삭제 (초기화)
-     * 테스트나 전체 재동기화시 사용
+     * Outbox 작업 완료 처리
+     * 서버 동기화 성공시 해당 작업을 Outbox에서 제거
      *
+     * @param operationId Outbox 작업 ID
      * @return 성공 여부
      */
-    suspend fun clearAllEntities(): CustomResult<Unit, Exception>
+    suspend fun markOutboxOperationComplete(operationId: String): CustomResult<Unit, Exception>
 
     /**
-     * 전체 도메인 모델 수 조회
-     * 통계 및 동기화 검증용
+     * 실패한 Outbox 작업 목록 조회
+     * 재시도가 필요한 작업들 확인
      *
-     * @return 도메인 모델 수
+     * @return 실패한 Outbox 작업 목록
      */
-    suspend fun getTotalEntityCount(): CustomResult<Int, Exception>
+    suspend fun getFailedOutboxOperations(): CustomResult<List<OutboxOperation>, Exception>
 
-    // === 존재 여부 확인 ===
+    // === SyncMetadata 관리 ===
 
     /**
-     * 도메인 모델 존재 여부 확인
-     * 중복 방지 및 검증용
+     * 마지막 동기화 커서 조회
+     * 증분 동기화의 시작점 결정
      *
-     * @param entityId 도메인 모델 ID
-     * @return 존재 여부
+     * @return 마지막 서버 커서 (타임스탬프)
      */
-    suspend fun entityExists(entityId: String): CustomResult<Boolean, Exception>
+    suspend fun getLastSyncCursor(): CustomResult<Long?, Exception>
+
+    /**
+     * 동기화 커서 업데이트
+     * 성공한 동기화 작업 후 커서 갱신
+     *
+     * @param cursor 새로운 서버 커서
+     * @param timestamp 동기화 완료 시간
+     * @return 성공 여부
+     */
+    suspend fun updateSyncCursor(cursor: Long, timestamp: Long): CustomResult<Unit, Exception>
+
+    /**
+     * 마지막 성공 동기화 시간 조회
+     * 동기화 건강 상태 모니터링용
+     *
+     * @return 마지막 성공 동기화 시간
+     */
+    suspend fun getLastSuccessfulSyncTime(): CustomResult<Long?, Exception>
 }
+
+/**
+ * Outbox 작업 정보
+ * SyncableRepository에서 사용하는 Outbox 작업 데이터
+ */
+data class OutboxOperation(
+    val id: String,
+    val entityId: String,
+    val operation: String,
+    val payload: String?,
+    val localTimestamp: Long,
+    val retries: Int
+)

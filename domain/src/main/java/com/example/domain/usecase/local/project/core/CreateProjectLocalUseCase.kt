@@ -3,7 +3,6 @@ package com.example.domain.usecase.local.project.core
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
 import com.example.domain.repository.local.ProjectLocalRepository
-import com.example.domain.repository.local.AuthLocalRepository
 import javax.inject.Inject
 
 interface CreateProjectLocalUseCase {
@@ -15,7 +14,7 @@ interface CreateProjectLocalUseCase {
 
 class CreateProjectLocalUseCaseImpl @Inject constructor(
     private val projectLocalRepository: ProjectLocalRepository,
-    private val authLocalRepository: AuthLocalRepository
+    private val authRepository: AuthRepository
 ) : CreateProjectLocalUseCase {
 
     override suspend operator fun invoke(

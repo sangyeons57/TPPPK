@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.ProjectChannelLocalRepository
+import com.example.domain.repository.local.LocalProjectChannelRepository
 import com.example.domain.usecase.local.project.channel.AddProjectChannelLocalUseCase
 import com.example.domain.usecase.local.project.channel.AddProjectChannelLocalUseCaseImpl
 import com.example.domain.usecase.local.project.channel.CreateProjectChannelLocalUseCase
@@ -27,7 +27,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectChannelUseCaseProvider @Inject constructor(
-    private val projectChannelLocalRepository: ProjectChannelLocalRepository
+    private val projectChannelLocalRepository: LocalProjectChannelRepository
 ) {
 
     /**
@@ -104,8 +104,8 @@ data class ProjectChannelLocalBasicUseCases(
     
     // 채널 삭제
     val deleteChannelLocalUseCase: DeleteChannelLocalUseCase,
-    
-    val projectChannelLocalRepository: ProjectChannelLocalRepository
+
+    val projectChannelLocalRepository: LocalProjectChannelRepository
 )
 
 /**
@@ -118,6 +118,6 @@ data class ProjectChannelLocalAdvancedUseCases(
     
     // 채널 순서 변경
     val reorderChannelsLocalUseCase: ReorderChannelsLocalUseCase,
-    
-    val projectChannelLocalRepository: ProjectChannelLocalRepository
+
+    val projectChannelLocalRepository: LocalProjectChannelRepository
 ) 

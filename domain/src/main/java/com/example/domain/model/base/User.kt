@@ -2,7 +2,6 @@ package com.example.domain.model.base
 
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.AggregateRoot
 import com.example.domain.event.user.UserAccountActivatedEvent
 import com.example.domain.event.user.UserAccountSuspendedEvent
 import com.example.domain.event.user.UserAccountWithdrawnEvent
@@ -11,6 +10,7 @@ import com.example.domain.event.user.UserMemoChangedEvent
 import com.example.domain.event.user.UserNameChangedEvent
 import com.example.domain.event.user.UserProfileUpdatedEvent
 import com.example.domain.event.user.UserStatusChangedEvent
+import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.example.domain.model.vo.DocumentId
@@ -55,17 +55,6 @@ class User private constructor(
         private set
 
 
-    /**
-     * Returns and clears the accumulated domain events.
-     */
-
-    override fun getCurrentStateMap(): Map<String, Any?> {
-        return emptyMap()
-    }
-
-    // Secondary constructor for convenience if some fields can be truly optional at creation
-    // For now, we assume all parameters in the primary internal constructor are essential for a valid User object
-    // or are set by factory methods.
 
     /**
      * Updates the user's profile information.

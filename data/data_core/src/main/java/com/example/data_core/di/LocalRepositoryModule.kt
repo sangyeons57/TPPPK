@@ -1,7 +1,35 @@
 package com.example.data_core.di
 
-import com.example.data_core.repository.local.*
-import com.example.domain.repository.local.*
+import com.example.data_core.repository.local.LocalCategoryRepositoryImpl
+import com.example.data_core.repository.local.LocalDMChannelRepositoryImpl
+import com.example.data_core.repository.local.LocalDMWrapperRepositoryImpl
+import com.example.data_core.repository.local.LocalFriendRepositoryImpl
+import com.example.data_core.repository.local.LocalMessageAttachmentRepositoryImpl
+import com.example.data_core.repository.local.LocalPermissionRepositoryImpl
+import com.example.data_core.repository.local.LocalProjectChannelRepositoryImpl
+import com.example.data_core.repository.local.LocalProjectInvitationRepositoryImpl
+import com.example.data_core.repository.local.LocalProjectMemberRepositoryImpl
+import com.example.data_core.repository.local.LocalProjectRepositoryImpl
+import com.example.data_core.repository.local.LocalProjectRoleRepositoryImpl
+import com.example.data_core.repository.local.LocalProjectsWrapperRepositoryImpl
+import com.example.data_core.repository.local.LocalReactionRepositoryImpl
+import com.example.data_core.repository.local.LocalScheduleRepositoryImpl
+import com.example.data_core.repository.local.LocalTaskRepositoryImpl
+import com.example.domain.repository.local.LocalCategoryRepository
+import com.example.domain.repository.local.LocalDMChannelRepository
+import com.example.domain.repository.local.LocalDMWrapperRepository
+import com.example.domain.repository.local.LocalFriendRepository
+import com.example.domain.repository.local.LocalMessageAttachmentRepository
+import com.example.domain.repository.local.LocalPermissionRepository
+import com.example.domain.repository.local.LocalProjectChannelRepository
+import com.example.domain.repository.local.LocalProjectInvitationRepository
+import com.example.domain.repository.local.LocalProjectMemberRepository
+import com.example.domain.repository.local.LocalProjectRepository
+import com.example.domain.repository.local.LocalProjectRoleRepository
+import com.example.domain.repository.local.LocalProjectsWrapperRepository
+import com.example.domain.repository.local.LocalReactionRepository
+import com.example.domain.repository.local.LocalScheduleRepository
+import com.example.domain.repository.local.LocalTaskRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -95,8 +123,8 @@ abstract class LocalRepositoryModule {
     @Binds
     @Singleton
     abstract fun bindLocalMemberRepository(
-        implementation: LocalMemberRepositoryImpl
-    ): LocalMemberRepository
+        implementation: LocalProjectMemberRepositoryImpl
+    ): LocalProjectMemberRepository
 
     // === Permission & Role Repositories ===
 

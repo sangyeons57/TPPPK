@@ -2,8 +2,7 @@ package com.example.domain.usecase.local.file
 
 import android.net.Uri
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.local.MessageAttachmentLocalRepository
-import com.example.domain.repository.remote.FileUploadResultData
+import com.example.domain.repository.local.LocalMessageAttachmentRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -15,7 +14,7 @@ interface UploadMessageAttachmentLocalUseCase {
 }
 
 class UploadMessageAttachmentLocalUseCaseImpl @Inject constructor(
-    private val messageAttachmentLocalRepository: MessageAttachmentLocalRepository,
+    private val messageAttachmentLocalRepository: LocalMessageAttachmentRepository,
     private val validateFileLocalUseCase: ValidateFileLocalUseCase
 ) : UploadMessageAttachmentLocalUseCase {
 

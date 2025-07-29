@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.CategoryLocalRepository
+import com.example.domain.repository.local.LocalCategoryRepository
 import com.example.domain.usecase.local.project.category.DeleteCategoryLocalUseCase
 import com.example.domain.usecase.local.project.category.DeleteCategoryLocalUseCaseImpl
 import com.example.domain.usecase.local.project.category.GetCategoryDetailsLocalUseCase
@@ -21,7 +21,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectCategoryUseCaseProvider @Inject constructor(
-    private val categoryLocalRepository: CategoryLocalRepository
+    private val categoryLocalRepository: LocalCategoryRepository
 ) {
 
     /**
@@ -76,6 +76,6 @@ data class ProjectCategoryLocalUseCases(
     
     // 카테고리 순서 변경
     val reorderCategoriesLocalUseCase: ReorderCategoriesLocalUseCase,
-    
-    val categoryLocalRepository: CategoryLocalRepository
+
+    val categoryLocalRepository: LocalCategoryRepository
 ) 

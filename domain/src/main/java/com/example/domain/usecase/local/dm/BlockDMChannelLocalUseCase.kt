@@ -2,8 +2,8 @@ package com.example.domain.usecase.local.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.local.AuthLocalRepository
-import com.example.domain.repository.local.DMChannelLocalRepository
+import com.example.domain.repository.local.LocalDMChannelRepository
+import com.example.domain.repository.remote.AuthRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -12,8 +12,8 @@ interface BlockDMChannelLocalUseCase {
 }
 
 class BlockDMChannelLocalUseCaseImpl @Inject constructor(
-    private val dmChannelLocalRepository: DMChannelLocalRepository,
-    private val authRepository: AuthLocalRepository
+    private val dmChannelLocalRepository: LocalDMChannelRepository,
+    private val authRepository: AuthRepository
 ) : BlockDMChannelLocalUseCase {
 
     override operator fun invoke(channelId: DocumentId): Flow<CustomResult<DocumentId, Exception>> {

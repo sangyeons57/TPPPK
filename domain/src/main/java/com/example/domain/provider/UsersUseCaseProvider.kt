@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.UserLocalRepository
+import com.example.domain.repository.local.LocalUserRepository
 import com.example.domain.usecase.local.users.CheckNicknameAvailabilityLocalUseCase
 import com.example.domain.usecase.local.users.CheckNicknameAvailabilityLocalUseCaseImpl
 import com.example.domain.usecase.local.users.DeleteUserUseCase
@@ -47,7 +47,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class UsersUseCaseProvider @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) {
 
     /**
@@ -59,35 +59,35 @@ class UsersUseCaseProvider @Inject constructor(
         return UsersLocalBasicUseCases(
             // 조회
             getAllUsersUseCase = GetAllUsersUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             getUserByIdLocalUseCase = GetUserByIdLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             getUserStreamLocalUseCase = GetUserStreamLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             getCurrentUserStreamLocalUseCase = GetCurrentUserStreamLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             getUserUseCase = GetUserUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             // 생성/수정/삭제
             insertUserUseCase = InsertUserUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             deleteUserUseCase = DeleteUserUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
-            
-            userLocalRepository = userLocalRepository
+
+            localUserRepository = localUserRepository
         )
     }
 
@@ -100,36 +100,36 @@ class UsersUseCaseProvider @Inject constructor(
         return UsersLocalProfileUseCases(
             // 프로필 업데이트
             updateNameLocalUseCase = UpdateNameLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             updateUserStatusLocalUseCase = UpdateUserStatusLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             updateUserMemoLocalUseCase = UpdateUserMemoLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             updateFcmTokenLocalUseCase = UpdateFcmTokenLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             // 프로필 이미지
             uploadProfileImageLocalUseCase = UploadProfileImageLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             removeProfileImageLocalUseCase = RemoveProfileImageLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             // 계정 관리
             suspendAccountLocalUseCase = SuspendAccountLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
-            
-            userLocalRepository = userLocalRepository
+
+            localUserRepository = localUserRepository
         )
     }
 
@@ -142,24 +142,24 @@ class UsersUseCaseProvider @Inject constructor(
         return UsersLocalSearchUseCases(
             // 검색
             searchUserByNameLocalUseCase = SearchUserByNameLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             searchUsersByNameLocalUseCase = SearchUsersByNameLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             // 닉네임 관련
             checkNicknameAvailabilityLocalUseCase = CheckNicknameAvailabilityLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
             
             // 관찰
             observeUserUpdatedAtLocalUseCase = ObserveUserUpdatedAtLocalUseCaseImpl(
-                userLocalRepository = userLocalRepository
+                localUserRepository = localUserRepository
             ),
-            
-            userLocalRepository = userLocalRepository
+
+            localUserRepository = localUserRepository
         )
     }
 }
@@ -178,8 +178,8 @@ data class UsersLocalBasicUseCases(
     // 생성/수정/삭제
     val insertUserUseCase: InsertUserUseCase,
     val deleteUserUseCase: DeleteUserUseCase,
-    
-    val userLocalRepository: UserLocalRepository
+
+    val localUserRepository: LocalUserRepository
 )
 
 /**
@@ -198,8 +198,8 @@ data class UsersLocalProfileUseCases(
     
     // 계정 관리
     val suspendAccountLocalUseCase: SuspendAccountLocalUseCase,
-    
-    val userLocalRepository: UserLocalRepository
+
+    val localUserRepository: LocalUserRepository
 )
 
 /**
@@ -215,6 +215,6 @@ data class UsersLocalSearchUseCases(
     
     // 관찰
     val observeUserUpdatedAtLocalUseCase: ObserveUserUpdatedAtLocalUseCase,
-    
-    val userLocalRepository: UserLocalRepository
+
+    val localUserRepository: LocalUserRepository
 ) 

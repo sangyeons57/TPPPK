@@ -2,10 +2,7 @@ package com.example.domain.model
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.vo.DocumentId
-import com.google.firebase.firestore.FieldValue
 import java.time.Instant
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 
 abstract class AggregateRoot {
@@ -22,8 +19,6 @@ abstract class AggregateRoot {
     abstract val updatedAt: Instant
 
     private val _domainEvents: MutableList<DomainEvent> = mutableListOf()
-
-    abstract fun getCurrentStateMap(): Map<String, Any?>
 
     fun pullDomainEvents(): List<DomainEvent> {
         val copy = _domainEvents.toList()

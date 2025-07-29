@@ -3,7 +3,7 @@ package com.example.domain.usecase.local.users
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.local.UserLocalRepository
+import com.example.domain.repository.local.LocalUserRepository
 import javax.inject.Inject
 
 interface SearchUserByNameLocalUseCase {
@@ -11,7 +11,7 @@ interface SearchUserByNameLocalUseCase {
 }
 
 class SearchUserByNameLocalUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) : SearchUserByNameLocalUseCase {
 
     override suspend operator fun invoke(name: UserName): CustomResult<User, Exception> {

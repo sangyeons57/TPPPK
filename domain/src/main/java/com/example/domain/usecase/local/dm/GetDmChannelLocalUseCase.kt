@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.repository.local.DMChannelLocalRepository
+import com.example.domain.repository.local.LocalDMChannelRepository
 import javax.inject.Inject
 
 interface GetDmChannelLocalUseCase {
@@ -13,7 +13,7 @@ interface GetDmChannelLocalUseCase {
 }
 
 class GetDmChannelLocalUseCaseImpl @Inject constructor(
-    private val dmChannelLocalRepository: DMChannelLocalRepository
+    private val dmChannelLocalRepository: LocalDMChannelRepository
 ) : GetDmChannelLocalUseCase {
 
     override suspend operator fun invoke(dmChannelId: DocumentId): CustomResult<DMChannel, Exception> {

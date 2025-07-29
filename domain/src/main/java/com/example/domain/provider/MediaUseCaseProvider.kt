@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.MediaLocalRepository
+import com.example.domain.repository.remote.MediaRepository
 import com.example.domain.usecase.local.media.DeleteMediaLocalUseCase
 import com.example.domain.usecase.local.media.DeleteMediaLocalUseCaseImpl
 import com.example.domain.usecase.local.media.UploadMediaLocalUseCase
@@ -15,7 +15,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class MediaUseCaseProvider @Inject constructor(
-    private val mediaLocalRepository: MediaLocalRepository
+    private val mediaLocalRepository: MediaRepository
 ) {
 
     /**
@@ -49,6 +49,6 @@ data class MediaLocalUseCases(
     
     // 미디어 삭제
     val deleteMediaLocalUseCase: DeleteMediaLocalUseCase,
-    
-    val mediaLocalRepository: MediaLocalRepository
+
+    val mediaLocalRepository: MediaRepository
 ) 

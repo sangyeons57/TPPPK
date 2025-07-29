@@ -1,7 +1,7 @@
 package com.example.domain.usecase.local.file
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.local.FileLocalRepository
+import com.example.domain.repository.remote.FileRepository
 import javax.inject.Inject
 
 interface DeleteFileLocalUseCase {
@@ -9,7 +9,7 @@ interface DeleteFileLocalUseCase {
 }
 
 class DeleteFileLocalUseCaseImpl @Inject constructor(
-    private val fileLocalRepository: FileLocalRepository
+    private val fileLocalRepository: FileRepository
 ) : DeleteFileLocalUseCase {
 
     override suspend operator fun invoke(storagePath: String): CustomResult<Unit, Exception> {

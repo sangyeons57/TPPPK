@@ -8,7 +8,7 @@ import java.time.Instant
  * 로컬 카테고리 데이터 저장소 인터페이스
  * 3-tier 클라이언트 주도 동기화 아키텍처를 지원합니다
  */
-interface LocalCategoriesDataSource {
+interface LocalProjectCategoriesDataSource {
 
     // === 기본 CRUD 작업 ===
 

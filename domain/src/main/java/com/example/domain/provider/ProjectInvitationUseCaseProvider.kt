@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.ProjectInvitationLocalRepository
+import com.example.domain.repository.local.LocalProjectInvitationRepository
 import com.example.domain.usecase.local.project.invitation.SendProjectInvitationLocalUseCase
 import com.example.domain.usecase.local.project.invitation.SendProjectInvitationLocalUseCaseImpl
 import javax.inject.Inject
@@ -13,7 +13,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectInvitationUseCaseProvider @Inject constructor(
-    private val projectInvitationLocalRepository: ProjectInvitationLocalRepository
+    private val projectInvitationLocalRepository: LocalProjectInvitationRepository
 ) {
 
     /**
@@ -74,20 +74,20 @@ class ProjectInvitationUseCaseProvider @Inject constructor(
 data class ProjectInvitationLocalBasicUseCases(
     // 초대장 생성
     val sendProjectInvitationLocalUseCase: SendProjectInvitationLocalUseCase,
-    
-    val projectInvitationLocalRepository: ProjectInvitationLocalRepository
+
+    val projectInvitationLocalRepository: LocalProjectInvitationRepository
 )
 
 /**
  * 프로젝트 초대 응답 관리 Local UseCase 그룹
  */
 data class ProjectInvitationLocalResponseUseCases(
-    val projectInvitationLocalRepository: ProjectInvitationLocalRepository
+    val projectInvitationLocalRepository: LocalProjectInvitationRepository
 )
 
 /**
  * 프로젝트 초대 상태 관리 Local UseCase 그룹
  */
 data class ProjectInvitationLocalStatusUseCases(
-    val projectInvitationLocalRepository: ProjectInvitationLocalRepository
+    val projectInvitationLocalRepository: LocalProjectInvitationRepository
 ) 

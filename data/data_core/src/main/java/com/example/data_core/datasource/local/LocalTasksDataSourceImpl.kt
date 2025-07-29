@@ -111,7 +111,7 @@ class LocalTasksDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             TaskOutboxOperation(
                 id = entity.id,
-                taskId = entity.entityId,
+                taskId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

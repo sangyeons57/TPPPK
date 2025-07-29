@@ -316,8 +316,6 @@ class LocalDMWrapperRepositoryImpl @Inject constructor(
             if (otherUserName != null || otherUserImageUrl != null || lastMessagePreview != null) {
                 updatedWrapper = DMWrapper.fromDataSource(
                     id = currentWrapper.id,
-                    dmChannelId = currentWrapper.dmChannelId,
-                    currentUserId = currentWrapper.currentUserId,
                     otherUserId = currentWrapper.otherUserId,
                     otherUserName = otherUserName ?: currentWrapper.otherUserName,
                     otherUserImageUrl = otherUserImageUrl ?: currentWrapper.otherUserImageUrl,

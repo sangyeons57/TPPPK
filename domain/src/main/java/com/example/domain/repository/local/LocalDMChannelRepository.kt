@@ -301,17 +301,4 @@ interface LocalDMChannelRepository : BaseLocalRepository<DMChannel> {
      * @return 업데이트된 DM 채널 목록
      */
     suspend fun getDMChannelsUpdatedAfter(timestamp: Instant): List<DMChannel>
-
-    /**
-     * Outbox에 작업 추가 (서버 동기화 대기열)
-     * @param channelId DM 채널 ID
-     * @param operation 작업 타입 (CREATE, UPDATE, DELETE)
-     * @param payload 작업 데이터 (JSON)
-     * @return 성공 여부
-     */
-    suspend fun addToOutbox(
-        channelId: String,
-        operation: String,
-        payload: String? = null
-    ): CustomResult<Unit, Exception>
 }

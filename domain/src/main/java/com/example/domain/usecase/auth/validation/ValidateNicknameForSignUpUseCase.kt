@@ -1,10 +1,8 @@
 package com.example.domain.usecase.auth.validation
 
-import com.example.core_common.result.CustomResult
 import com.example.domain.model.ui.sealed_class.UserNameResult
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.repository.remote.UserRepository
-import kotlinx.coroutines.flow.first
+import com.example.domain.repository.local.LocalUserRepository
 import javax.inject.Inject
 
 /**
@@ -14,7 +12,7 @@ import javax.inject.Inject
  * @property userRepository Repository for user-related data operations.
  */
 class ValidateNicknameForSignUpUseCase @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: LocalUserRepository
 ) {
 
     companion object {
@@ -30,53 +28,17 @@ class ValidateNicknameForSignUpUseCase @Inject constructor(
      * @return A [UserNameResult] indicating the outcome of the validation.
      */
     suspend operator fun invoke(username: UserName): UserNameResult {
-        if (username.isBlank()) {
-            return UserNameResult.Empty
-        }
-        if (username.length < MIN_NICKNAME_LENGTH) {
-            return UserNameResult.TooShort(MIN_NICKNAME_LENGTH)
-        }
-        if (username.length > MAX_NICKNAME_LENGTH) {
-            return UserNameResult.TooLong(MAX_NICKNAME_LENGTH)
-        }
-        if (!username.matches(ALLOWED_NICKNAME_REGEX)) {
-            return UserNameResult.InvalidCharacters
-        }
-
-        return try {
-            when (val result = userRepository.observeByName(name = username).first()) {
-                is CustomResult.Success -> {
-                    // If a user is found, the nickname is already taken.
-                    UserNameResult.NicknameAlreadyExists
-                }
-                is CustomResult.Failure -> {
-                    // If the specific error is 'NoSuchElementException', it means no user was found, so nickname IS available.
-                    if (result.error is NoSuchElementException) {
-                        UserNameResult.Valid
-                    } else {
-                        // Other errors from the repository call.
-                        UserNameResult.Failure("Failed to check nickname availability: ${result.error.localizedMessage}")
-                    }
-                }
-                is CustomResult.Loading -> {
-                    // This state should ideally not be hit if .first() is used and the stream emits quickly.
-                    UserNameResult.Failure("Nickname availability check timed out or remained in loading state.")
-                }
-                is CustomResult.Initial -> {
-                    UserNameResult.Failure("Nickname availability check remained in initial state.")
-                }
-                is CustomResult.Progress -> {
-                    UserNameResult.Failure("Nickname availability check remained in progress state.")
-                }
-            }
-        } catch (e: Exception) {
-            // Catch exceptions from Flow collection (e.g., .first() on an empty flow if not handled by NoSuchElementException from source)
-            // or other unexpected issues.
-            if (e is NoSuchElementException) { // This might occur if the flow completes without emitting, though findByNameStream should emit Failure(NoSuchElementException)
-                 UserNameResult.Valid
-            } else {
-                 UserNameResult.Failure("An unexpected error occurred during nickname validation: ${e.localizedMessage}")
-            }
-        }
+        // TODO: Implement ValidateNicknameForSignUpUseCase using LocalUserRepository
+        // This should:
+        // 1. Validate nickname format: check if blank, length (3-20 chars), alphanumeric only
+        // 2. Return appropriate UserNameResult for format validation (Empty, TooShort, TooLong, InvalidCharacters)
+        // 3. Check nickname availability using userRepository.observeByName(username).first()
+        // 4. Handle CustomResult states: Success (nickname taken), Failure (check NoSuchElementException for availability)
+        // 5. Return UserNameResult.NicknameAlreadyExists if user found
+        // 6. Return UserNameResult.Valid if NoSuchElementException (nickname available)
+        // 7. Handle other CustomResult states (Loading, Initial, Progress) with appropriate failure messages
+        // 8. Wrap in try-catch for Flow collection exceptions
+        // Note: This should work with LocalUserRepository for local data validation
+        TODO("ValidateNicknameForSignUpUseCase implementation pending - convert to use LocalUserRepository for SSOT pattern")
     }
 }

@@ -1,13 +1,9 @@
 package com.example.domain.usecase.sync
 
 import com.example.core_common.result.CustomResult
-import com.example.data_core.dao.SyncMetadataDao
-import com.example.data_model.local.SyncMetadataEntity
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.local.base.SyncableRepository
 import com.example.domain.repository.remote.DefaultRepository
-import com.google.firebase.firestore.Query
 import java.time.Instant
 import javax.inject.Inject
 
@@ -18,97 +14,30 @@ import javax.inject.Inject
  * @param T 도메인 모델 타입 (Category, Project, User 등)
  */
 class SyncIncrementalDataFromServerUseCase<T> @Inject constructor(
-    private val syncMetadataDao: SyncMetadataDao
+    // TODO: Replace with domain repository interface when data layer is integrated
+    // private val syncMetadataRepository: SyncMetadataRepository
 ) where T : AggregateRoot {
 
     suspend operator fun invoke(
         remoteRepository: DefaultRepository<T>,
         localRepository: SyncableRepository<T>
     ): CustomResult<SyncResult, Exception> {
-        return try {
-            val collectionName = localRepository.collectionName
+        // TODO: Implement incremental data synchronization from server
+        // This UseCase should:
+        // 1. Retrieve last sync metadata to determine the cursor/timestamp for incremental sync
+        // 2. Query remote repository for entities updated after the last sync timestamp
+        // 3. Filter entities to only include those newer than the last sync
+        // 4. Save new/updated entities to local repository
+        // 5. Update sync metadata with the latest sync timestamp
+        // 6. Return sync results with counts and any errors encountered
+        //
+        // Key features:
+        // - Uses timestamps/cursors to sync only changed data since last sync
+        // - Filters out already-synced entities to avoid duplicates
+        // - Updates sync metadata to track progress
+        // - Handles errors gracefully and reports detailed results
 
-            // 1. SyncMetadata에서 마지막 동기화 시간 확인
-            val syncMetadata = syncMetadataDao.getSyncMetadata(collectionName)
-                ?: SyncMetadataEntity(
-                    collectionName = collectionName,
-                    lastServerCursor = 0L,
-                    lastSuccessfulSync = System.currentTimeMillis() - 3600000L // 1시간 전부터
-                )
-
-            // 2. 서버에서 증분 데이터 조회 (마지막 동기화 이후)
-            remoteRepository.setCollection(CollectionPath.from(collectionName))
-            val serverResult = remoteRepository.findNByUpdatedAt(
-                n = 1000L, // 증분 동기화는 큰 제한으로 설정
-                updatedAt = Instant.ofEpochMilli(syncMetadata.lastServerCursor),
-                direction = Query.Direction.DESCENDING
-            )
-
-            val entities = when (serverResult) {
-                is CustomResult.Success -> serverResult.data.filter { entity ->
-                    // 엔티티별로 updatedAt 접근 방식이 다를 수 있으므로 리플렉션 사용
-                    getEntityUpdatedAt(entity)?.isAfter(Instant.ofEpochMilli(syncMetadata.lastServerCursor)) == true
-                }
-
-                is CustomResult.Failure -> return CustomResult.Failure(serverResult.error)
-                else -> return CustomResult.Failure(Exception("Unexpected result state"))
-            }
-
-            // 변경사항이 없으면 조기 반환
-            if (entities.isEmpty()) {
-                return CustomResult.Success(
-                    SyncResult(
-                        totalCount = 0,
-                        successCount = 0,
-                        errorCount = 0,
-                        errors = emptyList(),
-                        isIncremental = true
-                    )
-                )
-            }
-
-            // 3. 로컬에 저장
-            var successCount = 0
-            var errorCount = 0
-            val errors = mutableListOf<Exception>()
-
-            entities.forEach { entity ->
-                when (val saveResult = localRepository.saveEntity(entity)) {
-                    is CustomResult.Success -> successCount++
-                    is CustomResult.Failure -> {
-                        errorCount++
-                        errors.add(saveResult.error)
-                    }
-
-                    else -> {
-                        errorCount++
-                        errors.add(Exception("Unexpected save result state"))
-                    }
-                }
-            }
-
-            // 4. SyncMetadata 업데이트 (가장 최근 업데이트 시간으로)
-            val latestUpdateTime = entities.maxByOrNull { getEntityUpdatedAt(it) ?: Instant.MIN }
-                ?.let { getEntityUpdatedAt(it) } ?: Instant.now()
-            val updatedMetadata = syncMetadata.copy(
-                lastServerCursor = latestUpdateTime.toEpochMilli(),
-                lastSuccessfulSync = System.currentTimeMillis()
-            )
-            syncMetadataDao.insertSyncMetadata(updatedMetadata)
-
-            CustomResult.Success(
-                SyncResult(
-                    totalCount = entities.size,
-                    successCount = successCount,
-                    errorCount = errorCount,
-                    errors = errors,
-                    isIncremental = true
-                )
-            )
-
-        } catch (exception: Exception) {
-            CustomResult.Failure(exception)
-        }
+        return CustomResult.Failure(Exception("UseCase implementation pending - data layer integration required"))
     }
 
     /**

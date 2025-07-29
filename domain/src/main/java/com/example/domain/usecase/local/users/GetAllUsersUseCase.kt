@@ -1,7 +1,7 @@
 package com.example.domain.usecase.local.users
 
-import com.example.domain.model.User
-import com.example.domain.repository.local.UserLocalRepository
+import com.example.domain.model.base.User
+import com.example.domain.repository.local.LocalUserRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -10,7 +10,7 @@ interface GetAllUsersUseCase {
 }
 
 class GetAllUsersUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) : GetAllUsersUseCase {
 
     override operator fun invoke(): Flow<List<User>> {

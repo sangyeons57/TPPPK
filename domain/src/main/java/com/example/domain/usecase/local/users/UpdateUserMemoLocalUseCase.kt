@@ -1,7 +1,7 @@
 package com.example.domain.usecase.local.users
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.local.UserLocalRepository
+import com.example.domain.repository.local.LocalUserRepository
 import javax.inject.Inject
 
 interface UpdateUserMemoLocalUseCase {
@@ -9,7 +9,7 @@ interface UpdateUserMemoLocalUseCase {
 }
 
 class UpdateUserMemoLocalUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) : UpdateUserMemoLocalUseCase {
 
     override suspend operator fun invoke(memo: String): CustomResult<Unit, Exception> {

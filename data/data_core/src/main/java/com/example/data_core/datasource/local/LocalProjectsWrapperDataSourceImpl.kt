@@ -76,7 +76,7 @@ class LocalProjectsWrapperDataSourceImpl @Inject constructor(
         outboxDao.getPendingOperationsByCollection(COLLECTION_NAME).map {
             ProjectsWrapperOutboxOperation(
                 it.id,
-                it.entityId,
+                it.documentId,
                 it.operation,
                 it.payload,
                 it.localTimestamp,

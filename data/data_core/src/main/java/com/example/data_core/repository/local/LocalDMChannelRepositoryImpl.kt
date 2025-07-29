@@ -1,11 +1,11 @@
 package com.example.data_core.repository.local
 
-import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.datasource.local.LocalDMChannelsDataSource
 import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.enum.DMChannelStatus
+import com.example.domain.model.vo.CollectionPath
 import com.example.domain.model.vo.UserId
 import com.example.domain.repository.local.LocalDMChannelRepository
 import kotlinx.coroutines.flow.Flow
@@ -43,9 +43,10 @@ import javax.inject.Singleton
  */
 @Singleton
 class LocalDMChannelRepositoryImpl @Inject constructor(
-    private val localDmChannelsDataSource: LocalDMChannelsDataSource
+    private val localDmChannelsDataSource: LocalDMChannelsDataSource,
 ) : BaseLocalRepositoryImpl<DMChannel>(), LocalDMChannelRepository {
 
+    override lateinit var collectionPath: CollectionPath
     companion object {
         private const val TAG = "LocalDMChannelRepository"
     }

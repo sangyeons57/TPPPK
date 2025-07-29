@@ -1,11 +1,13 @@
 package com.example.data_core.repository.local
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.data_core.dao.OutboxDao
 import com.example.data_core.dao.ProjectsDao
-import com.example.data_core.model.local.OutboxEntity
+import com.example.data_core.datasource.local.SyncMetadataDataSource
+import com.example.data_core.datasource.local.SyncOutboxDataSource
 import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
 import com.example.domain.model.base.Project
+import com.example.domain.model.vo.OutboxCollectionType
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.project.ProjectStatus
 import com.example.domain.repository.local.LocalProjectRepository
@@ -13,10 +15,8 @@ import com.example.mapper.ProjectEntityMapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import android.util.Log
 
 /**
  * Local Project Repository Implementation (SSOT)
@@ -49,14 +49,18 @@ import android.util.Log
 @Singleton
 class LocalProjectRepositoryImpl @Inject constructor(
     private val projectsDao: ProjectsDao,
-    private val outboxDao: OutboxDao,
+    override val syncOutboxDataSource: SyncOutboxDataSource,
+    override val syncMetadataDataSource: SyncMetadataDataSource,
     private val mapper: ProjectEntityMapper
 ) : BaseLocalRepositoryImpl<Project>(), LocalProjectRepository {
 
     companion object {
         private const val TAG = "LocalProjectRepository"
-        private const val COLLECTION_NAME = "projects"
     }
+
+    // === BaseLocalRepositoryImpl 구현 ===
+
+    override val collectionType: OutboxCollectionType = OutboxCollectionType.PROJECTS
 
     // === BaseLocalRepository 메서드 구현 (도메인 특화 메서드로 위임) ===
 

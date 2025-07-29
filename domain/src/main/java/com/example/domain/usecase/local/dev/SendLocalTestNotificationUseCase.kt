@@ -1,7 +1,6 @@
 package com.example.domain.usecase.local.dev
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.repository.local.NotificationLocalRepository
 import javax.inject.Inject
 
 interface SendLocalTestNotificationUseCase {
@@ -12,7 +11,7 @@ interface SendLocalTestNotificationUseCase {
 }
 
 class SendLocalTestNotificationUseCaseImpl @Inject constructor(
-    private val notificationLocalRepository: NotificationLocalRepository
+    // private val notificationLocalRepository: NotificationLocalRepository
 ) : SendLocalTestNotificationUseCase {
 
     override suspend operator fun invoke(

@@ -1,13 +1,9 @@
 package com.example.domain.usecase.sync
 
 import com.example.core_common.result.CustomResult
-import com.example.data_core.dao.SyncMetadataDao
-import com.example.data_model.local.SyncMetadataEntity
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.CollectionPath
 import com.example.domain.repository.local.base.SyncableRepository
 import com.example.domain.repository.remote.DefaultRepository
-import com.google.firebase.firestore.Query
 import java.time.Instant
 import javax.inject.Inject
 
@@ -23,7 +19,8 @@ import javax.inject.Inject
  * @param T 엔티티 타입 (Category, Project, User 등)
  */
 class SyncOlderDataFromServerUseCase<T> @Inject constructor(
-    private val syncMetadataDao: SyncMetadataDao
+    // TODO: Replace with domain repository interface when data layer is integrated
+    // private val syncMetadataRepository: SyncMetadataRepository
 ) where T : AggregateRoot {
 
     suspend operator fun invoke(
@@ -31,132 +28,22 @@ class SyncOlderDataFromServerUseCase<T> @Inject constructor(
         localRepository: SyncableRepository<T>,
         batchSize: Long = 50L
     ): CustomResult<SyncResult, Exception> {
-        return try {
-            val collectionName = localRepository.collectionName
+        // TODO: Implement older data synchronization from server
+        // This UseCase should:
+        // 1. Check sync metadata for cursor information to determine where to continue pagination
+        // 2. Query remote repository for older data using cursor-based pagination (ASC order)
+        // 3. For each entity, check if it already exists locally to avoid duplicates
+        // 4. Save only new entities that don't exist locally
+        // 5. Update sync metadata with new cursor position
+        // 6. Return sync results indicating if more data is available for pagination
+        //
+        // Key features:
+        // - Cursor-based pagination for efficient historical data loading
+        // - Duplicate detection to avoid re-saving existing entities
+        // - Batch processing to control memory usage and network efficiency
+        // - Progressive loading: indicates if more historical data is available
 
-            // 1. SyncMetadata에서 커서 정보 확인
-            val syncMetadata = syncMetadataDao.getSyncMetadata(collectionName)
-                ?: SyncMetadataEntity(
-                    collectionName = collectionName,
-                    lastServerCursor = System.currentTimeMillis(),
-                    lastSuccessfulSync = System.currentTimeMillis()
-                )
-
-            // 2. 서버에서 과거 데이터 조회 (오래된 것부터)
-            remoteRepository.setCollection(CollectionPath.from(collectionName))
-
-            // 커서가 있으면 해당 지점부터, 없으면 가장 오래된 것부터
-            val serverResult = if (syncMetadata.lastServerCursor != null) {
-                // 커서 기반 페이지네이션
-                remoteRepository.findNAfterCursor(
-                    n = batchSize,
-                    cursor = syncMetadata.lastServerCursor!!,
-                    direction = Query.Direction.ASCENDING // 오래된 것부터
-                )
-            } else {
-                // 처음부터 조회
-                remoteRepository.findNByUpdatedAt(
-                    n = batchSize,
-                    updatedAt = Instant.EPOCH, // 가장 오래된 시점부터
-                    direction = Query.Direction.ASCENDING
-                )
-            }
-
-            val entities = when (serverResult) {
-                is CustomResult.Success -> serverResult.data
-                is CustomResult.Failure -> return CustomResult.Failure(serverResult.error)
-                else -> return CustomResult.Failure(Exception("Unexpected result state"))
-            }
-
-            // 더 이상 로드할 데이터가 없으면 조기 반환
-            if (entities.isEmpty()) {
-                return CustomResult.Success(
-                    SyncResult(
-                        totalCount = 0,
-                        successCount = 0,
-                        errorCount = 0,
-                        errors = emptyList(),
-                        hasMoreData = false,
-                        nextCursor = null
-                    )
-                )
-            }
-
-            // 3. 로컬에 저장 (중복 체크)
-            var successCount = 0
-            var errorCount = 0
-            val errors = mutableListOf<Exception>()
-
-            entities.forEach { entity ->
-                val entityId = getEntityId(entity)
-                if (entityId != null) {
-                    // 중복 체크
-                    when (val existsResult = localRepository.entityExists(entityId)) {
-                        is CustomResult.Success -> {
-                            if (!existsResult.data) {
-                                // 존재하지 않으면 저장
-                                when (val saveResult = localRepository.saveEntity(entity)) {
-                                    is CustomResult.Success -> successCount++
-                                    is CustomResult.Failure -> {
-                                        errorCount++
-                                        errors.add(saveResult.error)
-                                    }
-
-                                    else -> {
-                                        errorCount++
-                                        errors.add(Exception("Unexpected save result state"))
-                                    }
-                                }
-                            } else {
-                                // 이미 존재하면 스킵 (중복)
-                                successCount++
-                            }
-                        }
-
-                        is CustomResult.Failure -> {
-                            errorCount++
-                            errors.add(existsResult.error)
-                        }
-
-                        else -> {
-                            errorCount++
-                            errors.add(Exception("Unexpected exists check result"))
-                        }
-                    }
-                } else {
-                    errorCount++
-                    errors.add(Exception("Entity ID is null"))
-                }
-            }
-
-            // 4. SyncMetadata 업데이트 (커서 정보)
-            val lastEntity = entities.lastOrNull()
-            val nextCursor = lastEntity?.let { getEntityId(it) }
-            val hasMoreData = entities.size == batchSize.toInt()
-
-            if (nextCursor != null) {
-                val updatedMetadata = syncMetadata.copy(
-                    lastServerCursor = (getEntityUpdatedAt(lastEntity)
-                        ?: Instant.now()).toEpochMilli(),
-                    lastSuccessfulSync = System.currentTimeMillis()
-                )
-                syncMetadataDao.insertSyncMetadata(updatedMetadata)
-            }
-
-            CustomResult.Success(
-                SyncResult(
-                    totalCount = entities.size,
-                    successCount = successCount,
-                    errorCount = errorCount,
-                    errors = errors,
-                    hasMoreData = hasMoreData,
-                    nextCursor = nextCursor
-                )
-            )
-
-        } catch (exception: Exception) {
-            CustomResult.Failure(exception)
-        }
+        return CustomResult.Failure(Exception("UseCase implementation pending - data layer integration required"))
     }
 
     /**
@@ -164,7 +51,7 @@ class SyncOlderDataFromServerUseCase<T> @Inject constructor(
      */
     private fun getEntityId(entity: T): String? {
         return try {
-            val field = entity!!::class.java.getDeclaredField("id")
+            val field = entity::class.java.getDeclaredField("id")
             field.isAccessible = true
             val idValue = field.get(entity)
             // ValueObject 패턴의 ID 처리
@@ -187,7 +74,7 @@ class SyncOlderDataFromServerUseCase<T> @Inject constructor(
      */
     private fun getEntityUpdatedAt(entity: T): Instant? {
         return try {
-            val field = entity!!::class.java.getDeclaredField("updatedAt")
+            val field = entity::class.java.getDeclaredField("updatedAt")
             field.isAccessible = true
             field.get(entity) as? Instant
         } catch (e: Exception) {

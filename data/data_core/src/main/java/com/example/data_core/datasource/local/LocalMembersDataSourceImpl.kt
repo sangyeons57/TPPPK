@@ -67,7 +67,7 @@ class LocalMembersDataSourceImpl @Inject constructor(
         outboxDao.getPendingOperationsByCollection(COLLECTION_NAME).map {
             MemberOutboxOperation(
                 it.id,
-                it.entityId,
+                it.documentId,
                 it.operation,
                 it.payload,
                 it.localTimestamp,

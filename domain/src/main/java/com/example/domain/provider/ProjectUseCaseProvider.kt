@@ -1,8 +1,8 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.AuthLocalRepository
-import com.example.domain.repository.local.FileLocalRepository
-import com.example.domain.repository.local.ProjectLocalRepository
+import com.example.domain.repository.local.LocalProjectRepository
+import com.example.domain.repository.remote.AuthRepository
+import com.example.domain.repository.remote.FileRepository
 import com.example.domain.usecase.local.project.assets.RemoveProjectProfileImageLocalUseCase
 import com.example.domain.usecase.local.project.assets.RemoveProjectProfileImageLocalUseCaseImpl
 import com.example.domain.usecase.local.project.assets.UploadProjectProfileImageLocalUseCase
@@ -33,9 +33,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectUseCaseProvider @Inject constructor(
-    private val projectLocalRepository: ProjectLocalRepository,
-    private val fileLocalRepository: FileLocalRepository,
-    private val authLocalRepository: AuthLocalRepository
+    private val projectLocalRepository: LocalProjectRepository,
+    private val fileLocalRepository: FileRepository,
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -81,7 +81,7 @@ class ProjectUseCaseProvider @Inject constructor(
             // 프로젝트 생성
             createProjectLocalUseCase = CreateProjectLocalUseCaseImpl(
                 projectLocalRepository = projectLocalRepository,
-                authLocalRepository = authLocalRepository
+                authRepository = authRepository
             ),
             
             // 프로젝트 상세 조회
@@ -94,7 +94,7 @@ class ProjectUseCaseProvider @Inject constructor(
             ),
             
             projectLocalRepository = projectLocalRepository,
-            authLocalRepository = authLocalRepository
+            authRepository = authRepository
         )
     }
 
@@ -135,8 +135,8 @@ data class ProjectLocalBasicUseCases(
     // 프로젝트 생성/수정/삭제
     val insertProjectUseCase: InsertProjectUseCase,
     val deleteProjectUseCase: DeleteProjectUseCase,
-    
-    val projectLocalRepository: ProjectLocalRepository
+
+    val projectLocalRepository: LocalProjectRepository
 )
 
 /**
@@ -149,9 +149,9 @@ data class ProjectLocalDetailUseCases(
     // 프로젝트 상세 조회
     val getProjectDetailsLocalUseCase: GetProjectDetailsLocalUseCase,
     val getProjectDetailsStreamLocalUseCase: GetProjectDetailsStreamLocalUseCase,
-    
-    val projectLocalRepository: ProjectLocalRepository,
-    val authLocalRepository: AuthLocalRepository
+
+    val projectLocalRepository: LocalProjectRepository,
+    val authRepository: AuthRepository
 )
 
 /**
@@ -163,7 +163,7 @@ data class ProjectLocalAssetUseCases(
     
     // 프로젝트 프로필 이미지 제거
     val removeProjectProfileImageLocalUseCase: RemoveProjectProfileImageLocalUseCase,
-    
-    val projectLocalRepository: ProjectLocalRepository,
-    val fileLocalRepository: FileLocalRepository
+
+    val projectLocalRepository: LocalProjectRepository,
+    val fileLocalRepository: FileRepository
 ) 

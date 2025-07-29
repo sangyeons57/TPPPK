@@ -63,7 +63,7 @@ class LocalRolesDataSourceImpl @Inject constructor(
         outboxDao.getPendingOperationsByCollection(COLLECTION_NAME).map {
             RoleOutboxOperation(
                 it.id,
-                it.entityId,
+                it.documentId,
                 it.operation,
                 it.payload,
                 it.localTimestamp,

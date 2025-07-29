@@ -30,6 +30,16 @@ interface DefaultRepository<Domain> : Repository where Domain : AggregateRoot {
         direction: Query.Direction = Query.Direction.DESCENDING
     ): CustomResult<List<Domain>, Exception>
 
+    /**
+     * 커서 기반 페이지네이션으로 데이터 조회
+     * TODO: 구현 필요
+     */
+    suspend fun findNAfterCursor(
+        n: Long,
+        cursor: String,
+        direction: Query.Direction = Query.Direction.DESCENDING
+    ): CustomResult<List<Domain>, Exception>
+
     fun observe(id: DocumentId): Flow<CustomResult<Domain, Exception>>
     fun observeAll(): Flow<CustomResult<List<Domain>, Exception>>
     fun observeNByUpdatedAt(

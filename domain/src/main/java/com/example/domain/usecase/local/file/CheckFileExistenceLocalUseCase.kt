@@ -1,6 +1,6 @@
 package com.example.domain.usecase.local.file
 
-import com.example.domain.repository.local.FileLocalRepository
+import com.example.domain.repository.remote.FileRepository
 import javax.inject.Inject
 
 interface CheckFileExistenceLocalUseCase {
@@ -8,7 +8,7 @@ interface CheckFileExistenceLocalUseCase {
 }
 
 class CheckFileExistenceLocalUseCaseImpl @Inject constructor(
-    private val fileLocalRepository: FileLocalRepository
+    private val fileLocalRepository: FileRepository
 ) : CheckFileExistenceLocalUseCase {
 
     override suspend operator fun invoke(path: String): Boolean {

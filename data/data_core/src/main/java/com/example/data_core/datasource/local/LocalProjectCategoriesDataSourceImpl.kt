@@ -3,7 +3,6 @@ package com.example.data_core.datasource.local
 import android.util.Log
 import com.example.data_core.dao.CategoriesDao
 import com.example.data_core.dao.OutboxDao
-import com.example.data_model.local.OutboxEntity
 import com.example.domain.model.base.Category
 import com.example.mapper.entity.CategoryEntityMapper
 import kotlinx.coroutines.flow.Flow
@@ -13,11 +12,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class LocalCategoriesDataSourceImpl @Inject constructor(
+class LocalProjectCategoriesDataSourceImpl @Inject constructor(
     private val categoriesDao: CategoriesDao,
     private val outboxDao: OutboxDao,
     private val mapper: CategoryEntityMapper
-) : LocalCategoriesDataSource {
+) : LocalProjectCategoriesDataSource {
 
     companion object {
         private const val TAG = "LocalCategoriesDataSource"
@@ -91,23 +90,6 @@ class LocalCategoriesDataSourceImpl @Inject constructor(
     override fun observeCategoriesByProject(projectId: String): Flow<List<Category>> {
         return categoriesDao.observeCategoriesByProject(projectId).map { list ->
             list.map { mapper.toDomain(it) }
-        }
-    }
-
-    override suspend fun addToOutbox(categoryId: String, operation: String, payload: String?) {
-        try {
-            val outboxEntity = OutboxEntity(
-                collectionName = COLLECTION_NAME,
-                documentId = categoryId,
-                operation = operation,
-                payload = payload,
-                timestamp = Instant.now()
-            )
-            outboxDao.insertOutbox(outboxEntity)
-            Log.d(TAG, "Added to outbox: $categoryId, $operation")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to add to outbox: $categoryId", e)
-            throw e
         }
     }
 

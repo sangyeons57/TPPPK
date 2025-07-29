@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.MessageLocalRepository
+import com.example.domain.repository.local.LocalMessageRepository
 import com.example.domain.usecase.local.messages.DeleteMessageLocalUseCase
 import com.example.domain.usecase.local.messages.DeleteMessageLocalUseCaseImpl
 import com.example.domain.usecase.local.messages.DeleteMessageUseCase
@@ -11,14 +11,14 @@ import com.example.domain.usecase.local.messages.FetchNewerMessagesLocalUseCase
 import com.example.domain.usecase.local.messages.FetchNewerMessagesLocalUseCaseImpl
 import com.example.domain.usecase.local.messages.FetchPastMessagesLocalUseCase
 import com.example.domain.usecase.local.messages.FetchPastMessagesLocalUseCaseImpl
+import com.example.domain.usecase.local.messages.GetMessageUseCase
+import com.example.domain.usecase.local.messages.GetMessageUseCaseImpl
 import com.example.domain.usecase.local.messages.GetMessagesByUserUseCase
 import com.example.domain.usecase.local.messages.GetMessagesByUserUseCaseImpl
 import com.example.domain.usecase.local.messages.GetMessagesStreamLocalUseCase
 import com.example.domain.usecase.local.messages.GetMessagesStreamLocalUseCaseImpl
 import com.example.domain.usecase.local.messages.GetMessagesUseCase
 import com.example.domain.usecase.local.messages.GetMessagesUseCaseImpl
-import com.example.domain.usecase.local.messages.GetMessageUseCase
-import com.example.domain.usecase.local.messages.GetMessageUseCaseImpl
 import com.example.domain.usecase.local.messages.InsertMessageUseCase
 import com.example.domain.usecase.local.messages.InsertMessageUseCaseImpl
 import com.example.domain.usecase.local.messages.SendMessageLocalUseCase
@@ -33,7 +33,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class MessagesUseCaseProvider @Inject constructor(
-    private val messageLocalRepository: MessageLocalRepository
+    private val messageLocalRepository: LocalMessageRepository
 ) {
 
     /**
@@ -134,8 +134,8 @@ data class MessagesLocalBasicUseCases(
     // 메시지 관리
     val insertMessageUseCase: InsertMessageUseCase,
     val deleteMessageUseCase: DeleteMessageUseCase,
-    
-    val messageLocalRepository: MessageLocalRepository
+
+    val messageLocalRepository: LocalMessageRepository
 )
 
 /**
@@ -153,8 +153,8 @@ data class MessagesLocalRealtimeUseCases(
     
     // 실시간 스트림
     val getMessagesStreamLocalUseCase: GetMessagesStreamLocalUseCase,
-    
-    val messageLocalRepository: MessageLocalRepository
+
+    val messageLocalRepository: LocalMessageRepository
 )
 
 /**
@@ -166,6 +166,6 @@ data class MessagesLocalPaginationUseCases(
     
     // 최신 메시지 조회
     val fetchNewerMessagesLocalUseCase: FetchNewerMessagesLocalUseCase,
-    
-    val messageLocalRepository: MessageLocalRepository
+
+    val messageLocalRepository: LocalMessageRepository
 ) 

@@ -2,7 +2,7 @@ package com.example.domain.usecase.local.users
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.repository.local.UserLocalRepository
+import com.example.domain.repository.local.LocalUserRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -11,7 +11,7 @@ interface GetCurrentUserStreamLocalUseCase {
 }
 
 class GetCurrentUserStreamLocalUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) : GetCurrentUserStreamLocalUseCase {
 
     override operator fun invoke(): Flow<CustomResult<User, Exception>> {

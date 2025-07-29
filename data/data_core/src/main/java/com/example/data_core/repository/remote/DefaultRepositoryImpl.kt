@@ -23,7 +23,7 @@ class DefaultRepositoryImpl<Domain, Data>(
 
     override fun setCollection(collectionPath: CollectionPath) {
         defaultDatasource.setCollection(collectionPath)
-        Log.d("DefaultRepositoryImpl", "initializeCollection: ${collectionPath.value}")
+        Log.d("DefaultRepositoryImpl", "initializeCollection: ${collectionPath.getPath()}")
     }
 
     override suspend fun create(domain: Domain): CustomResult<DocumentId, Exception> {
@@ -82,6 +82,14 @@ class DefaultRepositoryImpl<Domain, Data>(
             is CustomResult.Initial -> CustomResult.Initial
             is CustomResult.Progress -> CustomResult.Progress(result.progress)
         }
+    }
+
+    override suspend fun findNAfterCursor(
+        n: Long,
+        cursor: String,
+        direction: Query.Direction
+    ): CustomResult<List<Domain>, Exception> {
+        TODO("Not yet implemented")
     }
 
     override fun observe(id: DocumentId): Flow<CustomResult<Domain, Exception>> {

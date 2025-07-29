@@ -1,7 +1,7 @@
 package com.example.domain.usecase.local.users
 
-import com.example.domain.repository.local.UserLocalRepository
-import com.example.domain.util.CustomResult
+import com.example.core_common.result.CustomResult
+import com.example.domain.repository.local.LocalUserRepository
 import javax.inject.Inject
 
 interface DeleteUserUseCase {
@@ -9,7 +9,7 @@ interface DeleteUserUseCase {
 }
 
 class DeleteUserUseCaseImpl @Inject constructor(
-    private val userLocalRepository: UserLocalRepository
+    private val localUserRepository: LocalUserRepository
 ) : DeleteUserUseCase {
 
     override suspend operator fun invoke(userId: String): CustomResult<Unit, Exception> {

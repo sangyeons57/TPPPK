@@ -4,8 +4,8 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_core.dao.OutboxDao
 import com.example.data_core.dao.ProjectChannelsDao
-import com.example.data_core.model.local.OutboxEntity
 import com.example.data_core.repository.local.base.BaseLocalRepositoryImpl
+import com.example.data_model.local.OutboxEntity
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelStatus
 import com.example.domain.model.enum.ProjectChannelType
@@ -126,9 +126,9 @@ class LocalProjectChannelRepositoryImpl @Inject constructor(
                 documentId = entityId,
                 operation = operation,
                 payload = payload,
-                createdAt = System.currentTimeMillis()
+                localTimestamp = System.currentTimeMillis()
             )
-            outboxDao.insertOutboxEntry(outboxEntity)
+            outboxDao.insertOperation(outboxEntity)
         }
     }
 

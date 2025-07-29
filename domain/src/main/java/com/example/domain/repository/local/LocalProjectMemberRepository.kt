@@ -33,7 +33,7 @@ import java.time.Instant
  * - deleteEntity -> deleteMember
  * - Plus SyncableRepository methods (addToOutbox, clearAllEntities, etc.)
  */
-interface LocalMemberRepository : BaseLocalRepository<Member> {
+interface LocalProjectMemberRepository : BaseLocalRepository<Member> {
 
     // === BaseLocalRepository 메서드 (구현체에서 멤버 전용 메서드로 매핑) ===
     // observeEntityById -> observeMemberById
@@ -269,16 +269,4 @@ interface LocalMemberRepository : BaseLocalRepository<Member> {
      */
     suspend fun getMembersUpdatedAfter(timestamp: Instant): List<Member>
 
-    /**
-     * Outbox에 작업 추가 (서버 동기화 대기열)
-     * @param memberId 멤버 ID
-     * @param operation 작업 타입 (CREATE, UPDATE, DELETE)
-     * @param payload 작업 데이터 (JSON)
-     * @return 성공 여부
-     */
-    suspend fun addToOutbox(
-        memberId: String,
-        operation: String,
-        payload: String? = null
-    ): CustomResult<Unit, Exception>
 }

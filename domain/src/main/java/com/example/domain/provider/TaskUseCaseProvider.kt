@@ -1,7 +1,6 @@
 package com.example.domain.provider
 
 import com.example.domain.repository.local.LocalTaskRepository
-import com.example.domain.repository.local.TaskLocalRepository
 import com.example.domain.usecase.local.task.CreateTaskLocalUseCase
 import com.example.domain.usecase.local.task.CreateTaskLocalUseCaseImpl
 import com.example.domain.usecase.local.task.DeleteTaskLocalUseCase
@@ -105,8 +104,8 @@ data class TaskLocalBasicUseCases(
     
     // 태스크 삭제
     val deleteTaskLocalUseCase: DeleteTaskLocalUseCase,
-    
-    val taskLocalRepository: TaskLocalRepository
+
+    val taskLocalRepository: LocalTaskRepository
 )
 
 /**
@@ -122,6 +121,6 @@ data class TaskLocalStatusUseCases(
     
     // 태스크 순서 변경
     val reorderTaskLocalUseCase: ReorderTaskLocalUseCase,
-    
-    val taskLocalRepository: TaskLocalRepository
+
+    val taskLocalRepository: LocalTaskRepository
 ) 

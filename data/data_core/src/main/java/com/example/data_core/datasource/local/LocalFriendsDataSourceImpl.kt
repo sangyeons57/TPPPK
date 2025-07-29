@@ -134,7 +134,7 @@ class LocalFriendsDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             FriendOutboxOperation(
                 id = entity.id,
-                friendshipId = entity.entityId,
+                friendshipId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

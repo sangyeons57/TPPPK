@@ -1,8 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.FileLocalRepository
 import com.example.domain.repository.local.LocalMessageAttachmentRepository
-import com.example.domain.repository.local.MessageAttachmentLocalRepository
 import com.example.domain.repository.remote.FileRepository
 import com.example.domain.usecase.local.file.CheckFileExistenceLocalUseCase
 import com.example.domain.usecase.local.file.CheckFileExistenceLocalUseCaseImpl
@@ -97,8 +95,8 @@ data class FileLocalBasicUseCases(
     
     // 파일 검증
     val validateFileLocalUseCase: ValidateFileLocalUseCase,
-    
-    val fileLocalRepository: FileLocalRepository
+
+    val fileLocalRepository: FileRepository
 )
 
 /**
@@ -110,7 +108,7 @@ data class FileLocalMessageAttachmentUseCases(
     
     // 파일 검증
     val validateFileLocalUseCase: ValidateFileLocalUseCase,
-    
-    val messageAttachmentLocalRepository: MessageAttachmentLocalRepository,
-    val fileLocalRepository: FileLocalRepository
+
+    val messageAttachmentLocalRepository: LocalMessageAttachmentRepository,
+    val fileLocalRepository: FileRepository
 ) 

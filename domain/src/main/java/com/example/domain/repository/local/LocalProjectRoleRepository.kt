@@ -299,16 +299,4 @@ interface LocalProjectRoleRepository : BaseLocalRepository<Role> {
      */
     suspend fun getRolesUpdatedAfter(timestamp: Instant): List<Role>
 
-    /**
-     * Outbox에 작업 추가 (서버 동기화 대기열)
-     * @param roleId 역할 ID
-     * @param operation 작업 타입 (CREATE, UPDATE, DELETE)
-     * @param payload 작업 데이터 (JSON)
-     * @return 성공 여부
-     */
-    suspend fun addToOutbox(
-        roleId: String,
-        operation: String,
-        payload: String? = null
-    ): CustomResult<Unit, Exception>
 }

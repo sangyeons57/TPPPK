@@ -139,7 +139,7 @@ class LocalMessageAttachmentsDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             MessageAttachmentOutboxOperation(
                 id = entity.id,
-                attachmentId = entity.entityId,
+                attachmentId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

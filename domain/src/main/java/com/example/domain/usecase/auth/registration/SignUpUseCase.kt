@@ -1,19 +1,10 @@
 package com.example.domain.usecase.auth.registration
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.event.EventDispatcher
-import com.example.domain.exception.AccountAlreadyExistsException
 import com.example.domain.model.base.User
-import com.example.domain.model.enum.UserAccountStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserEmail
 import com.example.domain.model.vo.user.UserName
+import com.example.domain.repository.local.LocalUserRepository
 import com.example.domain.repository.remote.AuthRepository
-import com.example.domain.repository.remote.DefaultRepository
-import com.example.domain.repository.remote.UserRepository
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.firestore.core.UserData
-import kotlinx.coroutines.flow.first
 import java.time.Instant
 import javax.inject.Inject
 
@@ -25,7 +16,7 @@ import javax.inject.Inject
  */
 class SignUpUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: DefaultRepository<User>
+    private val userRepository: LocalUserRepository
 ) {
     // Centralized TAG for Logcat filtering
     companion object {
@@ -50,89 +41,18 @@ class SignUpUseCase @Inject constructor(
         nickname: UserName,
         consentTimeStamp: Instant
     ): CustomResult<User, Exception> {
-        // "Starting sign-up | email=$email, nickname=$nickname")
-
-        when (val signUpRes = authRepository.signup(email, password)) {
-            is CustomResult.Success -> {
-                val uid = signUpRes.data
-                // "Auth signup success. uid=$uid")
-                val newUser = User.create(
-                    id = DocumentId.from(uid),
-                    email = UserEmail(email),
-                    name = nickname,
-                    consentTimeStamp = consentTimeStamp
-                )
-                return userRepository.save(newUser).let { saveResult ->
-                    when (saveResult) {
-                        is CustomResult.Success -> {
-                            // "User aggregate persisted successfully for uid=$uid")
-                            EventDispatcher.publish(newUser)
-                            CustomResult.Success(newUser)
-                        }
-
-                        is CustomResult.Failure -> {
-                            // Failed to persist user aggregate: ${saveResult.error}
-                            saveResult
-                        }
-                        else -> CustomResult.Failure(Exception("Unknown error creating user profile"))
-                    }
-                }
-            }
-            is CustomResult.Failure -> {
-                val err = signUpRes.error
-                val isEmailInUse = err is FirebaseAuthUserCollisionException || err.message?.contains("already in use", true) == true
-
-                if (!isEmailInUse) {
-                    // Sign-up failed for a reason other than email collision: ${err.message}
-                    return CustomResult.Failure(err)
-                }
-
-                // Email collision detected. Checking for withdrawn account...
-                try {
-                    return when (val userRes = userRepository.observeByEmail(email).first()) {
-                        is CustomResult.Success -> {
-                            val existingUser = userRes.data
-                            // Existing user found with status: ${existingUser.accountStatus}
-                            if (existingUser.accountStatus == UserAccountStatus.WITHDRAWN) {
-                                // Reactivate withdrawn account using user repository
-                                // Reactivating withdrawn account for email: $email
-                                existingUser.reactivateAccount()
-                                existingUser.changeName(nickname)
-                                
-                                when (val saveResult = userRepository.save(existingUser)) {
-                                    is CustomResult.Success -> {
-                                        // "Account reactivated and saved for email: $email")
-                                        EventDispatcher.publish(existingUser)
-                                        CustomResult.Success(existingUser)
-                                    }
-                                    is CustomResult.Failure -> {
-                                        // "Failed to save reactivated user data for email: $email", saveResult.error)
-                                        saveResult
-                                    }
-                                    else -> CustomResult.Failure(Exception("Unknown error during saving reactivated user."))
-                                }
-                            } else {
-                                CustomResult.Failure(AccountAlreadyExistsException("An account with this email already exists."))
-                            }
-                        }
-                        is CustomResult.Failure -> {
-                            // "Error fetching user by email after collision", userRes.error)
-                            CustomResult.Failure(userRes.error)
-                        }
-                        else -> CustomResult.Failure(Exception("Unknown state while fetching user by email."))
-                    }
-                } catch (e: NoSuchElementException) {
-                    // "Auth reported email collision, but findByEmailStream was empty for $email", e)
-                    return CustomResult.Failure(Exception("Inconsistent state: Email is reported as in use, but no user profile was found."))
-                } catch (e: Exception) {
-                    // "An unexpected error occurred while checking for an existing user.", e)
-                    return CustomResult.Failure(e)
-                }
-            }
-            else -> {
-                // "Sign-up process in an intermediate state (Loading/Initial)")
-                return CustomResult.Failure(Exception("Sign-up process is currently in progress."))
-            }
-        }
+        // TODO: Implement SignUpUseCase using LocalUserRepository
+        // This should:
+        // 1. Attempt user signup using authRepository.signup(email, password)
+        // 2. On successful auth signup, create new User entity with provided details
+        // 3. Save new user to local storage using userRepository.save(newUser)
+        // 4. Publish user creation event using EventDispatcher.publish(newUser)
+        // 5. Handle email collision cases by checking for withdrawn accounts in local storage
+        // 6. For withdrawn accounts, reactivate using existingUser.reactivateAccount() and update name
+        // 7. Save reactivated user data and publish event
+        // 8. Handle all error cases with appropriate CustomResult responses
+        // 9. Properly handle FirebaseAuthUserCollisionException and other auth errors
+        // Note: This should work with LocalUserRepository instead of DefaultRepository<User>
+        TODO("SignUpUseCase implementation pending - convert to use LocalUserRepository for SSOT pattern")
     }
 }

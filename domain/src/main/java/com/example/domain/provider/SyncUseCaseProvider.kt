@@ -1,11 +1,14 @@
 package com.example.domain.provider
 
-import com.example.data_core.dao.OutboxDao
-import com.example.data_core.dao.SyncMetadataDao
 import com.example.domain.model.AggregateRoot
 import com.example.domain.repository.local.base.SyncableRepository
 import com.example.domain.repository.remote.DefaultRepository
-import com.example.domain.usecase.sync.*
+import com.example.domain.usecase.sync.ResolveDataConflictUseCase
+import com.example.domain.usecase.sync.SyncAllDataFromServerUseCase
+import com.example.domain.usecase.sync.SyncIncrementalDataFromServerUseCase
+import com.example.domain.usecase.sync.SyncLatestDataFromServerUseCase
+import com.example.domain.usecase.sync.SyncOlderDataFromServerUseCase
+import com.example.domain.usecase.sync.SyncPendingLocalChangesToServerUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,8 +49,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class SyncUseCaseProvider @Inject constructor(
-    private val outboxDao: OutboxDao,
-    private val syncMetadataDao: SyncMetadataDao
+    // TODO: Replace with domain repository interfaces when data layer is integrated
+    // private val outboxRepository: OutboxRepository,
+    // private val syncMetadataRepository: SyncMetadataRepository
 ) {
 
     /**
@@ -57,13 +61,15 @@ class SyncUseCaseProvider @Inject constructor(
      * @return 해당 타입에 특화된 Sync UseCase 그룹
      */
     fun <T> create(): SyncUseCases<T> where T : AggregateRoot {
+        // TODO: Implement when data layer is integrated
+        // Currently returns placeholder implementations that will fail at runtime
         return SyncUseCases(
-            syncPending = SyncPendingLocalChangesToServerUseCase<T>(outboxDao),
-            syncIncremental = SyncIncrementalDataFromServerUseCase<T>(syncMetadataDao),
+            syncPending = SyncPendingLocalChangesToServerUseCase<T>(),
+            syncIncremental = SyncIncrementalDataFromServerUseCase<T>(),
             resolveConflict = ResolveDataConflictUseCase<T>(),
-            syncOlder = SyncOlderDataFromServerUseCase<T>(syncMetadataDao),
-            syncLatest = SyncLatestDataFromServerUseCase<T>(syncMetadataDao),
-            syncAll = SyncAllDataFromServerUseCase<T>(syncMetadataDao)
+            syncOlder = SyncOlderDataFromServerUseCase<T>(),
+            syncLatest = SyncLatestDataFromServerUseCase<T>(),
+            syncAll = SyncAllDataFromServerUseCase<T>()
         )
     }
 }

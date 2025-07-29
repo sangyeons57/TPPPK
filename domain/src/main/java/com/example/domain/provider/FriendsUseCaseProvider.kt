@@ -1,15 +1,15 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.AuthLocalRepository
-import com.example.domain.repository.local.FriendLocalRepository
+import com.example.domain.repository.local.LocalFriendRepository
+import com.example.domain.repository.remote.AuthRepository
 import com.example.domain.usecase.local.friends.AcceptFriendRequestLocalUseCase
 import com.example.domain.usecase.local.friends.AcceptFriendRequestLocalUseCaseImpl
 import com.example.domain.usecase.local.friends.DeleteFriendUseCase
 import com.example.domain.usecase.local.friends.DeleteFriendUseCaseImpl
-import com.example.domain.usecase.local.friends.GetFriendsUseCase
-import com.example.domain.usecase.local.friends.GetFriendsUseCaseImpl
 import com.example.domain.usecase.local.friends.GetFriendUseCase
 import com.example.domain.usecase.local.friends.GetFriendUseCaseImpl
+import com.example.domain.usecase.local.friends.GetFriendsUseCase
+import com.example.domain.usecase.local.friends.GetFriendsUseCaseImpl
 import com.example.domain.usecase.local.friends.GetPendingFriendRequestsUseCase
 import com.example.domain.usecase.local.friends.GetPendingFriendRequestsUseCaseImpl
 import com.example.domain.usecase.local.friends.InsertFriendUseCase
@@ -26,8 +26,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class FriendsUseCaseProvider @Inject constructor(
-    private val friendLocalRepository: FriendLocalRepository,
-    private val authLocalRepository: AuthLocalRepository
+    private val friendLocalRepository: LocalFriendRepository,
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -69,13 +69,13 @@ class FriendsUseCaseProvider @Inject constructor(
             // 친구 요청 전송
             sendFriendRequestLocalUseCase = SendFriendRequestLocalUseCaseImpl(
                 friendLocalRepository = friendLocalRepository,
-                authLocalRepository = authLocalRepository
+                authRepository = authRepository
             ),
             
             // 친구 요청 수락
             acceptFriendRequestLocalUseCase = AcceptFriendRequestLocalUseCaseImpl(
                 friendLocalRepository = friendLocalRepository,
-                authLocalRepository = authLocalRepository
+                authRepository = authRepository
             ),
             
             // 대기중인 친구 요청 조회
@@ -84,7 +84,7 @@ class FriendsUseCaseProvider @Inject constructor(
             ),
             
             friendLocalRepository = friendLocalRepository,
-            authLocalRepository = authLocalRepository
+            authRepository = authRepository
         )
     }
 }
@@ -100,8 +100,8 @@ data class FriendsLocalBasicUseCases(
     // 친구 관리
     val insertFriendUseCase: InsertFriendUseCase,
     val deleteFriendUseCase: DeleteFriendUseCase,
-    
-    val friendLocalRepository: FriendLocalRepository
+
+    val friendLocalRepository: LocalFriendRepository
 )
 
 /**
@@ -116,7 +116,7 @@ data class FriendsLocalRequestUseCases(
     
     // 대기중인 친구 요청 조회
     val getPendingFriendRequestsUseCase: GetPendingFriendRequestsUseCase,
-    
-    val friendLocalRepository: FriendLocalRepository,
-    val authLocalRepository: AuthLocalRepository
+
+    val friendLocalRepository: LocalFriendRepository,
+    val authRepository: AuthRepository
 ) 

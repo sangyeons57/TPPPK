@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.ProjectRoleLocalRepository
+import com.example.domain.repository.local.LocalProjectRoleRepository
 import com.example.domain.usecase.local.project.role.CreateProjectRoleLocalUseCase
 import com.example.domain.usecase.local.project.role.CreateProjectRoleLocalUseCaseImpl
 import com.example.domain.usecase.local.project.role.CreateRoleLocalUseCase
@@ -29,7 +29,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ProjectRoleUseCaseProvider @Inject constructor(
-    private val projectRoleLocalRepository: ProjectRoleLocalRepository
+    private val projectRoleLocalRepository: LocalProjectRoleRepository
 ) {
 
     /**
@@ -112,8 +112,8 @@ data class ProjectRoleLocalBasicUseCases(
     
     // 역할 삭제
     val deleteRoleLocalUseCase: DeleteRoleLocalUseCase,
-    
-    val projectRoleLocalRepository: ProjectRoleLocalRepository
+
+    val projectRoleLocalRepository: LocalProjectRoleRepository
 )
 
 /**
@@ -128,6 +128,6 @@ data class ProjectRoleLocalAdvancedUseCases(
     
     // 멤버 역할 관리
     val updateMemberRolesLocalUseCase: UpdateMemberRolesLocalUseCase,
-    
-    val projectRoleLocalRepository: ProjectRoleLocalRepository
+
+    val projectRoleLocalRepository: LocalProjectRoleRepository
 ) 

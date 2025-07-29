@@ -1,6 +1,6 @@
 package com.example.domain.provider
 
-import com.example.domain.repository.local.ScheduleLocalRepository
+import com.example.domain.repository.local.LocalScheduleRepository
 import com.example.domain.usecase.local.schedules.AddScheduleLocalUseCase
 import com.example.domain.usecase.local.schedules.AddScheduleLocalUseCaseImpl
 import com.example.domain.usecase.local.schedules.DeleteScheduleLocalUseCase
@@ -9,14 +9,14 @@ import com.example.domain.usecase.local.schedules.DeleteScheduleUseCase
 import com.example.domain.usecase.local.schedules.DeleteScheduleUseCaseImpl
 import com.example.domain.usecase.local.schedules.GetScheduleDetailLocalUseCase
 import com.example.domain.usecase.local.schedules.GetScheduleDetailLocalUseCaseImpl
-import com.example.domain.usecase.local.schedules.GetSchedulesForDateLocalUseCase
-import com.example.domain.usecase.local.schedules.GetSchedulesForDateLocalUseCaseImpl
 import com.example.domain.usecase.local.schedules.GetScheduleSummaryForMonthLocalUseCase
 import com.example.domain.usecase.local.schedules.GetScheduleSummaryForMonthLocalUseCaseImpl
-import com.example.domain.usecase.local.schedules.GetSchedulesUseCase
-import com.example.domain.usecase.local.schedules.GetSchedulesUseCaseImpl
 import com.example.domain.usecase.local.schedules.GetScheduleUseCase
 import com.example.domain.usecase.local.schedules.GetScheduleUseCaseImpl
+import com.example.domain.usecase.local.schedules.GetSchedulesForDateLocalUseCase
+import com.example.domain.usecase.local.schedules.GetSchedulesForDateLocalUseCaseImpl
+import com.example.domain.usecase.local.schedules.GetSchedulesUseCase
+import com.example.domain.usecase.local.schedules.GetSchedulesUseCaseImpl
 import com.example.domain.usecase.local.schedules.InsertScheduleUseCase
 import com.example.domain.usecase.local.schedules.InsertScheduleUseCaseImpl
 import com.example.domain.usecase.local.schedules.UpdateScheduleLocalUseCase
@@ -31,7 +31,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class SchedulesUseCaseProvider @Inject constructor(
-    private val scheduleLocalRepository: ScheduleLocalRepository
+    private val scheduleLocalRepository: LocalScheduleRepository
 ) {
 
     /**
@@ -113,8 +113,8 @@ data class SchedulesLocalBasicUseCases(
     // 일정 관리
     val insertScheduleUseCase: InsertScheduleUseCase,
     val deleteScheduleUseCase: DeleteScheduleUseCase,
-    
-    val scheduleLocalRepository: ScheduleLocalRepository
+
+    val scheduleLocalRepository: LocalScheduleRepository
 )
 
 /**
@@ -129,6 +129,6 @@ data class SchedulesLocalAdvancedUseCases(
     // 날짜별/월별 조회
     val getSchedulesForDateLocalUseCase: GetSchedulesForDateLocalUseCase,
     val getScheduleSummaryForMonthLocalUseCase: GetScheduleSummaryForMonthLocalUseCase,
-    
-    val scheduleLocalRepository: ScheduleLocalRepository
+
+    val scheduleLocalRepository: LocalScheduleRepository
 ) 

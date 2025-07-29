@@ -35,7 +35,7 @@ data class OutboxEntity(
      * Referenced entity ID from the corresponding table
      * (userId, messageId, channelId, etc.)
      */
-    val entityId: String,
+    val documentId: String,
 
     /**
      * Operation type: CREATE, UPDATE, DELETE

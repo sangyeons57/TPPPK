@@ -2,9 +2,9 @@ package com.example.domain.usecase.local.dm
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
-import com.example.domain.repository.local.AuthLocalRepository
-import com.example.domain.repository.local.DMChannelLocalRepository
-import com.example.domain.repository.local.DMWrapperLocalRepository
+import com.example.domain.repository.local.LocalDMChannelRepository
+import com.example.domain.repository.local.LocalDMWrapperRepository
+import com.example.domain.repository.remote.AuthRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -13,9 +13,9 @@ interface GetUserDmChannelsLocalUseCase {
 }
 
 class GetUserDmChannelsLocalUseCaseImpl @Inject constructor(
-    private val dmChannelLocalRepository: DMChannelLocalRepository,
-    private val authRepository: AuthLocalRepository,
-    private val dmWrapperLocalRepository: DMWrapperLocalRepository
+    private val dmChannelLocalRepository: LocalDMChannelRepository,
+    private val authRepository: AuthRepository,
+    private val dmWrapperLocalRepository: LocalDMWrapperRepository
 ) : GetUserDmChannelsLocalUseCase {
 
     override operator fun invoke(): Flow<CustomResult<List<DMChannel>, Exception>> {

@@ -2,7 +2,6 @@ package com.example.domain.usecase.local.friends
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.repository.local.FriendLocalRepository
-import com.example.domain.repository.local.AuthLocalRepository
 import javax.inject.Inject
 
 interface AcceptFriendRequestLocalUseCase {
@@ -11,7 +10,7 @@ interface AcceptFriendRequestLocalUseCase {
 
 class AcceptFriendRequestLocalUseCaseImpl @Inject constructor(
     private val friendLocalRepository: FriendLocalRepository,
-    private val authLocalRepository: AuthLocalRepository
+    private val authRepository: AuthRepository
 ) : AcceptFriendRequestLocalUseCase {
 
     override suspend operator fun invoke(friendId: String): CustomResult<Unit, Exception> {

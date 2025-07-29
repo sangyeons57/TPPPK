@@ -151,7 +151,7 @@ class LocalDMWrapperDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             DMWrapperOutboxOperation(
                 id = entity.id,
-                wrapperId = entity.entityId,
+                wrapperId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,

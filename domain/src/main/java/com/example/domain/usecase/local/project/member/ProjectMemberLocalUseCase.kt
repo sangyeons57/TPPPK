@@ -3,7 +3,6 @@ package com.example.domain.usecase.local.project.member
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectMember
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.repository.local.ProjectMemberLocalRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

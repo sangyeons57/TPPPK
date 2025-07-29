@@ -38,12 +38,6 @@ interface LocalCategoryRepository : BaseLocalRepository<Category> {
 
     // === SyncableRepository 구현 ===
 
-    /**
-     * Firestore 컬렉션 이름
-     */
-    override val collectionName: String
-        get() = "categories"
-
 
     /**
      * 주어진 이름과 정확히 일치하는 카테고리를 실시간 관찰
@@ -250,17 +244,4 @@ interface LocalCategoryRepository : BaseLocalRepository<Category> {
      * @return 업데이트된 카테고리 목록
      */
     suspend fun getCategoriesUpdatedAfter(timestamp: Instant): List<Category>
-
-    /**
-     * Outbox에 작업 추가 (서버 동기화 대기열)
-     * @param categoryId 카테고리 ID
-     * @param operation 작업 타입 (CREATE, UPDATE, DELETE)
-     * @param payload 작업 데이터 (JSON)
-     * @return 성공 여부
-     */
-    suspend fun addToOutbox(
-        categoryId: String,
-        operation: String,
-        payload: String? = null
-    ): CustomResult<Unit, Exception>
 }

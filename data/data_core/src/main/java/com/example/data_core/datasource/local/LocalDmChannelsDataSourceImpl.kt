@@ -140,7 +140,7 @@ class LocalDMChannelsDataSourceImpl @Inject constructor(
         return entities.map { entity ->
             DMChannelOutboxOperation(
                 id = entity.id,
-                channelId = entity.entityId,
+                channelId = entity.documentId,
                 operation = entity.operation,
                 payload = entity.payload,
                 localTimestamp = entity.localTimestamp,
