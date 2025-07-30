@@ -12,9 +12,11 @@ import com.example.domain.model.enum.FriendStatus
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.provider.dm.DMUseCaseProvider
-import com.example.domain.provider.friend.FriendUseCaseProvider
-import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.dm.DMUseCaseProvider
+import com.example.domain_usecase.provider.dm.DMUseCases
+import com.example.domain_usecase.provider.friend.FriendUseCaseProvider
+import com.example.domain_usecase.provider.friend.FriendUseCases
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -68,9 +70,9 @@ class FriendViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹들
-    private lateinit var friendUseCases: com.example.domain.provider.friend.FriendUseCases
+    private lateinit var friendUseCases: FriendUseCases
     private val userUseCases = userUseCaseProvider.createForUser()
-    private lateinit var dmUseCases: com.example.domain.provider.dm.DMUseCases
+    private lateinit var dmUseCases: DMUseCases
 
     // 현재 사용자 ID
     private var currentUserId: String = ""

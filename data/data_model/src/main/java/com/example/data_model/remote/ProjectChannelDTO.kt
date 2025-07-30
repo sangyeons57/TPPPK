@@ -1,18 +1,15 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelStatus
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
-import com.example.domain.model.vo.DocumentId as VODocumentId
 
 /*
  * 프로젝트 채널 정보를 나타내는 DTO 클래스
@@ -43,37 +40,5 @@ data class ProjectChannelDTO(
         const val STATUS = ProjectChannel.KEY_STATUS
         const val CATEGORY_ID = ProjectChannel.KEY_CATEGORY_ID
     }
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return ProjectChannel 도메인 모델
-     */
-    override fun toDomain(): ProjectChannel {
-        return ProjectChannel.fromDataSource(
-            id = VODocumentId(id),
-            channelName = Name(channelName),
-            channelType = channelType,
-            order = ProjectChannelOrder.fromDouble(order),
-            status = status,
-            categoryId = VODocumentId(categoryId),
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant()
-        )
-    }
 }
 
-/**
- * ProjectChannel 도메인 모델을 DTO로 변환하는 확장 함수
- * @return ProjectChannelDTO 객체
- */
-fun ProjectChannel.toDto(): ProjectChannelDTO {
-    return ProjectChannelDTO(
-        id = id.value,
-        channelName = channelName.value,
-        channelType = channelType,
-        order = order.value.toDouble(),
-        status = status,
-        categoryId = categoryId.value,
-        createdAt = null,
-        updatedAt = null
-    )
-}

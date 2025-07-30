@@ -6,15 +6,15 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.core_common.result.CustomResult
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.google.firebase.messaging.FirebaseMessaging
-import com.example.core_common.result.CustomResult
 
 /**
  * Manages FCM token synchronization with the server

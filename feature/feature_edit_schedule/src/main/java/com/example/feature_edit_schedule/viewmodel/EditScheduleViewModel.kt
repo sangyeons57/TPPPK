@@ -11,7 +11,7 @@ import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.schedule.ScheduleContent
 import com.example.domain.model.vo.schedule.ScheduleTitle
-import com.example.domain.provider.schedule.ScheduleUseCaseProvider
+import com.example.domain_usecase.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

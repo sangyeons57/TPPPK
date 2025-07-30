@@ -9,8 +9,10 @@ import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.provider.project.ProjectChannelUseCaseProvider
-import com.example.domain.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectChannelUseCases
+import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,9 +62,9 @@ class AddProjectElementViewModel @Inject constructor(
 ) : ViewModel() {
 
     private var projectId: DocumentId? = null
-    private var projectStructureUseCases: com.example.domain.provider.project.ProjectStructureUseCases? =
+    private var projectStructureUseCases: ProjectStructureUseCases? =
         null
-    private var projectChannelUseCases: com.example.domain.provider.project.ProjectChannelUseCases? =
+    private var projectChannelUseCases: ProjectChannelUseCases? =
         null
 
     private val _uiState = MutableStateFlow(AddProjectElementUiState())
@@ -86,7 +88,7 @@ class AddProjectElementViewModel @Inject constructor(
      * Fetches the list of categories for the current project to populate the selection dropdown.
      */
     private fun loadCategoriesForDropdown() {
-        val currentProjectId = projectId ?: return
+        projectId ?: return
         val useCases = projectStructureUseCases ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }

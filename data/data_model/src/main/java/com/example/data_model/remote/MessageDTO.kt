@@ -1,18 +1,12 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.Message
-import com.example.domain.model.vo.MentionType
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MentionInfo
-import com.example.domain.model.vo.message.MessageContent
-import com.example.domain.model.vo.message.MessageIsDeleted
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
-import com.example.domain.model.vo.DocumentId as VODocumentId
 
 /*
  * 메시지 정보를 나타내는 DTO 클래스
@@ -44,56 +38,5 @@ data class MessageDTO(
         const val MENTIONS = Message.KEY_MENTIONS
     }
 
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return Message 도메인 모델
-     */
-    override fun toDomain(): Message {
-        val domainMentions = this.mentions.mapNotNull { map ->
-            try {
-                val type = MentionType.valueOf(map[MentionInfo.KEY_TYPE] as String)
-                val id = map[MentionInfo.KEY_ID] as String
-                val displayName = map[MentionInfo.KEY_DISPLAY_NAME] as String
-                MentionInfo(type, id, displayName)
-            } catch (e: Exception) {
-                null
-            }
-        }
-
-        return Message.fromDataSource(
-            id = VODocumentId(id),
-            senderId = UserId(senderId),
-            content = MessageContent(content),
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant(),
-            replyToMessageId = replyToMessageId?.let{VODocumentId(it)},
-            isDeleted = MessageIsDeleted(isDeleted),
-            mentions = domainMentions
-        )
-    }
 }
 
-/**
- * Message 도메인 모델을 DTO로 변환하는 확장 함수
- * @return MessageDTO 객체
- */
-fun Message.toDto(): MessageDTO {
-    val dtoMentions = this.mentions.map { mention ->
-        mapOf(
-            MentionInfo.KEY_TYPE to mention.type.name,
-            MentionInfo.KEY_ID to mention.id,
-            MentionInfo.KEY_DISPLAY_NAME to mention.displayName
-        )
-    }
-
-    return MessageDTO(
-        id = id.value,
-        senderId = senderId.value,
-        content = content.value,
-        createdAt = null,
-        updatedAt = null,
-        replyToMessageId = replyToMessageId?.value,
-        isDeleted = isDeleted.value,
-        mentions = dtoMentions
-    )
-}

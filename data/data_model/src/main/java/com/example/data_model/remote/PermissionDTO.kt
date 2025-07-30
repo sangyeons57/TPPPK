@@ -1,9 +1,8 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.Permission
-import com.example.domain.model.data.project.RolePermission
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
@@ -24,27 +23,5 @@ data class PermissionDTO(
     companion object {
         const val COLLECTION_NAME = Permission.COLLECTION_NAME// Sub-collection of Role
     }
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return Permission 도메인 모델
-     */
-    override fun toDomain(): Permission {
-        return Permission.fromDataSource(
-            id = RolePermission.from(id),
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant()
-        )
-    }
 }
 
-/**
- * Permission 도메인 모델을 DTO로 변환하는 확장 함수
- * @return PermissionDTO 객체
- */
-fun Permission.toDto(): PermissionDTO {
-    return PermissionDTO(
-        id = id.value,
-        createdAt = null,
-        updatedAt = null
-    )
-}

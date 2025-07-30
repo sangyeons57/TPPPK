@@ -19,6 +19,7 @@ import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.example.core_ui.R
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -65,7 +66,7 @@ class ProfileImageUpdateEventManager @Inject constructor() {
  */
 @HiltViewModel
 class UserProfileImageViewModel @Inject constructor(
-    private val userUseCaseProvider: com.example.domain.provider.user.UserUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider,
     private val imageLoader: ImageLoader
 ) : ViewModel() {
     

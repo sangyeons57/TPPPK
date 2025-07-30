@@ -3,7 +3,7 @@ package com.example.websocket
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
-import com.example.domain.repository.base.AuthRepository
+import com.example.domain_repository.base.AuthRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

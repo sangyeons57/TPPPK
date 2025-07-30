@@ -1,11 +1,9 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.enum.InviteStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
@@ -34,20 +32,6 @@ data class ProjectInvitationDTO(
     override val updatedAt: Date? = null
 ) : DTO {
 
-    /**
-     * DTO를 도메인 모델로 변환
-     */
-    override fun toDomain(): AggregateRoot {
-        return ProjectInvitation.fromDataSource(
-            id = DocumentId(id),
-            status = InviteStatus.fromString(status),
-            inviterId = UserId(inviterId),
-            projectId = DocumentId(projectId),
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant(),
-            expiresAt = expiresAt?.toInstant()
-        )
-    }
 
     companion object {
         /**

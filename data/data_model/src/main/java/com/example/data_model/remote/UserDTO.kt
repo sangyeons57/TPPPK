@@ -1,20 +1,15 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserFcmToken
-import com.example.domain.model.vo.user.UserMemo
-import com.example.domain.model.vo.user.UserName
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
 import java.util.Date
-import com.example.domain.model.vo.DocumentId as VODocumentId
 
 /**
  * 사용자 정보를 나타내는 DTO 클래스
@@ -53,39 +48,5 @@ data class UserDTO(
         const val ACCOUNT_STATUS = User.KEY_ACCOUNT_STATUS
 
     }
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return User 도메인 모델
-     */
-    override fun toDomain(): User {
-        return User.fromDataSource(
-            id = VODocumentId(id),
-            email = UserEmail(email), // Wrap in Value Object
-            name = UserName(name),   // Wrap in Value Object
-            consentTimeStamp = consentTimeStamp?.toInstant() ?: Instant.EPOCH, // Convert Date to Instant
-            memo = memo?.let { UserMemo(it) }, // Wrap in Value Object
-            userStatus = status ,
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant(),
-            fcmToken = UserFcmToken(fcmToken),
-            accountStatus = accountStatus
-        )
-    }
 }
 
-/**
- * User 도메인 모델을 DTO로 변환하는 확장 함수
- * @return UserDTO 객체
- */
-fun User.toDto(): UserDTO {
-    return UserDTO(
-        id = id.value,
-        email = email.value, // Extract primitive value
-        name = name.value,   // Extract primitive value
-        consentTimeStamp = Date.from(consentTimeStamp), // Convert Instant to Date
-        memo = memo?.value,  // Extract primitive value if memo is not null
-        status = userStatus, // Corrected from 'status' to 'userStatus'
-        fcmToken = fcmToken?.value,
-        accountStatus = accountStatus
-    )
-}

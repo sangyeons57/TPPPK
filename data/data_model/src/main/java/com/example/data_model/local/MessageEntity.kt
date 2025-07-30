@@ -52,9 +52,15 @@ data class MessageEntity(
     val deleted: Boolean = false
 ) {
 
+    @Deprecated(
+        message = "Use MessageMapper.entityToDomain() instead. " +
+                "Direct conversion in Entity violates Clean Architecture.",
+        replaceWith = ReplaceWith(
+            "messageMapper.entityToDomain(this)",
+            "com.example.mapper.message.MessageMapper"
+        )
+    )
     fun toDomainModel(): Message {
-        // Note: For now, we'll parse mentions as empty list
-        // In a real implementation, you'd parse the JSON string
         val mentionsList = emptyList<MentionInfo>()
 
         return Message.fromDataSource(
@@ -70,6 +76,14 @@ data class MessageEntity(
     }
 
     companion object {
+        @Deprecated(
+            message = "Use MessageMapper.domainToEntity() or domainToEntityWithSync() instead. " +
+                    "Direct conversion in Entity violates Clean Architecture.",
+            replaceWith = ReplaceWith(
+                "messageMapper.domainToEntityWithSync(message, serverVersion, serverUpdatedAt, syncStatus, deleted)",
+                "com.example.mapper.message.MessageMapper"
+            )
+        )
         fun fromDomainModel(
             message: Message,
             serverVersion: Long? = null,
@@ -77,8 +91,6 @@ data class MessageEntity(
             syncStatus: SyncStatus = SyncStatus.DEFAULT,
             deleted: Boolean = false
         ): MessageEntity {
-            // Note: For now, we'll serialize mentions as empty array
-            // In a real implementation, you'd serialize the mentions list to JSON
             val mentionsJson = "[]"
 
             return MessageEntity(

@@ -11,7 +11,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.permission.PermissionType
 import com.example.domain.model.vo.role.RoleIsDefault
-import com.example.domain.provider.project.ProjectRoleUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

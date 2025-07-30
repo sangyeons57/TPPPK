@@ -11,9 +11,9 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
 import com.example.domain.model.vo.IsLoading
 import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.provider.auth.AuthSessionUseCaseProvider
-import com.example.domain.provider.auth.AuthValidationUseCaseProvider
-import com.example.domain.usecase.auth.session.WithdrawnAccountException
+import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthValidationUseCaseProvider
+import com.example.domain_usecase.usecase.auth.session.WithdrawnAccountException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

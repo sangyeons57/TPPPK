@@ -6,15 +6,21 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.provider.schedule.ScheduleUseCaseProvider
+import com.example.domain_usecase.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Locale
+import javax.inject.Inject
 
 // 캘린더 UI 상태
 data class CalendarUiState(

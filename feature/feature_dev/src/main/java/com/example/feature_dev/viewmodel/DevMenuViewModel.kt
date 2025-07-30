@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.data.cache.ChatCacheManager
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.provider.auth.AuthSessionUseCaseProvider
-import com.example.domain.provider.dev.DevMenuUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.provider.dev.DevMenuUseCaseProvider
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import com.example.websocket.WebSocketConnectionState

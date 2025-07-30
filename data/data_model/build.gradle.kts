@@ -12,7 +12,9 @@ android {
 dependencies {
 
     // Core modules
-    implementation(project(":domain"))
+    implementation(project(":domain:domain"))
+    implementation(project(":domain:domain_usecase"))
+    implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
 
     // Test dependencies

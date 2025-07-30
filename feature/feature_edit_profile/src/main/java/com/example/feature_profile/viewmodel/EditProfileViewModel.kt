@@ -5,12 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.dispatcher.DispatcherProvider
 import com.example.core_common.result.CustomResult
-
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 /**
@@ -145,7 +144,7 @@ class EditProfileViewModel @Inject constructor(
         }
 
         _uiState.update { currentState ->
-            val hasNameChanged = currentState.user?.let { user ->
+            currentState.user?.let { user ->
                 currentState.originalUser?.let { original ->
                     user.name.value != original.name.value
                 } ?: false

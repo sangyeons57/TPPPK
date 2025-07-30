@@ -8,8 +8,8 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.example.domain.provider.user.UserUseCaseProvider
 import com.example.core_common.result.CustomResult
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -109,7 +109,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
         // Extract mention-specific data
         val messageId = data["messageId"] ?: ""
-        val senderId = data["senderId"] ?: ""
+        data["senderId"] ?: ""
         val senderName = data["senderName"] ?: "Someone"
         val channelId = data["channelId"] ?: ""
         val projectId = data["projectId"] ?: ""
@@ -209,7 +209,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         channelName: String
     ) {
         val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         // Create notification channel for Android O and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

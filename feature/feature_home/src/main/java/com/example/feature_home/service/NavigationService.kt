@@ -2,8 +2,8 @@ package com.example.feature_home.viewmodel.service
 
 import android.util.Log
 import com.example.core_navigation.core.NavigationManger
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
-import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
 
@@ -88,10 +88,11 @@ class NavigationService(
         
         // 채널 타입에 따라 다른 네비게이션 처리
         when (channel.mode) {
-            com.example.domain.model.enum.ProjectChannelType.TASKS -> {
+            ProjectChannelType.TASKS -> {
                 navigateToTaskList(projectId, channel.id)
             }
-            com.example.domain.model.enum.ProjectChannelType.MESSAGES -> {
+
+            ProjectChannelType.MESSAGES -> {
                 navigateToChannel(projectId, channel.id)
             }
             else -> {

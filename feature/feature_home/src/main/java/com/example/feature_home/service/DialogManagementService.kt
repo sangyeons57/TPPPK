@@ -1,4 +1,4 @@
-package com.example.feature_home.viewmodel.service
+package com.example.feature_home.service
 
 import android.util.Log
 import androidx.compose.material.icons.Icons

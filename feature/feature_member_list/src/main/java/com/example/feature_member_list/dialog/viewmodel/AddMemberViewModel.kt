@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
+import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.UserId
-import com.example.domain.provider.project.ProjectMemberUseCaseProvider
-import com.example.domain.provider.project.CoreProjectUseCaseProvider
-import com.example.domain.provider.friend.FriendUseCaseProvider
-import com.example.domain.provider.auth.AuthSessionUseCaseProvider
-import com.example.domain.usecase.auth.session.GetCurrentUserSessionUseCase
+import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthSessionUseCases
+import com.example.domain_usecase.provider.friend.FriendUseCaseProvider
+import com.example.domain_usecase.provider.friend.FriendUseCases
+import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
+import com.example.domain_usecase.provider.project.CoreProjectUseCases
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCases
 import com.example.feature_member_list.dialog.ui.FriendItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,10 +49,10 @@ class AddMemberViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
 ) : ViewModel() {
 
-    private var projectMemberUseCases: com.example.domain.provider.project.ProjectMemberUseCases? = null
-    private var coreProjectUseCases: com.example.domain.provider.project.CoreProjectUseCases? = null
-    private var friendUseCases: com.example.domain.provider.friend.FriendUseCases? = null
-    private var authSessionUseCases: com.example.domain.provider.auth.AuthSessionUseCases? = null
+    private var projectMemberUseCases: ProjectMemberUseCases? = null
+    private var coreProjectUseCases: CoreProjectUseCases? = null
+    private var friendUseCases: FriendUseCases? = null
+    private var authSessionUseCases: AuthSessionUseCases? = null
 
     private val _uiState = MutableStateFlow(AddMemberDialogUiState())
     val uiState: StateFlow<AddMemberDialogUiState> = _uiState.asStateFlow()
@@ -169,7 +173,7 @@ class AddMemberViewModel @Inject constructor(
                         // 1. 초대 생성 (DocumentId 반환)
                         val createResult = useCases.generateInviteLinkUseCase(
                             inviterId = currentUser.data.userId,
-                            projectId = projectId,
+                            projectId = ProjectId.from(projectId),
                             expiresInHours = 24 // 기본 24시간
                         )
                         

@@ -1,16 +1,13 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.Friend
 import com.example.domain.model.enum.FriendStatus
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.user.UserName
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
-import com.example.domain.model.vo.DocumentId as VODocumentId
 
 /*
  * 친구 관계 정보를 나타내는 DTO 클래스
@@ -21,7 +18,7 @@ data class FriendDTO(
     @get:PropertyName(STATUS)
     val status: FriendStatus = FriendStatus.UNKNOWN,
     @get:PropertyName(REQUESTED_AT)
-    @get:ServerTimestamp val requestedAt: Date? = null, 
+    @get:ServerTimestamp val requestedAt: Date? = null,
     @get:PropertyName(ACCEPTED_AT)
     @get:ServerTimestamp val acceptedAt: Date? = null,
     @get:PropertyName(NAME)
@@ -42,37 +39,5 @@ data class FriendDTO(
         const val NAME = Friend.KEY_NAME
         const val PROFILE_IMAGE_URL = Friend.KEY_PROFILE_IMAGE_URL
     }
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return Friend 도메인 모델
-     */
-    override fun toDomain(): Friend {
-        return Friend.fromDataSource(
-            id = VODocumentId(id),
-            status = status,
-            requestedAt = requestedAt?.toInstant(),
-            acceptedAt = acceptedAt?.toInstant(),
-            name = UserName(name),
-            profileImageUrl = profileImageUrl?.let{ ImageUrl(it) },
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant()
-        )
-    }
 }
 
-/*
- * Friend 도메인 모델을 DTO로 변환하는 확장 함수
- * @return FriendDTO 객체
- */
-fun Friend.toDto(): FriendDTO {
-    return FriendDTO(
-        id = id.value,
-        status = status,
-        requestedAt = requestedAt?.let{Date.from(it)},
-        acceptedAt = acceptedAt?.let{Date.from(it)},
-        name = name.value,
-        profileImageUrl = profileImageUrl?.value,
-        createdAt = null,
-        updatedAt = null
-    )
-}

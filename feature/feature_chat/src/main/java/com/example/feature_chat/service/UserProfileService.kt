@@ -4,8 +4,8 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.provider.file.FileManagementUseCases
-import com.example.domain.provider.user.UserUseCases
+import com.example.domain_usecase.provider.file.FileManagementUseCases
+import com.example.domain_usecase.provider.user.UserUseCases
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

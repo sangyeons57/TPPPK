@@ -9,7 +9,7 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
-import com.example.domain.provider.chat.ChatUseCases
+import com.example.domain_usecase.provider.chat.ChatUseCases
 import com.example.feature_chat.config.ChatMemoryConfig
 import com.example.feature_chat.memory.MessageMemoryManager
 import com.example.feature_chat.model.ChatMessageUiModel

@@ -3,7 +3,7 @@ package com.example.feature_chat.service
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.feature_chat.model.ProjectMember
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

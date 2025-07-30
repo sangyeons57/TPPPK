@@ -1,12 +1,19 @@
-package com.example.feature_home.viewmodel.service
+package com.example.feature_home.service.provider
 
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.provider.dm.DMUseCaseProvider
-import com.example.domain.provider.project.CoreProjectUseCaseProvider
-import com.example.domain.provider.project.ProjectStructureUseCaseProvider
-import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.dm.DMUseCaseProvider
+import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.example.feature_home.service.CategoryManagementService
+import com.example.feature_home.service.DialogManagementService
+import com.example.feature_home.viewmodel.service.LoadDmsService
+import com.example.feature_home.viewmodel.service.LoadProjectsService
+import com.example.feature_home.viewmodel.service.LoadUserDataService
+import com.example.feature_home.viewmodel.service.NavigationService
+import com.example.feature_home.viewmodel.service.ProjectSelectionService
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,7 +49,10 @@ class HomeServiceProvider @Inject constructor(
             loadUserDataService = LoadUserDataService(userUseCases),
             loadProjectsService = LoadProjectsService(coreProjectUseCases),
             loadDmsService = LoadDmsService(dmUseCases),
-            projectSelectionService = ProjectSelectionService(coreProjectUseCases, projectStructureUseCases),
+            projectSelectionService = ProjectSelectionService(
+                coreProjectUseCases,
+                projectStructureUseCases
+            ),
             categoryManagementService = CategoryManagementService(projectStructureUseCases),
             navigationService = NavigationService(navigationManager),
             dialogManagementService = DialogManagementService()

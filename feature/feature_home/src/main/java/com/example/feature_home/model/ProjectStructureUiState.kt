@@ -2,12 +2,12 @@ package com.example.feature_home.model
 
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.usecase.project.structure.ProjectStructureData
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.category.CategoryName
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain_usecase.usecase.project.structure.ProjectStructureData
 
 
 /**

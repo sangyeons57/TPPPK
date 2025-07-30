@@ -1,11 +1,12 @@
-package com.example.feature_home.viewmodel.service
+package com.example.feature_home.service
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.provider.project.ProjectStructureUseCases
+import com.example.domain_usecase.provider.project.ProjectStructureUseCases
+import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureItem
 
 /**
@@ -131,7 +132,7 @@ class CategoryManagementService(
     suspend fun reorderCategoryChannels(
         projectId: DocumentId,
         categoryId: DocumentId,
-        reorderedChannels: List<com.example.feature_home.model.ChannelUiModel>
+        reorderedChannels: List<ChannelUiModel>
     ): CustomResult<Unit, Exception> {
         Log.d("CategoryManagementService", "Reordering category channels for project: $projectId, category: $categoryId")
         

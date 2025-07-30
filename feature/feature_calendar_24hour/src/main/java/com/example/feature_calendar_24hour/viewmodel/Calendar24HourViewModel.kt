@@ -22,7 +22,7 @@ import com.example.core_ui.theme.ScheduleHighContrastColor5
 import com.example.core_ui.theme.ScheduleHighContrastColor6
 import com.example.core_ui.theme.ScheduleHighContrastColor7
 import com.example.domain.model.base.Schedule
-import com.example.domain.provider.schedule.ScheduleUseCaseProvider
+import com.example.domain_usecase.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

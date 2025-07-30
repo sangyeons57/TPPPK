@@ -13,9 +13,9 @@ import com.example.domain.model.base.Role
 import com.example.domain.model.base.User
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.provider.project.ProjectMemberUseCaseProvider
-import com.example.domain.provider.project.ProjectRoleUseCaseProvider
-import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

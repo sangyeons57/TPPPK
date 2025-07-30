@@ -6,7 +6,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.example.domain.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.teamnovapersonalprojectprojectingkotlin.fcm.FcmTokenManager
 import com.example.teamnovapersonalprojectprojectingkotlin.notification.NotificationChannelManager
 import com.example.websocket.GlobalWebSocketService

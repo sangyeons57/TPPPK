@@ -12,11 +12,11 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
 import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
-import com.example.domain.provider.project.CoreProjectUseCaseProvider
-import com.example.domain.provider.project.CoreProjectUseCases
-import com.example.domain.provider.project.ProjectChannelUseCaseProvider
-import com.example.domain.provider.project.ProjectStructureUseCaseProvider
-import com.example.domain.provider.project.ProjectStructureUseCases
+import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
+import com.example.domain_usecase.provider.project.CoreProjectUseCases
+import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCases
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel

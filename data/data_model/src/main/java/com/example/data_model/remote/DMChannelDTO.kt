@@ -1,15 +1,13 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.enum.DMChannelStatus
-import com.example.domain.model.vo.UserId
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
-import com.example.domain.model.vo.DocumentId as VODocumentId
 
 /**
  * 개인 메시지 채널 정보를 나타내는 DTO 클래스
@@ -32,29 +30,5 @@ data class DMChannelDTO(
         const val PARTICIPANTS = DMChannel.KEY_PARTICIPANTS
         const val STATUS = DMChannel.KEY_STATUS
     }
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return DMChannel 도메인 모델
-     */
-    override fun toDomain(): DMChannel {
-        return DMChannel.fromDataSource(
-            id = VODocumentId(id),
-            participants = participants.map { UserId(it) },
-            status = status,
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant()
-        )
-    }
 }
 
-/**
- * DMChannel 도메인 모델을 DTO로 변환하는 확장 함수
- * @return DMChannelDTO 객체
- */
-fun DMChannel.toDto(): DMChannelDTO {
-    return DMChannelDTO(
-        id = id.value,
-        participants = participants.map { it.value },
-        status = status // createdAt/updatedAt omitted for ServerTimestamp
-    )
-}

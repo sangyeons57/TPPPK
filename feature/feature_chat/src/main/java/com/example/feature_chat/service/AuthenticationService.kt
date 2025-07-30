@@ -4,7 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.UserId
-import com.example.domain.provider.auth.AuthSessionUseCases
+import com.example.domain_usecase.provider.auth.AuthSessionUseCases
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

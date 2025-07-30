@@ -10,7 +10,8 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.vo.ImageUrl
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.provider.friend.FriendUseCaseProvider
+import com.example.domain_usecase.provider.friend.FriendUseCaseProvider
+import com.example.domain_usecase.provider.friend.FriendUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,7 +57,7 @@ class AcceptFriendsViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
-    private lateinit var friendUseCases: com.example.domain.provider.friend.FriendUseCases
+    private lateinit var friendUseCases: FriendUseCases
 
     // UI 상태 (MutableStateFlow -> StateFlow로 외부 노출)
     private val _uiState = MutableStateFlow(AcceptFriendsUiState())

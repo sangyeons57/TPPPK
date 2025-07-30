@@ -6,10 +6,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_navigation.core.NavigationManger
-import com.example.domain.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.LoginRoute
-import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow

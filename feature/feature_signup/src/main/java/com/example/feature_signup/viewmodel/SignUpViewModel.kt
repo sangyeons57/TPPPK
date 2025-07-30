@@ -13,10 +13,10 @@ import com.example.core_navigation.core.PrivacyPolicyRoute
 import com.example.core_navigation.core.TermsOfServiceRoute
 import com.example.domain.model.ui.enum.SignUpFormFocusTarget
 import com.example.domain.model.vo.user.UserName
-import com.example.domain.provider.auth.AuthRegistrationUseCaseProvider
-import com.example.domain.provider.auth.AuthValidationUseCaseProvider
-import com.example.domain.provider.user.UserUseCaseProvider
-import com.example.domain.provider.validation.ValidationUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthRegistrationUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthValidationUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.validation.ValidationUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -255,7 +255,7 @@ class SignUpViewModel @Inject constructor(
             var nicknameAvailable: Boolean? = null
 
             // first() 사용하여 Success 또는 Failure 결과만 받기
-            val nicknameResult = userUseCases
+            userUseCases
                 .checkNicknameAvailabilityUseCase(state.name)
                 .onEach { result ->
                     when (result) {

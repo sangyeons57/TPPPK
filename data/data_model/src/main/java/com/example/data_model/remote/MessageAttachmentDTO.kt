@@ -1,17 +1,13 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
-import com.example.domain.model.vo.DocumentId as VODocumentId
 
 
 /**
@@ -42,31 +38,5 @@ data class MessageAttachmentDTO(
         const val FILE_NAME = MessageAttachment.KEY_FILE_NAME
         const val FILE_SIZE = MessageAttachment.KEY_FILE_SIZE
     }
-    override fun toDomain(): MessageAttachment {
-        return MessageAttachment.fromDataSource(
-            id = VODocumentId(id),
-            attachmentType = attachmentType,
-            attachmentUrl = MessageAttachmentUrl(attachmentUrl),
-            fileName = fileName?.let { MessageAttachmentFileName(it) },
-            fileSize = fileSize?.let { MessageAttachmentFileSize(it) },
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant(),
-        )
-    }
 }
 
-/**
- * MessageAttachment 도메인 모델을 DTO로 변환하는 확장 함수
- * @return MessageAttachmentDTO 객체
- */
-fun MessageAttachment.toDto(): MessageAttachmentDTO {
-    return MessageAttachmentDTO(
-        id = id.value,
-        attachmentType = attachmentType,
-        attachmentUrl = attachmentUrl.value,
-        fileName = fileName?.value,
-        fileSize = fileSize?.value,
-        createdAt = null,
-        updatedAt = null,
-    )
-}

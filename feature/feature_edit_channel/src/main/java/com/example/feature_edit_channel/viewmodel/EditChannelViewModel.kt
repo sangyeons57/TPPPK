@@ -12,8 +12,8 @@ import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
-import com.example.domain.provider.project.ProjectChannelUseCaseProvider
-import com.example.domain.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

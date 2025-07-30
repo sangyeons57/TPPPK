@@ -8,14 +8,15 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.Category
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
 import com.example.feature_home.model.ProjectStructureItem
 import com.example.feature_home.model.ProjectStructureUiState
-import com.example.feature_home.viewmodel.service.HomeServiceProvider
-import com.example.feature_home.viewmodel.service.HomeServices
+import com.example.feature_home.service.DialogManagementService
+import com.example.feature_home.service.provider.HomeServiceProvider
+import com.example.feature_home.service.provider.HomeServices
 import com.example.feature_home.viewmodel.service.LoadUserDataService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -62,7 +63,7 @@ class HomeViewModel @Inject constructor(
     private var projectStructureJob: Job? = null
     
     // 다이얼로그 상태
-    private var dialogState: com.example.feature_home.viewmodel.service.DialogManagementService.DialogState? = null
+    private var dialogState: DialogManagementService.DialogState? = null
     
     // 현재 사용자 ID
     private var currentUserId: UserId = UserId.EMPTY

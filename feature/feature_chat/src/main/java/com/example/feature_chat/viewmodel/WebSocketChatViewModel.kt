@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
-import com.example.data.utils.DebugChatLogger
 import com.example.domain.model.vo.MentionType
 import com.example.domain.model.vo.message.MentionInfo
 import com.example.feature_chat.model.ChatEvent
@@ -40,7 +39,6 @@ import javax.inject.Inject
 class WebSocketChatViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val chatServiceProvider: ChatServiceProvider,
-    private val debugChatLogger: DebugChatLogger // Inject the logger
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -90,7 +88,6 @@ class WebSocketChatViewModel @Inject constructor(
     private fun logChannelCacheOnEntry() {
         viewModelScope.launch {
             Log.i("DebugChatCache", "--- Dumping local cache for channel $channelId upon entry ---")
-            debugChatLogger.printChannelChatMessages(channelId)
         }
     }
 

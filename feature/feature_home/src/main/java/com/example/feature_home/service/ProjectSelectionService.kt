@@ -4,8 +4,8 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
-import com.example.domain.provider.project.CoreProjectUseCases
-import com.example.domain.provider.project.ProjectStructureUseCases
+import com.example.domain_usecase.provider.project.CoreProjectUseCases
+import com.example.domain_usecase.provider.project.ProjectStructureUseCases
 import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.toProjectStructureUiState
 import kotlinx.coroutines.flow.Flow

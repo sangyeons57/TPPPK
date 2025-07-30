@@ -4,7 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain.provider.dm.DMUseCaseProvider
+import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.feature_chat.model.ChatParticipant
 
 /**

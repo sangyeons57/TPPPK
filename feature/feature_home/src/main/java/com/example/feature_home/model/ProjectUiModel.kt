@@ -45,7 +45,7 @@ fun Project.toProjectUiModel(): ProjectUiModel {
     return ProjectUiModel(
         id = this.id,
         name = this.name,
-        imageUrl = this.imageUrl
+        imageUrl = ImageUrl("") //프로젝트 이미지는 사용자 이미지와 같이 id를 사용한 경로 고정으로 동작한다.따라서 여기 로직 고쳐야함 project_profile/{project_id}/profile.webp
     )
 }
 

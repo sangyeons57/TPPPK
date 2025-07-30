@@ -12,11 +12,13 @@ android {
 
 dependencies {
     // --- 모듈 의존성 ---
-    implementation(project(":domain"))
+    implementation(project(":domain:domain"))
+    implementation(project(":domain:domain_usecase"))
+    implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui"))
-    implementation(project(":data:data_core"))
+    implementation(project(":data:data"))
 
     // Module-specific dependencies
     implementation(libs.androidx.compose.navigation)

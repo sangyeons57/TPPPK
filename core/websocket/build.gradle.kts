@@ -13,7 +13,9 @@ android {
 
 dependencies {
 
-    implementation(project(":domain"))
+    implementation(project(":domain:domain"))
+    implementation(project(":domain:domain_usecase"))
+    implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
 
     implementation(libs.androidx.core.ktx)

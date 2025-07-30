@@ -2,7 +2,7 @@ package com.example.feature_change_password.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.example.domain.provider.auth.AuthPasswordUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthPasswordUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

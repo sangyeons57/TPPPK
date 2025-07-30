@@ -9,7 +9,7 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Role
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.Name
-import com.example.domain.provider.project.ProjectRoleUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

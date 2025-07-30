@@ -22,10 +22,10 @@ import com.example.core_ui.components.project.ProjectImageUpdateEventManager
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.project.ProjectName
-import com.example.domain.provider.project.CoreProjectUseCaseProvider
-import com.example.domain.provider.project.ProjectAssetsUseCaseProvider
-import com.example.domain.provider.project.ProjectChannelUseCaseProvider
-import com.example.domain.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectAssetsUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -111,7 +111,6 @@ class ProjectSettingViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             projectName = project.name,
-                            projectImageUrl = project.imageUrl?.value
                         )
                     }
                 }

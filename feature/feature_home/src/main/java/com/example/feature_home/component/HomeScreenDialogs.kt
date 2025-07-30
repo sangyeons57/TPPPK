@@ -3,6 +3,7 @@ package com.example.feature_home.ui.component
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.core_ui.components.reorder.SimpleReorderDialog
+import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureUiState
@@ -143,8 +144,8 @@ private fun ReorderCategoryChannelsDialog(
         itemKey = { it.id.value },
         itemLabel = { channel ->
             val channelIcon = when (channel.mode) {
-                com.example.domain.model.enum.ProjectChannelType.MESSAGES -> "#"
-                com.example.domain.model.enum.ProjectChannelType.TASKS -> "◉"
+                ProjectChannelType.MESSAGES -> "#"
+                ProjectChannelType.TASKS -> "◉"
                 else -> "#"
             }
             "$channelIcon ${channel.name.value}"

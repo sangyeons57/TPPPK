@@ -1,13 +1,9 @@
 package com.example.data_model.remote
 
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
-import com.example.domain.model.DTO
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.model.vo.category.CategoryOrder
-import com.example.domain.model.vo.category.IsCategoryFlag
+import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
@@ -16,7 +12,7 @@ import java.util.Date
  * 카테고리 정보를 나타내는 DTO 클래스
  */
 data class CategoryDTO(
-    @com.google.firebase.firestore.DocumentId
+    @get:DocumentId
     override val id: String = "",
     @get:PropertyName(NAME)
     val name: String = "",
@@ -40,35 +36,5 @@ data class CategoryDTO(
         const val CREATED_BY = Category.KEY_CREATED_BY
         const val IS_CATEGORY = Category.KEY_IS_CATEGORY
     }
-    /**
-     * DTO를 도메인 모델로 변환
-     * @return Category 도메인 모델
-     */
-    override fun toDomain(): Category {
-        return Category.fromDataSource(
-            id = DocumentId(id),
-            name = CategoryName(name),
-            order = CategoryOrder.fromDouble(order),
-            createdBy = OwnerId(createdBy),
-            createdAt = createdAt?.toInstant(),
-            updatedAt = updatedAt?.toInstant(),
-            isCategory= IsCategoryFlag(isCategory)
-        )
-    }
 }
 
-/**
- * Category 도메인 모델을 DTO로 변환하는 확장 함수
- * @return CategoryDTO 객체
- */
-fun Category.toDto(): CategoryDTO {
-    return CategoryDTO(
-        id = id.value,
-        name = name.value,
-        order = order.value.toDouble(),
-        createdBy = createdBy.value,
-        createdAt = null,
-        updatedAt = null,
-        isCategory = isCategory.value
-    )
-}

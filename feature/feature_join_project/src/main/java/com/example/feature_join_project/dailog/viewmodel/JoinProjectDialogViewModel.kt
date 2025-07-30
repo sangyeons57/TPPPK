@@ -5,11 +5,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
-import com.example.domain.provider.project.CoreProjectUseCaseProvider
-import com.example.feature_join_project.dailog.viewmodel.JoinProjectDialogEvent.*
-import com.example.feature_join_project.dailog.viewmodel.JoinProjectDialogUiState.*
+import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
+import com.example.feature_join_project.dailog.viewmodel.JoinProjectDialogEvent.JoinSuccess
+import com.example.feature_join_project.dailog.viewmodel.JoinProjectDialogEvent.ShowSnackbar
+import com.example.feature_join_project.dailog.viewmodel.JoinProjectDialogUiState.ProjectInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -145,8 +151,8 @@ class JoinProjectDialogViewModel @Inject constructor(
         // 이미 멤버인 경우 처리
         if (projectInfo.isAlreadyMember) {
             viewModelScope.launch {
-                _eventFlow.emit(JoinProjectDialogEvent.ShowSnackbar("이미 프로젝트에 참여하고 있습니다."))
-                _eventFlow.emit(JoinProjectDialogEvent.JoinSuccess(projectInfo.projectId))
+                _eventFlow.emit(ShowSnackbar("이미 프로젝트에 참여하고 있습니다."))
+                _eventFlow.emit(JoinSuccess(projectInfo.projectId))
             }
             return
         }
