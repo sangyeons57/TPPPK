@@ -11,6 +11,7 @@ import com.example.domain.model.vo.message.MentionInfo
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
 import com.example.mapper.Mapper
+import com.example.mapper.DtoMapper
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,7 +21,8 @@ import javax.inject.Singleton
  * JSON 의존성 없이 순수한 객체 변환만 담당
  */
 @Singleton
-class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, MessageDTO> {
+class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, MessageDTO>,
+    DtoMapper<Message, MessageDTO> {
 
     override fun entityToDomain(entity: MessageEntity): Message {
         return Message.fromDataSource(

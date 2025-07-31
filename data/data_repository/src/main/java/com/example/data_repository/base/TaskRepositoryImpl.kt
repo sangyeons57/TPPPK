@@ -2,26 +2,24 @@ package com.example.data_repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.TaskRemoteDataSource
+import com.example.data_model.remote.TaskDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
-import com.example.mapper.task.TaskMapper
 import com.example.domain.model.base.Task
 import com.example.domain.model.vo.DocumentId
 import com.example.domain_repository.base.TaskRepository
+import com.example.mapper.DtoMapper
 import com.google.firebase.firestore.FieldValue
 import javax.inject.Inject
 
 class TaskRepositoryImpl @Inject constructor(
     private val taskRemoteDataSource: TaskRemoteDataSource,
-    private val taskMapper: TaskMapper,
-) : DefaultRepositoryImpl(taskRemoteDataSource), TaskRepository {
+    private val taskMapper: DtoMapper<Task, TaskDTO>,
+) : DefaultRepositoryImpl<Task, TaskDTO>(taskRemoteDataSource, taskMapper), TaskRepository {
 
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Task)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Task"))
+    override suspend fun save(entity: Task): CustomResult<DocumentId, Exception> {
         ensureCollection()
         return if (entity.isNew) {
-            taskRemoteDataSource.create(taskMapper.domainToDto(entity))
+            taskRemoteDataSource.create(mapper.domainToDto(entity))
         } else {
             val changedFields = entity.getChangedFields().toMutableMap()
             

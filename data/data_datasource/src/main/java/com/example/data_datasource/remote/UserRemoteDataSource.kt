@@ -6,8 +6,10 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
 import com.example.data_model.remote.DMWrapperDTO
+import com.example.data_model.remote.ProjectsWrapperDTO
 import com.example.data_model.remote.UserDTO
 import com.example.domain.model.AggregateRoot
+import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.google.firebase.Timestamp
@@ -21,7 +23,7 @@ import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface UserRemoteDataSource : DefaultDatasource {
+interface UserRemoteDataSource : DefaultDatasource<UserDTO> {
 
     /**
      * 주어진 이름(닉네임)과 정확히 일치하는 사용자 정보를 실시간 스트림으로 반환합니다.
@@ -69,7 +71,9 @@ interface UserRemoteDataSource : DefaultDatasource {
 class UserRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-) : DefaultDatasourceImpl<UserDTO>(firestore, UserDTO::class.java), UserRemoteDataSource {
+) : DefaultDatasourceImpl<UserDTO>(firestore), UserRemoteDataSource {
+
+    override val dtoClass = UserDTO::class.java
 
     /**
      * Creates a default UserDTO instance when standard deserialization fails.

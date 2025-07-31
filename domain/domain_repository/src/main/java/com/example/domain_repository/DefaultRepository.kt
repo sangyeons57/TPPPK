@@ -9,15 +9,19 @@ import kotlinx.coroutines.flow.Flow
 
 interface Repository
 
-interface DefaultRepository : Repository {
+interface DefaultRepository<D : AggregateRoot> : Repository {
     fun setCollection(collectionPath: CollectionPath)
 
-    suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception>
+    suspend fun save(entity: D): CustomResult<DocumentId, Exception>
     suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
 
-    suspend fun findById(id: DocumentId, source: Source = Source.DEFAULT): CustomResult<AggregateRoot, Exception>
-    suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<AggregateRoot>, Exception>
+    suspend fun findById(
+        id: DocumentId,
+        source: Source = Source.DEFAULT
+    ): CustomResult<D, Exception>
 
-    fun observe(id: DocumentId): Flow<CustomResult<AggregateRoot, Exception>>
-    fun observeAll(): Flow<CustomResult<List<AggregateRoot>, Exception>>
+    suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<D>, Exception>
+
+    fun observe(id: DocumentId): Flow<CustomResult<D, Exception>>
+    fun observeAll(): Flow<CustomResult<List<D>, Exception>>
 }

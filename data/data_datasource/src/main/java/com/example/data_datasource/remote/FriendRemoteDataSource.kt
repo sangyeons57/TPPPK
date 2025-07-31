@@ -30,7 +30,7 @@ import javax.inject.Singleton
  * 대부분의 작업 전에 `setCollection(userId)`를 호출하여 주 사용자 컨텍스트를 설정해야 합니다.
  * 일부 작업(예: 친구 요청, 수락)은 두 사용자의 데이터에 영향을 미칠 수 있으며, 구현 시 이를 고려해야 합니다.
  */
-interface FriendRemoteDataSource : DefaultDatasource {
+interface FriendRemoteDataSource : DefaultDatasource<FriendDTO> {
 
     /**
      * 특정 사용자에게 온 친구 요청("pending" 상태) 목록을 실시간으로 관찰합니다.
@@ -88,7 +88,9 @@ interface FriendRemoteDataSource : DefaultDatasource {
 @Singleton
 class FriendRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<FriendDTO>(firestore, FriendDTO::class.java), FriendRemoteDataSource {
+) : DefaultDatasourceImpl<FriendDTO>(firestore), FriendRemoteDataSource {
+
+    override val dtoClass = FriendDTO::class.java
 
     private val TAG = "FriendRemoteDS"
 

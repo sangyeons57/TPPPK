@@ -2,13 +2,14 @@ package com.example.domain_repository.base
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.base.Project
 import com.example.domain.model.vo.DocumentId
 import com.example.domain_repository.DefaultRepository
 
 /**
  * 프로젝트 생성, 조회, 관리 등 관련 데이터 처리를 위한 인터페이스입니다.
  */
-interface ProjectRepository : DefaultRepository {
+interface ProjectRepository : DefaultRepository<Project> {
 
     /**
      * 프로젝트 프로필 이미지를 업로드합니다.

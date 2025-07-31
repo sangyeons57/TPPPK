@@ -11,9 +11,11 @@ import javax.inject.Singleton
  * 태스크 정보에 접근하기 위한 인터페이스입니다.
  * 통합된 task_container collection에서 task 타입 문서만 필터링하여 처리합니다.
  */
-interface TaskRemoteDataSource : DefaultDatasource
+interface TaskRemoteDataSource : DefaultDatasource<TaskDTO>
 
 @Singleton
 class TaskRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<TaskDTO>(firestore, TaskDTO::class.java), TaskRemoteDataSource
+) : DefaultDatasourceImpl<TaskDTO>(firestore), TaskRemoteDataSource {
+    override val dtoClass = TaskDTO::class.java
+}

@@ -2,13 +2,12 @@ package com.example.data_repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.ScheduleRemoteDataSource
+import com.example.data_model.remote.ScheduleDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
-import com.example.mapper.schedule.ScheduleMapper
 import com.example.domain.model.base.Schedule
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain_repository.base.ScheduleRepository
+import com.example.mapper.DtoMapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -17,20 +16,9 @@ import javax.inject.Inject
 
 class ScheduleRepositoryImpl @Inject constructor(
     private val scheduleRemoteDataSource: ScheduleRemoteDataSource,
-    private val scheduleMapper: ScheduleMapper,
-    // removed factoryContext,
-) : DefaultRepositoryImpl(scheduleRemoteDataSource), ScheduleRepository {
-
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Schedule)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
-        ensureCollection()
-        return if (entity.isNew) {
-            scheduleRemoteDataSource.create(scheduleMapper.domainToDto(entity))
-        } else {
-            scheduleRemoteDataSource.update(entity.id,entity.getChangedFields())
-        }
-    }
+    private val scheduleMapper: DtoMapper<Schedule, ScheduleDTO>,
+) : DefaultRepositoryImpl<Schedule, ScheduleDTO>(scheduleRemoteDataSource, scheduleMapper),
+    ScheduleRepository {
 
     override suspend fun findByDateSummaryForMonth(
         userId: UserId,
@@ -45,9 +33,7 @@ class ScheduleRepositoryImpl @Inject constructor(
         return scheduleRemoteDataSource.findByMonth(userId.value, yearMonth).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map {
-                    scheduleMapper.dtoToDomain(
-                        it
-                    )
+                    mapper.dtoToDomain(it)
                 })
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 is CustomResult.Loading -> CustomResult.Loading
@@ -62,9 +48,7 @@ class ScheduleRepositoryImpl @Inject constructor(
         return scheduleRemoteDataSource.findByDate(userId.value, date).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map {
-                    scheduleMapper.dtoToDomain(
-                        it
-                    )
+                    mapper.dtoToDomain(it)
                 })
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 is CustomResult.Loading -> CustomResult.Loading

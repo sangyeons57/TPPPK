@@ -21,7 +21,7 @@ import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface ScheduleRemoteDataSource: DefaultDatasource {
+interface ScheduleRemoteDataSource : DefaultDatasource<ScheduleDTO> {
 
     /**
      * Firestore에서 지정된 년도와 월에 해당하는 모든 스케줄 DTO를 가져옵니다.
@@ -54,8 +54,9 @@ interface ScheduleRemoteDataSource: DefaultDatasource {
 class ScheduleRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<ScheduleDTO>(firestore, ScheduleDTO::class.java),
+) : DefaultDatasourceImpl<ScheduleDTO>(firestore),
     ScheduleRemoteDataSource {
+    override val dtoClass = ScheduleDTO::class.java
 
     override suspend fun findByMonth(userId : String, yearMonth: YearMonth): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {
 

@@ -26,7 +26,7 @@ import javax.inject.Singleton
  * 모든 작업 전에 `setCollection(channelPath)`를 호출하여 채널 컨텍스트를 설정해야 합니다.
  * `channelPath`는 부모 채널 문서의 전체 경로입니다 (예: "dm_channels/channelId123" 또는 "projects/projectId123/channels/channelId456").
  */
-interface MessageRemoteDataSource : DefaultDatasource {
+interface MessageRemoteDataSource : DefaultDatasource<MessageDTO> {
 
     /**
      * 특정 채널에 새로운 메시지를 전송합니다. Firestore가 메시지 ID를 자동 생성합니다.
@@ -81,7 +81,8 @@ interface MessageRemoteDataSource : DefaultDatasource {
 class MessageRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val mapper: MessageMapper,
-) : DefaultDatasourceImpl<MessageDTO>(firestore, MessageDTO::class.java), MessageRemoteDataSource {
+) : DefaultDatasourceImpl<MessageDTO>(firestore), MessageRemoteDataSource {
+    override val dtoClass = MessageDTO::class.java 
 
     private var currentChannelPath: String? = null
 

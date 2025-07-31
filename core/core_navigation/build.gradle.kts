@@ -53,7 +53,7 @@ kotlin {
 dependencies {
     // Project modules
     implementation(project(":domain:domain"))
-    implementation(project(":domain:domain_usecase"))
+    implementation(project(":usecase"))
     implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
 

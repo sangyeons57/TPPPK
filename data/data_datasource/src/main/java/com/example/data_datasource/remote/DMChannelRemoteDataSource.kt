@@ -18,14 +18,16 @@ import javax.inject.Singleton
  * DefaultDatasource를 확장하여 기본적인 CRUD 및 관찰 기능을 제공하며,
  * DM 채널 특화된 기능을 추가로 정의합니다.
  */
-interface DMChannelRemoteDataSource : DefaultDatasource {
+interface DMChannelRemoteDataSource : DefaultDatasource<DMChannelDTO> {
     suspend fun findByParticipants(participants: List<String>): CustomResult<DMChannelDTO, Exception>
 }
 
 @Singleton
 class DMChannelRemoteDataSourceImpl @Inject constructor(
-    private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<DMChannelDTO>(firestore, DMChannelDTO::class.java), DMChannelRemoteDataSource {
+    private val firestore: FirebaseFirestore,
+) : DefaultDatasourceImpl<DMChannelDTO>(firestore), DMChannelRemoteDataSource {
+    override val dtoClass = DMChannelDTO::class.java
+
     override suspend fun findByParticipants(participants: List<String>): CustomResult<DMChannelDTO, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("findByParticipants")
         resultTry {
@@ -38,7 +40,8 @@ class DMChannelRemoteDataSourceImpl @Inject constructor(
                 .get()
                 .await()
             if (snapshot.isEmpty) throw Exception("DMChannel not found for given participants")
-            snapshot.documents.first().toObject(clazz) ?: throw Exception("DMChannel not found for given participants")
+            snapshot.documents.first().toDtoSafely()
+                ?: throw Exception("DMChannel not found for given participants")
         }
     }
 

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 /**
  * 친구 관계 및 친구 요청 관련 데이터 처리를 위한 인터페이스입니다.
  */
-interface FriendRepository: DefaultRepository {
+interface FriendRepository : DefaultRepository<Friend> {
 
     suspend fun findFriendsByUserId(userId: String): CustomResult<List<Friend>, Exception>
     

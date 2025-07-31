@@ -4,10 +4,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.data.cache.ChatCacheManager
 import com.example.domain.model.vo.DocumentId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dev.DevMenuUseCaseProvider
+import com.example.domain_usecase.sync.SyncManager
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import com.example.websocket.WebSocketConnectionState
@@ -24,7 +24,7 @@ class DevMenuViewModel @Inject constructor(
     private val webSocketClient: ChatWebSocketClient,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val devMenuUseCaseProvider: DevMenuUseCaseProvider,
-    private val chatCacheManager: ChatCacheManager // 추가
+    private val syncManager: SyncManager
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -202,15 +202,48 @@ class DevMenuViewModel @Inject constructor(
     }
 
     /**
-     * 로컬 채팅 캐시 전체 삭제
+     * 동기화 캐시 및 대기열 정리
      */
     fun clearAllLocalChatCache() {
         viewModelScope.launch {
             _isLocalChatCacheClearing.value = true
-            _localChatCacheClearResult.value = "로컬 채팅 캐시 삭제 중..."
+            _localChatCacheClearResult.value = "동기화 데이터 정리 중..."
             try {
-                chatCacheManager.clearAllCache()
-                _localChatCacheClearResult.value = "성공: 모든 채팅 캐시가 삭제되었습니다."
+                // 완료된 OutBox 작업들을 정리
+                val cleanupResult = syncManager.cleanupCompletedOperations()
+                when (cleanupResult) {
+                    is CustomResult.Success -> {
+                        val cleanedCount = cleanupResult.data
+                        // 실패한 작업들도 리셋
+                        val resetResult = syncManager.resetFailedOperations()
+                        when (resetResult) {
+                            is CustomResult.Success -> {
+                                val resetCount = resetResult.data
+                                _localChatCacheClearResult.value =
+                                    "성공: 완료된 작업 ${cleanedCount}개 정리, 실패한 작업 ${resetCount}개 리셋됨"
+                            }
+
+                            is CustomResult.Failure -> {
+                                _localChatCacheClearResult.value =
+                                    "부분 성공: 완료된 작업 ${cleanedCount}개 정리됨, 실패 작업 리셋 실패: ${resetResult.error.message}"
+                            }
+
+                            else -> {
+                                _localChatCacheClearResult.value =
+                                    "부분 성공: 완료된 작업 ${cleanedCount}개 정리됨"
+                            }
+                        }
+                    }
+
+                    is CustomResult.Failure -> {
+                        _localChatCacheClearResult.value =
+                            "실패: ${cleanupResult.error.message ?: "알 수 없는 오류"}"
+                    }
+
+                    else -> {
+                        _localChatCacheClearResult.value = "실패: 알 수 없는 오류"
+                    }
+                }
             } catch (e: Exception) {
                 _localChatCacheClearResult.value = "실패: ${e.message ?: "알 수 없는 오류"}"
             } finally {
@@ -399,6 +432,47 @@ class DevMenuViewModel @Inject constructor(
 
     fun getWebSocketStatusText(): String {
         return getConnectionStateText(_webSocketConnectionState.value)
+    }
+
+    /**
+     * 동기화 상태 요약을 조회합니다.
+     */
+    fun getSyncStatusSummary() {
+        viewModelScope.launch {
+            _isLocalChatCacheClearing.value = true
+            _localChatCacheClearResult.value = "동기화 상태 조회 중..."
+            try {
+                val summaryResult = syncManager.getSyncStatusSummary()
+                when (summaryResult) {
+                    is CustomResult.Success -> {
+                        val summary = summaryResult.data
+                        _localChatCacheClearResult.value = """
+                            동기화 상태:
+                            • 대기 중인 작업: ${summary.pendingOperationsCount}개
+                            • 실패한 작업: ${summary.failedOperationsCount}개
+                            • 완료된 작업: ${summary.completedOperationsCount}개
+                            • 활성 스코프: ${summary.activeScopesCount}개
+                            • 오류 스코프: ${summary.errorScopesCount}개
+                            • 총 동기화 작업: ${summary.totalSyncOperations}회
+                            • 마지막 동기화: ${summary.lastSyncAt ?: "없음"}
+                        """.trimIndent()
+                    }
+
+                    is CustomResult.Failure -> {
+                        _localChatCacheClearResult.value =
+                            "상태 조회 실패: ${summaryResult.error.message}"
+                    }
+
+                    else -> {
+                        _localChatCacheClearResult.value = "상태 조회 실패: 알 수 없는 오류"
+                    }
+                }
+            } catch (e: Exception) {
+                _localChatCacheClearResult.value = "상태 조회 실패: ${e.message ?: "알 수 없는 오류"}"
+            } finally {
+                _isLocalChatCacheClearing.value = false
+            }
+        }
     }
 
     /**

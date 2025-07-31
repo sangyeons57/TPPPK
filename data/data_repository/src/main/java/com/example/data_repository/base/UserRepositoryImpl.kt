@@ -4,6 +4,7 @@ import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.UserRemoteDataSource
 import com.example.data_datasource.remote.special.FunctionsRemoteDataSource
+import com.example.data_model.remote.UserDTO
 import com.example.data_repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.User
@@ -18,15 +19,13 @@ import javax.inject.Inject
 class UserRepositoryImpl @Inject constructor(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource,
-    private val userMapper: UserMapper,
-) : DefaultRepositoryImpl(userRemoteDataSource), UserRepository {
+    userMapper: UserMapper,
+) : DefaultRepositoryImpl<User, UserDTO>(userRemoteDataSource, userMapper), UserRepository {
 
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is User)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type User"))
+    override suspend fun save(entity: User): CustomResult<DocumentId, Exception> {
         ensureCollection()
         return if(entity.isNew) {
-            userRemoteDataSource.create(userMapper.domainToDto(entity))
+            userRemoteDataSource.create(mapper.domainToDto(entity))
         } else {
             userRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
@@ -36,7 +35,7 @@ class UserRepositoryImpl @Inject constructor(
         ensureCollection()
         return userRemoteDataSource.findByNameStream(name.value).map { result ->
             when (result) {
-                is CustomResult.Success -> CustomResult.Success(userMapper.dtoToDomain(result.data))
+                is CustomResult.Success -> CustomResult.Success(mapper.dtoToDomain(result.data))
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 is CustomResult.Loading -> CustomResult.Loading
                 is CustomResult.Initial -> CustomResult.Initial
@@ -49,7 +48,7 @@ class UserRepositoryImpl @Inject constructor(
         ensureCollection()
         return userRemoteDataSource.findByNameStream(email).map { result ->
             when (result) {
-                is CustomResult.Success -> CustomResult.Success(userMapper.dtoToDomain(result.data))
+                is CustomResult.Success -> CustomResult.Success(mapper.dtoToDomain(result.data))
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 is CustomResult.Loading -> CustomResult.Loading
                 is CustomResult.Initial -> CustomResult.Initial
@@ -63,7 +62,7 @@ class UserRepositoryImpl @Inject constructor(
         return userRemoteDataSource.findAllByNameStream(name, limit).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map {
-                    userMapper.dtoToDomain(
+                    mapper.dtoToDomain(
                         it
                     )
                 })
@@ -142,7 +141,7 @@ class UserRepositoryImpl @Inject constructor(
         return userRemoteDataSource.observeUsers(userIds).map { result ->
             when (result) {
                 is CustomResult.Success -> CustomResult.Success(result.data.map {
-                    userMapper.dtoToDomain(
+                    mapper.dtoToDomain(
                         it
                     )
                 })

@@ -5,20 +5,21 @@ import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.DMChannelRemoteDataSource
 import com.example.data_datasource.remote.special.AuthRemoteDataSource
 import com.example.data_datasource.remote.special.FunctionsRemoteDataSource
+import com.example.data_model.remote.DMChannelDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.DMChannel
 import com.example.domain.model.vo.DocumentId
 import com.example.domain_repository.base.DMChannelRepository
-import com.example.mapper.dm.DMChannelMapper
+import com.example.mapper.DtoMapper
 import javax.inject.Inject
 
 class DMChannelRepositoryImpl @Inject constructor(
     private val dmChannelRemoteDataSource: DMChannelRemoteDataSource,
     private val authRemoteDataSource: AuthRemoteDataSource,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource,
-    private val dmChannelMapper: DMChannelMapper,
-) : DefaultRepositoryImpl(dmChannelRemoteDataSource), DMChannelRepository {
+    private val dmChannelMapper: DtoMapper<DMChannel, DMChannelDTO>,
+) : DefaultRepositoryImpl<DMChannel, DMChannelDTO>(dmChannelRemoteDataSource, dmChannelMapper),
+    DMChannelRepository {
 
 
     override suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMChannel, Exception> {
@@ -36,23 +37,12 @@ class DMChannelRepositoryImpl @Inject constructor(
         return when (channelIdResult) {
             is CustomResult.Success -> {
                 val dmChannelDTO = channelIdResult.data
-                CustomResult.Success(dmChannelMapper.dtoToDomain(dmChannelDTO))
+                CustomResult.Success(mapper.dtoToDomain(dmChannelDTO))
             }
             is CustomResult.Failure -> CustomResult.Failure(channelIdResult.error)
             is CustomResult.Loading -> CustomResult.Loading // Propagate loading
             is CustomResult.Initial -> CustomResult.Initial // Propagate initial
             is CustomResult.Progress -> CustomResult.Progress(channelIdResult.progress) // Propagate progress
-        }
-    }
-
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is DMChannel)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type DMChannel"))
-        ensureCollection()
-        if (entity.isNew) {
-            return dmChannelRemoteDataSource.create(dmChannelMapper.domainToDto(entity))
-        } else {
-            return dmChannelRemoteDataSource.update(entity.id, entity.getChangedFields())
         }
     }
     

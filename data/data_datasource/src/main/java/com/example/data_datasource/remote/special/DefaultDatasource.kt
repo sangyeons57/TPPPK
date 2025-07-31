@@ -21,18 +21,19 @@ import kotlinx.coroutines.withContext
 
 interface Datasource
 
-interface DefaultDatasource : Datasource {
-    fun setCollection(collectionPath: CollectionPath) : DefaultDatasource
+interface DefaultDatasource<T : DTO> : Datasource {
+    fun setCollection(collectionPath: CollectionPath): DefaultDatasource<T>
 
-    fun observe(id: DocumentId): Flow<CustomResult<DTO, Exception>>
-    fun observeAll(): Flow<CustomResult<List<DTO>, Exception>>
+    fun observe(id: DocumentId): Flow<CustomResult<T, Exception>>
+    fun observeAll(): Flow<CustomResult<List<T>, Exception>>
     suspend fun findById(
         id: DocumentId,
         source: Source = Source.DEFAULT,
-    ): CustomResult<DTO, Exception>
-    suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<DTO>, Exception>
+    ): CustomResult<T, Exception>
 
-    suspend fun create(dto: DTO): CustomResult<DocumentId, Exception>
+    suspend fun findAll(source: Source = Source.DEFAULT): CustomResult<List<T>, Exception>
+
+    suspend fun create(dto: T): CustomResult<DocumentId, Exception>
     suspend fun update(id: DocumentId, data: Map<String, Any?>): CustomResult<DocumentId, Exception>
     suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
 }
@@ -49,10 +50,12 @@ interface DefaultDatasource : Datasource {
  *
  * @param firestore Firestore instance injected from DI container.
  */
-abstract class DefaultDatasourceImpl<Data>(
-    private val firestore: FirebaseFirestore,
-    val clazz: Class<Data>
-) : DefaultDatasource where Data : DTO {
+abstract class DefaultDatasourceImpl<Data : DTO>(
+    private val firestore: FirebaseFirestore
+) : DefaultDatasource<Data> {
+
+    /** Concrete DTO class for Firestore deserialization */
+    protected abstract val dtoClass: Class<Data>
 
     /** Firestore collection reference – must be set via [setCollection] */
     lateinit var collection: CollectionReference
@@ -62,7 +65,7 @@ abstract class DefaultDatasourceImpl<Data>(
      * Default implementation: treat the passed segments as a single collection path.
      * Most concrete datasources will **override** this to build nested paths.
      */
-    override fun setCollection(collectionPath: CollectionPath): DefaultDatasource {
+    override fun setCollection(collectionPath: CollectionPath): DefaultDatasource<Data> {
         collection = firestore.collection(collectionPath.value)
         Log.d("DefaultDatasourceImpl", collection.path)
         return this
@@ -97,15 +100,15 @@ abstract class DefaultDatasourceImpl<Data>(
 
     /**
      * Safely converts DocumentSnapshot to DTO with fallback to default creation.
-     * Uses standard toObject() first, then falls back to createDefaultDto() if that fails.
+     * Uses reified type parameter for safe conversion without clazz dependency.
      * 
      * @param snapshot The DocumentSnapshot to convert
      * @return Converted DTO or null if both standard conversion and fallback fail
      */
     protected fun DocumentSnapshot.toDtoSafely(): Data? {
         return try {
-            // First try standard Firestore toObject conversion
-            this.toObject(clazz)
+            // Use reified type parameter for type-safe conversion
+            this.toObject(dtoClass)
         } catch (e: Exception) {
             // If standard conversion fails, try fallback with default creation
             try {
@@ -121,7 +124,7 @@ abstract class DefaultDatasourceImpl<Data>(
 
     // region —— CRUD & observe implementation ——
 
-    override fun observe(id: DocumentId): Flow<CustomResult<DTO, Exception>> = callbackFlow{
+    override fun observe(id: DocumentId): Flow<CustomResult<Data, Exception>> = callbackFlow {
         checkCollectionInitialized("observe")
         val listener = collection.document(id.value).addSnapshotListener{ snapshot, error ->
             if(error != null) {
@@ -134,14 +137,14 @@ abstract class DefaultDatasourceImpl<Data>(
                 if(dto != null) {
                     trySend(CustomResult.Success(dto))
                 } else {
-                    trySend(CustomResult.Failure(Exception("${clazz.simpleName} not found or failed to deserialize")))
+                    trySend(CustomResult.Failure(Exception("Data not found or failed to deserialize")))
                 }
             }
         }
         awaitClose { listener.remove() }
     }
 
-    override fun observeAll(): Flow<CustomResult<List<DTO>, Exception>> = callbackFlow{
+    override fun observeAll(): Flow<CustomResult<List<Data>, Exception>> = callbackFlow {
         checkCollectionInitialized("observeAll")
         
         // 초기 로딩 상태 전송
@@ -184,15 +187,16 @@ abstract class DefaultDatasourceImpl<Data>(
     override suspend fun findById(
         id: DocumentId,
         source: Source,
-    ): CustomResult<DTO, Exception> = withContext(Dispatchers.IO) {
+    ): CustomResult<Data, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("findById")
         resultTry {
             val snapshot = collection.document(id.value).get(source).await()
-            snapshot.toDtoSafely() ?: throw Exception("${clazz.simpleName} not found or failed to deserialize")
+            snapshot.toDtoSafely() ?: throw Exception("Data not found or failed to deserialize")
         }
     }
 
-    override suspend fun findAll(source: Source): CustomResult<List<DTO>, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun findAll(source: Source): CustomResult<List<Data>, Exception> =
+        withContext(Dispatchers.IO) {
         checkCollectionInitialized("findAll")
         resultTry {
             val snapshot = collection.get(source).await()
@@ -200,7 +204,8 @@ abstract class DefaultDatasourceImpl<Data>(
         }
     }
 
-    override suspend fun create(dto: DTO): CustomResult<DocumentId, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun create(dto: Data): CustomResult<DocumentId, Exception> =
+        withContext(Dispatchers.IO) {
         checkCollectionInitialized("create")
         resultTry {
             if(DocumentId.isAssigned(dto.id)) {

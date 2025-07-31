@@ -26,7 +26,6 @@
             <option value="$PROJECT_DIR$/domain" />
             <option value="$PROJECT_DIR$/domain/domain" />
             <option value="$PROJECT_DIR$/domain/domain_repository" />
-            <option value="$PROJECT_DIR$/domain/domain_usecase" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/feature_accept_friend" />
             <option value="$PROJECT_DIR$/feature/feature_add_project" />
@@ -66,6 +65,7 @@
             <option value="$PROJECT_DIR$/feature/feature_terms_of_service" />
             <option value="$PROJECT_DIR$/mapper" />
             <option value="$PROJECT_DIR$/navigation" />
+            <option value="$PROJECT_DIR$/usecase" />
           </set>
         </option>
       </GradleProjectSettings>

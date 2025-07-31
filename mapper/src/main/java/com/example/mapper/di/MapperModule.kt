@@ -219,6 +219,10 @@ object MapperModule {
     fun provideMessageAttachmentDtoMapper(mapper: MessageAttachmentMapper): DtoMapper<MessageAttachment, MessageAttachmentDTO> =
         mapper
 
+    @Provides
+    @Singleton
+    fun provideMessageDtoMapper(mapper: MessageMapper): DtoMapper<Message, MessageDTO> = mapper
+
     // Full Mapper 제네릭 인터페이스들 (Entity + Domain + DTO)
     @Provides
     @Singleton

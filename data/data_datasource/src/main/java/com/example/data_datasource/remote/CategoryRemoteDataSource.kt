@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface CategoryRemoteDataSource : DefaultDatasource { // DefaultDatasource 상속
+interface CategoryRemoteDataSource : DefaultDatasource<CategoryDTO> { // DefaultDatasource 상속
 
     /**
      * 특정 프로젝트의 모든 카테고리 목록을 순서대로 실시간 관찰합니다.
@@ -27,7 +27,9 @@ interface CategoryRemoteDataSource : DefaultDatasource { // DefaultDatasource �
 @Singleton
 class CategoryRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore // FirebaseAuth 의존성 제거
-) : DefaultDatasourceImpl<CategoryDTO>(firestore, CategoryDTO::class.java), CategoryRemoteDataSource {
+) : DefaultDatasourceImpl<CategoryDTO>(firestore), CategoryRemoteDataSource {
+
+    override val dtoClass = CategoryDTO::class.java
 
     /**
      * 특정 프로젝트의 모든 카테고리 목록을 순서대로 실시간 관찰합니다.

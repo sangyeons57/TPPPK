@@ -27,21 +27,14 @@ import java.util.UUID
 import javax.inject.Inject
 
 class MessageAttachmentRepositoryImpl @Inject constructor(
-    private val messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource,
+    messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSource,
     private val fileUploadDataSource: FileUploadDataSource,
-    private val mapper: DtoMapper<MessageAttachment, MessageAttachmentDTO>
+    private val messageAttachmentMapper: DtoMapper<MessageAttachment, MessageAttachmentDTO>
     // private val localMediaDataSource: LocalMediaDataSource, // 파일 업로드 전처리 등에 사용 가능
-) : DefaultRepositoryImpl(messageAttachmentRemoteDataSource), MessageAttachmentRepository {
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is MessageAttachment)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type MessageAttachment"))
-        ensureCollection()
-        return if (entity.isNew) {
-            messageAttachmentRemoteDataSource.create(mapper.domainToDto(entity))
-        } else {
-            messageAttachmentRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
-    }
+) : DefaultRepositoryImpl<MessageAttachment, MessageAttachmentDTO>(
+    messageAttachmentRemoteDataSource,
+    messageAttachmentMapper
+), MessageAttachmentRepository {
 
     override fun uploadFile(
         fileUri: Uri,

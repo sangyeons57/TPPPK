@@ -20,9 +20,11 @@ import javax.inject.Singleton
  * - `ids[0]` (첫 번째 인자): `projectId` (String)
  * - `ids[1]` (두 번째 인자): `roleId` (String)
  */
-interface PermissionRemoteDataSource : DefaultDatasource
+interface PermissionRemoteDataSource : DefaultDatasource<PermissionDTO>
 
 @Singleton
 class PermissionRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<PermissionDTO>(firestore, PermissionDTO::class.java), PermissionRemoteDataSource
+) : DefaultDatasourceImpl<PermissionDTO>(firestore), PermissionRemoteDataSource {
+    override val dtoClass = PermissionDTO::class.java
+}

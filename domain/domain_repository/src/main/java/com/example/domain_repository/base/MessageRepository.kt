@@ -1,6 +1,7 @@
 package com.example.domain_repository.base
 
 import com.example.domain_repository.DefaultRepository
+import com.example.domain.model.base.Message
 
 // 메시지 전송 시 사용할 첨부파일 모델 (도메인 모델 MessageAttachment와 구분)
 data class MessageAttachmentToSend(
@@ -11,4 +12,4 @@ data class MessageAttachmentToSend(
 )
 
 
-interface MessageRepository : DefaultRepository
+interface MessageRepository : DefaultRepository<Message>

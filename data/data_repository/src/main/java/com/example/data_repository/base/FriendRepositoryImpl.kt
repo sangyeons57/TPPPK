@@ -9,12 +9,11 @@ import com.example.data_datasource.remote.FriendRemoteDataSource
 import com.example.data_datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data_model.remote.FriendDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Friend
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.vo.CollectionPath
 import com.example.domain_repository.base.FriendRepository
-import com.example.mapper.friend.FriendMapper
+import com.example.mapper.DtoMapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -27,22 +26,12 @@ import javax.inject.Inject
 class FriendRepositoryImpl @Inject constructor(
     private val friendRemoteDataSource: FriendRemoteDataSource,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource,
-    private val mapper: FriendMapper,
-) : DefaultRepositoryImpl(friendRemoteDataSource), FriendRepository {
+    private val friendMapper: DtoMapper<Friend, FriendDTO>,
+) : DefaultRepositoryImpl<Friend, FriendDTO>(friendRemoteDataSource, friendMapper),
+    FriendRepository {
 
     private val TAG = "FriendRepository"
 
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Friend)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Friend"))
-        ensureCollection()
-        return if (entity.isNew) {
-            friendRemoteDataSource.create(mapper.domainToDto(entity))
-        } else {
-            friendRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
-    }
-    
     override suspend fun findFriendsByUserId(userId: String): CustomResult<List<Friend>, Exception> {
         return resultTry {
             ensureCollection()
@@ -63,7 +52,6 @@ class FriendRepositoryImpl @Inject constructor(
         return resultTry {
             ensureCollection()
             friendRemoteDataSource.findById(DocumentId.from(friendId)).getOrNull()
-                ?.let { it as FriendDTO }
                 ?.let { mapper.dtoToDomain(it) }
         }
     }

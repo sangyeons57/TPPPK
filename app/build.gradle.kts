@@ -64,7 +64,7 @@ dependencies {
 
     // Core modules
     implementation(project(":domain:domain"))
-    implementation(project(":domain:domain_usecase"))
+    implementation(project(":usecase"))
     implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
     implementation(project(":core:websocket")) // WebSocket 서비스

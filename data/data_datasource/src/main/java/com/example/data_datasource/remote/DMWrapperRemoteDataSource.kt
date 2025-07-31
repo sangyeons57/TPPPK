@@ -19,7 +19,7 @@ import javax.inject.Singleton
  * DMWrapper는 `users/{userId}/dm_wrappers/{dmChannelId}` 경로에 저장되므로,
  * 모든 작업 전에 `setCollection(userId)`를 호출하여 사용자 컨텍스트를 설정해야 합니다.
  */
-interface DMWrapperRemoteDataSource : DefaultDatasource {
+interface DMWrapperRemoteDataSource : DefaultDatasource<DMWrapperDTO> {
     /**
      * 특정 사용자의 DMWrapper 중에서 지정된 상대방 사용자 ID(`otherUserId`)를 가진 문서를 찾습니다.
      * **중요:** 이 메서드를 호출하기 전에 `setCollection(userId)`를 통해 사용자 컨텍스트를 설정해야 합니다.
@@ -34,7 +34,9 @@ interface DMWrapperRemoteDataSource : DefaultDatasource {
 @Singleton
 class DMWrapperRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<DMWrapperDTO>(firestore, DMWrapperDTO::class.java), DMWrapperRemoteDataSource {
+) : DefaultDatasourceImpl<DMWrapperDTO>(firestore), DMWrapperRemoteDataSource {
+
+    override val dtoClass = DMWrapperDTO::class.java
 
     override suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMWrapperDTO, Exception> {
         return withContext(Dispatchers.IO) {
@@ -44,7 +46,7 @@ class DMWrapperRemoteDataSourceImpl @Inject constructor(
                     .limit(1)
                     .get().await()
                 if (snap.isEmpty) throw Exception("DMWrapper not found")
-                snap.documents.first().toObject(DMWrapperDTO::class.java) ?: throw Exception("Parse error")
+                snap.documents.first().toDtoSafely() ?: throw Exception("Parse error")
             }
         }
     }

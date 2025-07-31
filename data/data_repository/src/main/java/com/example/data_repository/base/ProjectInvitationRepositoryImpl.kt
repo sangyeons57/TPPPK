@@ -2,6 +2,7 @@ package com.example.data_repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.ProjectInvitationRemoteDataSource
+import com.example.data_model.remote.ProjectInvitationDTO
 import com.example.data_repository.DefaultRepositoryImpl
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.ProjectInvitation
@@ -11,7 +12,7 @@ import com.example.domain.model.vo.ProjectId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.invite.InviteCode
 import com.example.domain_repository.base.ProjectInvitationRepository
-import com.example.mapper.project.ProjectInvitationMapper
+import com.example.mapper.DtoMapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.time.Instant
@@ -23,25 +24,11 @@ import javax.inject.Inject
  */
 class ProjectInvitationRepositoryImpl @Inject constructor(
     private val projectInvitationRemoteDataSource: ProjectInvitationRemoteDataSource,
-    private val projectInvitationMapper: ProjectInvitationMapper,
-) : DefaultRepositoryImpl(projectInvitationRemoteDataSource), ProjectInvitationRepository {
-
-    /**
-     * DDD save() 메서드 - 생성/수정 통합 처리
-     * 
-     * 새로운 ProjectInvitation: Firebase Functions로 초대 링크 생성
-     * 기존 ProjectInvitation: Firestore 직접 업데이트
-     */
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is ProjectInvitation)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type ProjectInvitation"))
-        ensureCollection()
-        return if(entity.isNew) {
-            projectInvitationRemoteDataSource.create(projectInvitationMapper.domainToDto(entity))
-        } else {
-            projectInvitationRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
-    }
+    private val projectInvitationMapper: DtoMapper<ProjectInvitation, ProjectInvitationDTO>,
+) : DefaultRepositoryImpl<ProjectInvitation, ProjectInvitationDTO>(
+    projectInvitationRemoteDataSource,
+    projectInvitationMapper
+), ProjectInvitationRepository {
 
     /**
      * 초대 코드로 초대 정보를 조회합니다.

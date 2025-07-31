@@ -3,17 +3,21 @@ package com.example.data_repository
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.special.DefaultDatasource
+import com.example.domain.DTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.vo.CollectionPath
 import com.example.domain_repository.DefaultRepository
+import com.example.mapper.DtoMapper
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import retrofit2.Converter
 
-abstract class DefaultRepositoryImpl  (
-    private val defaultDatasource: DefaultDatasource,
-): DefaultRepository  {
+abstract class DefaultRepositoryImpl<D : AggregateRoot, E : DTO>(
+    private val defaultDatasource: DefaultDatasource<E>,
+    protected val mapper: DtoMapper<D, E>,
+) : DefaultRepository<D> {
 
     private var currentCollectionPath: CollectionPath? = null
 
@@ -32,19 +36,27 @@ abstract class DefaultRepositoryImpl  (
         } ?: throw IllegalStateException("Collection path not set. Call setCollection() first.")
     }
 
+    override suspend fun save(entity: D): CustomResult<DocumentId, Exception> {
+        ensureCollection()
+        return if (entity.isNew) {
+            defaultDatasource.create(mapper.domainToDto(entity))
+        } else {
+            defaultDatasource.update(entity.id, entity.getChangedFields())
+        }
+    }
+
     override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> {
         ensureCollection()
         return defaultDatasource.delete(id)
     }
 
-    override suspend fun findById(id: DocumentId, source: Source): CustomResult<AggregateRoot, Exception> {
+    override suspend fun findById(id: DocumentId, source: Source): CustomResult<D, Exception> {
         ensureCollection()
         Log.d("DefaultRepositoryImpl", "findById: documentId=${id.value}, source=$source")
         return when (val result = defaultDatasource.findById(id, source)) {
             is CustomResult.Success -> {
                 Log.d("DefaultRepositoryImpl", "findById success: documentId=${id.value}")
-                // TODO: This should be overridden by concrete implementations with proper mapping
-                throw NotImplementedError("findById should be overridden by concrete repository implementations")
+                CustomResult.Success(mapper.dtoToDomain(result.data))
             }
             is CustomResult.Failure -> {
                 Log.e("DefaultRepositoryImpl", "findById failed: documentId=${id.value}, error=${result.error.message}", result.error)
@@ -58,12 +70,11 @@ abstract class DefaultRepositoryImpl  (
 
     override suspend fun findAll(
         source: Source
-    ): CustomResult<List<AggregateRoot>, Exception> {
+    ): CustomResult<List<D>, Exception> {
         ensureCollection()
         return when(val result = defaultDatasource.findAll(source)) {
             is CustomResult.Success -> {
-                // TODO: This should be overridden by concrete implementations with proper mapping
-                throw NotImplementedError("findAll should be overridden by concrete repository implementations")
+                CustomResult.Success(result.data.map { mapper.dtoToDomain(it) })
             }
             is CustomResult.Failure -> CustomResult.Failure(result.error)
             is CustomResult.Loading -> CustomResult.Loading
@@ -72,13 +83,12 @@ abstract class DefaultRepositoryImpl  (
         }
     }
 
-    override fun observe(id: DocumentId): Flow<CustomResult<AggregateRoot, Exception>> {
+    override fun observe(id: DocumentId): Flow<CustomResult<D, Exception>> {
         ensureCollection()
         return defaultDatasource.observe(id).map { result ->
             when (result) {
                 is CustomResult.Success -> {
-                    // TODO: This should be overridden by concrete implementations with proper mapping
-                    throw NotImplementedError("observe should be overridden by concrete repository implementations")
+                    CustomResult.Success(mapper.dtoToDomain(result.data))
                 }
                 is CustomResult.Failure -> CustomResult.Failure(result.error)
                 is CustomResult.Loading -> CustomResult.Loading
@@ -88,14 +98,13 @@ abstract class DefaultRepositoryImpl  (
         }
     }
 
-    override fun observeAll(): Flow<CustomResult<List<AggregateRoot>, Exception>> {
+    override fun observeAll(): Flow<CustomResult<List<D>, Exception>> {
         ensureCollection()
         return defaultDatasource.observeAll()
             .map { dtoListResult ->
                 when (dtoListResult) {
                     is CustomResult.Success -> {
-                        // TODO: This should be overridden by concrete implementations with proper mapping
-                        throw NotImplementedError("observeAll should be overridden by concrete repository implementations")
+                        CustomResult.Success(dtoListResult.data.map { mapper.dtoToDomain(it) })
                     }
                     is CustomResult.Failure -> CustomResult.Failure(dtoListResult.error)
                     is CustomResult.Initial -> CustomResult.Initial

@@ -87,7 +87,7 @@ class WebSocketChatViewModel @Inject constructor(
 
     private fun logChannelCacheOnEntry() {
         viewModelScope.launch {
-            Log.i("DebugChatCache", "--- Dumping local cache for channel $channelId upon entry ---")
+            Log.i("Debug", "--- Initializing chat for channel $channelId ---")
         }
     }
 

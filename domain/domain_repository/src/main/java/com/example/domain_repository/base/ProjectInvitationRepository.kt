@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
  * 
  * 글로벌 초대 링크 방식을 지원합니다.
  */
-interface ProjectInvitationRepository : DefaultRepository {
+interface ProjectInvitationRepository : DefaultRepository<ProjectInvitation> {
     
     
     /**

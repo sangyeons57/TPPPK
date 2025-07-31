@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface ProjectsWrapperRemoteDataSource : DefaultDatasource {
+interface ProjectsWrapperRemoteDataSource : DefaultDatasource<ProjectsWrapperDTO> {
     fun observeProjectsWrappers(userId: String): Flow<CustomResult<List<String>, Exception>>
     suspend fun addProjectToUser(userId: String, projectId: String, dto: ProjectsWrapperDTO): CustomResult<Unit, Exception>
     suspend fun removeProjectFromUser(userId: String, projectId: String): CustomResult<Unit, Exception>
@@ -26,8 +26,8 @@ interface ProjectsWrapperRemoteDataSource : DefaultDatasource {
 @Singleton
 class ProjectsWrapperRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<ProjectsWrapperDTO>(firestore, ProjectsWrapperDTO::class.java),
-    ProjectsWrapperRemoteDataSource {
+) : DefaultDatasourceImpl<ProjectsWrapperDTO>(firestore), ProjectsWrapperRemoteDataSource {
+    override val dtoClass = ProjectsWrapperDTO::class.java
 
     override fun observeProjectsWrappers(userId: String): Flow<CustomResult<List<String>, Exception>> {
         setCollection(CollectionPath.userProjectWrappers(userId))

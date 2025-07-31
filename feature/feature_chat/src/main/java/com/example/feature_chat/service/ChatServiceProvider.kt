@@ -2,7 +2,6 @@ package com.example.feature_chat.service
 
 import com.example.core_common.config.FeatureFlags
 import com.example.core_navigation.core.NavigationManger
-import com.example.data.cache.ChatCacheManager
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.chat.ChatUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
@@ -30,7 +29,6 @@ class ChatServiceProvider @Inject constructor(
     private val webSocketClient: ChatWebSocketClient,
     private val offlineMessageQueue: OfflineMessageQueue,
     private val navigationManger: NavigationManger,
-    private val chatCacheManager: ChatCacheManager? = null // 선택적 의존성으로 점진적 롤아웃 지원
 ) {
     
     /**
@@ -77,8 +75,7 @@ class ChatServiceProvider @Inject constructor(
             userProfileService = userProfileService,
             roomId = roomId,
             projectId = projectId,
-            channelType = channelType,
-            chatCacheManager = if (FeatureFlags.ENABLE_LOCAL_CHAT_CACHE) chatCacheManager else null
+            channelType = channelType
         )
         
         val connectionService = ConnectionService(
@@ -141,8 +138,7 @@ class ChatServiceProvider @Inject constructor(
             userProfileService = userProfileService,
             roomId = roomId,
             projectId = null,
-            channelType = channelType,
-            chatCacheManager = if (FeatureFlags.ENABLE_LOCAL_CHAT_CACHE) chatCacheManager else null
+            channelType = channelType
         )
         
         val connectionService = ConnectionService(

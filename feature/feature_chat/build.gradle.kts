@@ -14,7 +14,7 @@ android {
 dependencies {
     // --- 모듈 의존성 ---
     implementation(project(":domain:domain"))
-    implementation(project(":domain:domain_usecase"))
+    implementation(project(":usecase"))
     implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
     implementation(project(":core:core_navigation"))

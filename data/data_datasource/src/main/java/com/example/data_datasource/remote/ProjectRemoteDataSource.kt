@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface ProjectRemoteDataSource : DefaultDatasource {
+interface ProjectRemoteDataSource : DefaultDatasource<ProjectDTO> {
     suspend fun findActiveProjects(source: Source = Source.DEFAULT): CustomResult<List<ProjectDTO>, Exception>
     fun observeActiveProjects(): Flow<CustomResult<List<ProjectDTO>, Exception>>
 }
@@ -25,8 +25,8 @@ interface ProjectRemoteDataSource : DefaultDatasource {
 @Singleton
 class ProjectRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<ProjectDTO>(firestore, ProjectDTO::class.java),
-    ProjectRemoteDataSource {
+) : DefaultDatasourceImpl<ProjectDTO>(firestore), ProjectRemoteDataSource {
+    override val dtoClass = ProjectDTO::class.java
 
     override suspend fun findActiveProjects(source: Source): CustomResult<List<ProjectDTO>, Exception> = withContext(Dispatchers.IO) {
         checkCollectionInitialized("findActiveProjects")

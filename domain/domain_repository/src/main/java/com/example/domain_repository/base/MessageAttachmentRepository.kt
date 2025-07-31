@@ -27,7 +27,7 @@ sealed class FileUploadResultData {
     data class Failure(val exception: Exception) : FileUploadResultData()
 }
 
-interface MessageAttachmentRepository : DefaultRepository {
+interface MessageAttachmentRepository : DefaultRepository<MessageAttachment> {
     
     /**
      * 파일을 업로드하고 MessageAttachment를 생성합니다.

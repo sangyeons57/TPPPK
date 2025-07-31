@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 /**
  * 사용자 정보 조회, 업데이트, 계정 관리 등과 관련된 데이터 처리를 위한 인터페이스입니다.
  */
-interface UserRepository : DefaultRepository {
+interface UserRepository : DefaultRepository<User> {
 
     /**
      * 주어진 이름(닉네임)과 정확히 일치하는 사용자 1명을 스트림으로 반환합니다.

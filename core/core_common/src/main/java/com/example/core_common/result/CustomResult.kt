@@ -57,6 +57,7 @@ sealed class CustomResult<out S, out E> {
             else -> onOther(this)
         }
     }
+
     /**
      * Success 상태이면 데이터를 반환하고, 그렇지 않으면 [defaultValue]를 반환합니다.
      */
@@ -120,6 +121,24 @@ inline fun <T> resultTry(block: () -> T): CustomResult<T, Exception> {
     }
 }
 
+@Suppress("UNCHECKED_CAST")
+fun <T> convertCustomResultListType(
+    resultList: CustomResult<List<Any>, Exception>
+): CustomResult<List<T>, Exception> {
+    return when (resultList) {
+        is CustomResult.Success -> {
+            resultTry {
+                resultList.data.map { it as T }.toList()
+            }
+        }
+
+        is CustomResult.Failure -> CustomResult.Failure(resultList.error)
+        is CustomResult.Initial -> CustomResult.Initial
+        is CustomResult.Loading -> CustomResult.Loading
+        is CustomResult.Progress -> CustomResult.Progress(resultList.progress)
+    }
+
+}
 
 // Extension functions
 fun <S, E> CustomResult<S, E>.getOrNull(): S? =

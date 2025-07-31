@@ -4,7 +4,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMChannel
 import com.example.domain_repository.DefaultRepository
 
-interface DMChannelRepository : DefaultRepository {
+interface DMChannelRepository : DefaultRepository<DMChannel> {
 
     suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMChannel, Exception>
     

@@ -1,28 +1,19 @@
 package com.example.data_repository.base
 
-import com.example.core_common.result.CustomResult
+import com.example.data_converter.JsonConverter
 import com.example.data_datasource.remote.CategoryRemoteDataSource
+import com.example.data_model.remote.CategoryDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
 import com.example.domain_repository.base.CategoryRepository
-import com.example.mapper.category.CategoryMapper
+import com.example.mapper.DtoMapper
+import retrofit2.Converter
 import javax.inject.Inject
 
 class CategoryRepositoryImpl @Inject constructor(
-    private val categoryRemoteDataSource: CategoryRemoteDataSource,
-    private val categoryMapper: CategoryMapper,
-) : DefaultRepositoryImpl(categoryRemoteDataSource), CategoryRepository {
-
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Category)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Category"))
-        ensureCollection()
-        return if (entity.isNew) {
-            categoryRemoteDataSource.create(categoryMapper.domainToDto(entity))
-        } else {
-            categoryRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
-    }
+    categoryRemoteDataSource: CategoryRemoteDataSource,
+    private val categoryMapper: DtoMapper<Category, CategoryDTO>,
+) : DefaultRepositoryImpl<Category, CategoryDTO>(categoryRemoteDataSource, categoryMapper),
+    CategoryRepository {
+    // 모든 기본 CRUD 메서드들은 부모 클래스에서 자동으로 처리됩니다!
 }

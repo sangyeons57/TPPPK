@@ -2,6 +2,7 @@ package com.example.data_datasource.remote
 
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
+import com.example.data_model.remote.DMWrapperDTO
 import com.example.data_model.remote.MessageAttachmentDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import javax.inject.Inject
@@ -14,9 +15,11 @@ import javax.inject.Singleton
  * 모든 작업 전에 `setCollection(messagePath)`를 호출하여 메시지 컨텍스트를 설정해야 합니다.
  * `messagePath`는 부모 메시지 문서의 전체 경로입니다 (예: "dm_channels/channelId/messages/messageId").
  */
-interface MessageAttachmentRemoteDataSource : DefaultDatasource
+interface MessageAttachmentRemoteDataSource : DefaultDatasource<MessageAttachmentDTO>
 
 @Singleton
 class MessageAttachmentRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<MessageAttachmentDTO>(firestore, MessageAttachmentDTO::class.java), MessageAttachmentRemoteDataSource
+) : DefaultDatasourceImpl<MessageAttachmentDTO>(firestore), MessageAttachmentRemoteDataSource {
+    override val dtoClass = MessageAttachmentDTO::class.java
+}

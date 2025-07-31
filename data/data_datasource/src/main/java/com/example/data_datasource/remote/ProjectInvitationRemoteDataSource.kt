@@ -13,7 +13,7 @@ import javax.inject.Singleton
  * ProjectInvitation 전용 데이터소스 인터페이스
  * DefaultDatasource를 확장하여 Firebase Functions 통합을 제공합니다.
  */
-interface ProjectInvitationRemoteDataSource : DefaultDatasource {
+interface ProjectInvitationRemoteDataSource : DefaultDatasource<ProjectInvitationDTO> {
     
     /**
      * Firebase Functions를 통해 초대 코드를 검증합니다.
@@ -58,7 +58,9 @@ interface ProjectInvitationRemoteDataSource : DefaultDatasource {
 class ProjectInvitationRemoteDataSourceImpl @Inject constructor(
     firestore: FirebaseFirestore,
     private val functionsRemoteDataSource: FunctionsRemoteDataSource
-) : DefaultDatasourceImpl<ProjectInvitationDTO>( firestore, ProjectInvitationDTO::class.java), ProjectInvitationRemoteDataSource {
+) : DefaultDatasourceImpl<ProjectInvitationDTO>(firestore), ProjectInvitationRemoteDataSource {
+
+    override val dtoClass = ProjectInvitationDTO::class.java
 
     override suspend fun validateInviteCodeViaFunction(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.validateInviteCode(inviteCode)

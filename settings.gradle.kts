@@ -34,10 +34,10 @@ include(":core:core_navigation")
 include(":core:websocket")
 
 include(":mapper")
+include(":usecase")
 
 include(":domain:domain")
 include(":domain:domain_repository")
-include(":domain:domain_usecase")
 
 include(":data:data_repository")
 include(":data:data_datasource")

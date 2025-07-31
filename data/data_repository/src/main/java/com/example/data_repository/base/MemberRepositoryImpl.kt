@@ -1,29 +1,17 @@
 package com.example.data_repository.base
 
-// import com.example.data.datasource.local.projectmember.ProjectMemberLocalDataSource // 필요시
-import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.MemberRemoteDataSource
+import com.example.data_model.remote.MemberDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Member
-import com.example.domain.model.vo.DocumentId
 import com.example.domain_repository.base.MemberRepository
-import com.example.mapper.member.MemberMapper
+import com.example.mapper.DtoMapper
 import javax.inject.Inject
 
 class MemberRepositoryImpl @Inject constructor(
-    private val memberRemoteDataSource: MemberRemoteDataSource,
-    private val memberMapper: MemberMapper,
-) : DefaultRepositoryImpl(memberRemoteDataSource), MemberRepository {
-
-    override suspend fun save(entity: AggregateRoot): CustomResult<DocumentId, Exception> {
-        if (entity !is Member)
-            return CustomResult.Failure(IllegalArgumentException("Entity must be of type Member"))
-        ensureCollection()
-        return if (entity.isNew) {
-            memberRemoteDataSource.create(memberMapper.domainToDto(entity))
-        } else {
-            memberRemoteDataSource.update(entity.id, entity.getChangedFields())
-        }
-    }
+    memberRemoteDataSource: MemberRemoteDataSource,
+    private val memberMapper: DtoMapper<Member, MemberDTO>,
+) : DefaultRepositoryImpl<Member, MemberDTO>(memberRemoteDataSource, memberMapper),
+    MemberRepository {
+    // 모든 기본 CRUD 메서드들은 부모 클래스에서 자동으로 처리됩니다!
 }

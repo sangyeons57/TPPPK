@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.YearMonth
 
-interface ScheduleRepository : DefaultRepository {
+interface ScheduleRepository : DefaultRepository<Schedule> {
 
     suspend fun findByDateSummaryForMonth(userId: UserId, yearMonth: YearMonth): CustomResult<Set<LocalDate>, Exception>
 

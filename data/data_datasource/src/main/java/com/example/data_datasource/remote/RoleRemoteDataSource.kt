@@ -7,10 +7,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface RoleRemoteDataSource : DefaultDatasource
+interface RoleRemoteDataSource : DefaultDatasource<RoleDTO>
 
 @Singleton
 class RoleRemoteDataSourceImpl @Inject constructor(
     val firestore: FirebaseFirestore,
-) : DefaultDatasourceImpl<RoleDTO>(firestore, RoleDTO::class.java), RoleRemoteDataSource
+) : DefaultDatasourceImpl<RoleDTO>(firestore), RoleRemoteDataSource {
+    override val dtoClass = RoleDTO::class.java
+}
 
