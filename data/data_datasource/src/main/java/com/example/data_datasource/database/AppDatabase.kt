@@ -18,7 +18,7 @@ import com.example.data_model.local.ScopeMetadataEntity
         OutBoxEntity::class,
         ScopeMetadataEntity::class
     ],
-    version = 2, // MessageEntity 추가로 버전 업
+    version = 3, // delivery_status 필드 추가로 버전 업
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

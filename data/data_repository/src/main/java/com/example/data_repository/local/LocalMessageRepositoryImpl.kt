@@ -272,4 +272,30 @@ class LocalMessageRepositoryImpl @Inject constructor(
     override fun getMessagesPagingSource(): PagingSource<Long, Message> {
         return MessagePagingSource(this)
     }
+
+    // ================================
+    // 전송 상태 관리 작업 구현
+    // ================================
+
+    override suspend fun updateDeliveryStatus(
+        messageId: DocumentId,
+        deliveryStatus: String
+    ): CustomResult<Unit, Exception> {
+        return try {
+            messageDataSource.updateDeliveryStatus(messageId.value, deliveryStatus)
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun saveWithDeliveryStatus(
+        message: Message,
+        deliveryStatus: String
+    ): CustomResult<DocumentId, Exception> {
+        return try {
+            messageDataSource.saveWithDeliveryStatus(message, deliveryStatus)
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
+    }
 }

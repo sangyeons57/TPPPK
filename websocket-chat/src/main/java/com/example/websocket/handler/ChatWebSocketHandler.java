@@ -1,6 +1,7 @@
 package com.example.websocket.handler;
 
 import com.example.websocket.auth.FirebaseAuthService;
+import com.example.websocket.constants.WebSocketEventConstants;
 import com.example.websocket.model.ChatMessage;
 import com.example.websocket.service.ChatRoomManager;
 import com.example.websocket.service.FirestoreMessageService;
@@ -127,27 +128,27 @@ public class ChatWebSocketHandler {
         // 각 필드별 값 요약 로그
         logger.info("[WS-FIELDS] {}", message.toSummaryString());
         switch (message.getType()) {
-            case "AUTH":
+            case WebSocketEventConstants.AUTH:
                 // Skip AUTH messages - authentication is handled during handshake
                 logger.debug("Ignoring AUTH message - authentication already handled during handshake");
                 break;
-            case "JOIN_ROOM":
+            case WebSocketEventConstants.JOIN_ROOM:
                 handleJoinRoom(message.getRoomId());
                 break;
-            case "LEAVE_ROOM":
+            case WebSocketEventConstants.LEAVE_ROOM:
                 handleLeaveRoom(message.getRoomId());
                 break;
-            case "MESSAGE":
+            case WebSocketEventConstants.MESSAGE:
                 handleMessage(message);
                 break;
-            case "EDIT_MESSAGE":
+            case WebSocketEventConstants.EDIT_MESSAGE:
                 handleEditMessage(message);
                 break;
-            case "DELETE_MESSAGE":
+            case WebSocketEventConstants.DELETE_MESSAGE:
                 handleDeleteMessage(message);
                 break;
-            case "PING":
-            case "HEARTBEAT":
+            case WebSocketEventConstants.PING:
+            case WebSocketEventConstants.HEARTBEAT:
                 sendPong();
                 break;
             default:
@@ -232,12 +233,12 @@ public class ChatWebSocketHandler {
                        currentRoomId, userId, message.getMessageId());
             
             // 3. 송신자에게 ACK 전송
-            sendMessageAck(message.getMessageId(), "MESSAGE_ACK");
+            sendMessageAck(message.getMessageId(), WebSocketEventConstants.MESSAGE_ACK);
             logger.info("✅ MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
             
         } catch (Exception e) {
             logger.error("❌ Error processing message from user {}: {}", userId, e.getMessage());
-            sendMessageAck(message.getMessageId(), "MESSAGE_FAILED");
+            sendMessageAck(message.getMessageId(), WebSocketEventConstants.MESSAGE_FAILED);
         }
     }
 
@@ -252,7 +253,7 @@ public class ChatWebSocketHandler {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
-            message.setType("EDIT_MESSAGE");
+            message.setType(WebSocketEventConstants.EDIT_MESSAGE);
             
             logger.info("✏️ Processing edit message: channelType={}, projectId={}, roomId={}", 
                        message.getChannelType(), message.getProjectId(), currentRoomId);
@@ -278,12 +279,12 @@ public class ChatWebSocketHandler {
                        currentRoomId, userId, message.getMessageId());
             
             // 3. 송신자에게 ACK 전송
-            sendMessageAck(message.getMessageId(), "EDIT_MESSAGE_ACK");
+            sendMessageAck(message.getMessageId(), WebSocketEventConstants.EDIT_MESSAGE_ACK);
             logger.info("✅ EDIT_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
             
         } catch (Exception e) {
             logger.error("❌ Error processing edit message from user {}: {}", userId, e.getMessage());
-            sendMessageAck(message.getMessageId(), "EDIT_MESSAGE_FAILED");
+            sendMessageAck(message.getMessageId(), WebSocketEventConstants.EDIT_MESSAGE_FAILED);
         }
     }
 
@@ -298,7 +299,7 @@ public class ChatWebSocketHandler {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
-            message.setType("DELETE_MESSAGE");
+            message.setType(WebSocketEventConstants.DELETE_MESSAGE);
             
             logger.info("🗑️ Processing delete message: channelType={}, projectId={}, roomId={}", 
                        message.getChannelType(), message.getProjectId(), currentRoomId);
@@ -324,35 +325,35 @@ public class ChatWebSocketHandler {
                        currentRoomId, userId, message.getMessageId());
             
             // 3. 송신자에게 ACK 전송
-            sendMessageAck(message.getMessageId(), "DELETE_MESSAGE_ACK");
+            sendMessageAck(message.getMessageId(), WebSocketEventConstants.DELETE_MESSAGE_ACK);
             logger.info("✅ DELETE_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
             
         } catch (Exception e) {
             logger.error("❌ Error processing delete message from user {}: {}", userId, e.getMessage());
-            sendMessageAck(message.getMessageId(), "DELETE_MESSAGE_FAILED");
+            sendMessageAck(message.getMessageId(), WebSocketEventConstants.DELETE_MESSAGE_FAILED);
         }
     }
 
     private void sendPong() {
-        ChatMessage pong = new ChatMessage("PONG", null, "server", "pong", Instant.now());
+        ChatMessage pong = new ChatMessage(WebSocketEventConstants.PONG, null, "server", "pong", Instant.now());
         sendMessage(pong);
     }
 
     private void sendAuthSuccessMessage() {
-        ChatMessage authSuccessMessage = new ChatMessage("AUTH_SUCCESS", null, "system", "Authentication successful", Instant.now());
+        ChatMessage authSuccessMessage = new ChatMessage(WebSocketEventConstants.AUTH_SUCCESS, null, "system", "Authentication successful", Instant.now());
         sendMessage(authSuccessMessage);
         logger.info("📤 AUTH_SUCCESS message sent to user {}", userId);
     }
 
     private void sendJoinRoomSuccessMessage(String roomId) {
-        ChatMessage joinSuccessMessage = new ChatMessage("JOINED_ROOM", roomId, "system", 
+        ChatMessage joinSuccessMessage = new ChatMessage(WebSocketEventConstants.JOINED_ROOM, roomId, "system", 
                                                          "Successfully joined room: " + roomId, Instant.now());
         sendMessage(joinSuccessMessage);
         logger.info("📤 JOINED_ROOM confirmation sent to user {} for room {}", userId, roomId);
     }
 
     private void sendLeaveRoomSuccessMessage(String roomId) {
-        ChatMessage leaveSuccessMessage = new ChatMessage("LEFT_ROOM", roomId, "system", 
+        ChatMessage leaveSuccessMessage = new ChatMessage(WebSocketEventConstants.LEFT_ROOM, roomId, "system", 
                                                           "Successfully left room: " + roomId, Instant.now());
         sendMessage(leaveSuccessMessage);
         logger.info("📤 LEFT_ROOM confirmation sent to user {} for room {}", userId, roomId);
@@ -364,7 +365,7 @@ public class ChatWebSocketHandler {
     }
 
     private void sendErrorMessage(String error) {
-        ChatMessage errorMessage = new ChatMessage("ERROR", currentRoomId, "system", error, Instant.now());
+        ChatMessage errorMessage = new ChatMessage(WebSocketEventConstants.ERROR, currentRoomId, "system", error, Instant.now());
         sendMessage(errorMessage);
     }
 

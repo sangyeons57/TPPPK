@@ -3,6 +3,7 @@ package com.example.data_model.local
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.core_common.constant.MessageDeliveryStatus
 import com.example.domain.model.enum.SyncStatus
 
 @Entity(tableName = "messages")
@@ -39,7 +40,11 @@ data class MessageEntity(
     val serverUpdatedAt: Long? = null, // Epoch milliseconds, server time
 
     @ColumnInfo(name = "sync_status")
-    val syncStatus: String = SyncStatus.DEFAULT.name
+    val syncStatus: String = SyncStatus.DEFAULT.name,
+
+    // 클라이언트 측 메시지 전송 상태 (SENDING/SENT/FAILED)
+    @ColumnInfo(name = "delivery_status")
+    val deliveryStatus: String = MessageDeliveryStatus.SENT // Default to SENT for existing messages
 ) {
 
 

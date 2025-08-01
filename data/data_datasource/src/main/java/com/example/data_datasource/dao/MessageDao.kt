@@ -357,5 +357,17 @@ interface MessageDao {
         beforeCount: Int = 25,
         afterCount: Int = 25
     ): List<MessageEntity>
+
+    // ================================
+    // 전송 상태 관리
+    // ================================
+
+    /**
+     * 메시지의 전송 상태 업데이트
+     * @param messageId 메시지 ID
+     * @param deliveryStatus 새로운 전송 상태 (SENDING/SENT/FAILED)
+     */
+    @Query("UPDATE messages SET delivery_status = :deliveryStatus WHERE id = :messageId")
+    suspend fun updateDeliveryStatus(messageId: String, deliveryStatus: String)
     
 }

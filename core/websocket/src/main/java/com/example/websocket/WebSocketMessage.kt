@@ -17,25 +17,25 @@ data class WebSocketMessage(
     @SerialName("channelType") val channelType: String? = null
 ) {
     companion object {
-        // Message Types
-        const val TYPE_AUTH = "AUTH"
-        const val TYPE_AUTH_SUCCESS = "AUTH_SUCCESS"
-        const val TYPE_JOIN_ROOM = "JOIN_ROOM"
-        const val TYPE_LEAVE_ROOM = "LEAVE_ROOM"
-        const val TYPE_MESSAGE = "MESSAGE"
-        const val TYPE_EDIT_MESSAGE = "EDIT_MESSAGE"
-        const val TYPE_DELETE_MESSAGE = "DELETE_MESSAGE"
-        const val TYPE_SYSTEM = "SYSTEM"
-        const val TYPE_ACK = "ACK"
-        const val TYPE_MESSAGE_ACK = "MESSAGE_ACK"
-        const val TYPE_EDIT_MESSAGE_ACK = "EDIT_MESSAGE_ACK"
-        const val TYPE_DELETE_MESSAGE_ACK = "DELETE_MESSAGE_ACK"
+        // Message Types - WebSocketEventTypes를 참조하여 중복 제거
+        const val TYPE_AUTH = WebSocketEventTypes.AUTH
+        const val TYPE_AUTH_SUCCESS = WebSocketEventTypes.AUTH_SUCCESS
+        const val TYPE_JOIN_ROOM = WebSocketEventTypes.JOIN_ROOM
+        const val TYPE_LEAVE_ROOM = WebSocketEventTypes.LEAVE_ROOM
+        const val TYPE_MESSAGE = WebSocketEventTypes.MESSAGE
+        const val TYPE_EDIT_MESSAGE = WebSocketEventTypes.EDIT_MESSAGE
+        const val TYPE_DELETE_MESSAGE = WebSocketEventTypes.DELETE_MESSAGE
+        const val TYPE_SYSTEM = WebSocketEventTypes.SYSTEM
+        const val TYPE_ACK = WebSocketEventTypes.ACK
+        const val TYPE_MESSAGE_ACK = WebSocketEventTypes.MESSAGE_ACK
+        const val TYPE_EDIT_MESSAGE_ACK = WebSocketEventTypes.EDIT_MESSAGE_ACK
+        const val TYPE_DELETE_MESSAGE_ACK = WebSocketEventTypes.DELETE_MESSAGE_ACK
 
-        const val TYPE_ERROR = "ERROR"
-        const val TYPE_HEARTBEAT = "HEARTBEAT"
+        const val TYPE_ERROR = WebSocketEventTypes.ERROR
+        const val TYPE_HEARTBEAT = WebSocketEventTypes.HEARTBEAT
 
         // Channel Types
-        const val CHANNEL_TYPE_DM = "DM"
-        const val CHANNEL_TYPE_PROJECT = "PROJECT"
+        const val CHANNEL_TYPE_DM = WebSocketEventTypes.CHANNEL_TYPE_DM
+        const val CHANNEL_TYPE_PROJECT = WebSocketEventTypes.CHANNEL_TYPE_PROJECT
     }
 }

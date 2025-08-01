@@ -432,4 +432,40 @@ class MessageDataSourceImpl @Inject constructor(
             }
         }
     }
+
+    // ================================
+    // 전송 상태 관리
+    // ================================
+
+    override suspend fun updateDeliveryStatus(
+        messageId: String,
+        deliveryStatus: String
+    ): CustomResult<Unit, Exception> {
+        return withContext(Dispatchers.IO) {
+            try {
+                messageDao.updateDeliveryStatus(messageId, deliveryStatus)
+                CustomResult.Success(Unit)
+            } catch (e: Exception) {
+                CustomResult.Failure(e)
+            }
+        }
+    }
+
+    override suspend fun saveWithDeliveryStatus(
+        message: Message,
+        deliveryStatus: String
+    ): CustomResult<com.example.domain.model.vo.DocumentId, Exception> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val entity = messageMapper.domainToEntityWithSync(
+                    domain = message,
+                    deliveryStatus = deliveryStatus
+                )
+                messageDao.insert(entity)
+                CustomResult.Success(message.id)
+            } catch (e: Exception) {
+                CustomResult.Failure(e)
+            }
+        }
+    }
 }

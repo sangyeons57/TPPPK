@@ -112,6 +112,28 @@ interface LocalMessageRepository : BaseLocalRepository<Message> {
         serverUpdatedAt: Long? = null
     ): CustomResult<Unit, Exception>
 
+    /**
+     * Message의 전송 상태 업데이트
+     * @param messageId 메시지 ID
+     * @param deliveryStatus 새로운 전송 상태 (SENDING/SENT/FAILED)
+     * @return 성공/실패 결과
+     */
+    suspend fun updateDeliveryStatus(
+        messageId: DocumentId,
+        deliveryStatus: String
+    ): CustomResult<Unit, Exception>
+
+    /**
+     * Message 저장 시 전송 상태 지정
+     * @param message 저장할 메시지
+     * @param deliveryStatus 전송 상태 (SENDING/SENT/FAILED)
+     * @return 성공/실패 결과
+     */
+    suspend fun saveWithDeliveryStatus(
+        message: Message,
+        deliveryStatus: String
+    ): CustomResult<DocumentId, Exception>
+
     // ================================
     // 배치 처리 작업
     // ================================

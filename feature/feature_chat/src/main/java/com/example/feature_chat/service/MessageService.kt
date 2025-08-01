@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import com.example.core_common.constant.MessageDeliveryStatus
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Message
@@ -23,6 +24,7 @@ import com.example.feature_chat.util.ReplyParser
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import com.example.websocket.WebSocketConnectionState
+import com.example.websocket.WebSocketEventTypes
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -399,9 +401,29 @@ class MessageService(
             mentions = mentions
         )
 
-        // 서버 중심 저장: 낙관적 로컬 저장 제거
-        // 서버에서 Firestore 저장 후 WebSocket으로 브로드캐스트하면 handleNewMessage에서 처리
+        // 1. 즉시 Room에 SENDING 상태로 저장 (optimistic UI 패턴)
+        Log.d("MessageService", "Saving message to Room with SENDING status: ${message.id.value}")
+        val roomSaveResult =
+            localMessageRepository.saveWithDeliveryStatus(message, MessageDeliveryStatus.SENDING)
+        when (roomSaveResult) {
+            is CustomResult.Success -> {
+                Log.d("MessageService", "Message saved to Room successfully: ${message.id.value}")
+            }
 
+            is CustomResult.Failure -> {
+                Log.e(
+                    "MessageService",
+                    "Failed to save message to Room: ${message.id.value}",
+                    roomSaveResult.error
+                )
+                return SendMessageResult(
+                    success = false,
+                    error = "메시지 저장 실패: ${roomSaveResult.error.message}"
+                )
+            }
+        }
+
+        // 2. 서버로 전송 시도
         when (webSocketClient.connectionState.value) {
             is WebSocketConnectionState.Connected -> {
                 val result = webSocketClient.sendMessage(
@@ -415,16 +437,36 @@ class MessageService(
                 
                 when {
                     result.isSuccess -> {
-                        // 서버 중심 저장: WebSocket으로만 전송하고 서버에서 Firestore 저장
                         Log.d(
                             "MessageService",
                             "Message sent via WebSocket successfully: ${message.id.value}"
                         )
-                        
+                        // WebSocket 전송 성공 시에는 서버에서 ACK를 받으면 SENT로 업데이트됨
+                        // 여기서는 상태를 변경하지 않고 ACK 대기
                         return SendMessageResult(success = true, tempMessage = tempUiMessage)
                     }
                     result.isFailure -> {
-                        return handleSendMessageFallback(message, tempUiMessage, senderId)
+                        // WebSocket 전송 실패 시 FAILED 상태로 업데이트
+                        Log.w(
+                            "MessageService",
+                            "WebSocket send failed, updating status to FAILED: ${message.id.value}"
+                        )
+                        localMessageRepository.updateDeliveryStatus(
+                            messageId,
+                            MessageDeliveryStatus.FAILED
+                        )
+                        return SendMessageResult(
+                            success = false,
+                            tempMessage = tempUiMessage.copy(
+                                sendFailed = true,
+                                isSending = false,
+                                canRetry = true,
+                                deliveryState = com.example.feature_chat.model.MessageDeliveryState.Failed(
+                                    "WebSocket 전송 실패"
+                                )
+                            ),
+                            error = "메시지 전송 실패"
+                        )
                     }
                 }
             }
@@ -962,6 +1004,146 @@ private suspend fun saveMessageToRoom(message: Message) {
     } catch (e: Exception) {
         Log.e("MessageService", "Exception while saving message to Room", e)
     }
+}
+
+/**
+ * WebSocket ACK 이벤트 처리 - 메시지 전송 성공
+ */
+suspend fun MessageService.handleMessageAck(event: ChatWebSocketEvent.MessageAck) {
+    Log.d("MessageService", "Received ACK for message: ${event.messageId}, type: ${event.ackType}")
+
+    when (event.ackType) {
+        WebSocketEventTypes.MESSAGE_ACK -> {
+            // 메시지 전송 성공 - SENT 상태로 업데이트
+            val result = localMessageRepository.updateDeliveryStatus(
+                DocumentId(event.messageId),
+                MessageDeliveryStatus.SENT
+            )
+            when (result) {
+                is CustomResult.Success -> {
+                    Log.d(
+                        "MessageService",
+                        "Updated delivery status to SENT for message: ${event.messageId}"
+                    )
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(
+                        "MessageService",
+                        "Failed to update delivery status to SENT",
+                        result.error
+                    )
+                }
+            }
+        }
+
+        WebSocketEventTypes.EDIT_MESSAGE_ACK, WebSocketEventTypes.DELETE_MESSAGE_ACK -> {
+            // 편집/삭제 ACK - 현재는 별도 처리 없음
+            Log.d("MessageService", "Received ${event.ackType} for message: ${event.messageId}")
+        }
+    }
+}
+
+/**
+ * WebSocket FAILED 이벤트 처리 - 메시지 전송 실패
+ */
+suspend fun MessageService.handleMessageFailed(event: ChatWebSocketEvent.MessageFailed) {
+    Log.w(
+        "MessageService",
+        "Received FAILED for message: ${event.messageId}, type: ${event.failureType}"
+    )
+
+    when (event.failureType) {
+        WebSocketEventTypes.MESSAGE_FAILED -> {
+            // 메시지 전송 실패 - FAILED 상태로 업데이트
+            val result = localMessageRepository.updateDeliveryStatus(
+                DocumentId(event.messageId),
+                MessageDeliveryStatus.FAILED
+            )
+            when (result) {
+                is CustomResult.Success -> {
+                    Log.d(
+                        "MessageService",
+                        "Updated delivery status to FAILED for message: ${event.messageId}"
+                    )
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(
+                        "MessageService",
+                        "Failed to update delivery status to FAILED",
+                        result.error
+                    )
+                }
+            }
+        }
+
+        WebSocketEventTypes.EDIT_MESSAGE_FAILED, WebSocketEventTypes.DELETE_MESSAGE_FAILED -> {
+            // 편집/삭제 실패 - 현재는 별도 처리 없음
+            Log.w("MessageService", "Received ${event.failureType} for message: ${event.messageId}")
+        }
+    }
+}
+
+/**
+ * MessageEntity에서 ChatMessageUiModel로 변환하는 확장 함수 (deliveryStatus 포함)
+ */
+private suspend fun com.example.data_model.local.MessageEntity.toUiModel(
+    currentUserId: String,
+    getUserDisplayName: (String) -> String,
+    getUserProfileUrl: suspend (String) -> String?,
+    getCachedProfileUrl: (String) -> String?,
+    findReplyToMessage: (String) -> ChatMessageUiModel? = { null }
+): ChatMessageUiModel {
+    val createdAtInstant = java.time.Instant.ofEpochMilli(this.createdAt)
+    val updatedAtInstant = java.time.Instant.ofEpochMilli(this.updatedAt)
+    val isModified = updatedAtInstant.isAfter(createdAtInstant.plusSeconds(1))
+
+    // 답장 정보 처리
+    val replyToMessage = this.replyToMessageId?.let { replyId ->
+        findReplyToMessage(replyId)
+    }
+
+    // deliveryStatus에 따른 UI 상태 결정
+    val deliveryState = when (this.deliveryStatus) {
+        MessageDeliveryStatus.SENDING -> com.example.feature_chat.model.MessageDeliveryState.Sending
+        MessageDeliveryStatus.SENT -> com.example.feature_chat.model.MessageDeliveryState.Sent
+        MessageDeliveryStatus.FAILED -> com.example.feature_chat.model.MessageDeliveryState.Failed("전송 실패")
+        else -> com.example.feature_chat.model.MessageDeliveryState.Sent
+    }
+
+    val isSending = this.deliveryStatus == MessageDeliveryStatus.SENDING
+    val sendFailed = this.deliveryStatus == MessageDeliveryStatus.FAILED
+    val canRetry = sendFailed && this.senderId == currentUserId
+
+    return ChatMessageUiModel(
+        messageId = this.id,
+        userId = this.senderId,
+        userName = getUserDisplayName(this.senderId),
+        userProfileUrl = getCachedProfileUrl(this.senderId),
+        message = this.content,
+        formattedTimestamp = if (isSending) "전송 중..." else DateTimeUtil.formatChatTime(
+            createdAtInstant
+        ),
+        isModified = isModified,
+        attachmentImageUrls = emptyList(),
+        isMyMessage = this.senderId == currentUserId,
+        isDeleted = this.isDeleted,
+        actualTimestamp = createdAtInstant,
+        isOptimistic = false,
+        isSending = isSending,
+        sendFailed = sendFailed,
+        canRetry = canRetry,
+        deliveryState = deliveryState,
+        errorMessage = if (sendFailed) "메시지 전송에 실패했습니다" else null,
+        // 답장 정보
+        replyToMessageId = this.replyToMessageId,
+        replyToContent = replyToMessage?.message,
+        replyToUserName = replyToMessage?.userName,
+        // 멘션 정보 (TODO: JSON 파싱 구현 필요)
+        mentions = emptyList(),
+        isMentionedMessage = false
+    )
 }
 
 /**

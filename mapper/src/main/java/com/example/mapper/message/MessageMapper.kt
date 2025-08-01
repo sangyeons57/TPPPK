@@ -1,5 +1,6 @@
 package com.example.mapper.message
 
+import com.example.core_common.constant.MessageDeliveryStatus
 import com.example.data_model.local.MessageEntity
 import com.example.data_model.remote.MessageDTO
 import com.example.domain.model.base.Message
@@ -49,7 +50,8 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             updatedAt = domain.updatedAt.toEpochMilli(),
             serverVersion = null,
             serverUpdatedAt = null,
-            syncStatus = SyncStatus.DEFAULT.name
+            syncStatus = SyncStatus.DEFAULT.name,
+            deliveryStatus = MessageDeliveryStatus.SENT // 기본값: 서버에서 온 메시지는 SENT 상태
         )
     }
 
@@ -118,7 +120,8 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
         domain: Message,
         serverVersion: Long? = null,
         serverUpdatedAt: Long? = null,
-        syncStatus: SyncStatus = SyncStatus.DEFAULT
+        syncStatus: SyncStatus = SyncStatus.DEFAULT,
+        deliveryStatus: String = MessageDeliveryStatus.SENT // 전송 상태 (SENDING/SENT/FAILED)
     ): MessageEntity {
         return MessageEntity(
             id = domain.id.value,
@@ -131,7 +134,8 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             updatedAt = domain.updatedAt.toEpochMilli(),
             serverVersion = serverVersion,
             serverUpdatedAt = serverUpdatedAt,
-            syncStatus = syncStatus.name
+            syncStatus = syncStatus.name,
+            deliveryStatus = deliveryStatus
         )
     }
 }

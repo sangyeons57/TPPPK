@@ -6,6 +6,8 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.feature_chat.util.ChatLogUtil
 import com.example.websocket.GlobalWebSocketService
+import com.example.websocket.OperationStatus
+import com.example.websocket.WebSocketEventTypes
 import com.example.websocket.WebSocketManager
 import com.example.websocket.WebSocketMessage
 import kotlinx.coroutines.flow.Flow
@@ -50,7 +52,10 @@ class ChatWebSocketClient @Inject constructor(
                     userId = message.senderId,
                     roomId = roomId,
                     messageId = message.messageId ?: "unknown",
-                    metadata = mapOf("action" to "RECEIVE", "status" to "SUCCESS")
+                        metadata = mapOf(
+                            "action" to OperationStatus.ACTION_RECEIVE,
+                            "status" to OperationStatus.SUCCESS
+                        )
                 ))
             }
             .map { message ->
@@ -79,7 +84,7 @@ class ChatWebSocketClient @Inject constructor(
                             timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
                         )
                     }
-                    WebSocketMessage.TYPE_SYSTEM, "JOINED_ROOM", "LEFT_ROOM" -> {
+                    WebSocketMessage.TYPE_SYSTEM, WebSocketEventTypes.JOINED_ROOM, WebSocketEventTypes.LEFT_ROOM -> {
                         ChatWebSocketEvent.SystemMessage(
                             content = message.content ?: "",
                             timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
@@ -111,7 +116,7 @@ class ChatWebSocketClient @Inject constructor(
                             ackType = message.type
                         )
                     }
-                    "MESSAGE_FAILED", "EDIT_MESSAGE_FAILED", "DELETE_MESSAGE_FAILED" -> {
+                    WebSocketEventTypes.MESSAGE_FAILED, WebSocketEventTypes.EDIT_MESSAGE_FAILED, WebSocketEventTypes.DELETE_MESSAGE_FAILED -> {
                         val correlationId = ChatLogUtil.generateCorrelationId()
                         Log.e(
                             ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
@@ -576,7 +581,7 @@ class ChatWebSocketClient @Inject constructor(
         )
         
         return webSocketManager.sendMessage(message).also { result ->
-            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
+            val status = if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
             Log.i(
                 ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
                 correlationId = sendCorrelationId,
@@ -628,7 +633,7 @@ class ChatWebSocketClient @Inject constructor(
         )
         
         return webSocketManager.sendMessage(message).also { result ->
-            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
+            val status = if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
             Log.i(
                 ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
                 correlationId = editCorrelationId,
@@ -675,7 +680,7 @@ class ChatWebSocketClient @Inject constructor(
         )
         
         return webSocketManager.sendMessage(message).also { result ->
-            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
+            val status = if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
             Log.i(
                 ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
                 correlationId = deleteCorrelationId,

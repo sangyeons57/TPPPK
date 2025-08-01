@@ -260,4 +260,30 @@ interface MessageDataSource {
      * @return 성공/실패 결과
      */
     suspend fun deleteAll(): CustomResult<Unit, Exception>
+
+    // ================================
+    // 전송 상태 관리
+    // ================================
+
+    /**
+     * Message의 전송 상태 업데이트
+     * @param messageId 메시지 ID
+     * @param deliveryStatus 새로운 전송 상태 (SENDING/SENT/FAILED)
+     * @return 성공/실패 결과
+     */
+    suspend fun updateDeliveryStatus(
+        messageId: String,
+        deliveryStatus: String
+    ): CustomResult<Unit, Exception>
+
+    /**
+     * Message 저장 시 전송 상태 지정
+     * @param message 저장할 메시지
+     * @param deliveryStatus 전송 상태 (SENDING/SENT/FAILED)
+     * @return 성공/실패 결과
+     */
+    suspend fun saveWithDeliveryStatus(
+        message: Message,
+        deliveryStatus: String
+    ): CustomResult<com.example.domain.model.vo.DocumentId, Exception>
 }

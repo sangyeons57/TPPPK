@@ -33,12 +33,12 @@ sealed class ChatWebSocketEvent {
     
     data class MessageAck(
         val messageId: String,
-        val ackType: String // MESSAGE_ACK, EDIT_MESSAGE_ACK, DELETE_MESSAGE_ACK
+        val ackType: String // WebSocketEventTypes.MESSAGE_ACK, EDIT_MESSAGE_ACK, DELETE_MESSAGE_ACK
     ) : ChatWebSocketEvent()
     
     data class MessageFailed(
         val messageId: String,
-        val failureType: String // MESSAGE_FAILED, EDIT_MESSAGE_FAILED, DELETE_MESSAGE_FAILED
+        val failureType: String // WebSocketEventTypes.MESSAGE_FAILED, EDIT_MESSAGE_FAILED, DELETE_MESSAGE_FAILED
     ) : ChatWebSocketEvent()
     
     data class Unknown(
