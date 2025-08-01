@@ -3,6 +3,7 @@ package com.example.data_repository.di
 import com.example.data_repository.local.LocalMessageRepositoryImpl
 import com.example.data_repository.local.OutBoxRepositoryImpl
 import com.example.data_repository.local.ScopeMetaDataRepositoryImpl
+import com.example.domain_repository.local.LocalMessagePagingRepository
 import com.example.domain_repository.local.LocalMessageRepository
 import com.example.domain_repository.local.OutBoxRepository
 import com.example.domain_repository.local.ScopeMetaDataRepository
@@ -19,6 +20,10 @@ abstract class LocalRepositoryModule {
     @Binds
     @Singleton
     abstract fun bindLocalMessageRepository(impl: LocalMessageRepositoryImpl): LocalMessageRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLocalMessagePagingRepository(impl: LocalMessageRepositoryImpl): LocalMessagePagingRepository
 
     @Binds
     @Singleton

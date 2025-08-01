@@ -27,6 +27,10 @@ data class WebSocketMessage(
         const val TYPE_DELETE_MESSAGE = "DELETE_MESSAGE"
         const val TYPE_SYSTEM = "SYSTEM"
         const val TYPE_ACK = "ACK"
+        const val TYPE_MESSAGE_ACK = "MESSAGE_ACK"
+        const val TYPE_EDIT_MESSAGE_ACK = "EDIT_MESSAGE_ACK"
+        const val TYPE_DELETE_MESSAGE_ACK = "DELETE_MESSAGE_ACK"
+
         const val TYPE_ERROR = "ERROR"
         const val TYPE_HEARTBEAT = "HEARTBEAT"
 

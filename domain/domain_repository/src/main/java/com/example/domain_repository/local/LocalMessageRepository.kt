@@ -160,4 +160,5 @@ interface LocalMessageRepository : BaseLocalRepository<Message> {
      * @return 상태별 메시지 개수 통계
      */
     suspend fun getSyncStatusStatistics(): CustomResult<Map<SyncStatus, Int>, Exception>
+
 }

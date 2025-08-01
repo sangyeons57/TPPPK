@@ -2,9 +2,9 @@ package com.example.data_datasource.local
 
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.dao.MessageDao
-import com.example.data_model.local.MessageEntity
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
+import com.example.mapper.message.MessageMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -20,7 +20,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class MessageDataSourceImpl @Inject constructor(
-    private val messageDao: MessageDao
+    private val messageDao: MessageDao,
+    private val messageMapper: MessageMapper
 ) : MessageDataSource {
 
     // ================================
@@ -30,7 +31,7 @@ class MessageDataSourceImpl @Inject constructor(
     override suspend fun save(message: Message): CustomResult<Unit, Exception> {
         return withContext(Dispatchers.IO) {
             try {
-                val entity = MessageEntity.fromDomainModel(message)
+                val entity = messageMapper.domainToEntity(message)
                 messageDao.insert(entity)
                 CustomResult.Success(Unit)
             } catch (e: Exception) {
@@ -42,7 +43,7 @@ class MessageDataSourceImpl @Inject constructor(
     override suspend fun saveAll(messages: List<Message>): CustomResult<Unit, Exception> {
         return withContext(Dispatchers.IO) {
             try {
-                val entities = messages.map { MessageEntity.fromDomainModel(it) }
+                val entities = messages.map { messageMapper.domainToEntity(it) }
                 messageDao.insertAll(entities)
                 CustomResult.Success(Unit)
             } catch (e: Exception) {
@@ -54,7 +55,9 @@ class MessageDataSourceImpl @Inject constructor(
     override suspend fun delete(message: Message): CustomResult<Unit, Exception> {
         return withContext(Dispatchers.IO) {
             try {
-                val entity = MessageEntity.fromDomainModel(message, deleted = true)
+                // 메시지를 삭제된 상태로 업데이트
+                message.delete() // Domain method to mark as deleted
+                val entity = messageMapper.domainToEntity(message)
                 messageDao.update(entity)
                 CustomResult.Success(Unit)
             } catch (e: Exception) {
@@ -71,7 +74,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entity = messageDao.getById(id)
-                val domainModel = entity?.toDomainModel()
+                val domainModel = entity?.let { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModel)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -83,7 +86,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getAll()
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -95,7 +98,7 @@ class MessageDataSourceImpl @Inject constructor(
         return messageDao.observeById(id)
             .map { entity ->
                 try {
-                    val domainModel = entity?.toDomainModel()
+                    val domainModel = entity?.let { messageMapper.entityToDomain(it) }
                     CustomResult.Success(domainModel)
                 } catch (e: Exception) {
                     CustomResult.Failure(e)
@@ -111,7 +114,7 @@ class MessageDataSourceImpl @Inject constructor(
         return messageDao.observeAll()
             .map { entities ->
                 try {
-                    val domainModels = entities.map { it.toDomainModel() }
+                    val domainModels = entities.map { messageMapper.entityToDomain(it) }
                     CustomResult.Success(domainModels)
                 } catch (e: Exception) {
                     CustomResult.Failure(e)
@@ -134,7 +137,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getMessagesAfter(afterTimestamp, limit)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -149,7 +152,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getMessagesBefore(beforeTimestamp, limit)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -164,7 +167,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getMessagesBetween(startTimestamp, endTimestamp)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -180,7 +183,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getMessagesBySender(senderId)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -192,7 +195,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getRepliesByMessageId(replyToMessageId)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -208,7 +211,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getMessagesBySyncStatus(syncStatus.name)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -220,7 +223,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getUnsyncedMessages()
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -232,7 +235,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getErrorMessages()
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -244,7 +247,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getMessagesAfterVersion(version)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)
@@ -286,7 +289,7 @@ class MessageDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val entities = messageDao.getUnsyncedMessages().take(limit)
-                val domainModels = entities.map { it.toDomainModel() }
+                val domainModels = entities.map { messageMapper.entityToDomain(it) }
                 CustomResult.Success(domainModels)
             } catch (e: Exception) {
                 CustomResult.Failure(e)

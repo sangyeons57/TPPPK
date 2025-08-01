@@ -70,4 +70,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)      // 또는 implementation "androidx.room:room-ktx:2.6.1"
     ksp(libs.androidx.room.compiler)            // 또는 ksp "androidx.room:room-compiler:2.6.1"
     androidTestImplementation(libs.androidx.room.testing) // Room 테스트 의존성 추가
+
+    // Paging3 dependencies for SSOT implementation
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.room.paging)
 }

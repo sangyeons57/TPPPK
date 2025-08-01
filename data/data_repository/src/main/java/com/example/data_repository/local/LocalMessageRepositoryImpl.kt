@@ -1,12 +1,14 @@
 package com.example.data_repository.local
 
+import androidx.paging.PagingSource
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.local.MessageDataSource
+import com.example.data_repository.paging.MessagePagingSource
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
-import com.example.domain_repository.local.LocalMessageRepository
+import com.example.domain_repository.local.LocalMessagePagingRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,7 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class LocalMessageRepositoryImpl @Inject constructor(
     private val messageDataSource: MessageDataSource
-) : BaseLocalRepositoryImpl<Message>(), LocalMessageRepository {
+) : BaseLocalRepositoryImpl<Message>(), LocalMessagePagingRepository {
 
     // ================================
     // BaseLocalRepositoryImpl 추상 메서드 구현
@@ -261,5 +263,13 @@ class LocalMessageRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             CustomResult.Failure(e)
         }
+    }
+
+    // ================================
+    // Paging3 지원 구현
+    // ================================
+
+    override fun getMessagesPagingSource(): PagingSource<Long, Message> {
+        return MessagePagingSource(this)
     }
 }

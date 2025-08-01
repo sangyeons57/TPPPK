@@ -1,5 +1,7 @@
 package com.example.data_datasource.di
 
+import com.example.data_datasource.local.MessageDataSource
+import com.example.data_datasource.local.MessageDataSourceImpl
 import com.example.data_datasource.local.OutBoxDataSource
 import com.example.data_datasource.local.OutBoxDataSourceImpl
 import com.example.data_datasource.local.ScopeMetadataDataSource
@@ -242,6 +244,16 @@ abstract class DataSourceModule {
     abstract fun bindOutBoxDataSource(
         outBoxDatasourceImpl: OutBoxDataSourceImpl
     ): OutBoxDataSource
+
+    /**
+     * MessageDataSource 인터페이스 요청 시
+     * MessageDataSourceImpl 구현체를 제공하도록 Hilt에 알립니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindMessageDataSource(
+        messageDataSourceImpl: MessageDataSourceImpl
+    ): MessageDataSource
 
     /**
      * ScopeMetadataDataSource 인터페이스 요청 시

@@ -2,6 +2,7 @@ package com.example.data.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.data_datasource.dao.MessageDao
 import com.example.data_datasource.dao.OutBoxDao
 import com.example.data_datasource.dao.ScopeMetadataDao
 import com.example.data_datasource.database.AppDatabase
@@ -39,6 +40,15 @@ object DatabaseModule {
     @Singleton
     fun provideOutBoxDao(database: AppDatabase): OutBoxDao {
         return database.outBoxDao()
+    }
+
+    /**
+     * MessageDao 제공
+     */
+    @Provides
+    @Singleton
+    fun provideMessageDao(database: AppDatabase): MessageDao {
+        return database.messageDao()
     }
 
     /**

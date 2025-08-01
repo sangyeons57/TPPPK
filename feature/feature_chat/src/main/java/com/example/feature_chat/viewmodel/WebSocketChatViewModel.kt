@@ -524,32 +524,33 @@ class WebSocketChatViewModel @Inject constructor(
     private fun loadDMParticipants() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingParticipants = true) }
-            
-            try {
-                val participantService = services.participantService
-                if (participantService != null) {
-                    Log.d("ViewModel", "Loading DM participants using ParticipantService")
-                    val participants = participantService.loadParticipants()
-                    
-                    _uiState.update { 
-                        it.copy(
+
+            _uiState.update {
+                try {
+                    val participantService = services.participantService
+                    if (participantService != null) {
+                        Log.d("ViewModel", "Loading DM participants using ParticipantService")
+                        val participants = participantService.loadParticipants()
+
+                        Log.d(
+                            "ViewModel",
+                            "Successfully loaded ${participants.size} DM participants"
+                        )
+                        return@update it.copy(
                             participants = participants,
                             isLoadingParticipants = false
                         )
+
+                    } else {
+                        Log.e("ViewModel", "ParticipantService is null for DM channel")
+                        return@update it.copy(isLoadingParticipants = false)
                     }
-                    
-                    Log.d("ViewModel", "Successfully loaded ${participants.size} DM participants")
-                } else {
-                    Log.e("ViewModel", "ParticipantService is null for DM channel")
-                    _uiState.update { it.copy(isLoadingParticipants = false) }
-                }
-            } catch (e: Exception) {
-                Log.e("ViewModel", "Failed to load DM participants", e)
-                _uiState.update { 
-                    it.copy(
+                } catch (e: Exception) {
+                    Log.e("ViewModel", "Failed to load DM participants", e)
+                    return@update it.copy(
                         participants = emptyList(),
                         isLoadingParticipants = false
-                    ) 
+                    )
                 }
             }
         }
@@ -558,41 +559,48 @@ class WebSocketChatViewModel @Inject constructor(
     private fun loadProjectMembersAndRoles() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingProjectData = true) }
-            
-            try {
-                val memberService = services.memberService
-                val roleService = services.roleService
-                
-                if (memberService != null && roleService != null) {
-                    Log.d("ViewModel", "Loading project members and roles using MemberService and RoleService")
-                    
-                    // Load members and roles concurrently
-                    val membersDeferred = async { memberService.loadMembers() }
-                    val rolesDeferred = async { roleService.loadRoles() }
-                    
-                    val projectMembers = membersDeferred.await()
-                    val projectRoles = rolesDeferred.await()
-                    
-                    // Update role member counts with total member count
-                    val updatedRoles = roleService.updateRoleMemberCounts(projectRoles, projectMembers.size)
-                    
-                    _uiState.update { 
-                        it.copy(
+
+            _uiState.update {
+                try {
+                    val memberService = services.memberService
+                    val roleService = services.roleService
+
+                    if (memberService != null && roleService != null) {
+                        Log.d(
+                            "ViewModel",
+                            "Loading project members and roles using MemberService and RoleService"
+                        )
+
+                        // Load members and roles concurrently
+                        val membersDeferred = async { memberService.loadMembers() }
+                        val rolesDeferred = async { roleService.loadRoles() }
+
+                        val projectMembers = membersDeferred.await()
+                        val projectRoles = rolesDeferred.await()
+
+                        // Update role member counts with total member count
+                        val updatedRoles =
+                            roleService.updateRoleMemberCounts(projectRoles, projectMembers.size)
+
+                        Log.d(
+                            "ViewModel",
+                            "Successfully loaded ${projectMembers.size} members and ${updatedRoles.size} roles"
+                        )
+                        return@update it.copy(
                             projectMembers = projectMembers,
                             projectRoles = updatedRoles,
                             isLoadingProjectData = false
                         )
+                    } else {
+                        Log.e(
+                            "ViewModel",
+                            "MemberService or RoleService is null for project channel"
+                        )
+                        return@update it.copy(isLoadingProjectData = false)
                     }
-                    
-                    Log.d("ViewModel", "Successfully loaded ${projectMembers.size} members and ${updatedRoles.size} roles")
-                } else {
-                    Log.e("ViewModel", "MemberService or RoleService is null for project channel")
-                    _uiState.update { it.copy(isLoadingProjectData = false) }
-                }
-            } catch (e: Exception) {
-                Log.e("ViewModel", "Failed to load project data", e)
-                _uiState.update { 
-                    it.copy(
+                } catch (e: Exception) {
+                    Log.e("ViewModel", "Failed to load project data", e)
+                    return@update it.copy(
                         projectMembers = emptyList(),
                         projectRoles = emptyList(),
                         isLoadingProjectData = false

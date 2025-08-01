@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
+import com.example.domain_usecase.provider.auth.AuthSessionUseCases
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.feature_chat.model.ChatParticipant
 
@@ -14,6 +15,7 @@ import com.example.feature_chat.model.ChatParticipant
 class ParticipantService(
     private val dmUseCaseProvider: DMUseCaseProvider,
     private val channelId: String,
+    private val authUseCases: AuthSessionUseCases,
     private val userProfileService: UserProfileService
 ) {
     
@@ -29,7 +31,7 @@ class ParticipantService(
             // Get current user's DM channel UseCases
             // Note: We need to get the current user ID properly
             val currentUserId = getCurrentUserId()
-            val dmUseCases = dmUseCaseProvider.createForUser(UserId(currentUserId))
+            val dmUseCases = dmUseCaseProvider.createForUser(currentUserId)
             
             // Use GetDmChannelUseCase to get DM channel details
             Log.d("ParticipantService", "channelId: $channelId")
@@ -76,18 +78,16 @@ class ParticipantService(
      * 현재 사용자 ID를 가져옵니다.
      * TODO: AuthService에서 실제 현재 사용자 ID를 가져오도록 구현 필요
      */
-    private suspend fun getCurrentUserId(): String {
-        // TODO: Get from AuthService or similar
-        return "current_user_id" // Placeholder - needs real implementation
-    }
-    
-    /**
-     * 참가자의 온라인 상태를 업데이트합니다.
-     * TODO: 실제 온라인 상태 추적 구현 필요
-     */
-    suspend fun updateParticipantOnlineStatus(userId: String, isOnline: Boolean) {
-        Log.d(tag, "updateParticipantOnlineStatus: Updating online status for user $userId to $isOnline")
-        // This would be implemented when we have real-time presence system
+    private suspend fun getCurrentUserId(): UserId {
+        return authUseCases.getCurrentUserSessionUseCase().let { result ->
+            when (result) {
+                is CustomResult.Success -> result.data.userId
+                else -> {
+                    Log.e(tag, "getCurrentUserId: Failed to get current user ID")
+                    UserId.UNKNOWN_USER
+                }
+            }
+        }
     }
     
     /**

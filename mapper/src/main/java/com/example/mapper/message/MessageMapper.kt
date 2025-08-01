@@ -10,8 +10,8 @@ import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MentionInfo
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
-import com.example.mapper.Mapper
 import com.example.mapper.DtoMapper
+import com.example.mapper.Mapper
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,8 +49,7 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             updatedAt = domain.updatedAt.toEpochMilli(),
             serverVersion = null,
             serverUpdatedAt = null,
-            syncStatus = SyncStatus.DEFAULT.name,
-            deleted = false
+            syncStatus = SyncStatus.DEFAULT.name
         )
     }
 
@@ -119,15 +118,20 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
         domain: Message,
         serverVersion: Long? = null,
         serverUpdatedAt: Long? = null,
-        syncStatus: SyncStatus = SyncStatus.DEFAULT,
-        deleted: Boolean = false
+        syncStatus: SyncStatus = SyncStatus.DEFAULT
     ): MessageEntity {
-        return MessageEntity.fromDomainModel(
-            message = domain,
+        return MessageEntity(
+            id = domain.id.value,
+            senderId = domain.senderId.value,
+            content = domain.content.value,
+            replyToMessageId = domain.replyToMessageId?.value,
+            isDeleted = domain.isDeleted.value,
+            mentions = "[]", // TODO: JSON 직렬화는 JsonConverter에서 처리
+            createdAt = domain.createdAt.toEpochMilli(),
+            updatedAt = domain.updatedAt.toEpochMilli(),
             serverVersion = serverVersion,
             serverUpdatedAt = serverUpdatedAt,
-            syncStatus = syncStatus,
-            deleted = deleted
+            syncStatus = syncStatus.name
         )
     }
 }

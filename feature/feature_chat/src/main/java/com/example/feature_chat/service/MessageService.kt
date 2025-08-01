@@ -2,6 +2,9 @@ package com.example.feature_chat.service
 
 import android.net.Uri
 import android.util.Log
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Message
@@ -9,9 +12,9 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
+import com.example.domain_repository.local.LocalMessagePagingRepository
 import com.example.domain_usecase.provider.chat.ChatUseCases
 import com.example.feature_chat.config.ChatMemoryConfig
-import com.example.feature_chat.memory.MessageMemoryManager
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.feature_chat.queue.QueuedMessageAction
@@ -21,6 +24,7 @@ import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import com.example.websocket.WebSocketConnectionState
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 /**
@@ -32,15 +36,33 @@ class MessageService(
     private val webSocketClient: ChatWebSocketClient,
     private val offlineMessageQueue: OfflineMessageQueue,
     private val userProfileService: UserProfileService,
+    private val localMessageRepository: LocalMessagePagingRepository,
     private val roomId: String,
     private val projectId: String? = null,
     private val channelType: String,
 ) {
     
-    // 메모리 관리자
-    private val memoryManager = MessageMemoryManager()
-    
     private var tempMessageCounter = 0L
+
+    // Paging3 메시지 Flow 제공
+    private val _messagesPager by lazy {
+        Pager(
+            config = PagingConfig(
+                pageSize = 50,
+                prefetchDistance = 10,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = { localMessageRepository.getMessagesPagingSource() }
+        )
+    }
+
+    /**
+     * Paging3를 사용한 메시지 Flow 제공
+     * Room DB를 Single Source of Truth로 사용
+     */
+    fun getMessagesPagingFlow(): Flow<PagingData<Message>> {
+        return _messagesPager.flow
+    }
     
     data class MessageResult(
         val messages: List<ChatMessageUiModel> = emptyList(),
@@ -71,6 +93,9 @@ class MessageService(
             is CustomResult.Success -> {
                 val fetchTime = System.currentTimeMillis()
                 Log.d("MessageService", "SUCCESS - got ${result.data.size} messages in ${fetchTime - startTime}ms, optimizing profile loading")
+
+                // Room에 메시지 저장 (SSOT)
+                saveMessagesToRoom(result.data)
                 
                 // 1단계: 현재 메시지에 있는 모든 사용자 ID 수집
                 val userIds = result.data.map { it.senderId.value }.toSet()
@@ -523,6 +548,10 @@ class MessageService(
         
         // 참여 방식: 모든 메시지를 동일하게 처리 (내 메시지든 남의 메시지든)
         Log.d("MessageService", "Adding new message from ${if (event.senderId == currentUserId) "myself" else "other user"}: ${event.senderId}")
+
+        // Room에 메시지 저장 (SSOT)
+        val domainMessage = createDomainMessageFromWebSocketEvent(event)
+        saveMessageToRoom(domainMessage)
         
         userProfileService.loadUserProfile(event.senderId)
         
@@ -886,5 +915,67 @@ private suspend fun Message.toUiModel(
         // 멘션 정보
         mentions = mentions,
         isMentionedMessage = isMentionedMessage
+    )
+}
+
+/**
+ * 메시지들을 Room에 저장 (SSOT)
+ */
+private suspend fun saveMessagesToRoom(messages: List<Message>) {
+    try {
+        Log.d("MessageService", "Saving ${messages.size} messages to Room database")
+        val result = localMessageRepository.saveAll(messages)
+        when (result) {
+            is CustomResult.Success -> {
+                Log.d("MessageService", "Successfully saved ${messages.size} messages to Room")
+            }
+
+            is CustomResult.Failure -> {
+                Log.e("MessageService", "Failed to save messages to Room", result.error)
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("MessageService", "Exception while saving messages to Room", e)
+    }
+}
+
+/**
+ * 단일 메시지를 Room에 저장 (SSOT)
+ */
+private suspend fun saveMessageToRoom(message: Message) {
+    try {
+        Log.d("MessageService", "Saving message ${message.id.value} to Room database")
+        val result = localMessageRepository.save(message)
+        when (result) {
+            is CustomResult.Success -> {
+                Log.d("MessageService", "Successfully saved message ${message.id.value} to Room")
+            }
+
+            is CustomResult.Failure -> {
+                Log.e(
+                    "MessageService",
+                    "Failed to save message ${message.id.value} to Room",
+                    result.error
+                )
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("MessageService", "Exception while saving message to Room", e)
+    }
+}
+
+/**
+ * 웹소켓 이벤트로부터 도메인 메시지 모델을 생성
+ */
+private fun createDomainMessageFromWebSocketEvent(event: ChatWebSocketEvent.MessageReceived): Message {
+    return Message.createNew(
+        id = DocumentId(event.messageId),
+        senderId = UserId(event.senderId),
+        content = MessageContent(event.content),
+        replyToMessageId = null, // TODO: 웹소켓 이벤트에 답장 정보 추가 필요
+        createdAt = Instant.parse(event.timestamp),
+        updatedAt = Instant.parse(event.timestamp),
+        isDeleted = MessageIsDeleted.FALSE,
+        mentions = emptyList() // TODO: 멘션 정보 파싱 추가
     )
 }

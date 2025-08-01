@@ -97,7 +97,7 @@ class ChatWebSocketClient @Inject constructor(
                             message = message.content ?: "Unknown error"
                         )
                     }
-                    "MESSAGE_ACK", "EDIT_MESSAGE_ACK", "DELETE_MESSAGE_ACK" -> {
+                    WebSocketMessage.TYPE_MESSAGE_ACK, WebSocketMessage.TYPE_EDIT_MESSAGE_ACK, WebSocketMessage.TYPE_DELETE_MESSAGE_ACK -> {
                         val correlationId = ChatLogUtil.generateCorrelationId()
                         Log.i(
                             ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(

@@ -91,7 +91,7 @@ interface MessageDao {
     @Query("""
         SELECT * FROM messages 
         WHERE created_at > :afterTimestamp
-        AND deleted = 0
+        AND is_deleted = 0
         ORDER BY created_at ASC 
         LIMIT :limit
     """)
@@ -109,7 +109,7 @@ interface MessageDao {
     @Query("""
         SELECT * FROM messages 
         WHERE created_at < :beforeTimestamp
-        AND deleted = 0
+        AND is_deleted = 0
         ORDER BY created_at DESC 
         LIMIT :limit
     """)
@@ -127,7 +127,7 @@ interface MessageDao {
     @Query("""
         SELECT * FROM messages 
         WHERE created_at BETWEEN :startTimestamp AND :endTimestamp
-        AND deleted = 0
+        AND is_deleted = 0
         ORDER BY created_at DESC
     """)
     suspend fun getMessagesBetween(startTimestamp: Long, endTimestamp: Long): List<MessageEntity>
@@ -186,7 +186,7 @@ interface MessageDao {
     @Query("""
         SELECT * FROM messages 
         WHERE sender_id = :senderId 
-        AND deleted = 0
+        AND is_deleted = 0
         ORDER BY created_at DESC
     """)
     suspend fun getMessagesBySender(senderId: String): List<MessageEntity>
@@ -199,7 +199,7 @@ interface MessageDao {
     @Query("""
         SELECT * FROM messages 
         WHERE reply_to_message_id = :replyToMessageId 
-        AND deleted = 0
+        AND is_deleted = 0
         ORDER BY created_at ASC
     """)
     suspend fun getRepliesByMessageId(replyToMessageId: String): List<MessageEntity>
@@ -229,7 +229,7 @@ interface MessageDao {
      * 삭제 마크된 메시지들 완전 제거
      * @return 삭제된 행의 개수
      */
-    @Query("DELETE FROM messages WHERE deleted = 1")
+    @Query("DELETE FROM messages WHERE is_deleted = 1")
     suspend fun deleteMarkedMessages(): Int
     
     /**
@@ -246,7 +246,7 @@ interface MessageDao {
      * 전체 메시지 개수 조회
      * @return 전체 메시지 개수
      */
-    @Query("SELECT COUNT(*) FROM messages WHERE deleted = 0")
+    @Query("SELECT COUNT(*) FROM messages WHERE is_deleted = 0")
     suspend fun getTotalCount(): Int
     
     
@@ -271,5 +271,91 @@ interface MessageDao {
      */
     @Query("SELECT EXISTS(SELECT 1 FROM messages WHERE id = :id)")
     suspend fun exists(id: String): Boolean
+
+    // ================================
+    // 양방향 페이징을 위한 추가 쿼리 메서드
+    // ================================
+
+    /**
+     * 특정 메시지를 기준으로 이후(최신) 메시지들 조회
+     * 중간 진입점에서 위쪽(최신) 방향으로 로딩할 때 사용
+     * @param anchorTimestamp 기준 메시지의 타임스탬프
+     * @param limit 조회할 개수 제한
+     * @return 기준 이후의 메시지 목록 (시간 순 정렬)
+     */
+    @Query(
+        """
+        SELECT * FROM messages 
+        WHERE created_at > :anchorTimestamp
+        AND is_deleted = 0
+        ORDER BY created_at ASC 
+        LIMIT :limit
+    """
+    )
+    suspend fun getMessagesAfterAnchor(
+        anchorTimestamp: Long,
+        limit: Int = 50
+    ): List<MessageEntity>
+
+    /**
+     * 특정 메시지를 기준으로 이전(과거) 메시지들 조회
+     * 중간 진입점에서 아래쪽(과거) 방향으로 로딩할 때 사용
+     * @param anchorTimestamp 기준 메시지의 타임스탬프
+     * @param limit 조회할 개수 제한
+     * @return 기준 이전의 메시지 목록 (시간 역순 정렬)
+     */
+    @Query(
+        """
+        SELECT * FROM messages 
+        WHERE created_at < :anchorTimestamp
+        AND is_deleted = 0
+        ORDER BY created_at DESC 
+        LIMIT :limit
+    """
+    )
+    suspend fun getMessagesBeforeAnchor(
+        anchorTimestamp: Long,
+        limit: Int = 50
+    ): List<MessageEntity>
+
+    /**
+     * 특정 메시지 ID를 기준으로 주변 메시지들 조회
+     * 중간 진입점 설정 시 사용 (기준점 + 앞뒤 컨텍스트)
+     * @param anchorMessageId 기준 메시지 ID
+     * @param beforeCount 기준 이전 메시지 개수
+     * @param afterCount 기준 이후 메시지 개수
+     * @return 기준 메시지 주변의 메시지 목록
+     */
+    @Query(
+        """
+        WITH anchor_message AS (
+            SELECT created_at FROM messages WHERE id = :anchorMessageId
+        ),
+        before_messages AS (
+            SELECT * FROM messages 
+            WHERE created_at < (SELECT created_at FROM anchor_message)
+            AND is_deleted = 0
+            ORDER BY created_at DESC 
+            LIMIT :beforeCount
+        ),
+        after_messages AS (
+            SELECT * FROM messages 
+            WHERE created_at >= (SELECT created_at FROM anchor_message)
+            AND is_deleted = 0
+            ORDER BY created_at ASC 
+            LIMIT :afterCount
+        )
+        SELECT * FROM (
+            SELECT * FROM before_messages
+            UNION ALL
+            SELECT * FROM after_messages
+        ) ORDER BY created_at ASC
+    """
+    )
+    suspend fun getMessagesAroundAnchor(
+        anchorMessageId: String,
+        beforeCount: Int = 25,
+        afterCount: Int = 25
+    ): List<MessageEntity>
     
 }
