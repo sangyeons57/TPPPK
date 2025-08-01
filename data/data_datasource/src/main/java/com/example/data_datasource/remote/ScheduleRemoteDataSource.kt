@@ -54,8 +54,7 @@ interface ScheduleRemoteDataSource : DefaultDatasource<ScheduleDTO> {
 class ScheduleRemoteDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     val firestore: FirebaseFirestore
-) : DefaultDatasourceImpl<ScheduleDTO>(firestore),
-    ScheduleRemoteDataSource {
+) : DefaultDatasourceImpl<ScheduleDTO>(firestore), ScheduleRemoteDataSource {
     override val dtoClass = ScheduleDTO::class.java
 
     override suspend fun findByMonth(userId : String, yearMonth: YearMonth): Flow<CustomResult<List<ScheduleDTO>, Exception>> = callbackFlow {

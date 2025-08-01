@@ -12,7 +12,6 @@ import com.example.mapper.DtoMapper
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import retrofit2.Converter
 
 abstract class DefaultRepositoryImpl<D : AggregateRoot, E : DTO>(
     private val defaultDatasource: DefaultDatasource<E>,

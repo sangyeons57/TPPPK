@@ -2,7 +2,6 @@ package com.example.data_datasource.remote
 
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
-import com.example.data_model.remote.DMWrapperDTO
 import com.example.data_model.remote.MessageAttachmentDTO
 import com.google.firebase.firestore.FirebaseFirestore
 import javax.inject.Inject
