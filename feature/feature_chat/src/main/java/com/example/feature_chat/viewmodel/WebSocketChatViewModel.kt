@@ -16,7 +16,7 @@ import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.MentionSuggestion
 import com.example.feature_chat.service.ChatServiceProvider
 import com.example.feature_chat.websocket.ChatWebSocketEvent
-import com.example.websocket.WebSocketConnectionState
+import com.example.websocket.core.WebSocketConnectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async

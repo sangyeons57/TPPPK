@@ -1,6 +1,6 @@
 package com.example.feature_chat.model
 
-import com.example.websocket.WebSocketConnectionState
+import com.example.websocket.core.WebSocketConnectionState
 
 /**
  * WebSocket 연결 상태와 관련된 UI 상태를 관리하는 데이터 클래스
@@ -85,9 +85,9 @@ data class ConnectionState(
         /**
          * 연결된 상태 생성
          */
-        fun connected(): ConnectionState {
+        fun connected(serverUrl: String = ""): ConnectionState {
             return ConnectionState(
-                connectionState = WebSocketConnectionState.Connected,
+                connectionState = WebSocketConnectionState.Connected(serverUrl),
                 statusText = "실시간 연결됨",
                 showConnectionError = false,
                 lastConnectionTime = System.currentTimeMillis(),

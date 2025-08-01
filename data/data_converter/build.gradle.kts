@@ -16,7 +16,7 @@ dependencies {
     implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
     implementation(project(":data:data_model"))
-    implementation(project(":mapper"))
+    implementation(project(":data:mapper"))
 
     // OkHttp and Retrofit dependencies
     implementation(libs.okhttp)

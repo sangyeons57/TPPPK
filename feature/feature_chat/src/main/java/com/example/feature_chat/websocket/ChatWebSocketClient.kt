@@ -5,176 +5,120 @@ import com.example.domain.model.data.UserSession
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.feature_chat.util.ChatLogUtil
-import com.example.websocket.GlobalWebSocketService
-import com.example.websocket.OperationStatus
-import com.example.websocket.WebSocketEventTypes
-import com.example.websocket.WebSocketManager
-import com.example.websocket.WebSocketMessage
+import com.example.websocket.core.WebSocketConnectionState
+import com.example.websocket.event.WebSocketDomainEvent
+import com.example.websocket.usecase.RoomWebSocketUseCases
+import com.example.websocket.usecase.WebSocketUseCaseProvider
+import com.example.websocket.usecase.WebSocketUseCases
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.withTimeoutOrNull
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * 채팅 기능을 위한 WebSocket 클라이언트 (리팩토링된 버전)
+ *
+ * 기존 ChatWebSocketClient의 인터페이스를 유지하면서
+ * 내부적으로는 새로운 WebSocketUseCaseProvider를 사용하여
+ * Clean Architecture 원칙을 따르고 중앙 집중식 WebSocket 관리를 활용한다.
+ *
+ * 변경사항:
+ * - GlobalWebSocketService 직접 사용 → WebSocketUseCaseProvider 사용
+ * - 복잡한 WebSocket 로직을 core:websocket으로 이동
+ * - 채팅 관련 로직만 유지하고 나머지는 use case에 위임
+ * - 기존 인터페이스 호환성 유지로 기존 UI 코드 수정 최소화
+ */
 @Singleton
 class ChatWebSocketClient @Inject constructor(
-    val globalWebSocketService: GlobalWebSocketService
+    private val webSocketUseCaseProvider: WebSocketUseCaseProvider
 ) {
-    
-    // Delegate to global service for connection state
-    val connectionState = globalWebSocketService.globalConnectionState
-    
-    // Get the underlying WebSocketManager for direct operations
-    val webSocketManager: WebSocketManager = globalWebSocketService.getWebSocketManager()
-    val isAuthenticated = webSocketManager.isAuthenticated
-    
+
+    // WebSocket 사용 사례들
+    private val webSocketUseCases: WebSocketUseCases = webSocketUseCaseProvider.create()
+
+    // 연결 상태 (UseCase를 통해 접근)
+    val connectionState: Flow<WebSocketConnectionState> =
+        webSocketUseCases.getConnectionStateUseCase()
+    val isAuthenticated: Flow<Boolean> = webSocketUseCases.getAuthenticationStateUseCase()
+
+    /**
+     * 특정 방의 채팅 메시지 이벤트 스트림 반환
+     *
+     * 기존 인터페이스를 유지하면서 내부적으로는 새로운 WebSocket 아키텍처 사용
+     */
     fun getChatMessages(roomId: String): Flow<ChatWebSocketEvent> {
         val correlationId = ChatLogUtil.generateCorrelationId()
         Log.d(
             ChatLogUtil.TAG_WEBSOCKET, ChatLogUtil.formatLogMessage(
             correlationId = correlationId,
-            message = "getChatMessages 시작",
+                message = "getChatMessages 시작 (새 아키텍처)",
             roomId = roomId
         ))
-        
-        return webSocketManager.incomingMessages
-            .filter { it.roomId == roomId && it.type != WebSocketMessage.TYPE_AUTH_SUCCESS }
-            .onEach { message ->
+
+        // 방별 WebSocket 사용 사례 생성
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+
+        return roomUseCases.subscribeToRoomEventsUseCase()
+            .onEach { domainEvent ->
                 val correlationId = ChatLogUtil.generateCorrelationId()
                 Log.i(
                     ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
-                    correlationId = correlationId,
-                    message = "WebSocket 메시지 RECEIVE 성공",
-                    userId = message.senderId,
-                    roomId = roomId,
-                    messageId = message.messageId ?: "unknown",
-                        metadata = mapOf(
-                            "action" to OperationStatus.ACTION_RECEIVE,
-                            "status" to OperationStatus.SUCCESS
-                        )
-                ))
+                        correlationId = correlationId,
+                        message = "WebSocket 도메인 이벤트 수신: ${domainEvent::class.simpleName}",
+                        roomId = roomId
+                    )
+                )
             }
-            .map { message ->
-                when (message.type) {
-                    WebSocketMessage.TYPE_MESSAGE -> {
-                        ChatWebSocketEvent.MessageReceived(
-                            messageId = message.messageId ?: "",
-                            senderId = message.senderId ?: "",
-                            content = message.content ?: "",
-                            timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString(),
-                            replyToMessageId = message.replyToMessageId
-                        )
-                    }
-                    WebSocketMessage.TYPE_EDIT_MESSAGE -> {
-                        ChatWebSocketEvent.MessageEdited(
-                            messageId = message.messageId ?: "",
-                            senderId = message.senderId ?: "",
-                            newContent = message.content ?: "",
-                            timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
-                        )
-                    }
-                    WebSocketMessage.TYPE_DELETE_MESSAGE -> {
-                        ChatWebSocketEvent.MessageDeleted(
-                            messageId = message.messageId ?: "",
-                            senderId = message.senderId ?: "",
-                            timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
-                        )
-                    }
-                    WebSocketMessage.TYPE_SYSTEM, WebSocketEventTypes.JOINED_ROOM, WebSocketEventTypes.LEFT_ROOM -> {
-                        ChatWebSocketEvent.SystemMessage(
-                            content = message.content ?: "",
-                            timestamp = message.timestamp?.let { Instant.ofEpochSecond(it.toLong()).toString() } ?: Instant.now().toString()
-                        )
-                    }
-                    WebSocketMessage.TYPE_ERROR -> {
-                        val correlationId = ChatLogUtil.generateCorrelationId()
-                        Log.e(
-                            ChatLogUtil.TAG_WEBSOCKET, ChatLogUtil.formatLogMessage(
-                            correlationId = correlationId,
-                            message = "WebSocket 에러 수신: ${message.content}",
-                            roomId = roomId
-                        ))
-                        ChatWebSocketEvent.Error(
-                            message = message.content ?: "Unknown error"
-                        )
-                    }
-                    WebSocketMessage.TYPE_MESSAGE_ACK, WebSocketMessage.TYPE_EDIT_MESSAGE_ACK, WebSocketMessage.TYPE_DELETE_MESSAGE_ACK -> {
-                        val correlationId = ChatLogUtil.generateCorrelationId()
-                        Log.i(
-                            ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
-                            correlationId = correlationId,
-                            message = "메시지 처리 성공 확인: ${message.type}",
-                            roomId = roomId,
-                            messageId = message.messageId ?: "unknown"
-                        ))
-                        ChatWebSocketEvent.MessageAck(
-                            messageId = message.messageId ?: "",
-                            ackType = message.type
-                        )
-                    }
-                    WebSocketEventTypes.MESSAGE_FAILED, WebSocketEventTypes.EDIT_MESSAGE_FAILED, WebSocketEventTypes.DELETE_MESSAGE_FAILED -> {
-                        val correlationId = ChatLogUtil.generateCorrelationId()
-                        Log.e(
-                            ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
-                            correlationId = correlationId,
-                            message = "메시지 처리 실패 알림: ${message.type}",
-                            roomId = roomId,
-                            messageId = message.messageId ?: "unknown"
-                        ))
-                        ChatWebSocketEvent.MessageFailed(
-                            messageId = message.messageId ?: "",
-                            failureType = message.type
-                        )
-                    }
-                    else -> {
-                        val correlationId = ChatLogUtil.generateCorrelationId()
-                        Log.w(
-                            ChatLogUtil.TAG_WEBSOCKET, ChatLogUtil.formatLogMessage(
-                            correlationId = correlationId,
-                            message = "알 수 없는 메시지 타입: ${message.type}",
-                            roomId = roomId,
-                            metadata = mapOf("messageType" to message.type)
-                        ))
-                        ChatWebSocketEvent.Unknown(message.type)
-                    }
-                }
+            .mapNotNull { domainEvent ->
+                // WebSocketDomainEvent를 ChatWebSocketEvent로 변환
+                ChatWebSocketEvent.fromDomainEvent(domainEvent)
+            }
+            .onEach { chatEvent ->
+                val correlationId = ChatLogUtil.generateCorrelationId()
+                Log.i(
+                    ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
+                        correlationId = correlationId,
+                        message = "채팅 이벤트 변환 완료: ${chatEvent::class.simpleName}",
+                        roomId = roomId
+                    )
+                )
             }
     }
-    
+
+    /**
+     * WebSocket 연결 (UseCase 위임)
+     */
     suspend fun connect(serverUrl: String, authToken: String): Result<Unit> {
         val correlationId = ChatLogUtil.generateCorrelationId()
         Log.i(
             ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
             correlationId = correlationId,
-            message = "WebSocket 연결 시도 (GlobalWebSocketService 사용)",
+                message = "WebSocket 연결 시도 (UseCase 사용)",
             metadata = mapOf("serverUrl" to serverUrl)
         ))
         
-        // Note: Connection is now managed by GlobalWebSocketService
-        // This method exists for compatibility but the actual connection
-        // should already be established by the global service
         return try {
-            // Configure the global service if needed
-            globalWebSocketService.configure(serverUrl)
+            val result = webSocketUseCases.connectUseCase(serverUrl, authToken)
             
-            // Force reconnect if not already connected
-            if (connectionState.value !is com.example.websocket.WebSocketConnectionState.Connected) {
-                globalWebSocketService.forceReconnect()
-            }
-            
-            val result = Result.success(Unit)
-
             val connectionCorrelationId = ChatLogUtil.generateCorrelationId()
-            Log.i(
-                ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                correlationId = connectionCorrelationId,
-                message = "GlobalWebSocketService 연결 위임 완료",
-                metadata = mapOf("serverUrl" to serverUrl, "status" to "DELEGATED")
-            ))
+            if (result.isSuccess) {
+                Log.i(
+                    ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
+                        correlationId = connectionCorrelationId,
+                        message = "WebSocket 연결 성공 (UseCase 사용)",
+                        metadata = mapOf("serverUrl" to serverUrl)
+                    )
+                )
+            } else {
+                Log.e(
+                    ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
+                        correlationId = connectionCorrelationId,
+                        message = "WebSocket 연결 실패: ${result.exceptionOrNull()?.message}",
+                        metadata = mapOf("serverUrl" to serverUrl)
+                    )
+                )
+            }
             
             result
         } catch (e: Exception) {
@@ -182,16 +126,16 @@ class ChatWebSocketClient @Inject constructor(
             Log.e(
                 ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
                 correlationId = errorCorrelationId,
-                message = "GlobalWebSocketService 연결 위임 실패: ${e.message}",
+                    message = "WebSocket 연결 중 예외 발생: ${e.message}",
                 metadata = mapOf("serverUrl" to serverUrl)
-            ))
+                ), e
+            )
             Result.failure(e)
         }
     }
     
     /**
-     * UserSession을 받아서 토큰을 추출하여 WebSocket에 연결합니다.
-     * 토큰이 유효하지 않은 경우 오류를 반환합니다.
+     * UserSession을 사용한 WebSocket 연결 (UseCase 위임)
      */
     suspend fun connectWithSession(serverUrl: String, userSession: UserSession): Result<Unit> {
         val correlationId = ChatLogUtil.generateCorrelationId()
@@ -207,93 +151,51 @@ class ChatWebSocketClient @Inject constructor(
             ))
             return Result.failure(error)
         }
-        
-        val authToken = userSession.idToken!!.value
 
         Log.i(
             ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
             correlationId = correlationId,
-            message = "UserSession으로 WebSocket 연결 시도",
+                message = "UserSession으로 WebSocket 연결 시도 (UseCase 사용)",
             userId = userSession.userId.value,
         ))
-        
-        return connect(serverUrl, authToken)
+
+        return webSocketUseCases.connectWithSessionUseCase(serverUrl, userSession)
     }
-    
+
+    /**
+     * WebSocket 인증 대기 (UseCase 위임)
+     */
     suspend fun waitForAuthentication(userId: UserId, timeoutMs: Long = 15000): Result<Unit> {
         val authCorrelationId = ChatLogUtil.generateCorrelationId()
         Log.i(
             ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
             correlationId = authCorrelationId,
-            message = "WebSocket 인증 확인 대기 (타임아웃: ${timeoutMs}ms)",
+                message = "WebSocket 인증 확인 대기 (UseCase 사용, 타임아웃: ${timeoutMs}ms)",
             userId = userId.value
         ))
         
-        // First check if already authenticated
-        if (webSocketManager.isAuthenticated.value) {
-            Log.i(
-                ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                correlationId = authCorrelationId,
-                message = "이미 인증된 상태",
-                userId = userId.value
-            ))
-            return Result.success(Unit)
-        }
-        
-        // Wait for AUTH_SUCCESS message from server with improved error handling
         return try {
-            val authResult = withTimeoutOrNull(timeoutMs) {
-                webSocketManager.incomingMessages
-                    .onEach { message ->
-                        Log.d(ChatLogUtil.TAG_CONNECTION, "수신된 메시지 타입: ${message.type}")
-                    }
-                    .filter { message -> 
-                        message.type == WebSocketMessage.TYPE_AUTH_SUCCESS || 
-                        message.type == WebSocketMessage.TYPE_ERROR
-                    }
-                    .first()
-            }
-            
-            when {
-                authResult == null -> {
-                    Log.e(
-                        ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                        correlationId = authCorrelationId,
-                        message = "WebSocket 인증 시간 초과 (${timeoutMs}ms)",
-                        userId = userId.value,
-                        metadata = mapOf("connectionState" to (connectionState.value::class.simpleName ?: "unknown"))
-                    ))
-                    Result.failure(Exception("Authentication timeout - no AUTH_SUCCESS received within ${timeoutMs}ms"))
-                }
-                authResult.type == WebSocketMessage.TYPE_AUTH_SUCCESS -> {
-                    Log.i(
-                        ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
+            val result = webSocketUseCases.waitForAuthenticationUseCase(userId, timeoutMs)
+
+            if (result.isSuccess) {
+                Log.i(
+                    ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
                         correlationId = authCorrelationId,
                         message = "WebSocket 인증 성공",
-                        userId = userId.value,
-                        metadata = mapOf("authContent" to (authResult.content ?: "none"))
-                    ))
-                    Result.success(Unit)
-                }
-                authResult.type == WebSocketMessage.TYPE_ERROR -> {
-                    Log.e(
-                        ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                        correlationId = authCorrelationId,
-                        message = "WebSocket 인증 실패: ${authResult.content}",
                         userId = userId.value
-                    ))
-                    Result.failure(Exception("Authentication failed: ${authResult.content}"))
-                }
-                else -> {
-                    Log.e(
-                        ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
+                    )
+                )
+            } else {
+                Log.e(
+                    ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
                         correlationId = authCorrelationId,
-                        message = "WebSocket 인증 처리 중 예상치 못한 메시지 타입: ${authResult.type}",
+                        message = "WebSocket 인증 실패: ${result.exceptionOrNull()?.message}",
                         userId = userId.value
-                    ))
-                    Result.failure(Exception("Unexpected message type during authentication: ${authResult.type}"))
-                }
+                    )
+                )
             }
+
+            result
         } catch (e: Exception) {
             Log.e(
                 ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
@@ -304,180 +206,64 @@ class ChatWebSocketClient @Inject constructor(
             Result.failure(e)
         }
     }
-    
+
+    /**
+     * WebSocket 연결 해제 (UseCase 위임)
+     */
     suspend fun disconnect() {
         val disconnectCorrelationId = ChatLogUtil.generateCorrelationId()
         Log.i(
             ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
             correlationId = disconnectCorrelationId,
-            message = "WebSocket 연결 해제 시도 (GlobalWebSocketService는 유지)"
+                message = "WebSocket 연결 해제 시도 (UseCase 사용)"
         ))
-        
-        // Note: We don't disconnect the global service as it's managed app-wide
-        // Individual chat features should only leave their rooms
-        // The global connection remains for other features to use
+
+        webSocketUseCases.disconnectUseCase()
 
         Log.i(
             ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
             correlationId = disconnectCorrelationId,
-            message = "개별 채팅 기능 종료 - GlobalWebSocketService는 계속 활성 상태"
+                message = "개별 채팅 기능 종료 완료 (GlobalWebSocketService는 계속 활성 상태)"
         ))
     }
-    
-    // 방 입장 상태 추적을 위한 변수들
-    private val joiningRooms = mutableSetOf<String>()
-    private val joinedRooms = mutableSetOf<String>()
-    
+
+    /**
+     * 방 입장 (UseCase 위임)
+     */
     suspend fun joinRoom(roomId: String, userId: UserId? = null): Result<Unit> {
         val joinCorrelationId = ChatLogUtil.generateCorrelationId()
         Log.i(
             ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
             correlationId = joinCorrelationId,
-            message = "채팅방 입장 시도",
+                message = "채팅방 입장 시도 (UseCase 사용)",
             roomId = roomId,
             userId = userId?.value
         ))
-        
-        // 이미 입장 중이거나 입장한 경우 중복 방지
-        synchronized(joiningRooms) {
-            if (joiningRooms.contains(roomId)) {
+
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+        return try {
+            val result = roomUseCases.joinRoomUseCase(userId)
+
+            if (result.isSuccess) {
                 Log.i(
                     ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
                     correlationId = joinCorrelationId,
-                    message = "이미 채팅방 입장 중",
+                        message = "채팅방 입장 성공",
                     roomId = roomId,
                     userId = userId?.value
                 ))
-                return Result.success(Unit)
-            }
-            if (joinedRooms.contains(roomId)) {
-                Log.i(
-                    ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                    correlationId = joinCorrelationId,
-                    message = "이미 채팅방에 입장함",
-                    roomId = roomId,
-                    userId = userId?.value
-                ))
-                return Result.success(Unit)
-            }
-            joiningRooms.add(roomId)
-        }
-        
-        try {
-            // WebSocket 연결 상태 확인
-            if (connectionState.value !is com.example.websocket.WebSocketConnectionState.Connected) {
-                Log.w(
-                    ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                    correlationId = joinCorrelationId,
-                    message = "WebSocket 연결되지 않음, 연결 대기 중",
-                    roomId = roomId,
-                    userId = userId?.value
-                ))
-                
-                // 연결이 완료될 때까지 대기 (최대 10초)
-                val connectionWaitResult = withTimeoutOrNull(10000) {
-                    connectionState.first { it is com.example.websocket.WebSocketConnectionState.Connected }
-                }
-                
-                if (connectionWaitResult == null) {
-                    synchronized(joiningRooms) { joiningRooms.remove(roomId) }
-                    return Result.failure(Exception("WebSocket connection timeout while joining room"))
-                }
-            }
-            
-            // userId가 제공된 경우 직접 메시지를 보내고, 그렇지 않으면 기본 WebSocketManager 사용
-            val sendResult = if (userId != null) {
-                val joinMessage = WebSocketMessage(
-                    type = WebSocketMessage.TYPE_JOIN_ROOM,
-                    roomId = roomId,
-                    senderId = userId.value,
-                    timestamp = Instant.now().epochSecond.toDouble()
-                )
-                webSocketManager.sendMessage(joinMessage)
             } else {
-                webSocketManager.joinRoom(roomId)
-            }
-            
-            return if (sendResult.isSuccess) {
-                // Wait for JOINED_ROOM confirmation from server with improved handling
-                try {
-                    val confirmationResult = withTimeoutOrNull(10000) { // 10초로 연장
-                        webSocketManager.incomingMessages
-                            .filter { message -> 
-                                (message.type == "JOINED_ROOM" && message.roomId == roomId) ||
-                                (message.type == WebSocketMessage.TYPE_ERROR && 
-                                 (message.content?.contains("Room") == true || message.roomId == roomId))
-                            }
-                            .first()
-                    }
-                    
-                    when {
-                        confirmationResult?.type == "JOINED_ROOM" -> {
-                            synchronized(joiningRooms) {
-                                joiningRooms.remove(roomId)
-                                joinedRooms.add(roomId)
-                            }
-                            Log.i(
-                                ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                                correlationId = joinCorrelationId,
-                                message = "채팅방 입장 확인됨",
-                                roomId = roomId,
-                                userId = userId?.value
-                            ))
-                            Result.success(Unit)
-                        }
-                        confirmationResult?.type == WebSocketMessage.TYPE_ERROR -> {
-                            synchronized(joiningRooms) { joiningRooms.remove(roomId) }
-                            Log.e(
-                                ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                                correlationId = joinCorrelationId,
-                                message = "채팅방 입장 실패: ${confirmationResult.content}",
-                                roomId = roomId,
-                                userId = userId?.value
-                            ))
-                            Result.failure(Exception("Room join failed: ${confirmationResult.content}"))
-                        }
-                        else -> {
-                            // 타임아웃이지만 메시지는 전송됨 - 낙관적으로 성공 처리
-                            synchronized(joiningRooms) {
-                                joiningRooms.remove(roomId)
-                                joinedRooms.add(roomId)
-                            }
-                            Log.w(
-                                ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                                correlationId = joinCorrelationId,
-                                message = "채팅방 입장 확인 시간 초과 (낙관적 성공)",
-                                roomId = roomId,
-                                userId = userId?.value
-                            ))
-                            Result.success(Unit)
-                        }
-                    }
-                } catch (e: Exception) {
-                    synchronized(joiningRooms) { joiningRooms.remove(roomId) }
-                    Log.e(
-                        ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                        correlationId = joinCorrelationId,
-                        message = "채팅방 입장 확인 중 오류: ${e.message}",
-                        roomId = roomId,
-                        userId = userId?.value
-                    ), e)
-                    // 메시지는 전송되었으므로 성공으로 처리
-                    Result.success(Unit)
-                }
-            } else {
-                synchronized(joiningRooms) { joiningRooms.remove(roomId) }
                 Log.e(
                     ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
-                    correlationId = joinCorrelationId,
-                    message = "채팅방 입장 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}",
+                        correlationId = joinCorrelationId,
+                        message = "채팅방 입장 실패: ${result.exceptionOrNull()?.message}",
                     roomId = roomId,
                     userId = userId?.value
                 ))
-                sendResult
             }
+
+            result
         } catch (e: Exception) {
-            synchronized(joiningRooms) { joiningRooms.remove(roomId) }
             Log.e(
                 ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
                 correlationId = joinCorrelationId,
@@ -485,26 +271,24 @@ class ChatWebSocketClient @Inject constructor(
                 roomId = roomId,
                 userId = userId?.value
             ), e)
-            return Result.failure(e)
+            Result.failure(e)
         }
     }
-    
+
+    /**
+     * 방 퇴장 (UseCase 위임)
+     */
     suspend fun leaveRoom(roomId: String): Result<Unit> {
         val leaveCorrelationId = ChatLogUtil.generateCorrelationId()
         Log.i(
             ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
             correlationId = leaveCorrelationId,
-            message = "채팅방 퇴장 시도",
+                message = "채팅방 퇴장 시도 (UseCase 사용)",
             roomId = roomId
         ))
-        
-        // 방 상태 정리
-        synchronized(joiningRooms) {
-            joiningRooms.remove(roomId)
-            joinedRooms.remove(roomId)
-        }
-        
-        return webSocketManager.leaveRoom(roomId).also { result ->
+
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+        return roomUseCases.leaveRoomUseCase().also { result ->
             if (result.isSuccess) {
                 Log.i(
                     ChatLogUtil.TAG_CONNECTION, ChatLogUtil.formatLogMessage(
@@ -524,30 +308,33 @@ class ChatWebSocketClient @Inject constructor(
     }
     
     /**
-     * 방 입장 상태 확인 메서드
+     * 방 입장 상태 확인 (UseCase 위임)
      */
     fun isRoomJoined(roomId: String): Boolean {
-        synchronized(joiningRooms) {
-            return joinedRooms.contains(roomId)
-        }
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+        return roomUseCases.isRoomJoinedUseCase()
     }
-    
+
+    /**
+     * 방 입장 진행 중 상태 확인 (UseCase 위임)
+     */
     fun isRoomJoining(roomId: String): Boolean {
-        synchronized(joiningRooms) {
-            return joiningRooms.contains(roomId)
-        }
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+        return roomUseCases.isRoomJoiningUseCase()
     }
     
     /**
-     * 모든 방에서 퇴장 (연결 해제 시 호출)
+     * 모든 방에서 퇴장 (UseCase 위임)
+     * 호환성을 위해 유지하지만 실제로는 WebSocketMessageService에서 처리
      */
     fun clearAllRooms() {
-        synchronized(joiningRooms) {
-            joiningRooms.clear()
-            joinedRooms.clear() 
-        }
+        Log.i(ChatLogUtil.TAG_CONNECTION, "모든 방 상태 정리 (UseCase에서 처리됨)")
+        // WebSocketMessageService에서 중앙 집중적으로 처리되므로 별도 작업 불필요
     }
-    
+
+    /**
+     * 메시지 전송 (UseCase 위임)
+     */
     suspend fun sendMessage(
         roomId: String,
         senderId: UserId,
@@ -561,27 +348,23 @@ class ChatWebSocketClient @Inject constructor(
         Log.i(
             ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
             correlationId = sendCorrelationId,
-            message = "메시지 전송 시도",
+                message = "메시지 전송 시도 (UseCase 사용)",
             userId = senderId.value,
             roomId = roomId,
             messageId = messageId.value,
             metadata = mapOf("contentLength" to content.length.toString())
         ))
-        
-        val message = WebSocketMessage(
-            type = WebSocketMessage.TYPE_MESSAGE,
-            roomId = roomId,
-            senderId = senderId.value,
+
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+        return roomUseCases.sendMessageUseCase(
+            senderId = senderId,
             content = content,
-            messageId = messageId.value,
-            replyToMessageId = replyToMessageId?.value,
-            timestamp = Instant.now().epochSecond.toDouble(),
+            messageId = messageId,
+            replyToMessageId = replyToMessageId,
             projectId = projectId,
             channelType = channelType
-        )
-        
-        return webSocketManager.sendMessage(message).also { result ->
-            val status = if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
+        ).also { result ->
+            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
             Log.i(
                 ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
                 correlationId = sendCorrelationId,
@@ -604,7 +387,10 @@ class ChatWebSocketClient @Inject constructor(
             }
         }
     }
-    
+
+    /**
+     * 메시지 수정 (UseCase 위임)
+     */
     suspend fun editMessage(
         roomId: String,
         messageId: DocumentId,
@@ -616,24 +402,20 @@ class ChatWebSocketClient @Inject constructor(
         Log.i(
             ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
             correlationId = editCorrelationId,
-            message = "메시지 수정 시도",
+                message = "메시지 수정 시도 (UseCase 사용)",
             roomId = roomId,
             messageId = messageId.value,
             metadata = mapOf("newContentLength" to newContent.length.toString())
         ))
-        
-        val message = WebSocketMessage(
-            type = WebSocketMessage.TYPE_EDIT_MESSAGE,
-            roomId = roomId,
-            messageId = messageId.value,
-            content = newContent,
-            timestamp = Instant.now().epochSecond.toDouble(),
+
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+        return roomUseCases.editMessageUseCase(
+            messageId = messageId,
+            newContent = newContent,
             projectId = projectId,
             channelType = channelType
-        )
-        
-        return webSocketManager.sendMessage(message).also { result ->
-            val status = if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
+        ).also { result ->
+            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
             Log.i(
                 ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
                 correlationId = editCorrelationId,
@@ -654,7 +436,10 @@ class ChatWebSocketClient @Inject constructor(
             }
         }
     }
-    
+
+    /**
+     * 메시지 삭제 (UseCase 위임)
+     */
     suspend fun deleteMessage(
         roomId: String,
         messageId: DocumentId,
@@ -665,22 +450,18 @@ class ChatWebSocketClient @Inject constructor(
         Log.i(
             ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
             correlationId = deleteCorrelationId,
-            message = "메시지 삭제 시도",
+                message = "메시지 삭제 시도 (UseCase 사용)",
             roomId = roomId,
             messageId = messageId.value
         ))
-        
-        val message = WebSocketMessage(
-            type = WebSocketMessage.TYPE_DELETE_MESSAGE,
-            roomId = roomId,
-            messageId = messageId.value,
-            timestamp = Instant.now().epochSecond.toDouble(),
+
+        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+        return roomUseCases.deleteMessageUseCase(
+            messageId = messageId,
             projectId = projectId,
             channelType = channelType
-        )
-        
-        return webSocketManager.sendMessage(message).also { result ->
-            val status = if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
+        ).also { result ->
+            val status = if (result.isSuccess) "SUCCESS" else "FAILED"
             Log.i(
                 ChatLogUtil.TAG_MESSAGE, ChatLogUtil.formatLogMessage(
                 correlationId = deleteCorrelationId,

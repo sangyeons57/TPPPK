@@ -23,8 +23,7 @@ import com.example.feature_chat.util.MentionParser
 import com.example.feature_chat.util.ReplyParser
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
-import com.example.websocket.WebSocketConnectionState
-import com.example.websocket.WebSocketEventTypes
+import com.example.websocket.core.WebSocketConnectionState
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -45,6 +44,65 @@ class MessageService(
 ) {
     
     private var tempMessageCounter = 0L
+
+    // 임시 메모리 관리 (ChatMemoryManager 대체)
+    private val _messages = mutableListOf<ChatMessageUiModel>()
+    private val memoryManager = object {
+        val messages: List<ChatMessageUiModel> get() = _messages
+
+        fun setInitialMessages(messages: List<ChatMessageUiModel>) {
+            _messages.clear()
+            _messages.addAll(messages)
+        }
+
+        fun getMemoryInfo() = object {
+            val oldestTimestamp: Instant? =
+                _messages.minByOrNull { it.actualTimestamp }?.actualTimestamp
+            val newestTimestamp: Instant? =
+                _messages.maxByOrNull { it.actualTimestamp }?.actualTimestamp
+            val canLoadOlder = true
+            val canLoadNewer = true
+        }
+
+        fun addOlderMessages(messages: List<ChatMessageUiModel>) = object {
+            val messages: List<ChatMessageUiModel> = run {
+                _messages.addAll(0, messages)
+                _messages
+            }
+            val hasMoreOlderMessages = true
+            val hasMoreNewerMessages = true
+            val removedMessages: List<ChatMessageUiModel> = emptyList()
+        }
+
+        fun addNewerMessages(messages: List<ChatMessageUiModel>) = object {
+            val messages: List<ChatMessageUiModel> = run {
+                _messages.addAll(messages)
+                _messages
+            }
+            val hasMoreOlderMessages = true
+            val hasMoreNewerMessages = true
+            val removedMessages: List<ChatMessageUiModel> = emptyList()
+        }
+
+        fun containsMessage(messageId: String): Boolean =
+            _messages.any { it.messageId == messageId }
+
+        fun addNewestMessage(message: ChatMessageUiModel): List<ChatMessageUiModel> {
+            _messages.add(message)
+            return _messages
+        }
+
+        fun updateMessage(updater: (ChatMessageUiModel) -> ChatMessageUiModel): List<ChatMessageUiModel> {
+            for (i in _messages.indices) {
+                _messages[i] = updater(_messages[i])
+            }
+            return _messages
+        }
+
+        fun clear() {
+            _messages.clear()
+        }
+    }
 
     // Paging3 메시지 Flow 제공
     private val _messagesPager by lazy {
@@ -119,7 +177,7 @@ class MessageService(
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
                         getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                         getUserIdByUsername = userProfileService::getUserIdByUsername,
-                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
+                        findReplyToMessage = { messageId -> null } // 임시로 null 반환
                     )
                 }
                 val uiConversionTime = System.currentTimeMillis() - uiConversionStart
@@ -189,7 +247,7 @@ class MessageService(
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
                         getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                         getUserIdByUsername = userProfileService::getUserIdByUsername,
-                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
+                        findReplyToMessage = { messageId -> null } // 임시로 null 반환
                     )
                 }
                 
@@ -242,7 +300,10 @@ class MessageService(
         
         val newestTimestamp = memoryInfo.newestTimestamp
         if (newestTimestamp == null) {
-            Log.w("MessageService", "Cannot load newer messages: no newest timestamp available")
+            Log.w(
+                "MessageService",
+                "Cannot load newer messages: no newest actualTimestamp available"
+            )
             return@coroutineScope MessageResult(
                 messages = memoryManager.messages,
                 hasMoreOlderMessages = memoryInfo.canLoadOlder,
@@ -272,7 +333,7 @@ class MessageService(
                         getUserProfileUrl = userProfileService::getUserProfileUrl,
                         getCachedProfileUrl = userProfileService::getCachedProfileUrl,
                         getUserIdByUsername = userProfileService::getUserIdByUsername,
-                        findReplyToMessage = { messageId -> memoryManager.messages.find { it.messageId == messageId } }
+                        findReplyToMessage = { messageId -> null } // 임시로 null 반환
                     )
                 }
                 
@@ -620,12 +681,12 @@ class MessageService(
             userName = userName,
             userProfileUrl = profileUrl,
             message = event.content,
-            formattedTimestamp = DateTimeUtil.formatChatTime(Instant.parse(event.timestamp)),
+            formattedTimestamp = DateTimeUtil.formatChatTime(Instant.parse(event.actualTimestamp)),
             isMyMessage = event.senderId == currentUserId,
             isModified = false,
             attachmentImageUrls = emptyList(),
             isDeleted = false,
-            actualTimestamp = Instant.parse(event.timestamp),
+            actualTimestamp = Instant.parse(event.actualTimestamp),
             isOptimistic = false, // 서버에서 온 확정된 메시지
             isSending = false,
             sendFailed = false,
@@ -664,7 +725,7 @@ class MessageService(
                 message.copy(
                     message = event.newContent,
                     isModified = true,
-                    formattedTimestamp = DateTimeUtil.formatChatTime(Instant.parse(event.timestamp))
+                    formattedTimestamp = DateTimeUtil.formatChatTime(Instant.parse(event.actualTimestamp))
                 )
             } else {
                 null
@@ -908,8 +969,8 @@ private suspend fun ChatWebSocketEvent.MessageReceived.toDomainMessage(
         senderId = UserId(senderId),
         content = MessageContent(content),
         replyToMessageId = null, // TODO: ChatWebSocketEvent에 답장 정보 추가 필요
-        createdAt = Instant.parse(timestamp),
-        updatedAt = Instant.parse(timestamp),
+        createdAt = Instant.parse(actualTimestamp),
+        updatedAt = Instant.parse(actualTimestamp),
         isDeleted = MessageIsDeleted.FALSE,
         mentions = mentions
     )
@@ -1155,8 +1216,8 @@ private fun createDomainMessageFromWebSocketEvent(event: ChatWebSocketEvent.Mess
         senderId = UserId(event.senderId),
         content = MessageContent(event.content),
         replyToMessageId = null, // TODO: 웹소켓 이벤트에 답장 정보 추가 필요
-        createdAt = Instant.parse(event.timestamp),
-        updatedAt = Instant.parse(event.timestamp),
+        createdAt = Instant.parse(event.actualTimestamp),
+        updatedAt = Instant.parse(event.actualTimestamp),
         isDeleted = MessageIsDeleted.FALSE,
         mentions = emptyList() // TODO: 멘션 정보 파싱 추가
     )

@@ -11,7 +11,7 @@ import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.feature_chat.websocket.ChatWebSocketClient
-import com.example.websocket.WebSocketMessage
+import com.example.websocket.core.WebSocketMessage
 import javax.inject.Inject
 
 /**
@@ -154,6 +154,7 @@ class ChatServiceProvider @Inject constructor(
         val participantService = ParticipantService(
             dmUseCaseProvider = dmUseCaseProvider,
             channelId = channelId,
+            authUseCases = authUseCases,
             userProfileService = userProfileService
         )
         

@@ -2,7 +2,7 @@ package com.example.feature_chat.queue
 
 import com.example.domain.model.base.Message
 import com.example.feature_chat.websocket.ChatWebSocketClient
-import com.example.websocket.WebSocketConnectionState
+import com.example.websocket.core.WebSocketConnectionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

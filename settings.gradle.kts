@@ -33,7 +33,6 @@ include(":core:core_ui")
 include(":core:core_navigation")
 include(":core:websocket")
 
-include(":mapper")
 include(":usecase")
 
 include(":domain:domain")
@@ -44,6 +43,7 @@ include(":data:data_datasource")
 include(":data:data_converter")
 include(":data:data")
 include(":data:data_model")
+include(":data:mapper")
 
 include(":feature:feature_chat")
 include(":feature:feature_splash")

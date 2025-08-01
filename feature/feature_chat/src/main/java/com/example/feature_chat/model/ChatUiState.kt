@@ -2,7 +2,7 @@ package com.example.feature_chat.model
 
 import android.net.Uri
 import com.example.domain.model.vo.MentionType
-import com.example.websocket.WebSocketConnectionState
+import com.example.websocket.core.WebSocketConnectionState
 
 /**
  * ChatViewModel의 UI 상태를 관리하는 데이터 클래스
@@ -27,7 +27,7 @@ data class ChatUiState(
     val isLastPage: Boolean = false,
     val error: String? = null,
     // Added for ChatViewModel refactor
-    val pendingMessageText: String = "", 
+    val pendingMessageText: String = "",
     val selectedAttachmentUris: List<Uri> = emptyList(),
     val isLoadingGallery: Boolean = false,
     

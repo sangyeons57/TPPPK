@@ -1,9 +1,11 @@
-package com.example.websocket
+package com.example.websocket.service
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
 import com.example.domain_repository.base.AuthRepository
+import com.example.websocket.core.WebSocketConnectionState
+import com.example.websocket.core.WebSocketManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,9 +35,9 @@ class GlobalWebSocketService @Inject constructor(
     private val webSocketManager: WebSocketManager,
     private val authRepository: AuthRepository
 ) {
-    
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
+
     // Connection configuration
     private var serverUrl: String? = null
     private var currentAuthToken: String? = null
@@ -48,16 +50,17 @@ class GlobalWebSocketService @Inject constructor(
     private val maxReconnectDelayMs = 60000L // 60초
     private var manuallyDisconnected = false
     private var reconnectJob: Job? = null
-    
+
     // State management
     private val _globalConnectionState = MutableStateFlow<WebSocketConnectionState>(
         WebSocketConnectionState.Disconnected
     )
-    val globalConnectionState: StateFlow<WebSocketConnectionState> = _globalConnectionState.asStateFlow()
-    
+    val globalConnectionState: StateFlow<WebSocketConnectionState> =
+        _globalConnectionState.asStateFlow()
+
     private val _isInForeground = MutableStateFlow(true)
     val isInForeground: StateFlow<Boolean> = _isInForeground.asStateFlow()
-    
+
     // Authentication monitoring
     private var authMonitoringJob: Job? = null
     private var connectionMaintenanceJob: Job? = null
@@ -65,17 +68,17 @@ class GlobalWebSocketService @Inject constructor(
     // Token refresh state
     private var currentUserSession: UserSession? = null
     private var isRefreshingToken = false
-    
+
     init {
         // Start connection state monitoring
         startConnectionStateMonitoring()
     }
-    
+
     /**
      * Initialize the service with authentication monitoring
      */
     fun initializeWithAuth(authStateFlow: Flow<CustomResult<UserSession, Exception>>) {
-        
+
         authMonitoringJob?.cancel()
         authMonitoringJob = scope.launch {
             authStateFlow.collectLatest { authResult ->
@@ -84,10 +87,12 @@ class GlobalWebSocketService @Inject constructor(
                         currentUserSession = authResult.data
                         extractAndUpdateAuthToken(authResult.data)
                     }
+
                     is CustomResult.Failure -> {
                         currentUserSession = null
                         handleAuthenticationFailure()
                     }
+
                     else -> {
                         // Other authentication states
                     }
@@ -95,14 +100,14 @@ class GlobalWebSocketService @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Configure the WebSocket connection
      */
     fun configure(serverUrl: String = WebSocketManager.SERVER_URL) {
         this.serverUrl = serverUrl
         Log.d(TAG, "GlobalWebSocketService configured with server: $serverUrl")
-        
+
         // If we have auth token and are in foreground, connect
         if (currentAuthToken != null && _isInForeground.value) {
             scope.launch {
@@ -110,7 +115,7 @@ class GlobalWebSocketService @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Start the service (typically called from Application.onCreate)
      */
@@ -119,61 +124,61 @@ class GlobalWebSocketService @Inject constructor(
             Log.d(TAG, "Service already active")
             return
         }
-        
+
         isServiceActive = true
         Log.d(TAG, "GlobalWebSocketService started")
-        
+
         // Start connection maintenance
         startConnectionMaintenance()
     }
-    
+
     /**
      * Stop the service (typically called from Application.onTerminate or onDestroy)
      */
     fun stopService() {
         if (!isServiceActive) return
-        
+
         isServiceActive = false
         Log.d(TAG, "GlobalWebSocketService stopped")
-        
+
         // Cancel all jobs
         authMonitoringJob?.cancel()
         connectionMaintenanceJob?.cancel()
         reconnectJob?.cancel()
-        
+
         // Disconnect WebSocket
         scope.launch {
             webSocketManager.disconnect()
         }
     }
-    
+
     /**
      * Get the underlying WebSocketManager for sending messages
      */
     fun getWebSocketManager(): WebSocketManager = webSocketManager
-    
+
     fun onAppForegrounded() {
         Log.d(TAG, "App entered foreground")
         _isInForeground.value = true
         manuallyDisconnected = false // Reset manual disconnect when app comes to foreground
-        
+
         if (isServiceActive && currentAuthToken != null && serverUrl != null) {
             scope.launch {
                 attemptConnection()
             }
         }
     }
-    
+
     fun onAppBackgrounded() {
         Log.d(TAG, "App entered background")
         _isInForeground.value = false
-        
+
         // Optionally disconnect in background to save resources
         // For chat apps, you might want to keep connection alive for push notifications
         // For now, we'll keep the connection alive but log the state change
         Log.d(TAG, "Maintaining WebSocket connection in background for real-time updates")
     }
-    
+
     private fun startConnectionStateMonitoring() {
         scope.launch {
             webSocketManager.connectionState.collect { state ->
@@ -182,7 +187,7 @@ class GlobalWebSocketService @Inject constructor(
             }
         }
     }
-    
+
     private fun startConnectionMaintenance() {
         connectionMaintenanceJob?.cancel()
         connectionMaintenanceJob = scope.launch {
@@ -193,23 +198,23 @@ class GlobalWebSocketService @Inject constructor(
             ) { isInForeground, connectionState ->
                 Pair(isInForeground, connectionState)
             }.collectLatest { (isInForeground, connectionState) ->
-                
+
                 when {
                     // App in foreground, should be connected, but disconnected
                     isInForeground &&
                             connectionState is WebSocketConnectionState.Disconnected &&
-                    currentAuthToken != null && 
-                    serverUrl != null -> {
+                            currentAuthToken != null &&
+                            serverUrl != null -> {
                         Log.d(TAG, "App in foreground but disconnected, attempting reconnection")
                         delay(1000) // Brief delay before reconnection
                         attemptConnection()
                     }
-                    
+
                     // Connection error with valid auth - try to reconnect
                     connectionState is WebSocketConnectionState.Error &&
-                    currentAuthToken != null && 
-                    serverUrl != null &&
-                    !connectionState.message.contains("Authentication") -> {
+                            currentAuthToken != null &&
+                            serverUrl != null &&
+                            !connectionState.message.contains("Authentication") -> {
                         Log.d(TAG, "Connection error detected, scheduling reconnection")
                         scheduleReconnect()
                     }
@@ -247,13 +252,13 @@ class GlobalWebSocketService @Inject constructor(
             Log.i(TAG, "Token expiring soon, refreshing before connection")
             refreshTokenIfNeeded(session)
         }
-        
+
         val token = currentAuthToken
         if (url == null || token == null) {
             Log.w(TAG, "Cannot connect: missing server URL or auth token")
             return null
         }
-        
+
         // 연결 중이거나 이미 연결된 경우 중복 방지
         val currentState = webSocketManager.connectionState.value
         if (currentState is WebSocketConnectionState.Connected) {
@@ -264,20 +269,20 @@ class GlobalWebSocketService @Inject constructor(
             Log.d(TAG, "Connection already in progress, skipping duplicate attempt")
             return null
         }
-        
+
         Log.d(TAG, "Attempting WebSocket connection to: $url")
 
         return try {
             val result = webSocketManager.connect(url, token)
-            
+
             if (result.isSuccess) {
                 Log.d(TAG, "WebSocket connection successful")
-                
+
                 // 연결 성공 후 인증 대기
                 val authTimeout = withTimeoutOrNull(15000) { // 15초 대기
                     webSocketManager.isAuthenticated.first { it }
                 }
-                
+
                 if (authTimeout == true) {
                     Log.d(TAG, "WebSocket authentication successful")
                 } else {
@@ -375,7 +380,7 @@ class GlobalWebSocketService @Inject constructor(
 
         Log.d(TAG, "🏁 Token extraction and update process completed")
     }
-    
+
 
     private fun handleAuthenticationFailure() {
         currentAuthToken = null
@@ -383,7 +388,7 @@ class GlobalWebSocketService @Inject constructor(
             webSocketManager.disconnect()
         }
     }
-    
+
     /**
      * Force reconnection with state reset (unified method)
      */
@@ -412,7 +417,7 @@ class GlobalWebSocketService @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Manual disconnection
      */
@@ -569,7 +574,7 @@ class GlobalWebSocketService @Inject constructor(
             isRefreshingToken = false
         }
     }
-    
+
     companion object {
         private const val TAG = "GlobalWebSocketService"
     }
