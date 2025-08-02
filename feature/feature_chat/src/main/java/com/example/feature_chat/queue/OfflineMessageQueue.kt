@@ -1,8 +1,8 @@
 package com.example.feature_chat.queue
 
 import com.example.domain.model.base.Message
-import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.websocket.core.WebSocketConnectionState
+import com.example.websocket.usecase.WebSocketUseCaseProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,15 +21,16 @@ sealed class QueuedMessageAction {
 
 @Singleton
 class OfflineMessageQueue @Inject constructor(
-    private val webSocketClient: ChatWebSocketClient
+    private val webSocketUseCaseProvider: WebSocketUseCaseProvider
 ) {
     private val queue = ConcurrentLinkedQueue<QueuedMessageAction>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val webSocketUseCases by lazy { webSocketUseCaseProvider.create() }
     
     init {
         // Watch for connection state changes
         scope.launch {
-            webSocketClient.connectionState.collectLatest { state ->
+            webSocketUseCases.getConnectionStateUseCase().collectLatest { state ->
                 if (state is WebSocketConnectionState.Connected) {
                     processQueue()
                 }
@@ -48,8 +49,8 @@ class OfflineMessageQueue @Inject constructor(
             try {
                 when (action) {
                     is QueuedMessageAction.Send -> {
-                        webSocketClient.sendMessage(
-                            roomId = action.roomId,
+                        val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
+                        roomUseCases.sendMessageUseCase(
                             senderId = action.message.senderId,
                             content = action.message.content.value,
                             messageId = action.message.id,
@@ -57,15 +58,15 @@ class OfflineMessageQueue @Inject constructor(
                         )
                     }
                     is QueuedMessageAction.Edit -> {
-                        webSocketClient.editMessage(
-                            roomId = action.roomId,
+                        val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
+                        roomUseCases.editMessageUseCase(
                             messageId = com.example.domain.model.vo.DocumentId(action.messageId),
                             newContent = action.newContent
                         )
                     }
                     is QueuedMessageAction.Delete -> {
-                        webSocketClient.deleteMessage(
-                            roomId = action.roomId,
+                        val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
+                        roomUseCases.deleteMessageUseCase(
                             messageId = com.example.domain.model.vo.DocumentId(action.messageId)
                         )
                     }

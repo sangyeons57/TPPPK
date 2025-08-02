@@ -72,6 +72,14 @@ fun ConnectionStatusBar(
                 Icons.Default.CloudOff
             )
         }
+        is WebSocketConnectionState.Reconnecting -> {
+            Quadruple(
+                true,
+                MaterialTheme.colorScheme.primary,
+                "재연결 중...",
+                Icons.Default.Refresh
+            )
+        }
     }
 
     AnimatedVisibility(

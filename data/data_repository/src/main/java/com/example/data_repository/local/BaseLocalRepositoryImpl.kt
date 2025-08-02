@@ -43,7 +43,7 @@ abstract class BaseLocalRepositoryImpl<T : AggregateRoot> : BaseLocalRepository<
      * @param id 엔티티 ID
      * @return 도메인 엔티티 (없으면 null)
      */
-    protected abstract suspend fun findByIdFromDataSource(id: DocumentId): CustomResult<T?, Exception>
+    protected abstract suspend fun findByIdFromDataSource(id: DocumentId): CustomResult<T, Exception>
     
     /**
      * DataSource에서 모든 엔티티 조회
@@ -133,13 +133,9 @@ abstract class BaseLocalRepositoryImpl<T : AggregateRoot> : BaseLocalRepository<
     // ================================
     // 기본 조회 작업 구현
     // ================================
-    
-    override suspend fun findById(id: DocumentId): CustomResult<T?, Exception> {
-        return try {
-            findByIdFromDataSource(id)
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
+
+    override suspend fun findById(id: DocumentId): CustomResult<T, Exception> {
+        return findByIdFromDataSource(id)
     }
     
     override suspend fun findAll(): CustomResult<List<T>, Exception> {

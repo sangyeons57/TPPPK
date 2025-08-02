@@ -45,7 +45,7 @@ interface MessageDataSource {
      * @param id 메시지 ID
      * @return Message 도메인 모델 (없으면 null)
      */
-    suspend fun getById(id: String): CustomResult<Message?, Exception>
+    suspend fun getById(id: String): CustomResult<Message, Exception>
     
     /**
      * 모든 Message 조회

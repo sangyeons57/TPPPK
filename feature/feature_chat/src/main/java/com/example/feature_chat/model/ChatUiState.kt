@@ -11,12 +11,12 @@ data class ChatUiState(
     val channelId: String = "", // 생성자에서 초기화되므로 non-null
     val channelName: String = "채팅방",
     val channelPath: String = "",
-    val messages: List<ChatMessageUiModel> = emptyList(), // ★ UI 모델 사용
+    // Note: messages are now handled by Paging3 flow in ViewModel
     val messageInput: String = "",
     val isAttachmentAreaVisible: Boolean = false,
     val galleryImages: List<GalleryImageUiModel> = emptyList(), // ★ UI 모델 사용
     val selectedImages: Set<Uri> = emptySet(),
-    val isLoadingHistory: Boolean = false, // ★ 이름 명확화: 과거 메시지 로딩
+    // Note: loading states are now handled by Paging3 LoadState
     val isSendingMessage: Boolean = false, // ★ 이름 명확화: 메시지 전송 중
     val isEditing: Boolean = false,
     val editingMessageId: String? = null, // Fixed: Message IDs are String-based DocumentIds
@@ -24,7 +24,7 @@ data class ChatUiState(
     val currentUserId: String? = null, // Current authenticated user ID
     val myUserNameDisplay: String? = null, // For optimistic UI updates
     val myUserProfileUrl: String? = null, // For optimistic UI updates
-    val isLastPage: Boolean = false,
+    // Note: pagination state is now handled by Paging3
     val error: String? = null,
     // Added for ChatViewModel refactor
     val pendingMessageText: String = "",
@@ -35,11 +35,8 @@ data class ChatUiState(
     val connectionState: WebSocketConnectionState = WebSocketConnectionState.Disconnected,
     val queuedMessagesCount: Int = 0,
     val showConnectionError: Boolean = false,
-    
-    // Pagination state
-    val hasMoreMessages: Boolean = true,
-    val isLoadingMoreMessages: Boolean = false,
-    val lastMessageTimestamp: java.time.Instant? = null,
+
+    // Note: Pagination state is now handled by Paging3 LoadState
     
     // Profile loading state
     val loadingProfileUserIds: Set<String> = emptySet(),

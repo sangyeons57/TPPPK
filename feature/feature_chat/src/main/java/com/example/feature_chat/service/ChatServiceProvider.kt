@@ -10,8 +10,8 @@ import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.feature_chat.queue.OfflineMessageQueue
-import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.websocket.core.WebSocketMessage
+import com.example.websocket.usecase.WebSocketUseCaseProvider
 import javax.inject.Inject
 
 /**
@@ -26,7 +26,7 @@ class ChatServiceProvider @Inject constructor(
     private val dmUseCaseProvider: DMUseCaseProvider,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
-    private val webSocketClient: ChatWebSocketClient,
+    private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val offlineMessageQueue: OfflineMessageQueue,
     private val navigationManger: NavigationManger,
     private val localMessageRepository: LocalMessagePagingRepository,
@@ -36,9 +36,7 @@ class ChatServiceProvider @Inject constructor(
      * ChatViewModel에서 사용할 Service들을 묶어서 제공하는 데이터 클래스
      */
     data class ChatServices(
-        val authenticationService: AuthenticationService,
         val messageService: MessageService,
-        val connectionService: ConnectionService,
         val userProfileService: UserProfileService,
         val navigationService: NavigationService,
         val participantService: ParticipantService? = null, // For DM channels
@@ -51,19 +49,13 @@ class ChatServiceProvider @Inject constructor(
      */
     fun createForProjectChannel(projectId: String, channelId: String): ChatServices {
         val chatUseCases = chatUseCaseProvider.createForChannel(projectId, channelId)
-        val authUseCases = authSessionUseCaseProvider.create()
         val userUseCases = userUseCaseProvider.createForUser()
         val fileUseCases = fileUseCaseProvider.create()
 
         val roomId = channelId  // 접두사 제거 - 단순히 channelId만 사용
         val channelType = WebSocketMessage.CHANNEL_TYPE_PROJECT
         
-        val authenticationService = AuthenticationService(
-            authUseCases = authUseCases,
-            webSocketClient = webSocketClient,
-            roomId = roomId
-        )
-        
+
         val userProfileService = UserProfileService(
             userUseCases = userUseCases,
             fileUseCases = fileUseCases
@@ -71,18 +63,12 @@ class ChatServiceProvider @Inject constructor(
         
         val messageService = MessageService(
             chatUseCases = chatUseCases,
-            webSocketClient = webSocketClient,
+            webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
-            userProfileService = userProfileService,
             localMessageRepository = localMessageRepository,
             roomId = roomId,
             projectId = projectId,
             channelType = channelType
-        )
-        
-        val connectionService = ConnectionService(
-            webSocketClient = webSocketClient,
-            offlineMessageQueue = offlineMessageQueue
         )
         
         val navigationService = NavigationService(navigationManger)
@@ -99,9 +85,7 @@ class ChatServiceProvider @Inject constructor(
         )
         
         return ChatServices(
-            authenticationService = authenticationService,
             messageService = messageService,
-            connectionService = connectionService,
             userProfileService = userProfileService,
             navigationService = navigationService,
             participantService = null, // Not needed for project channels
@@ -122,12 +106,6 @@ class ChatServiceProvider @Inject constructor(
         val roomId = channelId  // 접두사 제거 - 단순히 channelId만 사용
         val channelType = WebSocketMessage.CHANNEL_TYPE_DM
         
-        val authenticationService = AuthenticationService(
-            authUseCases = authUseCases,
-            webSocketClient = webSocketClient,
-            roomId = roomId
-        )
-        
         val userProfileService = UserProfileService(
             userUseCases = userUseCases,
             fileUseCases = fileUseCases
@@ -135,18 +113,12 @@ class ChatServiceProvider @Inject constructor(
         
         val messageService = MessageService(
             chatUseCases = chatUseCases,
-            webSocketClient = webSocketClient,
+            webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
-            userProfileService = userProfileService,
             localMessageRepository = localMessageRepository,
             roomId = roomId,
             projectId = null,
             channelType = channelType
-        )
-        
-        val connectionService = ConnectionService(
-            webSocketClient = webSocketClient,
-            offlineMessageQueue = offlineMessageQueue
         )
         
         val navigationService = NavigationService(navigationManger)
@@ -159,9 +131,7 @@ class ChatServiceProvider @Inject constructor(
         )
         
         return ChatServices(
-            authenticationService = authenticationService,
             messageService = messageService,
-            connectionService = connectionService,
             userProfileService = userProfileService,
             navigationService = navigationService,
             participantService = participantService,

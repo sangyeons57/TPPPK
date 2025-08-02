@@ -3,6 +3,7 @@ package com.example.domain.model.base
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.event.message.MessageContentUpdatedEvent
 import com.example.domain.model.AggregateRoot
+import com.example.domain.model.enum.OutBoxStatus
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MentionInfo
@@ -16,6 +17,8 @@ class Message private constructor(
     initialReplyToMessageId: DocumentId?,
     initialIsDeleted: MessageIsDeleted,
     initialMentions: List<MentionInfo>,
+    initialDeliveryStatus: OutBoxStatus,
+    initialFailureReason: String?,
     override val id: DocumentId,
     override var isNew: Boolean,
     override val createdAt: Instant,
@@ -30,6 +33,10 @@ class Message private constructor(
         private set
     var isDeleted: MessageIsDeleted = initialIsDeleted
         private set
+    var deliveryStatus: OutBoxStatus = initialDeliveryStatus
+        private set
+    var failureReason: String? = initialFailureReason
+        private set
 
     init {
         setOriginalState()
@@ -43,6 +50,8 @@ class Message private constructor(
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
             KEY_IS_DELETED to this.isDeleted.value,
+            KEY_DELIVERY_STATUS to this.deliveryStatus.name,
+            KEY_FAILURE_REASON to this.failureReason,
             KEY_MENTIONS to this.mentions.map { 
                 mapOf(
                     "type" to it.type.name,
@@ -72,12 +81,59 @@ class Message private constructor(
         this.isDeleted = MessageIsDeleted.TRUE
     }
 
+    /**
+     * Marks the message as successfully delivered (ACK received).
+     */
+    fun markAsDelivered() {
+        if (deliveryStatus.canTransitionTo(OutBoxStatus.COMPLETED)) {
+            this.deliveryStatus = OutBoxStatus.COMPLETED
+            this.failureReason = null
+        }
+    }
+
+    /**
+     * Marks the message as failed with an optional error reason.
+     */
+    fun markAsFailed(errorReason: String? = null) {
+        if (deliveryStatus.canTransitionTo(OutBoxStatus.FAILED)) {
+            this.deliveryStatus = OutBoxStatus.FAILED
+            this.failureReason = errorReason
+        }
+    }
+
+    /**
+     * Marks the message as pending (for retry scenarios).
+     */
+    fun markAsPending() {
+        if (deliveryStatus.canTransitionTo(OutBoxStatus.PENDING)) {
+            this.deliveryStatus = OutBoxStatus.PENDING
+            this.failureReason = null
+        }
+    }
+
+    /**
+     * Checks if the message delivery is still in progress.
+     */
+    fun isDeliveryPending(): Boolean = deliveryStatus.isActive()
+
+    /**
+     * Checks if the message was successfully delivered.
+     */
+    fun isDelivered(): Boolean = deliveryStatus == OutBoxStatus.COMPLETED
+
+    /**
+     * Checks if the message delivery failed.
+     */
+    fun isDeliveryFailed(): Boolean = deliveryStatus == OutBoxStatus.FAILED
+
     companion object {
         const val COLLECTION_NAME = "messages"
         const val KEY_SENDER_ID = "senderId"
         const val KEY_SEND_MESSAGE = "content"
         const val KEY_REPLY_TO_MESSAGE_ID = "replyToMessageId"
         const val KEY_IS_DELETED = "isDeleted"
+        const val KEY_DELIVERY_STATUS = "deliveryStatus"
+        const val KEY_FAILURE_REASON = "failureReason"
         const val KEY_MENTIONS = "mentions"
 
         /**
@@ -98,6 +154,8 @@ class Message private constructor(
                 updatedAt = DateTimeUtil.nowInstant(),
                 initialIsDeleted = MessageIsDeleted.FALSE,
                 initialMentions = mentions,
+                initialDeliveryStatus = OutBoxStatus.PENDING, // 새 메시지는 PENDING 상태
+                initialFailureReason = null,
                 id = id,
                 isNew = true
             )
@@ -115,7 +173,9 @@ class Message private constructor(
             createdAt: Instant?,
             updatedAt: Instant?,
             isDeleted: MessageIsDeleted,
-            mentions: List<MentionInfo>
+            mentions: List<MentionInfo>,
+            deliveryStatus: OutBoxStatus = OutBoxStatus.COMPLETED, // 데이터소스에서 온 메시지는 기본적으로 COMPLETED
+            failureReason: String? = null
         ): Message {
             return Message(
                 initialSenderId = senderId,
@@ -125,6 +185,8 @@ class Message private constructor(
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 initialIsDeleted = isDeleted,
                 initialMentions = mentions,
+                initialDeliveryStatus = deliveryStatus,
+                initialFailureReason = failureReason,
                 id = id,
                 isNew = false
             )

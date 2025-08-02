@@ -9,8 +9,9 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.teamnovapersonalprojectprojectingkotlin.fcm.FcmTokenManager
 import com.example.teamnovapersonalprojectprojectingkotlin.notification.NotificationChannelManager
-import com.example.websocket.GlobalWebSocketService
-import com.example.websocket.WebSocketManager
+import com.example.websocket.core.WebSocketManager
+import com.example.websocket.service.GlobalWebSocketService
+import com.google.firebase.BuildConfig
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory

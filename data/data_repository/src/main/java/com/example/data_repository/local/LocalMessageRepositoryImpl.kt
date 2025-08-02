@@ -53,8 +53,8 @@ class LocalMessageRepositoryImpl @Inject constructor(
             CustomResult.Failure(e)
         }
     }
-    
-    override suspend fun findByIdFromDataSource(id: DocumentId): CustomResult<Message?, Exception> {
+
+    override suspend fun findByIdFromDataSource(id: DocumentId): CustomResult<Message, Exception> {
         return messageDataSource.getById(id.value)
     }
     

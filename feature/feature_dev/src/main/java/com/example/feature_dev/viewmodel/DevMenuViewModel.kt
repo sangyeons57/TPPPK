@@ -8,9 +8,9 @@ import com.example.domain.model.vo.DocumentId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dev.DevMenuUseCaseProvider
 import com.example.domain_usecase.sync.SyncManager
-import com.example.feature_chat.websocket.ChatWebSocketClient
-import com.example.feature_chat.websocket.ChatWebSocketEvent
-import com.example.websocket.WebSocketConnectionState
+import com.example.websocket.core.WebSocketConnectionState
+import com.example.websocket.event.WebSocketDomainEvent
+import com.example.websocket.usecase.WebSocketUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,11 +21,16 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DevMenuViewModel @Inject constructor(
-    private val webSocketClient: ChatWebSocketClient,
+    private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val devMenuUseCaseProvider: DevMenuUseCaseProvider,
     private val syncManager: SyncManager
 ) : ViewModel() {
+
+    // WebSocket use cases for dev testing
+    private val webSocketUseCases by lazy {
+        webSocketUseCaseProvider.createForRoom(TEST_ROOM_ID)
+    }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -106,7 +111,7 @@ class DevMenuViewModel @Inject constructor(
 
         // WebSocket 연결 상태 관찰
         viewModelScope.launch {
-            webSocketClient.connectionState.collect { state ->
+            webSocketUseCaseProvider.create().getConnectionStateUseCase().collect { state ->
                 _webSocketConnectionState.value = state
                 addMessage("Connection State: ${getConnectionStateText(state)}")
             }
@@ -114,11 +119,11 @@ class DevMenuViewModel @Inject constructor(
 
         // WebSocket 메시지 관찰
         viewModelScope.launch {
-            webSocketClient.getChatMessages(TEST_ROOM_ID).collect { event ->
+            webSocketUseCases.subscribeToRoomEventsUseCase().collect { event ->
                 when (event) {
-                    is ChatWebSocketEvent.MessageReceived -> {
-                        val message = "Received: ${event.content} (from: ${event.senderId})"
-                        addMessage(message)
+                    is WebSocketDomainEvent.MessageReceived -> {
+                        val receivedMessage = "Received: ${event.content} (from: ${event.senderId})"
+                        addMessage(receivedMessage)
 
                         // 내가 보낸 코드가 돌아왔는지 확인
                         _lastSentCode.value?.let { sentCode ->
@@ -127,10 +132,12 @@ class DevMenuViewModel @Inject constructor(
                             }
                         }
                     }
-                    is ChatWebSocketEvent.SystemMessage -> {
+
+                    is WebSocketDomainEvent.SystemMessage -> {
                         addMessage("System: ${event.content}")
                     }
-                    is ChatWebSocketEvent.Error -> {
+
+                    is WebSocketDomainEvent.Error -> {
                         addMessage("❌ Error: ${event.message}")
                     }
                     else -> {
@@ -268,7 +275,7 @@ class DevMenuViewModel @Inject constructor(
                 when (val sessionResult = authUseCases.getCurrentUserSessionUseCase()) {
                     is CustomResult.Success -> {
                         val userSession = sessionResult.data
-                        val userId = userSession.userId
+                        userSession.userId
                         var token = userSession.idToken?.value
 
                         if (token == null) {
@@ -283,56 +290,51 @@ class DevMenuViewModel @Inject constructor(
 
                         addMessage("🔄 Token validated. Attempting to connect WebSocket...")
 
-                        val connectResult = webSocketClient.connect(SERVER_URL, token)
+                        try {
+                            val connectResult =
+                                webSocketUseCaseProvider.create().connectUseCase(SERVER_URL, token)
+                            if (connectResult.isSuccess) {
+                                addMessage("✅ Connected and authenticated, joining room...")
 
-                        if (connectResult.isSuccess) {
-                            addMessage("✅ Connected, waiting for authentication confirmation...")
-                            
-                            // 2단계: 인증 완료 대기 (서버가 handshake token으로 자동 인증)
-                            val authResult = webSocketClient.waitForAuthentication(userId)
-                            if (authResult.isSuccess) {
-                                addMessage("✅ Authentication confirmed, joining room...")
-                                
-                                // 3단계: 방 입장
-                                val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
+                                // 방 입장 (connect가 성공하면 인증도 완료됨)
+                                val joinResult =
+                                    webSocketUseCases.joinRoomUseCase(userSession.userId)
                                 if (joinResult.isSuccess) {
                                     addMessage("✅ Joined room: $TEST_ROOM_ID")
                                 } else {
                                     addMessage("❌ Failed to join room: ${joinResult.exceptionOrNull()?.message}")
                                 }
                             } else {
-                                addMessage("❌ Authentication failed: ${authResult.exceptionOrNull()?.message}")
-                            }
-                        } else {
-                            val errorMessage = connectResult.exceptionOrNull()?.message ?: "Unknown error"
-                            addMessage("❌ Connection failed: $errorMessage")
+                                val errorMessage =
+                                    connectResult.exceptionOrNull()?.message ?: "Unknown error"
+                                addMessage("❌ Connection failed: $errorMessage")
 
-                            if (errorMessage.contains("1008") || errorMessage.contains("Authentication") || errorMessage.contains("Policy")) {
-                                addMessage("🔄 Authentication error detected, retrying with a new token...")
-                                val newToken = refreshAuthToken()
-                                if (newToken != null) {
-                                    val retryResult = webSocketClient.connect(SERVER_URL, newToken)
-                                    if (retryResult.isSuccess) {
-                                        addMessage("✅ Connected after token refresh, waiting for authentication...")
-                                        
-                                        // 재시도 시에도 인증 완료 대기 적용
-                                        val retryAuthResult = webSocketClient.waitForAuthentication(userId)
-                                        if (retryAuthResult.isSuccess) {
-                                            addMessage("✅ Re-authentication confirmed, joining room...")
-                                            val joinResult = webSocketClient.joinRoom(TEST_ROOM_ID, userId)
+                                if (errorMessage.contains("1008") || errorMessage.contains("Authentication") || errorMessage.contains(
+                                        "Policy"
+                                    )
+                                ) {
+                                    addMessage("🔄 Authentication error detected, retrying with a new token...")
+                                    val newToken = refreshAuthToken()
+                                    if (newToken != null) {
+                                        val retryResult = webSocketUseCaseProvider.create()
+                                            .connectUseCase(SERVER_URL, newToken)
+                                        if (retryResult.isSuccess) {
+                                            addMessage("✅ Connected after token refresh, joining room...")
+                                            val joinResult =
+                                                webSocketUseCases.joinRoomUseCase(userSession.userId)
                                             if (joinResult.isSuccess) {
-                                                addMessage("✅ Joined room: $TEST_ROOM_ID")
+                                                addMessage("✅ Joined room after retry: $TEST_ROOM_ID")
                                             } else {
                                                 addMessage("❌ Failed to join room after retry: ${joinResult.exceptionOrNull()?.message}")
                                             }
                                         } else {
-                                            addMessage("❌ Re-authentication failed: ${retryAuthResult.exceptionOrNull()?.message}")
+                                            addMessage("❌ Connection failed even after token refresh: ${retryResult.exceptionOrNull()?.message}")
                                         }
-                                    } else {
-                                        addMessage("❌ Connection failed even after token refresh: ${retryResult.exceptionOrNull()?.message}")
                                     }
                                 }
                             }
+                        } catch (e: Exception) {
+                            addMessage("❌ Exception during WebSocket connection: ${e.message}")
                         }
                     }
                     is CustomResult.Failure -> {
@@ -354,8 +356,16 @@ class DevMenuViewModel @Inject constructor(
         viewModelScope.launch {
             addMessage("🔄 Disconnecting...")
             try {
-                webSocketClient.leaveRoom(TEST_ROOM_ID)
-                webSocketClient.disconnect()
+                // 방 나가기
+                val leaveResult = webSocketUseCases.leaveRoomUseCase()
+                if (leaveResult.isSuccess) {
+                    addMessage("✅ Left room: $TEST_ROOM_ID")
+                } else {
+                    addMessage("⚠️ Failed to leave room: ${leaveResult.exceptionOrNull()?.message}")
+                }
+
+                // 연결 해제
+                webSocketUseCaseProvider.create().disconnectUseCase()
                 addMessage("✅ Disconnected")
             } catch (e: Exception) {
                 addMessage("❌ Error during disconnect: ${e.message}")
@@ -381,13 +391,11 @@ class DevMenuViewModel @Inject constructor(
                 when (val sessionResult = authUseCases.getCurrentUserSessionUseCase()) {
                     is CustomResult.Success -> {
                         val userId = sessionResult.data.userId
-                        val result = webSocketClient.sendMessage(
-                            roomId = TEST_ROOM_ID,
+                        val result = webSocketUseCases.sendMessageUseCase(
                             senderId = userId,
                             content = message,
                             messageId = DocumentId.generate()
                         )
-
                         if (result.isSuccess) {
                             addMessage("✅ Message sent successfully")
                         } else {
@@ -426,6 +434,7 @@ class DevMenuViewModel @Inject constructor(
             is WebSocketConnectionState.Connected -> "Connected"
             is WebSocketConnectionState.Connecting -> "Connecting..."
             is WebSocketConnectionState.Disconnected -> "Disconnected"
+            is WebSocketConnectionState.Reconnecting -> "Reconnecting..."
             is WebSocketConnectionState.Error -> "Error: ${state.message}"
         }
     }

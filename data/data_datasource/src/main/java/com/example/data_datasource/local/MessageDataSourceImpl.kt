@@ -1,6 +1,7 @@
 package com.example.data_datasource.local
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.resultTry
 import com.example.data_datasource.dao.MessageDao
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
@@ -69,15 +70,13 @@ class MessageDataSourceImpl @Inject constructor(
     // ================================
     // Repository용 - 기본 조회 작업
     // ================================
-    
-    override suspend fun getById(id: String): CustomResult<Message?, Exception> {
+
+    override suspend fun getById(id: String): CustomResult<Message, Exception> {
         return withContext(Dispatchers.IO) {
-            try {
+            resultTry {
                 val entity = messageDao.getById(id)
-                val domainModel = entity?.let { messageMapper.entityToDomain(it) }
-                CustomResult.Success(domainModel)
-            } catch (e: Exception) {
-                CustomResult.Failure(e)
+                entity?.let { messageMapper.entityToDomain(it) }
+                    ?: throw Exception("Message not found: $id")
             }
         }
     }

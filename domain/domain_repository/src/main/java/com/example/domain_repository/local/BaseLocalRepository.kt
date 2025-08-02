@@ -45,7 +45,7 @@ interface BaseLocalRepository<T : AggregateRoot> {
      * @param id 엔티티 ID
      * @return 도메인 엔티티 (없으면 null)
      */
-    suspend fun findById(id: DocumentId): CustomResult<T?, Exception>
+    suspend fun findById(id: DocumentId): CustomResult<T, Exception>
     
     /**
      * 모든 엔티티 조회

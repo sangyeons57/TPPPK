@@ -124,6 +124,11 @@ data class WebSocketMessage(
         const val TYPE_EDIT_MESSAGE_ACK = "EDIT_MESSAGE_ACK"
         const val TYPE_DELETE_MESSAGE_ACK = "DELETE_MESSAGE_ACK"
 
+        // FAILED 메시지 타입
+        const val TYPE_MESSAGE_FAILED = "MESSAGE_FAILED"
+        const val TYPE_EDIT_MESSAGE_FAILED = "EDIT_MESSAGE_FAILED"
+        const val TYPE_DELETE_MESSAGE_FAILED = "DELETE_MESSAGE_FAILED"
+
         // 방 관리 메시지 타입
         const val TYPE_JOIN_ROOM = "JOIN_ROOM"
         const val TYPE_LEAVE_ROOM = "LEAVE_ROOM"
@@ -259,6 +264,17 @@ data class WebSocketMessage(
      */
     fun isAckMessage(): Boolean {
         return type in setOf(TYPE_MESSAGE_ACK, TYPE_EDIT_MESSAGE_ACK, TYPE_DELETE_MESSAGE_ACK)
+    }
+
+    /**
+     * 메시지가 FAILED 메시지인지 확인
+     */
+    fun isFailedMessage(): Boolean {
+        return type in setOf(
+            TYPE_MESSAGE_FAILED,
+            TYPE_EDIT_MESSAGE_FAILED,
+            TYPE_DELETE_MESSAGE_FAILED
+        )
     }
 
     /**

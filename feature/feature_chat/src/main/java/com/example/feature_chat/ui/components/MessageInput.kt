@@ -39,15 +39,16 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun MessageInput(
+    modifier: Modifier = Modifier,
     text: String,
     isEditing: Boolean = false,
     onTextChange: (String) -> Unit = {},
     onSendClick: () -> Unit = {},
     onAttachmentClick: () -> Unit = {},
-    onCancelEdit: () -> Unit = {}
+    onCancelEdit: () -> Unit = {},
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         tonalElevation = 2.dp,
         shadowElevation = 4.dp
     ) {
