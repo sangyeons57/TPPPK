@@ -1,6 +1,8 @@
 package com.example.teamnovapersonalprojectprojectingkotlin
 
+import android.app.ActivityManager
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
@@ -28,6 +30,7 @@ import javax.inject.Inject
  * 애플리케이션 초기화 클래스
  * 
  * 앱이 처음 시작될 때 필요한 초기화 작업을 수행합니다.
+ * ANR 방지를 위해 무거운 작업은 백그라운드에서 실행합니다.
  */
 @HiltAndroidApp
 class MyApp : Application(), LifecycleObserver {
@@ -51,20 +54,93 @@ class MyApp : Application(), LifecycleObserver {
     override fun onCreate() {
         super.onCreate()
 
-        FirebaseApp.initializeApp(this)
-        appcheck()
-        
-        // Register lifecycle observer
-        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        // 1. 필수적인 동기 초기화만 먼저 수행
+        initializeEssentialServices()
 
-        // Initialize notification channels
-        initializeNotificationChannels()
-        
-        // Initialize global WebSocket service after DI is ready
-        initializeGlobalWebSocketService()
+        // 2. 무거운 초기화는 백그라운드에서 지연 실행
+        initializeHeavyServicesAsync()
+    }
 
-        // Initialize FCM token management
-        initializeFcmTokenManager()
+    /**
+     * 필수적인 동기 초기화 작업
+     * 메인 스레드에서 빠르게 완료되어야 하는 작업들
+     */
+    private fun initializeEssentialServices() {
+        try {
+            // Firebase 기본 초기화
+            FirebaseApp.initializeApp(this)
+
+            // 라이프사이클 옵저버 등록
+            ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+
+            // 알림 채널 초기화 (빠른 작업)
+            initializeNotificationChannels()
+
+            Log.d(TAG, "✅ Essential services initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to initialize essential services", e)
+        }
+    }
+
+    /**
+     * 무거운 초기화 작업을 백그라운드에서 지연 실행
+     * ANR 방지를 위해 비동기로 처리
+     */
+    private fun initializeHeavyServicesAsync() {
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "🚀 Starting heavy services initialization in background...")
+
+                // 메모리 상태 로깅
+                logMemoryUsage("Before heavy services initialization")
+
+                // Firebase App Check 초기화
+                initializeFirebaseAppCheck()
+
+                // 잠시 대기 후 WebSocket 서비스 초기화
+                kotlinx.coroutines.delay(1000)
+                initializeGlobalWebSocketService()
+
+                // FCM 토큰 관리 초기화
+                kotlinx.coroutines.delay(500)
+                initializeFcmTokenManager()
+
+                // 메모리 상태 재확인
+                logMemoryUsage("After heavy services initialization")
+
+                Log.d(TAG, "✅ All heavy services initialized successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to initialize heavy services", e)
+            }
+        }
+    }
+
+    /**
+     * 메모리 사용량을 로그로 출력
+     */
+    private fun logMemoryUsage(context: String) {
+        try {
+            val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+            val memoryInfo = ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memoryInfo)
+
+            val availableMemory = memoryInfo.availMem / (1024 * 1024) // MB
+            val totalMemory = memoryInfo.totalMem / (1024 * 1024) // MB
+            val usedMemory = totalMemory - availableMemory
+            val memoryUsagePercent = (usedMemory.toFloat() / totalMemory * 100).toInt()
+
+            Log.i(TAG, "📊 Memory Usage [$context]:")
+            Log.i(TAG, "   Used: ${usedMemory}MB / ${totalMemory}MB (${memoryUsagePercent}%)")
+            Log.i(TAG, "   Available: ${availableMemory}MB")
+            Log.i(TAG, "   Low memory: ${memoryInfo.lowMemory}")
+
+            // 메모리 압박이 높으면 경고
+            if (memoryUsagePercent > 80) {
+                Log.w(TAG, "⚠️ HIGH MEMORY USAGE: ${memoryUsagePercent}% - Consider optimizing")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get memory info", e)
+        }
     }
 
     private fun initializeNotificationChannels() {
@@ -167,7 +243,7 @@ class MyApp : Application(), LifecycleObserver {
      * Firebase App Check을 초기화합니다.
      * 2024-2025 Firebase 요구사항에 맞게 구성되었습니다.
      */
-    private fun appcheck() {
+    private fun initializeFirebaseAppCheck() {
         try {
             Log.d(TAG, "Starting Firebase App Check initialization...")
             

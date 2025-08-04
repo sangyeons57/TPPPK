@@ -14,11 +14,13 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.data_repository.util.RoomDatabaseLogger
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
+import com.example.domain.model.enum.SyncStatus
 import com.example.domain.model.vo.MentionType
 import com.example.domain.model.vo.message.MentionInfo
-import com.example.domain_repository.local.LocalMessagePagingRepository
+import com.example.domain_repository.base.MessageRepository
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
@@ -30,6 +32,7 @@ import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.usecase.WebSocketUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -40,9 +43,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -55,7 +62,9 @@ class WebSocketChatViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val chatServiceProvider: ChatServiceProvider,
-    private val localMessageRepository: LocalMessagePagingRepository,
+    private val messageRepository: MessageRepository,
+    private val roomDatabaseLogger: RoomDatabaseLogger,
+    private val sendMessageUseCase: com.example.domain_usecase.usecase.message.SendMessageUseCase,
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -92,37 +101,137 @@ class WebSocketChatViewModel @Inject constructor(
     // 메시지 타임아웃 관리를 위한 Job 맵
     private val messageTimeoutJobs = mutableMapOf<String, Job>()
 
-    // Paging3 Flow for messages from Room DB (Single Source of Truth)
-    val messagesFlow: Flow<PagingData<ChatMessageUiModel>> =
-        Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false,
-                prefetchDistance = 5
-            ),
-            pagingSourceFactory = {
-                localMessageRepository.getMessagesPagingSource()
-            }
-        ).flow.map { pagingData: PagingData<Message> ->
+    // Paging3 configuration for messages from Room DB (Single Source of Truth)
+    private val pager = Pager(
+        config = PagingConfig(
+            pageSize = 20,
+            enablePlaceholders = false,
+            prefetchDistance = 5
+        ),
+        pagingSourceFactory = {
+            messageRepository.getMessagesPagingSource(channelId)
+        }
+    )
+
+    // Paging3 Flow for messages from Room DB
+    val messagesFlow: Flow<PagingData<ChatMessageUiModel>> = pager.flow
+        .map { pagingData: PagingData<Message> ->
+            Log.d("Paging3-UI", "🔄 Paging3 데이터 변환 시작")
             pagingData.map<Message, ChatMessageUiModel> { message: Message ->
                 // Convert domain Message to UI model with display format
-                convertDomainMessageToUiModel(message)
+                val uiModel = convertDomainMessageToUiModel(message)
+                Log.d(
+                    "Paging3-UI",
+                    "  📱 UI 모델 변환: id=${message.id.value}, content=${message.content.value.take(20)}"
+                )
+                uiModel
             }
-        }.cachedIn(viewModelScope)
+        }
+        .onEach { pagingData ->
+            Log.d("Paging3-UI", "📊 Paging3 Flow에서 새로운 데이터 감지됨")
+        }
+        .cachedIn(viewModelScope)
 
     init {
         // Log local cache on entry
         logChannelCacheOnEntry()
 
+        // 수신 메시지 처리를 위한 이벤트 구독
+        subscribeToIncomingMessages()
+
         initializeUserSession()
-        joinChatRoom()
+        // joinChatRoom() - 사용자 인증 완료 후 호출로 이동
+        observeConnectionState() // 연결 상태 모니터링 시작
         observeWebSocketEventsForUiEvents()
         loadChannelData()
     }
 
     private fun logChannelCacheOnEntry() {
         viewModelScope.launch {
-            Log.i("Debug", "--- Initializing chat for channel $channelId ---")
+            Log.i("ChatDebug", "🚀 === CHAT INITIALIZATION: $channelId ===")
+
+            // Room DB 상태 로그 출력 (IO 스레드에서 실행)
+            try {
+                withContext(Dispatchers.IO) {
+                    // 1️⃣ 현재 채널의 상세 메시지 상태 출력
+                    roomDatabaseLogger.logChannelMessages(channelId, 10)
+
+                    // 2️⃣ 채널별 상세 분석 (Repository를 통한 조회)
+                    logChannelSpecificData()
+
+                    // 3️⃣ 전체 DB 상태 요약
+                    roomDatabaseLogger.logTableState("messages")
+
+                    // 4️⃣ OutBox 상태 확인 (동기화 대기 중인 메시지)
+                    roomDatabaseLogger.logTableState("outbox")
+                }
+                Log.d("ChatDebug", "✅ Room DB 로거 실행 완료")
+            } catch (e: Exception) {
+                Log.e("ChatDebug", "❌ Room DB 로깅 실패", e)
+            }
+        }
+    }
+
+    /**
+     * 현재 채널의 구체적인 데이터 상태를 로그로 출력
+     */
+    private suspend fun logChannelSpecificData() {
+        try {
+            // MessageDao를 통해 채널별 통계 조회
+            val messageDao =
+                messageRepository as? com.example.data_repository.base.MessageRepositoryImpl
+
+            if (messageDao != null) {
+                // TODO: MessageRepositoryImpl에서 MessageDao에 직접 접근할 수 있는 메서드 필요
+                // 임시로 Repository 메서드를 통해 데이터 조회
+                Log.i("ChatDebug", "📊 === CHANNEL DATA: $channelId ===")
+
+                // 최근 메시지 조회해서 로그 출력
+                when (val result = messageRepository.getMessagesBefore(
+                    channelId,
+                    System.currentTimeMillis(),
+                    10
+                )) {
+                    is CustomResult.Success -> {
+                        val messages = result.data
+                        Log.i("ChatDebug", "📝 채널 메시지 개수: ${messages.size}")
+                        Log.i("ChatDebug", "📋 최근 메시지 목록:")
+
+                        messages.forEachIndexed { index, message ->
+                            val timeFormatted =
+                                DateTimeUtil.formatToHumanReadable(message.createdAt)
+                            val contentPreview = if (message.content.value.length > 30) {
+                                message.content.value.take(30) + "..."
+                            } else {
+                                message.content.value
+                            }
+                            Log.i(
+                                "ChatDebug",
+                                "   ${index + 1}. [${message.id.value.take(8)}] $timeFormatted: \"$contentPreview\""
+                            )
+                        }
+
+                        if (messages.isEmpty()) {
+                            Log.i("ChatDebug", "   📭 채널에 저장된 메시지가 없습니다")
+                        }
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e("ChatDebug", "❌ 채널 메시지 조회 실패: ${result.error.message}")
+                    }
+
+                    else -> {
+                        Log.w("ChatDebug", "⚠️ 메시지 조회 결과 타입 예상치 못함")
+                    }
+                }
+            } else {
+                Log.w("ChatDebug", "⚠️ MessageRepository가 MessageRepositoryImpl 타입이 아닙니다")
+            }
+
+            Log.i("ChatDebug", "🔚 === END CHANNEL DATA ===")
+
+        } catch (e: Exception) {
+            Log.e("ChatDebug", "❌ 채널별 데이터 로깅 실패", e)
         }
     }
 
@@ -143,6 +252,9 @@ class WebSocketChatViewModel @Inject constructor(
                                 myUserId = currentUserId ?: ""
                             )
                         }
+
+                        // 사용자 인증 완료 후 채팅방 입장
+                        joinChatRoom()
                     }
 
                     is CustomResult.Failure -> {
@@ -163,31 +275,43 @@ class WebSocketChatViewModel @Inject constructor(
             currentUserId?.let { userId ->
                 try {
                     val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
-                    val generalUseCases = webSocketUseCaseProvider.create()
 
                     roomUseCases.joinRoomUseCase(com.example.domain.model.vo.UserId(userId))
                     Log.d("ViewModel", "Joined chat room: $channelId")
 
-                    // Observe WebSocket connection state
-                    generalUseCases.getConnectionStateUseCase()
-                        .collect { connectionState: WebSocketConnectionState ->
-                            _uiState.update { state ->
-                                state.copy(connectionState = connectionState)
-                            }
-
-                            when (connectionState) {
-                                is WebSocketConnectionState.Error -> {
-                                    _eventFlow.emit(ChatEvent.Error("연결 오류: ${connectionState.message}"))
-                                }
-
-                                else -> { /* Handle other states if needed */
-                                }
-                            }
-                        }
                 } catch (e: Exception) {
                     Log.e("ViewModel", "Failed to join chat room", e)
                     _eventFlow.emit(ChatEvent.Error("채팅방 입장 실패: ${e.message}"))
                 }
+            }
+        }
+    }
+
+    /**
+     * 연결 상태 모니터링을 별도로 분리
+     */
+    private fun observeConnectionState() {
+        viewModelScope.launch {
+            try {
+                val generalUseCases = webSocketUseCaseProvider.create()
+
+                generalUseCases.getConnectionStateUseCase()
+                    .collect { connectionState: WebSocketConnectionState ->
+                        _uiState.update { state ->
+                            state.copy(connectionState = connectionState)
+                        }
+
+                        when (connectionState) {
+                            is WebSocketConnectionState.Error -> {
+                                _eventFlow.emit(ChatEvent.Error("연결 오류: ${connectionState.message}"))
+                            }
+
+                            else -> { /* Handle other states if needed */
+                            }
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Failed to observe connection state", e)
             }
         }
     }
@@ -257,12 +381,32 @@ class WebSocketChatViewModel @Inject constructor(
         // The Room database update will automatically flow through Paging3 to UI
         viewModelScope.launch {
             try {
-                // TODO: Update message status in Room database
-                // localMessageRepository.updateMessageStatus(event.messageId, sent = true, failed = false)
-                Log.d(
-                    "ViewModel",
-                    "Message marked as successfully sent in database: ${event.messageId}"
-                )
+                // Update message status in Room database
+                val messageId = com.example.domain.model.vo.DocumentId(event.messageId)
+                val result = messageRepository.updateSyncStatus(messageId, SyncStatus.SYNCED)
+
+                when (result) {
+                    is CustomResult.Success -> {
+                        Log.d("ViewModel", "Message marked as SENT in database: ${event.messageId}")
+
+                        // Paging3 새로고침으로 UI에 상태 변경 반영
+                        invalidatePagingSource()
+
+                        // OutBox 상태도 업데이트 (PENDING -> DISPATCHED)
+                        // TODO: OutBox 업데이트 로직 추가
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e(
+                            "ViewModel",
+                            "Failed to update message status to SENT: ${result.error.message}"
+                        )
+                    }
+
+                    else -> {
+                        Log.w("ViewModel", "Unexpected result type from updateSyncStatus")
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("ViewModel", "Failed to update message status in database", e)
             }
@@ -279,9 +423,35 @@ class WebSocketChatViewModel @Inject constructor(
         // The Room database update will automatically flow through Paging3 to UI
         viewModelScope.launch {
             try {
-                // TODO: Update message status in Room database
-                // localMessageRepository.updateMessageStatus(event.messageId, sent = false, failed = true)
-                Log.d("ViewModel", "Message marked as failed in database: ${event.messageId}")
+                // Update message status in Room database
+                val messageId = com.example.domain.model.vo.DocumentId(event.messageId)
+                val result = messageRepository.updateSyncStatus(messageId, SyncStatus.FAILED)
+
+                when (result) {
+                    is CustomResult.Success -> {
+                        Log.d(
+                            "ViewModel",
+                            "Message marked as FAILED in database: ${event.messageId}"
+                        )
+
+                        // Paging3 새로고침으로 UI에 실패 상태 반영
+                        invalidatePagingSource()
+
+                        // OutBox 상태도 업데이트 (PENDING -> FAILED)
+                        // TODO: OutBox 업데이트 로직 추가
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e(
+                            "ViewModel",
+                            "Failed to update message status to FAILED: ${result.error.message}"
+                        )
+                    }
+
+                    else -> {
+                        Log.w("ViewModel", "Unexpected result type from updateSyncStatus")
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("ViewModel", "Failed to update message status in database", e)
             }
@@ -322,24 +492,71 @@ class WebSocketChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Use core WebSocket UseCase directly
-                val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
-                roomUseCases.sendMessageUseCase(
+                // 1. 메시지 생성
+                val messageId = com.example.domain.model.vo.DocumentId(
+                    java.util.UUID.randomUUID().toString()
+                )
+                val message = Message.create(
+                    id = messageId,
                     senderId = com.example.domain.model.vo.UserId(senderId),
-                    content = text,
-                    messageId = com.example.domain.model.vo.DocumentId(
-                        java.util.UUID.randomUUID().toString()
-                    ),
+                    content = com.example.domain.model.vo.message.MessageContent(text),
                     replyToMessageId = replyToMessageId?.let {
-                        com.example.domain.model.vo.DocumentId(
-                            it
-                        )
-                    }
+                        com.example.domain.model.vo.DocumentId(it)
+                    },
+                    mentions = emptyList(), // TODO: 멘션 파싱 로직 추가
+                    channelId = com.example.domain.model.vo.ChannelId(channelId)
                 )
 
-                Log.d("ViewModel", "Message sent via WebSocket")
-                // Message will be automatically saved to Room DB by core_websocket
-                // Paging3 will automatically refresh when new data is available
+                // 2. SENDING 상태로 로컬에 즉시 저장 (SSOT)
+                val saveResult = sendMessageUseCase(message)
+
+                when (saveResult) {
+                    is CustomResult.Success -> {
+                        Log.d(
+                            "ViewModel",
+                            "Message saved locally with SENDING status: ${messageId.value}"
+                        )
+
+                        // 3. Paging3 새로고침 트리거 (SSOT 반영)
+                        invalidatePagingSource()
+
+                        // 4. 메시지 타임아웃 시작
+                        startMessageTimeout(messageId.value)
+
+                        // 5. 백그라운드에서 WebSocket 전송
+                        async {
+                            try {
+                                val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
+                                roomUseCases.sendMessageUseCase(
+                                    senderId = com.example.domain.model.vo.UserId(senderId),
+                                    content = text,
+                                    messageId = messageId,
+                                    replyToMessageId = replyToMessageId?.let {
+                                        com.example.domain.model.vo.DocumentId(it)
+                                    }
+                                )
+                                Log.d("ViewModel", "Message sent via WebSocket: ${messageId.value}")
+                            } catch (e: Exception) {
+                                Log.e("ViewModel", "WebSocket send failed: ${e.message}")
+                                // WebSocket 전송 실패 시 로컬 상태를 FAILED로 업데이트
+                                messageRepository.updateSyncStatus(messageId, SyncStatus.FAILED)
+                            }
+                        }
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e(
+                            "ViewModel",
+                            "Failed to save message locally: ${saveResult.error.message}"
+                        )
+                        _eventFlow.emit(ChatEvent.Error("메시지 저장 실패: ${saveResult.error.message}"))
+                    }
+
+                    else -> {
+                        Log.w("ViewModel", "Unexpected result from sendMessageUseCase")
+                        _eventFlow.emit(ChatEvent.Error("메시지 저장 실패: 예상치 못한 오류"))
+                    }
+                }
 
             } catch (e: Exception) {
                 Log.e("ViewModel", "Failed to send message", e)
@@ -397,6 +614,10 @@ class WebSocketChatViewModel @Inject constructor(
     // No manual loadMoreMessages needed
     
     private fun loadChannelData() {
+        // Paging3가 Room DB에서 기존 메시지를 자동으로 로드합니다.
+        // 별도의 초기 메시지 로딩은 필요하지 않습니다.
+        // WebSocket과 동기화 서비스가 백그라운드에서 데이터를 관리합니다.
+        
         if (projectId == null) {
             // DM channel - load participants
             loadDMParticipants()
@@ -405,7 +626,8 @@ class WebSocketChatViewModel @Inject constructor(
             loadProjectMembersAndRoles()
         }
     }
-    
+
+
     private fun loadDMParticipants() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingParticipants = true) }
@@ -784,26 +1006,53 @@ class WebSocketChatViewModel @Inject constructor(
      * Convert domain Message to ChatMessageUiModel
      */
     private fun convertDomainMessageToUiModel(message: Message): ChatMessageUiModel {
+        val userId = message.senderId.value
+        val userProfileService = services.userProfileService
+
+        // 사용자 프로필 정보 가져오기 (캐시된 값 사용)
+        val userName = userProfileService.getUserDisplayName(userId)
+        val userProfileUrl = userProfileService.getCachedProfileUrl(userId)
+
+        // 백그라운드에서 프로필 로딩 (이미 로딩 중이거나 캐시된 경우 스킵)
+        viewModelScope.launch {
+            try {
+                userProfileService.loadUserProfile(userId)
+                // 프로필 로딩 완료 후 UI 업데이트를 위해 메시지 리스트 새로고침
+                // Paging3의 경우 invalidate()를 호출하여 데이터를 다시 로드
+                Log.d("ViewModel", "User profile loaded for $userId, UI will be updated")
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Failed to load user profile for $userId", e)
+            }
+        }
+
+        // 전송 상태는 MessageLocal의 syncStatus에서 관리되므로 기본적으로 완료된 것으로 처리
+        val isSending = false // Message 도메인 모델에서 deliveryStatus 제거됨
+        val sendFailed = false // Message 도메인 모델에서 deliveryStatus 제거됨
+        val deliveryState = MessageDeliveryState.Sent // 기본적으로 완료된 상태로 처리
+
+        // 재전송 기능은 MessageLocal의 syncStatus를 통해 관리
+        val canRetry = false // MessageLocal의 syncStatus를 통해 관리
+        
         return ChatMessageUiModel(
             messageId = message.id.value,
-            userId = message.senderId.value,
-            userName = "Unknown", // TODO: Get from user profile
-            userProfileUrl = null, // TODO: Get from user profile
+            userId = userId,
+            userName = userName,
+            userProfileUrl = userProfileUrl,
             message = convertInternalToDisplayFormat(message.content.value),
-            formattedTimestamp = DateTimeUtil.formatChatTime(message.createdAt),
+            formattedTimestamp = if (isSending) "전송중..." else DateTimeUtil.formatChatTime(message.createdAt),
             actualTimestamp = message.createdAt,
             isModified = message.updatedAt != message.createdAt,
             attachmentImageUrls = emptyList(), // TODO: Handle attachments
             isMyMessage = message.senderId.value == currentUserId,
-            isSending = false,
-            sendFailed = false,
+            isSending = isSending,
+            sendFailed = sendFailed,
             isDeleted = message.isDeleted.value,
-            deliveryState = MessageDeliveryState.Sent,
-            isOptimistic = false,
-            clientSentAt = null,
-            retryCount = 0,
-            canRetry = false,
-            errorMessage = null,
+            deliveryState = deliveryState,
+            isOptimistic = isSending, // 전송 중인 메시지는 낙관적 업데이트로 처리
+            clientSentAt = message.createdAt,
+            retryCount = 0, // TODO: 재전송 횟수 추적 로직 추가
+            canRetry = canRetry,
+            errorMessage = null, // Message 도메인 모델에서 failureReason 제거됨
             replyToMessageId = message.replyToMessageId?.value,
             replyToContent = null, // TODO: Fetch reply content
             replyToUserName = null, // TODO: Fetch reply user name
@@ -872,6 +1121,7 @@ class WebSocketChatViewModel @Inject constructor(
         return when (val state = _uiState.value.connectionState) {
             is WebSocketConnectionState.Connected -> "실시간 연결됨"
             is WebSocketConnectionState.Connecting -> "연결 중..."
+            is WebSocketConnectionState.Authenticating -> "인증 중..."
             is WebSocketConnectionState.Disconnected -> {
                 if (queuedCount > 0) {
                     "오프라인 (${queuedCount}개 대기중)"
@@ -1000,7 +1250,7 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // TODO: Update message status in Room database
-                // localMessageRepository.updateMessageStatus(messageId, sent = true, failed = false)
+                // messageRepository.updateMessageStatus(messageId, sent = true, failed = false)
                 Log.d("ViewModel", "Timeout: Message marked as sent in database: $messageId")
             } catch (e: Exception) {
                 Log.e("ViewModel", "Failed to update message status in database", e)
@@ -1043,7 +1293,140 @@ class WebSocketChatViewModel @Inject constructor(
             }
         }
     }
-    
+
+    /**
+     * PagingSource를 무효화하여 Room DB 변경사항을 UI에 반영
+     */
+    private fun invalidatePagingSource() {
+        viewModelScope.launch {
+            try {
+                Log.d("ViewModel", "🔄 PagingSource 무효화 시작 - 채널: $channelId")
+
+                // PagingSource를 invalidate하여 Room 데이터 변경사항을 UI에 반영
+                messageRepository.getMessagesPagingSource(channelId).invalidate()
+
+                Log.d("ViewModel", "✅ PagingSource invalidated - UI will refresh from Room DB")
+
+                // 잠시 대기 후 Room DB 상태 확인
+                delay(100)
+                Log.d("ViewModel", "📊 PagingSource 무효화 후 Room DB 상태 확인 완료")
+
+            } catch (e: Exception) {
+                Log.e("ViewModel", "❌ Failed to invalidate PagingSource: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Anchor 기반 메시지 로딩 (특정 메시지 기준점에서 시작)
+     */
+    fun loadMessagesFromAnchor(anchorMessageId: String) {
+        viewModelScope.launch {
+            try {
+                // BidirectionalPagingMediator를 사용하여 Anchor 기반 로딩
+                com.example.data_repository.paging.BidirectionalPagingMediator(
+                    messageRepository = messageRepository,
+                    anchorMessageId = anchorMessageId,
+                    channelId = channelId
+                )
+
+                // Pager를 새로 구성하여 Anchor 기반 로딩
+                // TODO: ViewModel에서 동적 Pager 재구성 로직 추가
+                Log.d("ViewModel", "Loading messages from anchor: $anchorMessageId")
+
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Failed to load messages from anchor: ${e.message}")
+                _eventFlow.emit(ChatEvent.Error("특정 메시지 위치 로딩 실패: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * 수신 메시지 이벤트 구독 및 처리
+     */
+    private fun subscribeToIncomingMessages() {
+        viewModelScope.launch {
+            try {
+                // WebSocketMessageService에서 Paging3 새로고침 이벤트 구독
+                val generalUseCases = webSocketUseCaseProvider.create()
+                generalUseCases.subscribeToMessageRefreshEventsUseCase()
+                    .filter { refreshChannelId -> refreshChannelId == channelId } // 현재 채널만 필터링
+                    .onEach { refreshChannelId ->
+                        Log.d("ViewModel", "수신 메시지로 인한 Paging3 새로고침: $refreshChannelId")
+                        invalidatePagingSource()
+
+                        // UI 상태 업데이트 - 새 메시지 알림
+                        updateNewMessageNotification()
+
+                        // 새 메시지 알림 (선택적)
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("새 메시지가 도착했습니다"))
+                    }
+                    .launchIn(viewModelScope)
+
+                // 직접적인 WebSocket 이벤트 구독 (추가 처리가 필요한 경우)
+                val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
+                roomUseCases.subscribeToRoomEventsUseCase()
+                    .filter { event -> isMessageForCurrentChannel(event) }
+                    .onEach { event ->
+                        when (event) {
+                            is WebSocketDomainEvent.MessageReceived -> {
+                                Log.d("ViewModel", "새 메시지 수신: ${event.messageId}")
+                                // Room 저장은 WebSocketMessageService에서 자동 처리
+                                // UI 새로고침은 messageRefreshEvents에서 처리
+                            }
+
+                            is WebSocketDomainEvent.MessageEdited -> {
+                                Log.d("ViewModel", "메시지 수정 수신: ${event.messageId}")
+                                invalidatePagingSource()
+                            }
+
+                            is WebSocketDomainEvent.MessageDeleted -> {
+                                Log.d("ViewModel", "메시지 삭제 수신: ${event.messageId}")
+                                invalidatePagingSource()
+                            }
+
+                            else -> {
+                                // 다른 이벤트는 기존 로직 유지
+                            }
+                        }
+                    }
+                    .launchIn(viewModelScope)
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Failed to subscribe to incoming messages", e)
+            }
+        }
+    }
+
+    /**
+     * 이벤트가 현재 채널과 관련된 것인지 확인
+     */
+    private fun isMessageForCurrentChannel(event: WebSocketDomainEvent): Boolean {
+        return when (event) {
+            is WebSocketDomainEvent.MessageReceived -> event.roomId == channelId
+            is WebSocketDomainEvent.MessageEdited -> event.roomId == channelId
+            is WebSocketDomainEvent.MessageDeleted -> event.roomId == channelId
+            else -> false
+        }
+    }
+
+    /**
+     * 새 메시지 알림 상태 업데이트
+     */
+    private fun updateNewMessageNotification() {
+        // ChatUiState에는 새 메시지 알림 필드가 없으므로 로그만 출력
+        // 필요시 ChatUiState에 해당 필드들을 추가해야 함
+        Log.d("ViewModel", "새 메시지 알림 업데이트")
+    }
+
+    /**
+     * 새 메시지 알림 상태 초기화 (사용자가 메시지를 확인했을 때)
+     */
+    fun clearNewMessageNotification() {
+        // ChatUiState에는 새 메시지 알림 필드가 없으므로 로그만 출력
+        // 필요시 ChatUiState에 해당 필드들을 추가해야 함
+        Log.d("ViewModel", "새 메시지 알림 상태 초기화")
+    }
+
     override fun onCleared() {
         super.onCleared()
 

@@ -24,6 +24,15 @@ public class FirebaseAuthService {
     }
 
     /**
+     * Verify Firebase JWT token (async version with alias)
+     * @param idToken JWT token from Android client
+     * @return CompletableFuture with user ID if valid, null if invalid
+     */
+    public CompletableFuture<String> verifyIdTokenAsync(String idToken) {
+        return verifyToken(idToken);
+    }
+
+    /**
      * Verify Firebase JWT token
      * @param idToken JWT token from Android client
      * @return CompletableFuture with user ID if valid, null if invalid

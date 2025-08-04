@@ -24,6 +24,7 @@
             <option value="$PROJECT_DIR$/data/data_model" />
             <option value="$PROJECT_DIR$/data/data_repository" />
             <option value="$PROJECT_DIR$/data/mapper" />
+            <option value="$PROJECT_DIR$/data/orchestrator" />
             <option value="$PROJECT_DIR$/domain" />
             <option value="$PROJECT_DIR$/domain/domain" />
             <option value="$PROJECT_DIR$/domain/domain_repository" />

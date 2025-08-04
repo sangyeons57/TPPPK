@@ -19,6 +19,8 @@ data class DMChannelDTO(
     val participants: List<String> = emptyList(),
     @get:PropertyName(STATUS)
     val status: DMChannelStatus = DMChannelStatus.ACTIVE,
+    @get:PropertyName(BLOCKED_BY_MAP)
+    val blockedByMap: Map<String, String> = emptyMap(),
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp override val createdAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
@@ -29,6 +31,7 @@ data class DMChannelDTO(
         const val COLLECTION_NAME = DMChannel.COLLECTION_NAME
         const val PARTICIPANTS = DMChannel.KEY_PARTICIPANTS
         const val STATUS = DMChannel.KEY_STATUS
+        const val BLOCKED_BY_MAP = DMChannel.KEY_BLOCKED_BY_MAP
     }
 }
 

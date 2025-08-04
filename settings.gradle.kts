@@ -44,6 +44,7 @@ include(":data:data_converter")
 include(":data:data")
 include(":data:data_model")
 include(":data:mapper")
+include(":data:orchestrator")
 
 include(":feature:feature_chat")
 include(":feature:feature_splash")

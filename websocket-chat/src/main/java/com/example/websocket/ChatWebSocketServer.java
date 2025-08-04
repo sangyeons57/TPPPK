@@ -69,8 +69,8 @@ public class ChatWebSocketServer {
                     logger.info("🔧 Setting WebSocket container configuration...");
                     // Set WebSocket configuration
                     wsContainer.setDefaultMaxTextMessageBufferSize(65536);
-                    wsContainer.setDefaultMaxSessionIdleTimeout(Duration.ofMinutes(5).toMillis());
-                    logger.info("🔧 WebSocket buffer size: 65536, idle timeout: 5 minutes");
+                    wsContainer.setDefaultMaxSessionIdleTimeout(Duration.ofMinutes(4).toMillis());
+                    logger.info("🔧 WebSocket buffer size: 65536, idle timeout: 4 minutes (client ping: 3 minutes)");
 
                     // Create configurator that combines dependency injection with authentication
                     logger.info("🔧 Creating enhanced endpoint configurator...");

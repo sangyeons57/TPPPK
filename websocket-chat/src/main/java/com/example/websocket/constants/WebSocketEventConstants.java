@@ -30,6 +30,12 @@ public final class WebSocketEventConstants {
     /** 방 나가기 성공 알림 */
     public static final String LEFT_ROOM = "LEFT_ROOM";
     
+    /** 방 입장 성공 알림 (별칭) */
+    public static final String ROOM_JOINED = "ROOM_JOINED";
+    
+    /** 방 나가기 성공 알림 (별칭) */
+    public static final String ROOM_LEFT = "ROOM_LEFT";
+    
     // ================================
     // 메시지 관련 이벤트
     // ================================
@@ -79,14 +85,7 @@ public final class WebSocketEventConstants {
     /** 에러 메시지 */
     public static final String ERROR = "ERROR";
     
-    /** 하트비트/핑 */
-    public static final String HEARTBEAT = "HEARTBEAT";
-    
-    /** 핑 */
-    public static final String PING = "PING";
-    
-    /** 퐁 응답 */
-    public static final String PONG = "PONG";
+
     
     /** 일반 ACK */
     public static final String ACK = "ACK";

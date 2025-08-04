@@ -3,7 +3,6 @@ package com.example.domain_usecase.provider.chat
 import com.example.domain.vo.CollectionPath
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.MessageRepository
-import com.example.domain_repository.local.OutBoxRepository
 import com.example.domain_usecase.usecase.message.DeleteMessageUseCase
 import com.example.domain_usecase.usecase.message.EditMessageUseCase
 import com.example.domain_usecase.usecase.message.FetchNewerMessagesUseCase
@@ -35,8 +34,7 @@ enum class ChannelType {
 @Singleton
 class ChatUseCaseProvider @Inject constructor(
     private val messageRepository: MessageRepository,
-    private val authRepository: AuthRepository,
-    private val outBoxRepository: OutBoxRepository
+    private val authRepository: AuthRepository
 ) {
 
     /**
@@ -52,7 +50,7 @@ class ChatUseCaseProvider @Inject constructor(
         messageRepository.setCollection(collectionPath)
 
         return ChatUseCases(
-            sendMessageUseCase = SendMessageUseCase(this.messageRepository, outBoxRepository),
+            sendMessageUseCase = SendMessageUseCase(this.messageRepository),
             editMessageUseCase = EditMessageUseCase(this.messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(this.messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(this.messageRepository),
@@ -73,7 +71,7 @@ class ChatUseCaseProvider @Inject constructor(
         messageRepository.setCollection(collectionPath)
 
         return ChatUseCases(
-            sendMessageUseCase = SendMessageUseCase(this.messageRepository, outBoxRepository),
+            sendMessageUseCase = SendMessageUseCase(this.messageRepository),
             editMessageUseCase = EditMessageUseCase(this.messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(this.messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(this.messageRepository),

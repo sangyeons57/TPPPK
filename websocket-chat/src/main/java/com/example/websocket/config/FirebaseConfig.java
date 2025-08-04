@@ -24,13 +24,11 @@ public class FirebaseConfig {
             String googleAppCreds = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
             logger.info("🔥 GOOGLE_APPLICATION_CREDENTIALS: {}", googleAppCreds != null ? "set" : "not_set");
             
-            // Use Application Default Credentials (Workload Identity)
-            logger.info("🔥 Loading Application Default Credentials...");
-            GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
-            logger.info("🔥 Credentials loaded successfully");
+            // Use Workload Identity (Cloud Run default)
+            logger.info("🔥 Using Workload Identity for Firebase initialization...");
             
+            // Cloud Run 등에서는 별도 JSON 없이 아래처럼 사용 가능
             FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(credentials)
                     .setProjectId("teamnovaprojectprojecting")
                     .build();
 
@@ -39,11 +37,6 @@ public class FirebaseConfig {
             initialized = true;
             logger.info("✅ Firebase initialized successfully using Workload Identity");
             
-        } catch (java.io.IOException e) {
-            logger.warn("❌ Failed to load Google credentials ({}): {}. Running in mock authentication mode.", 
-                       e.getClass().getSimpleName(), e.getMessage());
-            logger.info("💡 To fix: Set GOOGLE_APPLICATION_CREDENTIALS environment variable or deploy to Google Cloud");
-            initialized = false;
         } catch (Exception e) {
             logger.warn("❌ Failed to initialize Firebase ({}): {}. Running in mock authentication mode.", 
                        e.getClass().getSimpleName(), e.getMessage());
@@ -51,7 +44,6 @@ public class FirebaseConfig {
             initialized = false;
         }
     }
-
 
     public static boolean isInitialized() {
         return initialized;

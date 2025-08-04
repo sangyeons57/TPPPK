@@ -4,12 +4,15 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
+import com.example.domain.model.enum.SyncStatus
+import com.example.domain.model.vo.ChannelId
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.model.vo.message.MessageIsDeleted
-import com.example.domain_repository.local.LocalMessagePagingRepository
+import com.example.domain_repository.base.MessageRepository
 import com.example.websocket.constant.OperationStatus
+import com.example.websocket.constant.WebSocketEventTypes
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.core.WebSocketManager
 import com.example.websocket.core.WebSocketMessage
@@ -19,6 +22,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
@@ -46,7 +51,7 @@ import javax.inject.Singleton
 class WebSocketMessageService @Inject constructor(
     private val globalWebSocketService: GlobalWebSocketService,
     private val webSocketEventFlow: WebSocketEventFlow,
-    private val localMessageRepository: LocalMessagePagingRepository
+    private val messageRepository: MessageRepository
 ) {
 
     // GlobalWebSocketService에서 연결 상태와 WebSocketManager 위임
@@ -60,6 +65,10 @@ class WebSocketMessageService @Inject constructor(
 
     // 코루틴 스코프 (자동 저장을 위한)
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Paging3 새로고침 이벤트 스트림
+    private val _messageRefreshEvents = MutableSharedFlow<String>() // channelId를 전달
+    val messageRefreshEvents: Flow<String> = _messageRefreshEvents.asSharedFlow()
 
     init {
         // WebSocketEventFlow 초기화 - GlobalWebSocketService의 메시지 스트림 연결
@@ -75,17 +84,31 @@ class WebSocketMessageService @Inject constructor(
     private fun initializeAutoSaveToRoomDB() {
         Log.i(TAG, "SSOT 패턴 초기화: WebSocket → Room DB 자동 저장 시작")
 
-        // 새 메시지 이벤트 → Room DB 저장
+        // 새 메시지 이벤트 → Room DB 저장 + Paging3 새로고침
         webSocketEventFlow.domainEvents
             .filterIsInstance<WebSocketDomainEvent.MessageReceived>()
             .onEach { event ->
                 try {
+                    // 중복 저장 방지: 이미 존재하는 메시지인지 확인
+                    val existingMessage = messageRepository.findById(DocumentId(event.messageId))
+
+                    if (existingMessage is CustomResult.Success) {
+                        Log.d(TAG, "메시지 이미 존재함, 저장 스킵: ${event.messageId}")
+                        return@onEach
+                    }
+                    
                     val message = convertWebSocketEventToDomainMessage(event)
-                    val result = localMessageRepository.save(message)
+                    val result = messageRepository.save(message)
 
                     when (result) {
                         is CustomResult.Success -> {
                             Log.d(TAG, "메시지 자동 저장 성공: ${event.messageId}")
+
+                            // Paging3 새로고침 이벤트 발송 (해당 채널만)
+                            event.roomId?.let { channelId ->
+                                _messageRefreshEvents.emit(channelId)
+                                Log.d(TAG, "Paging3 새로고침 이벤트 발송: $channelId")
+                            }
                         }
 
                         is CustomResult.Failure -> {
@@ -110,7 +133,7 @@ class WebSocketMessageService @Inject constructor(
                     // Room DB에서 메시지 업데이트 (update 메서드가 있다고 가정)
                     Log.d(TAG, "메시지 수정 이벤트 처리: ${event.messageId}")
                     // TODO: Repository에 update 메서드 구현 후 활성화
-                    // localMessageRepository.updateContent(DocumentId(event.messageId), MessageContent(event.newContent))
+                    // messageRepository.updateContent(DocumentId(event.messageId), MessageContent(event.newContent))
                 } catch (e: Exception) {
                     Log.e(TAG, "메시지 수정 자동 저장 중 예외: ${event.messageId}", e)
                 }
@@ -124,10 +147,10 @@ class WebSocketMessageService @Inject constructor(
                 try {
                     Log.d(TAG, "메시지 삭제 이벤트 처리: ${event.messageId}")
                     val existingMessage =
-                        localMessageRepository.findById(DocumentId(event.messageId))
+                        messageRepository.findById(DocumentId(event.messageId))
                     if (existingMessage is CustomResult.Success) {
                         existingMessage.data.delete()
-                        localMessageRepository.save(existingMessage.data)
+                        messageRepository.save(existingMessage.data)
                         Log.d(TAG, "메시지 삭제 처리 완료: ${event.messageId}")
                     }
                 } catch (e: Exception) {
@@ -147,10 +170,13 @@ class WebSocketMessageService @Inject constructor(
                         WebSocketMessage.TYPE_MESSAGE_ACK -> {
                             // 메시지 전송 성공 확인 - 메시지 상태를 SUCCESS로 업데이트
                             val existingMessage =
-                                localMessageRepository.findById(DocumentId(event.messageId))
+                                messageRepository.findById(DocumentId(event.messageId))
                             if (existingMessage is CustomResult.Success) {
-                                existingMessage.data.markAsDelivered()
-                                localMessageRepository.save(existingMessage.data)
+                                // 동기화 상태를 SYNCED로 업데이트
+                                messageRepository.updateSyncStatus(
+                                    DocumentId(event.messageId),
+                                    SyncStatus.SYNCED
+                                )
                                 Log.d(TAG, "메시지 전송 ACK 처리 완료: ${event.messageId}")
                             }
                         }
@@ -183,10 +209,13 @@ class WebSocketMessageService @Inject constructor(
                         WebSocketMessage.TYPE_MESSAGE_FAILED -> {
                             // 메시지 전송 실패 - 메시지 상태를 FAILED로 업데이트
                             val existingMessage =
-                                localMessageRepository.findById(DocumentId(event.messageId))
+                                messageRepository.findById(DocumentId(event.messageId))
                             if (existingMessage is CustomResult.Success) {
-                                existingMessage.data.markAsFailed(event.errorMessage)
-                                localMessageRepository.save(existingMessage.data)
+                                // 동기화 상태를 FAILED로 업데이트
+                                messageRepository.updateSyncStatus(
+                                    DocumentId(event.messageId),
+                                    SyncStatus.FAILED
+                                )
                                 Log.e(TAG, "메시지 전송 실패 처리 완료: ${event.messageId}")
                             }
                         }
@@ -210,6 +239,7 @@ class WebSocketMessageService @Inject constructor(
      * WebSocket 도메인 이벤트를 도메인 메시지 모델로 변환
      */
     private fun convertWebSocketEventToDomainMessage(event: WebSocketDomainEvent.MessageReceived): Message {
+        if (event.roomId == null) throw Exception("roomId is null")
         return Message.fromDataSource(
             id = DocumentId(event.messageId),
             senderId = UserId(event.senderId),
@@ -218,7 +248,8 @@ class WebSocketMessageService @Inject constructor(
             createdAt = Instant.parse(event.timestamp),
             updatedAt = Instant.parse(event.timestamp),
             isDeleted = MessageIsDeleted.FALSE,
-            mentions = emptyList() // TODO: WebSocketDomainEvent에 mentions 추가 후 활성화
+            mentions = emptyList(), // TODO: WebSocketDomainEvent에 mentions 추가 후 활성화
+            channelId = ChannelId(event.roomId)
         )
     }
 
@@ -399,19 +430,8 @@ class WebSocketMessageService @Inject constructor(
         }
 
         try {
-            // 연결 상태 확인 및 대기
-            if (connectionState.value !is WebSocketConnectionState.Connected) {
-                Log.w(TAG, "WebSocket 연결되지 않음, 연결 대기 중: $roomId")
-
-                val connectionWaitResult = withTimeoutOrNull(10000) {
-                    connectionState.first { it is WebSocketConnectionState.Connected }
-                }
-
-                if (connectionWaitResult == null) {
-                    synchronized(joiningRooms) { joiningRooms.remove(roomId) }
-                    return Result.failure(Exception("WebSocket connection timeout while joining room"))
-                }
-            }
+            // GlobalWebSocketService에서 이미 연결을 관리하므로 연결 확인 불필요
+            // 연결이 안 되어 있으면 방 입장 메시지 전송이 실패할 것이므로 자연스럽게 처리됨
 
             // 방 입장 메시지 전송
             val sendResult = if (userId != null) {
@@ -432,7 +452,7 @@ class WebSocketMessageService @Inject constructor(
                     val confirmationResult = withTimeoutOrNull(10000) {
                         webSocketManager.incomingMessages
                             .filter { message ->
-                                (message.type == "JOINED_ROOM" && message.roomId == roomId) ||
+                                (message.type == WebSocketEventTypes.JOINED_ROOM && message.roomId == roomId) ||
                                         (message.type == WebSocketMessage.TYPE_ERROR &&
                                                 (message.content?.contains("Room") == true || message.roomId == roomId))
                             }
@@ -440,7 +460,7 @@ class WebSocketMessageService @Inject constructor(
                     }
 
                     when {
-                        confirmationResult?.type == "JOINED_ROOM" -> {
+                        confirmationResult?.type == WebSocketEventTypes.JOINED_ROOM -> {
                             synchronized(joiningRooms) {
                                 joiningRooms.remove(roomId)
                                 joinedRooms.add(roomId)
@@ -557,11 +577,12 @@ class WebSocketMessageService @Inject constructor(
                 senderId = senderId,
                 content = MessageContent(content),
                 replyToMessageId = replyToMessageId,
-                mentions = emptyList()
+                mentions = emptyList(),
+                channelId = ChannelId(roomId) // ✅ roomId가 실제로는 channelId
             )
 
             // Room DB에 저장
-            val saveResult = localMessageRepository.save(tempMessage)
+            val saveResult = messageRepository.save(tempMessage)
             when (saveResult) {
                 is CustomResult.Success -> {
                     Log.d(TAG, "임시 메시지 Room DB 저장 성공: ${messageId.value}")

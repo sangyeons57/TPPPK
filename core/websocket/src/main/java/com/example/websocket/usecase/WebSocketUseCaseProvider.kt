@@ -127,6 +127,13 @@ class WebSocketUseCases(
         return webSocketMessageService.getAckEvents()
     }
 
+    /**
+     * Paging3 메시지 새로고침 이벤트 구독
+     */
+    fun subscribeToMessageRefreshEventsUseCase(): Flow<String> {
+        return webSocketMessageService.messageRefreshEvents
+    }
+
     // ================================
     // 상태 확인 Use Cases
     // ================================

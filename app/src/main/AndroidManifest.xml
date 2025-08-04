@@ -26,6 +26,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TeamnovaPersonalProjectProjectingKotlin"
         android:enableOnBackInvokedCallback="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true"
+        android:requestLegacyExternalStorage="false"
         tools:targetApi="33">
 
         <activity

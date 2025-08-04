@@ -46,8 +46,8 @@ class GlobalWebSocketService @Inject constructor(
     // Reconnection management with exponential backoff
     private var reconnectAttempts = 0
     private val maxReconnectAttempts = 10
-    private val baseReconnectDelayMs = 1000L // 1초
-    private val maxReconnectDelayMs = 60000L // 60초
+    private val baseReconnectDelayMs = 2000L // 2초 (3분 핑 간격에 맞춤)
+    private val maxReconnectDelayMs = 60000L // 60초 (최대 지연 시간)
     private var manuallyDisconnected = false
     private var reconnectJob: Job? = null
 
@@ -108,9 +108,14 @@ class GlobalWebSocketService @Inject constructor(
         this.serverUrl = serverUrl
         Log.d(TAG, "GlobalWebSocketService configured with server: $serverUrl")
 
-        // If we have auth token and are in foreground, connect
-        if (currentAuthToken != null && _isInForeground.value) {
-            scope.launch {
+        // 앱 시작 후 지연된 연결 시도 (ANR 방지)
+        scope.launch {
+            // 앱이 완전히 시작될 때까지 대기
+            delay(3000) // 3초 대기
+
+            // 인증 토큰이 있고 포그라운드에 있을 때만 연결
+            if (currentAuthToken != null && _isInForeground.value) {
+                Log.d(TAG, "🔄 Delayed connection attempt after app startup")
                 attemptConnection()
             }
         }
@@ -214,7 +219,9 @@ class GlobalWebSocketService @Inject constructor(
                     connectionState is WebSocketConnectionState.Error &&
                             currentAuthToken != null &&
                             serverUrl != null &&
-                            !connectionState.message.contains("Authentication") -> {
+                            !connectionState.message.contains("Authentication") &&
+                            !connectionState.message.contains("maximum reconnection attempts exceeded") &&
+                            reconnectAttempts < maxReconnectAttempts -> {
                         Log.d(TAG, "Connection error detected, scheduling reconnection")
                         scheduleReconnect()
                     }
@@ -433,6 +440,19 @@ class GlobalWebSocketService @Inject constructor(
         // Don't reconnect if manually disconnected or service not active
         if (manuallyDisconnected || !isServiceActive) {
             Log.d(TAG, "Skipping reconnection - manually disconnected or service inactive")
+            return
+        }
+
+        // Check if already connected or authenticating
+        val currentState = _globalConnectionState.value
+        if (currentState is WebSocketConnectionState.Connected) {
+            Log.d(TAG, "Skipping reconnection - already connected")
+            return
+        }
+
+        // Prevent multiple concurrent reconnection attempts
+        if (reconnectJob?.isActive == true) {
+            Log.d(TAG, "Skipping reconnection - attempt already in progress")
             return
         }
 

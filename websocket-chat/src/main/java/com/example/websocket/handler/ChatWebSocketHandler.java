@@ -8,56 +8,78 @@ import com.example.websocket.service.FirestoreMessageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import jakarta.websocket.server.ServerEndpointConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
-@ServerEndpoint(value = "/chat")
+@ServerEndpoint(value = "/chat", configurator = ChatWebSocketHandler.AuthConfigurator.class)
 public class ChatWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     
-    private final ObjectMapper objectMapper;
-    private final FirebaseAuthService authService;
-    private final ChatRoomManager roomManager;
-    private final FirestoreMessageService firestoreService;
+    private FirebaseAuthService authService;
+    private ChatRoomManager roomManager;
+    private FirestoreMessageService firestoreService;
+    private ObjectMapper objectMapper;
     
     private String userId;
     private String currentRoomId;
     private Session session;
+    
+    // 자동 Ping/Pong 모니터링을 위한 필드
+    private long lastPongReceivedTime = 0;
+    private int pongCount = 0;
+    private static final long PONG_TIMEOUT_MS = 120000; // 2분 (30초 Ping * 4)
 
-    public ChatWebSocketHandler(FirebaseAuthService authService, ChatRoomManager roomManager) {
-        this.authService = authService;
-        this.roomManager = roomManager;
-        this.firestoreService = new FirestoreMessageService();
+    // Default constructor required by Jakarta WebSocket
+    public ChatWebSocketHandler() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
+        this.firestoreService = new FirestoreMessageService();
+    }
+
+    // Constructor for dependency injection
+    public ChatWebSocketHandler(FirebaseAuthService authService, ChatRoomManager roomManager) {
+        this();
+        this.authService = authService;
+        this.roomManager = roomManager;
     }
 
     @OnOpen
-    public void onOpen(Session session) {
+    public void onOpen(Session session, EndpointConfig config) {
         this.session = session;
-        logger.info("🔌 WebSocket connection established - Session ID: {}", session.getId());
-        logger.info("🔌 Remote address: {}", session.getRequestURI());
-        logger.info("🔌 Protocol version: {}", session.getProtocolVersion());
-        
-        // Log all user properties for debugging
-        logger.debug("🔍 Session user properties: {}", session.getUserProperties());
-        
-        // Extract token from Authorization header (stored in user properties by configurator)
-        String token = (String) session.getUserProperties().get("auth_token");
-        
-        logger.info("🔑 Token extraction result - Token present: {}", token != null);
-        if (token != null) {
-            logger.debug("🔑 Token length: {}", token.length());
-            logger.debug("🔑 Token starts with: {}", token.length() > 10 ? token.substring(0, 10) + "..." : token);
+        logger.info("🔌 WebSocket connection opened for session: {}", session.getId());
+
+        // Services are already injected via constructor from ChatWebSocketServer
+        // No need to get from UserProperties as they're set in constructor
+        if (this.authService == null) {
+            logger.error("❌ authService is null - dependency injection failed");
+            closeWithError("Server configuration error");
+            return;
         }
-        
+        if (this.roomManager == null) {
+            logger.error("❌ roomManager is null - dependency injection failed");
+            closeWithError("Server configuration error");
+            return;
+        }
+        logger.debug("✅ Services injected successfully - authService and roomManager are ready");
+
+        // Extract Bearer token from Authorization header
+        String authHeader = (String) session.getUserProperties().get("Authorization");
+        logger.info("🔑 Authorization header: {}", authHeader != null ? "present" : "missing");
+
+        String token = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            logger.info("🔑 Extracted token (first 20 chars): {}...", token.substring(0, Math.min(20, token.length())));
+        }
+
         if (token == null || token.trim().isEmpty()) {
             logger.warn("❌ No authentication token provided in Authorization header");
             logger.warn("❌ Available user properties: {}", session.getUserProperties().keySet());
@@ -65,8 +87,9 @@ public class ChatWebSocketHandler {
             return;
         }
 
-        logger.info("🔑 Starting token verification...");
-        authService.verifyToken(token)
+        // Verify Firebase token asynchronously
+        logger.info("🔑 Starting Firebase token verification...");
+        authService.verifyIdTokenAsync(token)
                 .thenAccept(uid -> {
                     if (uid != null) {
                         this.userId = uid;
@@ -102,6 +125,20 @@ public class ChatWebSocketHandler {
             logger.error("[WS-RAW] 메시지 파싱 실패: {}", e.getMessage(), e);
             sendErrorMessage("Invalid message format");
         }
+    }
+
+    @OnMessage
+    public void onPong(PongMessage pongMessage) {
+        long currentTime = System.currentTimeMillis();
+        lastPongReceivedTime = currentTime;
+        pongCount++;
+        
+        logger.info("🏓 [AUTO-PING-PONG] Received pong frame from user {}: {} bytes (count: {}, time: {})", 
+                   userId, pongMessage.getApplicationData().remaining(), pongCount, 
+                   java.time.Instant.ofEpochMilli(currentTime));
+        
+        // 연결 상태 모니터링
+        monitorConnectionHealth();
     }
 
     @OnClose
@@ -147,13 +184,9 @@ public class ChatWebSocketHandler {
             case WebSocketEventConstants.DELETE_MESSAGE:
                 handleDeleteMessage(message);
                 break;
-            case WebSocketEventConstants.PING:
-            case WebSocketEventConstants.HEARTBEAT:
-                sendPong();
-                break;
             default:
                 logger.warn("Unknown message type: {}", message.getType());
-                sendErrorMessage("Unknown message type");
+                sendErrorMessage("Unknown message type: " + message.getType());
         }
     }
 
@@ -163,7 +196,7 @@ public class ChatWebSocketHandler {
             return;
         }
 
-        logger.info("🚪 User {} attempting to join room {}", userId, roomId);
+        logger.info("🚪 User {} joining room {}", userId, roomId);
 
         // Leave current room if any
         if (currentRoomId != null) {
@@ -175,10 +208,10 @@ public class ChatWebSocketHandler {
         currentRoomId = roomId;
         roomManager.joinRoom(roomId, userId, this);
         
-        // Send successful join confirmation
-        sendJoinRoomSuccessMessage(roomId);
-        logger.info("✅ User {} successfully joined room {} (room size: {})", 
-                   userId, roomId, roomManager.getRoomSize(roomId));
+        // Send join confirmation
+        ChatMessage joinConfirmation = new ChatMessage(WebSocketEventConstants.ROOM_JOINED, roomId, "server", "Successfully joined room: " + roomId, Instant.now());
+        sendMessage(joinConfirmation);
+        logger.info("✅ User {} successfully joined room {}", userId, roomId);
     }
 
     private void handleLeaveRoom(String roomId) {
@@ -188,8 +221,8 @@ public class ChatWebSocketHandler {
             currentRoomId = null;
             
             // Send successful leave confirmation
-            sendLeaveRoomSuccessMessage(roomId);
-            logger.info("✅ User {} successfully left room {}", userId, roomId);
+            ChatMessage leaveConfirmation = new ChatMessage(WebSocketEventConstants.ROOM_LEFT, roomId, "server", "Successfully left room: " + roomId, Instant.now());
+            sendMessage(leaveConfirmation);
         } else {
             logger.warn("❌ User {} attempted to leave room {} but is in room {}", 
                        userId, roomId, currentRoomId);
@@ -204,7 +237,7 @@ public class ChatWebSocketHandler {
         }
 
         try {
-            // Set message metadata (클라이언트에서 보낸 channelType, projectId는 유지)
+            // Set server-side fields
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
@@ -216,14 +249,13 @@ public class ChatWebSocketHandler {
             firestoreService.saveMessage(currentRoomId, message)
                 .thenAccept(success -> {
                     if (success) {
-                        logger.info("💾 Message saved to Firestore: messageId={}", message.getMessageId());
+                        logger.info("✅ Message saved to Firestore: {}", message.getMessageId());
                     } else {
-                        logger.warn("⚠️ Failed to save message to Firestore: messageId={}", message.getMessageId());
+                        logger.warn("⚠️ Failed to save message to Firestore: {}", message.getMessageId());
                     }
                 })
                 .exceptionally(throwable -> {
-                    logger.error("❌ Error saving message to Firestore: messageId={}, error={}", 
-                               message.getMessageId(), throwable.getMessage());
+                    logger.error("💥 Error saving message to Firestore: {}", throwable.getMessage(), throwable);
                     return null;
                 });
 
@@ -233,12 +265,15 @@ public class ChatWebSocketHandler {
                        currentRoomId, userId, message.getMessageId());
             
             // 3. 송신자에게 ACK 전송
-            sendMessageAck(message.getMessageId(), WebSocketEventConstants.MESSAGE_ACK);
-            logger.info("✅ MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
-            
+            ChatMessage ack = new ChatMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
+                                            "Message delivered", Instant.now());
+            ack.setReplyToMessageId(message.getMessageId());
+            sendMessage(ack);
+            logger.info("📩 ACK sent to sender {} for message {}", userId, message.getMessageId());
+
         } catch (Exception e) {
-            logger.error("❌ Error processing message from user {}: {}", userId, e.getMessage());
-            sendMessageAck(message.getMessageId(), WebSocketEventConstants.MESSAGE_FAILED);
+            logger.error("💥 Error processing message: {}", e.getMessage(), e);
+            sendErrorMessage("Failed to process message");
         }
     }
 
@@ -249,42 +284,40 @@ public class ChatWebSocketHandler {
         }
 
         try {
-            // Set message metadata (클라이언트에서 보낸 channelType, projectId는 유지)
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
-            message.setType(WebSocketEventConstants.EDIT_MESSAGE);
             
-            logger.info("✏️ Processing edit message: channelType={}, projectId={}, roomId={}", 
-                       message.getChannelType(), message.getProjectId(), currentRoomId);
+            logger.info("✏️ Processing message edit: messageId={}, roomId={}", 
+                       message.getMessageId(), currentRoomId);
 
-            // 1. Firestore에서 메시지 업데이트
+            // Update in Firestore
             firestoreService.updateMessage(currentRoomId, message)
                 .thenAccept(success -> {
                     if (success) {
-                        logger.info("✏️ Message updated in Firestore: messageId={}", message.getMessageId());
+                        logger.info("✅ Message updated in Firestore: {}", message.getMessageId());
                     } else {
-                        logger.warn("⚠️ Failed to update message in Firestore: messageId={}", message.getMessageId());
+                        logger.warn("⚠️ Failed to update message in Firestore: {}", message.getMessageId());
                     }
                 })
                 .exceptionally(throwable -> {
-                    logger.error("❌ Error updating message in Firestore: messageId={}, error={}", 
-                               message.getMessageId(), throwable.getMessage());
+                    logger.error("💥 Error updating message in Firestore: {}", throwable.getMessage(), throwable);
                     return null;
                 });
 
-            // 2. WebSocket으로 편집 알림 브로드캐스트
+            // Broadcast edit to room
             roomManager.broadcastToRoom(currentRoomId, message, userId);
-            logger.info("✏️ Message edit broadcast to room {} by user {} (messageId: {}) - echo prevented", 
-                       currentRoomId, userId, message.getMessageId());
+            logger.info("📤 Message edit broadcast to room {} by user {}", currentRoomId, userId);
             
-            // 3. 송신자에게 ACK 전송
-            sendMessageAck(message.getMessageId(), WebSocketEventConstants.EDIT_MESSAGE_ACK);
-            logger.info("✅ EDIT_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
-            
+            // Send ACK to sender
+            ChatMessage ack = new ChatMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
+                                            "Message edit delivered", Instant.now());
+            ack.setReplyToMessageId(message.getMessageId());
+            sendMessage(ack);
+
         } catch (Exception e) {
-            logger.error("❌ Error processing edit message from user {}: {}", userId, e.getMessage());
-            sendMessageAck(message.getMessageId(), WebSocketEventConstants.EDIT_MESSAGE_FAILED);
+            logger.error("💥 Error processing message edit: {}", e.getMessage(), e);
+            sendErrorMessage("Failed to process message edit");
         }
     }
 
@@ -295,95 +328,102 @@ public class ChatWebSocketHandler {
         }
 
         try {
-            // Set message metadata (클라이언트에서 보낸 channelType, projectId는 유지)
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
-            message.setType(WebSocketEventConstants.DELETE_MESSAGE);
             
-            logger.info("🗑️ Processing delete message: channelType={}, projectId={}, roomId={}", 
-                       message.getChannelType(), message.getProjectId(), currentRoomId);
+            logger.info("🗑️ Processing message deletion: messageId={}, roomId={}", 
+                       message.getMessageId(), currentRoomId);
 
-            // 1. Firestore에서 메시지 삭제 표시
+            // Delete from Firestore
             firestoreService.deleteMessage(currentRoomId, message)
                 .thenAccept(success -> {
                     if (success) {
-                        logger.info("🗑️ Message marked as deleted in Firestore: messageId={}", message.getMessageId());
+                        logger.info("✅ Message deleted from Firestore: {}", message.getMessageId());
                     } else {
-                        logger.warn("⚠️ Failed to delete message in Firestore: messageId={}", message.getMessageId());
+                        logger.warn("⚠️ Failed to delete message from Firestore: {}", message.getMessageId());
                     }
                 })
                 .exceptionally(throwable -> {
-                    logger.error("❌ Error deleting message in Firestore: messageId={}, error={}", 
-                               message.getMessageId(), throwable.getMessage());
+                    logger.error("💥 Error deleting message from Firestore: {}", throwable.getMessage(), throwable);
                     return null;
                 });
 
-            // 2. WebSocket으로 삭제 알림 브로드캐스트
+            // Broadcast deletion to room
             roomManager.broadcastToRoom(currentRoomId, message, userId);
-            logger.info("🗑️ Message delete broadcast to room {} by user {} (messageId: {}) - echo prevented", 
-                       currentRoomId, userId, message.getMessageId());
+            logger.info("📤 Message deletion broadcast to room {} by user {}", currentRoomId, userId);
             
-            // 3. 송신자에게 ACK 전송
-            sendMessageAck(message.getMessageId(), WebSocketEventConstants.DELETE_MESSAGE_ACK);
-            logger.info("✅ DELETE_MESSAGE_ACK sent to sender {} for messageId: {}", userId, message.getMessageId());
-            
+            // Send ACK to sender
+            ChatMessage ack = new ChatMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
+                                            "Message deletion delivered", Instant.now());
+            ack.setReplyToMessageId(message.getMessageId());
+            sendMessage(ack);
+
         } catch (Exception e) {
-            logger.error("❌ Error processing delete message from user {}: {}", userId, e.getMessage());
-            sendMessageAck(message.getMessageId(), WebSocketEventConstants.DELETE_MESSAGE_FAILED);
+            logger.error("💥 Error processing message deletion: {}", e.getMessage(), e);
+            sendErrorMessage("Failed to process message deletion");
         }
     }
 
-    private void sendPong() {
-        ChatMessage pong = new ChatMessage(WebSocketEventConstants.PONG, null, "server", "pong", Instant.now());
-        sendMessage(pong);
-    }
+
 
     private void sendAuthSuccessMessage() {
-        ChatMessage authSuccessMessage = new ChatMessage(WebSocketEventConstants.AUTH_SUCCESS, null, "system", "Authentication successful", Instant.now());
-        sendMessage(authSuccessMessage);
-        logger.info("📤 AUTH_SUCCESS message sent to user {}", userId);
-    }
-
-    private void sendJoinRoomSuccessMessage(String roomId) {
-        ChatMessage joinSuccessMessage = new ChatMessage(WebSocketEventConstants.JOINED_ROOM, roomId, "system", 
-                                                         "Successfully joined room: " + roomId, Instant.now());
-        sendMessage(joinSuccessMessage);
-        logger.info("📤 JOINED_ROOM confirmation sent to user {} for room {}", userId, roomId);
-    }
-
-    private void sendLeaveRoomSuccessMessage(String roomId) {
-        ChatMessage leaveSuccessMessage = new ChatMessage(WebSocketEventConstants.LEFT_ROOM, roomId, "system", 
-                                                          "Successfully left room: " + roomId, Instant.now());
-        sendMessage(leaveSuccessMessage);
-        logger.info("📤 LEFT_ROOM confirmation sent to user {} for room {}", userId, roomId);
-    }
-
-    private void sendSystemMessage(String type, String content) {
-        ChatMessage systemMessage = new ChatMessage(type, currentRoomId, "system", content, Instant.now());
-        sendMessage(systemMessage);
+        ChatMessage authSuccess = new ChatMessage(WebSocketEventConstants.AUTH_SUCCESS, null, "system", "Authentication successful", Instant.now());
+        sendMessage(authSuccess);
+        logger.info("✅ AUTH_SUCCESS message sent to user: {}", userId);
     }
 
     private void sendErrorMessage(String error) {
-        ChatMessage errorMessage = new ChatMessage(WebSocketEventConstants.ERROR, currentRoomId, "system", error, Instant.now());
+        ChatMessage errorMessage = new ChatMessage(WebSocketEventConstants.ERROR, null, "server", error, Instant.now());
         sendMessage(errorMessage);
+        logger.warn("❌ Error message sent: {}", error);
     }
-
-    private void sendMessageAck(String originalMessageId, String ackType) {
-        ChatMessage ackMessage = new ChatMessage(ackType, currentRoomId, "system", "Message processed", Instant.now());
-        // Set the messageId to match the original message for correlation
-        ackMessage.setMessageId(originalMessageId);
-        sendMessage(ackMessage);
+    
+    /**
+     * 자동 Ping/Pong 연결 상태 모니터링
+     */
+    private void monitorConnectionHealth() {
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastPong = currentTime - lastPongReceivedTime;
+        
+        // Pong 수신 통계 로깅
+        if (pongCount % 10 == 0) { // 10번마다 통계 출력
+            logger.info("📊 [AUTO-PING-PONG] Connection health check - User: {}, Pong count: {}, Last pong: {}ms ago", 
+                       userId, pongCount, timeSinceLastPong);
+        }
+        
+        // 타임아웃 체크 (2분 이상 Pong이 없으면 경고)
+        if (lastPongReceivedTime > 0 && timeSinceLastPong > PONG_TIMEOUT_MS) {
+            logger.warn("⚠️ [AUTO-PING-PONG] Connection timeout detected - User: {}, Time since last pong: {}ms", 
+                       userId, timeSinceLastPong);
+        }
+    }
+    
+    /**
+     * 연결 상태 정보 반환 (모니터링용)
+     */
+    public String getConnectionHealthInfo() {
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastPong = lastPongReceivedTime > 0 ? currentTime - lastPongReceivedTime : 0;
+        
+        return String.format(
+            "User: %s, Pong count: %d, Last pong: %dms ago, Connected: %s",
+            userId, pongCount, timeSinceLastPong, 
+            session != null && session.isOpen() ? "YES" : "NO"
+        );
     }
 
     public void sendMessage(ChatMessage message) {
-        try {
-            String json = objectMapper.writeValueAsString(message);
-            if (session != null && session.isOpen()) {
-                session.getBasicRemote().sendText(json);
+        if (session != null && session.isOpen()) {
+            try {
+                String jsonMessage = objectMapper.writeValueAsString(message);
+                session.getBasicRemote().sendText(jsonMessage);
+                logger.debug("📤 Sent message: {}", jsonMessage);
+            } catch (Exception e) {
+                logger.error("💥 Error sending message: {}", e.getMessage(), e);
             }
-        } catch (IOException e) {
-            logger.error("Error sending message: {}", e.getMessage());
+        } else {
+            logger.warn("⚠️ Attempted to send message to closed session for user: {}", userId);
         }
     }
 
@@ -402,74 +442,21 @@ public class ChatWebSocketHandler {
         return userId;
     }
 
-    public String getCurrentRoomId() {
-        return currentRoomId;
-    }
-
-    /**
-     * Configurator for extracting Authorization header and storing token in session properties
-     */
     public static class AuthConfigurator extends ServerEndpointConfig.Configurator {
-        private static final Logger logger = LoggerFactory.getLogger(AuthConfigurator.class);
-        
         @Override
         public void modifyHandshake(ServerEndpointConfig config, 
                                    jakarta.websocket.server.HandshakeRequest request, 
                                    jakarta.websocket.HandshakeResponse response) {
+            // Extract Authorization header from HTTP request
+            Map<String, List<String>> headers = request.getHeaders();
+            List<String> authHeaders = headers.get("authorization");
+            if (authHeaders == null || authHeaders.isEmpty()) {
+                authHeaders = headers.get("Authorization");
+            }
             
-            logger.info("🤝 WebSocket handshake started");
-            logger.info("🤝 Request URI: {}", request.getRequestURI());
-            
-            try {
-                // Extract Authorization header
-                Map<String, java.util.List<String>> headers = request.getHeaders();
-                logger.info("🔍 Total headers received: {}", headers.size());
-                
-                // Log all headers for debugging (be careful not to log sensitive data in production)
-                headers.forEach((key, values) -> {
-                    if (key.toLowerCase().contains("auth")) {
-                        logger.info("🔍 Header {}: [REDACTED] (length: {})", key, 
-                                   values.isEmpty() ? 0 : values.get(0).length());
-                    } else {
-                        logger.debug("🔍 Header {}: {}", key, values);
-                    }
-                });
-                
-                String authHeader = null;
-                
-                // Check both lowercase and uppercase variants
-                if (headers.containsKey("authorization") && !headers.get("authorization").isEmpty()) {
-                    authHeader = headers.get("authorization").get(0);
-                    logger.info("🔑 Found Authorization header (lowercase key)");
-                } else if (headers.containsKey("Authorization") && !headers.get("Authorization").isEmpty()) {
-                    authHeader = headers.get("Authorization").get(0);
-                    logger.info("🔑 Found Authorization header (uppercase key)");
-                } else {
-                    logger.warn("❌ No Authorization header found");
-                    logger.info("🔍 Available header keys: {}", headers.keySet());
-                }
-                
-                String token = null;
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    token = authHeader.substring(7); // Remove "Bearer " prefix
-                    logger.info("✅ Token extracted from Authorization header (length: {})", token.length());
-                } else if (authHeader != null) {
-                    logger.warn("❌ Authorization header does not start with 'Bearer ': {}", 
-                               authHeader.length() > 20 ? authHeader.substring(0, 20) + "..." : authHeader);
-                } else {
-                    logger.warn("❌ No Authorization header to process");
-                }
-                
-                // Store token in user properties for later use in onOpen
-                config.getUserProperties().put("auth_token", token);
-                
-                logger.info("🤝 Handshake processing completed - Token present: {}", token != null);
-                
-            } catch (Exception e) {
-                logger.error("💥 Error during handshake processing: {}", e.getMessage(), e);
-                // Don't fail the handshake, but log the error
-                config.getUserProperties().put("auth_token", null);
-                config.getUserProperties().put("handshake_error", e.getMessage());
+            if (authHeaders != null && !authHeaders.isEmpty()) {
+                String authHeader = authHeaders.get(0);
+                config.getUserProperties().put("Authorization", authHeader);
             }
         }
     }

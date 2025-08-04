@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":data:data_datasource"))
     implementation(project(":data:data_converter"))
     implementation(project(":data:mapper"))
+    implementation(project(":data:orchestrator"))
 
     // OkHttp and Retrofit dependencies
     implementation(libs.okhttp)
@@ -75,4 +76,6 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.room.paging)
+
+    implementation(libs.kotlinx.serialization.json)
 }

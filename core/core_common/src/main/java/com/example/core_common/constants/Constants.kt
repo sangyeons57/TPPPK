@@ -19,6 +19,17 @@ object Constants {
     }
 
     /**
+     * 채팅 관련 상수들
+     */
+    object Chat {
+        /**
+         * 알 수 없는 채널 ID를 위한 기본값
+         * Firestore에서 메시지를 가져올 때 channelId가 비어있을 경우 사용
+         */
+        const val UNKNOWN_CHANNEL_ID = "unknown_channel"
+    }
+
+    /**
      * 네비게이션 관련 상수들
      */
     object Navigation {

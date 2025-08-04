@@ -1,5 +1,6 @@
 package com.example.core_ui.components.user
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -7,7 +8,6 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.core_ui.R
-import android.util.Log
 
 /**
  * A simple composable that displays a user profile image from a given URL.
@@ -21,6 +21,21 @@ fun SimpleUserProfileImage(
     modifier: Modifier = Modifier
 ) {
     Log.d("ProfileImageDebug", "SimpleUserProfileImage: loading image URL: $imageUrl")
+
+    // null 체크 추가
+    if (imageUrl.isNullOrBlank()) {
+        Log.d(
+            "ProfileImageDebug",
+            "SimpleUserProfileImage: imageUrl is null or blank, using placeholder"
+        )
+        AsyncImage(
+            model = R.drawable.ic_default_profile_placeholder,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+        return
+    }
     
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current)

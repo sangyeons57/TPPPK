@@ -1,7 +1,7 @@
 package com.example.feature_chat.service
 
 import com.example.core_navigation.core.NavigationManger
-import com.example.domain_repository.local.LocalMessagePagingRepository
+import com.example.domain_repository.base.MessageRepository
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.chat.ChatUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
@@ -29,7 +29,7 @@ class ChatServiceProvider @Inject constructor(
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val offlineMessageQueue: OfflineMessageQueue,
     private val navigationManger: NavigationManger,
-    private val localMessageRepository: LocalMessagePagingRepository,
+    private val messageRepository: MessageRepository,
 ) {
     
     /**
@@ -65,7 +65,7 @@ class ChatServiceProvider @Inject constructor(
             chatUseCases = chatUseCases,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
-            localMessageRepository = localMessageRepository,
+            messageRepository = messageRepository,
             roomId = roomId,
             projectId = projectId,
             channelType = channelType
@@ -115,7 +115,7 @@ class ChatServiceProvider @Inject constructor(
             chatUseCases = chatUseCases,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
-            localMessageRepository = localMessageRepository,
+            messageRepository = messageRepository,
             roomId = roomId,
             projectId = null,
             channelType = channelType

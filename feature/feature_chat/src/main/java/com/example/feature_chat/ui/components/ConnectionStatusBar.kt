@@ -56,6 +56,14 @@ fun ConnectionStatusBar(
                 Icons.Default.Refresh
             )
         }
+        is WebSocketConnectionState.Authenticating -> {
+            Quadruple(
+                true,
+                MaterialTheme.colorScheme.primary,
+                "인증 중...",
+                Icons.Default.Refresh
+            )
+        }
         is WebSocketConnectionState.Connected -> {
             Quadruple(
                 false,

@@ -6,7 +6,7 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
-import com.example.domain_repository.local.LocalMessageRepository
+import com.example.domain_repository.base.MessageRepository
 import java.time.Instant
 import javax.inject.Inject
 
@@ -16,8 +16,9 @@ import javax.inject.Inject
  */
 @OptIn(ExperimentalPagingApi::class)
 class BidirectionalPagingMediator @Inject constructor(
-    private val localMessageRepository: LocalMessageRepository,
-    private val anchorMessageId: String? = null
+    private val messageRepository: MessageRepository,
+    private val anchorMessageId: String? = null,
+    private val channelId: String
 ) : RemoteMediator<Long, Message>() {
 
     private var anchorTimestamp: Long? = null
@@ -81,7 +82,8 @@ class BidirectionalPagingMediator @Inject constructor(
             }
         } else {
             // 일반적인 최신 메시지부터 시작
-            val result = localMessageRepository.getMessagesBefore(
+            val result = messageRepository.getMessagesBefore(
+                channelId = channelId,
                 beforeTimestamp = Instant.now().toEpochMilli(),
                 limit = state.config.pageSize
             )
@@ -109,7 +111,8 @@ class BidirectionalPagingMediator @Inject constructor(
             firstMessage?.createdAt?.toEpochMilli() ?: Instant.now().toEpochMilli()
         }
 
-        val result = localMessageRepository.getMessagesAfter(
+        val result = messageRepository.getMessagesAfter(
+            channelId = channelId,
             afterTimestamp = timestamp,
             limit = state.config.pageSize
         )
@@ -136,7 +139,8 @@ class BidirectionalPagingMediator @Inject constructor(
             lastMessage?.createdAt?.toEpochMilli() ?: 0L
         }
 
-        val result = localMessageRepository.getMessagesBefore(
+        val result = messageRepository.getMessagesBefore(
+            channelId = channelId,
             beforeTimestamp = timestamp,
             limit = state.config.pageSize
         )
@@ -157,11 +161,40 @@ class BidirectionalPagingMediator @Inject constructor(
     }
 
     private suspend fun loadMessagesAroundAnchor(anchorMessageId: String): CustomResult<List<Message>, Exception> {
-        // TODO: MessageDao의 getMessagesAroundAnchor를 사용하여 기준점 주변 메시지 로드
-        // 현재는 기본 구현으로 대체
-        return localMessageRepository.getMessagesBefore(
-            beforeTimestamp = Instant.now().toEpochMilli(),
-            limit = 50
-        )
+        return try {
+            // 1. 먼저 Anchor 메시지가 존재하는지 확인
+            val anchorMessage =
+                messageRepository.findById(com.example.domain.model.vo.DocumentId(anchorMessageId))
+
+            when (anchorMessage) {
+                is CustomResult.Success -> {
+                    val message = anchorMessage.data
+                    val anchorTimestamp = message.createdAt.toEpochMilli()
+
+                    // 2. Anchor 주변 메시지들을 시간 범위로 조회
+                    // 앞뒤 1시간씩 총 2시간 범위의 메시지 로드
+                    val oneHour = 3600000L // 1시간 = 3600000ms
+                    val startTime = anchorTimestamp - oneHour
+                    val endTime = anchorTimestamp + oneHour
+
+                    messageRepository.getMessagesBetween(channelId, startTime, endTime)
+                }
+
+                is CustomResult.Failure -> {
+                    // Anchor 메시지가 없는 경우 최신 메시지부터 로드
+                    messageRepository.getMessagesBefore(
+                        channelId = channelId,
+                        beforeTimestamp = Instant.now().toEpochMilli(),
+                        limit = 50
+                    )
+                }
+
+                else -> {
+                    CustomResult.Failure(Exception("Unexpected result type from findById"))
+                }
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 }

@@ -35,11 +35,11 @@ import javax.net.ssl.X509TrustManager
 class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
 
     private val okHttpClient = OkHttpClient.Builder()
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .pingInterval(15, TimeUnit.SECONDS) // Cloud Run LB idle-timeout is 30s, so use 15s
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .pingInterval(30, TimeUnit.SECONDS) // 서버 4분 타임아웃 대비 30초 핑 (8배 여유)
         .retryOnConnectionFailure(true)
-        .connectTimeout(10, TimeUnit.SECONDS) // 연결 타임아웃 추가
         .apply {
             // Configure SSL for Google Cloud Run compatibility
             configureSslForCloudRun()
@@ -112,6 +112,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     private val webSocketListener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             Log.d(TAG, "WebSocket connection opened successfully")
+            Log.i(TAG, "🔌 WebSocket connected - URL: ${response.request.url}")
             _connectionState.value = WebSocketConnectionState.Connected("")
 
             // Reset manual disconnect flag
@@ -119,6 +120,11 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
 
             // OkHttp handles ping/pong automatically with pingInterval
             Log.d(TAG, "Connection state updated to Connected, reconnect attempts reset")
+        }
+
+        override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) {
+            Log.i(TAG, "🏓 [AUTO-PING-PONG] Received pong frame: ${bytes.hex()}")
+            super.onMessage(webSocket, bytes)
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -155,6 +161,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             Log.d(TAG, "WebSocket closed: $code - $reason")
+            Log.w(TAG, "🔌 WebSocket disconnected - Code: $code, Reason: $reason")
 
             // 연결 끄어질 때 모든 방에서 퇴장
             leaveAllRooms()

@@ -92,11 +92,6 @@ object WebSocketEventTypes {
     // 연결 관리 이벤트
     // ================================
 
-    /** 연결 상태 확인 (Ping) */
-    const val PING = "PING"
-
-    /** 연결 상태 응답 (Pong) */
-    const val PONG = "PONG"
 
     /** 연결 성공 */
     const val CONNECTED = "CONNECTED"
@@ -237,7 +232,7 @@ object WebSocketEventTypes {
     fun isSystemEvent(eventType: String): Boolean {
         return eventType in setOf(
             ERROR, SYSTEM, ANNOUNCEMENT, MAINTENANCE,
-            PING, PONG, CONNECTED, DISCONNECTED, RECONNECT
+            CONNECTED, DISCONNECTED, RECONNECT
         )
     }
 

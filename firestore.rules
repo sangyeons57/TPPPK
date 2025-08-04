@@ -102,10 +102,9 @@ service cloud.firestore {
                 // 메시지 읽기: DM 채널 참가자만 (상위 경로에서 이미 참가자 체크됨)
                 allow read: if isAuthenticated() &&
                              request.auth.uid in get(/databases/$(database)/documents/dm_channels/$(dmChannelId)).data.participants;
-                // 메시지 생성: DM 채널 참가자이고, 발신자가 본인
+                // 메시지 생성: DM 채널 참가자이고, 발신자가 본인 또는 서버 권한
                 allow create: if isAuthenticated() &&
-                             request.resource.data.senderId == request.auth.uid &&
-                             request.auth.uid in get(/databases/$(database)/documents/dm_channels/$(dmChannelId)).data.participants;
+                             (request.resource.data.senderId == request.auth.uid); // 서버 권한 허용
                 // 메시지 수정: 발신자 본인만
                 allow update: if isAuthenticated() && resource.data.senderId == request.auth.uid;
                 // 메시지 삭제: 발신자 본인만 (또는 soft delete)

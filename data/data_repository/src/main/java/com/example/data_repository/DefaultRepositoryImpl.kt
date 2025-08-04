@@ -18,7 +18,7 @@ abstract class DefaultRepositoryImpl<D : AggregateRoot, E : DTO>(
     protected val mapper: DtoMapper<D, E>,
 ) : DefaultRepository<D> {
 
-    private var currentCollectionPath: CollectionPath? = null
+    protected var currentCollectionPath: CollectionPath? = null
 
     override fun setCollection(collectionPath: CollectionPath) {
         currentCollectionPath = collectionPath

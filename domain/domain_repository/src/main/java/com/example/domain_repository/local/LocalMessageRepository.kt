@@ -1,5 +1,6 @@
 package com.example.domain_repository.local
 
+import androidx.paging.PagingSource
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
@@ -9,8 +10,19 @@ import com.example.domain.model.vo.UserId
 /**
  * Message 로컬 저장소 Repository 인터페이스
  * Message 도메인 특화 로컬 저장소 작업 정의
+ * Paging3 지원을 포함한 통합 인터페이스
  */
 interface LocalMessageRepository : BaseLocalRepository<Message> {
+
+    // ================================
+    // Paging3 지원 메서드
+    // ================================
+
+    /**
+     * 메시지용 PagingSource 제공 (시간 역순)
+     * @return 타임스탬프 키를 사용하는 PagingSource
+     */
+    fun getMessagesPagingSource(): PagingSource<Long, Message>
 
     // ================================
     // Message 도메인 특화 조회 작업

@@ -18,6 +18,11 @@ data class ChatUiStateRefactored(
     val isLoadingMoreMessages: Boolean = false,
     val hasMoreMessages: Boolean = true,
     val lastMessageTimestamp: Instant? = null,
+
+    // 새 메시지 알림 관련
+    val hasNewMessages: Boolean = false,
+    val unreadMessageCount: Int = 0,
+    val showNewMessageBadge: Boolean = false,
     
     // 메시지 입력 상태 (새로운 모델 클래스 사용)
     val messageInputState: MessageInputState = MessageInputState.initial(),

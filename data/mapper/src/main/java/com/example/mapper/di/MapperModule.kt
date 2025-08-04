@@ -52,7 +52,6 @@ import com.example.mapper.project.ProjectsWrapperMapper
 import com.example.mapper.reaction.ReactionMapper
 import com.example.mapper.role.RoleMapper
 import com.example.mapper.schedule.ScheduleMapper
-import com.example.mapper.sync.OutBoxMapper
 import com.example.mapper.task.TaskMapper
 import com.example.mapper.user.UserMapper
 import dagger.Module
@@ -73,10 +72,6 @@ object MapperModule {
     @Provides
     @Singleton
     fun provideMessageMapper(): MessageMapper = MessageMapper()
-
-    @Provides
-    @Singleton
-    fun provideOutBoxMapper(): OutBoxMapper = OutBoxMapper()
 
     // Entity가 없는 DtoMapper들
     @Provides

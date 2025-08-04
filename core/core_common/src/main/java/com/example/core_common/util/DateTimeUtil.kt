@@ -715,4 +715,76 @@ object DateTimeUtil {
             else -> throw IllegalArgumentException("Cannot convert ${value::class.simpleName} to Timestamp")
         }
     }
+
+    /**
+     * Instant를 사람이 읽기 쉬운 형태로 포맷팅합니다.
+     * 디버깅 및 로깅 목적으로 사용됩니다.
+     *
+     * 포맷: "yyyy-MM-dd HH:mm:ss" (예: "2024-12-21 14:30:45")
+     *
+     * @param instant 변환할 Instant
+     * @param zoneId 시간대 (기본값: 시스템 기본 시간대)
+     * @return 사람이 읽기 쉬운 날짜/시간 문자열
+     */
+    fun formatToHumanReadable(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatDateTimeWithSeconds(instant, zoneId)
+    }
+
+    /**
+     * 에포크 밀리초를 사람이 읽기 쉬운 형태로 포맷팅합니다.
+     * 디버깅 및 로깅 목적으로 사용됩니다.
+     *
+     * 포맷: "yyyy-MM-dd HH:mm:ss" (예: "2024-12-21 14:30:45")
+     *
+     * @param epochMillis 에포크 시간 (밀리초)
+     * @param zoneId 시간대 (기본값: 시스템 기본 시간대)
+     * @return 사람이 읽기 쉬운 날짜/시간 문자열
+     */
+    fun formatToHumanReadable(epochMillis: Long, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatToHumanReadable(fromEpochMillisToInstant(epochMillis), zoneId)
+    }
+
+    /**
+     * LocalDateTime을 사람이 읽기 쉬운 형태로 포맷팅합니다.
+     * 디버깅 및 로깅 목적으로 사용됩니다.
+     *
+     * 포맷: "yyyy-MM-dd HH:mm:ss" (예: "2024-12-21 14:30:45")
+     *
+     * @param localDateTime 변환할 LocalDateTime
+     * @return 사람이 읽기 쉬운 날짜/시간 문자열
+     */
+    fun formatToHumanReadable(localDateTime: LocalDateTime): String {
+        return formatDateTimeWithSeconds(localDateTime)
+    }
+
+    /**
+     * Date를 사람이 읽기 쉬운 형태로 포맷팅합니다.
+     * 디버깅 및 로깅 목적으로 사용됩니다.
+     *
+     * 포맷: "yyyy-MM-dd HH:mm:ss" (예: "2024-12-21 14:30:45")
+     *
+     * @param date 변환할 Date
+     * @param zoneId 시간대 (기본값: 시스템 기본 시간대)
+     * @return 사람이 읽기 쉬운 날짜/시간 문자열
+     */
+    fun formatToHumanReadable(date: Date, zoneId: ZoneId = ZoneId.systemDefault()): String {
+        return formatToHumanReadable(toInstant(date), zoneId)
+    }
+
+    /**
+     * Firebase Timestamp를 사람이 읽기 쉬운 형태로 포맷팅합니다.
+     * 디버깅 및 로깅 목적으로 사용됩니다.
+     *
+     * 포맷: "yyyy-MM-dd HH:mm:ss" (예: "2024-12-21 14:30:45")
+     *
+     * @param timestamp 변환할 Firebase Timestamp
+     * @param zoneId 시간대 (기본값: 시스템 기본 시간대)
+     * @return 사람이 읽기 쉬운 날짜/시간 문자열
+     */
+    fun formatToHumanReadable(
+        timestamp: Timestamp,
+        zoneId: ZoneId = ZoneId.systemDefault()
+    ): String {
+        return formatToHumanReadable(firebaseTimestampToInstant(timestamp), zoneId)
+    }
 }

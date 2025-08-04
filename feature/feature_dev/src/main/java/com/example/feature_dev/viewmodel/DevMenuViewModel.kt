@@ -4,10 +4,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.domain.model.sync.SyncCoordinator
 import com.example.domain.model.vo.DocumentId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dev.DevMenuUseCaseProvider
-import com.example.domain_usecase.sync.SyncManager
+import com.example.domain_usecase.usecase.sync.ResetAndSyncUseCase
+import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.usecase.WebSocketUseCaseProvider
@@ -24,7 +26,9 @@ class DevMenuViewModel @Inject constructor(
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val devMenuUseCaseProvider: DevMenuUseCaseProvider,
-    private val syncManager: SyncManager
+    private val syncManager: SyncCoordinator,
+    private val syncUseCase: SyncUseCase,
+    private val resetAndSyncUseCase: ResetAndSyncUseCase
 ) : ViewModel() {
 
     // WebSocket use cases for dev testing
@@ -104,6 +108,13 @@ class DevMenuViewModel @Inject constructor(
     // 로컬 채팅 캐시 삭제 결과
     private val _localChatCacheClearResult = MutableStateFlow("")
     val localChatCacheClearResult: StateFlow<String> = _localChatCacheClearResult.asStateFlow()
+
+    // 동기화 관련 상태
+    private val _syncStatus = MutableStateFlow("")
+    val syncStatus: StateFlow<String> = _syncStatus.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
     init {
         // 로그인 상태 확인
@@ -205,57 +216,6 @@ class DevMenuViewModel @Inject constructor(
             _cacheClearResult.value = "정보: Firestore는 네이티브 캐싱을 사용합니다. 수동 캐시 삭제가 필요하지 않습니다."
 
             _isCacheClearing.value = false
-        }
-    }
-
-    /**
-     * 동기화 캐시 및 대기열 정리
-     */
-    fun clearAllLocalChatCache() {
-        viewModelScope.launch {
-            _isLocalChatCacheClearing.value = true
-            _localChatCacheClearResult.value = "동기화 데이터 정리 중..."
-            try {
-                // 완료된 OutBox 작업들을 정리
-                val cleanupResult = syncManager.cleanupCompletedOperations()
-                when (cleanupResult) {
-                    is CustomResult.Success -> {
-                        val cleanedCount = cleanupResult.data
-                        // 실패한 작업들도 리셋
-                        val resetResult = syncManager.resetFailedOperations()
-                        when (resetResult) {
-                            is CustomResult.Success -> {
-                                val resetCount = resetResult.data
-                                _localChatCacheClearResult.value =
-                                    "성공: 완료된 작업 ${cleanedCount}개 정리, 실패한 작업 ${resetCount}개 리셋됨"
-                            }
-
-                            is CustomResult.Failure -> {
-                                _localChatCacheClearResult.value =
-                                    "부분 성공: 완료된 작업 ${cleanedCount}개 정리됨, 실패 작업 리셋 실패: ${resetResult.error.message}"
-                            }
-
-                            else -> {
-                                _localChatCacheClearResult.value =
-                                    "부분 성공: 완료된 작업 ${cleanedCount}개 정리됨"
-                            }
-                        }
-                    }
-
-                    is CustomResult.Failure -> {
-                        _localChatCacheClearResult.value =
-                            "실패: ${cleanupResult.error.message ?: "알 수 없는 오류"}"
-                    }
-
-                    else -> {
-                        _localChatCacheClearResult.value = "실패: 알 수 없는 오류"
-                    }
-                }
-            } catch (e: Exception) {
-                _localChatCacheClearResult.value = "실패: ${e.message ?: "알 수 없는 오류"}"
-            } finally {
-                _isLocalChatCacheClearing.value = false
-            }
         }
     }
 
@@ -433,6 +393,7 @@ class DevMenuViewModel @Inject constructor(
         return when (state) {
             is WebSocketConnectionState.Connected -> "Connected"
             is WebSocketConnectionState.Connecting -> "Connecting..."
+            is WebSocketConnectionState.Authenticating -> "Authenticating..."
             is WebSocketConnectionState.Disconnected -> "Disconnected"
             is WebSocketConnectionState.Reconnecting -> "Reconnecting..."
             is WebSocketConnectionState.Error -> "Error: ${state.message}"
@@ -441,47 +402,6 @@ class DevMenuViewModel @Inject constructor(
 
     fun getWebSocketStatusText(): String {
         return getConnectionStateText(_webSocketConnectionState.value)
-    }
-
-    /**
-     * 동기화 상태 요약을 조회합니다.
-     */
-    fun getSyncStatusSummary() {
-        viewModelScope.launch {
-            _isLocalChatCacheClearing.value = true
-            _localChatCacheClearResult.value = "동기화 상태 조회 중..."
-            try {
-                val summaryResult = syncManager.getSyncStatusSummary()
-                when (summaryResult) {
-                    is CustomResult.Success -> {
-                        val summary = summaryResult.data
-                        _localChatCacheClearResult.value = """
-                            동기화 상태:
-                            • 대기 중인 작업: ${summary.pendingOperationsCount}개
-                            • 실패한 작업: ${summary.failedOperationsCount}개
-                            • 완료된 작업: ${summary.completedOperationsCount}개
-                            • 활성 스코프: ${summary.activeScopesCount}개
-                            • 오류 스코프: ${summary.errorScopesCount}개
-                            • 총 동기화 작업: ${summary.totalSyncOperations}회
-                            • 마지막 동기화: ${summary.lastSyncAt ?: "없음"}
-                        """.trimIndent()
-                    }
-
-                    is CustomResult.Failure -> {
-                        _localChatCacheClearResult.value =
-                            "상태 조회 실패: ${summaryResult.error.message}"
-                    }
-
-                    else -> {
-                        _localChatCacheClearResult.value = "상태 조회 실패: 알 수 없는 오류"
-                    }
-                }
-            } catch (e: Exception) {
-                _localChatCacheClearResult.value = "상태 조회 실패: ${e.message ?: "알 수 없는 오류"}"
-            } finally {
-                _isLocalChatCacheClearing.value = false
-            }
-        }
     }
 
     /**
@@ -526,6 +446,133 @@ class DevMenuViewModel @Inject constructor(
                 Log.d("DevMenuViewModel-FCM", "❌ FCM 테스트 알림 예외: ${e.message}")
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    // ================================
+    // 동기화 기능
+    // ================================
+
+    /**
+     * 증분 동기화 실행
+     * @param tableName 동기화할 테이블명 (기본값: "messages")
+     */
+    fun syncIncremental(tableName: String = "messages") {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _syncStatus.value = "🔄 증분 동기화 시작..."
+
+            Log.d("DevMenuViewModel-Sync", "🔄 Incremental sync started for table: $tableName")
+            addMessage("🔄 증분 동기화 시작 (테이블: $tableName)")
+
+            try {
+                when (val result = syncUseCase(tableName)) {
+                    is CustomResult.Success -> {
+                        _syncStatus.value = "✅ 증분 동기화 완료!"
+                        Log.d("DevMenuViewModel-Sync", "✅ Incremental sync completed successfully")
+                        Log.d("DevMenuViewModel-Sync", "   - Table: $tableName")
+                        Log.d("DevMenuViewModel-Sync", "   - Only new/updated data synced")
+                        addMessage("✅ 증분 동기화 완료! (테이블: $tableName)")
+                    }
+
+                    is CustomResult.Failure -> {
+                        _syncStatus.value = "❌ 증분 동기화 실패: ${result.error.message}"
+                        Log.e("DevMenuViewModel-Sync", "❌ Incremental sync failed", result.error)
+                        Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
+                        Log.e("DevMenuViewModel-Sync", "   - Error: ${result.error.message}")
+                        addMessage("❌ 증분 동기화 실패: ${result.error.message}")
+                    }
+
+                    else -> {
+                        _syncStatus.value = "⚠️ 증분 동기화 결과 알 수 없음"
+                        Log.w(
+                            "DevMenuViewModel-Sync",
+                            "⚠️ Unknown result from incremental sync: $result"
+                        )
+                        addMessage("⚠️ 증분 동기화 결과 알 수 없음")
+                    }
+                }
+            } catch (e: Exception) {
+                _syncStatus.value = "❌ 증분 동기화 예외: ${e.message}"
+                Log.e("DevMenuViewModel-Sync", "💥 Exception during incremental sync", e)
+                Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
+                Log.e(
+                    "DevMenuViewModel-Sync",
+                    "   - Exception: ${e.javaClass.simpleName}: ${e.message}"
+                )
+                addMessage("💥 증분 동기화 예외: ${e.message}")
+            } finally {
+                _isSyncing.value = false
+                Log.d("DevMenuViewModel-Sync", "🏁 Incremental sync process finished")
+            }
+        }
+    }
+
+    /**
+     * 캐시 클리어 + 전체 동기화 실행
+     * @param tableName 동기화할 테이블명 (기본값: "messages")
+     * @param channelId 클리어할 채널 ID (messages 테이블 전용)
+     */
+    fun resetAndSync(tableName: String = "messages", channelId: String = TEST_ROOM_ID) {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _syncStatus.value = "📱 로컬 캐시 클리어 시작..."
+
+            Log.d(
+                "DevMenuViewModel-Sync",
+                "🚀 Reset and sync started for table: $tableName, channel: $channelId"
+            )
+            addMessage("🚀 로컬 캐시 클리어 + 동기화 시작 (채널: $channelId)")
+
+            try {
+                _syncStatus.value = "🗑️ 로컬 캐시 삭제 중..."
+                addMessage("🗑️ 로컬 캐시 삭제 중...")
+
+                when (val result = resetAndSyncUseCase(tableName, channelId)) {
+                    is CustomResult.Success -> {
+                        _syncStatus.value = "✅ 리셋 및 동기화 완료!"
+                        Log.d("DevMenuViewModel-Sync", "✅ Reset and sync completed successfully")
+                        Log.d("DevMenuViewModel-Sync", "   - Table: $tableName")
+                        Log.d("DevMenuViewModel-Sync", "   - Channel: $channelId")
+                        Log.d(
+                            "DevMenuViewModel-Sync",
+                            "   - Local cache cleared and remote data synced"
+                        )
+                        addMessage("✅ 리셋 및 동기화 완료! (테이블: $tableName, 채널: $channelId)")
+                    }
+
+                    is CustomResult.Failure -> {
+                        _syncStatus.value = "❌ 리셋 및 동기화 실패: ${result.error.message}"
+                        Log.e("DevMenuViewModel-Sync", "❌ Reset and sync failed", result.error)
+                        Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
+                        Log.e("DevMenuViewModel-Sync", "   - Channel: $channelId")
+                        Log.e("DevMenuViewModel-Sync", "   - Error: ${result.error.message}")
+                        addMessage("❌ 리셋 및 동기화 실패: ${result.error.message}")
+                    }
+
+                    else -> {
+                        _syncStatus.value = "⚠️ 리셋 및 동기화 결과 알 수 없음"
+                        Log.w(
+                            "DevMenuViewModel-Sync",
+                            "⚠️ Unknown result from reset and sync: $result"
+                        )
+                        addMessage("⚠️ 리셋 및 동기화 결과 알 수 없음")
+                    }
+                }
+            } catch (e: Exception) {
+                _syncStatus.value = "❌ 리셋 및 동기화 예외: ${e.message}"
+                Log.e("DevMenuViewModel-Sync", "💥 Exception during reset and sync", e)
+                Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
+                Log.e("DevMenuViewModel-Sync", "   - Channel: $channelId")
+                Log.e(
+                    "DevMenuViewModel-Sync",
+                    "   - Exception: ${e.javaClass.simpleName}: ${e.message}"
+                )
+                addMessage("💥 리셋 및 동기화 예외: ${e.message}")
+            } finally {
+                _isSyncing.value = false
+                Log.d("DevMenuViewModel-Sync", "🏁 Reset and sync process finished")
             }
         }
     }

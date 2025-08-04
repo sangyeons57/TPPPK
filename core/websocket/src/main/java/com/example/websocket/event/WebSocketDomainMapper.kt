@@ -2,6 +2,7 @@ package com.example.websocket.event
 
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Message
+import com.example.domain.model.vo.ChannelId
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
@@ -155,6 +156,7 @@ class WebSocketDomainMapper @Inject constructor() {
      * WebSocketDomainEvent.MessageReceived를 도메인 Message로 변환
      */
     fun messageReceivedToDomainMessage(event: WebSocketDomainEvent.MessageReceived): Message {
+        if (event.roomId == null) throw Exception("roomId is null")
         return Message.fromDataSource(
             id = DocumentId(event.messageId),
             senderId = UserId(event.senderId),
@@ -163,7 +165,8 @@ class WebSocketDomainMapper @Inject constructor() {
             createdAt = parseTimestamp(event.timestamp),
             updatedAt = parseTimestamp(event.timestamp),
             isDeleted = MessageIsDeleted.FALSE,
-            mentions = emptyList() // TODO: WebSocket에서 mentions 파싱 지원 시 추가
+            mentions = emptyList(), // TODO: WebSocket에서 mentions 파싱 지원 시 추가
+            channelId = ChannelId(event.roomId)
         )
     }
 
@@ -174,6 +177,7 @@ class WebSocketDomainMapper @Inject constructor() {
         existingMessage: Message,
         event: WebSocketDomainEvent.MessageEdited
     ): Message {
+        if (event.roomId == null) throw Exception("roomId is null")
         return Message.fromDataSource(
             id = existingMessage.id,
             senderId = existingMessage.senderId,
@@ -182,7 +186,8 @@ class WebSocketDomainMapper @Inject constructor() {
             createdAt = existingMessage.createdAt,
             updatedAt = parseTimestamp(event.timestamp),
             isDeleted = existingMessage.isDeleted,
-            mentions = existingMessage.mentions // 기존 mentions 유지
+            mentions = existingMessage.mentions, // 기존 mentions 유지
+            channelId = ChannelId(event.roomId)
         )
     }
 
@@ -193,6 +198,7 @@ class WebSocketDomainMapper @Inject constructor() {
         existingMessage: Message,
         event: WebSocketDomainEvent.MessageDeleted
     ): Message {
+        if (event.roomId == null) throw Exception("roomId is null")
         return Message.fromDataSource(
             id = existingMessage.id,
             senderId = existingMessage.senderId,
@@ -201,7 +207,8 @@ class WebSocketDomainMapper @Inject constructor() {
             createdAt = existingMessage.createdAt,
             updatedAt = parseTimestamp(event.timestamp),
             isDeleted = MessageIsDeleted.TRUE,
-            mentions = existingMessage.mentions
+            mentions = existingMessage.mentions,
+            channelId = ChannelId(event.roomId)
         )
     }
 

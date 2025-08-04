@@ -13,6 +13,8 @@ import java.util.Date
  */
 data class MessageDTO(
     @DocumentId override val id: String = "",
+    @get:PropertyName(CHANNEL_ID)
+    val channelId: String = "",
     @get:PropertyName(SENDER_ID)
     val senderId: String = "",
     @get:PropertyName(SEND_MESSAGE)
@@ -31,6 +33,7 @@ data class MessageDTO(
 
     companion object {
         const val COLLECTION_NAME = Message.COLLECTION_NAME
+        const val CHANNEL_ID = Message.KEY_CHANNEL_ID
         const val SENDER_ID = Message.KEY_SENDER_ID
         const val SEND_MESSAGE = Message.KEY_SEND_MESSAGE
         const val REPLY_TO_MESSAGE_ID = Message.KEY_REPLY_TO_MESSAGE_ID

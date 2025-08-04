@@ -2,6 +2,7 @@ package com.example.data_converter
 
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Message
+import com.example.domain.model.vo.ChannelId
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.MentionType
 import com.example.domain.model.vo.UserId
@@ -27,6 +28,7 @@ class MessageJsonConverter @Inject constructor(
         return try {
             val messageData = mapOf(
                 AggregateRoot.KEY_ID to data.id.value,
+                Message.KEY_CHANNEL_ID to data.channelId.value,
                 Message.KEY_SENDER_ID to data.senderId.value,
                 Message.KEY_SEND_MESSAGE to data.content.value,
                 Message.KEY_REPLY_TO_MESSAGE_ID to data.replyToMessageId?.value,
@@ -76,7 +78,8 @@ class MessageJsonConverter @Inject constructor(
                 createdAt = Instant.ofEpochMilli((messageData[AggregateRoot.KEY_CREATED_AT] as Double).toLong()),
                 updatedAt = Instant.ofEpochMilli((messageData[AggregateRoot.KEY_UPDATED_AT] as Double).toLong()),
                 isDeleted = if (messageData[Message.KEY_IS_DELETED] as Boolean) MessageIsDeleted.TRUE else MessageIsDeleted.FALSE,
-                mentions = mentions
+                mentions = mentions,
+                channelId = ChannelId(messageData[Message.KEY_CHANNEL_ID] as? String ?: "")
             )
         } catch (e: JsonSyntaxException) {
             throw JsonConversionException("Invalid JSON format for Message: ${e.message}", e)

@@ -4,9 +4,13 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
+import com.example.data_datasource.remote.util.ChannelIdExtractor
 import com.example.data_model.remote.MessageDTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Message
+import com.example.domain.model.sync.OutBoxRecord
+import com.example.domain.model.sync.PushResult
+import com.example.domain.model.sync.RemoteBatch
 import com.example.domain.vo.CollectionPath
 import com.example.mapper.message.MessageMapper
 import com.google.firebase.Timestamp
@@ -27,6 +31,13 @@ import javax.inject.Singleton
  * `channelPath`는 부모 채널 문서의 전체 경로입니다 (예: "dm_channels/channelId123" 또는 "projects/projectId123/channels/channelId456").
  */
 interface MessageRemoteDataSource : DefaultDatasource<MessageDTO> {
+
+    /* Outbox 배치를 서버로 업로드 */
+    suspend fun push(events: List<OutBoxRecord>): PushResult
+
+    /* updatedAt 커서 기반으로 증분 페이징 */
+    suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<MessageDTO>
+
 
     /**
      * 특정 채널에 새로운 메시지를 전송합니다. Firestore가 메시지 ID를 자동 생성합니다.
@@ -78,14 +89,50 @@ interface MessageRemoteDataSource : DefaultDatasource<MessageDTO> {
 }
 
 @Singleton
-class MessageRemoteDataSourceImpl @Inject constructor(
+open class MessageRemoteDataSourceImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val mapper: MessageMapper,
 ) : DefaultDatasourceImpl<MessageDTO>(firestore), MessageRemoteDataSource {
-    override val dtoClass = MessageDTO::class.java 
+    override val dtoClass = MessageDTO::class.java
 
-    private var currentChannelPath: String? = null
+    protected var currentChannelPath: String? = null
 
+    private fun parseCursor(cursor: String?): Pair<Long?, String?> {
+        if (cursor.isNullOrEmpty()) return null to null
+        val p = cursor.split(":")
+        return p.getOrNull(0)?.toLongOrNull() to p.getOrNull(1)
+    }
+
+    override suspend fun push(events: List<OutBoxRecord>): PushResult {
+        return PushResult(successIds = events.map { it.id }, failIds = emptyList())
+    }
+
+    override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<MessageDTO> {
+        val (lastTs, lastId) = parseCursor(cursor)
+
+        var q: Query = collection
+            .orderBy(AggregateRoot.KEY_UPDATED_AT, Query.Direction.ASCENDING)
+            .orderBy(AggregateRoot.KEY_ID, Query.Direction.ASCENDING)
+            .limit(limit.toLong())
+
+        if (lastTs != null && lastId != null) {
+            q = q.startAfter(lastTs, lastId)
+        }
+
+        val snap = q.get().await()
+        val items = snap.toObjects(MessageDTO::class.java)
+
+        val hasMore = items.size == limit
+        val nextCursor = items.lastOrNull()?.let { "${it.updatedAt}:${it.id}" }
+
+        return RemoteBatch(
+            items = items,
+            tombstones = emptyList(),
+            nextCursor = nextCursor,
+            hasMore = hasMore,
+            watermark = items.lastOrNull()?.updatedAt?.time
+        )
+    }
 
     private fun checkCollectionInitialized(methodName: String, expectedChannelPath: String? = null) {
         super.checkCollectionInitialized(methodName)
@@ -138,7 +185,29 @@ class MessageRemoteDataSourceImpl @Inject constructor(
 
                 val snapshot = query.get().await()
                 val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
-                val messages = messageDTOs.map { mapper.dtoToDomain(it) }
+
+                // ✅ Firestore에서 온 메시지들에 channelId 할당
+                val messages = messageDTOs.map { dto ->
+                    // DTO에 이미 channelId가 있으면 그대로 사용
+                    if (dto.channelId.isNotEmpty()) {
+                        mapper.dtoToDomain(dto)
+                    } else {
+                        // channelId가 없으면 경로에서 추출
+                        val extractedChannelId =
+                            ChannelIdExtractor.extractChannelIdFromCollectionPath(
+                                messagesCollectionPath.value
+                            )
+
+                        if (extractedChannelId != null) {
+                            // channelId가 있는 DTO로 변환
+                            val dtoWithChannelId = dto.copy(channelId = extractedChannelId)
+                            mapper.dtoToDomain(dtoWithChannelId)
+                        } else {
+                            // 추출 실패 시 원본 DTO 사용 (기본값은 빈 문자열)
+                            mapper.dtoToDomain(dto)
+                        }
+                    }
+                }
 
                 CustomResult.Success(messages)
             } catch (e: Exception) {
@@ -152,20 +221,73 @@ class MessageRemoteDataSourceImpl @Inject constructor(
     ): CustomResult<List<Message>, Exception> =
         withContext(Dispatchers.IO) {
             return@withContext try {
+                Log.d("MessageRemoteDataSource", "🔥 Firestore에서 최근 메시지 로딩 시작")
+                Log.d("MessageRemoteDataSource", "📋 요청 정보: channelId=$channelId, limit=$limit")
+                
                 // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
                 val messagesCollectionPath = getMessagesCollectionPath(channelId)
+                Log.d("MessageRemoteDataSource", "📍 Firestore 경로: ${messagesCollectionPath.value}")
 
                 // 최신 메시지들을 생성시간 기준으로 가져오기
                 val query = firestore.collection(messagesCollectionPath.value)
                     .orderBy(AggregateRoot.KEY_CREATED_AT, Query.Direction.DESCENDING)
                     .limit(limit.toLong())
 
+                Log.d("MessageRemoteDataSource", "🔍 Firestore 쿼리 실행 중...")
                 val snapshot = query.get().await()
-                val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
-                val messages = messageDTOs.map { mapper.dtoToDomain(it) }
+                Log.d("MessageRemoteDataSource", "✅ Firestore 쿼리 성공: ${snapshot.size()}개 문서")
 
+                if (snapshot.isEmpty) {
+                    Log.d("MessageRemoteDataSource", "📭 해당 채널에 메시지가 없습니다")
+                    return@withContext CustomResult.Success(emptyList())
+                }
+
+                val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
+                Log.d("MessageRemoteDataSource", "📦 MessageDTO 변환 완료: ${messageDTOs.size}개")
+
+                // Firestore에서 온 메시지들에 channelId 할당
+                val messagesWithChannelId = messageDTOs.map { dto ->
+                    if (dto.channelId.isBlank()) {
+                        Log.w(
+                            "MessageRemoteDataSource",
+                            "⚠️ channelId가 비어있음. 보정: $channelId, id=${dto.id}"
+                        )
+                        dto.copy(channelId = channelId)
+                    } else {
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "✅ channelId 정상: ${dto.channelId}, id=${dto.id}"
+                        )
+                        dto
+                    }
+                }
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "🔧 channelId 보정 완료: ${messagesWithChannelId.size}개"
+                )
+
+                val messages = messagesWithChannelId.map { dto ->
+                    try {
+                        val message = mapper.dtoToDomain(dto)
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "✅ 도메인 변환 성공: id=${message.id.value}, channelId=${message.channelId.value}"
+                        )
+                        message
+                    } catch (e: Exception) {
+                        Log.e(
+                            "MessageRemoteDataSource",
+                            "❌ 도메인 변환 실패: id=${dto.id}, channelId=${dto.channelId}",
+                            e
+                        )
+                        null
+                    }
+                }.filterNotNull()
+
+                Log.d("MessageRemoteDataSource", "🎉 최종 변환 완료: ${messages.size}개 메시지")
                 CustomResult.Success(messages)
             } catch (e: Exception) {
+                Log.e("MessageRemoteDataSource", "💥 Firestore에서 메시지 로딩 실패: channelId=$channelId", e)
                 CustomResult.Failure(e)
             }
         }
@@ -177,8 +299,15 @@ class MessageRemoteDataSourceImpl @Inject constructor(
     ): CustomResult<List<Message>, Exception> =
         withContext(Dispatchers.IO) {
             return@withContext try {
+                Log.d("MessageRemoteDataSource", "🔥 Firestore에서 과거 메시지 로딩 시작")
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "📋 요청 정보: channelId=$channelId, beforeTimestamp=$beforeTimestamp, limit=$limit"
+                )
+                
                 // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
                 val messagesCollectionPath = getMessagesCollectionPath(channelId)
+                Log.d("MessageRemoteDataSource", "📍 Firestore 경로: ${messagesCollectionPath.value}")
 
                 // 특정 시점 이전의 과거 메시지들 가져오기 (페이지네이션)
                 val query = firestore.collection(messagesCollectionPath.value)
@@ -192,12 +321,65 @@ class MessageRemoteDataSourceImpl @Inject constructor(
                     .orderBy("createdAt", Query.Direction.DESCENDING)
                     .limit(limit.toLong())
 
+                Log.d("MessageRemoteDataSource", "🔍 Firestore 쿼리 실행 중...")
                 val snapshot = query.get().await()
-                val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
-                val messages = messageDTOs.map { mapper.dtoToDomain(it) }
+                Log.d("MessageRemoteDataSource", "✅ Firestore 쿼리 성공: ${snapshot.size()}개 문서")
 
+                if (snapshot.isEmpty) {
+                    Log.d("MessageRemoteDataSource", "📭 해당 시점 이전에 메시지가 없습니다")
+                    return@withContext CustomResult.Success(emptyList())
+                }
+
+                val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
+                Log.d("MessageRemoteDataSource", "📦 MessageDTO 변환 완료: ${messageDTOs.size}개")
+
+                // Firestore에서 온 메시지들에 channelId 할당
+                val messagesWithChannelId = messageDTOs.map { dto ->
+                    if (dto.channelId.isBlank()) {
+                        Log.w(
+                            "MessageRemoteDataSource",
+                            "⚠️ channelId가 비어있음. 보정: $channelId, id=${dto.id}"
+                        )
+                        dto.copy(channelId = channelId)
+                    } else {
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "✅ channelId 정상: ${dto.channelId}, id=${dto.id}"
+                        )
+                        dto
+                    }
+                }
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "🔧 channelId 보정 완료: ${messagesWithChannelId.size}개"
+                )
+
+                val messages = messagesWithChannelId.map { dto ->
+                    try {
+                        val message = mapper.dtoToDomain(dto)
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "✅ 도메인 변환 성공: id=${message.id.value}, channelId=${message.channelId.value}"
+                        )
+                        message
+                    } catch (e: Exception) {
+                        Log.e(
+                            "MessageRemoteDataSource",
+                            "❌ 도메인 변환 실패: id=${dto.id}, channelId=${dto.channelId}",
+                            e
+                        )
+                        null
+                    }
+                }.filterNotNull()
+
+                Log.d("MessageRemoteDataSource", "🎉 최종 변환 완료: ${messages.size}개 메시지")
                 CustomResult.Success(messages)
             } catch (e: Exception) {
+                Log.e(
+                    "MessageRemoteDataSource",
+                    "💥 Firestore에서 과거 메시지 로딩 실패: channelId=$channelId",
+                    e
+                )
                 CustomResult.Failure(e)
             }
         }

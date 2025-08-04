@@ -21,6 +21,13 @@ public class ChatRoomManager {
     public void joinRoom(String roomId, String userId, ChatWebSocketHandler handler) {
         logger.info("User {} joining room {}", userId, roomId);
         
+        // Check if user is already in another room and leave it first
+        String currentRoom = userRooms.get(userId);
+        if (currentRoom != null && !currentRoom.equals(roomId)) {
+            logger.info("User {} is already in room {}, leaving it first", userId, currentRoom);
+            leaveRoom(currentRoom, userId, handler);
+        }
+        
         // Add to room
         rooms.computeIfAbsent(roomId, k -> new CopyOnWriteArraySet<>()).add(handler);
         

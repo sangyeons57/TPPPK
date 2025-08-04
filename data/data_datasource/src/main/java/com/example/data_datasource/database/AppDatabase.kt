@@ -2,12 +2,12 @@ package com.example.data_datasource.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import com.example.data_datasource.dao.MessageDao
-import com.example.data_datasource.dao.OutBoxDao
-import com.example.data_datasource.dao.ScopeMetadataDao
+import com.example.data_model.local.MessageDao
 import com.example.data_model.local.MessageEntity
-import com.example.data_model.local.OutBoxEntity
-import com.example.data_model.local.ScopeMetadataEntity
+import com.example.data_model.local.OutboxDao
+import com.example.data_model.local.OutboxRecordEntity
+import com.example.data_model.local.SyncMetadataDao
+import com.example.data_model.local.SyncMetadataEntity
 
 /**
  * Room Database 설정
@@ -15,15 +15,15 @@ import com.example.data_model.local.ScopeMetadataEntity
 @Database(
     entities = [
         MessageEntity::class,
-        OutBoxEntity::class,
-        ScopeMetadataEntity::class
+        OutboxRecordEntity::class,
+        SyncMetadataEntity::class
     ],
-    version = 3, // delivery_status 필드 추가로 버전 업
+    version = 5, // serverVersion, serverUpdatedAt, deliveryStatus 필드 추가로 버전 업
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun messageDao(): MessageDao
-    abstract fun outBoxDao(): OutBoxDao
-    abstract fun scopeMetadataDao(): ScopeMetadataDao
+    abstract fun outBoxDao(): OutboxDao
+    abstract fun syncMetadataDao(): SyncMetadataDao
 }

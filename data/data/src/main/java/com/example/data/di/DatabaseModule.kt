@@ -2,10 +2,11 @@ package com.example.data.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.data_datasource.dao.MessageDao
-import com.example.data_datasource.dao.OutBoxDao
-import com.example.data_datasource.dao.ScopeMetadataDao
 import com.example.data_datasource.database.AppDatabase
+import com.example.data_datasource.database.migration.MIGRATION_3_4
+import com.example.data_model.local.MessageDao
+import com.example.data_model.local.OutboxDao
+import com.example.data_model.local.SyncMetadataDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,7 +31,10 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "projecting_kotlin_database"
-        ).build()
+        )
+            .addMigrations(MIGRATION_3_4) // channel_id 필드 추가 마이그레이션
+            // .fallbackToDestructiveMigration() // 개발 환경: 마이그레이션 실패 시 데이터베이스 재생성 (주석 처리)
+            .build()
     }
 
     /**
@@ -38,7 +42,7 @@ object DatabaseModule {
      */
     @Provides
     @Singleton
-    fun provideOutBoxDao(database: AppDatabase): OutBoxDao {
+    fun provideOutBoxDao(database: AppDatabase): OutboxDao {
         return database.outBoxDao()
     }
 
@@ -56,7 +60,7 @@ object DatabaseModule {
      */
     @Provides
     @Singleton
-    fun provideScopeMetadataDao(database: AppDatabase): ScopeMetadataDao {
-        return database.scopeMetadataDao()
+    fun provideScopeMetadataDao(database: AppDatabase): SyncMetadataDao {
+        return database.syncMetadataDao()
     }
 }

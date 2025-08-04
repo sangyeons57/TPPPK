@@ -6,10 +6,11 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
+import com.example.domain.model.vo.ChannelId
 import com.example.domain.model.vo.DocumentId
 import com.example.domain.model.vo.UserId
 import com.example.domain.model.vo.message.MessageContent
-import com.example.domain_repository.local.LocalMessagePagingRepository
+import com.example.domain_repository.base.MessageRepository
 import com.example.domain_usecase.provider.chat.ChatUseCases
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.websocket.usecase.WebSocketUseCaseProvider
@@ -29,7 +30,7 @@ class MessageService @Inject constructor(
     private val chatUseCases: ChatUseCases,
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val offlineMessageQueue: OfflineMessageQueue,
-    private val localMessageRepository: LocalMessagePagingRepository,
+    private val messageRepository: MessageRepository,
     private val roomId: String,
     private val projectId: String? = null,
     private val channelType: String = "chat"
@@ -52,7 +53,7 @@ class MessageService @Inject constructor(
             enablePlaceholders = false
         ),
         pagingSourceFactory = {
-            localMessageRepository.getMessagesPagingSource()
+            messageRepository.getMessagesPagingSource()
         }
     )
 
@@ -82,7 +83,7 @@ class MessageService @Inject constructor(
 
                     // Room DB에 저장 (중복 방지는 Repository에서 처리)
                     result.data.forEach { message ->
-                        localMessageRepository.save(message)
+                        messageRepository.save(message)
                     }
 
                     Log.d(TAG, "초기 메시지 Room DB 저장 완료")
@@ -142,10 +143,11 @@ class MessageService @Inject constructor(
                     senderId = senderId,
                     content = MessageContent(content),
                     replyToMessageId = replyToMessageId,
-                    mentions = emptyList()
+                    mentions = emptyList(),
+                    channelId = ChannelId(roomId) // ✅ roomId가 실제로는 channelId
                 )
 
-                localMessageRepository.save(tempMessage)
+                messageRepository.save(tempMessage)
 
                 CustomResult.Success(messageId)
             } else {
@@ -157,7 +159,8 @@ class MessageService @Inject constructor(
                     senderId = senderId,
                     content = MessageContent(content),
                     replyToMessageId = replyToMessageId,
-                    mentions = emptyList()
+                    mentions = emptyList(),
+                    channelId = ChannelId(roomId) // ✅ roomId가 실제로는 channelId
                 )
                 offlineMessageQueue.queueMessage(
                     com.example.feature_chat.queue.QueuedMessageAction.Send(
@@ -195,10 +198,10 @@ class MessageService @Inject constructor(
                 Log.d(TAG, "메시지 수정 성공: ${messageId.value}")
 
                 // Room DB에서 메시지 업데이트 (WebSocket 이벤트로도 업데이트되지만 즉시 반영용)
-                val existingMessage = localMessageRepository.findById(messageId)
+                val existingMessage = messageRepository.findById(messageId)
                 if (existingMessage is CustomResult.Success) {
                     existingMessage.data.updateContent(MessageContent(newContent))
-                    localMessageRepository.save(existingMessage.data)
+                    messageRepository.save(existingMessage.data)
                 }
 
                 CustomResult.Success(Unit)
@@ -229,10 +232,10 @@ class MessageService @Inject constructor(
                 Log.d(TAG, "메시지 삭제 성공: ${messageId.value}")
 
                 // Room DB에서 메시지 삭제 마킹 (WebSocket 이벤트로도 처리되지만 즉시 반영용)
-                val existingMessage = localMessageRepository.findById(messageId)
+                val existingMessage = messageRepository.findById(messageId)
                 if (existingMessage is CustomResult.Success) {
                     existingMessage.data.delete()
-                    localMessageRepository.save(existingMessage.data)
+                    messageRepository.save(existingMessage.data)
                 }
 
                 CustomResult.Success(Unit)

@@ -142,8 +142,7 @@ data class WebSocketMessage(
         // 시스템 메시지 타입
         const val TYPE_ERROR = "ERROR"
         const val TYPE_SYSTEM = "SYSTEM"
-        const val TYPE_PING = "PING"
-        const val TYPE_PONG = "PONG"
+
 
         // 채널 타입 상수
         const val CHANNEL_TYPE_PROJECT = "PROJECT"
@@ -233,19 +232,7 @@ data class WebSocketMessage(
             )
         }
 
-        /**
-         * Ping 메시지 생성 (연결 상태 확인용)
-         */
-        fun createPingMessage(): WebSocketMessage {
-            return WebSocketMessage(type = TYPE_PING)
-        }
 
-        /**
-         * Pong 메시지 생성 (Ping에 대한 응답)
-         */
-        fun createPongMessage(): WebSocketMessage {
-            return WebSocketMessage(type = TYPE_PONG)
-        }
     }
 
     // ================================
@@ -295,7 +282,7 @@ data class WebSocketMessage(
      * 메시지가 시스템 메시지인지 확인
      */
     fun isSystemMessage(): Boolean {
-        return type in setOf(TYPE_ERROR, TYPE_SYSTEM, TYPE_PING, TYPE_PONG)
+        return type in setOf(TYPE_ERROR, TYPE_SYSTEM)
     }
 
     /**

@@ -57,3 +57,5 @@ sentry.properties
 .env
 
 websocket-chat/firebase-service-account.json
+websocket-chat/teamnovaprojectprojecting-firebase-adminsdk-fbsvc-8145032c56.json
+websocket-chat/service-account-key.json

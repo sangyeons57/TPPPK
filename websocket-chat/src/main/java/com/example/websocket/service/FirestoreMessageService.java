@@ -78,6 +78,7 @@ public class FirestoreMessageService {
             Map<String, Object> messageData = new HashMap<>();
             messageData.put("senderId", message.getSenderId());
             messageData.put("content", message.getContent());
+            messageData.put("channelId", roomId); // ✅ channelId 필드 추가
             messageData.put("createdAt", message.getTimestampAsInstant());
             messageData.put("updatedAt", message.getTimestampAsInstant());
             messageData.put("isDeleted", false);

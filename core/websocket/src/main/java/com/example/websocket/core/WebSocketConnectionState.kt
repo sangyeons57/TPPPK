@@ -32,6 +32,15 @@ sealed class WebSocketConnectionState {
     data class Connected(val serverUrl: String) : WebSocketConnectionState()
 
     /**
+     * 인증을 진행하는 중인 상태
+     *
+     * WebSocket 연결은 성공했지만 서버로부터 인증 성공 응답을 기다리는 상태
+     *
+     * @param serverUrl 연결된 서버의 URL
+     */
+    data class Authenticating(val serverUrl: String) : WebSocketConnectionState()
+
+    /**
      * 연결 오류가 발생한 상태
      *
      * 연결 실패, 네트워크 오류, 인증 실패 등의 문제가 발생한 상태
@@ -69,9 +78,10 @@ sealed class WebSocketConnectionState {
     fun isConnected(): Boolean = this is Connected
 
     /**
-     * 현재 상태가 연결 시도 중인 상태인지 확인 (연결 중 또는 재연결 중)
+     * 현재 상태가 연결 시도 중인 상태인지 확인 (연결 중, 인증 중 또는 재연결 중)
      */
-    fun isConnecting(): Boolean = this is Connecting || this is Reconnecting
+    fun isConnecting(): Boolean =
+        this is Connecting || this is Authenticating || this is Reconnecting
 
     /**
      * 현재 상태가 연결이 해제된 상태인지 확인
@@ -97,6 +107,7 @@ sealed class WebSocketConnectionState {
         return when (this) {
             is Disconnected -> "연결 해제됨"
             is Connecting -> "연결 중..."
+            is Authenticating -> "인증 중..."
             is Connected -> "연결됨"
             is Error -> "연결 오류: $message"
             is Reconnecting -> "재연결 시도 중... ($attempt/$maxAttempts)"
@@ -110,6 +121,7 @@ sealed class WebSocketConnectionState {
         return when (this) {
             is Disconnected -> "Disconnected"
             is Connecting -> "Connecting"
+            is Authenticating -> "Authenticating($serverUrl)"
             is Connected -> "Connected($serverUrl)"
             is Error -> "Error($message)"
             is Reconnecting -> "Reconnecting($attempt/$maxAttempts)"

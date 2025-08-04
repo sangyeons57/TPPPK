@@ -82,6 +82,10 @@ fun DevMenuScreen(
     val isWebSocketConnecting by viewModel.isWebSocketConnecting.collectAsState()
     val webSocketMessages by viewModel.webSocketMessages.collectAsState()
     val lastSentCode by viewModel.lastSentCode.collectAsState()
+
+    // 동기화 상태
+    val syncStatus by viewModel.syncStatus.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
     
     Scaffold(
         modifier = modifier,
@@ -513,7 +517,7 @@ fun DevMenuScreen(
                 modifier = Modifier.padding(top = 16.dp)
             )
 
-            if (viewModel.isLocalChatCacheClearing.collectAsState().value) {
+            if (isSyncing) {
                 Button(
                     onClick = {},
                     modifier = Modifier.fillMaxWidth(),
@@ -521,41 +525,54 @@ fun DevMenuScreen(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("로컬 채팅 캐시 삭제 중...")
+                    Text("동기화 진행 중...")
                 }
             } else {
-                DevMenuButton(text = "로컬 채팅 캐시 전체 삭제") {
-                    viewModel.clearAllLocalChatCache()
+                DevMenuButton(text = "로컬 채팅 캐시 삭제 + 동기화") {
+                    viewModel.resetAndSync()
                 }
             }
 
-            // 삭제 결과 표시
-            val localChatCacheClearResult =
-                viewModel.localChatCacheClearResult.collectAsState().value
-            if (localChatCacheClearResult.isNotEmpty()) {
+            // 동기화 결과 표시
+            if (syncStatus.isNotEmpty()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (localChatCacheClearResult.startsWith("성공"))
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.errorContainer
+                        containerColor = when {
+                            syncStatus.contains("✅") -> MaterialTheme.colorScheme.primaryContainer
+                            syncStatus.contains("❌") -> MaterialTheme.colorScheme.errorContainer
+                            else -> MaterialTheme.colorScheme.surfaceVariant
+                        }
                     )
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp)
                     ) {
                         Text(
-                            text = "결과:",
+                            text = "동기화 상태:",
                             style = MaterialTheme.typography.labelMedium
                         )
                         Text(
-                            text = localChatCacheClearResult,
+                            text = syncStatus,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
+                }
+            }
+
+            // 추가 동기화 버튼들
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.syncIncremental() },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isSyncing
+                ) {
+                    Text("증분 동기화")
                 }
             }
         }

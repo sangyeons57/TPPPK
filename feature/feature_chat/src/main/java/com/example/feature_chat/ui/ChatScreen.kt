@@ -42,22 +42,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -85,11 +81,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -116,6 +108,7 @@ import com.example.feature_chat.model.ProjectRole
 import com.example.feature_chat.ui.components.ConnectionStatusBar
 import com.example.feature_chat.ui.components.MentionStyledInputField
 import com.example.feature_chat.ui.components.MessageInput
+import com.example.feature_chat.ui.components.MessageStatusRow
 import com.example.feature_chat.viewmodel.WebSocketChatViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -134,7 +127,7 @@ private fun getEffectiveTimestamp(message: ChatMessageUiModel): Instant {
 /**
  * Data class to represent a parsed mention in the text
  */
-private data class ParsedMention(
+data class ParsedMention(
     val type: String,
     val id: String,
     val displayName: String,
@@ -145,7 +138,7 @@ private data class ParsedMention(
 /**
  * Data class to hold processed text with mentions
  */
-private data class ProcessedText(
+data class ProcessedText(
     val text: String,
     val mentions: List<ParsedMention>
 )
@@ -604,7 +597,7 @@ fun ChatMessageItemComposable(
     projectRoles: List<ProjectRole> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+    LocalContext.current
 
     Row(
         modifier = modifier
@@ -650,89 +643,16 @@ fun ChatMessageItemComposable(
             }
 
             val displayMessage = message.message
-            val annotatedString = buildAnnotatedString {
-                val processedText = parseMentionsForDisplay(
-                    displayMessage,
-                    participants,
-                    projectMembers,
-                    projectRoles
-                )
-                append(processedText.text)
-                
-                // Handle mention styling with enhanced visibility
-                processedText.mentions.forEach { mention ->
-                    addStringAnnotation("MENTION", "${mention.type}:${mention.id}", mention.start, mention.end)
-                    
-                    // Apply different styles for user and role mentions
-                    val mentionStyle = when (mention.type) {
-                        "user" -> SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            background = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        "role" -> SpanStyle(
-                            color = MaterialTheme.colorScheme.tertiary,
-                            background = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        else -> SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            background = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    
-                    addStyle(
-                        style = mentionStyle,
-                        start = mention.start,
-                        end = mention.end
-                    )
-                }
-                
-                // Handle URL styling
-                val urlRegex = """(https?://\S+)""".toRegex()
-                urlRegex.findAll(processedText.text).forEach { matchResult ->
-                    val url = matchResult.value
-                    val startIndex = matchResult.range.first
-                    val endIndex = matchResult.range.last + 1
-                    addStringAnnotation("URL", url, startIndex, endIndex)
-                    addStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.tertiary,
-                            textDecoration = TextDecoration.Underline
-                        ),
-                        start = startIndex,
-                        end = endIndex
-                    )
-                }
-            }
+            val processedText = parseMentionsForDisplay(
+                displayMessage,
+                participants,
+                projectMembers,
+                projectRoles
+            )
 
-            ClickableText(
-                text = annotatedString,
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                onClick = { position ->
-                    // Handle mention clicks
-                    annotatedString.getStringAnnotations("MENTION", position, position)
-                        .firstOrNull()?.let { annotation ->
-                            val parts = annotation.item.split(":")
-                            if (parts.size == 2) {
-                                val type = parts[0]
-                                val id = parts[1]
-                                onMentionClick(type, id)
-                            }
-                        }
-                    
-                    // Handle URL clicks
-                    annotatedString.getStringAnnotations("URL", position, position)
-                        .firstOrNull()?.let { annotation ->
-                            try {
-                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(annotation.item))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                // Handle error opening URL
-                            }
-                        }
-                }
+            ChatMessageText(
+                processedText = processedText,
+                onMentionClick = onMentionClick
             )
 
             if (message.attachmentImageUrls.isNotEmpty()) {
@@ -751,76 +671,10 @@ fun ChatMessageItemComposable(
                 }
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (message.isModified) {
-                    Text(
-                        text = "(수정됨)",
-                        fontSize = 10.sp,
-                        fontStyle = FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
-                
-                if(message.isMyMessage) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        when {
-                            message.isSending -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .testTag("delivery_indicator"),
-                                    strokeWidth = 1.dp
-                                )
-                            }
-
-                            message.sendFailed -> {
-                                Icon(
-                                    Icons.Default.ErrorOutline,
-                                    contentDescription = "전송 실패",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .testTag("delivery_indicator")
-                                )
-                                if (message.canRetry) {
-                                    IconButton(
-                                        onClick = { onRetryMessage(message.messageId) },
-                                        modifier = Modifier.size(16.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Refresh,
-                                            contentDescription = "재전송",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            message.deliveryState is com.example.feature_chat.model.MessageDeliveryState.Retry -> {
-                                Icon(
-                                    Icons.Default.Refresh,
-                                    contentDescription = "재전송 대기",
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .testTag("delivery_indicator")
-                                )
-                            }
-
-                            else -> {
-                                // 성공적으로 전송된 경우 시간만 표시 (기존 로직 유지)
-                            }
-                        }
-                    }
-                }
-            }
+            MessageStatusRow(
+                message = message,
+                onRetryMessage = onRetryMessage
+            )
         }
     }
 }

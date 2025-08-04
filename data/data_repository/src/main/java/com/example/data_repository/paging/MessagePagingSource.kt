@@ -4,7 +4,7 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
-import com.example.domain_repository.local.LocalMessageRepository
+import com.example.domain_repository.base.MessageRepository
 import java.time.Instant
 import javax.inject.Inject
 
@@ -13,7 +13,8 @@ import javax.inject.Inject
  * 타임스탬프를 키로 사용하여 시간 순으로 메시지를 페이징합니다.
  */
 class MessagePagingSource @Inject constructor(
-    private val localMessageRepository: LocalMessageRepository
+    private val messageRepository: MessageRepository,
+    private val channelId: String
 ) : PagingSource<Long, Message>() {
 
     override suspend fun load(params: LoadParams<Long>): LoadResult<Long, Message> {
@@ -22,7 +23,7 @@ class MessagePagingSource @Inject constructor(
             val pageSize = params.loadSize
 
             // Room에서 메시지 조회 (시간 역순)
-            val result = localMessageRepository.getMessagesBefore(beforeTimestamp, pageSize)
+            val result = messageRepository.getMessagesBefore(channelId, beforeTimestamp, pageSize)
 
             when (result) {
                 is CustomResult.Success -> {

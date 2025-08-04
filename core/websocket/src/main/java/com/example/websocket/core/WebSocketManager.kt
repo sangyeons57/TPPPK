@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface WebSocketManager {
 
     companion object {
-        const val SERVER_URL = "wss://your-websocket-server.com/ws"
+        const val SERVER_URL = "wss://websocket-chat-wizwlraydq-du.a.run.app/chat"
     }
 
     // ================================
