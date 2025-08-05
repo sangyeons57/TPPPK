@@ -2,7 +2,6 @@ package com.example.websocket.handler;
 
 import com.example.websocket.config.FirebaseConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.time.Instant;
 
-@WebServlet("/health")
 public class HealthWebSocketHandler extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(HealthWebSocketHandler.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();

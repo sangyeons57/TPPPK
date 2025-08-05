@@ -1,13 +1,12 @@
 package com.example.websocket;
 
 import com.example.websocket.config.FirebaseConfig;
+import com.example.websocket.handler.HealthWebSocketHandler;
 import com.example.websocket.service.ServiceProvider;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer;
-import org.eclipse.jetty.webapp.Configuration;
-import org.eclipse.jetty.webapp.JettyWebXmlConfiguration;
-import org.eclipse.jetty.webapp.AnnotationConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,16 +62,15 @@ public class ChatWebSocketServer {
             logger.info("🚀 Creating Jetty server on port {}...", port);
             Server server = new Server(port);
 
-            // Configure servlet context with AnnotationConfiguration
-            logger.info("🔧 Configuring servlet context with AnnotationConfiguration...");
+            // Configure servlet context
+            logger.info("🔧 Configuring servlet context...");
             ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
             context.setContextPath("/");
             
-            // Enable annotation scanning for @WebServlet
-            Configuration.ClassList
-                .setServerDefault(server)
-                .addBefore(JettyWebXmlConfiguration.class.getName(),
-                           AnnotationConfiguration.class.getName());
+            // Explicitly register health servlet
+            logger.info("🔧 Registering health servlet...");
+            ServletHolder healthServlet = new ServletHolder(HealthWebSocketHandler.class);
+            context.addServlet(healthServlet, "/health");
             
             server.setHandler(context);
 
