@@ -220,10 +220,29 @@ class GlobalWebSocketService @Inject constructor(
                             currentAuthToken != null &&
                             serverUrl != null &&
                             !connectionState.message.contains("Authentication") &&
+                            !connectionState.message.contains("Server configuration error") &&
                             !connectionState.message.contains("maximum reconnection attempts exceeded") &&
                             reconnectAttempts < maxReconnectAttempts -> {
                         Log.d(TAG, "Connection error detected, scheduling reconnection")
                         scheduleReconnect()
+                    }
+
+                    // Server configuration error - permanent failure, don't reconnect
+                    connectionState is WebSocketConnectionState.Error &&
+                            connectionState.message.contains("Server configuration error") -> {
+                        Log.e(
+                            TAG,
+                            "❌ Server configuration error detected - stopping auto-reconnection"
+                        )
+                        Log.e(
+                            TAG,
+                            "💡 This is a permanent server-side issue that requires server restart"
+                        )
+                        reconnectJob?.cancel()
+                        _globalConnectionState.value = WebSocketConnectionState.Error(
+                            message = "Server configuration error - please contact support or try again later",
+                            throwable = connectionState.throwable
+                        )
                     }
 
                     // Handle disconnection by scheduling reconnect

@@ -2,8 +2,11 @@ package com.example.data_repository.di
 
 import androidx.room.RoomDatabase
 import com.example.data_datasource.database.AppDatabase
+import com.example.data_model.local.RoomSyncCursorStore
 import com.example.domain.model.sync.SyncCoordinator
-import com.example.orchestrator.NoOpSyncCoordinator
+import com.example.domain.model.sync.SyncCursorStore
+import com.example.orchestrator.DefaultSyncManager
+import com.example.orchestrator.MessageSyncPortFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,12 +47,43 @@ object CommonModule {
     }
 
     /**
-     * SyncCoordinator 제공
-     * NoOp 구현체를 제공하여 복잡한 동기화 로직 없이도 DI 오류를 해결
+     * SyncCursorStore 제공
+     * Room DB 기반 커서 저장소
      */
     @Provides
     @Singleton
-    fun provideSyncCoordinator(): SyncCoordinator {
-        return NoOpSyncCoordinator()
+    fun provideSyncCursorStore(database: AppDatabase): SyncCursorStore {
+        return RoomSyncCursorStore(database.syncMetadataDao())
+    }
+
+    /**
+     * MessageSyncPortFactory 제공
+     * 채널별 MessageSyncPort 생성 팩토리
+     */
+    @Provides
+    @Singleton
+    fun provideMessageSyncPortFactory(
+        messageRemoteDataSource: com.example.data_datasource.remote.MessageRemoteDataSource,
+        messageRepository: com.example.domain_repository.base.MessageRepository
+    ): MessageSyncPortFactory {
+        return MessageSyncPortFactory(messageRemoteDataSource, messageRepository)
+    }
+
+    /**
+     * SyncCoordinator 제공
+     * DefaultSyncManager 구현체로 실제 증분 동기화 기능 제공
+     */
+    @Provides
+    @Singleton
+    fun provideSyncCoordinator(
+        cursorStore: SyncCursorStore
+    ): SyncCoordinator {
+        // 현재 MessageSyncPort는 런타임에 동적으로 생성되므로 빈 리스트로 초기화
+        // 실제 동기화는 SyncUseCase에서 채널별로 처리됨
+        return DefaultSyncManager(
+            ports = emptyList(),
+            cursorStore = cursorStore,
+            pageSize = 50 // 한 번에 동기화할 메시지 수
+        )
     }
 } 

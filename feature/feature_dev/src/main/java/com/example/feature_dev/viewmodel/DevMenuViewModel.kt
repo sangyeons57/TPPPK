@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.data_repository.util.RoomDatabaseLogger
 import com.example.domain.model.sync.SyncCoordinator
 import com.example.domain.model.vo.DocumentId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
@@ -28,7 +29,8 @@ class DevMenuViewModel @Inject constructor(
     private val devMenuUseCaseProvider: DevMenuUseCaseProvider,
     private val syncManager: SyncCoordinator,
     private val syncUseCase: SyncUseCase,
-    private val resetAndSyncUseCase: ResetAndSyncUseCase
+    private val resetAndSyncUseCase: ResetAndSyncUseCase,
+    private val roomDatabaseLogger: RoomDatabaseLogger
 ) : ViewModel() {
 
     // WebSocket use cases for dev testing
@@ -115,6 +117,16 @@ class DevMenuViewModel @Inject constructor(
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    // Room DB 검사 관련 상태
+    private val _isDbInspecting = MutableStateFlow(false)
+    val isDbInspecting: StateFlow<Boolean> = _isDbInspecting.asStateFlow()
+
+    private val _dbInspectionResult = MutableStateFlow("")
+    val dbInspectionResult: StateFlow<String> = _dbInspectionResult.asStateFlow()
+
+    private val _selectedChannelId = MutableStateFlow("")
+    val selectedChannelId: StateFlow<String> = _selectedChannelId.asStateFlow()
 
     init {
         // 로그인 상태 확인
@@ -575,5 +587,227 @@ class DevMenuViewModel @Inject constructor(
                 Log.d("DevMenuViewModel-Sync", "🏁 Reset and sync process finished")
             }
         }
+    }
+
+    // ================================
+    // Room DB 검사 기능
+    // ================================
+
+    /**
+     * 전체 Room DB 상태를 검사합니다
+     */
+    fun inspectFullDatabase() {
+        viewModelScope.launch {
+            _isDbInspecting.value = true
+            _dbInspectionResult.value = "🔍 전체 데이터베이스 검사 중..."
+
+            try {
+                Log.d("DevMenuViewModel-DB", "🔍 Starting full database inspection")
+
+                // RoomDatabaseLogger를 통해 전체 DB 상태 출력
+                roomDatabaseLogger.logDatabaseState()
+
+                _dbInspectionResult.value = "✅ 전체 DB 검사 완료! 로그를 확인하세요."
+                addMessage("✅ 전체 DB 검사 완료! 자세한 내용은 로그 확인")
+
+            } catch (e: Exception) {
+                _dbInspectionResult.value = "❌ DB 검사 실패: ${e.message}"
+                Log.e("DevMenuViewModel-DB", "❌ Database inspection failed", e)
+                addMessage("❌ DB 검사 실패: ${e.message}")
+            } finally {
+                _isDbInspecting.value = false
+            }
+        }
+    }
+
+    /**
+     * 특정 채널의 메시지를 검사합니다
+     */
+    fun inspectChannelMessages(channelId: String) {
+        if (channelId.isBlank()) {
+            _dbInspectionResult.value = "❌ 채널 ID를 입력해주세요"
+            return
+        }
+
+        viewModelScope.launch {
+            _isDbInspecting.value = true
+            _dbInspectionResult.value = "🔍 채널 '$channelId' 메시지 검사 중..."
+            _selectedChannelId.value = channelId
+
+            try {
+                Log.d("DevMenuViewModel-DB", "🔍 Starting channel inspection for: $channelId")
+
+                // 채널별 메시지 상태 출력 (최근 20개)
+                roomDatabaseLogger.logChannelMessages(channelId, 20)
+
+                _dbInspectionResult.value = "✅ 채널 '$channelId' 검사 완료! 로그를 확인하세요."
+                addMessage("✅ 채널 '$channelId' 검사 완료!")
+
+            } catch (e: Exception) {
+                _dbInspectionResult.value = "❌ 채널 검사 실패: ${e.message}"
+                Log.e("DevMenuViewModel-DB", "❌ Channel inspection failed", e)
+                addMessage("❌ 채널 검사 실패: ${e.message}")
+            } finally {
+                _isDbInspecting.value = false
+            }
+        }
+    }
+
+    /**
+     * 메시지 테이블 상태만 검사합니다
+     */
+    fun inspectMessagesTable() {
+        viewModelScope.launch {
+            _isDbInspecting.value = true
+            _dbInspectionResult.value = "🔍 메시지 테이블 검사 중..."
+
+            try {
+                Log.d("DevMenuViewModel-DB", "🔍 Starting messages table inspection")
+
+                // 메시지 테이블 상세 정보 출력
+                roomDatabaseLogger.logTableDetails("messages")
+
+                _dbInspectionResult.value = "✅ 메시지 테이블 검사 완료! 로그를 확인하세요."
+                addMessage("✅ 메시지 테이블 검사 완료!")
+
+            } catch (e: Exception) {
+                _dbInspectionResult.value = "❌ 테이블 검사 실패: ${e.message}"
+                Log.e("DevMenuViewModel-DB", "❌ Messages table inspection failed", e)
+                addMessage("❌ 테이블 검사 실패: ${e.message}")
+            } finally {
+                _isDbInspecting.value = false
+            }
+        }
+    }
+
+    /**
+     * OutBox 테이블 상태를 검사합니다 (동기화 대기열)
+     */
+    fun inspectOutboxTable() {
+        viewModelScope.launch {
+            _isDbInspecting.value = true
+            _dbInspectionResult.value = "🔍 OutBox 테이블 검사 중..."
+
+            try {
+                Log.d("DevMenuViewModel-DB", "🔍 Starting outbox table inspection")
+
+                // OutBox 테이블 상세 정보 출력
+                roomDatabaseLogger.logTableDetails("outboxRecord")
+
+                _dbInspectionResult.value = "✅ OutBox 테이블 검사 완료! 로그를 확인하세요."
+                addMessage("✅ OutBox 테이블 검사 완료!")
+
+            } catch (e: Exception) {
+                _dbInspectionResult.value = "❌ OutBox 검사 실패: ${e.message}"
+                Log.e("DevMenuViewModel-DB", "❌ Outbox table inspection failed", e)
+                addMessage("❌ OutBox 검사 실패: ${e.message}")
+            } finally {
+                _isDbInspecting.value = false
+            }
+        }
+    }
+
+    /**
+     * 동기화 메타데이터 테이블을 검사합니다
+     */
+    fun inspectSyncMetadata() {
+        viewModelScope.launch {
+            _isDbInspecting.value = true
+            _dbInspectionResult.value = "🔍 동기화 메타데이터 검사 중..."
+
+            try {
+                Log.d("DevMenuViewModel-DB", "🔍 Starting sync metadata inspection")
+
+                // 동기화 메타데이터 테이블 정보 출력
+                roomDatabaseLogger.logTableDetails("syncMetadata")
+
+                _dbInspectionResult.value = "✅ 동기화 메타데이터 검사 완료! 로그를 확인하세요."
+                addMessage("✅ 동기화 메타데이터 검사 완료!")
+
+            } catch (e: Exception) {
+                _dbInspectionResult.value = "❌ 메타데이터 검사 실패: ${e.message}"
+                Log.e("DevMenuViewModel-DB", "❌ Sync metadata inspection failed", e)
+                addMessage("❌ 메타데이터 검사 실패: ${e.message}")
+            } finally {
+                _isDbInspecting.value = false
+            }
+        }
+    }
+
+    /**
+     * 동기화 실행 전후 DB 상태를 비교합니다
+     */
+    fun syncWithDbComparison(channelId: String) {
+        if (channelId.isBlank()) {
+            _dbInspectionResult.value = "❌ 채널 ID를 입력해주세요"
+            return
+        }
+
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _isDbInspecting.value = true
+            _syncStatus.value = "🔄 동기화 전후 DB 상태 비교 중..."
+
+            try {
+                Log.d("DevMenuViewModel-Sync", "🔍 === SYNC WITH DB COMPARISON START ===")
+                Log.d("DevMenuViewModel-Sync", "📋 Channel: $channelId")
+
+                // 동기화 실행 전 상태
+                Log.d("DevMenuViewModel-Sync", "📊 === DB STATE BEFORE SYNC ===")
+                roomDatabaseLogger.logChannelMessages(channelId, 10)
+                roomDatabaseLogger.logTableState("outboxRecord")
+
+                // 동기화 실행
+                _syncStatus.value = "🔄 동기화 실행 중..."
+                val streamName = "messages-$channelId"
+
+                when (val result = syncUseCase(streamName)) {
+                    is CustomResult.Success -> {
+                        Log.d("DevMenuViewModel-Sync", "✅ Sync completed successfully")
+
+                        // 동기화 실행 후 상태
+                        Log.d("DevMenuViewModel-Sync", "📊 === DB STATE AFTER SYNC ===")
+                        roomDatabaseLogger.logChannelMessages(channelId, 10)
+                        roomDatabaseLogger.logTableState("outboxRecord")
+
+                        _syncStatus.value = "✅ 동기화 및 DB 비교 완료!"
+                        _dbInspectionResult.value = "✅ 동기화 전후 상태 비교 완료! 로그 확인"
+                        addMessage("✅ 채널 '$channelId' 동기화 및 DB 비교 완료!")
+
+                    }
+
+                    is CustomResult.Failure -> {
+                        _syncStatus.value = "❌ 동기화 실패: ${result.error.message}"
+                        _dbInspectionResult.value = "❌ 동기화 실패: ${result.error.message}"
+                        Log.e("DevMenuViewModel-Sync", "❌ Sync failed", result.error)
+                        addMessage("❌ 동기화 실패: ${result.error.message}")
+                    }
+
+                    else -> {
+                        _syncStatus.value = "⚠️ 동기화 결과 불명"
+                        _dbInspectionResult.value = "⚠️ 동기화 결과 불명"
+                        addMessage("⚠️ 동기화 결과 불명")
+                    }
+                }
+
+                Log.d("DevMenuViewModel-Sync", "🔍 === SYNC WITH DB COMPARISON END ===")
+
+            } catch (e: Exception) {
+                _syncStatus.value = "❌ 동기화 비교 실패: ${e.message}"
+                _dbInspectionResult.value = "❌ 동기화 비교 실패: ${e.message}"
+                Log.e("DevMenuViewModel-Sync", "❌ Sync with comparison failed", e)
+                addMessage("❌ 동기화 비교 실패: ${e.message}")
+            } finally {
+                _isSyncing.value = false
+                _isDbInspecting.value = false
+            }
+        }
+    }
+
+    /**
+     * 채널 ID 설정
+     */
+    fun setChannelId(channelId: String) {
+        _selectedChannelId.value = channelId
     }
 }

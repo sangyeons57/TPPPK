@@ -122,7 +122,7 @@ interface MessageRepository : DefaultRepository<Message> {
     suspend fun clearAllCache(): CustomResult<Unit, Exception>
 
     /**
-     * 채널의 최신 메시지들을 Firestore에서 가져옴
+     * 채널의 최신 메시지들을 Room DB에서 가져옴 (로컬 캐시)
      * @param channelId 채널 ID
      * @param limit 가져올 메시지 개수
      * @return 최신 메시지 목록

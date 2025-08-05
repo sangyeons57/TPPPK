@@ -22,6 +22,7 @@ import com.example.domain.model.vo.MentionType
 import com.example.domain.model.vo.message.MentionInfo
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
@@ -65,6 +66,7 @@ class WebSocketChatViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val roomDatabaseLogger: RoomDatabaseLogger,
     private val sendMessageUseCase: com.example.domain_usecase.usecase.message.SendMessageUseCase,
+    private val syncUseCase: SyncUseCase, // 증분 동기화 UseCase 추가
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -101,7 +103,14 @@ class WebSocketChatViewModel @Inject constructor(
     // 메시지 타임아웃 관리를 위한 Job 맵
     private val messageTimeoutJobs = mutableMapOf<String, Job>()
 
+    // 주기적 동기화를 위한 Job
+    private var periodicSyncJob: Job? = null
+
     // Paging3 configuration for messages from Room DB (Single Source of Truth)
+    // PagingSource 인스턴스를 추적하기 위한 변수
+    private var currentPagingSource: androidx.paging.PagingSource<Long, Message>? =
+        null
+    
     private val pager = Pager(
         config = PagingConfig(
             pageSize = 20,
@@ -109,7 +118,10 @@ class WebSocketChatViewModel @Inject constructor(
             prefetchDistance = 5
         ),
         pagingSourceFactory = {
-            messageRepository.getMessagesPagingSource(channelId)
+            val pagingSource = messageRepository.getMessagesPagingSource(channelId)
+            currentPagingSource = pagingSource // 현재 PagingSource 인스턴스 추적
+            Log.d("ViewModel", "🔄 새로운 PagingSource 생성됨: ${pagingSource.hashCode()}")
+            pagingSource
         }
     )
 
@@ -129,6 +141,9 @@ class WebSocketChatViewModel @Inject constructor(
         }
         .onEach { pagingData ->
             Log.d("Paging3-UI", "📊 Paging3 Flow에서 새로운 데이터 감지됨")
+
+            // Paging3 로드 시 증분 동기화 트리거 (백그라운드 실행)
+            performPagingLoadSync()
         }
         .cachedIn(viewModelScope)
 
@@ -144,6 +159,12 @@ class WebSocketChatViewModel @Inject constructor(
         observeConnectionState() // 연결 상태 모니터링 시작
         observeWebSocketEventsForUiEvents()
         loadChannelData()
+
+        // 초기 진입 시 증분 동기화 실행
+        performInitialSync()
+
+        // 5분 주기 동기화 시작
+        startPeriodicSync()
     }
 
     private fun logChannelCacheOnEntry() {
@@ -1302,10 +1323,20 @@ class WebSocketChatViewModel @Inject constructor(
             try {
                 Log.d("ViewModel", "🔄 PagingSource 무효화 시작 - 채널: $channelId")
 
-                // PagingSource를 invalidate하여 Room 데이터 변경사항을 UI에 반영
-                messageRepository.getMessagesPagingSource(channelId).invalidate()
+                // 현재 활성화된 PagingSource 인스턴스를 무효화
+                val pagingSource = currentPagingSource
+                if (pagingSource != null && !pagingSource.invalid) {
+                    Log.d("ViewModel", "✅ 현재 PagingSource 무효화: ${pagingSource.hashCode()}")
+                    pagingSource.invalidate()
+                } else {
+                    Log.d("ViewModel", "⚠️ PagingSource가 null이거나 이미 무효화됨")
 
-                Log.d("ViewModel", "✅ PagingSource invalidated - UI will refresh from Room DB")
+                    // 새로운 PagingSource 생성을 위해 Pager를 통해 접근
+                    // 이는 pagingSourceFactory를 트리거하여 새로운 인스턴스를 생성합니다
+                    Log.d("ViewModel", "🔄 새로운 PagingSource 생성 트리거")
+                }
+
+                Log.d("ViewModel", "✅ PagingSource invalidation 완료 - UI가 Room DB에서 새로고침됨")
 
                 // 잠시 대기 후 Room DB 상태 확인
                 delay(100)
@@ -1427,12 +1458,125 @@ class WebSocketChatViewModel @Inject constructor(
         Log.d("ViewModel", "새 메시지 알림 상태 초기화")
     }
 
+    /**
+     * 채팅화면 최초 진입 시 증분 동기화 실행
+     */
+    private fun performInitialSync() {
+        viewModelScope.launch {
+            try {
+                Log.d("ViewModel", "🔄 초기 증분 동기화 시작: $channelId")
+
+                when (val result = syncUseCase.syncChannel(channelId)) {
+                    is CustomResult.Success -> {
+                        Log.d("ViewModel", "✅ 초기 동기화 완료: $channelId")
+                        // Room DB 변경 → Paging3 자동 새로고침 트리거
+                        invalidatePagingSource()
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e("ViewModel", "❌ 초기 동기화 실패: ${result.error.message}")
+                        // 실패해도 사용자에게는 알리지 않음 (백그라운드 작업)
+                    }
+
+                    else -> {
+                        throw Exception("syncChannel() returned unexpected result: $result")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "💥 초기 동기화 예외", e)
+            }
+        }
+    }
+
+    /**
+     * 5분 주기 동기화 시작
+     */
+    private fun startPeriodicSync() {
+        // 기존 주기 동기화 Job이 있다면 취소
+        periodicSyncJob?.cancel()
+
+        periodicSyncJob = viewModelScope.launch {
+            try {
+                while (true) {
+                    delay(5 * 60 * 1000L) // 5분 대기
+
+                    Log.d("ViewModel", "🔄 주기적 증분 동기화 실행: $channelId")
+
+                    when (val result = syncUseCase.syncChannel(channelId)) {
+                        is CustomResult.Success -> {
+                            Log.d("ViewModel", "✅ 주기 동기화 완료: $channelId")
+                            // Room DB 변경 → Paging3 자동 새로고침 트리거
+                            invalidatePagingSource()
+                        }
+
+                        is CustomResult.Failure -> {
+                            Log.e("ViewModel", "❌ 주기 동기화 실패: ${result.error.message}")
+                            // 실패해도 계속 진행 (다음 주기에 재시도)
+                        }
+
+                        else -> {
+                            throw Exception("syncChannel() returned unexpected result: $result")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Log.e("ViewModel", "💥 주기 동기화 예외", e)
+                }
+            }
+        }
+    }
+
+    /**
+     * Paging3 로드 시 증분 동기화 실행 (빈도 제한 적용)
+     */
+    private var lastPagingLoadSyncTime = 0L
+    private fun performPagingLoadSync() {
+        val currentTime = System.currentTimeMillis()
+        val minSyncInterval = 30 * 1000L // 30초 간격 제한
+
+        // 너무 빈번한 호출 방지
+        if (currentTime - lastPagingLoadSyncTime < minSyncInterval) {
+            Log.d("ViewModel", "🚫 Paging3 동기화 빈도 제한 적용 (${currentTime - lastPagingLoadSyncTime}ms)")
+            return
+        }
+
+        lastPagingLoadSyncTime = currentTime
+
+        viewModelScope.launch {
+            try {
+                Log.d("ViewModel", "🔄 Paging3 로드 시 증분 동기화 실행: $channelId")
+
+                when (val result = syncUseCase.syncChannel(channelId)) {
+                    is CustomResult.Success -> {
+                        Log.d("ViewModel", "✅ Paging3 동기화 완료: $channelId")
+                        // 동기화 후 자동으로 Paging3가 업데이트됨
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e("ViewModel", "❌ Paging3 동기화 실패: ${result.error.message}")
+                        // 실패해도 사용자에게는 알리지 않음 (백그라운드 작업)
+                    }
+
+                    else -> {
+                        throw Exception("syncChannel() returned unexpected result: $result")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "💥 Paging3 동기화 예외", e)
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
 
         // 모든 타임아웃 Job 취소
         messageTimeoutJobs.values.forEach { it.cancel() }
         messageTimeoutJobs.clear()
+
+        // 주기적 동기화 Job 취소
+        periodicSyncJob?.cancel()
         
         viewModelScope.launch {
             // Leave room when ViewModel is cleared

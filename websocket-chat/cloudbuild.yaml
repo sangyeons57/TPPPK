@@ -2,12 +2,10 @@
 steps:
   # Build standalone websocket-chat with official Gradle builder
   - name: 'gcr.io/cloud-builders/gradle'
-    dir: 'websocket-chat'
-    args: ['clean', 'shadowJar', '--no-daemon']
+    args: [ 'clean', 'build', '--no-daemon' ]
 
   # Build Docker image using Cloud Build's automatic Docker build
   - name: 'gcr.io/cloud-builders/docker'
-    dir: 'websocket-chat'
     args:
       - 'build'
       - '-t'
@@ -45,9 +43,8 @@ steps:
       - 'websocket-chat-sa@$PROJECT_ID.iam.gserviceaccount.com'
       - '--revision-suffix'
       - '$BUILD_ID'
-      - '--use-http1'
       - '--set-env-vars'
-      - 'JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0'
+      - 'JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0,HTTP_VERSION=1.1'
 
 # Store images in Artifact Registry (not Container Registry)
 images:

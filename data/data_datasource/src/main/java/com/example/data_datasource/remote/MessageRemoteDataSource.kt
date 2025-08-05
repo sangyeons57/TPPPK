@@ -389,22 +389,57 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
      * CollectionPath 헬퍼를 사용하여 DM 채널과 프로젝트 채널을 구분
      */
     private fun getMessagesCollectionPath(channelId: String): CollectionPath {
-        return if (channelId.startsWith("dm_")) {
-            // DM 채널: dm_channels/{channelId}/messages
-            CollectionPath.dmChannelMessages(channelId)
-        } else {
-            // 프로젝트 채널: projects/{projectId}/channels/{channelId}/messages
-            // 현재 컨텍스트에서 프로젝트 ID 추출
-            val projectId = extractProjectIdFromContext(channelId)
-            if (projectId != null) {
-                CollectionPath.projectChannelMessages(projectId, channelId)
-            } else {
-                // 프로젝트 ID를 찾을 수 없는 경우 DM 경로로 폴백 (임시)
-                Log.w(
+        // 이미 전체 경로인 경우 그대로 사용 (예: /dm_channels/channelId 또는 dm_channels/channelId/messages)
+        return when {
+            // Case 1: 이미 완전한 Firestore 경로인 경우 (예: "dm_channels/channelId/messages")
+            channelId.contains("/messages") -> {
+                Log.d("MessageRemoteDataSource", "📍 Using provided full path: $channelId")
+                CollectionPath(channelId)
+            }
+
+            // Case 2: 이미 채널 경로이지만 /messages가 없는 경우 (예: "/dm_channels/channelId")
+            channelId.startsWith("/dm_channels/") -> {
+                val cleanChannelId = channelId.removePrefix("/")
+                Log.d(
                     "MessageRemoteDataSource",
-                    "Could not extract projectId for channel: $channelId, using DM path as fallback"
+                    "📍 Converting path to collection: $cleanChannelId/messages"
                 )
+                CollectionPath("$cleanChannelId/messages")
+            }
+
+            // Case 3: 채널 경로이지만 /messages가 없는 경우 (예: "dm_channels/channelId")
+            channelId.startsWith("dm_channels/") -> {
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "📍 Adding messages to DM channel path: $channelId/messages"
+                )
+                CollectionPath("$channelId/messages")
+            }
+
+            // Case 4: 단순 DM 채널 ID (예: "dm_userId1_userId2")
+            channelId.startsWith("dm_") -> {
+                Log.d("MessageRemoteDataSource", "📍 Creating DM channel path for: $channelId")
                 CollectionPath.dmChannelMessages(channelId)
+            }
+
+            // Case 5: 프로젝트 채널 (예: "channel_project_projectId")
+            else -> {
+                // 프로젝트 채널: projects/{projectId}/channels/{channelId}/messages
+                val projectId = extractProjectIdFromContext(channelId)
+                if (projectId != null) {
+                    Log.d(
+                        "MessageRemoteDataSource",
+                        "📍 Creating project channel path for: projectId=$projectId, channelId=$channelId"
+                    )
+                    CollectionPath.projectChannelMessages(projectId, channelId)
+                } else {
+                    // 프로젝트 ID를 찾을 수 없는 경우 DM 경로로 폴백 (임시)
+                    Log.w(
+                        "MessageRemoteDataSource",
+                        "Could not extract projectId for channel: $channelId, using DM path as fallback"
+                    )
+                    CollectionPath.dmChannelMessages(channelId)
+                }
             }
         }
     }

@@ -3,6 +3,8 @@ package com.example.data_repository.util
 import android.database.Cursor
 import android.util.Log
 import com.example.data_datasource.database.AppDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,24 +56,26 @@ class RoomDatabaseLogger @Inject constructor(
     /**
      * 전체 데이터베이스 상태를 로그로 출력
      */
-    fun logDatabaseState() {
-        Log.i(TAG, "=".repeat(80))
-        Log.i(TAG, "📊 ROOM DATABASE STATE REPORT")
-        Log.i(TAG, "=".repeat(80))
+    suspend fun logDatabaseState() {
+        withContext(Dispatchers.IO) {
+            Log.i(TAG, "=".repeat(80))
+            Log.i(TAG, "📊 ROOM DATABASE STATE REPORT")
+            Log.i(TAG, "=".repeat(80))
 
-        TABLE_INFO.forEach { (tableName, tableInfo) ->
-            logTableState(tableName, tableInfo)
+            TABLE_INFO.forEach { (tableName, tableInfo) ->
+                logTableStateInternal(tableName, tableInfo)
+            }
+
+            Log.i(TAG, "=".repeat(80))
+            Log.i(TAG, "📊 END OF DATABASE REPORT")
+            Log.i(TAG, "=".repeat(80))
         }
-
-        Log.i(TAG, "=".repeat(80))
-        Log.i(TAG, "📊 END OF DATABASE REPORT")
-        Log.i(TAG, "=".repeat(80))
     }
 
     /**
-     * 특정 테이블 상태를 로그로 출력
+     * 특정 테이블 상태를 로그로 출력 (내부 사용, 이미 IO 스레드에서 실행됨)
      */
-    private fun logTableState(tableName: String, tableInfo: TableInfo) {
+    private fun logTableStateInternal(tableName: String, tableInfo: TableInfo) {
         try {
             val count = getTableCount(tableName)
             val sampleData = getSampleData(tableName, 3)
@@ -189,131 +193,139 @@ class RoomDatabaseLogger @Inject constructor(
     /**
      * 테이블 스키마 정보 출력
      */
-    fun logTableSchema(tableName: String) {
-        try {
-            val cursor = appDatabase.query("PRAGMA table_info($tableName)", emptyArray())
+    suspend fun logTableSchema(tableName: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val cursor = appDatabase.query("PRAGMA table_info($tableName)", emptyArray())
 
-            Log.i(TAG, "")
-            Log.i(TAG, "🏗️ SCHEMA: $tableName")
-            Log.i(TAG, "┌" + "─".repeat(60) + "┐")
-            Log.i(
-                TAG,
-                "│ ${"Column".padEnd(20)} │ ${"Type".padEnd(15)} │ ${"Nullable".padEnd(8)} │ ${
-                    "Primary Key".padEnd(12)
-                } │"
-            )
-            Log.i(TAG, "├" + "─".repeat(60) + "┤")
-
-            while (cursor.moveToNext()) {
-                val columnName = cursor.getString(1)
-                val dataType = cursor.getString(2)
-                val notNull = if (cursor.getInt(3) == 1) "NO" else "YES"
-                val primaryKey = if (cursor.getInt(5) == 1) "YES" else "NO"
-
+                Log.i(TAG, "")
+                Log.i(TAG, "🏗️ SCHEMA: $tableName")
+                Log.i(TAG, "┌" + "─".repeat(60) + "┐")
                 Log.i(
                     TAG,
-                    "│ ${columnName.padEnd(20)} │ ${dataType.padEnd(15)} │ ${notNull.padEnd(8)} │ ${
-                        primaryKey.padEnd(12)
+                    "│ ${"Column".padEnd(20)} │ ${"Type".padEnd(15)} │ ${"Nullable".padEnd(8)} │ ${
+                        "Primary Key".padEnd(12)
                     } │"
                 )
+                Log.i(TAG, "├" + "─".repeat(60) + "┤")
+
+                while (cursor.moveToNext()) {
+                    val columnName = cursor.getString(1)
+                    val dataType = cursor.getString(2)
+                    val notNull = if (cursor.getInt(3) == 1) "NO" else "YES"
+                    val primaryKey = if (cursor.getInt(5) == 1) "YES" else "NO"
+
+                    Log.i(
+                        TAG,
+                        "│ ${columnName.padEnd(20)} │ ${dataType.padEnd(15)} │ ${notNull.padEnd(8)} │ ${
+                            primaryKey.padEnd(12)
+                        } │"
+                    )
+                }
+
+                Log.i(TAG, "└" + "─".repeat(60) + "┘")
+                cursor.close()
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to log schema for $tableName: ${e.message}")
             }
-
-            Log.i(TAG, "└" + "─".repeat(60) + "┘")
-            cursor.close()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to log schema for $tableName: ${e.message}")
         }
     }
 
     /**
      * 특정 테이블의 상세 정보 출력 (스키마 + 샘플 데이터)
      */
-    fun logTableDetails(tableName: String) {
-        val tableInfo = TABLE_INFO[tableName]
-        if (tableInfo != null) {
-            logTableState(tableName, tableInfo)
-            logTableSchema(tableName)
-        } else {
-            Log.w(TAG, "⚠️ Unknown table: $tableName")
+    suspend fun logTableDetails(tableName: String) {
+        withContext(Dispatchers.IO) {
+            val tableInfo = TABLE_INFO[tableName]
+            if (tableInfo != null) {
+                logTableStateInternal(tableName, tableInfo)
+                logTableSchema(tableName)
+            } else {
+                Log.w(TAG, "⚠️ Unknown table: $tableName")
+            }
         }
     }
 
     /**
      * 특정 테이블 상태를 로그로 출력 (외부에서 호출 가능)
      */
-    fun logTableState(tableName: String) {
-        val tableInfo = TABLE_INFO[tableName]
-        if (tableInfo != null) {
-            logTableState(tableName, tableInfo)
-        } else {
-            Log.w(TAG, "⚠️ Unknown table: $tableName")
+    suspend fun logTableState(tableName: String) {
+        withContext(Dispatchers.IO) {
+            val tableInfo = TABLE_INFO[tableName]
+            if (tableInfo != null) {
+                logTableStateInternal(tableName, tableInfo)
+            } else {
+                Log.w(TAG, "⚠️ Unknown table: $tableName")
+            }
         }
     }
 
     /**
      * 특정 채널의 메시지 상태를 상세히 로그로 출력
      */
-    fun logChannelMessages(channelId: String, limit: Int = 10) {
-        try {
-            Log.i(TAG, "")
-            Log.i(TAG, "💬 === CHANNEL MESSAGES: $channelId ===")
+    suspend fun logChannelMessages(channelId: String, limit: Int = 10) {
+        withContext(Dispatchers.IO) {
+            try {
+                Log.i(TAG, "")
+                Log.i(TAG, "💬 === CHANNEL MESSAGES: $channelId ===")
 
-            // 채널별 메시지 개수
-            val countCursor = appDatabase.query(
-                "SELECT COUNT(*) FROM messages WHERE channelId = ?",
-                arrayOf(channelId)
-            )
-            val totalCount = if (countCursor.moveToFirst()) countCursor.getInt(0) else 0
-            countCursor.close()
-
-            Log.i(TAG, "📊 Total messages in channel: $totalCount")
-
-            if (totalCount > 0) {
-                // 동기화 상태별 개수
-                val statusCursor = appDatabase.query(
-                    "SELECT syncStatus, COUNT(*) as count FROM messages WHERE channelId = ? GROUP BY syncStatus",
+                // 채널별 메시지 개수
+                val countCursor = appDatabase.query(
+                    "SELECT COUNT(*) FROM messages WHERE channelId = ?",
                     arrayOf(channelId)
                 )
-                Log.i(TAG, "📈 Messages by sync status:")
-                while (statusCursor.moveToNext()) {
-                    val status = statusCursor.getString(0) ?: "NULL"
-                    val count = statusCursor.getInt(1)
-                    Log.i(TAG, "   $status: $count messages")
-                }
-                statusCursor.close()
+                val totalCount = if (countCursor.moveToFirst()) countCursor.getInt(0) else 0
+                countCursor.close()
 
-                // 최신 메시지들
-                val messagesCursor = appDatabase.query(
-                    "SELECT id, senderId, substr(content, 1, 40) as content_preview, createdAt, syncStatus FROM messages WHERE channelId = ? ORDER BY createdAt DESC LIMIT ?",
-                    arrayOf(channelId, limit.toString())
-                )
+                Log.i(TAG, "📊 Total messages in channel: $totalCount")
 
-                Log.i(TAG, "📝 Recent messages (최신 ${limit}개):")
-                var index = 1
-                while (messagesCursor.moveToNext()) {
-                    val id = messagesCursor.getString(0)?.take(8) ?: "unknown"
-                    val senderId = messagesCursor.getString(1)?.take(8) ?: "unknown"
-                    val content = messagesCursor.getString(2) ?: ""
-                    val createdAt = messagesCursor.getLong(3)
-                    val syncStatus = messagesCursor.getString(4) ?: ""
-
-                    val timeFormatted = formatTimestamp(createdAt)
-                    Log.i(
-                        TAG,
-                        "   $index. [$id] $senderId ($syncStatus) $timeFormatted: \"$content\""
+                if (totalCount > 0) {
+                    // 동기화 상태별 개수
+                    val statusCursor = appDatabase.query(
+                        "SELECT syncStatus, COUNT(*) as count FROM messages WHERE channelId = ? GROUP BY syncStatus",
+                        arrayOf(channelId)
                     )
-                    index++
+                    Log.i(TAG, "📈 Messages by sync status:")
+                    while (statusCursor.moveToNext()) {
+                        val status = statusCursor.getString(0) ?: "NULL"
+                        val count = statusCursor.getInt(1)
+                        Log.i(TAG, "   $status: $count messages")
+                    }
+                    statusCursor.close()
+
+                    // 최신 메시지들
+                    val messagesCursor = appDatabase.query(
+                        "SELECT id, senderId, substr(content, 1, 40) as content_preview, createdAt, syncStatus FROM messages WHERE channelId = ? ORDER BY createdAt DESC LIMIT ?",
+                        arrayOf(channelId, limit.toString())
+                    )
+
+                    Log.i(TAG, "📝 Recent messages (최신 ${limit}개):")
+                    var index = 1
+                    while (messagesCursor.moveToNext()) {
+                        val id = messagesCursor.getString(0)?.take(8) ?: "unknown"
+                        val senderId = messagesCursor.getString(1)?.take(8) ?: "unknown"
+                        val content = messagesCursor.getString(2) ?: ""
+                        val createdAt = messagesCursor.getLong(3)
+                        val syncStatus = messagesCursor.getString(4) ?: ""
+
+                        val timeFormatted = formatTimestamp(createdAt)
+                        Log.i(
+                            TAG,
+                            "   $index. [$id] $senderId ($syncStatus) $timeFormatted: \"$content\""
+                        )
+                        index++
+                    }
+                    messagesCursor.close()
+                } else {
+                    Log.i(TAG, "   📭 No messages found in this channel")
                 }
-                messagesCursor.close()
-            } else {
-                Log.i(TAG, "   📭 No messages found in this channel")
+
+                Log.i(TAG, "💬 === END CHANNEL MESSAGES ===")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to log channel messages for $channelId: ${e.message}")
             }
-
-            Log.i(TAG, "💬 === END CHANNEL MESSAGES ===")
-
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to log channel messages for $channelId: ${e.message}")
         }
     }
 }

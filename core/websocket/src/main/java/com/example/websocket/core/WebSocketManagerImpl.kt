@@ -21,14 +21,13 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.security.KeyStore
 import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 @Singleton
@@ -46,37 +45,21 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         }
         .build()
 
-    private fun OkHttpClient.Builder.configureSslForCloudRun() {
-        try {
-            // Create a trust manager that accepts Google Cloud Run certificates
-            val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
-                override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
-                override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {
-                    // For Google Cloud Run, we trust certificates issued by known CAs
-                    // In production, you might want to add more specific validation
-                }
+    private fun OkHttpClient.Builder.configureSslForCloudRun(): OkHttpClient.Builder {
+        // Use default SSL context with proper certificate validation
+        val tmf = TrustManagerFactory.getInstance(
+            TrustManagerFactory.getDefaultAlgorithm()
+        ).apply { init(null as KeyStore?) }
+        val trustManager = tmf.trustManagers
+            .first { it is X509TrustManager } as X509TrustManager
 
-                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-            })
-
-            // Create hostname verifier for Cloud Run domains
-            val hostnameVerifier = HostnameVerifier { hostname, session ->
-                // Accept Google Cloud Run domains
-                hostname.endsWith(".run.app") ||
-                        hostname.endsWith(".asia-northeast3.run.app") ||
-                        hostname.contains("websocket-chat") ||
-                        hostname == "localhost"
-            }
-
-            val sslContext = SSLContext.getInstance("SSL")
-            sslContext.init(null, trustAllCerts, SecureRandom())
-
-            sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
-            hostnameVerifier(hostnameVerifier)
-
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to configure SSL, using default settings", e)
+        val sslContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf(trustManager), SecureRandom())
         }
+
+        Log.d(TAG, "SSL configured with strict security settings")
+
+        return sslSocketFactory(sslContext.socketFactory, trustManager)
     }
 
     private val json = Json {
@@ -140,9 +123,32 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                     }
 
                     WebSocketMessage.TYPE_ERROR -> {
-                        if (message.content?.contains("Authentication") == true) {
-                            Log.w(TAG, "Authentication failed: ${message.content}")
-                            _isAuthenticated.value = false
+                        val errorContent = message.content ?: "Unknown error"
+                        Log.w(TAG, "Received error message: $errorContent")
+
+                        when {
+                            errorContent.contains("Authentication") -> {
+                                Log.w(TAG, "Authentication failed: $errorContent")
+                                _isAuthenticated.value = false
+                            }
+
+                            errorContent.contains("Server configuration error") -> {
+                                Log.e(
+                                    TAG,
+                                    "❌ Server configuration error - this requires server restart"
+                                )
+                                _connectionState.value = WebSocketConnectionState.Error(
+                                    message = "Server configuration error",
+                                    throwable = Exception("Server dependency injection failed")
+                                )
+                                _isAuthenticated.value = false
+                                // Close connection with policy violation code
+                                webSocket?.close(1008, "Server configuration error")
+                            }
+
+                            else -> {
+                                Log.w(TAG, "Other error received: $errorContent")
+                            }
                         }
                     }
                 }

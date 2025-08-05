@@ -7,8 +7,7 @@ group = "com.example"
 version = "1.0.0"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))   // Jetty 12 최소 JDK
 }
 
 repositories {
@@ -16,20 +15,19 @@ repositories {
 }
 
 dependencies {
-    // Jetty Core
+    // Jetty core + EE10 modules (WebSocket + Servlet)
     implementation("org.eclipse.jetty:jetty-server:12.0.23")
-    
-    // Jetty EE10 (Jakarta EE 10) WebSocket Support
     implementation("org.eclipse.jetty.ee10:jetty-ee10-servlet:12.0.23")
     implementation("org.eclipse.jetty.ee10.websocket:jetty-ee10-websocket-jakarta-server:12.0.23")
-    
-    // Jakarta WebSocket API
-    implementation("jakarta.websocket:jakarta.websocket-api:2.2.0")
-    
-    // Jakarta Servlet API
-    implementation("jakarta.servlet:jakarta.servlet-api:6.1.0")
 
-    // Firebase Admin SDK
+    // Jetty Annotations - @ServerEndpoint 애노테이션 스캔을 위해 필요
+    implementation("org.eclipse.jetty.ee10:jetty-ee10-annotations:12.0.23")
+
+    // Compile-only Jakarta APIs (avoid runtime duplicates)
+    compileOnly("jakarta.servlet:jakarta.servlet-api:6.0.0")   // EE10 스펙
+    compileOnly("jakarta.websocket:jakarta.websocket-api:2.1.1")
+
+    // Firebase Admin SDK (현재 사용 가능한 버전)
     implementation("com.google.firebase:firebase-admin:9.5.0")
 
     // JSON Processing
@@ -52,8 +50,8 @@ tasks.shadowJar {
     archiveClassifier.set("")
     mergeServiceFiles()
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
-    manifest { 
-        attributes["Main-Class"] = "com.example.websocket.ChatWebSocketServer" 
+    manifest {
+        attributes["Main-Class"] = "com.example.websocket.ChatWebSocketServer"
     }
 }
 

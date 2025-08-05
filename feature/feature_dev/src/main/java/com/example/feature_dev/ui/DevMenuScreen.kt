@@ -21,13 +21,17 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -86,7 +90,11 @@ fun DevMenuScreen(
     // 동기화 상태
     val syncStatus by viewModel.syncStatus.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
-    
+
+    // Room DB 검사 상태
+    val isDbInspecting by viewModel.isDbInspecting.collectAsState()
+    val dbInspectionResult by viewModel.dbInspectionResult.collectAsState()
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -575,6 +583,154 @@ fun DevMenuScreen(
                     Text("증분 동기화")
                 }
             }
+
+            /* ----------------------------------------- */
+            /* Room DB 검사 기능                          */
+            /* ----------------------------------------- */
+            Text(
+                "--- Room DB 검사 ---",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            // 채널 ID 입력 필드
+            var channelIdInput by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = channelIdInput,
+                onValueChange = { channelIdInput = it },
+                label = { Text("채널 ID") },
+                placeholder = { Text("예: /dm_channels/dm_clGwk2ViVKOs07EM3Nb8KTY6jgL2_n3iS8WoOnxb8EZ0XZE5tCiIAGxf1") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp), // 높이 증가로 긴 ID 표시 개선
+                minLines = 2, // 최소 2줄 표시
+                maxLines = 3  // 최대 3줄까지 확장 가능
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // DB 검사 버튼들 (2x2 그리드)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.inspectFullDatabase() },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isDbInspecting
+                ) {
+                    Text("전체 DB 검사")
+                }
+                Button(
+                    onClick = { viewModel.inspectMessagesTable() },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isDbInspecting
+                ) {
+                    Text("메시지 테이블")
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.inspectOutboxTable() },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isDbInspecting
+                ) {
+                    Text("OutBox 테이블")
+                }
+                Button(
+                    onClick = { viewModel.inspectSyncMetadata() },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isDbInspecting
+                ) {
+                    Text("동기화 메타데이터")
+                }
+            }
+
+            // 채널별 검사 버튼들
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        if (channelIdInput.isNotBlank()) {
+                            viewModel.inspectChannelMessages(channelIdInput)
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isDbInspecting && channelIdInput.isNotBlank()
+                ) {
+                    Text("채널 메시지 검사")
+                }
+                Button(
+                    onClick = {
+                        if (channelIdInput.isNotBlank()) {
+                            viewModel.syncWithDbComparison(channelIdInput)
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isDbInspecting && !isSyncing && channelIdInput.isNotBlank()
+                ) {
+                    Text("동기화 + 비교")
+                }
+            }
+
+            // DB 검사 결과 표시
+            if (dbInspectionResult.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "DB 검사 결과:",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = dbInspectionResult,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
+            // 로딩 상태 표시
+            if (isDbInspecting) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "DB 검사 진행 중...",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

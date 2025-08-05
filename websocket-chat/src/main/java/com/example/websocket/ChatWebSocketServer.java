@@ -2,6 +2,7 @@ package com.example.websocket;
 
 import com.example.websocket.config.FirebaseConfig;
 import com.example.websocket.handler.HealthWebSocketHandler;
+import com.example.websocket.handler.ChatWebSocketHandler;
 import com.example.websocket.service.ServiceProvider;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
@@ -88,7 +89,10 @@ public class ChatWebSocketServer {
                     wsContainer.setDefaultMaxSessionIdleTimeout(Duration.ofMinutes(4).toMillis());
                     logger.info("🔧 WebSocket buffer size: 65536, idle timeout: 4 minutes (client ping: 3 minutes)");
                     
-                    logger.info("✅ WebSocket endpoint /chat configured via @ServerEndpoint annotation");
+                    // Programmatically register WebSocket endpoint
+                    logger.info("🔧 Registering WebSocket endpoint /chat programmatically...");
+                    wsContainer.addEndpoint(ChatWebSocketHandler.class);
+                    logger.info("✅ WebSocket endpoint /chat registered programmatically");
                     
                 } catch (Exception e) {
                     logger.error("❌ Error during WebSocket configuration: {}", e.getMessage(), e);

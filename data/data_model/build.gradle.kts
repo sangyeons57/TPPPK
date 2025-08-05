@@ -13,7 +13,6 @@ dependencies {
 
     // Core modules
     implementation(project(":domain:domain"))
-    implementation(project(":usecase"))
     implementation(project(":domain:domain_repository"))
     implementation(project(":core:core_common"))
 

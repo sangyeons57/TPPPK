@@ -13,7 +13,6 @@ dependencies {
 
     implementation(project(":core:core_common"))
     implementation(project(":domain:domain"))
-    implementation(project(":domain:domain"))
     implementation(project(":domain:domain_repository"))
     implementation(project(":data:data_model"))
     implementation(project(":data:data_datasource"))

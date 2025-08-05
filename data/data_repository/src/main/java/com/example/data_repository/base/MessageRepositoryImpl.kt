@@ -84,12 +84,12 @@ class MessageRepositoryImpl @Inject constructor(
 
         // ✅ Room 저장 직후 전체 메시지 로그 출력
         val allMessages = messageDao.getRecentMessagesForDebug(channelId, 20)
-        messageDao.getTotalMessageCount()
-        messageDao.getMessageCountByChannel(channelId)
+        val totalCount = messageDao.getTotalMessageCount()
+        val channelCount = messageDao.getMessageCountByChannel(channelId)
 
         android.util.Log.d(
             "RoomDB",
-            "💾 Room 저장 후 상태 - 전체: $totalCount개, 채널($channelId): $channelCount개"
+            "💾 Room 저장 후 상태 - 전체: ${totalCount}개, 채널(${channelId}): ${channelCount}개"
         )
         android.util.Log.d("RoomDB", "💾 Room 저장 후 최근 메시지 (채널: $channelId): ${allMessages.size}개")
         allMessages.forEach { entity ->
@@ -145,87 +145,47 @@ class MessageRepositoryImpl @Inject constructor(
             return try {
                 val key = params.key ?: System.currentTimeMillis()
                 val limit = params.loadSize
-                val targetChannelId = channelId ?: "" // 빈 문자열은 모든 채널 (DAO에서 처리)
 
-                android.util.Log.d(
-                    "PagingSource",
-                    "🔄 PagingSource.load() 호출됨 - 채널: $targetChannelId, 키: $key, 크기: $limit"
-                )
+                // 채널ID 유효성 검사 - null이거나 빈 문자열이면 에러 반환
+                if (channelId.isNullOrBlank()) {
+                    android.util.Log.e("PagingSource", "❌ 채널ID가 null이거나 빈 문자열입니다")
+                    return LoadResult.Error(IllegalStateException("채널ID는 필수입니다"))
+                }
 
-                // ✅ Room DB 상태 직접 확인
-                messageDao.getTotalMessageCount()
-                messageDao.getMessageCountByChannel(targetChannelId)
-                android.util.Log.d(
-                    "PagingSource",
-                    "📊 Room DB 상태 - 전체: $totalCount개, 채널($targetChannelId): $channelCount개"
-                )
+                // 디버그 모드에서만 로깅 (성능 최적화)
+                if (android.util.Log.isLoggable("PagingSource", android.util.Log.DEBUG)) {
+                    android.util.Log.d(
+                        "PagingSource",
+                        "🔄 PagingSource.load() - 채널: $channelId, 키: $key, 크기: $limit"
+                    )
+                }
 
                 // 기존 DAO 메서드 활용 - 최신 메시지부터 시간 역순으로 로딩
                 val entities = when (params) {
                     is LoadParams.Refresh -> {
-                        android.util.Log.d("PagingSource", "📥 Refresh 로드 - 현재 시간 이전의 최신 메시지들")
-                        android.util.Log.d(
-                            "PagingSource",
-                            "📋 쿼리 조건: channelId='$targetChannelId', beforeTimestamp=$key, limit=$limit"
-                        )
                         // 초기 로드: 현재 시간 이전의 최신 메시지들
-                        val result = messageDao.getMessagesBefore(targetChannelId, key, limit)
-                        android.util.Log.d("PagingSource", "📥 Refresh 쿼리 결과: ${result.size}개")
-                        result
+                        messageDao.getMessagesBefore(channelId, key, limit)
                     }
 
                     is LoadParams.Prepend -> {
-                        android.util.Log.d("PagingSource", "📥 Prepend 로드 - 더 최신 메시지들")
-                        android.util.Log.d(
-                            "PagingSource",
-                            "📋 쿼리 조건: channelId='$targetChannelId', afterTimestamp=$key, limit=$limit"
-                        )
                         // 위로 스크롤: 더 최신 메시지들
-                        val result = messageDao.getMessagesAfter(targetChannelId, key, limit)
-                        android.util.Log.d("PagingSource", "📥 Prepend 쿼리 결과: ${result.size}개")
-                        result
+                        messageDao.getMessagesAfter(channelId, key, limit)
                     }
 
                     is LoadParams.Append -> {
-                        android.util.Log.d("PagingSource", "📥 Append 로드 - 더 과거 메시지들")
-                        android.util.Log.d(
-                            "PagingSource",
-                            "📋 쿼리 조건: channelId='$targetChannelId', beforeTimestamp=$key, limit=$limit"
-                        )
                         // 아래로 스크롤: 더 과거 메시지들
-                        val result = messageDao.getMessagesBefore(targetChannelId, key, limit)
-                        android.util.Log.d("PagingSource", "📥 Append 쿼리 결과: ${result.size}개")
-                        result
+                        messageDao.getMessagesBefore(channelId, key, limit)
                     }
                 }
-
-                android.util.Log.d("PagingSource", "✅ DAO 쿼리 완료 - ${entities.size}개 엔티티 로드됨")
 
                 // MessageEntity를 Message 도메인으로 변환
                 val messages = entities.map { entity ->
                     messageMapper.entityToDomain(entity)
                 }
 
-                // ✅ Paging3로 UI에 출력되는 메시지 로그
-                android.util.Log.d(
-                    "Paging3",
-                    "🖥️ Paging3로 UI에 출력되는 메시지 (채널: $targetChannelId): ${messages.size}개"
-                )
-                messages.forEach { message ->
-                    android.util.Log.d(
-                        "Paging3",
-                        "  - id: ${message.id.value}, content: ${message.content.value.take(30)}, channelId: ${message.channelId.value}"
-                    )
-                }
-
                 // 다음/이전 키 계산
                 val nextKey = entities.lastOrNull()?.createdAt
                 val prevKey = entities.firstOrNull()?.createdAt
-
-                android.util.Log.d(
-                    "PagingSource",
-                    "📊 LoadResult 생성 - prevKey: $prevKey, nextKey: $nextKey"
-                )
 
                 LoadResult.Page(
                     data = messages,
@@ -240,8 +200,19 @@ class MessageRepositoryImpl @Inject constructor(
 
         override fun getRefreshKey(state: androidx.paging.PagingState<Long, Message>): Long? {
             return state.anchorPosition?.let { anchorPosition ->
+                // 현재 위치에서 가장 가까운 페이지를 찾아서
                 val anchorPage = state.closestPageToPosition(anchorPosition)
-                anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
+
+                // 해당 위치의 메시지 타임스탬프를 기준으로 새로고침 키 계산
+                val anchorItem = state.closestItemToPosition(anchorPosition)
+
+                if (anchorItem != null) {
+                    // 현재 메시지의 타임스탬프를 기준으로 새로고침
+                    anchorItem.createdAt.toEpochMilli()
+                } else {
+                    // 아이템이 없으면 페이지의 키 사용
+                    anchorPage?.prevKey ?: anchorPage?.nextKey ?: System.currentTimeMillis()
+                }
             }
         }
     }
@@ -366,17 +337,32 @@ class MessageRepositoryImpl @Inject constructor(
                 )
             }
 
-            // MessageRemoteDataSource를 통해 Firestore에서 최신 메시지 가져오기
-            messageRemoteDataSource.getRecentMessages(channelId, limit)
+            android.util.Log.d(
+                "MessageRepository",
+                "📱 Room DB에서 최신 메시지 조회 - 채널: $channelId, 제한: $limit"
+            )
+
+            // Room DB에서 최신 메시지들 가져오기 (현재 시간 이전의 메시지들)
+            val currentTime = System.currentTimeMillis()
+            val entities = messageDao.getMessagesBefore(channelId, currentTime, limit)
+            val messages = entities.map { entity -> convertEntityToMessage(entity) }
+
+            android.util.Log.d(
+                "MessageRepository",
+                "✅ Room DB에서 ${messages.size}개 메시지 조회 완료 (채널: $channelId)"
+            )
+
+            CustomResult.Success(messages)
         } catch (e: Exception) {
             android.util.Log.e(
                 "MessageRepository",
-                "Failed to get recent messages for channel: $channelId",
+                "❌ Room DB에서 최신 메시지 조회 실패 - 채널: $channelId",
                 e
             )
             CustomResult.Failure(e)
         }
     }
+
 
     /**
      * MessageEntity를 Message 도메인 객체로 변환

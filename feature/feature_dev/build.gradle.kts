@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":core:core_ui"))
     implementation(project(":core:websocket"))
     implementation(project(":data:data"))
+    implementation(project(":data:data_repository"))
     // WebSocket 기능
 
     // Feature module dependencies

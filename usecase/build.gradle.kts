@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":core:core_common"))
     implementation(project(":domain:domain"))
     implementation(project(":domain:domain_repository"))
+    implementation(project(":data:orchestrator"))
 
     // Clean Architecture에서 Domain 레이어는 데이터 소스에 의존하지 않고,
     // 비즈니스 로직과 엔티티, 리포지토리 인터페이스만 포함
