@@ -45,6 +45,7 @@ steps:
       - 'websocket-chat-sa@$PROJECT_ID.iam.gserviceaccount.com'
       - '--revision-suffix'
       - '$BUILD_ID'
+      - '--use-http1'
       - '--set-env-vars'
       - 'JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0'
 
