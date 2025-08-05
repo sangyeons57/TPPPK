@@ -1,13 +1,13 @@
 package com.example.websocket;
 
-import com.example.websocket.auth.FirebaseAuthService;
 import com.example.websocket.config.FirebaseConfig;
-import com.example.websocket.handler.ChatWebSocketHandler;
-import com.example.websocket.service.ChatRoomManager;
 import com.example.websocket.service.ServiceProvider;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee10.websocket.jakarta.server.config.JakartaWebSocketServletContainerInitializer;
+import org.eclipse.jetty.webapp.Configuration;
+import org.eclipse.jetty.webapp.JettyWebXmlConfiguration;
+import org.eclipse.jetty.webapp.AnnotationConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,10 +63,17 @@ public class ChatWebSocketServer {
             logger.info("🚀 Creating Jetty server on port {}...", port);
             Server server = new Server(port);
 
-            // Configure servlet context
-            logger.info("🔧 Configuring servlet context...");
+            // Configure servlet context with AnnotationConfiguration
+            logger.info("🔧 Configuring servlet context with AnnotationConfiguration...");
             ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
             context.setContextPath("/");
+            
+            // Enable annotation scanning for @WebServlet
+            Configuration.ClassList
+                .setServerDefault(server)
+                .addBefore(JettyWebXmlConfiguration.class.getName(),
+                           AnnotationConfiguration.class.getName());
+            
             server.setHandler(context);
 
             // Final service validation before WebSocket configuration

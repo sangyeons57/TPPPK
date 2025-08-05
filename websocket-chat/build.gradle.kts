@@ -23,6 +23,9 @@ dependencies {
     implementation("org.eclipse.jetty.ee10:jetty-ee10-servlet:12.0.23")
     implementation("org.eclipse.jetty.ee10.websocket:jetty-ee10-websocket-jakarta-server:12.0.23")
     
+    // Jetty Annotations - @WebServlet 애노테이션 스캔을 위해 필요
+    implementation("org.eclipse.jetty:jetty-annotations:12.0.23")
+    
     // Jakarta WebSocket API
     implementation("jakarta.websocket:jakarta.websocket-api:2.2.0")
     
