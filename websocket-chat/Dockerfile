@@ -8,9 +8,6 @@ WORKDIR /app
 # Note: Shadow JAR has empty classifier, so it will be websocket-chat-1.0.0.jar
 COPY build/libs/*.jar app.jar
 
-# Copy Firebase service account key (if needed)
-# COPY firebase-service-account.json .
-
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /app

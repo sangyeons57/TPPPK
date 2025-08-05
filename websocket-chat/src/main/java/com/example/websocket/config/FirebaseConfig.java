@@ -20,28 +20,26 @@ public class FirebaseConfig {
             logger.info("🔥 Starting Firebase initialization...");
             logger.info("🔥 Project ID: teamnovaprojectprojecting");
             
-            // Check environment variables
-            String googleAppCreds = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
-            logger.info("🔥 GOOGLE_APPLICATION_CREDENTIALS: {}", googleAppCreds != null ? "set" : "not_set");
+            // Firebase Cloud 환경으로 연결
+            logger.info("🔥 Connecting to Firebase Cloud...");
             
-            // Use Workload Identity (Cloud Run default)
-            logger.info("🔥 Using Workload Identity for Firebase initialization...");
-            
-            // Cloud Run 등에서는 별도 JSON 없이 아래처럼 사용 가능
+            // Application Default Credentials (ADC)를 사용하여 Firebase 초기화
             FirebaseOptions options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.getApplicationDefault())
                     .setProjectId("teamnovaprojectprojecting")
                     .build();
 
-            logger.info("🔥 Initializing Firebase app...");
+            logger.info("🔥 Initializing Firebase app with ADC...");
             FirebaseApp.initializeApp(options);
             initialized = true;
-            logger.info("✅ Firebase initialized successfully using Workload Identity");
+            logger.info("✅ Firebase initialized successfully using Application Default Credentials");
             
         } catch (Exception e) {
-            logger.warn("❌ Failed to initialize Firebase ({}): {}. Running in mock authentication mode.", 
+            logger.error("❌ Failed to initialize Firebase ({}): {}", 
                        e.getClass().getSimpleName(), e.getMessage());
             logger.debug("🔍 Full stack trace:", e);
             initialized = false;
+            throw new RuntimeException("Firebase initialization failed", e);
         }
     }
 

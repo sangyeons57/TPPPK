@@ -1,38 +1,31 @@
-# Google Cloud Build configuration for WebSocket Chat Server (Independent Gradle build)
+# Google Cloud Build configuration for WebSocket Chat Server
 steps:
-  # Build standalone websocket-chat with Gradle 8.6-jdk17
-  - name: 'gradle:8.6-jdk17'
-    args: ['gradle', 'clean', 'shadowJar', '--no-daemon']
+  # Build standalone websocket-chat with official Gradle builder
+  - name: 'gcr.io/cloud-builders/gradle'
+    dir: 'websocket-chat'
+    args: ['clean', 'shadowJar', '--no-daemon']
 
-  # Build Docker image
+  # Build Docker image using Cloud Build's automatic Docker build
   - name: 'gcr.io/cloud-builders/docker'
+    dir: 'websocket-chat'
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
+      - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/websocket-chat/websocket-chat:$BUILD_ID'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/websocket-chat:latest'
+      - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/websocket-chat/websocket-chat:latest'
+      - '-f'
+      - 'Dockerfile'
       - '.'
 
-  # Push to Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
-
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/websocket-chat:latest'
-
-  # Deploy to Cloud Run
+  # Deploy to Cloud Run with dedicated service account and WebSocket timeout
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
       - 'deploy'
       - 'websocket-chat'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
+      - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/websocket-chat/websocket-chat:$BUILD_ID'
       - '--region'
       - 'asia-northeast3'
       - '--platform'
@@ -45,21 +38,25 @@ steps:
       - '--cpu'
       - '2'
       - '--max-instances'
-      - '10'
+      - '5'
       - '--timeout'
-      - '300'
+      - '3600'
+      - '--service-account'
+      - 'websocket-chat-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--revision-suffix'
+      - '$BUILD_ID'
       - '--set-env-vars'
       - 'JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0'
 
-# Store images in Container Registry
+# Store images in Artifact Registry (not Container Registry)
 images:
-  - 'gcr.io/$PROJECT_ID/websocket-chat:$BUILD_ID'
-  - 'gcr.io/$PROJECT_ID/websocket-chat:latest'
+  - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/websocket-chat/websocket-chat:$BUILD_ID'
+  - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/websocket-chat/websocket-chat:latest'
 
 # Build options
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: 'E2_HIGHCPU_8'
+  machineType: 'E2_HIGHCPU_8'  # Using valid machine type
 
 # Build timeout
 timeout: '600s'

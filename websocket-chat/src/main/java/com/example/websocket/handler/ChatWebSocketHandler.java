@@ -19,7 +19,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-@ServerEndpoint(value = "/chat", configurator = ChatWebSocketHandler.AuthConfigurator.class)
+@ServerEndpoint(
+    value = "/chat",
+    configurator = ChatWebSocketHandler.ChatEndpointConfigurator.class)
 public class ChatWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     
@@ -442,7 +444,15 @@ public class ChatWebSocketHandler {
         return userId;
     }
 
-    public static class AuthConfigurator extends ServerEndpointConfig.Configurator {
+    public static class ChatEndpointConfigurator extends ServerEndpointConfig.Configurator {
+        @Override
+        public <T> T getEndpointInstance(Class<T> clazz) throws InstantiationException {
+            // ServiceProvider를 통해 DI 수행
+            com.example.websocket.service.ServiceProvider provider = com.example.websocket.service.ServiceProvider.getInstance();
+            return clazz.cast(new ChatWebSocketHandler(
+                    provider.getAuthService(), provider.getRoomManager()));
+        }
+        
         @Override
         public void modifyHandshake(ServerEndpointConfig config, 
                                    jakarta.websocket.server.HandshakeRequest request, 

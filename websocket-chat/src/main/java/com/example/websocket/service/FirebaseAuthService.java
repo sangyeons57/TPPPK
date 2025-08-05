@@ -16,11 +16,23 @@ public class FirebaseAuthService {
 
     public FirebaseAuthService() {
         this.firebaseEnabled = FirebaseConfig.isInitialized();
-        this.firebaseAuth = firebaseEnabled ? FirebaseAuth.getInstance() : null;
         
-        if (!firebaseEnabled) {
+        FirebaseAuth tempAuth = null;
+        if (firebaseEnabled) {
+            try {
+                tempAuth = FirebaseAuth.getInstance();
+                logger.info("✅ FirebaseAuth initialized successfully");
+            } catch (Exception e) {
+                logger.warn("⚠️ Failed to get FirebaseAuth instance: {}", e.getMessage());
+                // Firebase가 초기화되지 않았을 때는 null로 설정하고 계속 진행
+                tempAuth = null;
+            }
+        } else {
+            tempAuth = null;
             logger.warn("Firebase not initialized - authentication will be bypassed");
         }
+        
+        this.firebaseAuth = tempAuth;
     }
 
     /**
@@ -38,7 +50,7 @@ public class FirebaseAuthService {
      * @return CompletableFuture with user ID if valid, null if invalid
      */
     public CompletableFuture<String> verifyToken(String idToken) {
-        if (!firebaseEnabled) {
+        if (!firebaseEnabled || firebaseAuth == null) {
             // For demo purposes - return a mock user ID when Firebase is disabled
             logger.info("Firebase disabled - using mock authentication");
             return CompletableFuture.completedFuture("demo_user_" + System.currentTimeMillis());
@@ -74,7 +86,7 @@ public class FirebaseAuthService {
      * @return user ID if valid, null if invalid
      */
     public String verifyTokenSync(String idToken) {
-        if (!firebaseEnabled) {
+        if (!firebaseEnabled || firebaseAuth == null) {
             // For demo purposes - return a mock user ID when Firebase is disabled
             logger.info("Firebase disabled - using mock authentication (sync)");
             return "demo_user_sync_" + System.currentTimeMillis();
