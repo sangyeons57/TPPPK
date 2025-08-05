@@ -4,7 +4,6 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
-import com.example.data_datasource.remote.util.ChannelIdExtractor
 import com.example.data_model.remote.MessageDTO
 import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Message
@@ -22,6 +21,58 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * CollectionPath에서 channelId를 추출하는 확장 함수
+ */
+fun CollectionPath.extractChannelId(): String? {
+    Log.d("CollectionPath", "🔍 extractChannelId 호출: $value")
+
+    return when {
+        // DM 채널: dm_channels/{channelId}/messages
+        value.contains("dm_channels/") -> {
+            val parts = value.split("/")
+            val channelIndex = parts.indexOf("dm_channels")
+            if (channelIndex >= 0 && channelIndex + 1 < parts.size) {
+                val channelId = parts[channelIndex + 1]
+                Log.d("CollectionPath", "✅ channelId 추출 성공: $channelId")
+                channelId
+            } else {
+                Log.e(
+                    "CollectionPath",
+                    "❌ channelId 추출 실패: 인덱스 범위 초과 (channelIndex=$channelIndex, parts.size=${parts.size})"
+                )
+                null
+            }
+        }
+
+        // 프로젝트 채널: projects/{projectId}/project_channels/{channelId}/messages
+        value.contains("project_channels/") -> {
+            val parts = value.split("/")
+            Log.d("CollectionPath", "🔍 프로젝트 채널 패턴 감지, parts: ${parts.toList()}")
+
+            val channelIndex = parts.indexOf("project_channels")
+            Log.d("CollectionPath", "🔍 project_channels 인덱스: $channelIndex")
+
+            if (channelIndex >= 0 && channelIndex + 1 < parts.size) {
+                val channelId = parts[channelIndex + 1]
+                Log.d("CollectionPath", "✅ channelId 추출 성공: $channelId")
+                channelId
+            } else {
+                Log.e(
+                    "CollectionPath",
+                    "❌ channelId 추출 실패: 인덱스 범위 초과 (channelIndex=$channelIndex, parts.size=${parts.size})"
+                )
+                null
+            }
+        }
+
+        else -> {
+            Log.e("CollectionPath", "❌ 지원하지 않는 경로 패턴: $value")
+            null
+        }
+    }
+}
 
 /**
  * 메시지 정보에 접근하기 위한 인터페이스입니다.
@@ -53,35 +104,35 @@ interface MessageRemoteDataSource : DefaultDatasource<MessageDTO> {
     /**
      * 특정 시점 이후 업데이트된 메시지들을 가져옴 (증분 동기화용)
      * updateAt > timestamp 조건으로 변경된 메시지만 효율적으로 가져옴
-     * @param channelId 채널 ID
+     * @param collectionPath 메시지 컬렉션 경로
      * @param timestamp 마지막 동기화 시간
      * @return 업데이트된 메시지 목록
      */
     suspend fun getMessagesAfterTimestamp(
-        channelId: String,
+        collectionPath: CollectionPath,
         timestamp: Instant
     ): CustomResult<List<Message>, Exception>
 
     /**
      * 채널의 최신 메시지들을 가져옴 (전체 동기화용)
-     * @param channelId 채널 ID
+     * @param collectionPath 메시지 컬렉션 경로
      * @param limit 가져올 메시지 개수
      * @return 최신 메시지 목록
      */
     suspend fun getRecentMessages(
-        channelId: String,
+        collectionPath: CollectionPath,
         limit: Int
     ): CustomResult<List<Message>, Exception>
 
     /**
      * 특정 시점 이전의 과거 메시지들을 가져옴 (페이지네이션용)
-     * @param channelId 채널 ID
+     * @param collectionPath 메시지 컬렉션 경로
      * @param beforeTimestamp 기준 시간
      * @param limit 가져올 메시지 개수
      * @return 과거 메시지 목록
      */
     suspend fun getMessagesBeforeTimestamp(
-        channelId: String,
+        collectionPath: CollectionPath,
         beforeTimestamp: Instant,
         limit: Int
     ): CustomResult<List<Message>, Exception>
@@ -145,11 +196,30 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
 
     override suspend fun sendMessage(channelPath: String, message: MessageDTO): CustomResult<MessageDTO, Exception> = withContext(Dispatchers.IO) {
         return@withContext try {
+            // 현재 사용자 ID 확인
+            val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            Log.d(
+                "MessageRemoteDataSource",
+                "🔍 메시지 전송: senderId=${message.senderId}, currentUserId=$currentUserId"
+            )
+
+            // senderId가 현재 사용자 ID와 다르면 수정
+            val correctedMessage = if (message.senderId != currentUserId) {
+                Log.w(
+                    "MessageRemoteDataSource",
+                    "⚠️ senderId 불일치 수정: ${message.senderId} → $currentUserId"
+                )
+                message.copy(senderId = currentUserId ?: "")
+            } else {
+                Log.d("MessageRemoteDataSource", "✅ senderId 정상: ${message.senderId}")
+                message
+            }
+
             // 메시지를 Firestore에 저장
             val docRef = firestore.collection(channelPath).document()
 
             // 메시지 ID 설정 (Firestore 문서 ID 사용)
-            val messageWithId = message.copy(id = docRef.id)
+            val messageWithId = correctedMessage.copy(id = docRef.id)
 
             // Firestore에 저장
             docRef.set(messageWithId).await()
@@ -160,22 +230,38 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
             )
             CustomResult.Success(messageWithId)
         } catch (e: Exception) {
-            Log.e("MessageRemoteDataSource", "Failed to send message to Firestore", e)
-            CustomResult.Failure(e)
+            when {
+                e.message?.contains("PERMISSION_DENIED") == true -> {
+                    Log.e("MessageRemoteDataSource", "❌ 권한 없음: 메시지 전송 실패", e)
+                    CustomResult.Failure(Exception("메시지 전송 권한이 없습니다"))
+                }
+
+                e.message?.contains("UNAUTHENTICATED") == true -> {
+                    Log.e("MessageRemoteDataSource", "❌ 인증 실패: 재로그인 필요", e)
+                    CustomResult.Failure(Exception("재로그인이 필요합니다"))
+                }
+
+                else -> {
+                    Log.e("MessageRemoteDataSource", "❌ 기타 오류: 메시지 전송 실패", e)
+                    CustomResult.Failure(e)
+                }
+            }
         }
     }
 
     override suspend fun getMessagesAfterTimestamp(
-        channelId: String,
+        collectionPath: CollectionPath,
         timestamp: Instant
     ): CustomResult<List<Message>, Exception> =
         withContext(Dispatchers.IO) {
             return@withContext try {
-                // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
-                val messagesCollectionPath = getMessagesCollectionPath(channelId)
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "🔄 Getting messages after timestamp from: ${collectionPath.value}"
+                )
 
                 // updateAt > timestamp 조건으로 증분 동기화
-                val query = firestore.collection(messagesCollectionPath.value)
+                val query = firestore.collection(collectionPath.value)
                     .whereGreaterThan(
                         AggregateRoot.KEY_UPDATED_AT,
                         Timestamp(timestamp.epochSecond, timestamp.nano)
@@ -186,50 +272,62 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 val snapshot = query.get().await()
                 val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
 
-                // ✅ Firestore에서 온 메시지들에 channelId 할당
+                // CollectionPath에서 channelId 추출하여 메시지에 할당
+                val channelId = collectionPath.extractChannelId()
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "🔍 추출된 channelId: $channelId (경로: ${collectionPath.value})"
+                )
+                
                 val messages = messageDTOs.map { dto ->
-                    // DTO에 이미 channelId가 있으면 그대로 사용
-                    if (dto.channelId.isNotEmpty()) {
-                        mapper.dtoToDomain(dto)
+                    // DTO에 channelId가 없으면 경로에서 추출한 것으로 보정
+                    val dtoWithChannelId = if (dto.channelId.isBlank() && channelId != null) {
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "🔧 channelId 보정: 빈 값 → $channelId (메시지 ID: ${dto.id})"
+                        )
+                        dto.copy(channelId = channelId)
+                    } else if (dto.channelId.isBlank() && channelId == null) {
+                        Log.e(
+                            "MessageRemoteDataSource",
+                            "⚠️ channelId 추출 실패 및 DTO에도 없음: 메시지 ID=${dto.id}, 경로=${collectionPath.value}"
+                        )
+                        dto
                     } else {
-                        // channelId가 없으면 경로에서 추출
-                        val extractedChannelId =
-                            ChannelIdExtractor.extractChannelIdFromCollectionPath(
-                                messagesCollectionPath.value
-                            )
-
-                        if (extractedChannelId != null) {
-                            // channelId가 있는 DTO로 변환
-                            val dtoWithChannelId = dto.copy(channelId = extractedChannelId)
-                            mapper.dtoToDomain(dtoWithChannelId)
-                        } else {
-                            // 추출 실패 시 원본 DTO 사용 (기본값은 빈 문자열)
-                            mapper.dtoToDomain(dto)
-                        }
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "✅ channelId 정상: ${dto.channelId} (메시지 ID: ${dto.id})"
+                        )
+                        dto
                     }
+                    mapper.dtoToDomain(dtoWithChannelId)
                 }
 
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "✅ Retrieved ${messages.size} messages after timestamp"
+                )
                 CustomResult.Success(messages)
             } catch (e: Exception) {
+                Log.e("MessageRemoteDataSource", "❌ Failed to get messages after timestamp", e)
                 CustomResult.Failure(e)
             }
         }
 
     override suspend fun getRecentMessages(
-        channelId: String,
+        collectionPath: CollectionPath,
         limit: Int
     ): CustomResult<List<Message>, Exception> =
         withContext(Dispatchers.IO) {
             return@withContext try {
                 Log.d("MessageRemoteDataSource", "🔥 Firestore에서 최근 메시지 로딩 시작")
-                Log.d("MessageRemoteDataSource", "📋 요청 정보: channelId=$channelId, limit=$limit")
-                
-                // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
-                val messagesCollectionPath = getMessagesCollectionPath(channelId)
-                Log.d("MessageRemoteDataSource", "📍 Firestore 경로: ${messagesCollectionPath.value}")
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "📋 요청 정보: collectionPath=${collectionPath.value}, limit=$limit"
+                )
 
                 // 최신 메시지들을 생성시간 기준으로 가져오기
-                val query = firestore.collection(messagesCollectionPath.value)
+                val query = firestore.collection(collectionPath.value)
                     .orderBy(AggregateRoot.KEY_CREATED_AT, Query.Direction.DESCENDING)
                     .limit(limit.toLong())
 
@@ -238,25 +336,37 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 Log.d("MessageRemoteDataSource", "✅ Firestore 쿼리 성공: ${snapshot.size()}개 문서")
 
                 if (snapshot.isEmpty) {
-                    Log.d("MessageRemoteDataSource", "📭 해당 채널에 메시지가 없습니다")
+                    Log.d("MessageRemoteDataSource", "📭 해당 컬렉션에 메시지가 없습니다")
                     return@withContext CustomResult.Success(emptyList())
                 }
 
                 val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
                 Log.d("MessageRemoteDataSource", "📦 MessageDTO 변환 완료: ${messageDTOs.size}개")
 
-                // Firestore에서 온 메시지들에 channelId 할당
+                // CollectionPath에서 channelId 추출하여 메시지에 할당
+                val channelId = collectionPath.extractChannelId()
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "🔍 추출된 channelId: $channelId (경로: ${collectionPath.value})"
+                )
+
                 val messagesWithChannelId = messageDTOs.map { dto ->
-                    if (dto.channelId.isBlank()) {
-                        Log.w(
+                    if (dto.channelId.isBlank() && channelId != null) {
+                        Log.d(
                             "MessageRemoteDataSource",
-                            "⚠️ channelId가 비어있음. 보정: $channelId, id=${dto.id}"
+                            "🔧 channelId 보정: 빈 값 → $channelId (메시지 ID: ${dto.id})"
                         )
                         dto.copy(channelId = channelId)
+                    } else if (dto.channelId.isBlank() && channelId == null) {
+                        Log.e(
+                            "MessageRemoteDataSource",
+                            "⚠️ channelId 추출 실패 및 DTO에도 없음: 메시지 ID=${dto.id}, 경로=${collectionPath.value}"
+                        )
+                        dto
                     } else {
                         Log.d(
                             "MessageRemoteDataSource",
-                            "✅ channelId 정상: ${dto.channelId}, id=${dto.id}"
+                            "✅ channelId 정상: ${dto.channelId} (메시지 ID: ${dto.id})"
                         )
                         dto
                     }
@@ -287,13 +397,17 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 Log.d("MessageRemoteDataSource", "🎉 최종 변환 완료: ${messages.size}개 메시지")
                 CustomResult.Success(messages)
             } catch (e: Exception) {
-                Log.e("MessageRemoteDataSource", "💥 Firestore에서 메시지 로딩 실패: channelId=$channelId", e)
+                Log.e(
+                    "MessageRemoteDataSource",
+                    "💥 Firestore에서 메시지 로딩 실패: collectionPath=${collectionPath.value}",
+                    e
+                )
                 CustomResult.Failure(e)
             }
         }
 
     override suspend fun getMessagesBeforeTimestamp(
-        channelId: String,
+        collectionPath: CollectionPath,
         beforeTimestamp: Instant,
         limit: Int
     ): CustomResult<List<Message>, Exception> =
@@ -302,15 +416,11 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 Log.d("MessageRemoteDataSource", "🔥 Firestore에서 과거 메시지 로딩 시작")
                 Log.d(
                     "MessageRemoteDataSource",
-                    "📋 요청 정보: channelId=$channelId, beforeTimestamp=$beforeTimestamp, limit=$limit"
+                    "📋 요청 정보: collectionPath=${collectionPath.value}, beforeTimestamp=$beforeTimestamp, limit=$limit"
                 )
-                
-                // CollectionPath를 사용하여 적절한 메시지 컬렉션 경로 결정
-                val messagesCollectionPath = getMessagesCollectionPath(channelId)
-                Log.d("MessageRemoteDataSource", "📍 Firestore 경로: ${messagesCollectionPath.value}")
 
                 // 특정 시점 이전의 과거 메시지들 가져오기 (페이지네이션)
-                val query = firestore.collection(messagesCollectionPath.value)
+                val query = firestore.collection(collectionPath.value)
                     .whereLessThan(
                         AggregateRoot.KEY_CREATED_AT,
                         Timestamp(
@@ -333,9 +443,11 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 val messageDTOs = snapshot.toObjects(MessageDTO::class.java)
                 Log.d("MessageRemoteDataSource", "📦 MessageDTO 변환 완료: ${messageDTOs.size}개")
 
-                // Firestore에서 온 메시지들에 channelId 할당
+                // CollectionPath에서 channelId 추출하여 메시지에 할당
+                val channelId = collectionPath.extractChannelId()
+
                 val messagesWithChannelId = messageDTOs.map { dto ->
-                    if (dto.channelId.isBlank()) {
+                    if (dto.channelId.isBlank() && channelId != null) {
                         Log.w(
                             "MessageRemoteDataSource",
                             "⚠️ channelId가 비어있음. 보정: $channelId, id=${dto.id}"
@@ -377,102 +489,12 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
             } catch (e: Exception) {
                 Log.e(
                     "MessageRemoteDataSource",
-                    "💥 Firestore에서 과거 메시지 로딩 실패: channelId=$channelId",
+                    "💥 Firestore에서 과거 메시지 로딩 실패: collectionPath=${collectionPath.value}",
                     e
                 )
                 CustomResult.Failure(e)
             }
         }
 
-    /**
-     * 채널 ID를 기반으로 적절한 메시지 컬렉션 경로를 결정
-     * CollectionPath 헬퍼를 사용하여 DM 채널과 프로젝트 채널을 구분
-     */
-    private fun getMessagesCollectionPath(channelId: String): CollectionPath {
-        // 이미 전체 경로인 경우 그대로 사용 (예: /dm_channels/channelId 또는 dm_channels/channelId/messages)
-        return when {
-            // Case 1: 이미 완전한 Firestore 경로인 경우 (예: "dm_channels/channelId/messages")
-            channelId.contains("/messages") -> {
-                Log.d("MessageRemoteDataSource", "📍 Using provided full path: $channelId")
-                CollectionPath(channelId)
-            }
-
-            // Case 2: 이미 채널 경로이지만 /messages가 없는 경우 (예: "/dm_channels/channelId")
-            channelId.startsWith("/dm_channels/") -> {
-                val cleanChannelId = channelId.removePrefix("/")
-                Log.d(
-                    "MessageRemoteDataSource",
-                    "📍 Converting path to collection: $cleanChannelId/messages"
-                )
-                CollectionPath("$cleanChannelId/messages")
-            }
-
-            // Case 3: 채널 경로이지만 /messages가 없는 경우 (예: "dm_channels/channelId")
-            channelId.startsWith("dm_channels/") -> {
-                Log.d(
-                    "MessageRemoteDataSource",
-                    "📍 Adding messages to DM channel path: $channelId/messages"
-                )
-                CollectionPath("$channelId/messages")
-            }
-
-            // Case 4: 단순 DM 채널 ID (예: "dm_userId1_userId2")
-            channelId.startsWith("dm_") -> {
-                Log.d("MessageRemoteDataSource", "📍 Creating DM channel path for: $channelId")
-                CollectionPath.dmChannelMessages(channelId)
-            }
-
-            // Case 5: 프로젝트 채널 (예: "channel_project_projectId")
-            else -> {
-                // 프로젝트 채널: projects/{projectId}/channels/{channelId}/messages
-                val projectId = extractProjectIdFromContext(channelId)
-                if (projectId != null) {
-                    Log.d(
-                        "MessageRemoteDataSource",
-                        "📍 Creating project channel path for: projectId=$projectId, channelId=$channelId"
-                    )
-                    CollectionPath.projectChannelMessages(projectId, channelId)
-                } else {
-                    // 프로젝트 ID를 찾을 수 없는 경우 DM 경로로 폴백 (임시)
-                    Log.w(
-                        "MessageRemoteDataSource",
-                        "Could not extract projectId for channel: $channelId, using DM path as fallback"
-                    )
-                    CollectionPath.dmChannelMessages(channelId)
-                }
-            }
-        }
-    }
-
-    /**
-     * 채널 ID 또는 현재 컨텍스트에서 프로젝트 ID를 추출
-     * 향후 더 나은 방법으로 개선 필요 (현재는 간단한 폴백 로직)
-     */
-    private fun extractProjectIdFromContext(channelId: String): String? {
-        return try {
-            // TODO: 현재는 간단한 폴백을 사용
-            // 실제로는 채널 문서에서 projectId를 조회하거나,
-            // 별도의 context 매개변수를 통해 전달받아야 함
-
-            // 임시로 채널 ID가 프로젝트 패턴을 포함하는지 확인
-            if (channelId.contains("_project_")) {
-                // 예: "channel123_project_projectId456" 같은 패턴
-                val parts = channelId.split("_project_")
-                if (parts.size >= 2) {
-                    return parts[1]
-                }
-            }
-
-            // 다른 패턴이나 기본값 처리
-            null
-        } catch (e: Exception) {
-            Log.w(
-                "MessageRemoteDataSource",
-                "Failed to extract projectId from context for channel: $channelId",
-                e
-            )
-            null
-        }
-    }
 
 }

@@ -468,55 +468,52 @@ class DevMenuViewModel @Inject constructor(
 
     /**
      * 증분 동기화 실행
-     * @param tableName 동기화할 테이블명 (기본값: "messages")
+     * @param channelId 동기화할 채널 ID (비어있으면 동작하지 않음)
      */
-    fun syncIncremental(tableName: String = "messages") {
+    fun syncIncremental(channelId: String = "") {
         viewModelScope.launch {
+            // channelId가 비어있으면 동작하지 않음
+            if (channelId.isBlank()) {
+                _syncStatus.value = "❌ 채널 ID를 입력해주세요"
+                Log.w("DevMenuViewModel-Sync", "❌ syncIncremental 호출됨 but channelId is blank")
+                return@launch
+            }
+            
             _isSyncing.value = true
+
+            // 스트림명 결정
+            val streamName = "messages-$channelId"
+            
             _syncStatus.value = "🔄 증분 동기화 시작..."
 
-            Log.d("DevMenuViewModel-Sync", "🔄 Incremental sync started for table: $tableName")
-            addMessage("🔄 증분 동기화 시작 (테이블: $tableName)")
+            Log.d("DevMenuViewModel-Sync", "🔄 Incremental sync started")
+            Log.d("DevMenuViewModel-Sync", "   - Channel ID: $channelId")
+            Log.d("DevMenuViewModel-Sync", "   - Stream Name: $streamName")
 
             try {
-                when (val result = syncUseCase(tableName)) {
+                val result = syncUseCase(streamName)
+                when (result) {
                     is CustomResult.Success -> {
-                        _syncStatus.value = "✅ 증분 동기화 완료!"
+                        _syncStatus.value = "✅ 증분 동기화 완료"
                         Log.d("DevMenuViewModel-Sync", "✅ Incremental sync completed successfully")
-                        Log.d("DevMenuViewModel-Sync", "   - Table: $tableName")
-                        Log.d("DevMenuViewModel-Sync", "   - Only new/updated data synced")
-                        addMessage("✅ 증분 동기화 완료! (테이블: $tableName)")
                     }
-
                     is CustomResult.Failure -> {
                         _syncStatus.value = "❌ 증분 동기화 실패: ${result.error.message}"
                         Log.e("DevMenuViewModel-Sync", "❌ Incremental sync failed", result.error)
-                        Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
-                        Log.e("DevMenuViewModel-Sync", "   - Error: ${result.error.message}")
-                        addMessage("❌ 증분 동기화 실패: ${result.error.message}")
                     }
-
                     else -> {
                         _syncStatus.value = "⚠️ 증분 동기화 결과 알 수 없음"
                         Log.w(
                             "DevMenuViewModel-Sync",
                             "⚠️ Unknown result from incremental sync: $result"
                         )
-                        addMessage("⚠️ 증분 동기화 결과 알 수 없음")
                     }
                 }
             } catch (e: Exception) {
-                _syncStatus.value = "❌ 증분 동기화 예외: ${e.message}"
-                Log.e("DevMenuViewModel-Sync", "💥 Exception during incremental sync", e)
-                Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
-                Log.e(
-                    "DevMenuViewModel-Sync",
-                    "   - Exception: ${e.javaClass.simpleName}: ${e.message}"
-                )
-                addMessage("💥 증분 동기화 예외: ${e.message}")
+                _syncStatus.value = "❌ 증분 동기화 중 오류 발생: ${e.message}"
+                Log.e("DevMenuViewModel-Sync", "❌ Unexpected error during incremental sync", e)
             } finally {
                 _isSyncing.value = false
-                Log.d("DevMenuViewModel-Sync", "🏁 Incremental sync process finished")
             }
         }
     }

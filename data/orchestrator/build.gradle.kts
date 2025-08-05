@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":domain:domain_repository"))
     implementation(project(":data:data_model"))
     implementation(project(":data:data_datasource"))
+    implementation(project(":data:mapper"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

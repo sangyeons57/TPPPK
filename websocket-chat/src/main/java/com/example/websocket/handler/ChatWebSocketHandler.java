@@ -55,6 +55,7 @@ public class ChatWebSocketHandler {
 
     @OnOpen
     public void onOpen(Session session, EndpointConfig config) {
+        logger.debug("🔌 [AUTO-PING-PONG] WebSocket connection opened - ping/pong will start automatically");
         this.session = session;
         logger.info("🔌 WebSocket connection opened for session: {}", session.getId());
 
@@ -135,7 +136,7 @@ public class ChatWebSocketHandler {
         lastPongReceivedTime = currentTime;
         pongCount++;
         
-        logger.info("🏓 [AUTO-PING-PONG] Received pong frame from user {}: {} bytes (count: {}, time: {})", 
+        logger.debug("🏓 [AUTO-PING-PONG] Received pong frame from user {}: {} bytes (count: {}, time: {})", 
                    userId, pongMessage.getApplicationData().remaining(), pongCount, 
                    java.time.Instant.ofEpochMilli(currentTime));
         
@@ -388,17 +389,19 @@ public class ChatWebSocketHandler {
         long currentTime = System.currentTimeMillis();
         long timeSinceLastPong = currentTime - lastPongReceivedTime;
         
-        // Pong 수신 통계 로깅
-        if (pongCount % 10 == 0) { // 10번마다 통계 출력
-            logger.info("📊 [AUTO-PING-PONG] Connection health check - User: {}, Pong count: {}, Last pong: {}ms ago", 
-                       userId, pongCount, timeSinceLastPong);
-        }
+        // Pong 수신 통계 로깅 (매번 출력하도록 변경)
+        logger.debug("📊 [AUTO-PING-PONG] Connection health check - User: {}, Pong count: {}, Last pong: {}ms ago", 
+                   userId, pongCount, timeSinceLastPong);
         
         // 타임아웃 체크 (2분 이상 Pong이 없으면 경고)
         if (lastPongReceivedTime > 0 && timeSinceLastPong > PONG_TIMEOUT_MS) {
             logger.warn("⚠️ [AUTO-PING-PONG] Connection timeout detected - User: {}, Time since last pong: {}ms", 
                        userId, timeSinceLastPong);
         }
+        
+        // 매번 ping/pong 상태 로그 출력 (디버깅용)
+        logger.debug("🏓 [AUTO-PING-PONG] Ping/Pong Status - User: {}, Count: {}, Last: {}ms ago", 
+                   userId, pongCount, timeSinceLastPong);
     }
     
     /**

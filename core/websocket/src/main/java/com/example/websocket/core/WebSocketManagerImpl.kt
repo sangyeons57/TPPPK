@@ -102,11 +102,12 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
             manuallyDisconnected = false
 
             // OkHttp handles ping/pong automatically with pingInterval
+            Log.d(TAG, "🔌 [AUTO-PING-PONG] WebSocket connected - ping will start in 30 seconds")
             Log.d(TAG, "Connection state updated to Connected, reconnect attempts reset")
         }
 
         override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) {
-            Log.i(TAG, "🏓 [AUTO-PING-PONG] Received pong frame: ${bytes.hex()}")
+            Log.d(TAG, "🏓 [AUTO-PING-PONG] Received pong frame: ${bytes.hex()}")
             super.onMessage(webSocket, bytes)
         }
 

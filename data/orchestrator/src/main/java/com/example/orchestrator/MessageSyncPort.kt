@@ -3,6 +3,7 @@ package com.example.orchestrator
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.MessageRemoteDataSource
+import com.example.data_model.local.MessageDao
 import com.example.domain.model.base.Message
 import com.example.domain.model.sync.ApplyOutcome
 import com.example.domain.model.sync.ConflictResolver
@@ -11,7 +12,9 @@ import com.example.domain.model.sync.OutBoxRecord
 import com.example.domain.model.sync.PushResult
 import com.example.domain.model.sync.RemoteBatch
 import com.example.domain.model.sync.SyncPort
+import com.example.domain.vo.CollectionPath
 import com.example.domain_repository.base.MessageRepository
+import com.example.mapper.message.MessageMapper
 import java.time.Instant
 import javax.inject.Inject
 
@@ -26,6 +29,8 @@ import javax.inject.Inject
 class MessageSyncPort @Inject constructor(
     private val messageRemoteDataSource: MessageRemoteDataSource, // Firestore 직접 접근
     private val messageRepository: MessageRepository, // Room DB 접근
+    private val messageDao: MessageDao, // Room DB 직접 접근
+    private val messageMapper: MessageMapper, // Message <-> MessageEntity 변환
     private val channelId: String
 ) : SyncPort<Message> {
 
@@ -42,50 +47,39 @@ class MessageSyncPort @Inject constructor(
     /**
      * Firestore에서 커서 이후의 변경된 메시지들을 가져옵니다.
      *
-     * @param cursor 마지막 동기화 지점 (null이면 처음부터)
+     * @param cursor 마지막 동기화 커서 (null이면 처음부터)
      * @param limit 한 번에 가져올 메시지 수
-     * @return 원격 배치 데이터 (메시지 리스트 + 다음 커서)
+     * @return 원격 배치 데이터
      */
     override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<Message> {
-        Log.d(TAG, "🔄 Pulling messages since cursor: $cursor, limit: $limit")
+        Log.d(TAG, "📥 Pulling messages since cursor: $cursor, limit: $limit")
 
         return try {
-            // MessageRemoteDataSource를 통해 Firestore에서 직접 데이터 가져오기
-            val result = if (cursor.isNullOrBlank()) {
-                // 첫 번째 동기화: 최신 메시지들 가져오기
-                Log.d(TAG, "🔄 첫 번째 동기화: Firestore에서 최신 메시지 조회")
-                messageRemoteDataSource.getRecentMessages(channelId, limit)
-            } else {
-                // 증분 동기화: 커서(타임스탬프) 이후 메시지들 가져오기
-                Log.d(TAG, "🔄 증분 동기화: 커서 $cursor 이후 메시지 조회")
-                try {
-                    val cursorTimestamp = cursor.toLong()
-                    messageRemoteDataSource.getMessagesAfterTimestamp(
-                        channelId,
-                        Instant.ofEpochMilli(cursorTimestamp)
-                    )
-                } catch (e: NumberFormatException) {
-                    Log.e(TAG, "❌ 잘못된 커서 형식: $cursor, 최신 메시지로 대체")
-                    messageRemoteDataSource.getRecentMessages(channelId, limit)
-                }
-            }
+            // Firestore에서 메시지 가져오기
+            val timestamp =
+                cursor?.toLongOrNull()?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
+            val result = messageRemoteDataSource.getMessagesAfterTimestamp(
+                collectionPath = CollectionPath.dmChannelMessages(channelId),
+                timestamp = timestamp
+            )
 
             when (result) {
                 is CustomResult.Success -> {
                     val messages = result.data
-                    Log.d(TAG, "✅ Successfully pulled ${messages.size} messages from Firestore")
-
-                    // 다음 커서 생성 (마지막 메시지의 타임스탬프 사용)
                     val nextCursor = if (messages.isNotEmpty()) {
-                        messages.last().createdAt.toEpochMilli().toString()
-                    } else null
+                        messages.maxOfOrNull { it.updatedAt.toEpochMilli() }?.toString() ?: cursor
+                    } else {
+                        cursor
+                    }
+
+                    Log.d(TAG, "✅ Pulled ${messages.size} messages from Firestore")
+                    Log.d(TAG, "📊 Next cursor: $nextCursor")
 
                     RemoteBatch(
                         items = messages,
-                        tombstones = emptyList(), // TODO: 삭제된 메시지 처리
+                        tombstones = emptyList(),
                         nextCursor = nextCursor,
-                        hasMore = messages.size >= limit,
-                        watermark = System.currentTimeMillis()
+                        hasMore = messages.size >= limit
                     )
                 }
 
@@ -138,16 +132,17 @@ class MessageSyncPort @Inject constructor(
             var successCount = 0
             var failCount = 0
 
-            // 각 메시지를 Room DB에 저장
+            // 각 메시지를 Room DB에 직접 저장
             batch.items.forEach { message ->
                 try {
-                    // DefaultRepository 패턴을 통해 저장
-                    messageRepository.save(message)
+                    // Message를 MessageEntity로 변환하여 Room DB에 저장
+                    val messageEntity = messageMapper.domainToEntity(message)
+                    messageDao.upsert(messageEntity)
                     successCount++
-                    Log.d(TAG, "✅ Applied message: id=${message.id.value}")
+                    Log.d(TAG, "✅ Applied message to Room DB: id=${message.id.value}")
                 } catch (e: Exception) {
                     failCount++
-                    Log.e(TAG, "❌ Failed to apply message: id=${message.id.value}", e)
+                    Log.e(TAG, "❌ Failed to apply message to Room DB: id=${message.id.value}", e)
                 }
             }
 
@@ -225,19 +220,24 @@ class MessageSyncPort @Inject constructor(
                 }
             }
 
-            PushResult(successIds, failIds)
+            Log.d(TAG, "📊 Push complete: success=${successIds.size}, failed=${failIds.size}")
+
+            PushResult(
+                successIds = successIds,
+                failIds = failIds
+            )
 
         } catch (e: Exception) {
             Log.e(TAG, "💥 Exception during pushToRemote", e)
             PushResult(
                 successIds = emptyList(),
-                failIds = events.map { event ->
+                failIds = listOf(
                     FailedEvent(
-                        id = event.id,
+                        id = "batch_error",
                         reason = e.message ?: "Push failed",
                         retryAfterMillis = 10000L
                     )
-                }
+                )
             )
         }
     }
@@ -272,12 +272,20 @@ class MessageSyncPort @Inject constructor(
  */
 class MessageSyncPortFactory @Inject constructor(
     private val messageRemoteDataSource: MessageRemoteDataSource,
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val messageDao: MessageDao,
+    private val messageMapper: MessageMapper
 ) {
     /**
      * 특정 채널용 MessageSyncPort 생성
      */
     fun create(channelId: String): MessageSyncPort {
-        return MessageSyncPort(messageRemoteDataSource, messageRepository, channelId)
+        return MessageSyncPort(
+            messageRemoteDataSource,
+            messageRepository,
+            messageDao,
+            messageMapper,
+            channelId
+        )
     }
 }

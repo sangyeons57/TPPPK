@@ -16,6 +16,8 @@ object ChannelIdExtractor {
      * @return 추출된 channelId (실패 시 null)
      */
     fun extractChannelIdFromPath(documentPath: String): String? {
+        Log.d(TAG, "🔍 extractChannelIdFromPath 호출: $documentPath")
+        
         return try {
             when {
                 // DM 채널: dm_channels/{channelId}/messages/{messageId}
@@ -23,8 +25,13 @@ object ChannelIdExtractor {
                     val parts = documentPath.split("/")
                     val channelIndex = parts.indexOf("dm_channels")
                     if (channelIndex >= 0 && channelIndex + 1 < parts.size) {
-                        parts[channelIndex + 1]
-                    } else null
+                        val extractedChannelId = parts[channelIndex + 1]
+                        Log.d(TAG, "✅ DM 채널 ID 추출 성공: $extractedChannelId")
+                        extractedChannelId
+                    } else {
+                        Log.w(TAG, "❌ DM 채널 경로에서 channelId를 찾을 수 없음: $documentPath")
+                        null
+                    }
                 }
 
                 // 프로젝트 채널: projects/{projectId}/project_channels/{channelId}/messages/{messageId}
@@ -32,17 +39,22 @@ object ChannelIdExtractor {
                     val parts = documentPath.split("/")
                     val channelIndex = parts.indexOf("project_channels")
                     if (channelIndex >= 0 && channelIndex + 1 < parts.size) {
-                        parts[channelIndex + 1]
-                    } else null
+                        val extractedChannelId = parts[channelIndex + 1]
+                        Log.d(TAG, "✅ 프로젝트 채널 ID 추출 성공: $extractedChannelId")
+                        extractedChannelId
+                    } else {
+                        Log.w(TAG, "❌ 프로젝트 채널 경로에서 channelId를 찾을 수 없음: $documentPath")
+                        null
+                    }
                 }
 
                 else -> {
-                    Log.w(TAG, "Unknown path format: $documentPath")
+                    Log.w(TAG, "⚠️ 알 수 없는 경로 형식: $documentPath")
                     null
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to extract channelId from path: $documentPath", e)
+            Log.e(TAG, "💥 extractChannelIdFromPath 실패: $documentPath", e)
             null
         }
     }
@@ -54,6 +66,8 @@ object ChannelIdExtractor {
      * @return 추출된 channelId (실패 시 null)
      */
     fun extractChannelIdFromCollectionPath(collectionPath: String): String? {
+        Log.d(TAG, "🔍 extractChannelIdFromCollectionPath 호출: $collectionPath")
+        
         return try {
             when {
                 // DM 채널: dm_channels/{channelId}/messages
@@ -61,8 +75,13 @@ object ChannelIdExtractor {
                     val parts = collectionPath.split("/")
                     val channelIndex = parts.indexOf("dm_channels")
                     if (channelIndex >= 0 && channelIndex + 1 < parts.size) {
-                        parts[channelIndex + 1]
-                    } else null
+                        val extractedChannelId = parts[channelIndex + 1]
+                        Log.d(TAG, "✅ DM 채널 ID 추출 성공: $extractedChannelId")
+                        extractedChannelId
+                    } else {
+                        Log.w(TAG, "❌ DM 채널 경로에서 channelId를 찾을 수 없음: $collectionPath")
+                        null
+                    }
                 }
 
                 // 프로젝트 채널: projects/{projectId}/project_channels/{channelId}/messages
@@ -70,17 +89,22 @@ object ChannelIdExtractor {
                     val parts = collectionPath.split("/")
                     val channelIndex = parts.indexOf("project_channels")
                     if (channelIndex >= 0 && channelIndex + 1 < parts.size) {
-                        parts[channelIndex + 1]
-                    } else null
+                        val extractedChannelId = parts[channelIndex + 1]
+                        Log.d(TAG, "✅ 프로젝트 채널 ID 추출 성공: $extractedChannelId")
+                        extractedChannelId
+                    } else {
+                        Log.w(TAG, "❌ 프로젝트 채널 경로에서 channelId를 찾을 수 없음: $collectionPath")
+                        null
+                    }
                 }
 
                 else -> {
-                    Log.w(TAG, "Unknown collection path format: $collectionPath")
+                    Log.w(TAG, "⚠️ 알 수 없는 컬렉션 경로 형식: $collectionPath")
                     null
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to extract channelId from collection path: $collectionPath", e)
+            Log.e(TAG, "💥 extractChannelIdFromCollectionPath 실패: $collectionPath", e)
             null
         }
     }

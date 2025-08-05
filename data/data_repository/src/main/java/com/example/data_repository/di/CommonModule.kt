@@ -64,9 +64,16 @@ object CommonModule {
     @Singleton
     fun provideMessageSyncPortFactory(
         messageRemoteDataSource: com.example.data_datasource.remote.MessageRemoteDataSource,
-        messageRepository: com.example.domain_repository.base.MessageRepository
+        messageRepository: com.example.domain_repository.base.MessageRepository,
+        messageDao: com.example.data_model.local.MessageDao,
+        messageMapper: com.example.mapper.message.MessageMapper
     ): MessageSyncPortFactory {
-        return MessageSyncPortFactory(messageRemoteDataSource, messageRepository)
+        return MessageSyncPortFactory(
+            messageRemoteDataSource,
+            messageRepository,
+            messageDao,
+            messageMapper
+        )
     }
 
     /**

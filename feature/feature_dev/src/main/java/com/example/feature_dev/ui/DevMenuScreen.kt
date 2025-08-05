@@ -95,6 +95,9 @@ fun DevMenuScreen(
     val isDbInspecting by viewModel.isDbInspecting.collectAsState()
     val dbInspectionResult by viewModel.dbInspectionResult.collectAsState()
 
+    // 채널 ID 입력 상태 (동기화 및 DB 검사에서 공용 사용)
+    var channelIdInput by remember { mutableStateOf("") }
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -576,9 +579,14 @@ fun DevMenuScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { viewModel.syncIncremental() },
+                    onClick = {
+                        if (channelIdInput.isNotBlank()) {
+                            viewModel.syncIncremental(channelIdInput)
+                        }
+                        // channelId가 비어있으면 아무것도 하지 않음
+                    },
                     modifier = Modifier.weight(1f),
-                    enabled = !isSyncing
+                    enabled = !isSyncing && channelIdInput.isNotBlank()
                 ) {
                     Text("증분 동기화")
                 }
@@ -594,7 +602,6 @@ fun DevMenuScreen(
             )
 
             // 채널 ID 입력 필드
-            var channelIdInput by remember { mutableStateOf("") }
             OutlinedTextField(
                 value = channelIdInput,
                 onValueChange = { channelIdInput = it },
