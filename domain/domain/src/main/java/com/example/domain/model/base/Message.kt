@@ -1,19 +1,21 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.message.MessageContentUpdatedEvent
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.ChannelId
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MentionInfo
-import com.example.domain.model.vo.message.MessageContent
-import com.example.domain.model.vo.message.MessageIsDeleted
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MentionInfo
+import com.example.domain.vo.message.MessageIsDeleted
+import com.example.domain.vo.message.MessagePayload
+import com.example.domain.vo.message.MessageType
 import java.time.Instant
 
 class Message private constructor(
     initialSenderId: UserId,
-    initialContent: MessageContent,
+    initialMessageType: MessageType,
+    initialPayload: MessagePayload,
     initialReplyToMessageId: DocumentId?,
     initialIsDeleted: MessageIsDeleted,
     initialMentions: List<MentionInfo>,
@@ -26,10 +28,11 @@ class Message private constructor(
 
     val senderId: UserId = initialSenderId
     val channelId: ChannelId = initialChannelId
+    val messageType: MessageType = initialMessageType
     val replyToMessageId: DocumentId? = initialReplyToMessageId
     val mentions: List<MentionInfo> = initialMentions
 
-    var content: MessageContent = initialContent
+    var payload: MessagePayload = initialPayload
         private set
     var isDeleted: MessageIsDeleted = initialIsDeleted
         private set
@@ -42,7 +45,8 @@ class Message private constructor(
         return mapOf(
             KEY_SENDER_ID to this.senderId.value,
             KEY_CHANNEL_ID to this.channelId.value,
-            KEY_SEND_MESSAGE to this.content.value,
+            KEY_MESSAGE_TYPE to this.messageType.name,
+            KEY_PAYLOAD to this.payload.value,
             KEY_REPLY_TO_MESSAGE_ID to this.replyToMessageId?.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt,
@@ -58,13 +62,31 @@ class Message private constructor(
     }
 
     /**
-     * Updates the content of the message.
+     * Updates the payload of the message.
      */
-    fun updateContent(newContent: MessageContent) {
-        if (this.content == newContent || isDeleted.value) return
+    fun updatePayload(newPayload: MessagePayload) {
+        if (this.payload == newPayload || isDeleted.value) return
 
-        this.content = newContent
-        pushDomainEvent(MessageContentUpdatedEvent(this.id, this.content, DateTimeUtil.nowInstant()))
+        this.payload = newPayload
+        pushDomainEvent(
+            MessageContentUpdatedEvent(
+                this.id,
+                this.payload,
+                DateTimeUtil.nowInstant()
+            )
+        )
+    }
+
+    /**
+     * Updates the content of the message (backward compatibility).
+     * @deprecated Use updatePayload instead
+     */
+    @Deprecated(
+        "Use updatePayload instead",
+        ReplaceWith("updatePayload(MessagePayload.forText(newContent.value))")
+    )
+    fun updateContent(newContent: MessagePayload) {
+        updatePayload(newContent)
     }
 
     /**
@@ -80,10 +102,15 @@ class Message private constructor(
         const val COLLECTION_NAME = "messages"
         const val KEY_SENDER_ID = "senderId"
         const val KEY_CHANNEL_ID = "channelId"
-        const val KEY_SEND_MESSAGE = "content"
+        const val KEY_MESSAGE_TYPE = "messageType"
+        const val KEY_PAYLOAD = "payload"
         const val KEY_REPLY_TO_MESSAGE_ID = "replyToMessageId"
         const val KEY_IS_DELETED = "isDeleted"
         const val KEY_MENTIONS = "mentions"
+
+        // Backward compatibility
+        @Deprecated("Use KEY_PAYLOAD instead")
+        const val KEY_SEND_MESSAGE = "content"
 
         /**
          * Factory method for sending a new message.
@@ -91,14 +118,16 @@ class Message private constructor(
         fun create(
             id: DocumentId,
             senderId: UserId,
-            content: MessageContent,
+            messageType: MessageType = MessageType.TEXT,
+            payload: MessagePayload,
             replyToMessageId: DocumentId?,
             mentions: List<MentionInfo>,
             channelId: ChannelId
         ): Message {
             val message = Message(
                 initialSenderId = senderId,
-                initialContent = content,
+                initialMessageType = messageType,
+                initialPayload = payload,
                 initialReplyToMessageId = replyToMessageId,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
@@ -117,7 +146,8 @@ class Message private constructor(
         fun fromDataSource(
             id: DocumentId,
             senderId: UserId,
-            content: MessageContent,
+            messageType: MessageType,
+            payload: MessagePayload,
             replyToMessageId: DocumentId?,
             createdAt: Instant?,
             updatedAt: Instant?,
@@ -127,7 +157,8 @@ class Message private constructor(
         ): Message {
             return Message(
                 initialSenderId = senderId,
-                initialContent = content,
+                initialMessageType = messageType,
+                initialPayload = payload,
                 initialReplyToMessageId = replyToMessageId,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
@@ -136,6 +167,103 @@ class Message private constructor(
                 initialChannelId = channelId,
                 id = id,
                 isNew = false
+            )
+        }
+
+        /**
+         * Backward compatibility factory method
+         * @deprecated Use the new create method with messageType and payload
+         */
+        @Deprecated("Use create with messageType and payload parameters")
+        fun create(
+            id: DocumentId,
+            senderId: UserId,
+            content: MessagePayload,
+            replyToMessageId: DocumentId?,
+            mentions: List<MentionInfo>,
+            channelId: ChannelId
+        ): Message {
+            return create(
+                id = id,
+                senderId = senderId,
+                messageType = MessageType.TEXT,
+                payload = content,
+                replyToMessageId = replyToMessageId,
+                mentions = mentions,
+                channelId = channelId
+            )
+        }
+
+        /**
+         * Backward compatibility factory method
+         * @deprecated Use the new fromDataSource method with messageType and payload
+         */
+        @Deprecated("Use fromDataSource with messageType and payload parameters")
+        fun fromDataSource(
+            id: DocumentId,
+            senderId: UserId,
+            content: MessagePayload,
+            replyToMessageId: DocumentId?,
+            createdAt: Instant?,
+            updatedAt: Instant?,
+            isDeleted: MessageIsDeleted,
+            mentions: List<MentionInfo>,
+            channelId: ChannelId
+        ): Message {
+            return fromDataSource(
+                id = id,
+                senderId = senderId,
+                messageType = MessageType.TEXT,
+                payload = content,
+                replyToMessageId = replyToMessageId,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
+                isDeleted = isDeleted,
+                mentions = mentions,
+                channelId = channelId
+            )
+        }
+
+        /**
+         * Factory method for text messages (convenience)
+         */
+        fun createTextMessage(
+            id: DocumentId,
+            senderId: UserId,
+            textContent: String,
+            replyToMessageId: DocumentId? = null,
+            mentions: List<MentionInfo> = emptyList(),
+            channelId: ChannelId
+        ): Message {
+            return create(
+                id = id,
+                senderId = senderId,
+                messageType = MessageType.TEXT,
+                payload = MessagePayload.forText(textContent),
+                replyToMessageId = replyToMessageId,
+                mentions = mentions,
+                channelId = channelId
+            )
+        }
+
+        /**
+         * Factory method for system messages (convenience)
+         */
+        fun createSystemMessage(
+            id: DocumentId,
+            senderId: UserId,
+            messageType: MessageType,
+            payload: MessagePayload,
+            channelId: ChannelId
+        ): Message {
+            return create(
+                id = id,
+                senderId = senderId,
+                messageType = messageType,
+                payload = payload,
+                replyToMessageId = null,
+                mentions = emptyList(),
+                channelId = channelId
             )
         }
     }

@@ -1,14 +1,14 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.friend.FriendNameChangedEvent
 import com.example.domain.event.friend.FriendProfileImageChangedEvent
 import com.example.domain.event.friend.FriendStatusChangedEvent
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.FriendStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.user.UserName
 import java.time.Instant
 
 class Friend private constructor(

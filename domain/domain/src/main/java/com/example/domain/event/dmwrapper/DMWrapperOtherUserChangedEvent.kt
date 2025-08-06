@@ -1,8 +1,8 @@
 package com.example.domain.event.dmwrapper
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId // Added this import
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId // Added this import
+import com.example.domain.vo.UserId
 import java.time.Instant
 
 data class DMWrapperOtherUserChangedEvent(

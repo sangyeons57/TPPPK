@@ -1,15 +1,15 @@
 package com.example.data_converter
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.enum.MessageAttachmentUploadStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.model.vo.messageattachment.MessageAttachmentThumbnailUrl
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUploadProgress
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.vo.messageattachment.MessageAttachmentThumbnailUrl
+import com.example.domain.vo.messageattachment.MessageAttachmentUploadProgress
+import com.example.domain.vo.messageattachment.MessageAttachmentUrl
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken

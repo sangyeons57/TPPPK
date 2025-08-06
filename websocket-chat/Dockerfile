@@ -1,12 +1,29 @@
-# Use OpenJDK 17 runtime
+# Build stage
+FROM eclipse-temurin:17-jdk-jammy AS builder
+
+WORKDIR /workspace
+
+# Copy gradle wrapper and build files
+COPY gradle gradle
+COPY gradlew gradlew.bat build.gradle.kts settings.gradle.kts ./
+
+# Make gradlew executable
+RUN chmod +x gradlew
+
+# Copy source code
+COPY src src
+
+# Build the application
+RUN ./gradlew clean build --no-daemon
+
+# Runtime stage
 FROM eclipse-temurin:17-jre-jammy
 
 # Set working directory
 WORKDIR /app
 
-# Copy the packaged JAR file (shadow JAR from Gradle build)
-# Note: Shadow JAR has empty classifier, so it will be websocket-chat-1.0.0.jar
-COPY build/libs/*.jar app.jar
+# Copy the built JAR file from builder stage
+COPY --from=builder /workspace/build/libs/*.jar app.jar
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser

@@ -2,7 +2,7 @@ package com.example.domain_usecase.usecase.sync
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.sync.SyncCursorStore
 import com.example.domain.model.sync.SyncPort
 import com.example.domain.model.sync.SyncScope

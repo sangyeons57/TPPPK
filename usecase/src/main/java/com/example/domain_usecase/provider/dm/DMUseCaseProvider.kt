@@ -1,7 +1,7 @@
 package com.example.domain_usecase.provider.dm
 
-import com.example.domain.model.vo.UserId
 import com.example.domain.vo.CollectionPath
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.DMChannelRepository
 import com.example.domain_repository.base.DMWrapperRepository

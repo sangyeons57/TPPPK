@@ -1,6 +1,6 @@
-package com.example.domain.model.vo.category
+package com.example.domain.vo.category
 
-import com.example.domain.model.vo.Name
+import com.example.domain.vo.Name
 
 /**
  * Represents the name of a Category.

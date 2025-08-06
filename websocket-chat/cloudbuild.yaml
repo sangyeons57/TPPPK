@@ -1,10 +1,6 @@
 # Google Cloud Build configuration for WebSocket Chat Server
 steps:
-  # Build standalone websocket-chat with official Gradle builder
-  - name: 'gcr.io/cloud-builders/gradle'
-    args: [ 'clean', 'build', '--no-daemon' ]
-
-  # Build Docker image using Cloud Build's automatic Docker build
+  # Build Docker image using multistage build (includes compilation)
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -15,6 +11,17 @@ steps:
       - '-f'
       - 'Dockerfile'
       - '.'
+
+  # Push Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/websocket-chat/websocket-chat:$BUILD_ID'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/websocket-chat/websocket-chat:latest'
 
   # Deploy to Cloud Run with dedicated service account and WebSocket timeout
   - name: 'gcr.io/cloud-builders/gcloud'

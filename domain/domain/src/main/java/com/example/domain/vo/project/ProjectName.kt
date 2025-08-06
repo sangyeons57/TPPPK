@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.project
+package com.example.domain.vo.project
 
 @JvmInline
 value class ProjectName(val value: String) {

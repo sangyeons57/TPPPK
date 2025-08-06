@@ -1,8 +1,8 @@
 package com.example.domain.event.task
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.task.TaskStatus
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.task.TaskStatus
 import java.time.Instant
 
 /**

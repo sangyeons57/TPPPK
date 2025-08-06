@@ -11,8 +11,8 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Role
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider

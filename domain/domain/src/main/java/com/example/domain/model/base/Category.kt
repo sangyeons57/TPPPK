@@ -1,14 +1,14 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.category.CategoryNameChangedEvent
 import com.example.domain.event.category.CategoryOrderChangedEvent
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.model.vo.category.CategoryOrder
-import com.example.domain.model.vo.category.IsCategoryFlag
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.category.CategoryName
+import com.example.domain.vo.category.CategoryOrder
+import com.example.domain.vo.category.IsCategoryFlag
 import java.time.Instant
 
 /**

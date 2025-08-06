@@ -3,7 +3,7 @@ package com.example.domain_repository.base
 import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.DefaultRepository
 
 /**

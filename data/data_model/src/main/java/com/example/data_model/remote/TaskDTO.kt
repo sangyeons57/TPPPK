@@ -1,9 +1,9 @@
 package com.example.data_model.remote
 
+import com.example.domain.AggregateRoot
 import com.example.domain.DTO
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Task
-import com.example.domain.model.vo.task.TaskStatus
+import com.example.domain.vo.task.TaskStatus
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp

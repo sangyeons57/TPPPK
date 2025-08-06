@@ -1,6 +1,7 @@
 package com.example.feature_chat.queue
 
 import com.example.domain.model.base.Message
+import com.example.domain.vo.DocumentId
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.usecase.WebSocketUseCaseProvider
 import kotlinx.coroutines.CoroutineScope
@@ -52,7 +53,7 @@ class OfflineMessageQueue @Inject constructor(
                         val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
                         roomUseCases.sendMessageUseCase(
                             senderId = action.message.senderId,
-                            content = action.message.content.value,
+                            content = action.message.payload.getTextContent() ?: "",
                             messageId = action.message.id,
                             replyToMessageId = action.message.replyToMessageId
                         )
@@ -60,14 +61,14 @@ class OfflineMessageQueue @Inject constructor(
                     is QueuedMessageAction.Edit -> {
                         val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
                         roomUseCases.editMessageUseCase(
-                            messageId = com.example.domain.model.vo.DocumentId(action.messageId),
+                            messageId = DocumentId(action.messageId),
                             newContent = action.newContent
                         )
                     }
                     is QueuedMessageAction.Delete -> {
                         val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
                         roomUseCases.deleteMessageUseCase(
-                            messageId = com.example.domain.model.vo.DocumentId(action.messageId)
+                            messageId = DocumentId(action.messageId)
                         )
                     }
                 }

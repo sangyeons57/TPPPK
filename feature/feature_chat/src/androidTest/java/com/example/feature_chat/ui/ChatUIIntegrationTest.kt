@@ -1,14 +1,11 @@
 package com.example.feature_chat.ui
 
+import android.util.Log
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.core_ui.theme.AppTheme
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import android.util.Log
-import com.example.feature_chat.ui.ChatScreen
-import com.example.feature_chat.viewmodel.WebSocketChatViewModel
+import com.example.domain.vo.UserId
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.delay
@@ -18,7 +15,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.*
-import javax.inject.Inject
 
 /**
  * UI 테스트로 성공/실패 상태 확인 가능하도록 구현

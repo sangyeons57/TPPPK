@@ -10,8 +10,9 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -307,7 +308,7 @@ class EditChannelViewModel @Inject constructor(
                 when (getChannelResult) {
                     is CustomResult.Success -> {
                         val channelToUpdate = getChannelResult.data
-                    val newChannelName = com.example.domain.model.vo.Name(newName)
+                        val newChannelName = Name(newName)
                     val newCategoryDocumentId = if (newCategoryId.isNotEmpty()) DocumentId(newCategoryId) else null
                     
                     when (val updateResult = channelUseCases.updateProjectChannelUseCase(

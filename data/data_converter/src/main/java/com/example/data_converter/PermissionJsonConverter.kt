@@ -1,6 +1,6 @@
 package com.example.data_converter
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.base.Permission
 import com.example.domain.model.data.project.RolePermission
 import com.google.gson.Gson

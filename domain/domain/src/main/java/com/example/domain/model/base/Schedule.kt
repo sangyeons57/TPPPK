@@ -1,16 +1,16 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.schedule.ScheduleDetailsUpdatedEvent
 import com.example.domain.event.schedule.ScheduleRescheduledEvent
 import com.example.domain.event.schedule.ScheduleStatusChangedEvent
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.ScheduleStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.model.vo.schedule.ScheduleTitle
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.schedule.ScheduleContent
+import com.example.domain.vo.schedule.ScheduleTitle
 import java.time.Instant
 
 /**

@@ -2,9 +2,9 @@ package com.example.mapper.friend
 
 import com.example.data_model.remote.FriendDTO
 import com.example.domain.model.base.Friend
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.user.UserName
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -1,4 +1,4 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 /**
  * Dedicated identifier for User aggregates. Separate from generic [DocumentId]

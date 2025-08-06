@@ -1,4 +1,4 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 /**
  * Represents an owner/user identifier. Wrapper around underlying String document id.

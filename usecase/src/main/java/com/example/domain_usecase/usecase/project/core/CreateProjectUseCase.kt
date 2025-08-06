@@ -8,10 +8,10 @@ import com.example.domain.model.base.Member
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.model.base.Role
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.project.ProjectName
 import com.example.domain.vo.CollectionPath
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.project.ProjectName
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.CategoryRepository
 import com.example.domain_repository.base.MemberRepository

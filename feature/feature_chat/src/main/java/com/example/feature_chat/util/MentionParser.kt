@@ -1,7 +1,7 @@
 package com.example.feature_chat.util
 
-import com.example.domain.model.vo.message.MentionInfo
-import com.example.domain.model.vo.MentionType
+import com.example.domain.vo.MentionType
+import com.example.domain.vo.message.MentionInfo
 import java.util.regex.Pattern
 
 /**
@@ -28,8 +28,8 @@ object MentionParser {
 
         while (matcher.find()) {
             val username = matcher.group(1) ?: continue
-            val startIndex = matcher.start()
-            val endIndex = matcher.end()
+            matcher.start()
+            matcher.end()
 
             // username으로 실제 userId 조회
             val userId = getUserIdByUsername(username)

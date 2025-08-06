@@ -8,7 +8,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserStatus
-import com.example.domain.model.vo.user.UserMemo
+import com.example.domain.vo.user.UserMemo
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel

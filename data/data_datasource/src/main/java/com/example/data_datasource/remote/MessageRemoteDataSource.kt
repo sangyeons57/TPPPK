@@ -5,7 +5,7 @@ import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
 import com.example.data_model.remote.MessageDTO
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.base.Message
 import com.example.domain.model.sync.OutBoxRecord
 import com.example.domain.model.sync.PushResult

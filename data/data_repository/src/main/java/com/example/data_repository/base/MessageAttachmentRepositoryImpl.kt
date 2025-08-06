@@ -2,21 +2,19 @@ package com.example.data_repository.base
 
 // import java.io.File // 안드로이드 Uri 대신 File 객체를 사용한다면
 import android.net.Uri
-import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.MessageAttachmentRemoteDataSource
 import com.example.data_datasource.remote.special.FileUploadDataSource
 import com.example.data_datasource.remote.special.FileUploadResult
 import com.example.data_model.remote.MessageAttachmentDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.enum.MessageAttachmentUploadStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUploadProgress
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.vo.messageattachment.MessageAttachmentUploadProgress
+import com.example.domain.vo.messageattachment.MessageAttachmentUrl
 import com.example.domain_repository.base.FileUploadProgressData
 import com.example.domain_repository.base.FileUploadResultData
 import com.example.domain_repository.base.MessageAttachmentRepository

@@ -1,8 +1,8 @@
 package com.example.feature_chat.integration
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.feature_chat.websocket.ChatWebSocketEvent
 import com.example.websocket.WebSocketManager

@@ -48,11 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
-import com.example.domain.model.vo.IsLoading
-import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.vo.IsLoading
+import com.example.domain.vo.user.UserEmail
 import com.example.feature_login.viewmodel.LoginEvent
 import com.example.feature_login.viewmodel.LoginUiState
 import com.example.feature_login.viewmodel.LoginViewModel

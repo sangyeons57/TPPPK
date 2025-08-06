@@ -2,10 +2,10 @@ package com.example.domain_usecase.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.model.vo.category.CategoryOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.category.CategoryName
+import com.example.domain.vo.category.CategoryOrder
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.CategoryRepository
 import kotlinx.coroutines.flow.first

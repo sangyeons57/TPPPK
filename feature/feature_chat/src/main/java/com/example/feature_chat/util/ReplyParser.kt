@@ -1,6 +1,6 @@
 package com.example.feature_chat.util
 
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import java.util.regex.Pattern
 
 /**

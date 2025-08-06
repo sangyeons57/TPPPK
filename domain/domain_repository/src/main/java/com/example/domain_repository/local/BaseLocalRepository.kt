@@ -1,8 +1,8 @@
 package com.example.domain_repository.local
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.AggregateRoot
+import com.example.domain.vo.DocumentId
 import kotlinx.coroutines.flow.Flow
 
 /**

@@ -5,7 +5,7 @@ import com.example.core_common.result.CustomResult.Loading.getOrThrow
 import com.example.core_common.result.resultTry
 import com.example.domain.event.DomainEventPublisher
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.UserRepository
 import javax.inject.Inject

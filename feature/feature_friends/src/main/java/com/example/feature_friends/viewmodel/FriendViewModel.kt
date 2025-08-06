@@ -9,9 +9,9 @@ import com.example.core_common.util.AuthUtil
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.FriendStatus
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserName
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCases
 import com.example.domain_usecase.provider.friend.FriendUseCaseProvider

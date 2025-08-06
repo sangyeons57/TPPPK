@@ -2,11 +2,11 @@ package com.example.mapper.dm
 
 import com.example.data_model.remote.DMWrapperDTO
 import com.example.domain.model.base.DMWrapper
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.UserId
+import com.example.domain.vo.dmchannel.DMChannelLastMessagePreview
+import com.example.domain.vo.user.UserName
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -5,10 +5,10 @@ import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.special.AuthRemoteDataSource
 import com.example.data_datasource.util.FirebaseAuthWrapper
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.Token
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.Token
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserName
 import com.example.domain_repository.base.AuthRepository
 import com.google.firebase.FirebaseNetworkException
 import kotlinx.coroutines.ExperimentalCoroutinesApi

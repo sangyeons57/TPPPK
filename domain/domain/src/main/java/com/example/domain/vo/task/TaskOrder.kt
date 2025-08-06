@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.task
+package com.example.domain.vo.task
 
 /**
  * Value object representing the order of a task.

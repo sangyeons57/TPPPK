@@ -7,9 +7,9 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.model.vo.category.CategoryOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.category.CategoryName
+import com.example.domain.vo.category.CategoryOrder
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow

@@ -1,7 +1,7 @@
 package com.example.feature_chat.model
 
 import android.net.Uri
-import com.example.domain.model.vo.MentionType
+import com.example.domain.vo.MentionType
 import com.example.websocket.core.WebSocketConnectionState
 
 /**
@@ -12,7 +12,6 @@ data class ChatUiState(
     val channelName: String = "채팅방",
     val channelPath: String = "",
     // Note: messages are now handled by Paging3 flow in ViewModel
-    val messageInput: String = "",
     val isAttachmentAreaVisible: Boolean = false,
     val galleryImages: List<GalleryImageUiModel> = emptyList(), // ★ UI 모델 사용
     val selectedImages: Set<Uri> = emptySet(),

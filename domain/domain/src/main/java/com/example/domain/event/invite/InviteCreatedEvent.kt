@@ -1,9 +1,9 @@
 package com.example.domain.event.invite
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.UserId
 import java.time.Instant
 
 data class InviteCreatedEvent(

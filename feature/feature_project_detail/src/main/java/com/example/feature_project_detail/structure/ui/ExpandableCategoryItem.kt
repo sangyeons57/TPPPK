@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import java.time.Instant
 
 // 카테고리 및 채널 정보를 담는 데이터 클래스 (호출하는 쪽에서 사용)

@@ -3,7 +3,7 @@ package com.example.feature_chat.service
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_usecase.provider.file.FileManagementUseCases
 import com.example.domain_usecase.provider.user.UserUseCases
 import kotlinx.coroutines.async

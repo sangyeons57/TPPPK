@@ -3,10 +3,10 @@ package com.example.domain_usecase.usecase.schedule
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Schedule
 import com.example.domain.model.enum.ScheduleStatus
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.model.vo.schedule.ScheduleTitle
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.schedule.ScheduleContent
+import com.example.domain.vo.schedule.ScheduleTitle
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.ScheduleRepository
 import java.time.Instant

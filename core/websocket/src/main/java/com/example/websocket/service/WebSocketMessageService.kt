@@ -5,11 +5,12 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.enum.SyncStatus
-import com.example.domain.model.vo.ChannelId
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MessageContent
-import com.example.domain.model.vo.message.MessageIsDeleted
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MessageIsDeleted
+import com.example.domain.vo.message.MessagePayload
+import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.websocket.constant.OperationStatus
 import com.example.websocket.constant.WebSocketEventTypes
@@ -133,7 +134,7 @@ class WebSocketMessageService @Inject constructor(
                     // Room DB에서 메시지 업데이트 (update 메서드가 있다고 가정)
                     Log.d(TAG, "메시지 수정 이벤트 처리: ${event.messageId}")
                     // TODO: Repository에 update 메서드 구현 후 활성화
-                    // messageRepository.updateContent(DocumentId(event.messageId), MessageContent(event.newContent))
+                    // messageRepository.updatePayload(DocumentId(event.messageId), MessagePayload.forText(event.newContent))
                 } catch (e: Exception) {
                     Log.e(TAG, "메시지 수정 자동 저장 중 예외: ${event.messageId}", e)
                 }
@@ -243,7 +244,8 @@ class WebSocketMessageService @Inject constructor(
         return Message.fromDataSource(
             id = DocumentId(event.messageId),
             senderId = UserId(event.senderId),
-            content = MessageContent(event.content),
+            messageType = MessageType.TEXT,
+            payload = MessagePayload.forText(event.content),
             replyToMessageId = event.replyToMessageId?.let { DocumentId(it) },
             createdAt = Instant.parse(event.timestamp),
             updatedAt = Instant.parse(event.timestamp),
@@ -575,7 +577,8 @@ class WebSocketMessageService @Inject constructor(
             val tempMessage = Message.create(
                 id = messageId,
                 senderId = senderId,
-                content = MessageContent(content),
+                messageType = MessageType.TEXT,
+                payload = MessagePayload.forText(content),
                 replyToMessageId = replyToMessageId,
                 mentions = emptyList(),
                 channelId = ChannelId(roomId) // ✅ roomId가 실제로는 channelId

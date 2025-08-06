@@ -3,8 +3,8 @@ package com.example.domain_usecase.usecase.dm
 import android.util.Log
 import com.example.core_common.constants.FirebaseFunctionParameters
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserName
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.DMChannelRepository
 import kotlinx.coroutines.flow.Flow

@@ -1,15 +1,14 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.task.TaskContent
+import com.example.domain.vo.task.TaskOrder
+import com.example.domain.vo.task.TaskStatus
+import com.example.domain.vo.task.TaskType
 import java.time.Instant
-
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.task.TaskContent
-import com.example.domain.model.vo.task.TaskOrder
-import com.example.domain.model.vo.task.TaskStatus
-import com.example.domain.model.vo.task.TaskType
-import com.example.domain.model.vo.UserId
 
 class Task private constructor(
     initialTaskType: TaskType,

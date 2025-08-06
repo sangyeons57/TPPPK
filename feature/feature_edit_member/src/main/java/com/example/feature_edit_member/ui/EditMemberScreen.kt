@@ -49,10 +49,12 @@ import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Role
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.role.RoleIsDefault
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.UserId
+import com.example.domain.vo.role.RoleIsDefault
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserName
 import com.example.feature_edit_member.viewmodel.EditMemberEvent
 import com.example.feature_edit_member.viewmodel.EditMemberViewModel
 import com.example.feature_edit_member.viewmodel.RoleSelectionItem
@@ -275,8 +277,8 @@ private fun EditMemberContentPreview() {
     
     val previewUser = com.example.domain.model.base.User.create(
         id = DocumentId.from(UserId("u1")),
-        email = com.example.domain.model.vo.user.UserEmail("test@example.com"),
-        name = com.example.domain.model.vo.user.UserName("테스트 사용자"),
+        email = UserEmail("test@example.com"),
+        name = UserName("테스트 사용자"),
         consentTimeStamp = java.time.Instant.now()
     )
 
@@ -312,8 +314,8 @@ private fun EditMemberContentSavingPreview() {
     
     val previewUser = com.example.domain.model.base.User.create(
         id = DocumentId.from(UserId("u1")),
-        email = com.example.domain.model.vo.user.UserEmail("test@example.com"),
-        name = com.example.domain.model.vo.user.UserName("테스트 사용자"),
+        email = UserEmail("test@example.com"),
+        name = UserName("테스트 사용자"),
         consentTimeStamp = java.time.Instant.now()
     )
 

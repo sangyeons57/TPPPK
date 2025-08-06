@@ -5,7 +5,7 @@ import com.example.data_datasource.remote.ScheduleRemoteDataSource
 import com.example.data_model.remote.ScheduleDTO
 import com.example.data_repository.DefaultRepositoryImpl
 import com.example.domain.model.base.Schedule
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.ScheduleRepository
 import com.example.mapper.DtoMapper
 import kotlinx.coroutines.flow.Flow

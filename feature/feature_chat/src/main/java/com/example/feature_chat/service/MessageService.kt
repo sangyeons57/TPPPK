@@ -6,10 +6,11 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
-import com.example.domain.model.vo.ChannelId
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MessagePayload
+import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_usecase.provider.chat.ChatUseCases
 import com.example.feature_chat.queue.OfflineMessageQueue
@@ -38,8 +39,8 @@ class MessageService @Inject constructor(
 
     companion object {
         private const val TAG = "MessageService"
-        private const val PAGE_SIZE = 50
-        private const val PREFETCH_DISTANCE = 10
+        private const val PAGE_SIZE = 10 // Unified with ViewModel (reduced from 50 to 10)
+        private const val PREFETCH_DISTANCE = 3 // Unified with ViewModel (reduced from 10 to 3)
     }
 
     // WebSocket 사용 사례 (방별)
@@ -115,19 +116,72 @@ class MessageService @Inject constructor(
      */
     suspend fun sendMessage(
         senderId: UserId,
+        messageType: MessageType = MessageType.TEXT,
+        payload: MessagePayload,
+        replyToMessageId: DocumentId? = null
+    ): CustomResult<DocumentId, Exception> {
+        Log.d(
+            TAG,
+            "메시지 전송 시도: senderId=${senderId.value}, type=${messageType.name}, roomId=$roomId"
+        )
+
+        return sendMessageInternal(senderId, messageType, payload, replyToMessageId)
+    }
+
+    /**
+     * 텍스트 메시지 전송 (편의 메서드)
+     */
+    suspend fun sendTextMessage(
+        senderId: UserId,
         content: String,
         replyToMessageId: DocumentId? = null
     ): CustomResult<DocumentId, Exception> {
-        Log.d(TAG, "메시지 전송 시도: senderId=${senderId.value}, roomId=$roomId")
+        Log.d(TAG, "텍스트 메시지 전송 시도: senderId=${senderId.value}, content=$content, roomId=$roomId")
+
+        val payload = MessagePayload.forText(content)
+        return sendMessageInternal(senderId, MessageType.TEXT, payload, replyToMessageId)
+    }
+
+    /**
+     * 시스템 메시지 전송 (편의 메서드)
+     */
+    suspend fun sendSystemMessage(
+        senderId: UserId,
+        messageType: MessageType,
+        payload: MessagePayload
+    ): CustomResult<DocumentId, Exception> {
+        Log.d(
+            TAG,
+            "시스템 메시지 전송 시도: senderId=${senderId.value}, type=${messageType.name}, roomId=$roomId"
+        )
+
+        return sendMessageInternal(senderId, messageType, payload, null)
+    }
+
+    /**
+     * 내부 메시지 전송 로직
+     */
+    private suspend fun sendMessageInternal(
+        senderId: UserId,
+        messageType: MessageType,
+        payload: MessagePayload,
+        replyToMessageId: DocumentId?
+    ): CustomResult<DocumentId, Exception> {
 
         return try {
             // 고유 메시지 ID 생성
             val messageId = DocumentId.generate()
 
-            // WebSocket을 통한 메시지 전송
+            // WebSocket을 통한 메시지 전송 (TEXT 타입인 경우에만 content 추출)
+            val contentForWebSocket = if (messageType == MessageType.TEXT) {
+                payload.getTextContent() ?: ""
+            } else {
+                payload.value // 시스템 메시지 등은 전체 payload를 content로 전송
+            }
+            
             val sendResult = roomWebSocketUseCases.sendMessageUseCase(
                 senderId = senderId,
-                content = content,
+                content = contentForWebSocket,
                 messageId = messageId,
                 replyToMessageId = replyToMessageId,
                 projectId = projectId,
@@ -141,7 +195,8 @@ class MessageService @Inject constructor(
                 val tempMessage = Message.create(
                     id = messageId,
                     senderId = senderId,
-                    content = MessageContent(content),
+                    messageType = messageType,
+                    payload = payload,
                     replyToMessageId = replyToMessageId,
                     mentions = emptyList(),
                     channelId = ChannelId(roomId) // ✅ roomId가 실제로는 channelId
@@ -157,7 +212,8 @@ class MessageService @Inject constructor(
                 val tempMessage = Message.create(
                     id = messageId,
                     senderId = senderId,
-                    content = MessageContent(content),
+                    messageType = messageType,
+                    payload = payload,
                     replyToMessageId = replyToMessageId,
                     mentions = emptyList(),
                     channelId = ChannelId(roomId) // ✅ roomId가 실제로는 channelId
@@ -200,7 +256,8 @@ class MessageService @Inject constructor(
                 // Room DB에서 메시지 업데이트 (WebSocket 이벤트로도 업데이트되지만 즉시 반영용)
                 val existingMessage = messageRepository.findById(messageId)
                 if (existingMessage is CustomResult.Success) {
-                    existingMessage.data.updateContent(MessageContent(newContent))
+                    val newPayload = MessagePayload.forText(newContent)
+                    existingMessage.data.updatePayload(newPayload)
                     messageRepository.save(existingMessage.data)
                 }
 

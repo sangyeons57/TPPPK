@@ -1,7 +1,6 @@
 package com.example.feature_home.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,8 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserName
 import com.example.feature_home.model.DmUiModel
 
 /**

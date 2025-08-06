@@ -1,4 +1,4 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 /**
  * Represents a project identifier (Firestore document id for a project).

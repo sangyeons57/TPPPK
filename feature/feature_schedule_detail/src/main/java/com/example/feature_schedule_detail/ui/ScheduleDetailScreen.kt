@@ -42,9 +42,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.model.vo.schedule.ScheduleTitle
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.schedule.ScheduleContent
+import com.example.domain.vo.schedule.ScheduleTitle
 import com.example.feature_schedule_detail.viewmodel.ScheduleDetailEvent
 import com.example.feature_schedule_detail.viewmodel.ScheduleDetailItem
 import com.example.feature_schedule_detail.viewmodel.ScheduleDetailUiState

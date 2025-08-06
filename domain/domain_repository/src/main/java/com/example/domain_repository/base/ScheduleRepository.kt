@@ -5,7 +5,7 @@ package com.example.domain_repository.base
  */
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Schedule
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.UserId
 import com.example.domain_repository.DefaultRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate

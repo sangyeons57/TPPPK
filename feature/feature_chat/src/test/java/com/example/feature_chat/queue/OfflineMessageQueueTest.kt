@@ -1,9 +1,8 @@
 package com.example.feature_chat.queue
 
 import com.example.domain.model.base.Message
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.example.websocket.WebSocketConnectionState
 import io.mockk.coEvery

@@ -1,8 +1,8 @@
 package com.example.domain.util
 
 import com.example.domain.model.enum.MessageAttachmentUploadStatus
-import com.example.domain.model.vo.messageattachment.AttachmentUploadState
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUploadProgress
+import com.example.domain.vo.messageattachment.AttachmentUploadState
+import com.example.domain.vo.messageattachment.MessageAttachmentUploadProgress
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 // import timber.log.Timber - Domain 모듈에서 제거됨

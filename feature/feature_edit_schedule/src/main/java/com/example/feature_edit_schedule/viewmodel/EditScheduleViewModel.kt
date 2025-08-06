@@ -8,9 +8,9 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationResultKeys
 import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.model.base.Schedule
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.model.vo.schedule.ScheduleTitle
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.schedule.ScheduleContent
+import com.example.domain.vo.schedule.ScheduleTitle
 import com.example.domain_usecase.provider.schedule.ScheduleUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow

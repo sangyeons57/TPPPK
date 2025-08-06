@@ -35,10 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.category.CategoryName
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureItem

@@ -1,8 +1,8 @@
 package com.example.feature_home.service
 
 import com.example.core_navigation.core.NavigationManger
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider

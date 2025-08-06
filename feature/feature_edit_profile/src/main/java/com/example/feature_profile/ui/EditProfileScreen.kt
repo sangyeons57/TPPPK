@@ -56,9 +56,9 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserName
 import com.example.feature_profile.viewmodel.EditProfileEvent
 import com.example.feature_profile.viewmodel.EditProfileUiState
 import com.example.feature_profile.viewmodel.EditProfileViewModel

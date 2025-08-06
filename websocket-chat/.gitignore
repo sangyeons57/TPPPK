@@ -1,0 +1,68 @@
+# Gradle build files
+.gradle/
+build/
+out/
+.gradletasknamecache
+
+# Maven build files (legacy)
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Firebase service account key (SECURITY SENSITIVE!)
+service-account-key.json
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+
+# Class files
+*.class
+
+# JAR files (except wrapper)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# WAR files
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar

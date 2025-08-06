@@ -1,9 +1,9 @@
 package com.example.feature_home.model // Adjusted package
 
 import com.example.domain.model.base.Project
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.project.ProjectName
 
 /**
  * UI data model for a Project item in a list.

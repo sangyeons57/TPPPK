@@ -2,7 +2,7 @@ package com.example.mapper.member
 
 import com.example.data_model.remote.MemberDTO
 import com.example.domain.model.base.Member
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

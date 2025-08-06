@@ -1,10 +1,10 @@
 package com.example.data_converter
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.base.ProjectsWrapper
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.project.ProjectName
 import com.example.domain.vo.projectwrapper.ProjectWrapperOrder
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException

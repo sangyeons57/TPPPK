@@ -2,11 +2,11 @@ package com.example.mapper.user
 
 import com.example.data_model.remote.UserDTO
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserFcmToken
-import com.example.domain.model.vo.user.UserMemo
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserFcmToken
+import com.example.domain.vo.user.UserMemo
+import com.example.domain.vo.user.UserName
 import com.example.mapper.DtoMapper
 import java.time.Instant
 import java.util.Date

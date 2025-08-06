@@ -212,7 +212,7 @@ public class ChatWebSocketHandler {
         roomManager.joinRoom(roomId, userId, this);
         
         // Send join confirmation
-        ChatMessage joinConfirmation = new ChatMessage(WebSocketEventConstants.ROOM_JOINED, roomId, "server", "Successfully joined room: " + roomId, Instant.now());
+        ChatMessage joinConfirmation = ChatMessage.createSystemMessage(WebSocketEventConstants.ROOM_JOINED, roomId, "server", "Successfully joined room: " + roomId, Instant.now());
         sendMessage(joinConfirmation);
         logger.info("✅ User {} successfully joined room {}", userId, roomId);
     }
@@ -224,7 +224,7 @@ public class ChatWebSocketHandler {
             currentRoomId = null;
             
             // Send successful leave confirmation
-            ChatMessage leaveConfirmation = new ChatMessage(WebSocketEventConstants.ROOM_LEFT, roomId, "server", "Successfully left room: " + roomId, Instant.now());
+            ChatMessage leaveConfirmation = ChatMessage.createSystemMessage(WebSocketEventConstants.ROOM_LEFT, roomId, "server", "Successfully left room: " + roomId, Instant.now());
             sendMessage(leaveConfirmation);
         } else {
             logger.warn("❌ User {} attempted to leave room {} but is in room {}", 
@@ -268,7 +268,7 @@ public class ChatWebSocketHandler {
                        currentRoomId, userId, message.getMessageId());
             
             // 3. 송신자에게 ACK 전송
-            ChatMessage ack = new ChatMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
+            ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
                                             "Message delivered", Instant.now());
             ack.setReplyToMessageId(message.getMessageId());
             sendMessage(ack);
@@ -313,7 +313,7 @@ public class ChatWebSocketHandler {
             logger.info("📤 Message edit broadcast to room {} by user {}", currentRoomId, userId);
             
             // Send ACK to sender
-            ChatMessage ack = new ChatMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
+            ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
                                             "Message edit delivered", Instant.now());
             ack.setReplyToMessageId(message.getMessageId());
             sendMessage(ack);
@@ -357,7 +357,7 @@ public class ChatWebSocketHandler {
             logger.info("📤 Message deletion broadcast to room {} by user {}", currentRoomId, userId);
             
             // Send ACK to sender
-            ChatMessage ack = new ChatMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
+            ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
                                             "Message deletion delivered", Instant.now());
             ack.setReplyToMessageId(message.getMessageId());
             sendMessage(ack);
@@ -371,13 +371,13 @@ public class ChatWebSocketHandler {
 
 
     private void sendAuthSuccessMessage() {
-        ChatMessage authSuccess = new ChatMessage(WebSocketEventConstants.AUTH_SUCCESS, null, "system", "Authentication successful", Instant.now());
+        ChatMessage authSuccess = ChatMessage.createSystemMessage(WebSocketEventConstants.AUTH_SUCCESS, null, "system", "Authentication successful", Instant.now());
         sendMessage(authSuccess);
         logger.info("✅ AUTH_SUCCESS message sent to user: {}", userId);
     }
 
     private void sendErrorMessage(String error) {
-        ChatMessage errorMessage = new ChatMessage(WebSocketEventConstants.ERROR, null, "server", error, Instant.now());
+        ChatMessage errorMessage = ChatMessage.createSystemMessage(WebSocketEventConstants.ERROR, null, "server", error, Instant.now());
         sendMessage(errorMessage);
         logger.warn("❌ Error message sent: {}", error);
     }

@@ -1,9 +1,9 @@
 package com.example.domain.event.message
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MessagePayload
 import java.time.Instant
 
 /**
@@ -12,7 +12,7 @@ import java.time.Instant
 data class MessageSentEvent(
     val messageId: DocumentId,
     val senderId: UserId,
-    val content: MessageContent,
+    val content: MessagePayload,
     val replyToMessageId: DocumentId?,
     override val occurredOn: Instant
 ) : DomainEvent

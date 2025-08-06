@@ -1,9 +1,9 @@
 package com.example.domain.event.project
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.OwnerId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.OwnerId
 import java.time.Instant
 
 /**

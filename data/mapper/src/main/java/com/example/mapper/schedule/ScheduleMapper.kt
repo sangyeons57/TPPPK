@@ -2,11 +2,11 @@ package com.example.mapper.schedule
 
 import com.example.data_model.remote.ScheduleDTO
 import com.example.domain.model.base.Schedule
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.model.vo.schedule.ScheduleTitle
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.schedule.ScheduleContent
+import com.example.domain.vo.schedule.ScheduleTitle
 import com.example.mapper.DtoMapper
 import java.util.Date
 import javax.inject.Inject

@@ -6,6 +6,7 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.MessageRepository
 import java.time.Instant
 import javax.inject.Inject
@@ -164,7 +165,7 @@ class BidirectionalPagingMediator @Inject constructor(
         return try {
             // 1. 먼저 Anchor 메시지가 존재하는지 확인
             val anchorMessage =
-                messageRepository.findById(com.example.domain.model.vo.DocumentId(anchorMessageId))
+                messageRepository.findById(DocumentId(anchorMessageId))
 
             when (anchorMessage) {
                 is CustomResult.Success -> {

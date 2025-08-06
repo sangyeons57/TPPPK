@@ -2,7 +2,7 @@ package com.example.domain.model.base
 
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.event.user.UserAccountActivatedEvent
 import com.example.domain.event.user.UserAccountSuspendedEvent
 import com.example.domain.event.user.UserAccountWithdrawnEvent
@@ -13,11 +13,11 @@ import com.example.domain.event.user.UserProfileUpdatedEvent
 import com.example.domain.event.user.UserStatusChangedEvent
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserFcmToken
-import com.example.domain.model.vo.user.UserMemo
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserFcmToken
+import com.example.domain.vo.user.UserMemo
+import com.example.domain.vo.user.UserName
 import java.time.Instant
 
 /**

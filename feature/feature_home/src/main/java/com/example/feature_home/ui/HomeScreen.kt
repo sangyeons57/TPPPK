@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.feature_home.component.DmListComponent
 import com.example.feature_home.component.ProjectListScreen
 import com.example.feature_home.component.UnifiedProjectStructureList

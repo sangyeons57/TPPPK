@@ -2,12 +2,11 @@ package com.example.mapper.task
 
 import com.example.data_model.remote.TaskDTO
 import com.example.domain.model.base.Task
-import com.example.domain.model.vo.task.TaskOrder
-import com.example.domain.model.vo.task.TaskStatus
-import com.example.domain.model.vo.task.TaskType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.task.TaskContent
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.task.TaskContent
+import com.example.domain.vo.task.TaskOrder
+import com.example.domain.vo.task.TaskType
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

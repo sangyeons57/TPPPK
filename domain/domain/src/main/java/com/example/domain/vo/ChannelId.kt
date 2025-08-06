@@ -1,4 +1,4 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 /**
  * 채널 ID를 나타내는 Value Object
@@ -8,4 +8,4 @@ value class ChannelId(val value: String) {
     init {
         require(value.isNotBlank()) { "ChannelId cannot be blank" }
     }
-} 
+}

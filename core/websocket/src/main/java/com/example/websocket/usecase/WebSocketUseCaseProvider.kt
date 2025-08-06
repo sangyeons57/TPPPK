@@ -1,8 +1,8 @@
 package com.example.websocket.usecase
 
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.event.WebSocketDomainMapper

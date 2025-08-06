@@ -8,7 +8,7 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
 import com.example.data_model.remote.FriendDTO
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.enum.FriendStatus
 import com.example.domain.vo.CollectionPath
 import com.google.firebase.Timestamp

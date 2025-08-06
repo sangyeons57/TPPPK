@@ -7,9 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
 import com.example.core_navigation.core.NavigationManger
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserName
 import com.example.domain_usecase.provider.friend.FriendUseCaseProvider
 import com.example.domain_usecase.provider.friend.FriendUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel

@@ -1,7 +1,7 @@
 package com.example.feature_chat.websocket
 
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.websocket.WebSocketConnectionState
 import com.example.websocket.WebSocketManager
 import com.example.websocket.WebSocketMessage

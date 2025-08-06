@@ -1,6 +1,6 @@
 package com.example.feature_home.viewmodel
 
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 
 /** 홈 화면 이벤트 */
 sealed class HomeEvent {

@@ -4,7 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.CategoryRepository
 import com.example.domain_repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.Flow

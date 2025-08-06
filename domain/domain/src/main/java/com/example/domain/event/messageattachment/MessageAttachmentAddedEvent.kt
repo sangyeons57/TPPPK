@@ -2,10 +2,10 @@ package com.example.domain.event.messageattachment
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.enum.MessageAttachmentType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.vo.messageattachment.MessageAttachmentUrl
 import java.time.Instant
 
 /**

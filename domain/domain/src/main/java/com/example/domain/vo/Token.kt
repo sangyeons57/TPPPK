@@ -1,4 +1,4 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 @JvmInline
 value class Token(val value: String) {

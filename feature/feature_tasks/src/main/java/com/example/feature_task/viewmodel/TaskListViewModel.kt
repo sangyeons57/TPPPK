@@ -7,8 +7,8 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.task.TaskType
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.task.TaskType
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCases
 import com.example.domain_usecase.provider.task.TaskUseCaseProvider

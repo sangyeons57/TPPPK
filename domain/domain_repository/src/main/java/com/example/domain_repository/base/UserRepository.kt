@@ -3,7 +3,7 @@ package com.example.domain_repository.base
 import android.net.Uri
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.user.UserName
 import com.example.domain_repository.DefaultRepository
 import kotlinx.coroutines.flow.Flow
 

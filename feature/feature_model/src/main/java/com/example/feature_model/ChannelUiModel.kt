@@ -1,9 +1,9 @@
 package com.example.feature_model
 
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 
 // Assuming ProjectChannelType is available or will be defined/imported
 // For now, let's use a String for channelType as ProjectChannel domain model has ProjectChannelType enum

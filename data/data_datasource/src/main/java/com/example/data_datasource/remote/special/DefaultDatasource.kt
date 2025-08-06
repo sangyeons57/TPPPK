@@ -3,10 +3,10 @@ package com.example.data_datasource.remote.special
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
+import com.example.domain.AggregateRoot
 import com.example.domain.DTO
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.vo.CollectionPath
+import com.example.domain.vo.DocumentId
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue

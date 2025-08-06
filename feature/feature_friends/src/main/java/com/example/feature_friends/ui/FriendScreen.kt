@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,10 +37,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,12 +50,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.UserId
 import com.example.feature_friends.viewmodel.FriendItem
 import com.example.feature_friends.viewmodel.FriendViewModel
 import com.example.feature_friends.viewmodel.FriendsEvent
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 /**
  * FriendsScreen: 친구 목록 표시 및 관리 화면 (Stateful)
@@ -72,7 +68,7 @@ fun FriendsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope() // Scope for launching coroutines
+    rememberCoroutineScope() // Scope for launching coroutines
 
     // State for ModalBottomSheet
     val sheetState = rememberModalBottomSheetState(

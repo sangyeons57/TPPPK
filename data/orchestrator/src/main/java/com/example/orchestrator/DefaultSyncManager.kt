@@ -1,6 +1,6 @@
 package com.example.orchestrator
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.sync.ConflictResolver
 import com.example.domain.model.sync.PushResult
 import com.example.domain.model.sync.SyncCoordinator

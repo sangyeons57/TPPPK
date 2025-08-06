@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.user
+package com.example.domain.vo.user
 
 /**
  * Represents a user's memo as a Value Object.

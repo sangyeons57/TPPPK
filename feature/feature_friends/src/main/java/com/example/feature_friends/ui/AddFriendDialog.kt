@@ -36,7 +36,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.user.UserName
 import com.example.feature_friends.viewmodel.AddFriendEvent
 import com.example.feature_friends.viewmodel.AddFriendUiState
 import com.example.feature_friends.viewmodel.AddFriendViewModel

@@ -2,9 +2,9 @@ package com.example.mapper.project
 
 import com.example.data_model.remote.ProjectsWrapperDTO
 import com.example.domain.model.base.ProjectsWrapper
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.project.ProjectName
 import com.example.domain.vo.projectwrapper.ProjectWrapperOrder
 import com.example.mapper.DtoMapper
 import javax.inject.Inject

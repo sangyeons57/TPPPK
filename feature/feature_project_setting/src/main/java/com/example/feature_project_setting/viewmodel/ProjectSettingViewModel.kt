@@ -19,9 +19,9 @@ import com.example.core_navigation.core.RoleListRoute
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.core_ui.components.project.ProjectImageUpdateEventManager
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.project.ProjectName
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectAssetsUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider

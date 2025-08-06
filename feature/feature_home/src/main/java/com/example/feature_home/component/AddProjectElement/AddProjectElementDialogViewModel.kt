@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.category.CategoryName
+import com.example.domain.vo.category.CategoryOrder
+import com.example.domain.vo.category.IsCategoryFlag
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -260,11 +263,11 @@ class AddProjectElementDialogViewModel @Inject constructor(
                             val noCategory = Category.fromDataSource(
                                 id = DocumentId(Category.NO_CATEGORY_ID),
                                 name = CategoryName.NO_CATEGORY_NAME,
-                                order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
-                                createdBy = com.example.domain.model.vo.OwnerId("system"),
+                                order = CategoryOrder(Category.NO_CATEGORY_ORDER),
+                                createdBy = OwnerId("system"),
                                 createdAt = java.time.Instant.now(),
                                 updatedAt = java.time.Instant.now(),
-                                isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                                isCategory = IsCategoryFlag.FALSE
                             )
                             categories.add(0, noCategory)
                         }
@@ -278,11 +281,11 @@ class AddProjectElementDialogViewModel @Inject constructor(
                         val noCategory = Category.fromDataSource(
                             id = DocumentId(Category.NO_CATEGORY_ID),
                             name = CategoryName.NO_CATEGORY_NAME,
-                            order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
-                            createdBy = com.example.domain.model.vo.OwnerId("system"),
+                            order = CategoryOrder(Category.NO_CATEGORY_ORDER),
+                            createdBy = OwnerId("system"),
                             createdAt = java.time.Instant.now(),
                             updatedAt = java.time.Instant.now(),
-                            isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                            isCategory = IsCategoryFlag.FALSE
                         )
                         _uiState.value = _uiState.value.copy(
                             availableCategories = listOf(noCategory)
@@ -293,11 +296,11 @@ class AddProjectElementDialogViewModel @Inject constructor(
                         val noCategory = Category.fromDataSource(
                             id = DocumentId(Category.NO_CATEGORY_ID),
                             name = CategoryName.NO_CATEGORY_NAME,
-                            order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
-                            createdBy = com.example.domain.model.vo.OwnerId("system"),
+                            order = CategoryOrder(Category.NO_CATEGORY_ORDER),
+                            createdBy = OwnerId("system"),
                             createdAt = java.time.Instant.now(),
                             updatedAt = java.time.Instant.now(),
-                            isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                            isCategory = IsCategoryFlag.FALSE
                         )
                         _uiState.value = _uiState.value.copy(
                             availableCategories = listOf(noCategory)
@@ -309,11 +312,11 @@ class AddProjectElementDialogViewModel @Inject constructor(
                 val noCategory = Category.fromDataSource(
                     id = DocumentId(Category.NO_CATEGORY_ID),
                     name = CategoryName.NO_CATEGORY_NAME,
-                    order = com.example.domain.model.vo.category.CategoryOrder(Category.NO_CATEGORY_ORDER),
-                    createdBy = com.example.domain.model.vo.OwnerId("system"),
+                    order = CategoryOrder(Category.NO_CATEGORY_ORDER),
+                    createdBy = OwnerId("system"),
                     createdAt = java.time.Instant.now(),
                     updatedAt = java.time.Instant.now(),
-                    isCategory = com.example.domain.model.vo.category.IsCategoryFlag.FALSE
+                    isCategory = IsCategoryFlag.FALSE
                 )
                 _uiState.value = _uiState.value.copy(
                     availableCategories = listOf(noCategory)

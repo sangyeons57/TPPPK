@@ -1,14 +1,13 @@
 package com.example.data_model.remote
 
+import com.example.domain.AggregateRoot
 import com.example.domain.DTO
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp
-import java.time.Instant
 import java.util.Date
 
 /**

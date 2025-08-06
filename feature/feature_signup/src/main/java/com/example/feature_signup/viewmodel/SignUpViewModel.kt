@@ -12,7 +12,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.PrivacyPolicyRoute
 import com.example.core_navigation.core.TermsOfServiceRoute
 import com.example.domain.model.ui.enum.SignUpFormFocusTarget
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.user.UserName
 import com.example.domain_usecase.provider.auth.AuthRegistrationUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthValidationUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
@@ -23,13 +23,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import java.time.Instant
-import javax.inject.Inject
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * 회원가입 화면의 UI 상태를 정의하는 데이터 클래스

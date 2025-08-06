@@ -4,8 +4,8 @@ import androidx.paging.PagingSource
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 
 /**
  * Message 로컬 저장소 Repository 인터페이스

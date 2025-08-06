@@ -3,9 +3,9 @@ package com.example.domain_repository.base
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.enum.InviteStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.invite.InviteCode
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.invite.InviteCode
 import com.example.domain_repository.DefaultRepository
 import kotlinx.coroutines.flow.Flow
 

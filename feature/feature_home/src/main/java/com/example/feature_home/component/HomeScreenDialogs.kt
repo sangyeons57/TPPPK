@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.core_ui.components.reorder.SimpleReorderDialog
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.vo.DocumentId
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.ProjectStructureUiState
@@ -123,7 +124,7 @@ private fun ReorderUnifiedProjectStructureDialog(
 @Composable
 private fun ReorderCategoryChannelsDialog(
     projectStructure: ProjectStructureUiState,
-    categoryId: com.example.domain.model.vo.DocumentId,
+    categoryId: DocumentId,
     onDismiss: () -> Unit,
     onReorderComplete: (List<ChannelUiModel>) -> Unit
 ) {

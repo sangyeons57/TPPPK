@@ -1,9 +1,9 @@
 package com.example.domain.event.role
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.role.RoleIsDefault
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.role.RoleIsDefault
 import java.time.Instant
 
 /**

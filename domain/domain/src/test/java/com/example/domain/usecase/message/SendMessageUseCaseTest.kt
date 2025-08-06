@@ -2,15 +2,15 @@ package com.example.domain.usecase.message
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MessageContent
 import com.example.domain.repository.base.MessageRepository
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MessagePayload
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 
 class SendMessageUseCaseTest {
 
@@ -27,7 +27,7 @@ class SendMessageUseCaseTest {
     fun `test successful message send returns success with message`() = runTest {
         // Given
         val senderId = UserId("user123")
-        val content = MessageContent("Hello, World!")
+        val content = MessagePayload.forText("Hello, World!")
         val messageId = DocumentId("msg456")
         
         // Mock the repository to return success
@@ -40,7 +40,7 @@ class SendMessageUseCaseTest {
         assertTrue(result is CustomResult.Success)
         val message = (result as CustomResult.Success).data
         assertEquals(senderId, message.senderId)
-        assertEquals(content, message.content)
+        assertEquals(content, message.payload)
         assertNull(message.replyToMessageId)
         assertTrue(message.isNew)
         
@@ -52,7 +52,7 @@ class SendMessageUseCaseTest {
     fun `test message send with reply creates reply relationship`() = runTest {
         // Given
         val senderId = UserId("user123")
-        val content = MessageContent("This is a reply")
+        val content = MessagePayload.forText("This is a reply")
         val replyToMessageId = DocumentId("original_msg")
         val messageId = DocumentId("reply_msg")
         
@@ -77,7 +77,7 @@ class SendMessageUseCaseTest {
     fun `test repository failure returns failure result`() = runTest {
         // Given
         val senderId = UserId("user123")
-        val content = MessageContent("Hello, World!")
+        val content = MessagePayload.forText("Hello, World!")
         val exception = Exception("Database error")
         
         coEvery { mockMessageRepository.save(any()) } returns CustomResult.Failure(exception)
@@ -94,7 +94,7 @@ class SendMessageUseCaseTest {
     fun `test unexpected exception is caught and returned as failure`() = runTest {
         // Given
         val senderId = UserId("user123")
-        val content = MessageContent("Hello, World!")
+        val content = MessagePayload.forText("Hello, World!")
         val exception = RuntimeException("Unexpected error")
         
         coEvery { mockMessageRepository.save(any()) } throws exception
@@ -111,7 +111,7 @@ class SendMessageUseCaseTest {
     fun `test message properties are correctly set`() = runTest {
         // Given
         val senderId = UserId("user123")
-        val content = MessageContent("Test message")
+        val content = MessagePayload.forText("Test message")
         val messageId = DocumentId("msg456")
         
         val capturedMessage = slot<Message>()
@@ -123,7 +123,7 @@ class SendMessageUseCaseTest {
         // Then
         val message = capturedMessage.captured
         assertEquals(senderId, message.senderId)
-        assertEquals(content, message.content)
+        assertEquals(content, message.payload)
         assertTrue(message.isNew)
         assertNotNull(message.createdAt)
         assertNotNull(message.updatedAt)

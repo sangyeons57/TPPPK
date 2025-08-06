@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.user
+package com.example.domain.vo.user
 
 /**
  * Represents a Firebase Cloud Messaging token for push notifications.

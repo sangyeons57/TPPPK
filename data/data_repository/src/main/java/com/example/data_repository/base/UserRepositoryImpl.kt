@@ -6,10 +6,9 @@ import com.example.data_datasource.remote.UserRemoteDataSource
 import com.example.data_datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data_model.remote.UserDTO
 import com.example.data_repository.DefaultRepositoryImpl
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserName
 import com.example.domain_repository.base.UserRepository
 import com.example.mapper.user.UserMapper
 import kotlinx.coroutines.flow.Flow

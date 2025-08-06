@@ -1,6 +1,6 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
-import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.vo.category.CategoryName
 
 /**
  * Represents a general name value object.

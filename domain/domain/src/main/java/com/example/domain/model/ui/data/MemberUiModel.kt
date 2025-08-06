@@ -1,8 +1,8 @@
 package com.example.domain.model.ui.data
 
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.Name
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserName
 import java.time.Instant
 
 data class MemberUiModel(

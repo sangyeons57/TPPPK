@@ -3,13 +3,12 @@ package com.example.domain_usecase.usecase.project.structure
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.category.CategoryOrder
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.category.CategoryOrder
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import com.example.domain_repository.base.CategoryRepository
 import com.example.domain_repository.base.ProjectChannelRepository
 import javax.inject.Inject
-import kotlin.text.get
 
 /**
  * 카테고리와 직속 채널의 통합된 순서 관리를 위한 UseCase

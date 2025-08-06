@@ -1,10 +1,10 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.AggregateRoot
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.project.ProjectName
 import com.example.domain.vo.projectwrapper.ProjectWrapperOrder
 import java.time.Instant
 

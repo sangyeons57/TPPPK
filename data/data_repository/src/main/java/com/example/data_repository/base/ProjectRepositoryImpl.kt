@@ -8,7 +8,7 @@ import com.example.data_datasource.remote.special.FunctionsRemoteDataSource
 import com.example.data_model.remote.ProjectDTO
 import com.example.data_repository.DefaultRepositoryImpl
 import com.example.domain.model.base.Project
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.ProjectRepository
 import com.example.mapper.DtoMapper
 import javax.inject.Inject

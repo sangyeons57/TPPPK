@@ -5,8 +5,8 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
 import com.example.domain.model.data.UserSession
 import com.example.domain.model.enum.UserAccountStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserEmail
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.UserRepository
 import com.google.firebase.firestore.Source

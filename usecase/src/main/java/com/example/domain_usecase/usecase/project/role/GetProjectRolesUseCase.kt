@@ -3,7 +3,7 @@ package com.example.domain_usecase.usecase.project.role
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Role
 import com.example.domain.model.ui.project.RoleSortOption
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.ProjectRoleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

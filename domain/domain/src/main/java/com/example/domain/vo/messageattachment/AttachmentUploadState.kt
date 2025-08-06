@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.messageattachment
+package com.example.domain.vo.messageattachment
 
 import com.example.domain.model.enum.MessageAttachmentUploadStatus
 
@@ -45,7 +45,7 @@ data class AttachmentUploadState(
         fun initial(): AttachmentUploadState {
             return AttachmentUploadState(
                 status = MessageAttachmentUploadStatus.PENDING,
-                progress = MessageAttachmentUploadProgress.zero()
+                progress = MessageAttachmentUploadProgress.Companion.zero()
             )
         }
         
@@ -55,7 +55,7 @@ data class AttachmentUploadState(
         fun completed(): AttachmentUploadState {
             return AttachmentUploadState(
                 status = MessageAttachmentUploadStatus.COMPLETED,
-                progress = MessageAttachmentUploadProgress.complete()
+                progress = MessageAttachmentUploadProgress.Companion.complete()
             )
         }
         
@@ -65,7 +65,7 @@ data class AttachmentUploadState(
         fun failed(errorMessage: String): AttachmentUploadState {
             return AttachmentUploadState(
                 status = MessageAttachmentUploadStatus.FAILED,
-                progress = MessageAttachmentUploadProgress.zero(),
+                progress = MessageAttachmentUploadProgress.Companion.zero(),
                 errorMessage = errorMessage
             )
         }

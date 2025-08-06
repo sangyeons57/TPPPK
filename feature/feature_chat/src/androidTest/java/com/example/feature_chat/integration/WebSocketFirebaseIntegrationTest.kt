@@ -1,10 +1,9 @@
 package com.example.feature_chat.integration
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
 import com.example.domain.repository.MessageRepository
-import android.util.Log
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.feature_chat.websocket.ChatWebSocketClient
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -424,8 +423,8 @@ class WebSocketFirebaseIntegrationTest {
             delay(1000)
 
             // 오프라인 상태에서 Repository를 통해 메시지 저장 (오프라인 큐)
-            val messageId = DocumentId(UUID.randomUUID().toString())
-            val offlineMessageContent = "오프라인에서 작성된 메시지"
+            DocumentId(UUID.randomUUID().toString())
+            "오프라인에서 작성된 메시지"
 
             // Repository를 통해 로컬 저장
             // val saveResult = messageRepository.saveMessage(...) // 실제 구현에 따라 조정

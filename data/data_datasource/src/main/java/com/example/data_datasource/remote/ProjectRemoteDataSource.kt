@@ -5,7 +5,7 @@ import com.example.core_common.result.resultTry
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
 import com.example.data_model.remote.ProjectDTO
-import com.example.domain.model.vo.project.ProjectStatus
+import com.example.domain.vo.project.ProjectStatus
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.Dispatchers

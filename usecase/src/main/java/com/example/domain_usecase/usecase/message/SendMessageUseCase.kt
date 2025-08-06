@@ -3,11 +3,11 @@ package com.example.domain_usecase.usecase.message
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
-import com.example.domain.model.vo.ChannelId
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MentionInfo
-import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MentionInfo
+import com.example.domain.vo.message.MessagePayload
 import com.example.domain_repository.base.MessageRepository
 import javax.inject.Inject
 
@@ -20,7 +20,7 @@ class SendMessageUseCase @Inject constructor(
      */
     suspend operator fun invoke(
         senderId: UserId,
-        content: MessageContent,
+        payload: MessagePayload,
         replyToMessageId: DocumentId? = null,
         mentions: List<MentionInfo> = emptyList(),
         channelId: ChannelId
@@ -30,7 +30,7 @@ class SendMessageUseCase @Inject constructor(
             val message = Message.create(
                 id = messageId,
                 senderId = senderId,
-                content = content,
+                payload = payload,
                 replyToMessageId = replyToMessageId,
                 mentions = mentions,
                 channelId = channelId

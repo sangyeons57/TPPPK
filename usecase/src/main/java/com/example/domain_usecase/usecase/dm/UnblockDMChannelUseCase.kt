@@ -1,15 +1,14 @@
 package com.example.domain_usecase.usecase.dm
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserName
-import com.example.domain_repository.base.DMChannelRepository
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserName
 import com.example.domain_repository.base.AuthRepository
+import com.example.domain_repository.base.DMChannelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
-import kotlin.text.get
 
 /**
  * DM 채널 차단을 해제하는 UseCase입니다.

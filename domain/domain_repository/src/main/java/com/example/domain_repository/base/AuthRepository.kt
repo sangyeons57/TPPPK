@@ -3,7 +3,7 @@ package com.example.domain_repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.vo.user.UserEmail
 import com.example.domain_repository.Repository
 import kotlinx.coroutines.flow.Flow
 

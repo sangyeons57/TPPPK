@@ -1,6 +1,6 @@
 package com.example.domain.model.data.project
 
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 
 /**
  * Enum representing the available permissions that can be assigned to roles.

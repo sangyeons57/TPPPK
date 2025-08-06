@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.dmchannel
+package com.example.domain.vo.dmchannel
 
 /**
  * Represents a preview of the last message in a DM channel.

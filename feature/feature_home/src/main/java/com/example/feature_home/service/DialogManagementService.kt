@@ -8,7 +8,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapVert
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogBuilder
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel

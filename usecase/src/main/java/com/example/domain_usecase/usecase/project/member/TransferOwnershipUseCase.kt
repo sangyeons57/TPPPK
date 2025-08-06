@@ -3,7 +3,7 @@ package com.example.domain_usecase.usecase.project.member
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.domain.model.base.Member
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.ProjectRepository

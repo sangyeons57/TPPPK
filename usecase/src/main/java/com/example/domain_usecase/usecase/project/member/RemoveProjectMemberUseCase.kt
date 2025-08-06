@@ -1,10 +1,9 @@
 package com.example.domain_usecase.usecase.project.member
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.MemberRepository
 import javax.inject.Inject
-import kotlin.Result
 
 /**
  * UseCase for removing a member from a project.

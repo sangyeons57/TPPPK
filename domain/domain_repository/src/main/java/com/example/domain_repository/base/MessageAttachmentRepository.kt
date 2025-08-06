@@ -3,9 +3,9 @@ package com.example.domain_repository.base
 import android.net.Uri
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.vo.messageattachment.MessageAttachmentFileSize
 import com.example.domain_repository.DefaultRepository
 import kotlinx.coroutines.flow.Flow
 

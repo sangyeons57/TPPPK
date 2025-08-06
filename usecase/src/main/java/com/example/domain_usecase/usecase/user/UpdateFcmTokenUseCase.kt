@@ -4,8 +4,8 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Loading.getOrDefault
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserFcmToken
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserFcmToken
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.UserRepository
 import javax.inject.Inject

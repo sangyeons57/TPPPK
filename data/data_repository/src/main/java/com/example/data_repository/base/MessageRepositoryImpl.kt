@@ -16,7 +16,12 @@ import com.example.data_repository.DefaultRepositoryImpl
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
 import com.example.domain.model.sync.OutBoxRecord
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MessageIsDeleted
+import com.example.domain.vo.message.MessagePayload
+import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.mapper.DtoMapper
 import com.example.mapper.message.MessageMapper
@@ -51,7 +56,8 @@ class MessageRepositoryImpl @Inject constructor(
                 MessageEntity(
                     id = id,
                     channelId = channelId,
-                    content = content,
+                    messageType = "TEXT",
+                    payload = """{"content": "$content"}""",
                     updatedAt = now,
                     createdAt = now,
                     syncStatus = SyncStatus.PENDING.name,
@@ -64,7 +70,8 @@ class MessageRepositoryImpl @Inject constructor(
                     id = id,
                     channelId = channelId,
                     senderId = AuthUtil.getCurrentUserId(),
-                    content = content,
+                    messageType = "TEXT",
+                    payload = """{"content": "$content"}""",
                     updatedAt = Date(now),
                     createdAt = Date(now),
                 )
@@ -95,7 +102,7 @@ class MessageRepositoryImpl @Inject constructor(
         allMessages.forEach { entity ->
             android.util.Log.d(
                 "RoomDB",
-                "  - id: ${entity.id}, content: ${entity.content.take(30)}, syncStatus: ${entity.syncStatus}"
+                "  - id: ${entity.id}, payload: ${entity.payload.take(30)}, syncStatus: ${entity.syncStatus}"
             )
         }
 
@@ -370,14 +377,19 @@ class MessageRepositoryImpl @Inject constructor(
     private fun convertEntityToMessage(entity: MessageEntity): Message {
         return Message.fromDataSource(
             id = DocumentId(entity.id),
-            senderId = com.example.domain.model.vo.UserId(entity.senderId),
-            content = com.example.domain.model.vo.message.MessageContent(entity.content),
+            senderId = UserId(entity.senderId),
+            messageType = try {
+                MessageType.valueOf(entity.messageType)
+            } catch (e: Exception) {
+                MessageType.TEXT
+            },
+            payload = MessagePayload(entity.payload),
             replyToMessageId = entity.replyToMessageId?.let { DocumentId(it) },
             createdAt = Instant.ofEpochMilli(entity.createdAt),
             updatedAt = Instant.ofEpochMilli(entity.updatedAt),
-            isDeleted = com.example.domain.model.vo.message.MessageIsDeleted.fromBoolean(entity.isDeleted),
+            isDeleted = MessageIsDeleted.fromBoolean(entity.isDeleted),
             mentions = emptyList(), // TODO: JSON 파싱하여 mentions 복원
-            channelId = com.example.domain.model.vo.ChannelId(entity.channelId)
+            channelId = ChannelId(entity.channelId)
         )
     }
 }

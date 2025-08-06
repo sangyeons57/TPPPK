@@ -3,9 +3,9 @@ package com.example.mapper.project
 import com.example.data_model.remote.ProjectInvitationDTO
 import com.example.domain.model.base.ProjectInvitation
 import com.example.domain.model.enum.InviteStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.UserId
 import com.example.mapper.DtoMapper
 import java.util.Date
 import javax.inject.Inject

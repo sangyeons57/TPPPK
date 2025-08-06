@@ -18,7 +18,7 @@ import com.example.data_model.local.SyncMetadataEntity
         OutboxRecordEntity::class,
         SyncMetadataEntity::class
     ],
-    version = 5, // serverVersion, serverUpdatedAt, deliveryStatus 필드 추가로 버전 업
+    version = 6, // messageType, payload 필드 추가로 버전 업 (content 필드 대체)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

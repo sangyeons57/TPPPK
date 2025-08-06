@@ -1,9 +1,9 @@
 package com.example.domain.model.data
 
-import com.example.domain.model.vo.Token
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.Token
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserName
 import java.time.Instant
 
 /**

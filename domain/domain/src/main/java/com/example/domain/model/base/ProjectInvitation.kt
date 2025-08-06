@@ -1,15 +1,15 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.invite.InviteCreatedEvent
 import com.example.domain.event.invite.InviteExpiredEvent
 import com.example.domain.event.invite.InviteStatusChangedEvent
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.InviteStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.invite.InviteCode
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.invite.InviteCode
 import java.time.Instant
 
 class ProjectInvitation private constructor(

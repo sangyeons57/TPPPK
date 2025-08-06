@@ -2,8 +2,8 @@ package com.example.domain.usecase.project
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Member
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.MemberRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject

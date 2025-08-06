@@ -74,10 +74,28 @@ public class FirestoreMessageService {
             }
 
 
-            // 메시지 데이터 구성
+            // 메시지 데이터 구성 (payload + messageType 사용)
             Map<String, Object> messageData = new HashMap<>();
             messageData.put("senderId", message.getSenderId());
-            messageData.put("content", message.getContent());
+            messageData.put("messageType", message.getMessageType() != null ? message.getMessageType() : "TEXT");
+            
+            // payload 전용 처리 (일관성을 위해 content는 deprecated)
+            String payloadJson;
+            if (message.getPayload() != null && !message.getPayload().isEmpty()) {
+                // payload 우선 사용
+                payloadJson = convertStringMapToJson(message.getPayload());
+            } else if (message.getContent() != null && !message.getContent().isEmpty()) { 
+                // 백워드 호환성: content를 TEXT payload로 변환
+                Map<String, Object> textPayload = new HashMap<>();
+                textPayload.put("content", message.getContent());
+                payloadJson = convertMapToJson(textPayload);
+                logger.warn("⚠️ Using deprecated content field, converting to payload: {}", message.getMessageId());
+            } else {
+                // 빈 payload
+                payloadJson = "{}";
+            }
+            messageData.put("payload", payloadJson);
+            
             messageData.put("channelId", roomId); // ✅ channelId 필드 추가
             messageData.put("createdAt", message.getTimestampAsInstant());
             messageData.put("updatedAt", message.getTimestampAsInstant());
@@ -141,7 +159,24 @@ public class FirestoreMessageService {
             DocumentReference docRef = firestore.collection(collectionPath).document(message.getMessageId());
             
             Map<String, Object> updateData = new HashMap<>();
-            updateData.put("content", message.getContent());
+            updateData.put("messageType", message.getMessageType() != null ? message.getMessageType() : "TEXT");
+            
+            // payload 전용 업데이트
+            String payloadJson;
+            if (message.getPayload() != null && !message.getPayload().isEmpty()) {
+                // payload 우선 사용
+                payloadJson = convertStringMapToJson(message.getPayload());
+            } else if (message.getContent() != null && !message.getContent().isEmpty()) {
+                // 백워드 호환성: content를 TEXT payload로 변환
+                Map<String, Object> textPayload = new HashMap<>();
+                textPayload.put("content", message.getContent());
+                payloadJson = convertMapToJson(textPayload);
+                logger.warn("⚠️ Using deprecated content field for update, converting to payload: {}", message.getMessageId());
+            } else {
+                // 빈 payload
+                payloadJson = "{}";
+            }
+            updateData.put("payload", payloadJson);
             updateData.put("updatedAt", message.getTimestampAsInstant());
             
             logger.info("✏️ Updating message in Firestore: {}, messageId={}", 
@@ -242,5 +277,53 @@ public class FirestoreMessageService {
         }, MoreExecutors.directExecutor());
         
         return completableFuture;
+    }
+    
+    /**
+     * Map을 간단한 JSON 문자열로 변환하는 헬퍼 메서드 (String values)
+     */
+    private String convertStringMapToJson(Map<String, String> map) {
+        if (map == null || map.isEmpty()) {
+            return "{}";
+        }
+        
+        StringBuilder json = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            if (!first) {
+                json.append(",");
+            }
+            json.append("\"").append(entry.getKey()).append("\":");
+            json.append("\"").append(entry.getValue() != null ? entry.getValue() : "").append("\"");
+            first = false;
+        }
+        json.append("}");
+        return json.toString();
+    }
+    
+    /**
+     * Map을 간단한 JSON 문자열로 변환하는 헬퍼 메서드 (Object values)
+     */
+    private String convertMapToJson(Map<String, Object> map) {
+        if (map == null || map.isEmpty()) {
+            return "{}";
+        }
+        
+        StringBuilder json = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            if (!first) {
+                json.append(",");
+            }
+            json.append("\"").append(entry.getKey()).append("\":");
+            if (entry.getValue() instanceof String) {
+                json.append("\"").append(entry.getValue()).append("\"");
+            } else {
+                json.append(entry.getValue());
+            }
+            first = false;
+        }
+        json.append("}");
+        return json.toString();
     }
 }

@@ -2,9 +2,8 @@ package com.example.domain_usecase.usecase.project.invitation
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.ProjectInvitation
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.ProjectInvitationRepository
 import javax.inject.Inject
 

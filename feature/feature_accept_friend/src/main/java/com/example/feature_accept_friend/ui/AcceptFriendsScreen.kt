@@ -2,15 +2,37 @@ package com.example.feature_accept_friend.ui
 
 // Removed direct Coil imports, will use UserProfileImage
 // ViewModel 및 관련 상태/이벤트/UI 모델 Import
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +45,8 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserName
 import com.example.feature_accept_friend.viewmodel.AcceptFriendsEvent
 import com.example.feature_accept_friend.viewmodel.AcceptFriendsViewModel
 import com.example.feature_accept_friend.viewmodel.FriendRequestItem
@@ -105,8 +129,8 @@ fun AcceptFriendsScreen(
 fun AcceptFriendsListContent(
     modifier: Modifier = Modifier,
     requests: List<FriendRequestItem>,
-    onAcceptClick: (com.example.domain.model.vo.UserId) -> Unit,
-    onDenyClick: (com.example.domain.model.vo.UserId) -> Unit
+    onAcceptClick: (UserId) -> Unit,
+    onDenyClick: (UserId) -> Unit
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -184,15 +208,15 @@ private fun AcceptFriendsScreenPreview() {
     // 미리보기용 가짜 데이터 생성
     val sampleRequests = listOf(
         FriendRequestItem(
-            friendRequestId = com.example.domain.model.vo.UserId.from("req1"),
-            requesterId = com.example.domain.model.vo.UserId.from("user1"), 
-            userName = com.example.domain.model.vo.user.UserName.from("사용자1"), 
+            friendRequestId = UserId.from("req1"),
+            requesterId = UserId.from("user1"),
+            userName = UserName.from("사용자1"),
             profileImageUrl = null
         ),
         FriendRequestItem(
-            friendRequestId = com.example.domain.model.vo.UserId.from("req2"),
-            requesterId = com.example.domain.model.vo.UserId.from("user2"), 
-            userName = com.example.domain.model.vo.user.UserName.from("사용자2"), 
+            friendRequestId = UserId.from("req2"),
+            requesterId = UserId.from("user2"),
+            userName = UserName.from("사용자2"),
             profileImageUrl = null
         )
     )

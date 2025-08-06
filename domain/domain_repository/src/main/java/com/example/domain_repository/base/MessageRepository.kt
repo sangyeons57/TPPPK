@@ -4,7 +4,7 @@ import androidx.paging.PagingSource
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.enum.SyncStatus
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.DefaultRepository
 
 // 메시지 전송 시 사용할 첨부파일 모델 (도메인 모델 MessageAttachment와 구분)

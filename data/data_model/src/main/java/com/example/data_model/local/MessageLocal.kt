@@ -19,8 +19,11 @@ data class MessageEntity(
     @ColumnInfo(name = "senderId")
     val senderId: String,
 
-    @ColumnInfo(name = "content")
-    val content: String,
+    @ColumnInfo(name = "messageType", defaultValue = "TEXT")
+    val messageType: String = "TEXT", // 메시지 타입 (TEXT, SYSTEM_PROJECT_JOIN, etc.)
+
+    @ColumnInfo(name = "payload", defaultValue = "{}")
+    val payload: String = "{}", // JSON 페이로드 (기존 content 대체)
 
     @ColumnInfo(name = "replyToMessageId")
     val replyToMessageId: String? = null,

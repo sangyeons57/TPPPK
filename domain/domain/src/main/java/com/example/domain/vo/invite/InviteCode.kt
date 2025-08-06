@@ -1,4 +1,6 @@
-package com.example.domain.model.vo.invite
+package com.example.domain.vo.invite
+
+import com.example.domain.vo.DocumentId
 
 @JvmInline
 value class InviteCode(val value: String) {
@@ -13,7 +15,7 @@ value class InviteCode(val value: String) {
         /**
          * Creates an InviteCode from a DocumentId
          */
-        fun from(documentId: com.example.domain.model.vo.DocumentId): InviteCode {
+        fun from(documentId: DocumentId): InviteCode {
             return InviteCode(documentId.value)
         }
     }

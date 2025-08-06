@@ -2,7 +2,7 @@ package com.example.data_datasource.remote.special
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.vo.user.UserEmail
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.Dispatchers

@@ -1,7 +1,7 @@
 package com.example.domain_usecase.usecase.schedule
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.ScheduleRepository
 import javax.inject.Inject

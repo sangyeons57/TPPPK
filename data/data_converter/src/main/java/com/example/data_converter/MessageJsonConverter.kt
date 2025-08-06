@@ -1,14 +1,15 @@
 package com.example.data_converter
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.base.Message
-import com.example.domain.model.vo.ChannelId
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.MentionType
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MentionInfo
-import com.example.domain.model.vo.message.MessageContent
-import com.example.domain.model.vo.message.MessageIsDeleted
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.MentionType
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MentionInfo
+import com.example.domain.vo.message.MessageIsDeleted
+import com.example.domain.vo.message.MessagePayload
+import com.example.domain.vo.message.MessageType
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
@@ -30,7 +31,8 @@ class MessageJsonConverter @Inject constructor(
                 AggregateRoot.KEY_ID to data.id.value,
                 Message.KEY_CHANNEL_ID to data.channelId.value,
                 Message.KEY_SENDER_ID to data.senderId.value,
-                Message.KEY_SEND_MESSAGE to data.content.value,
+                Message.KEY_MESSAGE_TYPE to data.messageType.name,
+                Message.KEY_PAYLOAD to data.payload.value,
                 Message.KEY_REPLY_TO_MESSAGE_ID to data.replyToMessageId?.value,
                 Message.KEY_IS_DELETED to data.isDeleted.value,
                 Message.KEY_MENTIONS to data.mentions.map { mention ->
@@ -66,10 +68,37 @@ class MessageJsonConverter @Inject constructor(
                     }
                 } ?: emptyList()
 
+            // 하위 호환성: messageType 처리
+            val messageType = try {
+                val typeString = messageData[Message.KEY_MESSAGE_TYPE] as? String ?: "TEXT"
+                MessageType.valueOf(typeString)
+            } catch (e: Exception) {
+                MessageType.TEXT
+            }
+
+            // 하위 호환성: payload vs content 처리
+            val payload = when {
+                messageData[Message.KEY_PAYLOAD] != null -> {
+                    val payloadString = messageData[Message.KEY_PAYLOAD] as String
+                    MessagePayload(payloadString)
+                }
+
+                messageData[Message.KEY_SEND_MESSAGE] != null -> {
+                    // 레거시 content 필드를 payload로 변환
+                    val contentString = messageData[Message.KEY_SEND_MESSAGE] as String
+                    MessagePayload.forText(contentString)
+                }
+
+                else -> {
+                    MessagePayload.forText("")
+                }
+            }
+
             Message.fromDataSource(
                 id = DocumentId(messageData[AggregateRoot.KEY_ID] as String),
                 senderId = UserId(messageData[Message.KEY_SENDER_ID] as String),
-                content = MessageContent(messageData[Message.KEY_SEND_MESSAGE] as String),
+                messageType = messageType,
+                payload = payload,
                 replyToMessageId = (messageData[Message.KEY_REPLY_TO_MESSAGE_ID] as? String)?.let {
                     DocumentId(
                         it

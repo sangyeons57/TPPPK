@@ -1,7 +1,7 @@
 package com.example.domain.event.dmchannel
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import java.time.Instant
 
 /**

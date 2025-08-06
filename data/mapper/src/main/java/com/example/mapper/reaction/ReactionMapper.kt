@@ -2,9 +2,9 @@ package com.example.mapper.reaction
 
 import com.example.data_model.remote.ReactionDTO
 import com.example.domain.model.base.Reaction
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.reaction.Emoji
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.reaction.Emoji
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

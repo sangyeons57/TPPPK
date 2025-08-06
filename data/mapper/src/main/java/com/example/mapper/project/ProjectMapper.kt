@@ -2,10 +2,10 @@ package com.example.mapper.project
 
 import com.example.data_model.remote.ProjectDTO
 import com.example.domain.model.base.Project
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.project.ProjectName
-import com.example.domain.model.vo.project.ProjectStatus
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.project.ProjectName
+import com.example.domain.vo.project.ProjectStatus
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

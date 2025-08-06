@@ -1,6 +1,6 @@
 package com.example.domain.error
 
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 
 /**
  * 파일 업로드와 관련된 세분화된 에러 타입들

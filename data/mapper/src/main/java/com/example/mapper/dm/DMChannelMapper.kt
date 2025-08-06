@@ -2,8 +2,8 @@ package com.example.mapper.dm
 
 import com.example.data_model.remote.DMChannelDTO
 import com.example.domain.model.base.DMChannel
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

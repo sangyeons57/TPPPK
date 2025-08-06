@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.schedule
+package com.example.domain.vo.schedule
 
 import java.time.YearMonth
 

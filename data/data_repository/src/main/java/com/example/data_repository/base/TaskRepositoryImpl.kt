@@ -5,7 +5,7 @@ import com.example.data_datasource.remote.TaskRemoteDataSource
 import com.example.data_model.remote.TaskDTO
 import com.example.data_repository.DefaultRepositoryImpl
 import com.example.domain.model.base.Task
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.TaskRepository
 import com.example.mapper.DtoMapper
 import com.google.firebase.firestore.FieldValue

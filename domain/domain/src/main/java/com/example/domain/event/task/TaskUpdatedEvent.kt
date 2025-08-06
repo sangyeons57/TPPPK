@@ -1,9 +1,9 @@
 package com.example.domain.event.task
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.task.TaskContent
-import com.example.domain.model.vo.task.TaskType
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.task.TaskContent
+import com.example.domain.vo.task.TaskType
 import java.time.Instant
 
 /**

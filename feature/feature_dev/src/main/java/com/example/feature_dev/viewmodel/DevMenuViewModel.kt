@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.data_repository.util.RoomDatabaseLogger
 import com.example.domain.model.sync.SyncCoordinator
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dev.DevMenuUseCaseProvider
 import com.example.domain_usecase.usecase.sync.ResetAndSyncUseCase

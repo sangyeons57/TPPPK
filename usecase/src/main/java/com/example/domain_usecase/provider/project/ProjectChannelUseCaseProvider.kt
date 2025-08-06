@@ -1,7 +1,7 @@
 package com.example.domain_usecase.provider.project
 
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.vo.CollectionPath
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.CategoryRepository
 import com.example.domain_repository.base.ProjectChannelRepository

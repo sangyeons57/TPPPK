@@ -2,8 +2,8 @@ package com.example.domain_usecase.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.category.CategoryName
 import com.example.domain_repository.base.CategoryRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject

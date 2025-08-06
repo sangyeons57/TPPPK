@@ -2,7 +2,7 @@ package com.example.domain_usecase.usecase.project.assets
 
 import android.net.Uri
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.ProjectRepository
 import javax.inject.Inject
 

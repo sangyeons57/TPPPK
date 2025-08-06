@@ -1,6 +1,6 @@
-package com.example.domain.model.vo.user
+package com.example.domain.vo.user
 
-import com.example.domain.model.vo.Name
+import com.example.domain.vo.Name
 
 /**
  * Represents a user's name as a Value Object.

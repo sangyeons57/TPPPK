@@ -7,7 +7,7 @@ import com.example.core_common.constants.FirebaseFunctionParameters
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.MediaUtil
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage

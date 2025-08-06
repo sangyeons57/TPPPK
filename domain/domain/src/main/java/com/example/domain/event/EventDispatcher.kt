@@ -1,6 +1,6 @@
 package com.example.domain.event
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import java.time.Instant
 
 /**

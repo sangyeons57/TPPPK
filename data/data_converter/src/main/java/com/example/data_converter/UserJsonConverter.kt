@@ -1,14 +1,14 @@
 package com.example.data_converter
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserAccountStatus
 import com.example.domain.model.enum.UserStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserFcmToken
-import com.example.domain.model.vo.user.UserMemo
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserFcmToken
+import com.example.domain.vo.user.UserMemo
+import com.example.domain.vo.user.UserName
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken

@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.projectchannel
+package com.example.domain.vo.projectchannel
 
 @JvmInline
 value class ProjectChannelOrder(val value: Int) {

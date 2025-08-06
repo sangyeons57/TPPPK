@@ -1,13 +1,13 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.dmwrapper.DMWrapperOtherUserChangedEvent
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.dmchannel.DMChannelLastMessagePreview
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.UserId
+import com.example.domain.vo.dmchannel.DMChannelLastMessagePreview
+import com.example.domain.vo.user.UserName
 import java.time.Instant
 
 class DMWrapper private constructor(

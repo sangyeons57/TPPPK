@@ -1,6 +1,6 @@
-package com.example.domain.model.vo.message
+package com.example.domain.vo.message
 
-import com.example.domain.model.vo.MentionType
+import com.example.domain.vo.MentionType
 
 data class MentionInfo(
     val type: MentionType,

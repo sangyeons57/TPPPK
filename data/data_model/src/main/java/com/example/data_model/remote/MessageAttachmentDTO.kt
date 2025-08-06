@@ -1,7 +1,7 @@
 package com.example.data_model.remote
 
+import com.example.domain.AggregateRoot
 import com.example.domain.DTO
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.enum.MessageAttachmentType
 import com.google.firebase.firestore.DocumentId

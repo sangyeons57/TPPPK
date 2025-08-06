@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.category
+package com.example.domain.vo.category
 
 /**
  * Flag indicating if the item is a Category (true) or another type (e.g., a channel, false).

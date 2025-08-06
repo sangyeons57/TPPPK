@@ -1,8 +1,8 @@
 package com.example.domain.event.friend
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserName
 import java.time.Instant
 
 data class FriendNameChangedEvent(

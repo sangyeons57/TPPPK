@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.role
+package com.example.domain.vo.role
 
 @JvmInline
 value class RoleIsDefault(val value: Boolean)  {

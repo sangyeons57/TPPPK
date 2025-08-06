@@ -3,9 +3,9 @@ package com.example.feature_member_list.dialog.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCases
 import com.example.domain_usecase.provider.friend.FriendUseCaseProvider

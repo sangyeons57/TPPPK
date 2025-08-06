@@ -5,9 +5,9 @@ import com.example.domain.event.EventDispatcher
 import com.example.domain.exception.AccountAlreadyExistsException
 import com.example.domain.model.base.User
 import com.example.domain.model.enum.UserAccountStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.user.UserEmail
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.user.UserEmail
+import com.example.domain.vo.user.UserName
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.UserRepository
 import com.google.firebase.auth.FirebaseAuthUserCollisionException

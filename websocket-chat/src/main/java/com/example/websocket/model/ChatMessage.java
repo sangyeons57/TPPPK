@@ -3,6 +3,7 @@ package com.example.websocket.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -17,7 +18,10 @@ public class ChatMessage {
     private String senderId;
     
     @JsonProperty("content")
-    private String content;
+    private String content; // Deprecated: Use payload instead
+    
+    @JsonProperty("messageType")
+    private String messageType = "TEXT"; // Default to TEXT type
     
     @JsonProperty("timestamp")
     private Double timestamp; // Changed to Double to match client
@@ -47,6 +51,27 @@ public class ChatMessage {
         this.setTimestampFromInstant(timestamp);
     }
 
+    // Factory methods for payload-based messages
+    public static ChatMessage createWithTextPayload(String type, String roomId, String senderId, String messageType, String textContent, Instant timestamp) {
+        ChatMessage message = new ChatMessage();
+        message.type = type;
+        message.roomId = roomId;
+        message.senderId = senderId;
+        message.messageType = messageType != null ? messageType : "TEXT";
+        
+        // Create payload
+        Map<String, String> payloadMap = new HashMap<>();
+        payloadMap.put("content", textContent != null ? textContent : "");
+        message.payload = payloadMap;
+        message.setTimestampFromInstant(timestamp);
+        
+        return message;
+    }
+    
+    public static ChatMessage createSystemMessage(String type, String roomId, String senderId, String systemText, Instant timestamp) {
+        return createWithTextPayload(type, roomId, senderId, "SYSTEM", systemText, timestamp);
+    }
+
     // Getters and Setters
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
@@ -59,6 +84,9 @@ public class ChatMessage {
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+
+    public String getMessageType() { return messageType; }
+    public void setMessageType(String messageType) { this.messageType = messageType; }
 
     public Double getTimestamp() { return timestamp; }
     public void setTimestamp(Double timestamp) { this.timestamp = timestamp; }
@@ -93,15 +121,16 @@ public class ChatMessage {
      */
     public String toSummaryString() {
         return String.format(
-            "type='%s', roomId='%s', senderId='%s', content='%s', timestamp=%s, messageId='%s', replyToMessageId='%s', payload=%s, projectId='%s', channelType='%s'",
+            "type='%s', roomId='%s', senderId='%s', messageType='%s', payload=%s, content='%s', timestamp=%s, messageId='%s', replyToMessageId='%s', projectId='%s', channelType='%s'",
             String.valueOf(type),
             String.valueOf(roomId),
             String.valueOf(senderId),
+            String.valueOf(messageType),
+            payload != null ? payload.toString() : "null",
             String.valueOf(content),
             String.valueOf(timestamp),
             String.valueOf(messageId),
             String.valueOf(replyToMessageId),
-            payload != null ? payload.toString() : "null",
             String.valueOf(projectId),
             String.valueOf(channelType)
         );
@@ -113,11 +142,12 @@ public class ChatMessage {
                 "type='" + type + '\'' +
                 ", roomId='" + roomId + '\'' +
                 ", senderId='" + senderId + '\'' +
+                ", messageType='" + messageType + '\'' +
+                ", payload=" + payload +
                 ", content='" + content + '\'' +
                 ", timestamp=" + timestamp +
                 ", messageId='" + messageId + '\'' +
                 ", replyToMessageId='" + replyToMessageId + '\'' +
-                ", payload=" + payload +
                 ", projectId='" + projectId + '\'' +
                 ", channelType='" + channelType + '\'' +
                 '}';

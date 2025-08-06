@@ -5,7 +5,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectsWrapper
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.ProjectRepository
 import com.example.domain_repository.base.ProjectsWrapperRepository
 import com.google.firebase.firestore.FirebaseFirestoreException

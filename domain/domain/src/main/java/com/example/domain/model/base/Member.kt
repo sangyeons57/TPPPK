@@ -1,9 +1,9 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.member.MemberRolesUpdatedEvent
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import java.time.Instant
 
 class Member private constructor(

@@ -2,7 +2,7 @@ package com.example.feature_home.viewmodel.service
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.user.UserUseCases
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch

@@ -1,6 +1,7 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 import com.example.domain.model.data.project.RolePermission
+import java.util.UUID
 
 /**
  * Generic Firestore document identifier.
@@ -44,7 +45,7 @@ value class DocumentId(val value: String) {
          * Generates a new random DocumentId using UUID
          */
         fun generate(): DocumentId {
-            return DocumentId(java.util.UUID.randomUUID().toString())
+            return DocumentId(UUID.randomUUID().toString())
         }
     }
 

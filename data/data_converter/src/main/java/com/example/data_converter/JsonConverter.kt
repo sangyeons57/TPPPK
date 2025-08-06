@@ -1,6 +1,6 @@
 package com.example.data_converter
 
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 
 /**
  * JSON과 Domain Model 간의 변환을 담당하는 인터페이스

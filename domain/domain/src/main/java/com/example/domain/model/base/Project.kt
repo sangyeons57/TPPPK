@@ -1,14 +1,14 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.project.ProjectNameChangedEvent
 import com.example.domain.event.project.ProjectStatusChangedEvent
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.ImageUrl
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.project.ProjectName
-import com.example.domain.model.vo.project.ProjectStatus
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ImageUrl
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.project.ProjectName
+import com.example.domain.vo.project.ProjectStatus
 import java.time.Instant
 
 class Project private constructor(

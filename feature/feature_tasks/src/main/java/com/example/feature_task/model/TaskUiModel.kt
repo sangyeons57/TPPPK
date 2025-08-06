@@ -1,11 +1,11 @@
 package com.example.feature_task.model
 
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.task.TaskType
-import com.example.domain.model.vo.task.TaskStatus
-import com.example.domain.model.vo.task.TaskContent
-import com.example.domain.model.vo.task.TaskOrder
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.task.TaskContent
+import com.example.domain.vo.task.TaskOrder
+import com.example.domain.vo.task.TaskStatus
+import com.example.domain.vo.task.TaskType
 import java.time.Instant
 
 /**

@@ -7,14 +7,11 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,8 +41,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
@@ -74,8 +69,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -96,7 +89,8 @@ import coil.request.ImageRequest
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.SimpleUserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.MentionType
+import com.example.domain.vo.MentionType
+import com.example.domain.vo.message.MessageType
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatParticipant
@@ -105,11 +99,15 @@ import com.example.feature_chat.model.GalleryImageUiModel
 import com.example.feature_chat.model.MentionSuggestion
 import com.example.feature_chat.model.ProjectMember
 import com.example.feature_chat.model.ProjectRole
+import com.example.feature_chat.ui.components.ChatStartSystemMessage
 import com.example.feature_chat.ui.components.ConnectionStatusBar
-import com.example.feature_chat.ui.components.MentionStyledInputField
+import com.example.feature_chat.ui.components.DateSystemMessage
+import com.example.feature_chat.ui.components.DefaultSystemMessage
 import com.example.feature_chat.ui.components.MessageInput
 import com.example.feature_chat.ui.components.MessageStatusRow
+import com.example.feature_chat.ui.components.ProjectJoinSystemMessage
 import com.example.feature_chat.viewmodel.WebSocketChatViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -311,7 +309,10 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    var hasScrolledToInitialPosition by remember { mutableStateOf(false) }
 
+    // 키보드 상태 관리
+    var isKeyboardVisible by remember { mutableStateOf(false) }
     var showEditDeleteDialog by remember { mutableStateOf<ChatMessageUiModel?>(null) } // ★ 타입 변경
     var showUserProfileDialog by remember { mutableStateOf<String?>(null) }
 
@@ -347,6 +348,28 @@ fun ChatScreen(
         }
     }
 
+    // Auto-scroll to bottom on initial data load without animation - only once
+    LaunchedEffect(lazyPagingItems.itemCount, hasScrolledToInitialPosition) {
+        // Only scroll when we first get items and haven't scrolled yet
+        if (!hasScrolledToInitialPosition &&
+            lazyPagingItems.itemCount > 0 &&
+            lazyPagingItems.loadState.refresh is androidx.paging.LoadState.NotLoading
+        ) {
+            // Jump to bottom (index 0 in reverse layout) instantly without animation
+            listState.scrollToItem(0)
+            hasScrolledToInitialPosition = true
+        }
+    }
+
+    // 키보드 상태 변경 시 스크롤 위치 조정
+    LaunchedEffect(isKeyboardVisible) {
+        if (isKeyboardVisible && lazyPagingItems.itemCount > 0) {
+            // 키보드가 나타날 때 최신 메시지로 스크롤
+            delay(100) // 키보드 애니메이션 대기
+            listState.animateScrollToItem(0)
+        }
+    }
+
     // Note: With Paging3, auto-scroll on new messages should be handled differently
     // Consider using LaunchedEffect with item count or specific events
     // Removed dependency on uiState.messages since it's now handled by Paging3
@@ -377,8 +400,9 @@ fun ChatScreen(
                     modifier = Modifier
                         .navigationBarsPadding()
                         .imePadding(),
-                    text = uiState.messageInput,
+                    text = uiState.pendingMessageText,
                     isEditing = uiState.isEditing,
+                    isEnabled = viewModel.canPerformWriteOperations(),
                     onTextChange = viewModel::onMessageInputChange,
                     onSendClick = {
                         if (uiState.isEditing) {
@@ -389,6 +413,22 @@ fun ChatScreen(
                     },
                     onAttachmentClick = viewModel::onAttachmentClick,
                     onCancelEdit = viewModel::cancelEdit,
+                    onKeyboardStateChange = { keyboardVisible ->
+                        isKeyboardVisible = keyboardVisible
+                    },
+                    onScrollToBottom = {
+                        coroutineScope.launch {
+                            if (lazyPagingItems.itemCount > 0) {
+                                listState.animateScrollToItem(0)
+                            }
+                        }
+                    },
+                    onMentionSuggestionClick = viewModel::onMentionSuggestionClick,
+                    participants = uiState.participants,
+                    projectMembers = uiState.projectMembers,
+                    projectRoles = uiState.projectRoles,
+                    mentionSuggestions = uiState.mentionSuggestions,
+                    isMentionSuggestionVisible = uiState.isMentionSuggestionVisible
                 )
             } else {
                 Log.d("ChatScreen", "Chat input area hidden as chat is pending WebSocket implementation.")
@@ -487,14 +527,10 @@ fun ChatMessagesList(
         // Paging3 loading states
         when (val loadState = lazyPagingItems.loadState.refresh) {
             is androidx.paging.LoadState.Loading -> {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp), contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                    }
+                // Show skeleton UI instead of simple progress indicator
+                items(5) { // Show 5 skeleton items
+                    MessageSkeletonItem()
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
@@ -556,25 +592,29 @@ fun ChatMessagesList(
                     it.sendFailed -> it.copy(formattedTimestamp = "전송 실패")
                     else -> it
                 }
-                Log.d("ChatMessageItemComposable", "isFirstInGroup: $isFirstInGroup")
                 ChatMessageItemComposable(
                     message = messageWithStatus,
                     isFirstInGroup = isFirstInGroup,
                     onLongClick = { onMessageLongClick(it) },
                     onUserProfileClick = { onUserProfileClick(it.userId) },
                     onRetryMessage = onRetryMessage,
-                onMentionClick = { type, id ->
-                    when (type) {
-                        "user" -> onUserProfileClick(id)
-                        "role" -> {
-                            // Handle role mention click - could show role members or role details
-                            // For now, no action
+                    onJoinProject = { projectId ->
+                        // 프로젝트 참여 로직 - 추후 ViewModel에서 처리
+                        Log.d("ChatScreen", "프로젝트 참여 요청: $projectId")
+                        // TODO: 프로젝트 참여 이벤트 처리
+                    },
+                    onMentionClick = { type, id ->
+                        when (type) {
+                            "user" -> onUserProfileClick(id)
+                            "role" -> {
+                                // Handle role mention click - could show role members or role details
+                                // For now, no action
+                            }
                         }
-                    }
-                },
-                participants = uiState.participants,
-                projectMembers = uiState.projectMembers,
-                projectRoles = uiState.projectRoles
+                    },
+                    participants = uiState.participants,
+                    projectMembers = uiState.projectMembers,
+                    projectRoles = uiState.projectRoles
                 )
 
                 Spacer(modifier = Modifier.height(if (isFirstInGroup) 16.dp else 0.dp))
@@ -592,6 +632,7 @@ fun ChatMessageItemComposable(
     onUserProfileClick: () -> Unit,
     onMentionClick: (String, String) -> Unit = { _, _ -> }, // (type, id) -> Unit
     onRetryMessage: (String) -> Unit = { _ -> }, // 재전송 콜백 추가
+    onJoinProject: (String) -> Unit = { _ -> }, // 프로젝트 참여 콜백 추가
     participants: List<ChatParticipant> = emptyList(),
     projectMembers: List<ProjectMember> = emptyList(),
     projectRoles: List<ProjectRole> = emptyList(),
@@ -599,212 +640,123 @@ fun ChatMessageItemComposable(
 ) {
     LocalContext.current
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp)
-            .combinedClickable(
-                onClick = { /* 일반 클릭은 Bubble 자체에는 불필요할 수 있음 */ },
-                onLongClick = onLongClick
-            ),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Log.d("ChatMessageItemComposable", "isFirstInGroup: $isFirstInGroup")
-        if (isFirstInGroup) {
-            SimpleUserProfileImage(
-                imageUrl = message.userProfileUrl,
-                contentDescription = "${message.userName} 프로필",
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onUserProfileClick),
-            )
-        } else {
-            Spacer(modifier = Modifier.width(40.dp))
+    // 메시지 타입에 따라 다른 UI 렌더링
+    when (message.messageType) {
+        MessageType.TEXT -> {
+            // 기존 일반 메시지 UI
+            Row(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp)
+                    .combinedClickable(
+                        onClick = { /* 일반 클릭은 Bubble 자체에는 불필요할 수 있음 */ },
+                        onLongClick = onLongClick
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isFirstInGroup) {
+                    SimpleUserProfileImage(
+                        imageUrl = message.userProfileUrl,
+                        contentDescription = "${message.userName} 프로필",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable(onClick = onUserProfileClick),
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(40.dp))
+                }
+
+                Column {
+                    if (isFirstInGroup) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = message.userName,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = message.formattedTimestamp,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    val displayMessage = message.message
+                    val processedText = parseMentionsForDisplay(
+                        displayMessage,
+                        participants,
+                        projectMembers,
+                        projectRoles
+                    )
+
+                    ChatMessageText(
+                        processedText = processedText,
+                        onMentionClick = onMentionClick
+                    )
+
+                    if (message.attachmentImageUrls.isNotEmpty()) {
+                        FlowRow(modifier = Modifier.padding(top = 4.dp), maxItemsInEachRow = 3) {
+                            message.attachmentImageUrls.forEach { imageUrl ->
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "첨부 이미지",
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .padding(2.dp)
+                                        .clip(MaterialTheme.shapes.small),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+
+                    MessageStatusRow(
+                        message = message,
+                        onRetryMessage = onRetryMessage
+                    )
+                }
+            }
         }
 
-        Column {
-            if (isFirstInGroup) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = message.userName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = message.formattedTimestamp,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            val displayMessage = message.message
-            val processedText = parseMentionsForDisplay(
-                displayMessage,
-                participants,
-                projectMembers,
-                projectRoles
+        MessageType.SYSTEM_DATE -> {
+            DateSystemMessage(
+                payload = message.payload,
+                modifier = modifier.padding(vertical = 4.dp)
             )
+        }
 
-            ChatMessageText(
-                processedText = processedText,
-                onMentionClick = onMentionClick
+        MessageType.SYSTEM_CHAT_START -> {
+            ChatStartSystemMessage(
+                payload = message.payload,
+                modifier = modifier.padding(vertical = 8.dp)
             )
+        }
 
-            if (message.attachmentImageUrls.isNotEmpty()) {
-                FlowRow(modifier = Modifier.padding(top = 4.dp), maxItemsInEachRow = 3) {
-                    message.attachmentImageUrls.forEach { imageUrl ->
-                        AsyncImage(
-                            model = imageUrl,
-                            contentDescription = "첨부 이미지",
-                            modifier = Modifier
-                                .size(80.dp)
-                                .padding(2.dp)
-                                .clip(MaterialTheme.shapes.small),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-            }
+        MessageType.SYSTEM_PROJECT_JOIN -> {
+            ProjectJoinSystemMessage(
+                payload = message.payload,
+                onJoinProject = onJoinProject,
+                modifier = modifier.padding(vertical = 6.dp)
+            )
+        }
 
-            MessageStatusRow(
-                message = message,
-                onRetryMessage = onRetryMessage
+        else -> {
+            // 알 수 없는 메시지 타입은 기본 시스템 메시지로 표시
+            DefaultSystemMessage(
+                message = message.message,
+                modifier = modifier.padding(vertical = 4.dp)
             )
         }
     }
 }
 
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun ChatInputArea(
-    modifier: Modifier = Modifier,
-    uiState: ChatUiState,
-    onMessageChange: (String) -> Unit,
-    onSendMessage: () -> Unit,
-    onAttachmentClick: () -> Unit,
-    onImageSelected: (Uri) -> Unit,
-    onImageDeselected: (Uri) -> Unit,
-    onCancelEdit: () -> Unit,
-    onPickImages: () -> Unit,
-    onMentionSuggestionClick: (MentionSuggestion) -> Unit = {}
-) {
-    val focusRequester = remember { FocusRequester() }
-    val interactionSource = remember { MutableInteractionSource() }
-
-    // TextField가 눌렸을 때 키보드를 올리기 위한 로직
-    if (interactionSource.collectIsPressedAsState().value) {
-        LaunchedEffect(Unit) {
-            focusRequester.requestFocus()
-        }
-    }
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        AnimatedVisibility(visible = uiState.isEditing) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .testTag("edit_mode_input"),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "메시지 수정 중...",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                IconButton(onClick = onCancelEdit, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "수정 취소")
-                }
-            }
-        }
-
-        AnimatedVisibility(visible = uiState.selectedAttachmentUris.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                uiState.selectedAttachmentUris.forEach { uri ->
-                    SelectedImagePreview(uri = uri, onRemove = { onImageDeselected(uri) })
-                }
-            }
-        }
-
-        AnimatedVisibility(visible = uiState.isAttachmentAreaVisible) {
-            ImageSelectionGrid(
-                images = uiState.galleryImages, 
-                selectedImages = uiState.selectedAttachmentUris.toSet(),
-                onImageSelected = onImageSelected,
-                onImageDeselected = onImageDeselected,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 200.dp)
-            )
-        }
-
-        // Mention suggestions popup - moved above input field
-        AnimatedVisibility(visible = uiState.isMentionSuggestionVisible) {
-            MentionSuggestionsPopup(
-                suggestions = uiState.mentionSuggestions,
-                onSuggestionClick = onMentionSuggestionClick,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        Surface(tonalElevation = 3.dp) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp), // 높이 조절
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onPickImages) { 
-                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = "이미지 첨부")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                MentionStyledInputField(
-                    value = uiState.pendingMessageText,
-                    onValueChange = onMessageChange,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(max = 100.dp) // 최대 높이 줄임
-                        .focusRequester(focusRequester)
-                        .testTag("message_input_field"),
-                    interactionSource = interactionSource,
-                    placeholder = "메시지 입력...",
-                    maxLines = 3, // 줄 수 줄임
-                    participants = uiState.participants,
-                    projectMembers = uiState.projectMembers,
-                    projectRoles = uiState.projectRoles
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
-                    onClick = onSendMessage,
-                    enabled = !uiState.isSendingMessage && (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
-                    modifier = Modifier.testTag("send_button")
-                ) {
-                    if (uiState.isSendingMessage) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    } else {
-                        val icon = if(uiState.isEditing) Icons.Filled.Check else Icons.AutoMirrored.Filled.Send
-                        Icon(icon, contentDescription = if(uiState.isEditing) "수정 완료" else "전송")
-                    }
-                }
-            }
-        }
-    }
-}
+// ChatInputArea 컴포넌트는 MessageInput으로 대체되었습니다.
 
 /**
  * Mention suggestions popup component
@@ -1092,18 +1044,25 @@ private fun ChatContentPreview(uiState: ChatUiState){
             )
         },
         bottomBar = {
-            ChatInputArea(
-                uiState = uiState,
-                onMessageChange = {},
-                onSendMessage = {},
+            MessageInput(
+                text = uiState.pendingMessageText,
+                isEditing = uiState.isEditing,
+                isEnabled = true,
+                onTextChange = {},
+                onSendClick = {},
                 onAttachmentClick = {},
-                onImageSelected = {},
-                onImageDeselected = {},
                 onCancelEdit = {},
-                onPickImages = {}
+                onKeyboardStateChange = {},
+                onScrollToBottom = {},
+                onMentionSuggestionClick = {},
+                participants = uiState.participants,
+                projectMembers = uiState.projectMembers,
+                projectRoles = uiState.projectRoles,
+                mentionSuggestions = uiState.mentionSuggestions,
+                isMentionSuggestionVisible = uiState.isMentionSuggestionVisible
             )
         }
-    ) { paddingValues ->
+    ) {
         // TODO: Create mock LazyPagingItems for preview
         // ChatMessagesList requires LazyPagingItems which can't be easily mocked in Preview
         Text("Preview not available with Paging3 - use real device/emulator")
@@ -1142,5 +1101,64 @@ private fun ImageSelectionGridPreview() {
             onImageSelected = { selected.value = selected.value + it },
             onImageDeselected = { selected.value = selected.value - it }
         )
+    }
+}
+
+@Composable
+fun MessageSkeletonItem(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Profile picture skeleton
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+        )
+
+        Column {
+            // Username and timestamp skeleton
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(14.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            RoundedCornerShape(4.dp)
+                        )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .width(60.dp)
+                        .height(10.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            RoundedCornerShape(4.dp)
+                        )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Message content skeleton - varying lengths for more realistic look
+            val messageWidths = listOf(200.dp, 150.dp, 180.dp)
+            val randomWidth = messageWidths.random()
+
+            Box(
+                modifier = Modifier
+                    .width(randomWidth)
+                    .height(16.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        RoundedCornerShape(4.dp)
+                    )
+            )
+        }
     }
 }

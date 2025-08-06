@@ -1,14 +1,15 @@
 # Docker ignore file to reduce image size and build time
 
-# Maven build cache (only keep target/)
+# Maven build cache (not used in this Gradle project)
 .mvn/
 mvnw
 mvnw.cmd
-
-# Source files (not needed in final image)
-src/
 pom.xml
 dependency-reduced-pom.xml
+
+# Gradle build cache (only keep build/)
+build/
+.gradle/
 
 # IDE files
 .idea/
@@ -49,6 +50,3 @@ README*
 # Cloud Build files
 cloudbuild.yaml
 .gcloudignore
-
-# Test files
-src/test/

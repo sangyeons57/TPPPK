@@ -57,10 +57,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.ui.enum.SignUpFormFocusTarget
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.user.UserName
 import com.example.feature_signup.viewmodel.SignUpEvent
 import com.example.feature_signup.viewmodel.SignUpUiState
 import com.example.feature_signup.viewmodel.SignUpViewModel

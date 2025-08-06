@@ -2,7 +2,7 @@ package com.example.domain_usecase.usecase.project.category
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.CategoryRepository
 import javax.inject.Inject
 

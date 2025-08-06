@@ -1,6 +1,5 @@
 package com.example.domain
 
-import com.example.domain.model.AggregateRoot
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.ServerTimestamp

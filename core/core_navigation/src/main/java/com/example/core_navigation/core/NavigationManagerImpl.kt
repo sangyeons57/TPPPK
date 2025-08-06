@@ -6,7 +6,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import com.example.core_common.constants.Constants
 import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
-import com.example.domain.model.vo.DocumentId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

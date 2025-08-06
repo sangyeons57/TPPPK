@@ -3,11 +3,10 @@ package com.example.domain_usecase.usecase.project.category
 import com.example.core_common.result.CustomResult
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.category.CategoryOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.category.CategoryOrder
 import com.example.domain_repository.base.CategoryRepository
 import javax.inject.Inject
-import kotlin.text.get
 
 /**
  * Use case for reordering categories and normalizing their order values.

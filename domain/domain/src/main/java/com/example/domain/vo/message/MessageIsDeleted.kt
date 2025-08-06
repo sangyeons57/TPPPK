@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.message
+package com.example.domain.vo.message
 
 
 @JvmInline

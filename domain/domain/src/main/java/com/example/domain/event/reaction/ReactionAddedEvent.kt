@@ -1,9 +1,9 @@
 package com.example.domain.event.reaction
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.reaction.Emoji
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.reaction.Emoji
 import java.time.Instant
 
 /**

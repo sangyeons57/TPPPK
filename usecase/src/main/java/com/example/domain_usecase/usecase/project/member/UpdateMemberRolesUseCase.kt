@@ -1,11 +1,11 @@
 package com.example.domain_usecase.usecase.project.member
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.AggregateRoot
+import com.example.domain.AggregateRoot
 import com.example.domain.event.EventDispatcher
 import com.example.domain.model.base.Member
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.MemberRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject

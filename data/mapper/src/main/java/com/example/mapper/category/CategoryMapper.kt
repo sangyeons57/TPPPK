@@ -2,11 +2,11 @@ package com.example.mapper.category
 
 import com.example.data_model.remote.CategoryDTO
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.category.CategoryName
-import com.example.domain.model.vo.category.CategoryOrder
-import com.example.domain.model.vo.category.IsCategoryFlag
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.category.CategoryName
+import com.example.domain.vo.category.CategoryOrder
+import com.example.domain.vo.category.IsCategoryFlag
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

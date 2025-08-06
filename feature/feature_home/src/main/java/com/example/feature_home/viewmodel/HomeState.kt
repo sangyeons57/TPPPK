@@ -1,12 +1,12 @@
 package com.example.feature_home.viewmodel
 
-import com.example.domain.model.vo.DocumentId
+import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
+import com.example.domain.vo.DocumentId
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
 import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.ProjectUiModel
-import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialogItem
 
 /** 홈 화면 상단 섹션 */
 enum class TopSection {

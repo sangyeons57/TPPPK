@@ -1,7 +1,7 @@
 package com.example.feature_model
 
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.category.CategoryName
 
 data class CategoryUiModel(
     val id: DocumentId,

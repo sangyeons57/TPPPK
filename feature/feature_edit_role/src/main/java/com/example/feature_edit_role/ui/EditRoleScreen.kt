@@ -50,11 +50,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.permission.PermissionType
-import com.example.domain.model.vo.permission.PermissionCategory
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.role.RoleIsDefault
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.permission.PermissionCategory
+import com.example.domain.vo.permission.PermissionType
+import com.example.domain.vo.role.RoleIsDefault
 import com.example.feature_edit_role.viewmodel.EditRoleEvent
 import com.example.feature_edit_role.viewmodel.EditRoleUiState
 import com.example.feature_edit_role.viewmodel.EditRoleViewModel

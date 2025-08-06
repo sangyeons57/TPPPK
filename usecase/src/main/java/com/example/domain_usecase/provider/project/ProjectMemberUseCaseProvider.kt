@@ -1,6 +1,5 @@
 package com.example.domain_usecase.provider.project
 
-import com.example.domain.model.vo.DocumentId
 import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.DeleteProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
@@ -8,6 +7,7 @@ import com.example.domain.usecase.project.GetProjectMemberDetailsUseCaseImpl
 import com.example.domain.usecase.project.ObserveProjectMembersUseCase
 import com.example.domain.usecase.project.ObserveProjectMembersUseCaseImpl
 import com.example.domain.vo.CollectionPath
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.ProjectRepository

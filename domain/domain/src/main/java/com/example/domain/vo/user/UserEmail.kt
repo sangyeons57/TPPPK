@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.user
+package com.example.domain.vo.user
 
 import java.util.regex.Pattern
 

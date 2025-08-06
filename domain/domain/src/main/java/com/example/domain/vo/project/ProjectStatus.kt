@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.project
+package com.example.domain.vo.project
 
 /**
  * Enum representing the status of a project.

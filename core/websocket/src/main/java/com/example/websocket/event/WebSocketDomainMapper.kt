@@ -2,11 +2,12 @@ package com.example.websocket.event
 
 import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Message
-import com.example.domain.model.vo.ChannelId
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.message.MessageContent
-import com.example.domain.model.vo.message.MessageIsDeleted
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MessageIsDeleted
+import com.example.domain.vo.message.MessagePayload
+import com.example.domain.vo.message.MessageType
 import com.example.websocket.constant.WebSocketEventTypes
 import com.example.websocket.core.WebSocketMessage
 import java.time.Instant
@@ -160,7 +161,8 @@ class WebSocketDomainMapper @Inject constructor() {
         return Message.fromDataSource(
             id = DocumentId(event.messageId),
             senderId = UserId(event.senderId),
-            content = MessageContent(event.content),
+            messageType = MessageType.TEXT,
+            payload = MessagePayload.forText(event.content),
             replyToMessageId = event.replyToMessageId?.let { DocumentId(it) },
             createdAt = parseTimestamp(event.timestamp),
             updatedAt = parseTimestamp(event.timestamp),
@@ -181,7 +183,8 @@ class WebSocketDomainMapper @Inject constructor() {
         return Message.fromDataSource(
             id = existingMessage.id,
             senderId = existingMessage.senderId,
-            content = MessageContent(event.newContent),
+            messageType = existingMessage.messageType,
+            payload = MessagePayload.forText(event.newContent),
             replyToMessageId = existingMessage.replyToMessageId,
             createdAt = existingMessage.createdAt,
             updatedAt = parseTimestamp(event.timestamp),
@@ -202,7 +205,8 @@ class WebSocketDomainMapper @Inject constructor() {
         return Message.fromDataSource(
             id = existingMessage.id,
             senderId = existingMessage.senderId,
-            content = existingMessage.content,
+            messageType = existingMessage.messageType,
+            payload = existingMessage.payload,
             replyToMessageId = existingMessage.replyToMessageId,
             createdAt = existingMessage.createdAt,
             updatedAt = parseTimestamp(event.timestamp),
@@ -230,7 +234,7 @@ class WebSocketDomainMapper @Inject constructor() {
             type = messageType,
             roomId = roomId,
             senderId = message.senderId.value,
-            content = message.content.value,
+            content = message.payload.getTextContent() ?: "",
             messageId = message.id.value,
             replyToMessageId = message.replyToMessageId?.value,
             timestamp = message.createdAt.epochSecond.toDouble(),

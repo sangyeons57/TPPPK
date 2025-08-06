@@ -1,6 +1,7 @@
 package com.example.feature_chat.model
 
-import com.example.domain.model.vo.message.MentionInfo
+import com.example.domain.vo.message.MentionInfo
+import com.example.domain.vo.message.MessageType
 import java.time.Instant // Import Instant
 
 /**
@@ -12,7 +13,9 @@ data class ChatMessageUiModel(
     val userId: String,
     val userName: String,
     val userProfileUrl: String?,
-    val message: String,
+    val messageType: MessageType, // 메시지 타입 (TEXT, SYSTEM_PROJECT_JOIN, SYSTEM_DATE, etc.)
+    val message: String, // 텍스트 메시지 내용 또는 시스템 메시지 표시용 텍스트
+    val payload: String = "{}", // JSON 페이로드 (메시지 타입별 추가 데이터)
     val formattedTimestamp: String, // UI 표시용 포맷된 시간
     val actualTimestamp: Instant, // Raw Instant for logic like pagination cursors
     val isModified: Boolean,

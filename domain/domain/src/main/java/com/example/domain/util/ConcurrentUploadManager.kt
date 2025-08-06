@@ -1,7 +1,7 @@
 package com.example.domain.util
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap

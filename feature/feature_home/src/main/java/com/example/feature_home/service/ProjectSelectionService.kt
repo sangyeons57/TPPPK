@@ -3,7 +3,7 @@ package com.example.feature_home.viewmodel.service
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Project
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_usecase.provider.project.CoreProjectUseCases
 import com.example.domain_usecase.provider.project.ProjectStructureUseCases
 import com.example.feature_home.model.ProjectStructureUiState

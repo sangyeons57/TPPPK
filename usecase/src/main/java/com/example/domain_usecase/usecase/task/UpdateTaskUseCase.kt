@@ -2,11 +2,11 @@ package com.example.domain_usecase.usecase.task
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Task
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.task.TaskContent
-import com.example.domain.model.vo.task.TaskOrder
-import com.example.domain.model.vo.task.TaskStatus
-import com.example.domain.model.vo.task.TaskType
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.task.TaskContent
+import com.example.domain.vo.task.TaskOrder
+import com.example.domain.vo.task.TaskStatus
+import com.example.domain.vo.task.TaskType
 import com.example.domain_repository.base.TaskRepository
 import javax.inject.Inject
 

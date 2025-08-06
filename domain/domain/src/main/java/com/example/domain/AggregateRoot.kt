@@ -1,7 +1,7 @@
-package com.example.domain.model
+package com.example.domain
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import java.time.Instant
 
 

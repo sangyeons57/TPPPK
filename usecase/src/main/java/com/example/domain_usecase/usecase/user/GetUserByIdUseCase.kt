@@ -2,7 +2,7 @@ package com.example.domain_usecase.usecase.user
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.User
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.UserRepository
 import javax.inject.Inject
 

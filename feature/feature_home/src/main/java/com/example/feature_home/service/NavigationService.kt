@@ -3,7 +3,7 @@ package com.example.feature_home.viewmodel.service
 import android.util.Log
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
 

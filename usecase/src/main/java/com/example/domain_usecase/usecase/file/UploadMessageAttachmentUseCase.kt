@@ -4,12 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.vo.messageattachment.MessageAttachmentFileSize
 import com.example.domain_repository.base.FileUploadProgressData
-import com.example.domain_repository.base.MessageAttachmentRepository
 import com.example.domain_repository.base.FileUploadResultData
+import com.example.domain_repository.base.MessageAttachmentRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

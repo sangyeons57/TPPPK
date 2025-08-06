@@ -45,8 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.project.ProjectName
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import com.example.feature_project_detail.viewmodel.CreateChannelDialogData

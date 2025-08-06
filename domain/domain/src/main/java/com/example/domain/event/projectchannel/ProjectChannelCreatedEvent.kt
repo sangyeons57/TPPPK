@@ -2,9 +2,9 @@ package com.example.domain.event.projectchannel
 
 import com.example.domain.event.DomainEvent
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import java.time.Instant
 
 /**

@@ -5,9 +5,9 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.base.ProjectChannel
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import com.example.domain_repository.base.ProjectChannelRepository
 import kotlinx.coroutines.flow.first
 

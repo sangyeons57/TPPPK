@@ -69,11 +69,11 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_ui.theme.Dimens
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Schedule
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.OwnerId
-import com.example.domain.model.vo.ProjectId
-import com.example.domain.model.vo.schedule.ScheduleContent
-import com.example.domain.model.vo.schedule.ScheduleTitle
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.OwnerId
+import com.example.domain.vo.ProjectId
+import com.example.domain.vo.schedule.ScheduleContent
+import com.example.domain.vo.schedule.ScheduleTitle
 import com.example.feature_calendar.viewmodel.CalendarUiState
 import java.time.DayOfWeek
 import java.time.LocalDate

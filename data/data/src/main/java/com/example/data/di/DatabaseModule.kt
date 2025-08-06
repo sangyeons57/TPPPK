@@ -33,7 +33,7 @@ object DatabaseModule {
             "projecting_kotlin_database"
         )
             .addMigrations(MIGRATION_3_4) // channel_id 필드 추가 마이그레이션
-            // .fallbackToDestructiveMigration() // 개발 환경: 마이그레이션 실패 시 데이터베이스 재생성 (주석 처리)
+            .fallbackToDestructiveMigration() // messageType + payload 전환을 위한 파괴적 마이그레이션 활성화
             .build()
     }
 

@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.reaction
+package com.example.domain.vo.reaction
 
 @JvmInline
 value class Emoji(val value: String) {

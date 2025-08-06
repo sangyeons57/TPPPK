@@ -2,9 +2,9 @@ package com.example.mapper.role
 
 import com.example.data_model.remote.RoleDTO
 import com.example.domain.model.base.Role
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.role.RoleIsDefault
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.role.RoleIsDefault
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

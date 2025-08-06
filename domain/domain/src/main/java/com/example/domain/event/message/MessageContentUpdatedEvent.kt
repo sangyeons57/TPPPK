@@ -1,8 +1,8 @@
 package com.example.domain.event.message
 
 import com.example.domain.event.DomainEvent
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.message.MessageContent
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.message.MessagePayload
 import java.time.Instant
 
 /**
@@ -10,6 +10,6 @@ import java.time.Instant
  */
 data class MessageContentUpdatedEvent(
     val messageId: DocumentId,
-    val newContent: MessageContent,
+    val newContent: MessagePayload,
     override val occurredOn: Instant
 ) : DomainEvent

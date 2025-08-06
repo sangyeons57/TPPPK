@@ -1,10 +1,10 @@
 package com.example.domain.model.base
 
 import com.example.core_common.util.DateTimeUtil
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.reaction.Emoji
+import com.example.domain.AggregateRoot
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
+import com.example.domain.vo.reaction.Emoji
 import java.time.Instant
 
 class Reaction private constructor(

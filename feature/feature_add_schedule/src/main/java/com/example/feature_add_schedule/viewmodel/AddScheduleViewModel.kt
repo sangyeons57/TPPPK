@@ -9,8 +9,8 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.NavigationResultKeys
 import com.example.core_navigation.destination.RouteArgs
 import com.example.domain.model.enum.ScheduleStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.project.ProjectName
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.CoreProjectUseCases
 import com.example.domain_usecase.provider.schedule.ScheduleUseCaseProvider

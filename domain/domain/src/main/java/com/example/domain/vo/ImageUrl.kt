@@ -1,4 +1,4 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 /**
  * Represents a URL pointing to an image. This is a lightweight wrapper maintained to avoid

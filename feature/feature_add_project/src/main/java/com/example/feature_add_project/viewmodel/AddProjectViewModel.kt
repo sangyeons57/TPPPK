@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel

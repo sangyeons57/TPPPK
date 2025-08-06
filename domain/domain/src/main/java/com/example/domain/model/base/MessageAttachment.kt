@@ -2,20 +2,20 @@ package com.example.domain.model.base
 
 
 import com.example.core_common.util.DateTimeUtil
+import com.example.domain.AggregateRoot
 import com.example.domain.event.messageattachment.MessageAttachmentAddedEvent
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.enum.MessageAttachmentType
 import com.example.domain.model.enum.MessageAttachmentUploadStatus
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.messageattachment.AttachmentUploadState
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.model.vo.messageattachment.MessageAttachmentThumbnailUrl
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUploadProgress
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
 import com.example.domain.util.StateTransitionResult
 import com.example.domain.util.UploadStateEvent
 import com.example.domain.util.UploadStateMachine
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.messageattachment.AttachmentUploadState
+import com.example.domain.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.vo.messageattachment.MessageAttachmentThumbnailUrl
+import com.example.domain.vo.messageattachment.MessageAttachmentUploadProgress
+import com.example.domain.vo.messageattachment.MessageAttachmentUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -9,10 +9,10 @@ import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Role
 import com.example.domain.model.ui.data.MemberUiModel
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserName
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider

@@ -6,9 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Category
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.category.CategoryName
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.category.CategoryName
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectChannelUseCases
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider

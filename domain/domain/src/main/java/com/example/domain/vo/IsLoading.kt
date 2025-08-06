@@ -1,4 +1,4 @@
-package com.example.domain.model.vo
+package com.example.domain.vo
 
 /**
  * Generic URL value object for images stored in Firebase Storage, web, etc.

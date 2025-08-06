@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.messageattachment
+package com.example.domain.vo.messageattachment
 
 @JvmInline
 value class MessageAttachmentUploadProgress(val value: Float) {

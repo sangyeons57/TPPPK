@@ -1,9 +1,9 @@
 package com.example.domain_repository
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.AggregateRoot
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.AggregateRoot
 import com.example.domain.vo.CollectionPath
+import com.example.domain.vo.DocumentId
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 

@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.Category
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel

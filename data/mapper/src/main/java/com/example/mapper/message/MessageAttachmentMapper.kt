@@ -2,10 +2,10 @@ package com.example.mapper.message
 
 import com.example.data_model.remote.MessageAttachmentDTO
 import com.example.domain.model.base.MessageAttachment
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileName
-import com.example.domain.model.vo.messageattachment.MessageAttachmentFileSize
-import com.example.domain.model.vo.messageattachment.MessageAttachmentUrl
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.messageattachment.MessageAttachmentFileName
+import com.example.domain.vo.messageattachment.MessageAttachmentFileSize
+import com.example.domain.vo.messageattachment.MessageAttachmentUrl
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
 import javax.inject.Singleton

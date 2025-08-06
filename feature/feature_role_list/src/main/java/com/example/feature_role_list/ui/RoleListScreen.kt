@@ -44,8 +44,8 @@ import com.example.core_navigation.core.AddRoleRoute
 import com.example.core_navigation.core.EditRoleRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
 import com.example.feature_role_list.viewmodel.RoleItem
 import com.example.feature_role_list.viewmodel.RoleListEvent
 import com.example.feature_role_list.viewmodel.RoleListViewModel

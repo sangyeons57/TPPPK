@@ -9,8 +9,8 @@ import com.example.core_navigation.core.FindPasswordRoute
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.ui.enum.LoginFormFocusTarget
-import com.example.domain.model.vo.IsLoading
-import com.example.domain.model.vo.user.UserEmail
+import com.example.domain.vo.IsLoading
+import com.example.domain.vo.user.UserEmail
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthValidationUseCaseProvider
 import com.example.domain_usecase.usecase.auth.session.WithdrawnAccountException

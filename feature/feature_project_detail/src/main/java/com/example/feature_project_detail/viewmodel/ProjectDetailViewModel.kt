@@ -8,10 +8,10 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.DocumentId
-import com.example.domain.model.vo.Name
-import com.example.domain.model.vo.project.ProjectName
-import com.example.domain.model.vo.projectchannel.ProjectChannelOrder
+import com.example.domain.vo.DocumentId
+import com.example.domain.vo.Name
+import com.example.domain.vo.project.ProjectName
+import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.CoreProjectUseCases
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider

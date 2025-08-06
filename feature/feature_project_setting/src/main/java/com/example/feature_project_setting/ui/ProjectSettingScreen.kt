@@ -61,7 +61,7 @@ import com.example.core_ui.components.project.ProjectProfileImage
 import com.example.core_ui.picker.ImagePicker
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
-import com.example.domain.model.vo.project.ProjectName
+import com.example.domain.vo.project.ProjectName
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import com.example.feature_project_setting.viewmodel.viewmodel.ProjectSettingEvent

@@ -1,6 +1,6 @@
 package com.example.domain_usecase.usecase.project.core
 
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import javax.inject.Inject
 
 /**

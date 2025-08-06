@@ -121,7 +121,7 @@ class RoomDatabaseLogger @Inject constructor(
         return try {
             // 테이블별로 최적화된 쿼리 사용
             val query = when (tableName) {
-                TABLE_MESSAGES -> "SELECT id, channelId, senderId, substr(content, 1, 30) as content_preview, createdAt, syncStatus FROM messages ORDER BY createdAt DESC LIMIT $limit"
+                TABLE_MESSAGES -> "SELECT id, channelId, senderId, substr(payload, 1, 30) as content_preview, createdAt, syncStatus FROM messages ORDER BY createdAt DESC LIMIT $limit"
                 TABLE_OUTBOX_RECORD -> "SELECT id, stream, aggregateId, op, createdAt FROM outboxRecord ORDER BY createdAt DESC LIMIT $limit"
                 TABLE_SYNC_METADATA -> "SELECT * FROM sync_metadata ORDER BY lastSyncAt DESC LIMIT $limit"
                 else -> "SELECT * FROM $tableName ORDER BY ROWID DESC LIMIT $limit"
@@ -296,7 +296,7 @@ class RoomDatabaseLogger @Inject constructor(
 
                     // 최신 메시지들
                     val messagesCursor = appDatabase.query(
-                        "SELECT id, senderId, substr(content, 1, 40) as content_preview, createdAt, syncStatus FROM messages WHERE channelId = ? ORDER BY createdAt DESC LIMIT ?",
+                        "SELECT id, senderId, substr(payload, 1, 40) as content_preview, createdAt, syncStatus FROM messages WHERE channelId = ? ORDER BY createdAt DESC LIMIT ?",
                         arrayOf(channelId, limit.toString())
                     )
 

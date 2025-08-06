@@ -60,7 +60,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.domain.model.ui.data.MemberUiModel
-import com.example.domain.model.vo.UserId
+import com.example.domain.vo.UserId
 import com.example.feature_member_list.dialog.ui.AddMemberDialog
 import com.example.feature_member_list.viewmodel.MemberListEvent
 import com.example.feature_member_list.viewmodel.MemberListUiState

@@ -1,7 +1,7 @@
 package com.example.data_model.remote
 
+import com.example.domain.AggregateRoot
 import com.example.domain.DTO
-import com.example.domain.model.AggregateRoot
 import com.example.domain.model.base.Friend
 import com.example.domain.model.enum.FriendStatus
 import com.google.firebase.firestore.DocumentId

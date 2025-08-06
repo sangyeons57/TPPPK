@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.FriendStatus
-import com.example.domain.model.vo.UserId
-import com.example.domain.model.vo.user.UserName
+import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserName
 import com.example.feature_friends.viewmodel.FriendItem
 
 /**

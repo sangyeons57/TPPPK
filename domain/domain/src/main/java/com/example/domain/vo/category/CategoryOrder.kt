@@ -1,4 +1,4 @@
-package com.example.domain.model.vo.category
+package com.example.domain.vo.category
 
 /**
  * Represents the display order of a Category.

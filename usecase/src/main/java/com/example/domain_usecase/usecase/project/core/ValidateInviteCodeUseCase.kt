@@ -1,6 +1,7 @@
 package com.example.domain_usecase.usecase.project.core
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.vo.invite.InviteCode
 import com.example.domain_repository.base.ProjectInvitationRepository
 import javax.inject.Inject
 
@@ -24,7 +25,7 @@ class ValidateInviteCodeUseCase @Inject constructor(
         }
 
         return when (val result = projectInvitationRepository.validateInviteCode(
-            com.example.domain.model.vo.invite.InviteCode(inviteCode),
+            InviteCode(inviteCode),
             null,
         )) {
             is CustomResult.Success -> {

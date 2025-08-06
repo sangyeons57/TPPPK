@@ -59,7 +59,7 @@ import com.example.core_navigation.core.TypeSafeRouteCompat.toAppRoutePath
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.extractProjectArguments
 import com.example.core_navigation.extension.safeComposable
-import com.example.domain.model.vo.DocumentId
+import com.example.domain.vo.DocumentId
 import com.example.feature_accept_friend.ui.AcceptFriendsScreen
 import com.example.feature_add_project.ui.AddProjectScreen
 import com.example.feature_add_role.ui.AddRoleScreen
