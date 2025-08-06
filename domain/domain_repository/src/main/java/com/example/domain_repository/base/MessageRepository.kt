@@ -2,8 +2,8 @@ package com.example.domain_repository.base
 
 import androidx.paging.PagingSource
 import com.example.core_common.result.CustomResult
+import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
-import com.example.domain.model.enum.SyncStatus
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.DefaultRepository
 
@@ -89,19 +89,36 @@ interface MessageRepository : DefaultRepository<Message> {
     ): CustomResult<List<Message>, Exception>
 
     // ================================
-    // 메시지 상태 관리
+    // OutBox 기반 동기화 상태 관리
     // ================================
 
     /**
-     * 메시지의 동기화 상태 업데이트
+     * OutBox 상태를 기반으로 메시지의 동기화 상태 조회
      * @param messageId 메시지 ID
-     * @param syncStatus 새로운 동기화 상태
-     * @return 성공/실패 결과
+     * @return 동기화 상태
      */
-    suspend fun updateSyncStatus(
-        messageId: DocumentId,
-        syncStatus: SyncStatus
-    ): CustomResult<Unit, Exception>
+    suspend fun getMessageOutBoxStatus(messageId: DocumentId): CustomResult<OutBoxStatus, Exception>
+
+    /**
+     * 메시지 ACK 처리 (WebSocket ACK 수신 시)
+     * @param messageId 메시지 ID
+     * @return 처리 결과
+     */
+    suspend fun handleMessageAck(messageId: String): CustomResult<Unit, Exception>
+
+    /**
+     * 메시지 실패 처리 (WebSocket FAILED 수신 시)
+     * @param messageId 메시지 ID
+     * @return 처리 결과
+     */
+    suspend fun handleMessageFailure(messageId: String): CustomResult<Unit, Exception>
+
+    /**
+     * 특정 채널의 동기화 상태별 메시지 개수 조회
+     * @param channelId 채널 ID
+     * @return 동기화 상태별 메시지 개수 맵
+     */
+    suspend fun getChannelOutBoxStatusCounts(channelId: String): CustomResult<Map<OutBoxStatus, Int>, Exception>
 
     // ================================
     // 캐시 관리 기능
@@ -109,6 +126,7 @@ interface MessageRepository : DefaultRepository<Message> {
 
     /**
      * 특정 채널의 로컬 캐시를 완전히 클리어
+     * 메시지, OutBox, 동기화 메타데이터 모두 삭제
      * @param channelId 클리어할 채널 ID
      * @return 성공/실패 결과
      */

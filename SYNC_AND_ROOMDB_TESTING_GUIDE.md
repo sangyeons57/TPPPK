@@ -40,7 +40,7 @@
 **확인 포인트:**
 
 - 메시지가 `messages` 테이블에 저장됨
-- `syncStatus`가 `PENDING`으로 설정됨
+- `outBoxStatus`가 `PENDING`으로 설정됨
 - OutBox에 동기화 대기 레코드 생성됨
 
 ### 시나리오 2: 동기화 실행 전후 상태 비교
@@ -85,8 +85,8 @@
 📝 Description: 채팅 메시지
 📊 Record Count: 15
 📄 Sample Data:
-   1. {id="abc123...", channelId="temp_dm_channel_123", content="Hello World", syncStatus="SYNCED"}
-   2. {id="def456...", channelId="temp_dm_channel_123", content="How are you?", syncStatus="PENDING"}
+   1. {id="abc123...", channelId="temp_dm_channel_123", content="Hello World", outBoxStatus="SYNCED"}
+   2. {id="def456...", channelId="temp_dm_channel_123", content="How are you?", outBoxStatus="PENDING"}
 ```
 
 ### 동기화 상태 로그 예시
@@ -123,7 +123,7 @@
 
 1. **메시지 저장**
     - [ ] 송신 메시지가 Room DB에 즉시 저장됨
-    - [ ] `syncStatus`가 적절히 설정됨 (PENDING → SYNCED)
+   - [ ] `outBoxStatus`가 적절히 설정됨 (PENDING → SYNCED)
     - [ ] 채널 ID가 올바르게 저장됨
 
 2. **동기화 동작**

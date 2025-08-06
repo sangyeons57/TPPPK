@@ -40,9 +40,7 @@ data class MessageEntity(
     @ColumnInfo(name = "updatedAt")
     val updatedAt: Long, // Epoch milliseconds
 
-    // Sync metadata fields
-    @ColumnInfo(name = "syncStatus")
-    val syncStatus: String = "",
+    // syncStatus 필드 제거 - OutBox에서만 동기화 상태 관리
 )
 
 
@@ -137,38 +135,6 @@ interface MessageDao {
     ): List<MessageEntity>
 
     // ================================
-    // 동기화 상태 관련 쿼리
-    // ================================
-
-    @Query("UPDATE messages SET syncStatus = :syncStatus WHERE id = :messageId")
-    suspend fun updateSyncStatus(messageId: String, syncStatus: String)
-
-    @Query("UPDATE messages SET syncStatus = :syncStatus WHERE id IN (:messageIds)")
-    suspend fun updateSyncStatusByIds(messageIds: List<String>, syncStatus: String): Int
-
-    @Query(
-        """
-        SELECT * FROM messages 
-        WHERE channelId = :channelId AND syncStatus = :syncStatus 
-        ORDER BY createdAt ASC 
-        LIMIT :limit
-    """
-    )
-    suspend fun getMessagesBySyncStatus(
-        channelId: String,
-        syncStatus: String,
-        limit: Int
-    ): List<MessageEntity>
-
-    @Query(
-        """
-        SELECT COUNT(*) FROM messages 
-        WHERE channelId = :channelId AND syncStatus = :syncStatus
-    """
-    )
-    suspend fun countMessagesBySyncStatus(channelId: String, syncStatus: String): Int
-
-    // ================================
     // 캐시 관리 관련 쿼리
     // ================================
 
@@ -205,48 +171,8 @@ interface MessageDao {
         LIMIT :limit
     """
     )
-    suspend fun getRecentMessagesForDebug(channelId: String, limit: Int = 10): List<MessageEntity>
-
-    /**
-     * 동기화 상태별 메시지 개수 조회 (디버그용)
-     */
-    @Query(
-        """
-        SELECT syncStatus, COUNT(*) as count 
-        FROM messages 
-        WHERE channelId = :channelId 
-        GROUP BY syncStatus
-    """
-    )
-    suspend fun getSyncStatusCountsByChannel(channelId: String): List<SyncStatusCount>
-
-    /**
-     * 전체 메시지 개수 조회
-     */
-    @Query("SELECT COUNT(*) FROM messages")
-    suspend fun getTotalMessageCount(): Int
-
-    /**
-     * 채널별 메시지 개수 조회 (모든 채널)
-     */
-    @Query(
-        """
-        SELECT channelId, COUNT(*) as count 
-        FROM messages 
-        GROUP BY channelId 
-        ORDER BY count DESC
-    """
-    )
-    suspend fun getMessageCountsByChannel(): List<ChannelMessageCount>
+    suspend fun getRecentMessagesByChannel(channelId: String, limit: Int): List<MessageEntity>
 }
-
-/**
- * 동기화 상태별 개수를 담는 데이터 클래스
- */
-data class SyncStatusCount(
-    val syncStatus: String,
-    val count: Int
-)
 
 /**
  * 채널별 메시지 개수를 담는 데이터 클래스

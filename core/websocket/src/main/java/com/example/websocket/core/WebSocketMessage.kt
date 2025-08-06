@@ -46,11 +46,26 @@ data class WebSocketMessage(
     val senderId: String? = null,
 
     /**
-     * 메시지 내용 (옵션)
+     * 메시지 내용 (옵션, DEPRECATED)
      *
      * 채팅 메시지의 텍스트 내용이나 기타 데이터
+     * 새로운 구현에서는 payload 사용을 권장함
      */
     val content: String? = null,
+
+    /**
+     * 메시지 타입 (옵션)
+     *
+     * 메시지의 종류를 나타냄 (TEXT, SYSTEM_DATE, SYSTEM_PROJECT_JOIN 등)
+     */
+    val messageType: String? = "TEXT",
+
+    /**
+     * 메시지 페이로드 (옵션)
+     *
+     * JSON 형태의 메시지 내용 - content 필드를 대체하는 새로운 형식
+     */
+    val payload: Map<String, String>? = null,
 
     /**
      * 메시지 ID (옵션)

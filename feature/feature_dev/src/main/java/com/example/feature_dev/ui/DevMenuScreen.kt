@@ -88,7 +88,7 @@ fun DevMenuScreen(
     val lastSentCode by viewModel.lastSentCode.collectAsState()
 
     // 동기화 상태
-    val syncStatus by viewModel.syncStatus.collectAsState()
+    val outBoxStatus by viewModel.outBoxStatus.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
 
     // Room DB 검사 상태
@@ -545,15 +545,15 @@ fun DevMenuScreen(
             }
 
             // 동기화 결과 표시
-            if (syncStatus.isNotEmpty()) {
+            if (outBoxStatus.isNotEmpty()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = when {
-                            syncStatus.contains("✅") -> MaterialTheme.colorScheme.primaryContainer
-                            syncStatus.contains("❌") -> MaterialTheme.colorScheme.errorContainer
+                            outBoxStatus.contains("✅") -> MaterialTheme.colorScheme.primaryContainer
+                            outBoxStatus.contains("❌") -> MaterialTheme.colorScheme.errorContainer
                             else -> MaterialTheme.colorScheme.surfaceVariant
                         }
                     )
@@ -566,7 +566,7 @@ fun DevMenuScreen(
                             style = MaterialTheme.typography.labelMedium
                         )
                         Text(
-                            text = syncStatus,
+                            text = outBoxStatus,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }

@@ -15,9 +15,9 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.data_repository.util.RoomDatabaseLogger
+import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.enum.SyncStatus
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.MentionType
@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
@@ -137,7 +138,7 @@ class WebSocketChatViewModel @Inject constructor(
             // 로깅 최적화: 성능 향상을 위해 상세 로그 제거
             pagingData.map<Message, ChatMessageUiModel> { message: Message ->
                 // Convert domain Message to UI model with display format
-                convertDomainMessageToUiModel(message)
+                runBlocking { convertDomainMessageToUiModel(message) }
             }
         }
         .onEach { pagingData ->
@@ -352,8 +353,38 @@ class WebSocketChatViewModel @Inject constructor(
                         is WebSocketDomainEvent.MessageAck -> {
                             // Message ACK: Room database handles status update
                             // Paging3 will automatically reflect the changes in UI
-                            cancelMessageTimeout(event.messageId)
-                            Log.d("ViewModel", "Message ACK handled by Room: ${event.messageId}")
+                            try {
+                                // OutBox 기반 ACK 처리
+                                val result = messageRepository.handleMessageAck(event.messageId)
+
+                                when (result) {
+                                    is CustomResult.Success -> {
+                                        Log.d(
+                                            "ViewModel",
+                                            "Message ACK processed in OutBox: ${event.messageId}"
+                                        )
+
+                                        // Paging3 새로고침으로 UI에 상태 변경 반영
+                                        invalidatePagingSource()
+                                    }
+
+                                    is CustomResult.Failure -> {
+                                        Log.e(
+                                            "ViewModel",
+                                            "Failed to process message ACK: ${result.error.message}"
+                                        )
+                                    }
+
+                                    else -> {
+                                        Log.w(
+                                            "ViewModel",
+                                            "Unexpected result type from handleMessageAck"
+                                        )
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e("ViewModel", "Failed to process message ACK", e)
+                            }
                         }
 
                         is WebSocketDomainEvent.MessageFailed -> {
@@ -403,34 +434,30 @@ class WebSocketChatViewModel @Inject constructor(
         // The Room database update will automatically flow through Paging3 to UI
         viewModelScope.launch {
             try {
-                // Update message status in Room database
-                val messageId = DocumentId(event.messageId)
-                val result = messageRepository.updateSyncStatus(messageId, SyncStatus.SYNCED)
+                // OutBox 기반 ACK 처리
+                val result = messageRepository.handleMessageAck(event.messageId)
 
                 when (result) {
                     is CustomResult.Success -> {
-                        Log.d("ViewModel", "Message marked as SENT in database: ${event.messageId}")
+                        Log.d("ViewModel", "Message ACK processed in OutBox: ${event.messageId}")
 
                         // Paging3 새로고침으로 UI에 상태 변경 반영
                         invalidatePagingSource()
-
-                        // OutBox 상태도 업데이트 (PENDING -> DISPATCHED)
-                        // TODO: OutBox 업데이트 로직 추가
                     }
 
                     is CustomResult.Failure -> {
                         Log.e(
                             "ViewModel",
-                            "Failed to update message status to SENT: ${result.error.message}"
+                            "Failed to process message ACK: ${result.error.message}"
                         )
                     }
 
                     else -> {
-                        Log.w("ViewModel", "Unexpected result type from updateSyncStatus")
+                        Log.w("ViewModel", "Unexpected result type from handleMessageAck")
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ViewModel", "Failed to update message status in database", e)
+                Log.e("ViewModel", "Failed to process message ACK", e)
             }
         }
     }
@@ -445,37 +472,33 @@ class WebSocketChatViewModel @Inject constructor(
         // The Room database update will automatically flow through Paging3 to UI
         viewModelScope.launch {
             try {
-                // Update message status in Room database
-                val messageId = DocumentId(event.messageId)
-                val result = messageRepository.updateSyncStatus(messageId, SyncStatus.FAILED)
+                // OutBox 기반 실패 처리
+                val result = messageRepository.handleMessageFailure(event.messageId)
 
                 when (result) {
                     is CustomResult.Success -> {
                         Log.d(
                             "ViewModel",
-                            "Message marked as FAILED in database: ${event.messageId}"
+                            "Message failure processed in OutBox: ${event.messageId}"
                         )
 
                         // Paging3 새로고침으로 UI에 실패 상태 반영
                         invalidatePagingSource()
-
-                        // OutBox 상태도 업데이트 (PENDING -> FAILED)
-                        // TODO: OutBox 업데이트 로직 추가
                     }
 
                     is CustomResult.Failure -> {
                         Log.e(
                             "ViewModel",
-                            "Failed to update message status to FAILED: ${result.error.message}"
+                            "Failed to process message failure: ${result.error.message}"
                         )
                     }
 
                     else -> {
-                        Log.w("ViewModel", "Unexpected result type from updateSyncStatus")
+                        Log.w("ViewModel", "Unexpected result type from handleMessageFailure")
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ViewModel", "Failed to update message status in database", e)
+                Log.e("ViewModel", "Failed to process message failure", e)
             }
         }
     }
@@ -515,11 +538,11 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // 1. 메시지 생성
-                val messageId = DocumentId(
+                val domainMessageId = DocumentId(
                     UUID.randomUUID().toString()
                 )
-                val message = Message.create(
-                    id = messageId,
+                Message.create(
+                    id = domainMessageId,
                     senderId = UserId(senderId),
                     payload = MessagePayload.forText(text),
                     replyToMessageId = replyToMessageId?.let {
@@ -529,58 +552,39 @@ class WebSocketChatViewModel @Inject constructor(
                     channelId = ChannelId(channelId)
                 )
 
-                // 2. SENDING 상태로 로컬에 즉시 저장 (SSOT)
-                val saveResult = sendMessageUseCase(message)
+                // 2. 메시지 전송 (OutBox 기반으로 자동 처리)
+                val messageId = messageRepository.sendMessage(channelId, text)
 
-                when (saveResult) {
-                    is CustomResult.Success -> {
-                        Log.d(
-                            "ViewModel",
-                            "Message saved locally with SENDING status: ${messageId.value}"
+                Log.d("ViewModel", "Message sent with OutBox: $messageId")
+
+                // 3. Paging3 새로고침 트리거 (SSOT 반영) - 최적화된 방식
+                // 새 메시지 추가 시에는 전체 무효화 대신 스크롤 위치 유지
+                invalidatePagingSourceWithOptimization()
+
+                // 4. 메시지 타임아웃 시작
+                startMessageTimeout(messageId)
+
+                // 5. 백그라운드에서 WebSocket 전송
+                async {
+                    try {
+                        val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
+                        roomUseCases.sendMessageUseCase(
+                            senderId = UserId(senderId),
+                            content = text,
+                            messageId = DocumentId(messageId),
+                            replyToMessageId = replyToMessageId?.let {
+                                DocumentId(it)
+                            },
+                            projectId = projectId,
+                            channelType = if (projectId != null) "PROJECT" else "DM"
                         )
-
-                        // 3. Paging3 새로고침 트리거 (SSOT 반영) - 최적화된 방식
-                        // 새 메시지 추가 시에는 전체 무효화 대신 스크롤 위치 유지
-                        invalidatePagingSourceWithOptimization()
-
-                        // 4. 메시지 타임아웃 시작
-                        startMessageTimeout(messageId.value)
-
-                        // 5. 백그라운드에서 WebSocket 전송
-                        async {
-                            try {
-                                val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
-                                roomUseCases.sendMessageUseCase(
-                                    senderId = UserId(senderId),
-                                    content = text,
-                                    messageId = messageId,
-                                    replyToMessageId = replyToMessageId?.let {
-                                        DocumentId(it)
-                                    }
-                                )
-                                Log.d("ViewModel", "Message sent via WebSocket: ${messageId.value}")
-                            } catch (e: Exception) {
-                                Log.e("ViewModel", "WebSocket send failed: ${e.message}")
-                                // WebSocket 전송 실패 시 로컬 상태를 FAILED로 업데이트
-                                messageRepository.updateSyncStatus(messageId, SyncStatus.FAILED)
-                            }
-                        }
-                    }
-
-                    is CustomResult.Failure -> {
-                        Log.e(
-                            "ViewModel",
-                            "Failed to save message locally: ${saveResult.error.message}"
-                        )
-                        _eventFlow.emit(ChatEvent.Error("메시지 저장 실패: ${saveResult.error.message}"))
-                    }
-
-                    else -> {
-                        Log.w("ViewModel", "Unexpected result from sendMessageUseCase")
-                        _eventFlow.emit(ChatEvent.Error("메시지 저장 실패: 예상치 못한 오류"))
+                        Log.d("ViewModel", "Message sent via WebSocket: $messageId")
+                    } catch (e: Exception) {
+                        Log.e("ViewModel", "WebSocket send failed: ${e.message}")
+                        // WebSocket 전송 실패 시 OutBox에서 FAILED로 업데이트
+                        messageRepository.handleMessageFailure(messageId)
                     }
                 }
-
             } catch (e: Exception) {
                 Log.e("ViewModel", "Failed to send message", e)
                 _eventFlow.emit(ChatEvent.Error("메시지 전송 실패: ${e.message}"))
@@ -601,7 +605,9 @@ class WebSocketChatViewModel @Inject constructor(
                 val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
                 roomUseCases.editMessageUseCase(
                     messageId = DocumentId(messageId),
-                    newContent = newContent
+                    newContent = newContent,
+                    projectId = projectId,
+                    channelType = if (projectId != null) "PROJECT" else "DM"
                 )
                 Log.d("ViewModel", "Message edited via WebSocket")
             } catch (e: Exception) {
@@ -623,7 +629,9 @@ class WebSocketChatViewModel @Inject constructor(
             try {
                 val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
                 roomUseCases.deleteMessageUseCase(
-                    messageId = DocumentId(messageId)
+                    messageId = DocumentId(messageId),
+                    projectId = projectId,
+                    channelType = if (projectId != null) "PROJECT" else "DM"
                 )
                 Log.d("ViewModel", "Message deleted via WebSocket")
             } catch (e: Exception) {
@@ -1028,7 +1036,7 @@ class WebSocketChatViewModel @Inject constructor(
     /**
      * Convert domain Message to ChatMessageUiModel
      */
-    private fun convertDomainMessageToUiModel(message: Message): ChatMessageUiModel {
+    private suspend fun convertDomainMessageToUiModel(message: Message): ChatMessageUiModel {
         val userId = message.senderId.value
         val userProfileService = services.userProfileService
 
@@ -1050,13 +1058,38 @@ class WebSocketChatViewModel @Inject constructor(
             }
         }
 
-        // 전송 상태는 MessageLocal의 syncStatus에서 관리되므로 기본적으로 완료된 것으로 처리
-        val isSending = false // Message 도메인 모델에서 deliveryStatus 제거됨
-        val sendFailed = false // Message 도메인 모델에서 deliveryStatus 제거됨
-        val deliveryState = MessageDeliveryState.Sent // 기본적으로 완료된 상태로 처리
+        // 전송 상태는 OutBox에서 관리
+        // 성능을 위해 최근 메시지에 대해 휴리스틱 사용
+        var isSending = false
+        var sendFailed = false
+        var canRetry = false
 
-        // 재전송 기능은 MessageLocal의 syncStatus를 통해 관리
-        val canRetry = false // MessageLocal의 syncStatus를 통해 관리
+        // 최근 5초 이내에 내가 보낸 메시지는 전송 중으로 가정
+        // (실제 sync status 업데이트는 ACK/timeout에서 처리)
+        val fiveSecondsAgo = System.currentTimeMillis() - 5000
+        val isVeryRecentMyMessage = message.createdAt.toEpochMilli() > fiveSecondsAgo &&
+                message.senderId.value == currentUserId
+
+        if (isVeryRecentMyMessage) {
+            isSending = true
+            canRetry = false
+        }
+
+        // deliveryState를 조건에 따라 결정
+        // OutBoxStatus로 상태 변환
+        val outBoxStatusResult = messageRepository.getMessageOutBoxStatus(message.id)
+        val outBoxStatus = when (outBoxStatusResult) {
+            is CustomResult.Success -> outBoxStatusResult.data
+            is CustomResult.Failure -> OutBoxStatus.DISPATCHED // 기본값
+            is CustomResult.Initial -> OutBoxStatus.DISPATCHED // 기본값
+            is CustomResult.Loading -> OutBoxStatus.DISPATCHED // 기본값
+            is CustomResult.Progress -> OutBoxStatus.DISPATCHED // 기본값
+        }
+        val deliveryState = when (outBoxStatus) {
+            OutBoxStatus.PENDING -> MessageDeliveryState.Sending
+            OutBoxStatus.DISPATCHED -> MessageDeliveryState.Sent
+            OutBoxStatus.FAILED -> MessageDeliveryState.Failed("전송 실패")
+        }
 
         // 메시지 내용 처리 - 타입에 따라 다르게 처리
         val displayMessage = when (message.messageType) {
@@ -1066,25 +1099,20 @@ class WebSocketChatViewModel @Inject constructor(
                 convertInternalToDisplayFormat(textContent)
             }
 
-            MessageType.SYSTEM_DATE -> {
-                // 날짜 시스템 메시지: payload에서 displayText 추출
-                message.payload.getValue("displayText") ?: "날짜"
-            }
-
-            MessageType.SYSTEM_CHAT_START -> {
-                // 채팅 시작 시스템 메시지: payload에서 welcomeText 추출
-                message.payload.getValue("welcomeText") ?: "채팅이 시작되었습니다"
-            }
-
             MessageType.SYSTEM_PROJECT_JOIN -> {
                 // 프로젝트 참여 시스템 메시지: payload에서 projectName 추출
                 val projectName = message.payload.getValue("projectName") ?: "프로젝트"
                 "$projectName 프로젝트에 초대되었습니다"
             }
 
-            else -> {
-                // 기타 타입: 기본 처리
-                message.payload.getTextContent() ?: "알 수 없는 메시지"
+            MessageType.SYSTEM_DATE -> {
+                // 날짜 시스템 메시지: payload에서 displayText 추출
+                message.payload.getValue("displayText") ?: "새로운 날짜"
+            }
+
+            MessageType.SYSTEM_CHAT_START -> {
+                // 채팅 시작 시스템 메시지: payload에서 welcomeText 추출
+                message.payload.getValue("welcomeText") ?: "채팅이 시작되었습니다"
             }
         }
 
@@ -1306,9 +1334,28 @@ class WebSocketChatViewModel @Inject constructor(
         // The Room database update will automatically flow through Paging3 to UI
         viewModelScope.launch {
             try {
-                // TODO: Update message status in Room database
-                // messageRepository.updateMessageStatus(messageId, sent = true, failed = false)
-                Log.d("ViewModel", "Timeout: Message marked as sent in database: $messageId")
+                // OutBox에서 메시지 상태를 FAILED로 업데이트
+                val result = messageRepository.handleMessageFailure(messageId)
+                when (result) {
+                    is CustomResult.Success -> {
+                        Log.d(
+                            "ViewModel",
+                            "Timeout: Message marked as FAILED in OutBox: $messageId"
+                        )
+                        invalidatePagingSource() // Refresh UI to show failed status
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e(
+                            "ViewModel",
+                            "Failed to update timeout status: ${result.error.message}"
+                        )
+                    }
+
+                    else -> {
+                        Log.w("ViewModel", "Unexpected result from timeout status update")
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("ViewModel", "Failed to update message status in database", e)
             }
@@ -1338,7 +1385,9 @@ class WebSocketChatViewModel @Inject constructor(
                     senderId = UserId(currentUserId!!),
                     content = "[Retry Message]", // TODO: Get original content from Room DB
                     messageId = DocumentId(messageId), // Use same ID for retry
-                    replyToMessageId = null // TODO: Get original reply info from Room DB if needed
+                    replyToMessageId = null, // TODO: Get original reply info from Room DB if needed
+                    projectId = projectId,
+                    channelType = if (projectId != null) "PROJECT" else "DM"
                 )
 
                 Log.d("ViewModel", "Message retry sent via WebSocket: $messageId")

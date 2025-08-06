@@ -70,8 +70,8 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             isDeleted = domain.isDeleted.value,
             mentions = "[]", // JSON 직렬화는 별도 처리
             createdAt = domain.createdAt.toEpochMilli(),
-            updatedAt = domain.updatedAt.toEpochMilli(),
-            syncStatus = ""
+            updatedAt = domain.updatedAt.toEpochMilli()
+            // syncStatus 필드 제거
         )
     }
 

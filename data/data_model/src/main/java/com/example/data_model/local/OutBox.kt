@@ -7,8 +7,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.sync.OutBoxRecord
-
 
 @Entity(tableName = "outboxRecord")
 data class OutboxRecordEntity(
@@ -35,7 +35,7 @@ data class OutboxRecordEntity(
     val attempt: Int,
 
     @ColumnInfo(name = "status")
-    val status: String,
+    val status: String, // OutBoxStatus.value
 )
 
 
@@ -58,7 +58,49 @@ interface OutboxDao {
     suspend fun markDispatched(ids: List<String>)
 
     @Query("UPDATE outboxRecord SET attempt = attempt + 1, status='FAILED' WHERE id IN (:ids)")
-    suspend fun markFailed(ids: List<String>)
+    suspend fun markFailed(ids: List<String>): Int
+
+    // ================================
+    // Message 전용 ACK 처리
+    // ================================
+
+    /**
+     * Message ACK 수신 시 상태를 DISPATCHED로 변경
+     */
+    @Query("UPDATE outboxRecord SET status='DISPATCHED' WHERE aggregateId = :messageId AND stream = 'messages'")
+    suspend fun markMessageDispatched(messageId: String): Int
+
+    /**
+     * 특정 메시지의 OutBox 상태 조회
+     */
+    @Query("SELECT * FROM outboxRecord WHERE aggregateId = :messageId AND stream = 'messages' LIMIT 1")
+    suspend fun findByMessageId(messageId: String): OutboxRecordEntity?
+
+    /**
+     * 특정 채널의 PENDING 상태 메시지들 조회
+     */
+    @Query(
+        """
+        SELECT * FROM outboxRecord 
+        WHERE stream = 'messages' AND status = 'PENDING' 
+        AND payload LIKE '%' || :channelId || '%'
+        ORDER BY createdAt ASC
+    """
+    )
+    suspend fun getPendingMessagesByChannel(channelId: String): List<OutboxRecordEntity>
+
+    /**
+     * 특정 채널의 DISPATCHED 상태 메시지들 조회
+     */
+    @Query(
+        """
+        SELECT * FROM outboxRecord 
+        WHERE stream = 'messages' AND status = 'DISPATCHED' 
+        AND payload LIKE '%' || :channelId || '%'
+        ORDER BY createdAt ASC
+    """
+    )
+    suspend fun getDispatchedMessagesByChannel(channelId: String): List<OutboxRecordEntity>
 
     // ================================
     // 캐시 관리 관련 쿼리
@@ -87,7 +129,32 @@ interface OutboxDao {
      */
     @Query("DELETE FROM outboxRecord")
     suspend fun deleteAll(): Int
+
+    // ================================
+    // 디버그 및 통계 쿼리
+    // ================================
+
+    /**
+     * 특정 채널의 OutBox 상태별 개수 조회
+     */
+    @Query(
+        """
+        SELECT status, COUNT(*) as count 
+        FROM outboxRecord 
+        WHERE stream = 'messages' AND payload LIKE '%' || :channelId || '%'
+        GROUP BY status
+    """
+    )
+    suspend fun getOutBoxStatusCountsByChannel(channelId: String): List<OutBoxStatusCount>
 }
+
+/**
+ * OutBox 상태별 개수 통계
+ */
+data class OutBoxStatusCount(
+    val status: String,
+    val count: Int
+)
 
 fun OutboxRecordEntity.toModel(): OutBoxRecord {
     return OutBoxRecord(
@@ -101,7 +168,7 @@ fun OutboxRecordEntity.toModel(): OutBoxRecord {
     )
 }
 
-fun OutBoxRecord.toEntity(status: String = "PENDING"): OutboxRecordEntity {
+fun OutBoxRecord.toEntity(status: OutBoxStatus = OutBoxStatus.PENDING): OutboxRecordEntity {
     return OutboxRecordEntity(
         id = id,
         stream = stream,
@@ -110,6 +177,6 @@ fun OutBoxRecord.toEntity(status: String = "PENDING"): OutboxRecordEntity {
         payload = payload,
         createdAt = createdAt,
         attempt = attempt,
-        status = status
+        status = status.value
     )
 }

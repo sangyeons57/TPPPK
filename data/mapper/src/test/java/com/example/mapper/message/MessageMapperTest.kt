@@ -38,7 +38,7 @@ class MessageMapperTest {
             mentions = "[]",
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis(),
-            syncStatus = ""
+            outBoxStatus = ""
         )
 
         // When

@@ -1,5 +1,6 @@
 package com.example.data_repository.base
 
+import android.util.Log
 import androidx.paging.PagingSource
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
@@ -13,8 +14,8 @@ import com.example.data_model.local.SyncMetadataDao
 import com.example.data_model.local.toEntity
 import com.example.data_model.remote.MessageDTO
 import com.example.data_repository.DefaultRepositoryImpl
+import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
-import com.example.domain.model.enum.SyncStatus
 import com.example.domain.model.sync.OutBoxRecord
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
@@ -27,7 +28,6 @@ import com.example.mapper.DtoMapper
 import com.example.mapper.message.MessageMapper
 import kotlinx.serialization.json.Json
 import java.time.Instant
-import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
 
@@ -48,65 +48,41 @@ class MessageRepositoryImpl @Inject constructor(
         channelId: String,
         content: String
     ): String {
-        val id = UUID.randomUUID().toString()
+        val messageId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
 
         db.withTransaction {
-            messageDao.upsert(
-                MessageEntity(
-                    id = id,
-                    channelId = channelId,
-                    messageType = "TEXT",
-                    payload = """{"content": "$content"}""",
-                    updatedAt = now,
-                    createdAt = now,
-                    syncStatus = SyncStatus.PENDING.name,
-                    senderId = AuthUtil.getCurrentUserId(),
-                )
+            // 1. 메시지를 Room DB에 저장 (syncStatus 없음)
+            val message = Message.fromDataSource(
+                id = DocumentId(messageId),
+                channelId = ChannelId(channelId),
+                senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
+                messageType = MessageType.TEXT,
+                payload = MessagePayload(content),
+                replyToMessageId = null,
+                isDeleted = MessageIsDeleted(false),
+                mentions = emptyList(),
+                createdAt = Instant.ofEpochMilli(now),
+                updatedAt = Instant.ofEpochMilli(now)
             )
 
-            val payload = json.encodeToString(
-                MessageDTO(
-                    id = id,
-                    channelId = channelId,
-                    senderId = AuthUtil.getCurrentUserId(),
-                    messageType = "TEXT",
-                    payload = """{"content": "$content"}""",
-                    updatedAt = Date(now),
-                    createdAt = Date(now),
-                )
+            val entity = entityMapper.domainToEntity(message)
+            messageDao.upsert(entity)
+
+            // 2. OutBox에 전송 대기 레코드 생성
+            val outboxRecord = OutBoxRecord(
+                id = UUID.randomUUID().toString(),
+                stream = "messages",
+                aggregateId = messageId,
+                op = OutBoxRecord.Op.UPSERT,
+                payload = """{"channelId":"$channelId","content":"$content"}""",
+                createdAt = now
             )
 
-            outboxDao.enqueue(
-                OutBoxRecord(
-                    id = UUID.randomUUID().toString(),
-                    stream = Message.COLLECTION_NAME,
-                    aggregateId = id,
-                    op = OutBoxRecord.Op.UPSERT,
-                    payload = payload,
-                    createdAt = now,
-                ).toEntity()
-            )
+            outboxDao.enqueue(outboxRecord.toEntity(OutBoxStatus.PENDING))
         }
 
-        // ✅ Room 저장 직후 전체 메시지 로그 출력
-        val allMessages = messageDao.getRecentMessagesForDebug(channelId, 20)
-        val totalCount = messageDao.getTotalMessageCount()
-        val channelCount = messageDao.getMessageCountByChannel(channelId)
-
-        android.util.Log.d(
-            "RoomDB",
-            "💾 Room 저장 후 상태 - 전체: ${totalCount}개, 채널(${channelId}): ${channelCount}개"
-        )
-        android.util.Log.d("RoomDB", "💾 Room 저장 후 최근 메시지 (채널: $channelId): ${allMessages.size}개")
-        allMessages.forEach { entity ->
-            android.util.Log.d(
-                "RoomDB",
-                "  - id: ${entity.id}, payload: ${entity.payload.take(30)}, syncStatus: ${entity.syncStatus}"
-            )
-        }
-
-        return id
+        return messageId
     }
 
     override suspend fun deleteMessage(id: String) {
@@ -155,33 +131,33 @@ class MessageRepositoryImpl @Inject constructor(
 
                 // 채널ID 유효성 검사 - null이거나 빈 문자열이면 에러 반환
                 if (channelId.isNullOrBlank()) {
-                    android.util.Log.e("PagingSource", "❌ 채널ID가 null이거나 빈 문자열입니다")
+                    Log.e("PagingSource", "❌ 채널ID가 null이거나 빈 문자열입니다")
                     return LoadResult.Error(IllegalStateException("채널ID는 필수입니다"))
                 }
 
                 // 디버그 모드에서만 로깅 (성능 최적화)
-                if (android.util.Log.isLoggable("PagingSource", android.util.Log.DEBUG)) {
-                    android.util.Log.d(
+                if (Log.isLoggable("PagingSource", Log.DEBUG)) {
+                    Log.d(
                         "PagingSource",
                         "🔄 PagingSource.load() - 채널: $channelId, 키: $key, 크기: $limit"
                     )
                 }
 
-                // 기존 DAO 메서드 활용 - 최신 메시지부터 시간 역순으로 로딩
+                // 채팅 앱 표준 방향: 최신 메시지가 아래, 과거 메시지가 위
                 val entities = when (params) {
                     is LoadParams.Refresh -> {
-                        // 초기 로드: 현재 시간 이전의 최신 메시지들
+                        // 초기 로드: 현재 시간 이전의 최신 메시지들 (최근 순)
                         messageDao.getMessagesBefore(channelId, key, limit)
                     }
 
                     is LoadParams.Prepend -> {
-                        // 위로 스크롤: 더 최신 메시지들
-                        messageDao.getMessagesAfter(channelId, key, limit)
+                        // 위로 스크롤: 더 과거 메시지들 로딩
+                        messageDao.getMessagesBefore(channelId, key, limit)
                     }
 
                     is LoadParams.Append -> {
-                        // 아래로 스크롤: 더 과거 메시지들
-                        messageDao.getMessagesBefore(channelId, key, limit)
+                        // 아래로 스크롤: 더 최신 메시지들 로딩  
+                        messageDao.getMessagesAfter(channelId, key, limit)
                     }
                 }
 
@@ -190,17 +166,19 @@ class MessageRepositoryImpl @Inject constructor(
                     messageMapper.entityToDomain(entity)
                 }
 
-                // 다음/이전 키 계산
-                val nextKey = entities.lastOrNull()?.createdAt
-                val prevKey = entities.firstOrNull()?.createdAt
+                // 키 계산 (DESC 정렬이므로 first=최신, last=최과거)
+                // prevKey: 더 과거 메시지를 위한 키 (prepend용)
+                // nextKey: 더 최신 메시지를 위한 키 (append용)  
+                val oldestTimestamp = entities.lastOrNull()?.createdAt  // 가장 과거 메시지
+                val newestTimestamp = entities.firstOrNull()?.createdAt // 가장 최신 메시지
 
                 LoadResult.Page(
                     data = messages,
-                    prevKey = if (params is LoadParams.Refresh || params is LoadParams.Append) prevKey else null,
-                    nextKey = if (messages.isEmpty()) null else nextKey
+                    prevKey = if (entities.isNotEmpty() && (params is LoadParams.Refresh || params is LoadParams.Append)) oldestTimestamp else null,
+                    nextKey = if (entities.isNotEmpty() && (params is LoadParams.Refresh || params is LoadParams.Prepend)) newestTimestamp else null
                 )
             } catch (e: Exception) {
-                android.util.Log.e("PagingSource", "❌ PagingSource.load() 실패", e)
+                Log.e("PagingSource", "❌ PagingSource.load() 실패", e)
                 LoadResult.Error(e)
             }
         }
@@ -266,13 +244,69 @@ class MessageRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateSyncStatus(
-        messageId: DocumentId,
-        syncStatus: SyncStatus
-    ): CustomResult<Unit, Exception> {
+    // ================================
+    // OutBox 기반 동기화 상태 관리
+    // ================================
+
+    /**
+     * OutBox 상태를 기반으로 메시지의 동기화 상태 조회
+     */
+    override suspend fun getMessageOutBoxStatus(messageId: DocumentId): CustomResult<OutBoxStatus, Exception> {
         return try {
-            messageDao.updateSyncStatus(messageId.value, syncStatus.name)
+            val outboxRecord = outboxDao.findByMessageId(messageId.value)
+            val outBoxStatus = OutBoxStatus.fromString(outboxRecord?.status)
+            CustomResult.Success(outBoxStatus)
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
+    }
+
+    /**
+     * 메시지 ACK 처리 (WebSocket ACK 수신 시)
+     */
+    override suspend fun handleMessageAck(messageId: String): CustomResult<Unit, Exception> {
+        return try {
+            val updatedCount = outboxDao.markMessageDispatched(messageId)
+            if (updatedCount > 0) {
+                Log.d("MessageRepository", "Message ACK processed: $messageId")
+            }
             CustomResult.Success(Unit)
+        } catch (e: Exception) {
+            Log.e("MessageRepository", "Failed to handle message ACK: $messageId", e)
+            CustomResult.Failure(e)
+        }
+    }
+
+    /**
+     * 메시지 실패 처리 (WebSocket FAILED 수신 시)
+     */
+    override suspend fun handleMessageFailure(messageId: String): CustomResult<Unit, Exception> {
+        return try {
+            val updatedCount = outboxDao.markFailed(listOf(messageId))
+            if (updatedCount > 0) {
+                Log.d("MessageRepository", "Message failure processed: $messageId")
+            }
+            CustomResult.Success(Unit)
+        } catch (e: Exception) {
+            Log.e("MessageRepository", "Failed to handle message failure: $messageId", e)
+            CustomResult.Failure(e)
+        }
+    }
+
+    /**
+     * 특정 채널의 동기화 상태별 메시지 개수 조회
+     */
+    override suspend fun getChannelOutBoxStatusCounts(channelId: String): CustomResult<Map<OutBoxStatus, Int>, Exception> {
+        return try {
+            val statusCounts = outboxDao.getOutBoxStatusCountsByChannel(channelId)
+            val result = mutableMapOf<OutBoxStatus, Int>()
+
+            statusCounts.forEach { statusCount ->
+                val outBoxStatus = OutBoxStatus.fromString(statusCount.status)
+                result[outBoxStatus] = statusCount.count
+            }
+
+            CustomResult.Success(result)
         } catch (e: Exception) {
             CustomResult.Failure(e)
         }
@@ -294,15 +328,15 @@ class MessageRepositoryImpl @Inject constructor(
                 // 3. messages 스트림의 동기화 메타데이터 리셋 (처음부터 다시 동기화)
                 val resetSyncCount = syncMetadataDao.resetCursor("messages")
 
-                android.util.Log.d("MessageRepository", "=== 로컬 캐시 완전 클리어 완료 ===")
-                android.util.Log.d("MessageRepository", "채널: $channelId")
-                android.util.Log.d("MessageRepository", "삭제된 메시지: $deletedMessagesCount 개")
-                android.util.Log.d("MessageRepository", "삭제된 OutBox 레코드: $deletedOutboxCount 개")
-                android.util.Log.d("MessageRepository", "리셋된 동기화 커서: $resetSyncCount 개")
+                Log.d("MessageRepository", "=== 로컬 캐시 완전 클리어 완료 ===")
+                Log.d("MessageRepository", "채널: $channelId")
+                Log.d("MessageRepository", "삭제된 메시지: $deletedMessagesCount 개")
+                Log.d("MessageRepository", "삭제된 OutBox 레코드: $deletedOutboxCount 개")
+                Log.d("MessageRepository", "리셋된 동기화 커서: $resetSyncCount 개")
             }
             CustomResult.Success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("MessageRepository", "로컬 캐시 클리어 실패", e)
+            Log.e("MessageRepository", "로컬 캐시 클리어 실패", e)
             CustomResult.Failure(e)
         }
     }
@@ -319,14 +353,14 @@ class MessageRepositoryImpl @Inject constructor(
                 // 3. 모든 동기화 메타데이터 삭제
                 val deletedSyncCount = syncMetadataDao.deleteAll()
 
-                android.util.Log.d("MessageRepository", "=== 전체 캐시 완전 클리어 완료 ===")
-                android.util.Log.d("MessageRepository", "삭제된 메시지: $deletedMessagesCount 개")
-                android.util.Log.d("MessageRepository", "삭제된 OutBox 레코드: $deletedOutboxCount 개")
-                android.util.Log.d("MessageRepository", "삭제된 동기화 메타데이터: $deletedSyncCount 개")
+                Log.d("MessageRepository", "=== 전체 캐시 완전 클리어 완료 ===")
+                Log.d("MessageRepository", "삭제된 메시지: $deletedMessagesCount 개")
+                Log.d("MessageRepository", "삭제된 OutBox 레코드: $deletedOutboxCount 개")
+                Log.d("MessageRepository", "삭제된 동기화 메타데이터: $deletedSyncCount 개")
             }
             CustomResult.Success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("MessageRepository", "전체 캐시 클리어 실패", e)
+            Log.e("MessageRepository", "전체 캐시 클리어 실패", e)
             CustomResult.Failure(e)
         }
     }
@@ -338,13 +372,13 @@ class MessageRepositoryImpl @Inject constructor(
         return try {
             // channelId 유효성 검사
             if (channelId.isBlank()) {
-                android.util.Log.e("MessageRepository", "ChannelId cannot be blank")
+                Log.e("MessageRepository", "ChannelId cannot be blank")
                 return CustomResult.Failure(
                     IllegalArgumentException("ChannelId cannot be blank")
                 )
             }
 
-            android.util.Log.d(
+            Log.d(
                 "MessageRepository",
                 "📱 Room DB에서 최신 메시지 조회 - 채널: $channelId, 제한: $limit"
             )
@@ -354,14 +388,14 @@ class MessageRepositoryImpl @Inject constructor(
             val entities = messageDao.getMessagesBefore(channelId, currentTime, limit)
             val messages = entities.map { entity -> convertEntityToMessage(entity) }
 
-            android.util.Log.d(
+            Log.d(
                 "MessageRepository",
                 "✅ Room DB에서 ${messages.size}개 메시지 조회 완료 (채널: $channelId)"
             )
 
             CustomResult.Success(messages)
         } catch (e: Exception) {
-            android.util.Log.e(
+            Log.e(
                 "MessageRepository",
                 "❌ Room DB에서 최신 메시지 조회 실패 - 채널: $channelId",
                 e

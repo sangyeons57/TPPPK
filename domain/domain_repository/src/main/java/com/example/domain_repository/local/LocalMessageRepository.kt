@@ -2,8 +2,8 @@ package com.example.domain_repository.local
 
 import androidx.paging.PagingSource
 import com.example.core_common.result.CustomResult
+import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
-import com.example.domain.model.enum.SyncStatus
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
 
@@ -85,10 +85,10 @@ interface LocalMessageRepository : BaseLocalRepository<Message> {
     
     /**
      * 특정 동기화 상태의 메시지들 조회
-     * @param syncStatus 동기화 상태
+     * @param outBoxStatus 동기화 상태
      * @return 해당 상태의 메시지 목록
      */
-    suspend fun getMessagesBySyncStatus(syncStatus: SyncStatus): CustomResult<List<Message>, Exception>
+    suspend fun getMessagesByOutBoxStatus(outBoxStatus: OutBoxStatus): CustomResult<List<Message>, Exception>
     
     /**
      * 동기화가 필요한 메시지들 조회
@@ -112,14 +112,14 @@ interface LocalMessageRepository : BaseLocalRepository<Message> {
     /**
      * Message의 동기화 상태 업데이트
      * @param messageId 메시지 ID
-     * @param syncStatus 새로운 동기화 상태
+     * @param outBoxStatus 새로운 동기화 상태
      * @param serverVersion 서버 버전 (선택사항)
      * @param serverUpdatedAt 서버 업데이트 시간 (선택사항)
      * @return 성공/실패 결과
      */
-    suspend fun updateSyncStatus(
+    suspend fun updateOutBoxStatus(
         messageId: DocumentId,
-        syncStatus: SyncStatus,
+        outBoxStatus: OutBoxStatus,
         serverVersion: Long? = null,
         serverUpdatedAt: Long? = null
     ): CustomResult<Unit, Exception>
@@ -160,12 +160,12 @@ interface LocalMessageRepository : BaseLocalRepository<Message> {
     /**
      * 여러 메시지들의 동기화 상태를 일괄 업데이트
      * @param messageIds 업데이트할 메시지 ID 목록
-     * @param newSyncStatus 새로운 동기화 상태
+     * @param newOutBoxStatus 새로운 동기화 상태
      * @return 업데이트된 메시지 개수
      */
-    suspend fun updateSyncStatusByIds(
-        messageIds: List<DocumentId>, 
-        newSyncStatus: SyncStatus
+    suspend fun updateOutBoxStatusByIds(
+        messageIds: List<DocumentId>,
+        newOutBoxStatus: OutBoxStatus
     ): CustomResult<Int, Exception>
 
     // ================================
@@ -193,6 +193,6 @@ interface LocalMessageRepository : BaseLocalRepository<Message> {
      * 동기화 상태별 메시지 통계 조회
      * @return 상태별 메시지 개수 통계
      */
-    suspend fun getSyncStatusStatistics(): CustomResult<Map<SyncStatus, Int>, Exception>
+    suspend fun getOutBoxStatusStatistics(): CustomResult<Map<OutBoxStatus, Int>, Exception>
 
 }

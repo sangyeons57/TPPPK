@@ -4,7 +4,6 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
-import com.example.domain.model.enum.SyncStatus
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
@@ -160,7 +159,7 @@ class WebSocketMessageService @Inject constructor(
             }
             .launchIn(serviceScope)
 
-        // 3️⃣ NEW: ACK 이벤트 → Room DB 메시지 상태 업데이트
+        // 3️⃣ NEW: ACK 이벤트 → OutBox 상태 업데이트
         webSocketEventFlow.domainEvents
             .filterIsInstance<WebSocketDomainEvent.MessageAck>()
             .onEach { event ->
@@ -169,16 +168,30 @@ class WebSocketMessageService @Inject constructor(
 
                     when (event.ackType) {
                         WebSocketMessage.TYPE_MESSAGE_ACK -> {
-                            // 메시지 전송 성공 확인 - 메시지 상태를 SUCCESS로 업데이트
-                            val existingMessage =
-                                messageRepository.findById(DocumentId(event.messageId))
-                            if (existingMessage is CustomResult.Success) {
-                                // 동기화 상태를 SYNCED로 업데이트
-                                messageRepository.updateSyncStatus(
-                                    DocumentId(event.messageId),
-                                    SyncStatus.SYNCED
-                                )
-                                Log.d(TAG, "메시지 전송 ACK 처리 완료: ${event.messageId}")
+                            // OutBox에서 메시지 상태를 ACKED로 업데이트
+                            val result = messageRepository.handleMessageAck(event.messageId)
+
+                            when (result) {
+                                is CustomResult.Success -> {
+                                    Log.d(
+                                        TAG,
+                                        "메시지 ACK 처리 완료 (OutBox DISPATCHED): ${event.messageId}"
+                                    )
+
+                                    // Paging3 새로고침 이벤트 발송 (해당 채널만)
+                                    event.roomId?.let { channelId ->
+                                        _messageRefreshEvents.emit(channelId)
+                                        Log.d(TAG, "Paging3 새로고침 이벤트 발송: $channelId")
+                                    }
+                                }
+
+                                is CustomResult.Failure -> {
+                                    Log.e(TAG, "메시지 ACK 처리 실패: ${event.messageId}", result.error)
+                                }
+
+                                else -> {
+                                    Log.w(TAG, "메시지 ACK 처리 결과 알 수 없음: ${event.messageId}")
+                                }
                             }
                         }
 
@@ -208,16 +221,20 @@ class WebSocketMessageService @Inject constructor(
 
                     when (event.failureType) {
                         WebSocketMessage.TYPE_MESSAGE_FAILED -> {
-                            // 메시지 전송 실패 - 메시지 상태를 FAILED로 업데이트
-                            val existingMessage =
-                                messageRepository.findById(DocumentId(event.messageId))
-                            if (existingMessage is CustomResult.Success) {
-                                // 동기화 상태를 FAILED로 업데이트
-                                messageRepository.updateSyncStatus(
-                                    DocumentId(event.messageId),
-                                    SyncStatus.FAILED
-                                )
-                                Log.e(TAG, "메시지 전송 실패 처리 완료: ${event.messageId}")
+                            // 메시지 전송 실패 - OutBox에서 FAILED로 업데이트
+                            val result = messageRepository.handleMessageFailure(event.messageId)
+                            when (result) {
+                                is CustomResult.Success -> {
+                                    Log.e(TAG, "메시지 전송 실패 처리 완료 (OutBox): ${event.messageId}")
+                                }
+
+                                is CustomResult.Failure -> {
+                                    Log.e(TAG, "메시지 실패 처리 실패: ${event.messageId}", result.error)
+                                }
+
+                                else -> {
+                                    Log.w(TAG, "메시지 실패 처리 결과 알 수 없음: ${event.messageId}")
+                                }
                             }
                         }
 
@@ -573,40 +590,18 @@ class WebSocketMessageService @Inject constructor(
         Log.i(TAG, "메시지 전송 시도: messageId=${messageId.value}, roomId=$roomId")
 
         try {
-            // 1️⃣ 먼저 Room DB에 임시 메시지 저장 (PENDING 상태)
-            val tempMessage = Message.create(
-                id = messageId,
-                senderId = senderId,
-                messageType = MessageType.TEXT,
-                payload = MessagePayload.forText(content),
-                replyToMessageId = replyToMessageId,
-                mentions = emptyList(),
-                channelId = ChannelId(roomId) // ✅ roomId가 실제로는 channelId
-            )
-
-            // Room DB에 저장
-            val saveResult = messageRepository.save(tempMessage)
-            when (saveResult) {
-                is CustomResult.Success -> {
-                    Log.d(TAG, "임시 메시지 Room DB 저장 성공: ${messageId.value}")
-                }
-
-                is CustomResult.Failure -> {
-                    Log.e(TAG, "임시 메시지 Room DB 저장 실패: ${messageId.value}", saveResult.error)
-                    return Result.failure(saveResult.error)
-                }
-
-                else -> {
-                    Log.d(TAG, "임시 메시지 Room DB 저장 진행 중: ${messageId.value}")
-                }
-            }
+            // 1️⃣ Room DB 저장은 ViewModel에서 이미 처리되므로 여기서는 스킵
+            // ViewModel이 SENDING 상태로 이미 저장했음
+            Log.d(TAG, "Room DB 저장은 ViewModel에서 처리됨, WebSocket 전송만 진행: ${messageId.value}")
 
             // 2️⃣ WebSocket으로 메시지 전송
             val message = WebSocketMessage(
                 type = WebSocketMessage.TYPE_MESSAGE,
                 roomId = roomId,
                 senderId = senderId.value,
-                content = content,
+                content = content, // Backward compatibility
+                messageType = MessageType.TEXT.name,
+                payload = mapOf("content" to content), // New payload format
                 messageId = messageId.value,
                 replyToMessageId = replyToMessageId?.value,
                 timestamp = Instant.now().epochSecond.toDouble(),
@@ -646,7 +641,9 @@ class WebSocketMessageService @Inject constructor(
             type = WebSocketMessage.TYPE_EDIT_MESSAGE,
             roomId = roomId,
             messageId = messageId.value,
-            content = newContent,
+            content = newContent, // Backward compatibility
+            messageType = MessageType.TEXT.name,
+            payload = mapOf("content" to newContent), // New payload format
             timestamp = Instant.now().epochSecond.toDouble(),
             projectId = projectId,
             channelType = channelType
@@ -677,6 +674,8 @@ class WebSocketMessageService @Inject constructor(
             type = WebSocketMessage.TYPE_DELETE_MESSAGE,
             roomId = roomId,
             messageId = messageId.value,
+            messageType = MessageType.TEXT.name,
+            payload = emptyMap(), // Empty payload for delete operation
             timestamp = Instant.now().epochSecond.toDouble(),
             projectId = projectId,
             channelType = channelType

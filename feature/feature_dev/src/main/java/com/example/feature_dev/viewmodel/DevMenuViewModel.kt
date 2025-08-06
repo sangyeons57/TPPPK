@@ -112,8 +112,8 @@ class DevMenuViewModel @Inject constructor(
     val localChatCacheClearResult: StateFlow<String> = _localChatCacheClearResult.asStateFlow()
 
     // 동기화 관련 상태
-    private val _syncStatus = MutableStateFlow("")
-    val syncStatus: StateFlow<String> = _syncStatus.asStateFlow()
+    private val _outBoxStatus = MutableStateFlow("")
+    val outBoxStatus: StateFlow<String> = _outBoxStatus.asStateFlow()
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
@@ -474,7 +474,7 @@ class DevMenuViewModel @Inject constructor(
         viewModelScope.launch {
             // channelId가 비어있으면 동작하지 않음
             if (channelId.isBlank()) {
-                _syncStatus.value = "❌ 채널 ID를 입력해주세요"
+                _outBoxStatus.value = "❌ 채널 ID를 입력해주세요"
                 Log.w("DevMenuViewModel-Sync", "❌ syncIncremental 호출됨 but channelId is blank")
                 return@launch
             }
@@ -483,8 +483,8 @@ class DevMenuViewModel @Inject constructor(
 
             // 스트림명 결정
             val streamName = "messages-$channelId"
-            
-            _syncStatus.value = "🔄 증분 동기화 시작..."
+
+            _outBoxStatus.value = "🔄 증분 동기화 시작..."
 
             Log.d("DevMenuViewModel-Sync", "🔄 Incremental sync started")
             Log.d("DevMenuViewModel-Sync", "   - Channel ID: $channelId")
@@ -494,15 +494,15 @@ class DevMenuViewModel @Inject constructor(
                 val result = syncUseCase(streamName)
                 when (result) {
                     is CustomResult.Success -> {
-                        _syncStatus.value = "✅ 증분 동기화 완료"
+                        _outBoxStatus.value = "✅ 증분 동기화 완료"
                         Log.d("DevMenuViewModel-Sync", "✅ Incremental sync completed successfully")
                     }
                     is CustomResult.Failure -> {
-                        _syncStatus.value = "❌ 증분 동기화 실패: ${result.error.message}"
+                        _outBoxStatus.value = "❌ 증분 동기화 실패: ${result.error.message}"
                         Log.e("DevMenuViewModel-Sync", "❌ Incremental sync failed", result.error)
                     }
                     else -> {
-                        _syncStatus.value = "⚠️ 증분 동기화 결과 알 수 없음"
+                        _outBoxStatus.value = "⚠️ 증분 동기화 결과 알 수 없음"
                         Log.w(
                             "DevMenuViewModel-Sync",
                             "⚠️ Unknown result from incremental sync: $result"
@@ -510,7 +510,7 @@ class DevMenuViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                _syncStatus.value = "❌ 증분 동기화 중 오류 발생: ${e.message}"
+                _outBoxStatus.value = "❌ 증분 동기화 중 오류 발생: ${e.message}"
                 Log.e("DevMenuViewModel-Sync", "❌ Unexpected error during incremental sync", e)
             } finally {
                 _isSyncing.value = false
@@ -526,7 +526,7 @@ class DevMenuViewModel @Inject constructor(
     fun resetAndSync(tableName: String = "messages", channelId: String = TEST_ROOM_ID) {
         viewModelScope.launch {
             _isSyncing.value = true
-            _syncStatus.value = "📱 로컬 캐시 클리어 시작..."
+            _outBoxStatus.value = "📱 로컬 캐시 클리어 시작..."
 
             Log.d(
                 "DevMenuViewModel-Sync",
@@ -535,12 +535,12 @@ class DevMenuViewModel @Inject constructor(
             addMessage("🚀 로컬 캐시 클리어 + 동기화 시작 (채널: $channelId)")
 
             try {
-                _syncStatus.value = "🗑️ 로컬 캐시 삭제 중..."
+                _outBoxStatus.value = "🗑️ 로컬 캐시 삭제 중..."
                 addMessage("🗑️ 로컬 캐시 삭제 중...")
 
                 when (val result = resetAndSyncUseCase(tableName, channelId)) {
                     is CustomResult.Success -> {
-                        _syncStatus.value = "✅ 리셋 및 동기화 완료!"
+                        _outBoxStatus.value = "✅ 리셋 및 동기화 완료!"
                         Log.d("DevMenuViewModel-Sync", "✅ Reset and sync completed successfully")
                         Log.d("DevMenuViewModel-Sync", "   - Table: $tableName")
                         Log.d("DevMenuViewModel-Sync", "   - Channel: $channelId")
@@ -552,7 +552,7 @@ class DevMenuViewModel @Inject constructor(
                     }
 
                     is CustomResult.Failure -> {
-                        _syncStatus.value = "❌ 리셋 및 동기화 실패: ${result.error.message}"
+                        _outBoxStatus.value = "❌ 리셋 및 동기화 실패: ${result.error.message}"
                         Log.e("DevMenuViewModel-Sync", "❌ Reset and sync failed", result.error)
                         Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
                         Log.e("DevMenuViewModel-Sync", "   - Channel: $channelId")
@@ -561,7 +561,7 @@ class DevMenuViewModel @Inject constructor(
                     }
 
                     else -> {
-                        _syncStatus.value = "⚠️ 리셋 및 동기화 결과 알 수 없음"
+                        _outBoxStatus.value = "⚠️ 리셋 및 동기화 결과 알 수 없음"
                         Log.w(
                             "DevMenuViewModel-Sync",
                             "⚠️ Unknown result from reset and sync: $result"
@@ -570,7 +570,7 @@ class DevMenuViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                _syncStatus.value = "❌ 리셋 및 동기화 예외: ${e.message}"
+                _outBoxStatus.value = "❌ 리셋 및 동기화 예외: ${e.message}"
                 Log.e("DevMenuViewModel-Sync", "💥 Exception during reset and sync", e)
                 Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
                 Log.e("DevMenuViewModel-Sync", "   - Channel: $channelId")
@@ -743,7 +743,7 @@ class DevMenuViewModel @Inject constructor(
         viewModelScope.launch {
             _isSyncing.value = true
             _isDbInspecting.value = true
-            _syncStatus.value = "🔄 동기화 전후 DB 상태 비교 중..."
+            _outBoxStatus.value = "🔄 동기화 전후 DB 상태 비교 중..."
 
             try {
                 Log.d("DevMenuViewModel-Sync", "🔍 === SYNC WITH DB COMPARISON START ===")
@@ -755,7 +755,7 @@ class DevMenuViewModel @Inject constructor(
                 roomDatabaseLogger.logTableState("outboxRecord")
 
                 // 동기화 실행
-                _syncStatus.value = "🔄 동기화 실행 중..."
+                _outBoxStatus.value = "🔄 동기화 실행 중..."
                 val streamName = "messages-$channelId"
 
                 when (val result = syncUseCase(streamName)) {
@@ -767,21 +767,21 @@ class DevMenuViewModel @Inject constructor(
                         roomDatabaseLogger.logChannelMessages(channelId, 10)
                         roomDatabaseLogger.logTableState("outboxRecord")
 
-                        _syncStatus.value = "✅ 동기화 및 DB 비교 완료!"
+                        _outBoxStatus.value = "✅ 동기화 및 DB 비교 완료!"
                         _dbInspectionResult.value = "✅ 동기화 전후 상태 비교 완료! 로그 확인"
                         addMessage("✅ 채널 '$channelId' 동기화 및 DB 비교 완료!")
 
                     }
 
                     is CustomResult.Failure -> {
-                        _syncStatus.value = "❌ 동기화 실패: ${result.error.message}"
+                        _outBoxStatus.value = "❌ 동기화 실패: ${result.error.message}"
                         _dbInspectionResult.value = "❌ 동기화 실패: ${result.error.message}"
                         Log.e("DevMenuViewModel-Sync", "❌ Sync failed", result.error)
                         addMessage("❌ 동기화 실패: ${result.error.message}")
                     }
 
                     else -> {
-                        _syncStatus.value = "⚠️ 동기화 결과 불명"
+                        _outBoxStatus.value = "⚠️ 동기화 결과 불명"
                         _dbInspectionResult.value = "⚠️ 동기화 결과 불명"
                         addMessage("⚠️ 동기화 결과 불명")
                     }
@@ -790,7 +790,7 @@ class DevMenuViewModel @Inject constructor(
                 Log.d("DevMenuViewModel-Sync", "🔍 === SYNC WITH DB COMPARISON END ===")
 
             } catch (e: Exception) {
-                _syncStatus.value = "❌ 동기화 비교 실패: ${e.message}"
+                _outBoxStatus.value = "❌ 동기화 비교 실패: ${e.message}"
                 _dbInspectionResult.value = "❌ 동기화 비교 실패: ${e.message}"
                 Log.e("DevMenuViewModel-Sync", "❌ Sync with comparison failed", e)
                 addMessage("❌ 동기화 비교 실패: ${e.message}")

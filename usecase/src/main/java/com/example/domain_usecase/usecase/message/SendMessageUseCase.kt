@@ -1,8 +1,8 @@
 package com.example.domain_usecase.usecase.message
 
 import com.example.core_common.result.CustomResult
+import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
-import com.example.domain.model.enum.SyncStatus
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
@@ -64,14 +64,19 @@ class SendMessageUseCase @Inject constructor(
     }
 
     /**
-     * 메시지 동기화 상태 업데이트
+     * 메시지 동기화 상태 조회 (OutBox 기반)
      */
-    suspend fun updateMessageStatus(
-        messageId: DocumentId,
-        status: SyncStatus
+    suspend fun getMessageOutBoxStatus(messageId: DocumentId): CustomResult<OutBoxStatus, Exception> =
+        messageRepository.getMessageOutBoxStatus(messageId)
+
+    /**
+     * 메시지 ACK 처리 (WebSocket ACK 수신 시)
+     */
+    suspend fun handleMessageAck(
+        messageId: String
     ): CustomResult<Unit, Exception> {
         return try {
-            messageRepository.updateSyncStatus(messageId, status)
+            messageRepository.handleMessageAck(messageId)
         } catch (e: Exception) {
             CustomResult.Failure(e)
         }
