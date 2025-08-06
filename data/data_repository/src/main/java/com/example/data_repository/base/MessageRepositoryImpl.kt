@@ -53,17 +53,14 @@ class MessageRepositoryImpl @Inject constructor(
 
         db.withTransaction {
             // 1. 메시지를 Room DB에 저장 (syncStatus 없음)
-            val message = Message.fromDataSource(
+            val message = Message.create(
                 id = DocumentId(messageId),
-                channelId = ChannelId(channelId),
                 senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
                 messageType = MessageType.TEXT,
-                payload = MessagePayload(content),
+                payload = MessagePayload.forText(content),
                 replyToMessageId = null,
-                isDeleted = MessageIsDeleted(false),
                 mentions = emptyList(),
-                createdAt = Instant.ofEpochMilli(now),
-                updatedAt = Instant.ofEpochMilli(now)
+                channelId = ChannelId(channelId)
             )
 
             val entity = entityMapper.domainToEntity(message)
@@ -183,21 +180,46 @@ class MessageRepositoryImpl @Inject constructor(
             }
         }
 
+        /**
+         * 타임스탬프를 읽기 쉬운 형태로 포맷팅
+         */
+        private fun formatTimestamp(timestamp: Long): String {
+            return try {
+                val dateFormat =
+                    java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.getDefault())
+                dateFormat.format(java.util.Date(timestamp))
+            } catch (e: Exception) {
+                "Invalid"
+            }
+        }
+
         override fun getRefreshKey(state: androidx.paging.PagingState<Long, Message>): Long? {
             return state.anchorPosition?.let { anchorPosition ->
-                // 현재 위치에서 가장 가까운 페이지를 찾아서
-                val anchorPage = state.closestPageToPosition(anchorPosition)
-
-                // 해당 위치의 메시지 타임스탬프를 기준으로 새로고침 키 계산
+                // 현재 위치에서 가장 가까운 메시지를 찾아서
                 val anchorItem = state.closestItemToPosition(anchorPosition)
 
                 if (anchorItem != null) {
                     // 현재 메시지의 타임스탬프를 기준으로 새로고침
-                    anchorItem.createdAt.toEpochMilli()
+                    val refreshKey = anchorItem.createdAt.toEpochMilli()
+                    Log.d(
+                        "PagingSource",
+                        "🔄 getRefreshKey: ${formatTimestamp(refreshKey)} (현재 메시지 기준)"
+                    )
+                    refreshKey
                 } else {
-                    // 아이템이 없으면 페이지의 키 사용
-                    anchorPage?.prevKey ?: anchorPage?.nextKey ?: System.currentTimeMillis()
+                    // 아이템이 없으면 현재 시간 사용 (최신 메시지로 이동)
+                    val currentTime = System.currentTimeMillis()
+                    Log.d(
+                        "PagingSource",
+                        "🔄 getRefreshKey: ${formatTimestamp(currentTime)} (최신 메시지로 이동)"
+                    )
+                    currentTime
                 }
+            } ?: run {
+                // anchorPosition이 없으면 현재 시간 사용
+                val currentTime = System.currentTimeMillis()
+                Log.d("PagingSource", "🔄 getRefreshKey: ${formatTimestamp(currentTime)} (초기 로드)")
+                currentTime
             }
         }
     }
@@ -296,6 +318,16 @@ class MessageRepositoryImpl @Inject constructor(
     /**
      * 특정 채널의 동기화 상태별 메시지 개수 조회
      */
+    override suspend fun findById(messageId: String): Message? {
+        return try {
+            val entity = messageDao.findById(messageId)
+            entity?.let { convertEntityToMessage(it) }
+        } catch (e: Exception) {
+            Log.e("MessageRepository", "Failed to find message by ID: $messageId", e)
+            null
+        }
+    }
+
     override suspend fun getChannelOutBoxStatusCounts(channelId: String): CustomResult<Map<OutBoxStatus, Int>, Exception> {
         return try {
             val statusCounts = outboxDao.getOutBoxStatusCountsByChannel(channelId)

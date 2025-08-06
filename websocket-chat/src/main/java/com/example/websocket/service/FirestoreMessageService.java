@@ -83,7 +83,7 @@ public class FirestoreMessageService {
             String payloadJson;
             if (message.getPayload() != null && !message.getPayload().isEmpty()) {
                 // payload 우선 사용
-                payloadJson = convertStringMapToJson(message.getPayload());
+                payloadJson = convertMapToJson(message.getPayload());
             } else if (message.getContent() != null && !message.getContent().isEmpty()) { 
                 // 백워드 호환성: content를 TEXT payload로 변환
                 Map<String, Object> textPayload = new HashMap<>();
@@ -165,7 +165,7 @@ public class FirestoreMessageService {
             String payloadJson;
             if (message.getPayload() != null && !message.getPayload().isEmpty()) {
                 // payload 우선 사용
-                payloadJson = convertStringMapToJson(message.getPayload());
+                payloadJson = convertMapToJson(message.getPayload());
             } else if (message.getContent() != null && !message.getContent().isEmpty()) {
                 // 백워드 호환성: content를 TEXT payload로 변환
                 Map<String, Object> textPayload = new HashMap<>();

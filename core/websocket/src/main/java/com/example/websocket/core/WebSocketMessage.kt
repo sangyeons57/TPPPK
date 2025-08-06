@@ -1,6 +1,7 @@
 package com.example.websocket.core
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * WebSocket을 통해 송수신되는 메시지의 데이터 클래스
@@ -64,8 +65,10 @@ data class WebSocketMessage(
      * 메시지 페이로드 (옵션)
      *
      * JSON 형태의 메시지 내용 - content 필드를 대체하는 새로운 형식
+     * @Transient: JSON 직렬화에서 제외 (런타임 전용)
      */
-    val payload: Map<String, String>? = null,
+    @Transient
+    val payload: Map<String, Any?>? = null,
 
     /**
      * 메시지 ID (옵션)

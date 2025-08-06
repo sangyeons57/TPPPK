@@ -10,8 +10,6 @@ import com.example.data_datasource.remote.FriendRemoteDataSource
 import com.example.data_datasource.remote.FriendRemoteDataSourceImpl
 import com.example.data_datasource.remote.MemberRemoteDataSource
 import com.example.data_datasource.remote.MemberRemoteDataSourceImpl
-import com.example.data_datasource.remote.MessageAttachmentRemoteDataSource
-import com.example.data_datasource.remote.MessageAttachmentRemoteDataSourceImpl
 import com.example.data_datasource.remote.MessageRemoteDataSource
 import com.example.data_datasource.remote.MessageRemoteDataSourceImpl
 import com.example.data_datasource.remote.PermissionRemoteDataSource
@@ -153,11 +151,6 @@ abstract class DataSourceModule {
         dmWrapperRemoteDataSourceImpl: DMWrapperRemoteDataSourceImpl
     ): DMWrapperRemoteDataSource
 
-    @Binds
-    @Singleton
-    abstract fun bindMessageAttachmentRemoteDataSource(
-        messageAttachmentRemoteDataSource: MessageAttachmentRemoteDataSourceImpl
-    ): MessageAttachmentRemoteDataSource
 
 
     @Binds

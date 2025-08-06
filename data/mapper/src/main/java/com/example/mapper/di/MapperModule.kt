@@ -6,7 +6,6 @@ import com.example.data_model.remote.DMChannelDTO
 import com.example.data_model.remote.DMWrapperDTO
 import com.example.data_model.remote.FriendDTO
 import com.example.data_model.remote.MemberDTO
-import com.example.data_model.remote.MessageAttachmentDTO
 import com.example.data_model.remote.MessageDTO
 import com.example.data_model.remote.PermissionDTO
 import com.example.data_model.remote.ProjectChannelDTO
@@ -24,7 +23,6 @@ import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Friend
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Message
-import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.base.Permission
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectChannel
@@ -42,7 +40,6 @@ import com.example.mapper.dm.DMChannelMapper
 import com.example.mapper.dm.DMWrapperMapper
 import com.example.mapper.friend.FriendMapper
 import com.example.mapper.member.MemberMapper
-import com.example.mapper.message.MessageAttachmentMapper
 import com.example.mapper.message.MessageMapper
 import com.example.mapper.permission.PermissionMapper
 import com.example.mapper.project.ProjectChannelMapper
@@ -134,9 +131,6 @@ object MapperModule {
     @Singleton
     fun provideProjectsWrapperMapper(): ProjectsWrapperMapper = ProjectsWrapperMapper()
 
-    @Provides
-    @Singleton
-    fun provideMessageAttachmentMapper(): MessageAttachmentMapper = MessageAttachmentMapper()
 
     // ================================
     // Generic Mapper Interfaces
@@ -209,10 +203,6 @@ object MapperModule {
     fun provideProjectsWrapperDtoMapper(mapper: ProjectsWrapperMapper): DtoMapper<ProjectsWrapper, ProjectsWrapperDTO> =
         mapper
 
-    @Provides
-    @Singleton
-    fun provideMessageAttachmentDtoMapper(mapper: MessageAttachmentMapper): DtoMapper<MessageAttachment, MessageAttachmentDTO> =
-        mapper
 
     @Provides
     @Singleton

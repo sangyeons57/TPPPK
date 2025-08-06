@@ -6,7 +6,6 @@ import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Friend
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Message
-import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.base.Permission
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectChannel
@@ -25,7 +24,6 @@ import com.example.domain.model.base.User
 enum class EntityType(val collectionName: String) {
     // Core Communication
     MESSAGE(Message.COLLECTION_NAME),
-    MESSAGE_ATTACHMENT(MessageAttachment.COLLECTION_NAME),
     REACTION(Reaction.COLLECTION_NAME),
 
     // User Management
@@ -66,7 +64,6 @@ enum class EntityType(val collectionName: String) {
         inline fun <reified T> fromDomainClass(): EntityType? {
             return when (T::class) {
                 Message::class -> MESSAGE
-                MessageAttachment::class -> MESSAGE_ATTACHMENT
                 Reaction::class -> REACTION
                 User::class -> USER
                 Friend::class -> FRIEND

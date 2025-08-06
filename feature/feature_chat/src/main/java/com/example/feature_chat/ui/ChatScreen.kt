@@ -86,10 +86,12 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.core_ui.components.attachment.AttachmentRenderer
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.SimpleUserProfileImage
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.vo.MentionType
+import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
@@ -445,6 +447,35 @@ fun ChatScreen(
                 queuedMessagesCount = uiState.queuedMessagesCount,
                 onRetryConnection = { viewModel.retryConnection() }
             )
+
+            // 테스트용 Anchor Jump 버튼들 (개발 완료 후 제거 가능)
+            // TODO: 실제 배포 시에는 이 버튼들을 제거하거나 조건부로 숨김
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                TextButton(
+                    onClick = { viewModel.jumpToLatest() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("최신으로", fontSize = 10.sp)
+                }
+
+                TextButton(
+                    onClick = {
+                        // 테스트용: 첫 번째 메시지 ID로 점프 (실제로는 검색이나 알림에서 호출)
+                        if (lazyPagingItems.itemCount > 0) {
+                            val firstMessage = lazyPagingItems[0]
+                            firstMessage?.let { viewModel.jumpToMessage(it.messageId) }
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("첫 메시지로", fontSize = 10.sp)
+                }
+            }
             
             if (uiState.error != null && uiState.error?.contains("WebSocket 구현 예정") == true) {
                 Box(
@@ -467,7 +498,8 @@ fun ChatScreen(
                     listState = listState,
                     onMessageLongClick = viewModel::onMessageLongClick,
                     onUserProfileClick = viewModel::onUserProfileClick,
-                    onRetryMessage = viewModel::retryMessage
+                    onRetryMessage = viewModel::retryMessage,
+                    initialMessageId = viewModel.getInitialMessageId()
                 )
             }
         }
@@ -514,7 +546,8 @@ fun ChatMessagesList(
     listState: LazyListState,
     onMessageLongClick: (ChatMessageUiModel) -> Unit,
     onUserProfileClick: (String) -> Unit,
-    onRetryMessage: (String) -> Unit = { _ -> }
+    onRetryMessage: (String) -> Unit = { _ -> },
+    initialMessageId: String? = null
 ) {
     LazyColumn(
         modifier = modifier
@@ -522,7 +555,8 @@ fun ChatMessagesList(
             .testTag("message_list"),
         state = listState,
         reverseLayout = true,
-        contentPadding = PaddingValues(top = 16.dp, bottom = 8.dp) // 입력창과의 간격 추가
+        contentPadding = PaddingValues(top = 16.dp, bottom = 8.dp), // 입력창과의 간격 추가
+        userScrollEnabled = initialMessageId == null // 특정 메시지로 이동한 경우에만 스크롤 비활성화 (null이면 스크롤 가능, 설정되면 스크롤 비활성화)
     ) {
         // Paging3 loading states
         when (val loadState = lazyPagingItems.loadState.refresh) {
@@ -699,7 +733,35 @@ fun ChatMessageItemComposable(
                         onMentionClick = onMentionClick
                     )
 
-                    if (message.attachmentImageUrls.isNotEmpty()) {
+                    // 첨부파일 렌더링 (새로운 payload 기반 시스템)
+                    val attachments = remember(message.payload) {
+                        try {
+                            val messagePayload = MessagePayload(message.payload)
+                            messagePayload.getAttachments()
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    }
+
+                    if (attachments.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.padding(top = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            attachments.forEach { attachment ->
+                                AttachmentRenderer(
+                                    attachment = attachment,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onAttachmentClick = { clickedAttachment ->
+                                        // TODO: 첨부파일 클릭 처리 (이미지 확대, 파일 다운로드 등)
+                                        val url = clickedAttachment["url"] as? String ?: ""
+                                        Log.d("ChatScreen", "Attachment clicked: $url")
+                                    }
+                                )
+                            }
+                        }
+                    } else if (message.attachmentImageUrls.isNotEmpty()) {
+                        // 폴백: 기존 방식으로 이미지 표시
                         FlowRow(modifier = Modifier.padding(top = 4.dp), maxItemsInEachRow = 3) {
                             message.attachmentImageUrls.forEach { imageUrl ->
                                 AsyncImage(

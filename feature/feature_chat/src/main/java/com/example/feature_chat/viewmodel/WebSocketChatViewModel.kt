@@ -78,6 +78,7 @@ class WebSocketChatViewModel @Inject constructor(
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
     private val projectId: String? = savedStateHandle.get<String>(RouteArgs.PROJECT_ID)
+    private val initialMessageId: String? = savedStateHandle.get<String>("initialMessageId")
 
     // Services are initialized lazily once we determine the channel type
     private val services by lazy {
@@ -117,6 +118,11 @@ class WebSocketChatViewModel @Inject constructor(
     // PagingSource 인스턴스를 추적하기 위한 변수
     private var currentPagingSource: androidx.paging.PagingSource<Long, Message>? =
         null
+
+    // Anchor 관련 상태 관리
+    private var currentAnchor: Long? = null
+    private var isAnchorJumpInProgress = false
+    private var isInitialLoadComplete = false
     
     private val pager = Pager(
         config = PagingConfig(
@@ -149,6 +155,131 @@ class WebSocketChatViewModel @Inject constructor(
         }
         .cachedIn(viewModelScope)
 
+    /**
+     * Anchor Jump 기능들
+     */
+
+    /**
+     * 특정 메시지 ID로 Anchor Jump (해당 메시지를 중심으로 페이징)
+     */
+    fun jumpToMessage(messageId: String) {
+        viewModelScope.launch {
+            try {
+                Log.i("AnchorJump", "🎯 === ANCHOR JUMP TO MESSAGE: $messageId ===")
+
+                // 1. 메시지 ID로 해당 메시지 조회
+                val message = messageRepository.findById(messageId)
+                if (message != null) {
+                    val anchorTimestamp = message.createdAt.toEpochMilli()
+                    jumpToAnchor(anchorTimestamp, "메시지 ID: $messageId")
+                } else {
+                    Log.w("AnchorJump", "⚠️ 메시지를 찾을 수 없음: $messageId")
+                    _eventFlow.emit(ChatEvent.ShowSnackbar("메시지를 찾을 수 없습니다"))
+                }
+            } catch (e: Exception) {
+                Log.e("AnchorJump", "❌ Anchor Jump 실패", e)
+                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지로 이동하는 중 오류가 발생했습니다"))
+            }
+        }
+    }
+
+    /**
+     * 특정 타임스탬프로 Anchor Jump
+     */
+    fun jumpToTimestamp(timestamp: Long, reason: String = "타임스탬프") {
+        viewModelScope.launch {
+            jumpToAnchor(timestamp, reason)
+        }
+    }
+
+    /**
+     * 최신 메시지로 Anchor Jump (채팅방 입장 시 기본 동작)
+     */
+    fun jumpToLatest() {
+        viewModelScope.launch {
+            Log.i("AnchorJump", "🚀 === ANCHOR JUMP TO LATEST ===")
+            jumpToAnchor(System.currentTimeMillis(), "최신 메시지")
+        }
+    }
+
+    /**
+     * 내부 Anchor Jump 구현
+     */
+    private suspend fun jumpToAnchor(anchorTimestamp: Long, reason: String) {
+        if (isAnchorJumpInProgress) {
+            Log.w("AnchorJump", "⚠️ 이미 Anchor Jump가 진행 중입니다")
+            return
+        }
+
+        try {
+            isAnchorJumpInProgress = true
+            currentAnchor = anchorTimestamp
+
+            Log.i("AnchorJump", "🎯 === ANCHOR JUMP START ===")
+            Log.i("AnchorJump", "📍 Anchor: $anchorTimestamp (${formatTimestamp(anchorTimestamp)})")
+            Log.i("AnchorJump", "📝 Reason: $reason")
+            Log.i("AnchorJump", "📊 Channel: $channelId")
+
+            // PagingSource 무효화하여 새로운 anchor로 재시작
+            currentPagingSource?.invalidate()
+
+            Log.i("AnchorJump", "✅ PagingSource 무효화 완료")
+            Log.i("AnchorJump", "🎯 === ANCHOR JUMP END ===")
+
+        } catch (e: Exception) {
+            Log.e("AnchorJump", "❌ Anchor Jump 실패", e)
+            _eventFlow.emit(ChatEvent.ShowSnackbar("이동 중 오류가 발생했습니다"))
+        } finally {
+            isAnchorJumpInProgress = false
+        }
+    }
+
+    /**
+     * 초기 Anchor 설정
+     */
+    private fun initializeAnchor() {
+        viewModelScope.launch {
+            try {
+                Log.i("AnchorInit", "🚀 === INITIAL ANCHOR SETUP ===")
+                Log.i("AnchorInit", "📊 Channel: $channelId")
+                Log.i("AnchorInit", "📝 Initial Message ID: $initialMessageId")
+
+                if (initialMessageId != null) {
+                    // 1. 특정 메시지 ID가 설정된 경우: 해당 메시지를 anchor로 설정
+                    Log.i("AnchorInit", "🎯 특정 메시지로 Anchor 설정")
+                    jumpToMessage(initialMessageId)
+                } else {
+                    // 2. 설정이 없는 경우: 최신 메시지를 anchor로 설정
+                    Log.i("AnchorInit", "📌 최신 메시지로 Anchor 설정")
+                    jumpToLatest()
+                }
+
+                Log.i("AnchorInit", "✅ 초기 Anchor 설정 완료")
+                Log.i("AnchorInit", "🚀 === INITIAL ANCHOR SETUP END ===")
+            } catch (e: Exception) {
+                Log.e("AnchorInit", "❌ 초기 Anchor 설정 실패", e)
+            }
+        }
+    }
+
+    /**
+     * 초기 메시지 ID 반환
+     */
+    fun getInitialMessageId(): String? = initialMessageId
+
+    /**
+     * 타임스탬프를 읽기 쉬운 형태로 포맷팅
+     */
+    private fun formatTimestamp(timestamp: Long): String {
+        return try {
+            val dateFormat =
+                java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.getDefault())
+            dateFormat.format(java.util.Date(timestamp))
+        } catch (e: Exception) {
+            "Invalid"
+        }
+    }
+
     init {
         // Log local cache on entry
         logChannelCacheOnEntry()
@@ -167,6 +298,9 @@ class WebSocketChatViewModel @Inject constructor(
 
         // 5분 주기 동기화 시작
         startPeriodicSync()
+
+        // 초기 Anchor 설정
+        initializeAnchor()
     }
 
     private fun logChannelCacheOnEntry() {

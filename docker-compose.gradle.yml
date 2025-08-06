@@ -23,7 +23,7 @@ services:
   android-gradle:
     build:
       context: .                          # 현재 디렉토리를 빌드 컨텍스트로 사용
-      dockerfile: Dockerfile.gradle.slim  # 최적화된 Multi-stage Dockerfile 사용
+      dockerfile: Dockerfile  # 최적화된 Multi-stage Dockerfile 사용
     image: android-gradle-slim:latest
     container_name: android-gradle-dev
     working_dir: /workspace               # 컨테이너 내 작업 디렉토리

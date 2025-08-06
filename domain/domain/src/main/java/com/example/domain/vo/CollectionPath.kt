@@ -6,7 +6,6 @@ import com.example.domain.model.base.DMWrapper
 import com.example.domain.model.base.Friend
 import com.example.domain.model.base.Member
 import com.example.domain.model.base.Message
-import com.example.domain.model.base.MessageAttachment
 import com.example.domain.model.base.Permission
 import com.example.domain.model.base.Project
 import com.example.domain.model.base.ProjectChannel
@@ -62,11 +61,6 @@ value class CollectionPath(val value: String) {
         fun dmChannelMessage(dmChannelId: String, messageId: String): CollectionPath = 
             CollectionPath("${dmChannelMessages(dmChannelId).value}/$messageId")
         
-        fun dmMessageAttachments(dmChannelId: String, messageId: String): CollectionPath =
-            CollectionPath("${dmChannelMessage(dmChannelId, messageId).value}/${MessageAttachment.COLLECTION_NAME}")
-        fun dmMessageAttachment(dmChannelId: String, messageId: String, attachmentId: String): CollectionPath =
-            CollectionPath("${dmMessageAttachments(dmChannelId, messageId).value}/$attachmentId")
-        
         /* -------------------- Project Paths -------------------- */
         fun project(projectId: String): CollectionPath = 
             CollectionPath("${Project.COLLECTION_NAME}/$projectId")
@@ -106,15 +100,6 @@ value class CollectionPath(val value: String) {
             CollectionPath("${projectChannel(projectId, channelId).value}/${Message.COLLECTION_NAME}")
         fun projectChannelMessage(projectId: String, channelId: String, messageId: String): CollectionPath =
             CollectionPath("${projectChannelMessages(projectId, channelId).value}/$messageId")
-        
-        fun projectMessageAttachments(projectId: String, channelId: String, messageId: String): CollectionPath =
-            CollectionPath("${projectChannelMessage(projectId, channelId, messageId).value}/${MessageAttachment.COLLECTION_NAME}")
-        fun projectMessageAttachment(
-            projectId: String,
-            channelId: String,
-            messageId: String,
-            attachmentId: String
-        ): CollectionPath = CollectionPath("${projectMessageAttachments(projectId, channelId, messageId).value}/$attachmentId")
         
         /* -------------------- Task Paths -------------------- */
         fun tasks(projectId: String, channelId: String): CollectionPath =

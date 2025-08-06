@@ -33,7 +33,7 @@ public class ChatMessage {
     private String replyToMessageId;
     
     @JsonProperty("payload")
-    private Map<String, String> payload;
+    private Map<String, Object> payload;
     
     @JsonProperty("projectId")
     private String projectId;
@@ -60,7 +60,7 @@ public class ChatMessage {
         message.messageType = messageType != null ? messageType : "TEXT";
         
         // Create payload
-        Map<String, String> payloadMap = new HashMap<>();
+        Map<String, Object> payloadMap = new HashMap<>();
         payloadMap.put("content", textContent != null ? textContent : "");
         message.payload = payloadMap;
         message.setTimestampFromInstant(timestamp);
@@ -107,8 +107,8 @@ public class ChatMessage {
     public String getReplyToMessageId() { return replyToMessageId; }
     public void setReplyToMessageId(String replyToMessageId) { this.replyToMessageId = replyToMessageId; }
 
-    public Map<String, String> getPayload() { return payload; }
-    public void setPayload(Map<String, String> payload) { this.payload = payload; }
+    public Map<String, Object> getPayload() { return payload; }
+    public void setPayload(Map<String, Object> payload) { this.payload = payload; }
 
     public String getProjectId() { return projectId; }
     public void setProjectId(String projectId) { this.projectId = projectId; }

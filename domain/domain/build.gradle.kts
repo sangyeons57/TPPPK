@@ -17,6 +17,9 @@ dependencies {
     // 비즈니스 로직과 엔티티, 리포지토리 인터페이스만 포함
     implementation(libs.kotlinx.coroutines.core)
 
+    // JSON handling for MessagePayload
+    implementation(libs.kotlinx.serialization.json)
+
     implementation(libs.firebase.auth)
     
     // 테스트 라이브러리

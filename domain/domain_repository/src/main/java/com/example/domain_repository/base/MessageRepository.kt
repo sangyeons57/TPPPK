@@ -149,4 +149,11 @@ interface MessageRepository : DefaultRepository<Message> {
         channelId: String,
         limit: Int = 50
     ): CustomResult<List<Message>, Exception>
+
+    /**
+     * 메시지 ID로 단일 메시지 조회
+     * @param messageId 메시지 ID
+     * @return 메시지 객체 (없으면 null)
+     */
+    suspend fun findById(messageId: String): Message?
 }

@@ -8,7 +8,6 @@ import com.example.data_repository.base.FileRepositoryImpl
 import com.example.data_repository.base.FriendRepositoryImpl
 import com.example.data_repository.base.MediaRepositoryImpl
 import com.example.data_repository.base.MemberRepositoryImpl
-import com.example.data_repository.base.MessageAttachmentRepositoryImpl
 import com.example.data_repository.base.MessageRepositoryImpl
 import com.example.data_repository.base.PermissionRepositoryImpl
 import com.example.data_repository.base.ProjectChannelRepositoryImpl
@@ -28,7 +27,6 @@ import com.example.domain_repository.base.FileRepository
 import com.example.domain_repository.base.FriendRepository
 import com.example.domain_repository.base.MediaRepository
 import com.example.domain_repository.base.MemberRepository
-import com.example.domain_repository.base.MessageAttachmentRepository
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_repository.base.PermissionRepository
 import com.example.domain_repository.base.ProjectChannelRepository
@@ -86,9 +84,6 @@ abstract class RepositoryModule {
     @Singleton
     abstract fun bindMemberRepository(impl: MemberRepositoryImpl): MemberRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindMessageAttachmentRepository(impl: MessageAttachmentRepositoryImpl): MessageAttachmentRepository
 
     @Binds
     @Singleton
