@@ -17,6 +17,7 @@ data class ChatUiState(
     val selectedImages: Set<Uri> = emptySet(),
     // Note: loading states are now handled by Paging3 LoadState
     val isSendingMessage: Boolean = false, // ★ 이름 명확화: 메시지 전송 중
+    val isLoadingHistory: Boolean = false, // 초기 메시지 로딩 상태 추가
     val isEditing: Boolean = false,
     val editingMessageId: String? = null, // Fixed: Message IDs are String-based DocumentIds
     val myUserId: String = "", // 실제로는 외부에서 주입 또는 설정 필요
@@ -53,7 +54,10 @@ data class ChatUiState(
     // Project members and roles (for Project channels)
     val projectMembers: List<ProjectMember> = emptyList(),
     val projectRoles: List<ProjectRole> = emptyList(),
-    val isLoadingProjectData: Boolean = false
+    val isLoadingProjectData: Boolean = false,
+
+    // Anchor jump state (for UI coordination)
+    val isAnchorJumpInProgress: Boolean = false
 )
 
 /**

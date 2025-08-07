@@ -23,7 +23,7 @@ class Message private constructor(
     override val id: DocumentId,
     override var isNew: Boolean,
     override val createdAt: Instant,
-    override val updatedAt: Instant,
+    override val updatedAt: Instant
 ) : AggregateRoot() {
 
     val senderId: UserId = initialSenderId

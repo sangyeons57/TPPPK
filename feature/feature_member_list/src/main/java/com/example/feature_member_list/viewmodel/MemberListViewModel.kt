@@ -17,6 +17,7 @@ import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.example.feature_member_list.service.MemberImagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -78,7 +79,8 @@ class MemberListViewModel @Inject constructor(
     private val userUseCaseProvider: UserUseCaseProvider,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
-    private val navigationManger: NavigationManger
+    private val navigationManger: NavigationManger,
+    private val memberImagePreloader: MemberImagePreloader
 ) : ViewModel() {
 
     private val projectId: DocumentId =
@@ -213,6 +215,9 @@ class MemberListViewModel @Inject constructor(
                                 sortedMembers.filter { it.userName.value.contains(query, ignoreCase = true) }
                             }
                             _uiState.update { it.copy(members = filteredList, isLoading = false, error = null) }
+
+                            // 멤버 목록이 업데이트되면 프로필 이미지 프리로딩 시작
+                            memberImagePreloader.preloadMemberImages(filteredList, viewModelScope)
                         }
                         is CustomResult.Failure -> {
                             _uiState.update { it.copy(error = membersResult.error.toString(), members = emptyList(), isLoading = false) }

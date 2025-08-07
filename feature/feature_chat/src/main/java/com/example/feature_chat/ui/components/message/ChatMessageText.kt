@@ -1,4 +1,4 @@
-package com.example.feature_chat.ui
+package com.example.feature_chat.ui.components.message
 
 import android.net.Uri
 import androidx.compose.foundation.text.BasicText
@@ -14,6 +14,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
+import com.example.feature_chat.ui.components.mention.ParsedMention
+import com.example.feature_chat.ui.components.mention.ProcessedText
 
 /**
  * ChatMessageText: 링크와 멘션을 지원하는 채팅 메시지 텍스트 컴포넌트

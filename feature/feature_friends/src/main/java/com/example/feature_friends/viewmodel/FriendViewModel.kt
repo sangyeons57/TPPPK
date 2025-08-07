@@ -17,6 +17,7 @@ import com.example.domain_usecase.provider.dm.DMUseCases
 import com.example.domain_usecase.provider.friend.FriendUseCaseProvider
 import com.example.domain_usecase.provider.friend.FriendUseCases
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.example.feature_friends.service.FriendImagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -66,7 +67,8 @@ class FriendViewModel @Inject constructor(
     private val userUseCaseProvider: UserUseCaseProvider,
     private val dmUseCaseProvider: DMUseCaseProvider,
     private val authUtil: AuthUtil,
-    private val navigationManger: NavigationManger
+    private val navigationManger: NavigationManger,
+    private val friendImagePreloader: FriendImagePreloader
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹들
@@ -166,6 +168,9 @@ class FriendViewModel @Inject constructor(
                                     error = null
                                 )
                             }
+
+                            // 친구 목록이 업데이트되면 프로필 이미지 프리로딩 시작
+                            friendImagePreloader.preloadFriendImages(friendItems, viewModelScope)
                         }
                         is CustomResult.Failure -> {
                             Log.d("FriendViewModel", "7")

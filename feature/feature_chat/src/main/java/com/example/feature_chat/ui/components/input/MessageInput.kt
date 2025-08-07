@@ -1,4 +1,4 @@
-package com.example.feature_chat.ui.components
+package com.example.feature_chat.ui.components.input
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -23,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,10 +40,14 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.example.feature_chat.model.ChatParticipant
+import com.example.feature_chat.model.MentionSuggestion
+import com.example.feature_chat.model.ProjectMember
+import com.example.feature_chat.model.ProjectRole
 
 /**
  * 개선된 메시지 입력 컴포넌트
- * 키보드 높이 자동 조정, 포커스 관리, 스크롤 위치 조정 기능을 포함합니다.
+ * 키보드 높이 자동 조정, 포커스 관리, 스크롤 위치 조정, 멘션 기능을 포함합니다.
  *
  * @param text 입력 텍스트
  * @param isEditing 메시지 수정 모드 여부
@@ -54,6 +58,12 @@ import androidx.compose.ui.unit.dp
  * @param onCancelEdit 수정 취소 이벤트
  * @param onKeyboardStateChange 키보드 상태 변경 이벤트 (포커스 + 키보드 상태)
  * @param onScrollToBottom 스크롤을 최하단으로 이동하는 이벤트
+ * @param onMentionSuggestionClick 멘션 제안 클릭 이벤트
+ * @param participants 채팅 참가자 목록 (DM 채널용)
+ * @param projectMembers 프로젝트 멤버 목록 (프로젝트 채널용)
+ * @param projectRoles 프로젝트 역할 목록 (프로젝트 채널용)
+ * @param mentionSuggestions 멘션 제안 목록
+ * @param isMentionSuggestionVisible 멘션 제안 표시 여부
  */
 @Composable
 fun MessageInput(
@@ -67,6 +77,12 @@ fun MessageInput(
     onCancelEdit: () -> Unit = {},
     onKeyboardStateChange: (Boolean) -> Unit = {},
     onScrollToBottom: () -> Unit = {},
+    onMentionSuggestionClick: (MentionSuggestion) -> Unit = {},
+    participants: List<ChatParticipant> = emptyList(),
+    projectMembers: List<ProjectMember> = emptyList(),
+    projectRoles: List<ProjectRole> = emptyList(),
+    mentionSuggestions: List<MentionSuggestion> = emptyList(),
+    isMentionSuggestionVisible: Boolean = false,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -145,6 +161,15 @@ fun MessageInput(
                 }
             }
 
+            // 멘션 제안 팝업 (입력 필드 위에 표시)
+            AnimatedVisibility(visible = isMentionSuggestionVisible) {
+                MentionSuggestionsPopup(
+                    suggestions = mentionSuggestions,
+                    onSuggestionClick = onMentionSuggestionClick,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             // 메시지 입력 영역
             Row(
                 modifier = Modifier
@@ -184,16 +209,12 @@ fun MessageInput(
                         },
                     placeholder = {
                         Text(
-                            if (!isEnabled) "연결 중입니다..."
+                            text = if (!isEnabled) "연결 중입니다..."
                             else if (isEditing) "메시지 수정..."
                             else "메시지 입력..."
                         )
                     },
-                    shape = RoundedCornerShape(24.dp),
-                    singleLine = false,
                     maxLines = 5,
-                    enabled = isEnabled,
-                    readOnly = !isEnabled,
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Send
                     ),
@@ -208,6 +229,10 @@ fun MessageInput(
                             focusManager.clearFocus()
                             keyboardController?.hide()
                         }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
                 )
 

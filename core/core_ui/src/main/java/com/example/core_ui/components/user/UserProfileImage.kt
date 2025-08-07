@@ -18,10 +18,9 @@ import coil.compose.AsyncImage
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.example.core_common.cache.GlobalImageUrlCache
 import com.example.core_ui.R
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
-import com.google.firebase.Firebase
-import com.google.firebase.storage.storage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -67,7 +65,8 @@ class ProfileImageUpdateEventManager @Inject constructor() {
 @HiltViewModel
 class UserProfileImageViewModel @Inject constructor(
     private val userUseCaseProvider: UserUseCaseProvider,
-    private val imageLoader: ImageLoader
+    private val imageLoader: ImageLoader,
+    private val globalImageUrlCache: GlobalImageUrlCache
 ) : ViewModel() {
     
     private val userUseCases = userUseCaseProvider.createForUser()
@@ -126,6 +125,9 @@ class UserProfileImageViewModel @Inject constructor(
                     imageLoader.diskCache?.remove(currentUrl)
                     Log.d("UserProfileImage", "Cache cleared for Firebase Storage URL: $currentUrl")
                 }
+
+                // 글로벌 URL 캐시에서도 제거
+                globalImageUrlCache.clearUserCache(userId)
                 
                 Log.d("UserProfileImage", "Cache cleared for user: $userId")
             } catch (e: Exception) {
@@ -143,45 +145,18 @@ class UserProfileImageViewModel @Inject constructor(
     
     /**
      * Firebase Storage에서 사용자 프로필 이미지 URL을 가져옵니다.
-     * 파일 존재 여부를 먼저 확인하여 404 ERROR 로그를 방지합니다.
+     * 글로벌 캐시를 사용하여 중복 Firebase 호출을 방지합니다.
      */
     fun loadUserProfileImageUrl(userId: String) {
         viewModelScope.launch {
             try {
-                val storage = Firebase.storage
-                val pathString = "user_profiles/$userId/profile.webp"
-                val imageRef = storage.reference.child(pathString)
-                
-                // 파일 존재 여부를 먼저 확인 (404 ERROR 로그 방지)
-                imageRef.metadata.await()
-                
-                // 파일이 존재하면 URL 요청
-                val uri = imageRef.downloadUrl.await()
-                _imageUrl.value = uri.toString()
-                
-                Log.d("UserProfileImage", "Profile image URL loaded for user: $userId")
+                val url = globalImageUrlCache.getUserProfileImageUrl(userId)
+                _imageUrl.value = url
+
+                Log.d("UserProfileImage", "Profile image URL loaded for user: $userId, url: $url")
             } catch (e: Exception) {
-                when {
-                    e.message?.contains("Object does not exist") == true -> {
-                        // 프로필 이미지가 없는 것은 정상적인 상황이므로 DEBUG 레벨로 로깅
-                        Log.d("UserProfileImage", "Profile image does not exist for user: $userId, showing default placeholder")
-                        _imageUrl.value = null
-                    }
-                    e.message?.contains("Permission denied") == true -> {
-                        Log.w("UserProfileImage", "Permission denied for profile image of user: $userId, showing default placeholder")
-                        _imageUrl.value = null
-                    }
-                    e.message?.contains("StorageException") == true && e.message?.contains("404") == true -> {
-                        // Firebase Storage 404 오류도 정상적인 상황 (이미지 없음)
-                        Log.d("UserProfileImage", "Profile image not found (404) for user: $userId, showing default placeholder")
-                        _imageUrl.value = null
-                    }
-                    else -> {
-                        // 실제 오류인 경우에만 ERROR 레벨로 로깅
-                        Log.e("UserProfileImage", "Unexpected error loading profile image for user: $userId", e)
-                        _imageUrl.value = null
-                    }
-                }
+                Log.e("UserProfileImage", "Error loading profile image for user: $userId", e)
+                _imageUrl.value = null
             }
         }
     }
@@ -207,20 +182,18 @@ fun UserProfileImage(
     
     // 캐시 사용 여부 결정
     val shouldDisableCache = forceRefresh || isUpdated
-    
-    // userId가 변경되거나 사용자가 업데이트될 때 처리
-    LaunchedEffect(userId) {
-        if (!userId.isNullOrEmpty()) {
-            // 사용자 업데이트 감지 시작
+
+    // 통합된 LaunchedEffect: userId 변경과 업데이트 감지를 하나로 처리
+    LaunchedEffect(userId, userUpdatedAt) {
+        if (userId.isNullOrEmpty()) return@LaunchedEffect
+
+        // 사용자가 변경된 경우
+        if (userUpdatedAt == 0L || !isUpdated) {
+            // 초기 로딩 또는 사용자 변경
             viewModel.observeUserUpdates(userId)
-            // 프로필 이미지 URL 로드
             viewModel.loadUserProfileImageUrl(userId)
-        }
-    }
-    
-    // 사용자 updatedAt이 변경될 때 캐시 클리어 및 이미지 재로드
-    LaunchedEffect(userUpdatedAt) {
-        if (!userId.isNullOrEmpty() && isUpdated) {
+        } else if (isUpdated) {
+            // 사용자 업데이트 감지된 경우
             viewModel.clearImageCache(userId)
             viewModel.loadUserProfileImageUrl(userId)
             previousUpdatedAt.value = userUpdatedAt

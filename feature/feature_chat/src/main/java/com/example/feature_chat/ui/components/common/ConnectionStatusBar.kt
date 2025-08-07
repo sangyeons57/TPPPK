@@ -1,4 +1,4 @@
-package com.example.feature_chat.ui.components
+package com.example.feature_chat.ui.components.common
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -48,6 +48,7 @@ fun ConnectionStatusBar(
                 Icons.Default.WifiOff
             )
         }
+
         is WebSocketConnectionState.Connecting -> {
             Quadruple(
                 true,
@@ -56,6 +57,7 @@ fun ConnectionStatusBar(
                 Icons.Default.Refresh
             )
         }
+
         is WebSocketConnectionState.Authenticating -> {
             Quadruple(
                 true,
@@ -64,6 +66,7 @@ fun ConnectionStatusBar(
                 Icons.Default.Refresh
             )
         }
+
         is WebSocketConnectionState.Connected -> {
             Quadruple(
                 false,
@@ -72,6 +75,7 @@ fun ConnectionStatusBar(
                 Icons.Default.Wifi
             )
         }
+
         is WebSocketConnectionState.Error -> {
             Quadruple(
                 true,
@@ -80,6 +84,7 @@ fun ConnectionStatusBar(
                 Icons.Default.CloudOff
             )
         }
+
         is WebSocketConnectionState.Reconnecting -> {
             Quadruple(
                 true,
@@ -125,9 +130,9 @@ fun ConnectionStatusBar(
                     tint = color,
                     modifier = Modifier.size(16.dp)
                 )
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
-                
+
                 Text(
                     text = text,
                     color = color,
@@ -135,7 +140,7 @@ fun ConnectionStatusBar(
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.testTag("connection_status_text")
                 )
-                
+
                 if (connectionState is WebSocketConnectionState.Connecting) {
                     Spacer(modifier = Modifier.width(8.dp))
                     CircularProgressIndicator(

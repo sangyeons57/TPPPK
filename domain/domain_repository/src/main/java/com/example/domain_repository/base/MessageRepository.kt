@@ -114,6 +114,19 @@ interface MessageRepository : DefaultRepository<Message> {
     suspend fun handleMessageFailure(messageId: String): CustomResult<Unit, Exception>
 
     /**
+     * OutBox 레코드 생성 (메시지 전송 시 PENDING 상태로 생성)
+     * @param messageId 메시지 ID
+     * @param channelId 채널 ID
+     * @param payload 메시지 페이로드
+     * @return 생성 결과
+     */
+    suspend fun createOutBoxRecord(
+        messageId: String,
+        channelId: String,
+        payload: String
+    ): CustomResult<Unit, Exception>
+
+    /**
      * 특정 채널의 동기화 상태별 메시지 개수 조회
      * @param channelId 채널 ID
      * @return 동기화 상태별 메시지 개수 맵

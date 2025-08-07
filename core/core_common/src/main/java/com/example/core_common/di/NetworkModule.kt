@@ -4,7 +4,7 @@ import android.content.Context
 import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
-import coil.util.DebugLogger
+import com.example.core_common.cache.GlobalImageUrlCache
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -83,8 +83,18 @@ object NetworkModule {
                     .build()
             }
             .respectCacheHeaders(true) // HTTP Cache-Control 헤더 존중
-            .logger(DebugLogger()) // 디버그 모드에서만 로깅
+            // 디버그 로깅은 필요시에만 활성화
             .build()
+    }
+
+    /**
+     * 글로벌 이미지 URL 캐시 제공
+     * Firebase Storage URL을 앱 전체에서 공유하여 중복 호출 방지
+     */
+    @Provides
+    @Singleton
+    fun provideGlobalImageUrlCache(): GlobalImageUrlCache {
+        return GlobalImageUrlCache()
     }
 
 }

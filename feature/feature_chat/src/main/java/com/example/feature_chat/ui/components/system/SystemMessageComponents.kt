@@ -1,4 +1,4 @@
-package com.example.feature_chat.ui.components
+package com.example.feature_chat.ui.components.system
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Start
 import androidx.compose.material3.Button
@@ -32,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.example.domain.vo.message.MessagePayload
 
 /**
- * 날짜 표시 시스템 메시지 컴포넌트
+ * 날짜 표시 시스템 메시지 컴포넌트 (기존 메시지 기반)
  */
 @Composable
 fun DateSystemMessage(
@@ -42,6 +43,17 @@ fun DateSystemMessage(
     val messagePayload = MessagePayload(payload)
     val displayText = messagePayload.getValue("displayText") ?: "날짜"
 
+    DateSeparator(displayText = displayText, modifier = modifier)
+}
+
+/**
+ * UI-based 날짜 구분선 컴포넌트 (실제 메시지가 아닌 UI 요소)
+ */
+@Composable
+fun DateSeparator(
+    displayText: String,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -213,6 +225,107 @@ fun ProjectJoinSystemMessage(
 }
 
 /**
+ * 프로젝트 멤버 초대 시스템 메시지 컴포넌트
+ */
+@Composable
+fun MemberInvitationSystemMessage(
+    payload: String,
+    onAddMember: (String, String) -> Unit, // (projectId, targetUserId) -> Unit
+    modifier: Modifier = Modifier
+) {
+    val messagePayload = MessagePayload(payload)
+    val projectId = messagePayload.getValue("projectId") ?: ""
+    val projectName = messagePayload.getValue("projectName") ?: "프로젝트"
+    val inviterName = messagePayload.getValue("inviterName") ?: "사용자"
+    val targetUserId = messagePayload.getValue("targetUserId") ?: ""
+    val actionText = messagePayload.getValue("actionText") ?: "멤버로 추가"
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.8f)
+            ),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PersonAdd,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.width(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "멤버 초대",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "${inviterName}님이 '$projectName' 프로젝트에 초대했습니다",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { onAddMember(projectId, targetUserId) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            contentColor = MaterialTheme.colorScheme.onTertiary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = actionText,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Button(
+                        onClick = { /* 거절 로직 */ },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "거절",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * 기본 시스템 메시지 컴포넌트 (알 수 없는 타입용)
  */
 @Composable
@@ -266,6 +379,15 @@ private fun ProjectJoinSystemMessagePreview() {
     ProjectJoinSystemMessage(
         payload = """{"projectId": "project123", "projectName": "새로운 프로젝트", "actionText": "참여하기"}""",
         onJoinProject = {}
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MemberInvitationSystemMessagePreview() {
+    MemberInvitationSystemMessage(
+        payload = """{"projectId": "project123", "projectName": "새로운 프로젝트", "inviterName": "김철수", "targetUserId": "user456", "actionText": "멤버로 추가"}""",
+        onAddMember = { _, _ -> }
     )
 }
 

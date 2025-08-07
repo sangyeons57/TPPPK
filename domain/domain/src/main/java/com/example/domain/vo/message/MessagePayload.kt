@@ -153,6 +153,70 @@ value class MessagePayload(val value: String) {
             }
             return MessagePayload(jsonObject.toString())
         }
+
+        /**
+         * 프로젝트 멤버 초대 시스템 메시지용 페이로드 생성
+         */
+        fun forMemberInvitation(
+            projectId: String,
+            projectName: String,
+            inviterName: String,
+            targetUserId: String,
+            actionText: String = "멤버로 추가"
+        ): MessagePayload {
+            val jsonObject = buildJsonObject {
+                put("projectId", projectId)
+                put("projectName", projectName)
+                put("inviterName", inviterName)
+                put("targetUserId", targetUserId)
+                put("actionText", actionText)
+            }
+            return MessagePayload(jsonObject.toString())
+        }
+
+        /**
+         * 이미지 메시지용 페이로드 생성 (단일 이미지)
+         */
+        fun forImage(
+            content: String = "",
+            imageUrl: String,
+            imageFilename: String? = null,
+            width: Int? = null,
+            height: Int? = null,
+            size: Long? = null
+        ): MessagePayload {
+            val attachment = createAttachment(
+                kind = "image",
+                url = imageUrl,
+                mime = "image/jpeg", // 기본값, 추후 개선 가능
+                filename = imageFilename,
+                width = width,
+                height = height,
+                size = size
+            )
+            return forTextWithAttachments(content, listOf(attachment))
+        }
+
+        /**
+         * 이미지 메시지용 페이로드 생성 (다중 이미지)
+         */
+        fun forImages(
+            content: String = "",
+            images: List<Map<String, Any?>>
+        ): MessagePayload {
+            val imageAttachments = images.map { imageData ->
+                createAttachment(
+                    kind = "image",
+                    url = imageData["url"] as? String ?: "",
+                    mime = imageData["mime"] as? String ?: "image/jpeg",
+                    filename = imageData["filename"] as? String,
+                    width = imageData["width"] as? Int,
+                    height = imageData["height"] as? Int,
+                    size = imageData["size"] as? Long
+                )
+            }
+            return forTextWithAttachments(content, imageAttachments)
+        }
     }
 
     /**

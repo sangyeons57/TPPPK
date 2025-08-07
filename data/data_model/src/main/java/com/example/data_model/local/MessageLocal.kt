@@ -49,16 +49,6 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(e: MessageEntity)
 
-    @Query("SELECT * FROM messages WHERE id = :id")
-    suspend fun findById(id: String): MessageEntity?
-
-    @Query("UPDATE messages SET isDeleted = 1, updatedAt = :ts WHERE id = :id")
-    suspend fun tombstone(id: String, ts: Long)
-
-    // ================================
-    // Paging3 관련 쿼리
-    // ================================
-
     @Query(
         """
         SELECT * FROM messages 
@@ -91,7 +81,7 @@ interface MessageDao {
         """
         SELECT * FROM messages 
         WHERE (:channelId = '' OR channelId = :channelId) AND createdAt BETWEEN :startTimestamp AND :endTimestamp 
-        ORDER BY createdAt DESC
+        ORDER BY createdAt ASC
     """
     )
     suspend fun getMessagesBetween(
@@ -101,38 +91,19 @@ interface MessageDao {
     ): List<MessageEntity>
 
     // ================================
-    // Anchor 기반 쿼리 (3-way 분할 지원)
+    // 기본 조회 쿼리
     // ================================
 
     @Query(
         """
         SELECT * FROM messages 
-        WHERE channelId = :channelId AND id = :anchorMessageId
+        WHERE id = :messageId
     """
     )
-    suspend fun getAnchorMessage(channelId: String, anchorMessageId: String): MessageEntity?
+    suspend fun findById(messageId: String): MessageEntity?
 
-    @Query(
-        """
-        WITH anchor_time AS (
-            SELECT createdAt FROM messages 
-            WHERE channelId = :channelId AND id = :anchorMessageId
-        )
-        SELECT * FROM messages 
-        WHERE channelId = :channelId 
-        AND createdAt >= (SELECT createdAt FROM anchor_time) - :beforeRange
-        AND createdAt <= (SELECT createdAt FROM anchor_time) + :afterRange
-        ORDER BY createdAt DESC
-        LIMIT :limit
-    """
-    )
-    suspend fun getMessagesAroundAnchor(
-        channelId: String,
-        anchorMessageId: String,
-        beforeRange: Long = 3600000, // 1시간 전
-        afterRange: Long = 3600000,  // 1시간 후
-        limit: Int = 50
-    ): List<MessageEntity>
+    @Query("UPDATE messages SET isDeleted = 1, updatedAt = :ts WHERE id = :id")
+    suspend fun tombstone(id: String, ts: Long)
 
     // ================================
     // 캐시 관리 관련 쿼리

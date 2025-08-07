@@ -89,6 +89,21 @@ class WebSocketMessageService @Inject constructor(
             .filterIsInstance<WebSocketDomainEvent.MessageReceived>()
             .onEach { event ->
                 try {
+                    // 입장하지 않은 방의 메시지는 저장하지 않음
+                    val roomId = event.roomId
+                    if (roomId.isNullOrBlank()) {
+                        Log.e(TAG, "roomId 가 비어있어 메시지를 저장하지 않음: ${event.messageId}")
+                        return@onEach
+                    }
+
+                    if (!isRoomJoined(roomId)) {
+                        Log.d(
+                            TAG,
+                            "입장하지 않은 방의 메시지 스킵: roomId=$roomId, messageId=${event.messageId}"
+                        )
+                        return@onEach
+                    }
+
                     // 중복 저장 방지: 이미 존재하는 메시지인지 확인
                     val existingMessage = messageRepository.findById(DocumentId(event.messageId))
 
@@ -105,10 +120,8 @@ class WebSocketMessageService @Inject constructor(
                             Log.d(TAG, "메시지 자동 저장 성공: ${event.messageId}")
 
                             // Paging3 새로고침 이벤트 발송 (해당 채널만)
-                            event.roomId?.let { channelId ->
-                                _messageRefreshEvents.emit(channelId)
-                                Log.d(TAG, "Paging3 새로고침 이벤트 발송: $channelId")
-                            }
+                            _messageRefreshEvents.emit(roomId)
+                            Log.d(TAG, "Paging3 새로고침 이벤트 발송: $roomId")
                         }
 
                         is CustomResult.Failure -> {

@@ -1,4 +1,4 @@
-package com.example.feature_chat.ui.components
+package com.example.feature_chat.ui.components.message
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -37,21 +37,25 @@ fun MessageDeliveryIndicator(
             MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
             true
         )
+
         is MessageDeliveryState.Sent -> Triple(
             Icons.Default.Done,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
             false // Hide for sent messages to reduce clutter
         )
+
         is MessageDeliveryState.Delivered -> Triple(
             Icons.Default.DoneAll,
             MaterialTheme.colorScheme.primary,
             false // Hide for now, could be shown if needed
         )
+
         is MessageDeliveryState.Failed -> Triple(
             Icons.Default.Error,
             MaterialTheme.colorScheme.error,
             true
         )
+
         is MessageDeliveryState.Retry -> Triple(
             Icons.Default.Refresh,
             MaterialTheme.colorScheme.tertiary,
@@ -81,7 +85,7 @@ fun MessageDeliveryIndicator(
                 tint = color,
                 modifier = Modifier.size(12.dp)
             )
-            
+
             if (deliveryState is MessageDeliveryState.Failed) {
                 Text(
                     text = "전송 실패",
@@ -109,7 +113,7 @@ fun MessageStatusRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             fontSize = 11.sp
         )
-        
+
         MessageDeliveryIndicator(deliveryState = deliveryState)
     }
 }
@@ -133,6 +137,7 @@ fun OptimisticMessageOverlay(
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                     )
                 }
+
                 is MessageDeliveryState.Failed -> {
                     Icon(
                         imageVector = Icons.Default.Error,
@@ -150,7 +155,9 @@ fun OptimisticMessageOverlay(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-                else -> { /* No overlay for sent/delivered */ }
+
+                else -> { /* No overlay for sent/delivered */
+                }
             }
         }
     }

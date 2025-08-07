@@ -2,6 +2,7 @@ package com.example.data_repository.base
 
 import android.util.Log
 import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import com.example.core_common.result.CustomResult
@@ -105,121 +106,145 @@ class MessageRepositoryImpl @Inject constructor(
     // ================================
 
     override fun getMessagesPagingSource(): PagingSource<Long, Message> {
-        return MessagePagingSource(messageDao, entityMapper, channelId = null)
+        return MessagePagingSource(db, messageDao, entityMapper, channelId = null)
     }
 
     override fun getMessagesPagingSource(channelId: String): PagingSource<Long, Message> {
-        return MessagePagingSource(messageDao, entityMapper, channelId = channelId)
+        return MessagePagingSource(db, messageDao, entityMapper, channelId = channelId)
     }
 
     /**
      * Room 데이터를 Message 도메인으로 변환하는 PagingSource
      */
     private class MessagePagingSource(
+        private val db: RoomDatabase,
         private val messageDao: MessageDao,
         private val messageMapper: MessageMapper,
         private val channelId: String? // null이면 모든 채널, 지정하면 해당 채널만
     ) : PagingSource<Long, Message>() {
 
+        private val tableObserver =
+            object : androidx.room.InvalidationTracker.Observer("messages") {
+                override fun onInvalidated(tables: Set<String>) {
+                    // 메시지 테이블 변경 시 PagingSource 새로고침
+                    this@MessagePagingSource.invalidate()
+                }
+            }
+
+        init {
+            db.invalidationTracker.addObserver(tableObserver)
+        }
+
+        // 동일 키 재사용 허용 (프리페치/레이아웃 특성으로 동일 키가 연속 전달될 수 있음)
+        override val keyReuseSupported: Boolean = true
+
         override suspend fun load(params: LoadParams<Long>): LoadResult<Long, Message> {
+            val channelIdParam = channelId ?: ""
+            val limit = params.loadSize
+
             return try {
-                val key = params.key ?: System.currentTimeMillis()
-                val limit = params.loadSize
-
-                // 채널ID 유효성 검사 - null이거나 빈 문자열이면 에러 반환
-                if (channelId.isNullOrBlank()) {
-                    Log.e("PagingSource", "❌ 채널ID가 null이거나 빈 문자열입니다")
-                    return LoadResult.Error(IllegalStateException("채널ID는 필수입니다"))
-                }
-
-                // 디버그 모드에서만 로깅 (성능 최적화)
-                if (Log.isLoggable("PagingSource", Log.DEBUG)) {
-                    Log.d(
-                        "PagingSource",
-                        "🔄 PagingSource.load() - 채널: $channelId, 키: $key, 크기: $limit"
-                    )
-                }
-
-                // 채팅 앱 표준 방향: 최신 메시지가 아래, 과거 메시지가 위
-                val entities = when (params) {
+                when (params) {
                     is LoadParams.Refresh -> {
-                        // 초기 로드: 현재 시간 이전의 최신 메시지들 (최근 순)
-                        messageDao.getMessagesBefore(channelId, key, limit)
-                    }
+                        val beforeTs = params.key ?: Long.MAX_VALUE
+                        Log.d(
+                            "MessagePagingSource",
+                            "🔄 Refresh: key=$beforeTs, limit=$limit, channel=$channelIdParam"
+                        )
+                        val entities = messageDao.getMessagesBefore(channelIdParam, beforeTs, limit)
+                        val messages =
+                            entities.map { entity -> messageMapper.entityToDomain(entity) }
 
-                    is LoadParams.Prepend -> {
-                        // 위로 스크롤: 더 과거 메시지들 로딩
-                        messageDao.getMessagesBefore(channelId, key, limit)
+                        val newest = entities.firstOrNull()?.createdAt
+                        val oldest = entities.lastOrNull()?.createdAt
+
+                        val prevKey = if (entities.isEmpty()) {
+                            null
+                        } else {
+                            // 새로운 메시지를 위한 PREPEND 로딩 활성화
+                            // newest 타임스탬프보다 1ms 더 큰 값으로 설정하여 새 메시지 로드 가능하게 함
+                            newest?.plus(1)
+                        }
+
+                        val nextKey =
+                            if (entities.isEmpty() || entities.size < limit) null else oldest?.minus(
+                                1
+                            )
+
+                        Log.d(
+                            "MessagePagingSource",
+                            "🔄 Refresh result: size=${messages.size}, newest=$newest, oldest=$oldest, prevKey=$prevKey, nextKey=$nextKey"
+                        )
+
+                        LoadResult.Page(
+                            data = messages,
+                            prevKey = prevKey,
+                            nextKey = nextKey
+                        )
                     }
 
                     is LoadParams.Append -> {
-                        // 아래로 스크롤: 더 최신 메시지들 로딩  
-                        messageDao.getMessagesAfter(channelId, key, limit)
+                        val key = params.key
+                        Log.d(
+                            "MessagePagingSource",
+                            "⬇️ Append: key=$key, limit=$limit, channel=$channelIdParam"
+                        )
+                        val entities = messageDao.getMessagesBefore(channelIdParam, key, limit)
+                        val messages =
+                            entities.map { entity -> messageMapper.entityToDomain(entity) }
+                        val oldest = entities.lastOrNull()?.createdAt
+                        val nextKey =
+                            if (entities.isEmpty() || entities.size < limit) null else oldest?.minus(
+                                1
+                            )
+                        Log.d(
+                            "MessagePagingSource",
+                            "⬇️ Append result: size=${messages.size}, oldest=$oldest, nextKey=$nextKey"
+                        )
+                        LoadResult.Page(
+                            data = messages,
+                            prevKey = null,
+                            nextKey = nextKey
+                        )
+                    }
+
+                    is LoadParams.Prepend -> {
+                        val key = params.key
+                        Log.d(
+                            "MessagePagingSource",
+                            "⬆️ Prepend: key=$key, limit=$limit, channel=$channelIdParam"
+                        )
+                        val entitiesAsc = messageDao.getMessagesAfter(channelIdParam, key, limit)
+                        // getMessagesAfter는 ASC이므로, 전체 순서를 기존과 동일하게 DESC로 맞춤
+                        val entities = entitiesAsc.sortedByDescending { it.createdAt }
+                        val messages =
+                            entities.map { entity -> messageMapper.entityToDomain(entity) }
+                        val newest = entities.firstOrNull()?.createdAt
+                        val prevKey =
+                            if (entities.isEmpty() || entities.size < limit) null else newest?.plus(
+                                1
+                            )
+                        Log.d(
+                            "MessagePagingSource",
+                            "⬆️ Prepend result: size=${messages.size}, newest=$newest, prevKey=$prevKey"
+                        )
+
+                        LoadResult.Page(
+                            data = messages,
+                            prevKey = prevKey,
+                            nextKey = null
+                        )
                     }
                 }
-
-                // MessageEntity를 Message 도메인으로 변환
-                val messages = entities.map { entity ->
-                    messageMapper.entityToDomain(entity)
-                }
-
-                // 키 계산 (DESC 정렬이므로 first=최신, last=최과거)
-                // prevKey: 더 과거 메시지를 위한 키 (prepend용)
-                // nextKey: 더 최신 메시지를 위한 키 (append용)  
-                val oldestTimestamp = entities.lastOrNull()?.createdAt  // 가장 과거 메시지
-                val newestTimestamp = entities.firstOrNull()?.createdAt // 가장 최신 메시지
-
-                LoadResult.Page(
-                    data = messages,
-                    prevKey = if (entities.isNotEmpty() && (params is LoadParams.Refresh || params is LoadParams.Append)) oldestTimestamp else null,
-                    nextKey = if (entities.isNotEmpty() && (params is LoadParams.Refresh || params is LoadParams.Prepend)) newestTimestamp else null
-                )
             } catch (e: Exception) {
-                Log.e("PagingSource", "❌ PagingSource.load() 실패", e)
+                Log.e("MessagePagingSource", "❌ load error: ${e.message}", e)
                 LoadResult.Error(e)
             }
         }
 
-        /**
-         * 타임스탬프를 읽기 쉬운 형태로 포맷팅
-         */
-        private fun formatTimestamp(timestamp: Long): String {
-            return try {
-                val dateFormat =
-                    java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.getDefault())
-                dateFormat.format(java.util.Date(timestamp))
-            } catch (e: Exception) {
-                "Invalid"
-            }
-        }
-
-        override fun getRefreshKey(state: androidx.paging.PagingState<Long, Message>): Long? {
-            return state.anchorPosition?.let { anchorPosition ->
-                // 현재 위치에서 가장 가까운 메시지를 찾아서
-                val anchorItem = state.closestItemToPosition(anchorPosition)
-
-                if (anchorItem != null) {
-                    // 현재 메시지의 타임스탬프를 기준으로 새로고침
-                    val refreshKey = anchorItem.createdAt.toEpochMilli()
-                    Log.d(
-                        "PagingSource",
-                        "🔄 getRefreshKey: ${formatTimestamp(refreshKey)} (현재 메시지 기준)"
-                    )
-                    refreshKey
-                } else {
-                    // 아이템이 없으면 현재 시간 사용 (최신 메시지로 이동)
-                    val currentTime = System.currentTimeMillis()
-                    Log.d(
-                        "PagingSource",
-                        "🔄 getRefreshKey: ${formatTimestamp(currentTime)} (최신 메시지로 이동)"
-                    )
-                    currentTime
-                }
-            } ?: run {
-                // anchorPosition이 없으면 현재 시간 사용
-                val currentTime = System.currentTimeMillis()
-                Log.d("PagingSource", "🔄 getRefreshKey: ${formatTimestamp(currentTime)} (초기 로드)")
-                currentTime
+        override fun getRefreshKey(state: PagingState<Long, Message>): Long? {
+            // 앵커 기준으로 가장 가까운 아이템의 createdAt을 키로 사용
+            return state.anchorPosition?.let { anchor ->
+                state.closestItemToPosition(anchor)?.createdAt?.toEpochMilli()
             }
         }
     }
@@ -311,6 +336,35 @@ class MessageRepositoryImpl @Inject constructor(
             CustomResult.Success(Unit)
         } catch (e: Exception) {
             Log.e("MessageRepository", "Failed to handle message failure: $messageId", e)
+            CustomResult.Failure(e)
+        }
+    }
+
+    /**
+     * OutBox 레코드 생성 (메시지 전송 시 PENDING 상태로 생성)
+     */
+    override suspend fun createOutBoxRecord(
+        messageId: String,
+        channelId: String,
+        payload: String
+    ): CustomResult<Unit, Exception> {
+        return try {
+            val outboxRecord = OutBoxRecord(
+                id = UUID.randomUUID().toString(),
+                stream = "messages",
+                aggregateId = messageId,
+                op = OutBoxRecord.Op.UPSERT,
+                payload = """{"channelId":"$channelId","payload":"${
+                    payload.replace("\\", "\\\\").replace("\"", "\\\"")
+                }"}""",
+                createdAt = System.currentTimeMillis()
+            )
+
+            outboxDao.enqueue(outboxRecord.toEntity(OutBoxStatus.PENDING))
+            Log.d("MessageRepository", "OutBox record created: $messageId with status PENDING")
+            CustomResult.Success(Unit)
+        } catch (e: Exception) {
+            Log.e("MessageRepository", "Failed to create OutBox record: $messageId", e)
             CustomResult.Failure(e)
         }
     }

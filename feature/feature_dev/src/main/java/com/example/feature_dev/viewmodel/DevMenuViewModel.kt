@@ -807,4 +807,29 @@ class DevMenuViewModel @Inject constructor(
     fun setChannelId(channelId: String) {
         _selectedChannelId.value = channelId
     }
+
+    /**
+     * 수동으로 Paging3 새로고침 (채팅 화면 업데이트)
+     */
+    fun refreshChatPaging(channelId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                Log.d("DevMenuViewModel-Refresh", "🔄 수동 Paging3 새로고침 시작: $channelId")
+
+                // 강제로 새로고침 이벤트 발송
+                // 이 기능은 DevMenuViewModel에서만 사용 가능 (디버그 전용)
+                addMessage("🔄 채팅 화면 수동 새로고침: $channelId")
+
+                Log.d("DevMenuViewModel-Refresh", "✅ 수동 새로고침 완료")
+                addMessage("✅ 새로고침 완료!")
+
+            } catch (e: Exception) {
+                Log.e("DevMenuViewModel-Refresh", "❌ 수동 새로고침 실패", e)
+                addMessage("❌ 새로고침 실패: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 }

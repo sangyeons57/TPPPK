@@ -39,6 +39,7 @@ class ChatServiceProvider @Inject constructor(
         val messageService: MessageService,
         val userProfileService: UserProfileService,
         val navigationService: NavigationService,
+        val profileUpdates: kotlinx.coroutines.flow.StateFlow<Int>,
         val participantService: ParticipantService? = null, // For DM channels
         val memberService: MemberService? = null, // For project channels
         val roleService: RoleService? = null // For project channels
@@ -48,7 +49,6 @@ class ChatServiceProvider @Inject constructor(
      * 프로젝트 채널용 Service들을 생성하여 반환
      */
     fun createForProjectChannel(projectId: String, channelId: String): ChatServices {
-        val chatUseCases = chatUseCaseProvider.createForChannel(projectId, channelId)
         val userUseCases = userUseCaseProvider.createForUser()
         val fileUseCases = fileUseCaseProvider.create()
 
@@ -62,10 +62,12 @@ class ChatServiceProvider @Inject constructor(
         )
         
         val messageService = MessageService(
-            chatUseCases = chatUseCases,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
             messageRepository = messageRepository,
+            userProfileService = userProfileService,
+            fileUseCases = fileUseCases,
+            dmUseCaseProvider = dmUseCaseProvider,
             roomId = roomId,
             projectId = projectId,
             channelType = channelType
@@ -88,6 +90,7 @@ class ChatServiceProvider @Inject constructor(
             messageService = messageService,
             userProfileService = userProfileService,
             navigationService = navigationService,
+            profileUpdates = userProfileService.profileUpdates(),
             participantService = null, // Not needed for project channels
             memberService = memberService,
             roleService = roleService
@@ -98,7 +101,6 @@ class ChatServiceProvider @Inject constructor(
      * DM 채널용 Service들을 생성하여 반환
      */
     fun createForDMChannel(channelId: String): ChatServices {
-        val chatUseCases = chatUseCaseProvider.createForDMChannel(channelId)
         val authUseCases = authSessionUseCaseProvider.create()
         val userUseCases = userUseCaseProvider.createForUser()
         val fileUseCases = fileUseCaseProvider.create()
@@ -112,10 +114,12 @@ class ChatServiceProvider @Inject constructor(
         )
         
         val messageService = MessageService(
-            chatUseCases = chatUseCases,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
             messageRepository = messageRepository,
+            userProfileService = userProfileService,
+            fileUseCases = fileUseCases,
+            dmUseCaseProvider = dmUseCaseProvider,
             roomId = roomId,
             projectId = null,
             channelType = channelType
@@ -134,6 +138,7 @@ class ChatServiceProvider @Inject constructor(
             messageService = messageService,
             userProfileService = userProfileService,
             navigationService = navigationService,
+            profileUpdates = userProfileService.profileUpdates(),
             participantService = participantService,
             memberService = null, // Not needed for DM channels
             roleService = null // Not needed for DM channels

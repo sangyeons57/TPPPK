@@ -20,4 +20,5 @@ sealed class ChatEvent {
     data class ImageSelected(val uri: Uri) : ChatEvent() // 단일 이미지 선택
     data class ImageDeselected(val uri: Uri) : ChatEvent() // 단일 이미지 선택 취소
     data class SystemMessage(val content: String) : ChatEvent() // 시스템 메시지
+    object RefreshMessages : ChatEvent() // Paging3 갱신 트리거
 } 

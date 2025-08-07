@@ -20,9 +20,8 @@ dependencies {
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui")) // 공통 유틸리티 사용
     implementation(project(":core:websocket"))
-    implementation(project(":data:data"))
-    implementation(project(":data:data_repository"))
-    implementation(project(":data:data_datasource"))
+    // Clean Architecture: feature module should not depend on data-layer modules
+    // Removed direct data-module dependencies; rely on domain and usecase modules only
     // WebSocket 기능
 
     // Module-specific dependencies

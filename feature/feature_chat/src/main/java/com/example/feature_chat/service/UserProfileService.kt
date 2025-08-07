@@ -26,6 +26,10 @@ class UserProfileService(
     private val profileUrlCache = mutableMapOf<String, String?>()
     // Loading state tracking
     private val loadingProfileUserIds = mutableSetOf<String>()
+
+    // Profile updates versioning to notify UI to re-map names/images
+    private val _profileUpdates = kotlinx.coroutines.flow.MutableStateFlow(0)
+    fun profileUpdates() = _profileUpdates as kotlinx.coroutines.flow.StateFlow<Int>
     
     /**
      * 사용자 프로필을 로딩하고 캐시에 저장 (비동기)
@@ -136,6 +140,8 @@ class UserProfileService(
         // Mark as no longer loading
         loadingProfileUserIds.remove(userId)
         Log.d("UserProfileService", "loadUserProfileAsync($userId): removed from loading set")
+        // Notify observers that profile/name/url might have changed
+        _profileUpdates.value = _profileUpdates.value + 1
         
         profileResult
     }
@@ -152,7 +158,6 @@ class UserProfileService(
             else -> "알 수 없는 사용자" // More descriptive name for unknown users
         }
         
-        Log.d("UserProfileService", "getUserDisplayName($userId): cached=${cachedUser?.name?.value}, loading=$isLoading, result='$result'")
         return result
     }
     
@@ -160,12 +165,9 @@ class UserProfileService(
      * 사용자 프로필 이미지 URL 반환 (비동기)
      */
     suspend fun getUserProfileUrl(userId: String): String? {
-        Log.d("UserProfileService", "getUserProfileUrl($userId): starting profile URL lookup")
-        
         // Check cache first
         if (profileUrlCache.containsKey(userId)) {
             val cachedUrl = profileUrlCache[userId]
-            Log.d("UserProfileService", "getUserProfileUrl($userId): found in cache: $cachedUrl")
             return cachedUrl
         }
         
@@ -173,58 +175,48 @@ class UserProfileService(
         // Based on functions/src/triggers/user/userImage.trigger.ts line 57
         val fixedPath = "user_profiles/$userId/profile.webp"
         
-        Log.d("UserProfileService", "getUserProfileUrl($userId): checking fixed path: $fixedPath")
-        
         var foundUrl: String? = null
         try {
             // Use getFileUrlUseCase to check if file exists and get URL directly
             when (val result = fileUseCases.getFileUrlUseCase(fixedPath)) {
                 is CustomResult.Success -> {
                     foundUrl = result.data
-                    Log.d("UserProfileService", "getUserProfileUrl($userId): found file at path $fixedPath with URL: $foundUrl")
                 }
                 is CustomResult.Failure -> {
                     // Check if this is specifically a 404 error (file not found)
                     val errorMessage = result.error.message ?: ""
                     if (errorMessage.contains("404") || errorMessage.contains("Object does not exist") || 
                         errorMessage.contains("Not Found")) {
-                        Log.d("UserProfileService", "getUserProfileUrl($userId): profile image not found (404), will use default")
                         foundUrl = null
                     } else {
-                        Log.w("UserProfileService", "getUserProfileUrl($userId): other error getting file URL: $errorMessage")
+                        Log.w(
+                            "UserProfileService",
+                            "getUserProfileUrl($userId): error: $errorMessage"
+                        )
                         foundUrl = null
                     }
                 }
                 else -> {
-                    Log.d("UserProfileService", "getUserProfileUrl($userId): unexpected result checking path $fixedPath")
                     foundUrl = null
                 }
             }
         } catch (e: Exception) {
-            Log.e("UserProfileService", "getUserProfileUrl($userId): exception checking path $fixedPath", e)
-            // Check if the exception is related to storage/network issues
-            if (e.message?.contains("404") == true || e.message?.contains("Object does not exist") == true) {
-                Log.d("UserProfileService", "getUserProfileUrl($userId): profile image not found (exception), will use default")
-            }
+            Log.e("UserProfileService", "getUserProfileUrl($userId): exception", e)
             foundUrl = null
         }
         
         val url = if (foundUrl != null) {
-            Log.d("UserProfileService", "getUserProfileUrl($userId): using Firebase-generated URL: $foundUrl")
-            
             // Test URL accessibility before returning
-            val finalUrl = validateAndGetAccessibleUrl(foundUrl, userId)
-            Log.d("UserProfileService", "getUserProfileUrl($userId): final validated URL: $finalUrl")
-            finalUrl
+            validateAndGetAccessibleUrl(foundUrl, userId)
         } else {
-            Log.d("UserProfileService", "getUserProfileUrl($userId): no profile image found, will use default")
             // Return null to use default profile image from SimpleUserProfileImage component
             null
         }
         
         // Cache the result (even if null)
         profileUrlCache[userId] = url
-        Log.d("UserProfileService", "getUserProfileUrl($userId): cached result: $url")
+        // Notify profile URL update
+        _profileUpdates.value = _profileUpdates.value + 1
         return url
     }
     
@@ -239,11 +231,8 @@ class UserProfileService(
      * 특정 사용자의 메시지들을 위해 프로필 정보 업데이트
      */
     suspend fun updateMessagesForUser(userId: String): Pair<String, String?> {
-        Log.d("UserProfileService", "updateMessagesForUser($userId): updating profile info")
-        
         val newDisplayName = getUserDisplayName(userId)
         val newProfileUrl = getCachedProfileUrl(userId)
-        Log.d("UserProfileService", "updateMessagesForUser($userId): newDisplayName='$newDisplayName', newProfileUrl='$newProfileUrl'")
         
         return Pair(newDisplayName, newProfileUrl)
     }
