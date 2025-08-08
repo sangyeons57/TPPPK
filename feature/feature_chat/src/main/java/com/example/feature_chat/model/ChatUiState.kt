@@ -34,7 +34,13 @@ data class ChatUiState(
     // WebSocket connection state
     val connectionState: WebSocketConnectionState = WebSocketConnectionState.Disconnected,
     val queuedMessagesCount: Int = 0,
+    val failedMessagesCount: Int = 0, // 재시도 실패한 메시지 수
     val showConnectionError: Boolean = false,
+    val isRetryingMessages: Boolean = false, // 메시지 재시도 진행 중
+
+    // 업로드 상태
+    val uploadingImagesCount: Int = 0, // 현재 업로드 중인 이미지 수
+    val uploadProgress: Float = 0f, // 전체 업로드 진행률 (0.0 ~ 1.0)
 
     // Note: Pagination state is now handled by Paging3 LoadState
     

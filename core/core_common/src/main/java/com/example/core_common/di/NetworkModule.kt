@@ -4,6 +4,7 @@ import android.content.Context
 import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.example.core_common.cache.ChatImageCache
 import com.example.core_common.cache.GlobalImageUrlCache
 import dagger.Module
 import dagger.Provides
@@ -95,6 +96,19 @@ object NetworkModule {
     @Singleton
     fun provideGlobalImageUrlCache(): GlobalImageUrlCache {
         return GlobalImageUrlCache()
+    }
+
+    /**
+     * 채팅 이미지 캐시 제공
+     * 채팅에서 주고받는 이미지들의 효율적인 캐싱 및 썸네일 생성
+     */
+    @Provides
+    @Singleton
+    fun provideChatImageCache(
+        @ApplicationContext context: Context,
+        imageLoader: ImageLoader
+    ): ChatImageCache {
+        return ChatImageCache(context, imageLoader)
     }
 
 }

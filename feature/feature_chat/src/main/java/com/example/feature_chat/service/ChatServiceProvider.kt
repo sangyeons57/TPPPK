@@ -1,6 +1,8 @@
 package com.example.feature_chat.service
 
+import android.content.Context
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_common.cache.ChatImageCache
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.chat.ChatUseCaseProvider
@@ -19,6 +21,7 @@ import javax.inject.Inject
  * Hilt의 DI를 통해 필요한 Service들을 생성하여 제공합니다.
  */
 class ChatServiceProvider @Inject constructor(
+    private val context: Context,
     private val chatUseCaseProvider: ChatUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
@@ -30,6 +33,7 @@ class ChatServiceProvider @Inject constructor(
     private val offlineMessageQueue: OfflineMessageQueue,
     private val navigationManger: NavigationManger,
     private val messageRepository: MessageRepository,
+    private val chatImageCache: ChatImageCache,
 ) {
     
     /**
@@ -62,12 +66,14 @@ class ChatServiceProvider @Inject constructor(
         )
         
         val messageService = MessageService(
+            context = context,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
             messageRepository = messageRepository,
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,
             dmUseCaseProvider = dmUseCaseProvider,
+            chatImageCache = chatImageCache,
             roomId = roomId,
             projectId = projectId,
             channelType = channelType
@@ -114,12 +120,14 @@ class ChatServiceProvider @Inject constructor(
         )
         
         val messageService = MessageService(
+            context = context,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
             offlineMessageQueue = offlineMessageQueue,
             messageRepository = messageRepository,
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,
             dmUseCaseProvider = dmUseCaseProvider,
+            chatImageCache = chatImageCache,
             roomId = roomId,
             projectId = null,
             channelType = channelType

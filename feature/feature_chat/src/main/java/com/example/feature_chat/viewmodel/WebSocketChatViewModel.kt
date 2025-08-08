@@ -119,9 +119,13 @@ class WebSocketChatViewModel @Inject constructor(
                 )
                 if (joinResult.isSuccess) {
                     Log.d("ViewModel", "✅ 방 입장 성공: $channelId")
+
                     // 디버그: 로컬 DB 최신 10개 로그 출력
                     withContext(Dispatchers.IO) {
                         services.messageService.debugLogRecentMessages(limit = 10)
+
+                        // 이미지 성능 최적화: 최근 이미지 프리로딩
+                        services.messageService.preloadRecentImages()
                     }
                 } else {
                     Log.e(
@@ -163,7 +167,11 @@ class WebSocketChatViewModel @Inject constructor(
         // 5. 연결 상태 모니터링
         observeConnectionState()
 
-        // 6. 오프라인 큐 모니터링 (SSOT 패턴에서는 자동 처리)
+        // 6. 오프라인 큐 모니터링
+        observeOfflineQueue()
+
+        // 7. 주기적인 캐시 정리 (1시간마다)
+        startPeriodicCacheCleanup()
 
         // Note: messagesFlow는 lazy property로 설정되어 처음 접근 시점에 생성됨
     }
@@ -538,6 +546,58 @@ class WebSocketChatViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 오프라인 큐 상태 모니터링
+     */
+    private fun observeOfflineQueue() {
+        viewModelScope.launch {
+            // 주기적으로 큐 상태 업데이트 (5초마다)
+            while (true) {
+                try {
+                    val (pendingCount, failedCount) = services.messageService.offlineMessageQueue.getQueueInfo()
+
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            queuedMessagesCount = pendingCount,
+                            failedMessagesCount = failedCount,
+                            isRetryingMessages = pendingCount > 0 || failedCount > 0
+                        )
+                    }
+
+                    if (pendingCount > 0 || failedCount > 0) {
+                        Log.d("ViewModel", "📋 큐 상태 업데이트: 대기 ${pendingCount}개, 실패 ${failedCount}개")
+                    }
+                } catch (e: Exception) {
+                    Log.e("ViewModel", "❌ 큐 상태 모니터링 실패", e)
+                }
+
+                delay(5000) // 5초마다 확인
+            }
+        }
+    }
+
+    /**
+     * 주기적인 캐시 정리 (메모리 및 디스크 사용량 최적화)
+     */
+    private fun startPeriodicCacheCleanup() {
+        viewModelScope.launch {
+            while (true) {
+                try {
+                    delay(60 * 60 * 1000L) // 1시간 대기
+
+                    Log.d("ViewModel", "🧹 주기적 캐시 정리 시작")
+                    withContext(Dispatchers.IO) {
+                        services.messageService.cleanupCache()
+                    }
+                    Log.d("ViewModel", "✅ 주기적 캐시 정리 완료")
+                } catch (e: Exception) {
+                    Log.e("ViewModel", "❌ 주기적 캐시 정리 실패", e)
+                    // 실패해도 계속 시도
+                }
+            }
+        }
+    }
+
     // ================================
     // 🎯 멘션 관련 기능 (UI 전용)
     // ================================
@@ -655,10 +715,63 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 Log.d("ViewModel", "📸 이미지 선택됨: ${uris.size}개")
+
+                val userId = UserId(currentUserId ?: AuthUtil.getCurrentUserId() ?: "")
+
+                if (uris.size == 1) {
+                    // 단일 이미지 전송
+                    val result = services.messageService.sendImageMessage(
+                        senderId = userId,
+                        imageUri = uris.first(),
+                        content = "", // 이미지만 전송하는 경우 빈 내용
+                        replyToMessageId = null
+                    )
+
+                    when (result) {
+                        is CustomResult.Success -> {
+                            Log.d("ViewModel", "✅ 이미지 메시지 전송 성공: ${result.data}")
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("이미지를 전송했습니다"))
+                        }
+
+                        is CustomResult.Failure -> {
+                            Log.e("ViewModel", "❌ 이미지 메시지 전송 실패", result.error)
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송에 실패했습니다: ${result.error.message}"))
+                        }
+
+                        else -> {
+                            Log.w("ViewModel", "⏳ 이미지 메시지 전송 대기 중...")
+                        }
+                    }
+                } else {
+                    // 다중 이미지 전송
+                    val result = services.messageService.sendImagesMessage(
+                        senderId = userId,
+                        imageUris = uris,
+                        content = "", // 이미지만 전송하는 경우 빈 내용
+                        replyToMessageId = null
+                    )
+
+                    when (result) {
+                        is CustomResult.Success -> {
+                            Log.d("ViewModel", "✅ 다중 이미지 메시지 전송 성공: ${result.data}")
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("${uris.size}개의 이미지를 전송했습니다"))
+                        }
+
+                        is CustomResult.Failure -> {
+                            Log.e("ViewModel", "❌ 다중 이미지 메시지 전송 실패", result.error)
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송에 실패했습니다: ${result.error.message}"))
+                        }
+
+                        else -> {
+                            Log.w("ViewModel", "⏳ 다중 이미지 메시지 전송 대기 중...")
+                        }
+                    }
+                }
+                
                 _eventFlow.emit(ChatEvent.ImagesSelected(uris))
             } catch (e: Exception) {
                 Log.e("ViewModel", "❌ 이미지 선택 처리 실패", e)
-                _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 선택 처리에 실패했습니다"))
+                _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 선택 처리에 실패했습니다: ${e.message}"))
             }
         }
     }
@@ -670,7 +783,7 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 Log.d("ViewModel", "⬅️ 뒤로가기 클릭")
-                // TODO: 네비게이션 처리
+                services.navigationService.navigateBack()
             } catch (e: Exception) {
                 Log.e("ViewModel", "❌ 뒤로가기 처리 실패", e)
             }
@@ -838,8 +951,30 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 Log.d("ViewModel", "🔄 메시지 재전송: $messageId")
-                // TODO: 메시지 재전송 로직 구현
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 재전송 기능은 준비 중입니다"))
+
+                val result = services.messageService.retryFailedMessage(messageId)
+
+                when (result) {
+                    is CustomResult.Success -> {
+                        Log.d("ViewModel", "✅ 메시지 재전송 성공: $messageId")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("메시지를 다시 전송했습니다"))
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e("ViewModel", "❌ 메시지 재전송 실패", result.error)
+                        val errorMessage = when {
+                            result.error.message?.contains("네트워크") == true -> "네트워크 연결을 확인해주세요"
+                            result.error.message?.contains("이미지") == true -> "이미지 전송에 실패했습니다"
+                            else -> "메시지 재전송에 실패했습니다"
+                        }
+                        _eventFlow.emit(ChatEvent.ShowSnackbar(errorMessage))
+                    }
+
+                    else -> {
+                        Log.w("ViewModel", "⚠️ 메시지 재전송 알 수 없는 상태")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 재전송 중 문제가 발생했습니다"))
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("ViewModel", "❌ 메시지 재전송 실패", e)
                 _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 재전송에 실패했습니다"))

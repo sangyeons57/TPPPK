@@ -63,6 +63,28 @@ interface MessageDao {
         limit: Int
     ): List<MessageEntity>
 
+    /**
+     * 지정된 시점 이전의 최근 메시지들을 ASC(오래된→최신)로 반환
+     * - 내부 서브쿼리에서 DESC + LIMIT로 최근 N개를 뽑고, 바깥에서 ASC로 재정렬
+     * - 채팅 초기 로딩 및 Prepend 시 DB 레벨에서부터 ASC 정렬된 결과를 사용하기 위함
+     */
+    @Query(
+        """
+        SELECT * FROM (
+            SELECT * FROM messages
+            WHERE (:channelId = '' OR channelId = :channelId) AND createdAt < :beforeTimestamp
+            ORDER BY createdAt DESC
+            LIMIT :limit
+        ) AS sub
+        ORDER BY createdAt ASC
+        """
+    )
+    suspend fun getMessagesBeforeAsc(
+        channelId: String,
+        beforeTimestamp: Long,
+        limit: Int
+    ): List<MessageEntity>
+
     @Query(
         """
         SELECT * FROM messages 

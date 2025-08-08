@@ -18,4 +18,5 @@ alwaysApply: false
 - [tasks-rule.mdc](mdc:.cursor/rules/tasks-rule.mdc): Defines how to handle large or complex tasks requiring multiple steps using the `.cursor/tasks/` directory.
 - [tech-stack.mdc](mdc:.cursor/rules/tech-stack.mdc): Lists the core technologies, libraries, and frameworks used in the project.
 - [navigation-guidelines.mdc](mdc:.cursor/rules/navigation-guidelines.mdc): Details the structure, key components, usage, path management, and best practices of the app's navigation system. Based on the `core_navigation` module.
+ - [websocket-protocol.mdc](mdc:.cursor/rules/websocket-protocol.mdc): Defines the WebSocket transport protocol (Envelope). The Envelope is for client/server transport ONLY and must not leak into domain/data layers.
 

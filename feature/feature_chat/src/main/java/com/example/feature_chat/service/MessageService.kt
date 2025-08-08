@@ -1,14 +1,18 @@
 package com.example.feature_chat.service
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import com.example.core_common.cache.ChatImageCache
 import com.example.core_common.result.CustomResult
+import com.example.core_common.result.CustomResult.Success
 import com.example.core_common.util.AuthUtil
 import com.example.core_common.util.DateTimeUtil
+import com.example.core_common.util.ImageCompressor
 import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
 import com.example.domain.vo.ChannelId
@@ -24,6 +28,10 @@ import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.MessageDeliveryState
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.websocket.usecase.WebSocketUseCaseProvider
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,12 +51,14 @@ import javax.inject.Inject
  * - 오프라인 메시지 큐잉
  */
 class MessageService @Inject constructor(
+    private val context: Context,
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
-    private val offlineMessageQueue: OfflineMessageQueue,
+    val offlineMessageQueue: OfflineMessageQueue,
     private val messageRepository: MessageRepository,
     private val userProfileService: UserProfileService,
     private val fileUseCases: FileManagementUseCases,
     private val dmUseCaseProvider: DMUseCaseProvider,
+    private val chatImageCache: ChatImageCache,
     private val roomId: String,
     private val projectId: String? = null,
     private val channelType: String = "chat"
@@ -57,9 +67,9 @@ class MessageService @Inject constructor(
     companion object {
         private const val TAG = "MessageService"
         private const val PAGE_SIZE = 15 // 15개씩 로딩
-        private const val INITIAL_LOAD_SIZE = PAGE_SIZE * 2 // 초기 로드는 2페이지 정도만 로드 (뷰포트 채움 최소화)
-        private const val MAX_SIZE = PAGE_SIZE * 3 // 메모리 내 유지 아이템 수 제한
-        private const val PREFETCH_DISTANCE = 1 // 경계에 근접 시 다음 페이지 로드 (0은 경계 인식 문제로 비권장)
+        private const val INITIAL_LOAD_SIZE = PAGE_SIZE * 3 // 초기 3페이지 로드로 양방향 스크롤 여유 확보
+        private const val MAX_SIZE = PAGE_SIZE * 10 // 드랍으로 인한 재로딩 방지
+        private const val PREFETCH_DISTANCE = 10 // 경계 근접 전에 로드 트리거 강화
     }
 
     // OutBox 상태 캐시 (메시지 ID -> OutBox 상태)
@@ -161,6 +171,10 @@ class MessageService @Inject constructor(
             "메시지 상태 확인: messageId=${message.id.value}, outboxStatus=$outboxStatus, isSending=$isSending, sendFailed=$sendFailed, isDispatched=$isDispatched"
         )
 
+        // 이미지 URL 추출
+        val imageUrls = extractImageUrlsFromPayload(message.payload.value)
+        val hasImages = imageUrls.isNotEmpty()
+        
         return ChatMessageUiModel(
             messageId = message.id.value,
             userId = senderId,
@@ -172,7 +186,9 @@ class MessageService @Inject constructor(
             formattedTimestamp = DateTimeUtil.formatChatTime(message.createdAt),
             actualTimestamp = message.createdAt,
             isModified = false, // TODO: 수정 여부 확인
-            attachmentImageUrls = emptyList(), // TODO: 첨부파일 처리
+            attachmentImageUrls = emptyList(), // 레거시 - 하위 호환용
+            imageUrls = imageUrls, // 새로운 이미지 URL 목록
+            hasImages = hasImages, // 이미지 포함 여부
             isMyMessage = senderId == currentUserId,
             isSending = isSending,
             sendFailed = sendFailed,
@@ -203,6 +219,33 @@ class MessageService @Inject constructor(
                 userProfileService.loadUserProfile(userId)
             }
         } catch (_: Exception) { /* timeout or error - fallback to unknown */
+        }
+    }
+
+    /**
+     * 메시지 payload에서 이미지 URL들을 추출하는 유틸리티 메서드
+     */
+    private fun extractImageUrlsFromPayload(payload: String): List<String> {
+        return try {
+            // JSON 파싱을 시도하여 이미지 정보 추출
+            when {
+                // 단일 이미지 처리
+                payload.contains("\"imageUrl\"") -> {
+                    val regex = "\"imageUrl\"\\s*:\\s*\"([^\"]+)\"".toRegex()
+                    val match = regex.find(payload)
+                    if (match != null) listOf(match.groupValues[1]) else emptyList()
+                }
+                // 다중 이미지 처리
+                payload.contains("\"images\"") -> {
+                    val regex = "\"url\"\\s*:\\s*\"([^\"]+)\"".toRegex()
+                    regex.findAll(payload).map { it.groupValues[1] }.toList()
+                }
+
+                else -> emptyList()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "이미지 URL 추출 중 오류: ${e.message}")
+            emptyList()
         }
     }
 
@@ -331,106 +374,211 @@ class MessageService @Inject constructor(
     }
 
     /**
-     * 이미지 메시지 전송 (단일 이미지)
+     * 이미지 메시지 전송 (단일 이미지) - 압축 기능 및 에러 핸들링 포함
      */
     suspend fun sendImageMessage(
         senderId: UserId,
         imageUri: Uri,
         content: String = "",
-        replyToMessageId: DocumentId? = null
+        replyToMessageId: DocumentId? = null,
+        retryCount: Int = 0
     ): CustomResult<DocumentId, Exception> {
-        Log.d(TAG, "이미지 메시지 전송 시도: senderId=${senderId.value}, imageUri=$imageUri, roomId=$roomId")
-
+        Log.d(
+            TAG,
+            "이미지 메시지 전송 시도 (재시도: $retryCount): senderId=${senderId.value}, imageUri=$imageUri, roomId=$roomId"
+        )
+        
         return try {
-            // 이미지 업로드
-            val uploadPath = "chat_images/${roomId}/${System.currentTimeMillis()}.jpg"
-            val uploadResult = fileUseCases.uploadMediaUseCase(imageUri, uploadPath)
+            // 1단계: 이미지 압축 (재시도 시에는 캐시된 압축 결과 사용 가능)
+            Log.d(TAG, "🔄 이미지 압축 시작...")
+            val compressionOptions = ImageCompressor.CompressionOptions(
+                maxWidth = 1920,
+                maxHeight = 1920,
+                quality = if (retryCount > 0) 75 else 85, // 재시도 시 품질 낮춤
+                maxFileSizeBytes = if (retryCount > 0) 2 * 1024 * 1024 else 3 * 1024 * 1024 // 재시도 시 파일 크기 제한 강화
+            )
 
+            val compressedUri = ImageCompressor.compressImage(context, imageUri, compressionOptions)
+            Log.d(TAG, "✅ 이미지 압축 완료: $compressedUri")
+
+            // 2단계: Firebase Storage 업로드 (재시도 로직 포함)
+            val uploadPath =
+                "chat_images/${roomId}/${System.currentTimeMillis()}_r${retryCount}.jpg"
+            val uploadResult = uploadImageWithRetry(compressedUri, uploadPath, retryCount)
+            
             when (uploadResult) {
                 is CustomResult.Success -> {
                     val imageUrl = uploadResult.data
-                    Log.d(TAG, "✅ 이미지 업로드 성공: $imageUrl")
+                    Log.d(TAG, "✅ 이미지 업로드 성공 (재시도: $retryCount): $imageUrl")
 
-                    // 이미지 메시지 페이로드 생성
+                    // 3단계: 이미지 메시지 페이로드 생성
                     val payload = MessagePayload.forImage(
                         content = content,
                         imageUrl = imageUrl,
                         imageFilename = imageUri.lastPathSegment
                     )
 
+                    // 4단계: 메시지 전송
                     sendMessageInternal(senderId, MessageType.TEXT, payload, replyToMessageId)
                 }
-
                 is CustomResult.Failure -> {
-                    Log.e(TAG, "❌ 이미지 업로드 실패", uploadResult.error)
-                    CustomResult.Failure(uploadResult.error)
-                }
+                    Log.e(TAG, "❌ 이미지 업로드 실패 (재시도: $retryCount)", uploadResult.error)
 
+                    // 재시도 로직: 최대 3회까지 재시도
+                    if (retryCount < 3 && isRetryableError(uploadResult.error)) {
+                        Log.d(TAG, "🔄 이미지 업로드 재시도 예약: ${retryCount + 1}/3")
+                        delay(1000L * (retryCount + 1)) // 지수 백오프
+                        return sendImageMessage(
+                            senderId,
+                            imageUri,
+                            content,
+                            replyToMessageId,
+                            retryCount + 1
+                        )
+                    } else {
+                        // 최대 재시도 횟수 초과 또는 복구 불가능한 오류
+                        Log.e(TAG, "❌ 이미지 업로드 최종 실패 (재시도: $retryCount)")
+
+                        // 오프라인 큐에 추가하여 나중에 재시도
+                        queueFailedImageMessage(senderId, imageUri, content, replyToMessageId)
+
+                        CustomResult.Failure(
+                            ImageUploadException(
+                                "이미지 업로드에 실패했습니다. 네트워크 연결을 확인해주세요.",
+                                uploadResult.error
+                            )
+                        )
+                    }
+                }
                 else -> {
                     Log.e(TAG, "❌ 이미지 업로드 알 수 없는 상태: $uploadResult")
                     CustomResult.Failure(Exception("이미지 업로드 실패"))
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "이미지 메시지 전송 중 예외", e)
+            Log.e(TAG, "이미지 메시지 전송 중 예외 (재시도: $retryCount)", e)
+
+            // 예외가 발생한 경우에도 재시도 로직 적용
+            if (retryCount < 3 && isRetryableError(e)) {
+                Log.d(TAG, "🔄 이미지 전송 예외 재시도: ${retryCount + 1}/3")
+                delay(1000L * (retryCount + 1))
+                return sendImageMessage(
+                    senderId,
+                    imageUri,
+                    content,
+                    replyToMessageId,
+                    retryCount + 1
+                )
+            }
+            
             CustomResult.Failure(e)
         }
     }
 
     /**
-     * 이미지 메시지 전송 (다중 이미지)
+     * 이미지 메시지 전송 (다중 이미지) - 병렬 압축 및 업로드, 부분 실패 핸들링
      */
     suspend fun sendImagesMessage(
         senderId: UserId,
         imageUris: List<Uri>,
         content: String = "",
-        replyToMessageId: DocumentId? = null
+        replyToMessageId: DocumentId? = null,
+        retryCount: Int = 0
     ): CustomResult<DocumentId, Exception> {
         Log.d(
             TAG,
-            "이미지들 메시지 전송 시도: senderId=${senderId.value}, images=${imageUris.size}개, roomId=$roomId"
+            "이미지들 메시지 전송 시도 (재시도: $retryCount): senderId=${senderId.value}, images=${imageUris.size}개, roomId=$roomId"
         )
 
         return try {
-            val uploadedImages = mutableListOf<Map<String, Any?>>()
+            // 1단계: 모든 이미지를 병렬로 압축
+            Log.d(TAG, "🔄 ${imageUris.size}개 이미지 병렬 압축 시작...")
+            val compressionOptions = ImageCompressor.CompressionOptions(
+                maxWidth = 1920,
+                maxHeight = 1920,
+                quality = if (retryCount > 0) 70 else 80, // 재시도 시 품질 낮춤
+                maxFileSizeBytes = if (retryCount > 0) 1024 * 1024 else 2 * 1024 * 1024 // 재시도 시 더 작게
+            )
 
-            // 각 이미지를 순차적으로 업로드
-            for ((index, imageUri) in imageUris.withIndex()) {
-                val uploadPath = "chat_images/${roomId}/${System.currentTimeMillis()}_$index.jpg"
-                val uploadResult = fileUseCases.uploadMediaUseCase(imageUri, uploadPath)
+            val compressedUris =
+                ImageCompressor.compressImages(context, imageUris, compressionOptions)
+            Log.d(TAG, "✅ ${compressedUris.size}개 이미지 압축 완료")
 
-                when (uploadResult) {
-                    is CustomResult.Success -> {
-                        uploadedImages.add(
-                            mapOf(
-                                "url" to uploadResult.data,
-                                "filename" to imageUri.lastPathSegment,
-                                "mime" to "image/jpeg"
-                            )
+            // 2단계: 압축된 이미지들을 병렬로 업로드 (재시도 로직 포함)
+            Log.d(TAG, "🔄 ${compressedUris.size}개 이미지 병렬 업로드 시작...")
+            val uploadResults = coroutineScope {
+                compressedUris.mapIndexed { index, compressedUri ->
+                    async {
+                        uploadImageWithRetryForBatch(
+                            compressedUri,
+                            index,
+                            imageUris[index],
+                            retryCount
                         )
-                        Log.d(TAG, "✅ 이미지 ${index + 1}/${imageUris.size} 업로드 성공")
+                    }
+                }.awaitAll()
+            }
+
+            // 3단계: 성공한 업로드 결과들만 수집
+            val uploadedImages = uploadResults.filterNotNull()
+            val failedCount = uploadResults.count { it == null }
+
+            Log.d(TAG, "📊 업로드 완료: ${uploadedImages.size}/${imageUris.size}개 성공, ${failedCount}개 실패")
+
+            when {
+                uploadedImages.isNotEmpty() -> {
+                    // 부분적으로라도 성공한 경우 성공한 이미지들로 메시지 전송
+                    val payload = MessagePayload.forImages(content, uploadedImages)
+                    val result =
+                        sendMessageInternal(senderId, MessageType.TEXT, payload, replyToMessageId)
+
+                    // 실패한 이미지가 있으면 사용자에게 알림
+                    if (failedCount > 0) {
+                        Log.w(TAG, "⚠️ ${failedCount}개 이미지 업로드 실패, ${uploadedImages.size}개만 전송됨")
+                        // 실패한 이미지들을 오프라인 큐에 추가
+                        val failedUris =
+                            imageUris.filterIndexed { index, _ -> uploadResults[index] == null }
+                        queueFailedImagesMessage(senderId, failedUris, content, replyToMessageId)
                     }
 
-                    is CustomResult.Failure -> {
-                        Log.e(TAG, "❌ 이미지 ${index + 1} 업로드 실패", uploadResult.error)
-                        // 일부 실패해도 성공한 이미지들로 전송 진행
-                    }
+                    result
+                }
 
-                    else -> {
-                        Log.e(TAG, "❌ 이미지 ${index + 1} 업로드 알 수 없는 상태")
-                    }
+                retryCount < 2 -> {
+                    // 모든 이미지 업로드 실패, 재시도 가능
+                    Log.d(TAG, "🔄 모든 이미지 업로드 실패, 재시도 예약: ${retryCount + 1}/2")
+                    delay(2000L * (retryCount + 1))
+                    return sendImagesMessage(
+                        senderId,
+                        imageUris,
+                        content,
+                        replyToMessageId,
+                        retryCount + 1
+                    )
+                }
+
+                else -> {
+                    // 최대 재시도 횟수 초과
+                    Log.e(TAG, "❌ 모든 이미지 업로드 최종 실패")
+                    queueFailedImagesMessage(senderId, imageUris, content, replyToMessageId)
+                    CustomResult.Failure(ImageUploadException("모든 이미지 업로드에 실패했습니다. 나중에 다시 시도됩니다."))
                 }
             }
-
-            if (uploadedImages.isNotEmpty()) {
-                val payload = MessagePayload.forImages(content, uploadedImages)
-                sendMessageInternal(senderId, MessageType.TEXT, payload, replyToMessageId)
-            } else {
-                Log.e(TAG, "❌ 모든 이미지 업로드 실패")
-                CustomResult.Failure(Exception("모든 이미지 업로드에 실패했습니다"))
-            }
         } catch (e: Exception) {
-            Log.e(TAG, "이미지들 메시지 전송 중 예외", e)
+            Log.e(TAG, "이미지들 메시지 전송 중 예외 (재시도: $retryCount)", e)
+
+            if (retryCount < 2 && isRetryableError(e)) {
+                Log.d(TAG, "🔄 이미지들 전송 예외 재시도: ${retryCount + 1}/2")
+                delay(2000L * (retryCount + 1))
+                return sendImagesMessage(
+                    senderId,
+                    imageUris,
+                    content,
+                    replyToMessageId,
+                    retryCount + 1
+                )
+            }
+            
             CustomResult.Failure(e)
         }
     }
@@ -489,12 +637,10 @@ class MessageService @Inject constructor(
                         CustomResult.Failure(Exception("DM 메시지 전송 실패"))
                     }
                 }
-
                 is CustomResult.Failure -> {
                     Log.e(TAG, "❌ DM 채널 생성 실패", dmResult.error)
                     CustomResult.Failure(dmResult.error)
                 }
-
                 else -> {
                     Log.e(TAG, "❌ DM 채널 생성 알 수 없는 상태")
                     CustomResult.Failure(Exception("DM 채널 생성 실패"))
@@ -562,11 +708,9 @@ class MessageService @Inject constructor(
                         }
                     }
                 }
-
                 is CustomResult.Failure -> {
                     Log.e(TAG, "Room DB 최신 메시지 조회 실패", result.error)
                 }
-
                 else -> {
                     Log.d(TAG, "Room DB 최신 메시지 조회 - 상태: $result")
                 }
@@ -730,4 +874,326 @@ class MessageService @Inject constructor(
             CustomResult.Failure(e)
         }
     }
+
+    // ================================
+    // 🎯 에러 처리 및 재시도 유틸리티
+    // ================================
+
+    /**
+     * 재시도 가능한 에러인지 확인
+     */
+    private fun isRetryableError(error: Throwable): Boolean {
+        return when (error) {
+            is java.net.SocketTimeoutException,
+            is java.net.ConnectException,
+            is java.net.UnknownHostException,
+            is java.io.IOException -> true
+
+            else -> {
+                val message = error.message?.lowercase() ?: ""
+                message.contains("timeout") ||
+                        message.contains("network") ||
+                        message.contains("connection") ||
+                        message.contains("firebase") && message.contains("storage")
+            }
+        }
+    }
+
+    /**
+     * 이미지 업로드 재시도 로직 포함
+     */
+    private suspend fun uploadImageWithRetry(
+        compressedUri: Uri,
+        uploadPath: String,
+        currentRetryCount: Int
+    ): CustomResult<String, Exception> {
+        return try {
+            fileUseCases.uploadMediaUseCase(compressedUri, uploadPath)
+        } catch (e: Exception) {
+            if (currentRetryCount < 2 && isRetryableError(e)) {
+                Log.d(TAG, "🔄 이미지 업로드 재시도: ${currentRetryCount + 1}/2")
+                delay(1000L * (currentRetryCount + 1))
+                uploadImageWithRetry(compressedUri, uploadPath, currentRetryCount + 1)
+            } else {
+                Log.e(TAG, "❌ 이미지 업로드 최종 실패", e)
+                CustomResult.Failure(e)
+            }
+        }
+    }
+
+    /**
+     * 배치 업로드에서 개별 이미지 업로드 재시도 로직
+     */
+    private suspend fun uploadImageWithRetryForBatch(
+        compressedUri: Uri,
+        index: Int,
+        originalUri: Uri,
+        batchRetryCount: Int
+    ): Map<String, Any>? {
+        return try {
+            val uploadPath =
+                "chat_images/${roomId}/${System.currentTimeMillis()}_${index}_r${batchRetryCount}.jpg"
+            val uploadResult = uploadImageWithRetry(compressedUri, uploadPath, 0)
+
+            when (uploadResult) {
+                is CustomResult.Success -> {
+                    Log.d(TAG, "✅ 배치 이미지 ${index + 1} 업로드 성공")
+                    mapOf(
+                        "url" to uploadResult.data,
+                        "filename" to (originalUri.lastPathSegment ?: "image.jpg"),
+                        "mime" to "image/jpeg",
+                        "compressed" to true,
+                        "retryCount" to batchRetryCount
+                    )
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "❌ 배치 이미지 ${index + 1} 업로드 실패", uploadResult.error)
+                    null
+                }
+
+                else -> {
+                    Log.e(TAG, "❌ 배치 이미지 ${index + 1} 업로드 알 수 없는 상태")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 배치 이미지 ${index + 1} 업로드 예외", e)
+            null
+        }
+    }
+
+    /**
+     * 실패한 단일 이미지 메시지를 오프라인 큐에 추가
+     */
+    private fun queueFailedImageMessage(
+        senderId: UserId,
+        imageUri: Uri,
+        content: String,
+        replyToMessageId: DocumentId?
+    ) {
+        try {
+            Log.d(TAG, "📋 실패한 이미지 메시지 큐에 추가: $imageUri")
+            // TODO: 이미지 메시지 전용 큐잉 시스템 구현
+            // 현재는 기본 메시지 큐를 사용하되, 추후 이미지 전용 처리 필요
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 실패한 이미지 메시지 큐잉 실패", e)
+        }
+    }
+
+    /**
+     * 실패한 다중 이미지 메시지를 오프라인 큐에 추가
+     */
+    private fun queueFailedImagesMessage(
+        senderId: UserId,
+        imageUris: List<Uri>,
+        content: String,
+        replyToMessageId: DocumentId?
+    ) {
+        try {
+            Log.d(TAG, "📋 실패한 다중 이미지 메시지 큐에 추가: ${imageUris.size}개")
+            // TODO: 다중 이미지 메시지 전용 큐잉 시스템 구현
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 실패한 다중 이미지 메시지 큐잉 실패", e)
+        }
+    }
+
+    /**
+     * 메시지 재전송 기능
+     */
+    suspend fun retryFailedMessage(messageId: String): CustomResult<Unit, Exception> {
+        Log.d(TAG, "🔄 실패한 메시지 재전송 시도: $messageId")
+
+        return try {
+            // Room DB에서 실패한 메시지 조회
+            val messageResult = messageRepository.findById(DocumentId(messageId))
+
+            when (messageResult) {
+                is CustomResult.Success -> {
+                    val message = messageResult.data
+                    val payload = message.payload
+
+                    // 이미지 메시지인지 확인
+                    val imageUrls = extractImageUrlsFromPayload(payload.value)
+
+                    if (imageUrls.isNotEmpty()) {
+                        // 이미지 메시지 재전송 - 이미 업로드된 URL로 바로 전송
+                        val result = sendMessageInternal(
+                            senderId = message.senderId,
+                            messageType = message.messageType,
+                            payload = payload,
+                            replyToMessageId = message.replyToMessageId
+                        )
+
+                        if (result is CustomResult.Success) {
+                            // 기존 실패한 메시지 삭제
+                            messageRepository.delete(DocumentId(messageId))
+                            updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
+                        }
+
+                        when (result) {
+                            is CustomResult.Success -> Success(Unit)
+                            is CustomResult.Failure -> result
+                            is CustomResult.Loading -> result
+                            is CustomResult.Initial -> result
+                            is CustomResult.Progress -> result
+                        }
+                    } else {
+                        // 일반 텍스트 메시지 재전송
+                        val result = sendMessageInternal(
+                            senderId = message.senderId,
+                            messageType = message.messageType,
+                            payload = payload,
+                            replyToMessageId = message.replyToMessageId
+                        )
+
+                        if (result is CustomResult.Success) {
+                            // 기존 실패한 메시지 삭제
+                            messageRepository.delete(DocumentId(messageId))
+                            updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
+                        }
+
+                        when (result) {
+                            is CustomResult.Success -> CustomResult.Success(Unit)
+                            is CustomResult.Failure -> result
+                            is CustomResult.Progress -> result
+                            is CustomResult.Initial -> result
+                            is CustomResult.Loading -> result
+                        }
+                    }
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "❌ 재전송할 메시지 조회 실패", messageResult.error)
+                    CustomResult.Failure(Exception("재전송할 메시지를 찾을 수 없습니다"))
+                }
+
+                else -> {
+                    Log.e(TAG, "❌ 재전송할 메시지 조회 알 수 없는 상태")
+                    CustomResult.Failure(Exception("메시지 조회 실패"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 메시지 재전송 중 예외", e)
+            CustomResult.Failure(e)
+        }
+    }
+
+    // ================================
+    // 🎯 이미지 캐싱 및 성능 최적화
+    // ================================
+
+    /**
+     * 채팅방 최근 이미지들을 프리로드하여 캐시에 저장
+     */
+    suspend fun preloadRecentImages() {
+        try {
+            Log.d(TAG, "🚀 최근 이미지 프리로드 시작")
+
+            // 최근 50개 메시지에서 이미지 URL 추출
+            val recentMessagesResult = messageRepository.getRecentMessages(roomId, 50)
+
+            when (recentMessagesResult) {
+                is CustomResult.Success -> {
+                    val imageUrls = recentMessagesResult.data
+                        .asSequence()
+                        .mapNotNull { message ->
+                            extractImageUrlsFromPayload(message.payload.value)
+                        }
+                        .flatten()
+                        .distinct()
+                        .take(20) // 최대 20개 이미지만 프리로드
+                        .toList()
+
+                    if (imageUrls.isNotEmpty()) {
+                        chatImageCache.preloadImages(imageUrls)
+                        Log.d(TAG, "✅ 최근 이미지 프리로드 완료: ${imageUrls.size}개")
+                    } else {
+                        Log.d(TAG, "📭 프리로드할 이미지 없음")
+                    }
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "❌ 최근 메시지 조회 실패", recentMessagesResult.error)
+                }
+
+                else -> {
+                    Log.w(TAG, "⚠️ 최근 메시지 조회 알 수 없는 상태")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 이미지 프리로드 중 예외", e)
+        }
+    }
+
+    /**
+     * 이미지 썸네일 생성 (UI 성능 최적화용)
+     */
+    suspend fun generateImageThumbnails(imageUrls: List<String>) {
+        try {
+            Log.d(TAG, "🖼️ 이미지 썸네일 생성 시작: ${imageUrls.size}개")
+
+            imageUrls.forEach { imageUrl ->
+                chatImageCache.generateThumbnail(imageUrl)
+            }
+
+            Log.d(TAG, "✅ 이미지 썸네일 생성 완료")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 썸네일 생성 중 예외", e)
+        }
+    }
+
+    /**
+     * 캐시 정리 (용량 최적화)
+     */
+    suspend fun cleanupCache() {
+        try {
+            Log.d(TAG, "🧹 캐시 정리 시작")
+            chatImageCache.cleanupOldCache()
+            Log.d(TAG, "✅ 캐시 정리 완료")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 캐시 정리 중 예외", e)
+        }
+    }
+
+    /**
+     * 캐시 상태 정보 조회
+     */
+    fun getCacheInfo(): String {
+        return buildString {
+            appendLine("=== MessageService Cache Info ===")
+            appendLine("Room ID: $roomId")
+            appendLine("OutBox Cache: ${outboxStatusCache.size} entries")
+            append(chatImageCache.getCacheInfo().toString())
+        }
+    }
+
+    /**
+     * 성능 최적화를 위한 이미지 처리 파이프라인
+     */
+    suspend fun optimizeImagePerformance(imageUrls: List<String>) {
+        try {
+            Log.d(TAG, "⚡ 이미지 성능 최적화 시작")
+
+            // 1. 이미지 프리로딩
+            chatImageCache.preloadImages(imageUrls.take(10)) // 최대 10개
+
+            // 2. 썸네일 생성 (UI 스크롤 성능 향상)
+            imageUrls.take(20).forEach { url -> // 최대 20개
+                chatImageCache.generateThumbnail(url)
+            }
+
+            Log.d(TAG, "✅ 이미지 성능 최적화 완료")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 이미지 성능 최적화 중 예외", e)
+        }
+    }
 }
+
+/**
+ * 이미지 업로드 전용 예외 클래스
+ */
+class ImageUploadException(
+    message: String,
+    cause: Throwable? = null
+) : Exception(message, cause)

@@ -62,6 +62,7 @@ import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.ui.components.common.ConnectionStatusBar
 import com.example.feature_chat.ui.components.dialog.EditDeleteChatDialog
+import com.example.feature_chat.ui.components.dialog.ImageViewerDialog
 import com.example.feature_chat.ui.components.dialog.UserProfileDialog
 import com.example.feature_chat.ui.components.input.MessageInput
 import com.example.feature_chat.ui.components.system.ChatMessagesList
@@ -106,19 +107,24 @@ fun ChatScreen(
     var showEditDeleteDialog by remember { mutableStateOf<ChatMessageUiModel?>(null) } // ★ 타입 변경
     var showUserProfileDialog by remember { mutableStateOf<String?>(null) }
 
-    rememberLauncherForActivityResult(
+    // 이미지 뷰어 상태
+    var showImageViewer by remember { mutableStateOf(false) }
+    var currentImageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+    var currentImageIndex by remember { mutableStateOf(0) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
-        onResult = { uris: List<Uri> -> viewModel.onImagesSelected(uris) }
+        onResult = { uris: List<Uri> ->
+            if (uris.isNotEmpty()) {
+                viewModel.onImagesSelected(uris)
+            }
+        }
     )
 
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is ChatEvent.ScrollToBottom -> coroutineScope.launch {
-                    if(listState.layoutInfo.totalItemsCount > 0) {
-                        listState.animateScrollToItem(0)
-                    }
-                }
+                // is ChatEvent.ScrollToBottom -> { /* 강제 스크롤 임시 비활성화 */ }
                 is ChatEvent.ShowEditDeleteDialog -> showEditDeleteDialog = event.message // ★ 타입 변경됨
                 is ChatEvent.ShowUserProfileDialog -> showUserProfileDialog = event.userId
                 is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
@@ -134,33 +140,28 @@ fun ChatScreen(
                 is ChatEvent.ImageSelected -> {}
                 is ChatEvent.ImageDeselected -> {}
                 is ChatEvent.SystemMessage -> snackbarHostState.showSnackbar(event.content)
-                is ChatEvent.RefreshMessages -> {
-                    lazyPagingItems.refresh()
+                // is ChatEvent.RefreshMessages -> { /* 강제 새로고침 임시 비활성화 */ }
+                ChatEvent.RefreshMessages -> {
+                    // no-op: 강제 새로고침 임시 비활성화
+                }
+
+                ChatEvent.ScrollToBottom -> {
+                    // no-op: 강제 스크롤 임시 비활성화
                 }
             }
         }
     }
 
-    // Auto-scroll to bottom on initial data load - enhanced timing with anchor coordination
-    // 초기 자동 스크롤 억제: initialMessageId가 있으면 최신으로 스크롤하지 않음
+    // Auto position to bottom once when initial data is ready (reduces PREPEND cascade)
     LaunchedEffect(
         lazyPagingItems.itemCount,
-        lazyPagingItems.loadState.refresh,
-        uiState.isAnchorJumpInProgress,
-        viewModel.getInitialMessageId()
+        lazyPagingItems.loadState.refresh
     ) {
-        val hasAnchor = viewModel.getInitialMessageId() != null
-        if (!hasScrolledToInitialPosition &&
-            !hasAnchor && // 앵커가 없을 때만 최신으로 자동 스크롤
-            lazyPagingItems.itemCount > 0 &&
-            lazyPagingItems.loadState.refresh is androidx.paging.LoadState.NotLoading &&
-            lazyPagingItems.loadState.append is androidx.paging.LoadState.NotLoading
-        ) {
-            if (uiState.isAnchorJumpInProgress) return@LaunchedEffect
-            delay(100)
-            listState.scrollToItem(0)
+        val refreshDone = lazyPagingItems.loadState.refresh is androidx.paging.LoadState.NotLoading
+        if (!hasScrolledToInitialPosition && refreshDone && lazyPagingItems.itemCount > 0) {
+            listState.scrollToItem(lazyPagingItems.itemCount - 1)
             hasScrolledToInitialPosition = true
-            Log.d("ChatScreen", "✅ 초기 스크롤(최신) 완료 - 아이템 수: ${lazyPagingItems.itemCount}")
+            Log.d("ChatScreen", "✅ 초기 위치 하단 배치 완료 - items=${lazyPagingItems.itemCount}")
         }
     }
 
@@ -182,6 +183,7 @@ fun ChatScreen(
     }
 
     // 앵커 대상 메시지가 로드되면 해당 인덱스로 스크롤 (initialMessageId 케이스 포함)
+    /*
     LaunchedEffect(
         viewModel.anchorTargetMessageId.value,
         uiState.isAnchorJumpInProgress,
@@ -194,19 +196,17 @@ fun ChatScreen(
         if (uiState.isAnchorJumpInProgress) return@LaunchedEffect
         if (lazyPagingItems.itemCount <= 0) return@LaunchedEffect
 
-        // 현재 스냅샷에서 타겟 메시지의 인덱스를 찾음
         val snapshot = lazyPagingItems.itemSnapshotList.items
         val anchorIndex = snapshot.indexOfFirst { it.messageId == targetId }
         if (anchorIndex >= 0) {
-            // reverseLayout = true 이므로, index가 0이면 최신
             listState.scrollToItem(anchorIndex)
             hasScrolledToInitialPosition = true
             Log.d("ChatScreen", "🎯 앵커 스크롤 완료: targetId=$targetId, index=$anchorIndex")
         } else {
-            // 아직 스냅샷에 없으면 추후 append/refresh 시 다시 시도됨
             Log.d("ChatScreen", "⏳ 앵커 대상 미존재 - 다음 로딩 때 재시도: $targetId")
         }
     }
+    */
 
     // 추가: isLoadingHistory 상태 모니터링
     LaunchedEffect(uiState.isLoadingHistory) {
@@ -228,17 +228,7 @@ fun ChatScreen(
     }
 
     // 키보드 상태 변경 시 스크롤 위치 조정
-    LaunchedEffect(isKeyboardVisible) {
-        if (isKeyboardVisible && lazyPagingItems.itemCount > 0) {
-            // Anchor Jump 중이 아닐 때만 키보드 스크롤 수행
-            if (!uiState.isAnchorJumpInProgress) {
-                // 키보드가 나타날 때 최신 메시지로 스크롤
-                delay(100) // 키보드 애니메이션 대기
-                listState.animateScrollToItem(0)
-                Log.d("ChatScreen", "⌨️ 키보드 표시로 스크롤 조정")
-            }
-        }
-    }
+    // LaunchedEffect(isKeyboardVisible) { /* 키보드 표시 시 강제 스크롤 임시 비활성화 */ }
 
     // Note: With Paging3, auto-scroll on new messages should be handled differently
     // Consider using LaunchedEffect with item count or specific events
@@ -281,18 +271,12 @@ fun ChatScreen(
                             viewModel.onSendMessageClick()
                         }
                     },
-                    onAttachmentClick = viewModel::onAttachmentClick,
+                    onAttachmentClick = { imagePickerLauncher.launch("image/*") },
                     onCancelEdit = viewModel::cancelEdit,
                     onKeyboardStateChange = { keyboardVisible ->
                         isKeyboardVisible = keyboardVisible
                     },
-                    onScrollToBottom = {
-                        coroutineScope.launch {
-                            if (lazyPagingItems.itemCount > 0) {
-                                listState.animateScrollToItem(0)
-                            }
-                        }
-                    },
+                    onScrollToBottom = { /* 강제 스크롤 임시 비활성화 */ },
                     onMentionSuggestionClick = viewModel::onMentionSuggestionClick,
                     participants = uiState.participants,
                     projectMembers = uiState.projectMembers,
@@ -316,58 +300,7 @@ fun ChatScreen(
                 onRetryConnection = { viewModel.retryConnection() }
             )
 
-            // 개발 빌드에서만 노출되는 Anchor Jump 테스트 버튼
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                TextButton(
-                    onClick = {
-                        // 🎯 Anchor-aware 최신 스크롤 로직
-                        if (!uiState.isAnchorJumpInProgress) {
-                            coroutineScope.launch {
-                                // UI에서 직접 최신 메시지로 스크롤
-                                if (lazyPagingItems.itemCount > 0) {
-                                    listState.animateScrollToItem(0)
-                                    Log.d("ChatScreen", "📍 수동 최신 스크롤 실행")
-                                }
-                            }
-                            // ViewModel의 jumpToLatest도 함께 호출하여 데이터 새로고침
-                            viewModel.jumpToLatest()
-                        } else {
-                            Log.d("ChatScreen", "🚫 Anchor Jump 진행 중 - 최신 스크롤 스킵")
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = !uiState.isAnchorJumpInProgress // Anchor Jump 중 비활성화
-                ) {
-                    Text(
-                        "최신으로",
-                        fontSize = 10.sp,
-                        color = if (uiState.isAnchorJumpInProgress)
-                            MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = 0.6f
-                            )
-                        else
-                            MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                TextButton(
-                    onClick = {
-                        // 테스트용: 첫 번째 메시지 ID로 점프 (실제로는 검색이나 알림에서 호출)
-                        if (lazyPagingItems.itemCount > 0) {
-                            val firstMessage = lazyPagingItems[0]
-                            firstMessage?.let { viewModel.jumpToMessage(it.messageId) }
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("첫 메시지로", fontSize = 10.sp)
-                }
-            }
+            // Anchor Jump 테스트 버튼 제거됨
 
             when {
                 uiState.error != null && uiState.error?.contains("WebSocket 구현 예정") == true -> {
@@ -426,6 +359,11 @@ fun ChatScreen(
                         onMessageLongClick = viewModel::onMessageLongClick,
                         onUserProfileClick = viewModel::onUserProfileClick,
                         onRetryMessage = viewModel::retryMessage,
+                        onImageClick = { imageUrl, imageUrls, index ->
+                            currentImageUrls = imageUrls
+                            currentImageIndex = index
+                            showImageViewer = true
+                        },
                         initialMessageId = viewModel.getInitialMessageId()
                     )
                 }
@@ -451,6 +389,15 @@ fun ChatScreen(
 
     showUserProfileDialog?.let { userId ->
         UserProfileDialog(userId = userId, onDismiss = { showUserProfileDialog = null })
+    }
+
+    // 이미지 뷰어 다이얼로그
+    if (showImageViewer && currentImageUrls.isNotEmpty()) {
+        ImageViewerDialog(
+            imageUrls = currentImageUrls,
+            initialIndex = currentImageIndex,
+            onDismiss = { showImageViewer = false }
+        )
     }
 }
 

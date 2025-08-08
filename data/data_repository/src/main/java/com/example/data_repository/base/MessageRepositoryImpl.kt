@@ -144,35 +144,34 @@ class MessageRepositoryImpl @Inject constructor(
 
             return try {
                 when (params) {
+                    // ASC 모드: 기본 페이지는 최신 가까운 구간을 ASC로 반환
                     is LoadParams.Refresh -> {
                         val beforeTs = params.key ?: Long.MAX_VALUE
                         Log.d(
                             "MessagePagingSource",
-                            "🔄 Refresh: key=$beforeTs, limit=$limit, channel=$channelIdParam"
+                            "🔄 Refresh(ASC): beforeTs=$beforeTs, limit=$limit, channel=$channelIdParam"
                         )
-                        val entities = messageDao.getMessagesBefore(channelIdParam, beforeTs, limit)
+                        // 최신에서 과거 방향으로 limit개 가져온 뒤 ASC로 정렬하여 반환
+                        // DB 레벨에서 ASC로 반환하도록 전용 쿼리 사용
+                        val entities =
+                            messageDao.getMessagesBeforeAsc(channelIdParam, beforeTs, limit)
                         val messages =
                             entities.map { entity -> messageMapper.entityToDomain(entity) }
 
-                        val newest = entities.firstOrNull()?.createdAt
-                        val oldest = entities.lastOrNull()?.createdAt
+                        val oldest = entities.firstOrNull()?.createdAt
+                        val newest = entities.lastOrNull()?.createdAt
 
-                        val prevKey = if (entities.isEmpty()) {
-                            null
-                        } else {
-                            // 새로운 메시지를 위한 PREPEND 로딩 활성화
-                            // newest 타임스탬프보다 1ms 더 큰 값으로 설정하여 새 메시지 로드 가능하게 함
-                            newest?.plus(1)
-                        }
-
-                        val nextKey =
+                        // 더 과거 로딩용 키 (PREPEND)
+                        val prevKey =
                             if (entities.isEmpty() || entities.size < limit) null else oldest?.minus(
                                 1
                             )
+                        // 더 최신 로딩용 키 (APPEND). 초기(beforeTs=MAX)에는 대부분 null
+                        val nextKey = if (entities.isEmpty()) null else newest?.plus(1)
 
                         Log.d(
                             "MessagePagingSource",
-                            "🔄 Refresh result: size=${messages.size}, newest=$newest, oldest=$oldest, prevKey=$prevKey, nextKey=$nextKey"
+                            "🔄 Refresh(ASC) result: size=${messages.size}, oldest=$oldest, newest=$newest, prevKey=$prevKey, nextKey=$nextKey"
                         )
 
                         LoadResult.Page(
@@ -182,23 +181,26 @@ class MessageRepositoryImpl @Inject constructor(
                         )
                     }
 
+                    // ASC 모드: Append = 더 최신(createdAt 증가) 방향
                     is LoadParams.Append -> {
                         val key = params.key
                         Log.d(
                             "MessagePagingSource",
-                            "⬇️ Append: key=$key, limit=$limit, channel=$channelIdParam"
+                            "⬇️ Append(ASC newer): key=$key, limit=$limit, channel=$channelIdParam"
                         )
-                        val entities = messageDao.getMessagesBefore(channelIdParam, key, limit)
+                        val entities = messageDao.getMessagesAfter(channelIdParam, key, limit)
+                        // getMessagesAfter는 ASC 정렬 반환
                         val messages =
                             entities.map { entity -> messageMapper.entityToDomain(entity) }
-                        val oldest = entities.lastOrNull()?.createdAt
+                        val newest = entities.lastOrNull()?.createdAt
                         val nextKey =
-                            if (entities.isEmpty() || entities.size < limit) null else oldest?.minus(
+                            if (entities.isEmpty() || entities.size < limit) null else newest?.plus(
                                 1
                             )
+
                         Log.d(
                             "MessagePagingSource",
-                            "⬇️ Append result: size=${messages.size}, oldest=$oldest, nextKey=$nextKey"
+                            "⬇️ Append(ASC) result: size=${messages.size}, newest=$newest, nextKey=$nextKey"
                         )
                         LoadResult.Page(
                             data = messages,
@@ -207,25 +209,26 @@ class MessageRepositoryImpl @Inject constructor(
                         )
                     }
 
+                    // ASC 모드: Prepend = 더 과거(createdAt 감소) 방향
                     is LoadParams.Prepend -> {
                         val key = params.key
                         Log.d(
                             "MessagePagingSource",
-                            "⬆️ Prepend: key=$key, limit=$limit, channel=$channelIdParam"
+                            "⬆️ Prepend(ASC older): key=$key, limit=$limit, channel=$channelIdParam"
                         )
-                        val entitiesAsc = messageDao.getMessagesAfter(channelIdParam, key, limit)
-                        // getMessagesAfter는 ASC이므로, 전체 순서를 기존과 동일하게 DESC로 맞춤
-                        val entities = entitiesAsc.sortedByDescending { it.createdAt }
+                        // DB 레벨에서 ASC로 반환하도록 전용 쿼리 사용
+                        val entities = messageDao.getMessagesBeforeAsc(channelIdParam, key, limit)
                         val messages =
                             entities.map { entity -> messageMapper.entityToDomain(entity) }
-                        val newest = entities.firstOrNull()?.createdAt
+                        val oldest = entities.firstOrNull()?.createdAt
                         val prevKey =
-                            if (entities.isEmpty() || entities.size < limit) null else newest?.plus(
+                            if (entities.isEmpty() || entities.size < limit) null else oldest?.minus(
                                 1
                             )
+
                         Log.d(
                             "MessagePagingSource",
-                            "⬆️ Prepend result: size=${messages.size}, newest=$newest, prevKey=$prevKey"
+                            "⬆️ Prepend(ASC) result: size=${messages.size}, oldest=$oldest, prevKey=$prevKey"
                         )
 
                         LoadResult.Page(
@@ -242,10 +245,12 @@ class MessageRepositoryImpl @Inject constructor(
         }
 
         override fun getRefreshKey(state: PagingState<Long, Message>): Long? {
-            // 앵커 기준으로 가장 가까운 아이템의 createdAt을 키로 사용
-            return state.anchorPosition?.let { anchor ->
-                state.closestItemToPosition(anchor)?.createdAt?.toEpochMilli()
-            }
+            val anchorPosition = state.anchorPosition ?: return null
+            val anchorItem = state.closestItemToPosition(anchorPosition)
+            if (anchorItem?.createdAt != null) return anchorItem.createdAt.toEpochMilli()
+
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            return anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
     }
 

@@ -19,7 +19,9 @@ data class ChatMessageUiModel(
     val formattedTimestamp: String, // UI 표시용 포맷된 시간
     val actualTimestamp: Instant, // Raw Instant for logic like pagination cursors
     val isModified: Boolean,
-    val attachmentImageUrls: List<String> = emptyList(),
+    val attachmentImageUrls: List<String> = emptyList(), // 레거시 - 하위 호환용
+    val imageUrls: List<String> = emptyList(), // 새로운 이미지 URL 목록
+    val hasImages: Boolean = false, // 이미지가 포함된 메시지인지
     val isMyMessage: Boolean,
     val isSending: Boolean = false, // 메시지 전송 중 상태 (UI 피드백용)
     val sendFailed: Boolean = false, // 메시지 전송 실패 상태 (UI 피드백용)

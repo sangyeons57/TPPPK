@@ -37,6 +37,7 @@ fun ChatMessagesList(
     onUserProfileClick: (String) -> Unit,
     onRetryMessage: (String) -> Unit = { _ -> },
     onAddMember: (String, String) -> Unit = { _, _ -> }, // 멤버 추가 콜백 추가
+    onImageClick: (String, List<String>, Int) -> Unit = { _, _, _ -> }, // 이미지 클릭 콜백 추가
     initialMessageId: String? = null
 ) {
     LazyColumn(
@@ -44,7 +45,7 @@ fun ChatMessagesList(
             .padding(horizontal = 8.dp)
             .testTag("message_list"),
         state = listState,
-        reverseLayout = true,
+        reverseLayout = false,
         contentPadding = PaddingValues(top = 16.dp, bottom = 8.dp), // 입력창과의 간격 추가
         userScrollEnabled = true // 스크롤 항상 가능하도록 해서 경계 도달 시 페이징이 막히지 않음
     ) {
@@ -131,11 +132,14 @@ fun ChatMessagesList(
             val message = lazyPagingItems[index]
             message?.let {
                 // 날짜 구분선을 메시지와 함께 렌더링 (pseudo-item 충돌 방지)
-                // reverseLayout에서 index+1이 시간상 더 과거 메시지임
+                // ASC 정렬 기준으로 이전 아이템이 더 과거 메시지임
                 val shouldShowDateSeparator = shouldShowDateSeparatorBeforeMessage(
                     currentMessage = it,
-                    nextMessage = if (index < lazyPagingItems.itemCount - 1) lazyPagingItems[index + 1] else null
+                    previousMessage = if (index > 0) lazyPagingItems[index - 1] else null
                 )
+                // 리스트 최하단(마지막 메시지)에서는 날짜 구분선 표시를 생략
+                val isLastItem = index == lazyPagingItems.itemCount - 1
+                val showDateSeparator = shouldShowDateSeparator && !isLastItem
 
                 // Note: With Paging3, grouping logic needs to be handled differently
                 // For now, treat each message as first in group until grouping is reimplemented
@@ -147,7 +151,7 @@ fun ChatMessagesList(
 
                 // 단일 Column으로 날짜 구분선 + 메시지를 함께 렌더링
                 androidx.compose.foundation.layout.Column {
-                    if (shouldShowDateSeparator) {
+                    if (showDateSeparator) {
                         DateSeparator(
                             displayText = formatDateForSeparator(it.actualTimestamp)
                         )
@@ -166,6 +170,7 @@ fun ChatMessagesList(
                             // TODO: 프로젝트 참여 이벤트 처리
                         },
                         onAddMember = onAddMember,
+                        onImageClick = onImageClick,
                         onMentionClick = { type, id ->
                             when (type) {
                                 "user" -> onUserProfileClick(id)
@@ -188,20 +193,20 @@ fun ChatMessagesList(
 }
 
 /**
- * 현재 메시지 앞에 날짜 구분선을 표시해야 하는지 판단 (reverseLayout 기준)
+ * 현재 메시지 앞에 날짜 구분선을 표시해야 하는지 판단 (ASC 기준)
  */
 private fun shouldShowDateSeparatorBeforeMessage(
     currentMessage: ChatMessageUiModel,
-    nextMessage: ChatMessageUiModel? // reverseLayout에서 시간상 더 과거 메시지
+    previousMessage: ChatMessageUiModel? // ASC에서 시간상 더 과거 메시지
 ): Boolean {
-    // 가장 과거 메시지(마지막 인덱스)에는 항상 날짜 구분선 표시 (일반적인 채팅 앱 관례)
-    if (nextMessage == null) return true
+    // 첫 메시지(이전 항목 없음)에는 날짜 구분선 표시
+    if (previousMessage == null) return true
 
     val currentDate = currentMessage.actualTimestamp.atZone(ZoneId.systemDefault()).toLocalDate()
-    val nextDate = nextMessage.actualTimestamp.atZone(ZoneId.systemDefault()).toLocalDate()
+    val prevDate = previousMessage.actualTimestamp.atZone(ZoneId.systemDefault()).toLocalDate()
 
-    // 현재 메시지와 다음(더 과거) 메시지의 날짜가 다르면 구분선 표시
-    return !currentDate.isEqual(nextDate)
+    // 이전 메시지와 날짜가 다르면 구분선 표시
+    return !currentDate.isEqual(prevDate)
 }
 
 /**

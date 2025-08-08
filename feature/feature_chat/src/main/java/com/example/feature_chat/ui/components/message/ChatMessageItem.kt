@@ -62,6 +62,7 @@ fun ChatMessageItemComposable(
     onRetryMessage: (String) -> Unit = { _ -> }, // 재전송 콜백 추가
     onJoinProject: (String) -> Unit = { _ -> }, // 프로젝트 참여 콜백 추가
     onAddMember: (String, String) -> Unit = { _, _ -> }, // 멤버 추가 콜백 추가 (projectId, targetUserId)
+    onImageClick: (String, List<String>, Int) -> Unit = { _, _, _ -> }, // 이미지 클릭 콜백 추가
     participants: List<ChatParticipant> = emptyList(),
     projectMembers: List<ProjectMember> = emptyList(),
     projectRoles: List<ProjectRole> = emptyList(),
@@ -127,10 +128,18 @@ fun ChatMessageItemComposable(
                         projectRoles
                     )
 
-                    ChatMessageText(
-                        processedText = processedText,
-                        onMentionClick = onMentionClick
-                    )
+                    // 이미지가 있는 경우 이미지 컴포넌트 사용, 없으면 텍스트만 표시
+                    if (message.hasImages) {
+                        ImageMessageComponent(
+                            message = message,
+                            onImageClick = onImageClick
+                        )
+                    } else {
+                        ChatMessageText(
+                            processedText = processedText,
+                            onMentionClick = onMentionClick
+                        )
+                    }
 
                     // 수정 표시 (메시지 내용 아래에 표시)
                     if (message.isModified) {

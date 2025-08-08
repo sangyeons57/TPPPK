@@ -1,0 +1,33 @@
+---
+description: WebSocket transport protocol (Envelope) rules for client/server communication.
+alwaysApply: true
+---
+# WebSocket Transport Protocol Rules (Envelope)
+
+- Purpose: The Envelope is used ONLY for client/server transport over WebSocket.
+- Layering: Do NOT leak Envelope into domain/data. Build just-in-time for send; parse on receive and map to domain.
+
+## Envelope (schema: v2)
+- kind: `message` | `message_patch`
+- messageType: Present ONLY on `message` Envelope (top-level), not inside `payload`.
+- payload: Domain content JSON (text + attachments). Never contains messageType.
+
+### message
+- Fields: `schema`, `kind`, `messageId`, `messageType`, `payload`, `replyToMessageId?`, `meta?`
+
+### message_patch
+- Fields: `schema`, `kind`, `targetMessageId`, `patchVersion`, `patch`
+- Patch keys: `status`, `attachments[]` (index, ready, width, height, size, thumbnailUrl), `error{}`
+
+## Image Flow
+1. Upload → obtain stable URL
+2. Send `message` with TEXT payload including image attachment(s)
+3. Optionally send `message_patch` with readiness/dimensions/thumbnail
+4. Receiver shows spinner until Coil loads or `message_patch.status=media_ready`
+
+## Notes
+- Version gate by `schema`.
+- Keep Envelope construction/parsing in WebSocket layer only.
+
+Refer to [core/websocket/PROTOCOL.md](mdc:core/websocket/PROTOCOL.md) for examples.
+
