@@ -14,6 +14,7 @@ import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.websocket.core.WebSocketMessage
 import com.example.websocket.usecase.WebSocketUseCaseProvider
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 /**
@@ -21,7 +22,7 @@ import javax.inject.Inject
  * Hilt의 DI를 통해 필요한 Service들을 생성하여 제공합니다.
  */
 class ChatServiceProvider @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val chatUseCaseProvider: ChatUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,

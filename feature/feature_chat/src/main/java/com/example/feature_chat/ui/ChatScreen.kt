@@ -121,92 +121,18 @@ fun ChatScreen(
         }
     )
 
-    LaunchedEffect(Unit) {
-        viewModel.eventFlow.collectLatest { event ->
-            when (event) {
-                // is ChatEvent.ScrollToBottom -> { /* 강제 스크롤 임시 비활성화 */ }
-                is ChatEvent.ShowEditDeleteDialog -> showEditDeleteDialog = event.message // ★ 타입 변경됨
-                is ChatEvent.ShowUserProfileDialog -> showUserProfileDialog = event.userId
-                is ChatEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is ChatEvent.ClearFocus -> focusManager.clearFocus()
-                is ChatEvent.Error -> snackbarHostState.showSnackbar(event.message)
-                is ChatEvent.ShowMessageActions -> {
-                    // Note: With Paging3, we can't easily find messages in UI state
-                    // Consider refactoring to pass the message directly with the event
-                    // For now, skip this functionality until event system is updated
-                }
-                is ChatEvent.ImagesSelected -> {}
-                is ChatEvent.AttachmentClicked -> {}
-                is ChatEvent.ImageSelected -> {}
-                is ChatEvent.ImageDeselected -> {}
-                is ChatEvent.SystemMessage -> snackbarHostState.showSnackbar(event.content)
-                // is ChatEvent.RefreshMessages -> { /* 강제 새로고침 임시 비활성화 */ }
-                ChatEvent.RefreshMessages -> {
-                    // no-op: 강제 새로고침 임시 비활성화
-                }
+    // UI 강제 리프레시/강제 스크롤 유발하는 이벤트 바인딩 제거 (불필요한 재그림 억제)
 
-                ChatEvent.ScrollToBottom -> {
-                    // no-op: 강제 스크롤 임시 비활성화
-                }
-            }
-        }
-    }
-
-    // Auto position to bottom once when initial data is ready (reduces PREPEND cascade)
-    LaunchedEffect(
-        lazyPagingItems.itemCount,
-        lazyPagingItems.loadState.refresh
-    ) {
-        val refreshDone = lazyPagingItems.loadState.refresh is androidx.paging.LoadState.NotLoading
-        if (!hasScrolledToInitialPosition && refreshDone && lazyPagingItems.itemCount > 0) {
-            listState.scrollToItem(lazyPagingItems.itemCount - 1)
-            hasScrolledToInitialPosition = true
-            Log.d("ChatScreen", "✅ 초기 위치 하단 배치 완료 - items=${lazyPagingItems.itemCount}")
-        }
-    }
+    // Auto position to bottom once when initial data is ready (reverseLayout=true에서 index 0이 최신)
+    // 초기 자동 스크롤 제거: 불필요한 재그림/스크롤 트리거 방지
 
     // 추가: 초기 데이터 로딩 상태 모니터링
-    LaunchedEffect(lazyPagingItems.loadState.refresh) {
-        when (val loadState = lazyPagingItems.loadState.refresh) {
-            is androidx.paging.LoadState.Loading -> {
-                Log.d("ChatScreen", "🔄 초기 데이터 로딩 중...")
-            }
-
-            is androidx.paging.LoadState.NotLoading -> {
-                Log.d("ChatScreen", "✅ 초기 데이터 로딩 완료 - 아이템 수: ${lazyPagingItems.itemCount}")
-            }
-
-            is androidx.paging.LoadState.Error -> {
-                Log.e("ChatScreen", "❌ 초기 데이터 로딩 실패: ${loadState.error.message}")
-            }
-        }
-    }
+    // loadState 기반 추가 UI 반응 제거
 
     // 앵커 대상 메시지가 로드되면 해당 인덱스로 스크롤 (initialMessageId 케이스 포함)
-    /*
-    LaunchedEffect(
-        viewModel.anchorTargetMessageId.value,
-        uiState.isAnchorJumpInProgress,
-        lazyPagingItems.itemCount,
-        lazyPagingItems.loadState.refresh,
-        lazyPagingItems.loadState.append
-    ) {
-        val targetId = viewModel.anchorTargetMessageId.value
-        if (targetId.isNullOrBlank()) return@LaunchedEffect
-        if (uiState.isAnchorJumpInProgress) return@LaunchedEffect
-        if (lazyPagingItems.itemCount <= 0) return@LaunchedEffect
-
-        val snapshot = lazyPagingItems.itemSnapshotList.items
-        val anchorIndex = snapshot.indexOfFirst { it.messageId == targetId }
-        if (anchorIndex >= 0) {
-            listState.scrollToItem(anchorIndex)
-            hasScrolledToInitialPosition = true
-            Log.d("ChatScreen", "🎯 앵커 스크롤 완료: targetId=$targetId, index=$anchorIndex")
-        } else {
-            Log.d("ChatScreen", "⏳ 앵커 대상 미존재 - 다음 로딩 때 재시도: $targetId")
-        }
-    }
-    */
+    var hasScrolledToAnchor by remember { mutableStateOf(false) }
+    
+    // 앵커 관련 자동 스크롤 제거
 
     // 추가: isLoadingHistory 상태 모니터링
     LaunchedEffect(uiState.isLoadingHistory) {
@@ -218,14 +144,7 @@ fun ChatScreen(
     }
 
     // 🎯 Anchor Jump 완료 시 스크롤 최적화
-    LaunchedEffect(uiState.isAnchorJumpInProgress) {
-        // Anchor Jump가 완료되면 UI 스크롤 타이밍 최적화
-        if (!uiState.isAnchorJumpInProgress && hasScrolledToInitialPosition) {
-            // Anchor 완료 후 약간의 지연으로 안정적인 스크롤
-            delay(150)
-            Log.d("ChatScreen", "🎯 Anchor Jump 완료 - UI 스크롤 최적화 완료")
-        }
-    }
+    // Anchor Jump 후 최적화 제거
 
     // 키보드 상태 변경 시 스크롤 위치 조정
     // LaunchedEffect(isKeyboardVisible) { /* 키보드 표시 시 강제 스크롤 임시 비활성화 */ }

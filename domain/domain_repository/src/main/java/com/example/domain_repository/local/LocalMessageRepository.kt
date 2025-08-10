@@ -50,16 +50,7 @@ interface LocalMessageRepository : BaseLocalRepository<Message> {
         limit: Int = 50
     ): CustomResult<List<Message>, Exception>
     
-    /**
-     * 특정 시간 범위의 메시지들 조회
-     * @param startTimestamp 시작 시간 (epoch milliseconds)
-     * @param endTimestamp 종료 시간 (epoch milliseconds)
-     * @return 해당 시간 범위의 메시지 목록
-     */
-    suspend fun getMessagesBetween(
-        startTimestamp: Long, 
-        endTimestamp: Long
-    ): CustomResult<List<Message>, Exception>
+    // 사용하지 않는 메서드 제거됨: getMessagesBetween
 
     // ================================
     // 사용자 기반 조회 작업

@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.data_datasource.database.AppDatabase
 import com.example.data_datasource.database.migration.MIGRATION_3_4
 import com.example.data_datasource.database.migration.MIGRATION_6_7
+import com.example.data_datasource.database.migration.MIGRATION_7_8
 import com.example.data_model.local.MessageDao
 import com.example.data_model.local.OutboxDao
 import com.example.data_model.local.SyncMetadataDao
@@ -33,7 +34,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "projecting_kotlin_database"
         )
-            .addMigrations(MIGRATION_3_4, MIGRATION_6_7) // 마이그레이션 추가
+            .addMigrations(MIGRATION_3_4, MIGRATION_6_7, MIGRATION_7_8) // 마이그레이션 추가
             .fallbackToDestructiveMigration() // messageType + payload 전환을 위한 파괴적 마이그레이션 활성화
             .build()
     }

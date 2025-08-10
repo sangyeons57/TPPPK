@@ -9,6 +9,7 @@ import com.example.domain.vo.message.MessageIsDeleted
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.websocket.constant.WebSocketEventTypes
+import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.websocket.core.WebSocketMessage
 import java.time.Instant
 import javax.inject.Inject
@@ -39,7 +40,7 @@ class WebSocketDomainMapper @Inject constructor() {
                 WebSocketDomainEvent.MessageReceived(
                     messageId = message.messageId ?: "",
                     senderId = message.senderId ?: "",
-                    content = message.content ?: "",
+                    content = message.getTextContent() ?: "",
                     timestamp = message.timestamp?.let {
                         Instant.ofEpochSecond(it.toLong()).toString()
                     } ?: Instant.now().toString(),
@@ -54,7 +55,7 @@ class WebSocketDomainMapper @Inject constructor() {
                 WebSocketDomainEvent.MessageEdited(
                     messageId = message.messageId ?: "",
                     senderId = message.senderId ?: "",
-                    newContent = message.content ?: "",
+                    newContent = message.getTextContent() ?: "",
                     timestamp = message.timestamp?.let {
                         Instant.ofEpochSecond(it.toLong()).toString()
                     } ?: Instant.now().toString(),
@@ -89,7 +90,7 @@ class WebSocketDomainMapper @Inject constructor() {
                 WebSocketDomainEvent.MessageFailed(
                     messageId = message.messageId ?: "",
                     failureType = message.type,
-                    errorMessage = message.content,
+                    errorMessage = message.getTextContent(),
                     roomId = roomId ?: message.roomId
                 )
             }
@@ -116,7 +117,7 @@ class WebSocketDomainMapper @Inject constructor() {
 
             WebSocketMessage.TYPE_SYSTEM -> {
                 WebSocketDomainEvent.SystemMessage(
-                    content = message.content ?: "",
+                    content = message.getTextContent() ?: "",
                     timestamp = message.timestamp?.let {
                         Instant.ofEpochSecond(it.toLong()).toString()
                     } ?: Instant.now().toString(),
@@ -126,7 +127,7 @@ class WebSocketDomainMapper @Inject constructor() {
 
             WebSocketMessage.TYPE_ERROR -> {
                 WebSocketDomainEvent.Error(
-                    message = message.content ?: "Unknown error",
+                    message = message.getTextContent() ?: "Unknown error",
                     roomId = roomId ?: message.roomId
                 )
             }
@@ -143,7 +144,7 @@ class WebSocketDomainMapper @Inject constructor() {
             else -> {
                 WebSocketDomainEvent.Unknown(
                     type = message.type,
-                    rawData = message.content
+                    rawData = message.getTextContent()
                 )
             }
         }
@@ -230,11 +231,12 @@ class WebSocketDomainMapper @Inject constructor() {
         projectId: String? = null,
         channelType: String? = null
     ): WebSocketMessage {
+        val payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to (message.payload.getTextContent() ?: ""))
         return WebSocketMessage(
             type = messageType,
             roomId = roomId,
             senderId = message.senderId.value,
-            content = message.payload.getTextContent() ?: "",
+            payload = payload,
             messageId = message.id.value,
             replyToMessageId = message.replyToMessageId?.value,
             timestamp = message.createdAt.epochSecond.toDouble(),

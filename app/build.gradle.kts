@@ -76,6 +76,9 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     debugImplementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.messaging)
+    
+    // Compose BOM
+    implementation(platform(libs.androidx.compose.bom))
 
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)

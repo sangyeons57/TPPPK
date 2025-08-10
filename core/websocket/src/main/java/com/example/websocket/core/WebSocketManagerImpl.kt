@@ -124,7 +124,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                     }
 
                     WebSocketMessage.TYPE_ERROR -> {
-                        val errorContent = message.content ?: "Unknown error"
+                        val errorContent = message.getTextContent() ?: "Unknown error"
                         Log.w(TAG, "Received error message: $errorContent")
 
                         when {

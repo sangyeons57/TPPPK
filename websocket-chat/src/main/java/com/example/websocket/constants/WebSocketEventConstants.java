@@ -91,6 +91,77 @@ public final class WebSocketEventConstants {
     public static final String ACK = "ACK";
     
     // ================================
+    // JSON 필드 이름 상수
+    // ================================
+    
+    /** 메시지 타입 필드 (@JsonProperty) */
+    public static final String FIELD_TYPE = "type";
+    
+    /** 방 ID 필드 (@JsonProperty) */
+    public static final String FIELD_ROOM_ID = "roomId";
+    
+    /** 발신자 ID 필드 (@JsonProperty) */
+    public static final String FIELD_SENDER_ID = "senderId";
+    
+    /** 메시지 타입 필드 (@JsonProperty) */
+    public static final String FIELD_MESSAGE_TYPE = "messageType";
+    
+    /** 타임스탬프 필드 (@JsonProperty) */
+    public static final String FIELD_TIMESTAMP = "timestamp";
+    
+    /** 메시지 ID 필드 (@JsonProperty) */
+    public static final String FIELD_MESSAGE_ID = "messageId";
+    
+    /** 답장 대상 메시지 ID 필드 (@JsonProperty) */
+    public static final String FIELD_REPLY_TO_MESSAGE_ID = "replyToMessageId";
+    
+    /** 페이로드 필드 (@JsonProperty) */
+    public static final String FIELD_PAYLOAD = "payload";
+    
+    /** 프로젝트 ID 필드 (@JsonProperty) */
+    public static final String FIELD_PROJECT_ID = "projectId";
+    
+    /** 채널 타입 필드 (@JsonProperty) */
+    public static final String FIELD_CHANNEL_TYPE = "channelType";
+    
+    /** 인증 토큰 필드 (@JsonProperty) */
+    public static final String FIELD_AUTH_TOKEN = "authToken";
+    
+    /** 오류 코드 필드 (@JsonProperty) */
+    public static final String FIELD_ERROR_CODE = "errorCode";
+    
+    /** 메타데이터 필드 (@JsonProperty) */
+    public static final String FIELD_METADATA = "metadata";
+
+    // ================================
+    // 메시지 타입 상수
+    // ================================
+    
+    /** 텍스트 메시지 */
+    public static final String MESSAGE_TYPE_TEXT = "TEXT";
+    
+    /** 시스템 메시지 */
+    public static final String MESSAGE_TYPE_SYSTEM = "SYSTEM";
+    
+    /** 이미지 메시지 */
+    public static final String MESSAGE_TYPE_IMAGE = "IMAGE";
+    
+    /** 파일 메시지 */
+    public static final String MESSAGE_TYPE_FILE = "FILE";
+    
+    /** 시스템 날짜 메시지 */
+    public static final String MESSAGE_TYPE_SYSTEM_DATE = "SYSTEM_DATE";
+    
+    /** 시스템 프로젝트 입장 메시지 */
+    public static final String MESSAGE_TYPE_SYSTEM_PROJECT_JOIN = "SYSTEM_PROJECT_JOIN";
+    
+    /** 시스템 프로젝트 퇴장 메시지 */
+    public static final String MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE = "SYSTEM_PROJECT_LEAVE";
+    
+    /** 시스템 사용자 초대 메시지 */
+    public static final String MESSAGE_TYPE_SYSTEM_USER_INVITE = "SYSTEM_USER_INVITE";
+
+    // ================================
     // 채널 타입 상수
     // ================================
     

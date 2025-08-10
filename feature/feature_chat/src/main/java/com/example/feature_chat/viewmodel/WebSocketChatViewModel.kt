@@ -97,8 +97,8 @@ class WebSocketChatViewModel @Inject constructor(
     // 🎯 MessageService를 통한 모든 페이징 기능 위임
     // UI 모델 변환까지 포함된 완전한 페이징 플로우
     val messagesFlow: Flow<PagingData<ChatMessageUiModel>> by lazy {
-        Log.d("ViewModel", "🚀 messagesFlow lazy 초기화 시작")
-        services.messageService.getUiMessagesPagingFlow().cachedIn(viewModelScope)
+        Log.d("ViewModel", "🚀 messagesFlow lazy 초기화 시작 (initialMessageId=$initialMessageId)")
+        services.messageService.getUiMessagesPagingFlow(initialMessageId).cachedIn(viewModelScope)
     }
 
     // 🎯 MessageService의 상태들을 UI에 전달
@@ -106,10 +106,7 @@ class WebSocketChatViewModel @Inject constructor(
     val anchorTargetMessageId: StateFlow<String?> = services.messageService.anchorTargetMessageId
 
     init {
-        // 1. 🎯 즉시 Anchor 설정 (messagesFlow 접근 전에 반드시 설정)
-        viewModelScope.launch {
-            services.messageService.setupInitialAnchor(initialMessageId)
-        }
+        // 1. 🎯 Pager initialKey 방식을 사용하므로 초기 Anchor 설정은 생략
 
         // 2. 채팅방 즉시 입장 (해당 방 이벤트만 수신/저장하도록 보장)
         viewModelScope.launch {

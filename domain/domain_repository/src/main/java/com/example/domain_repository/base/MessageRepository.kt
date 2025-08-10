@@ -25,7 +25,15 @@ interface MessageRepository : DefaultRepository<Message> {
     // 기존 메시지 관리 기능
     // ================================
 
-    suspend fun sendMessage(channelId: String, content: String): String
+    /**
+     * 로컬(Room) 저장 + OutBox 생성까지 처리하는 메시지 생성
+     * WebSocket 전송은 상위 서비스 계층에서 처리한다.
+     *
+     * @param channelId 채널 ID
+     * @param payload 메시지 페이로드(Map 형태). JSON으로 직렬화되어 저장됨
+     * @return 생성된 메시지 ID
+     */
+    suspend fun sendMessage(channelId: String, payload: Map<String, Any?>): String
     suspend fun deleteMessage(id: String)
 
     // ================================
@@ -33,14 +41,8 @@ interface MessageRepository : DefaultRepository<Message> {
     // ================================
 
     /**
-     * 메시지용 PagingSource 제공 (시간 역순)
-     * @return 타임스탬프 키를 사용하는 PagingSource
-     */
-    fun getMessagesPagingSource(): PagingSource<Long, Message>
-
-    /**
      * 특정 채널의 메시지용 PagingSource 제공 (시간 역순)
-     * @param channelId 채널 ID
+     * @param channelId 채널 ID (빈 문자열/널 불가)
      * @return 해당 채널의 메시지들만 포함하는 PagingSource
      */
     fun getMessagesPagingSource(channelId: String): PagingSource<Long, Message>
@@ -75,18 +77,7 @@ interface MessageRepository : DefaultRepository<Message> {
         limit: Int = 50
     ): CustomResult<List<Message>, Exception>
 
-    /**
-     * 특정 시간 범위의 메시지들 조회
-     * @param channelId 채널 ID
-     * @param startTimestamp 시작 시간 (epoch milliseconds)
-     * @param endTimestamp 종료 시간 (epoch milliseconds)
-     * @return 해당 시간 범위의 메시지 목록
-     */
-    suspend fun getMessagesBetween(
-        channelId: String,
-        startTimestamp: Long,
-        endTimestamp: Long
-    ): CustomResult<List<Message>, Exception>
+    // 사용하지 않는 메서드 제거됨: getMessagesBetween
 
     // ================================
     // OutBox 기반 동기화 상태 관리

@@ -8,6 +8,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import com.example.core_common.cache.ChatImageCache
+import com.example.core_common.constant.PagingConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Success
 import com.example.core_common.util.AuthUtil
@@ -33,11 +34,13 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
@@ -66,10 +69,6 @@ class MessageService @Inject constructor(
 
     companion object {
         private const val TAG = "MessageService"
-        private const val PAGE_SIZE = 15 // 15개씩 로딩
-        private const val INITIAL_LOAD_SIZE = PAGE_SIZE * 3 // 초기 3페이지 로드로 양방향 스크롤 여유 확보
-        private const val MAX_SIZE = PAGE_SIZE * 10 // 드랍으로 인한 재로딩 방지
-        private const val PREFETCH_DISTANCE = 10 // 경계 근접 전에 로드 트리거 강화
     }
 
     // OutBox 상태 캐시 (메시지 ID -> OutBox 상태)
@@ -93,41 +92,63 @@ class MessageService @Inject constructor(
     // WebSocket 사용 사례 (방별) - 메시지 전송용으로만 사용
     private val roomWebSocketUseCases = webSocketUseCaseProvider.createForRoom(roomId)
 
-    // Paging3 설정 - 기본 페이지 (최신 메시지부터)
-    private val messagesPager = Pager(
-        config = PagingConfig(
-            pageSize = PAGE_SIZE,
-            initialLoadSize = INITIAL_LOAD_SIZE,
-            prefetchDistance = PREFETCH_DISTANCE,
-            maxSize = MAX_SIZE,
-            enablePlaceholders = false
-        ),
-        pagingSourceFactory = {
-            messageRepository.getMessagesPagingSource(roomId)
-        }
-    )
 
     // ================================
     // 메시지 읽기 (Paging3) - UI 모델 변환 포함
     // ================================
     
-    /**
-     * Room DB에서 Paging3를 통한 메시지 스트림 (도메인 모델)
-     * WebSocket으로 받은 메시지들이 자동으로 포함됨
-     */
-    fun getMessagesPagingFlow(): Flow<PagingData<Message>> {
-        Log.d(TAG, "메시지 Paging Flow 제공 - Room DB 기반")
-        return messagesPager.flow
-    }
+
 
     /**
      * UI에서 직접 사용할 수 있도록 UI 모델로 변환된 Paging3 스트림 제공
-     * ViewModel에서 runBlocking을 사용하지 않도록 여기서 변환을 수행
+     * @param initialMessageId 앵커 메시지 ID (null이면 최신 메시지부터 시작)
+     * @param useFallbackAnchor 앵커 메시지가 없을 때 현재 시간을 fallback으로 사용할지 여부
      */
-    fun getUiMessagesPagingFlow(): Flow<PagingData<ChatMessageUiModel>> {
-        Log.d(TAG, "UI 메시지 Paging Flow 제공 - UI 모델 변환 포함")
-        return messagesPager.flow.map { pagingData ->
-            pagingData.map { message -> convertDomainMessageToUiModel(message) }
+    fun getUiMessagesPagingFlow(
+        initialMessageId: String? = null,
+        useFallbackAnchor: Boolean = false
+    ): Flow<PagingData<ChatMessageUiModel>> {
+        Log.d(TAG, "UI 메시지 Paging Flow 제공 - initialMessageId=$initialMessageId, useFallbackAnchor=$useFallbackAnchor")
+        return flow {
+            val initialKey: Long? = try {
+                if (initialMessageId.isNullOrBlank()) {
+                    if (useFallbackAnchor) {
+                        System.currentTimeMillis()
+                    } else {
+                        null
+                    }
+                } else {
+                    val anchor = messageRepository.findById(initialMessageId)
+                    if (anchor != null) {
+                        anchor.createdAt?.toEpochMilli()
+                    } else if (useFallbackAnchor) {
+                        Log.d(TAG, "앵커 메시지 미존재, fallback 사용: $initialMessageId")
+                        System.currentTimeMillis()
+                    } else {
+                        null
+                    }
+                }
+            } catch (_: Exception) { 
+                if (useFallbackAnchor) System.currentTimeMillis() else null
+            }
+
+            val pager = Pager(
+                config = PagingConfig(
+                    pageSize = PagingConstants.PAGE_SIZE,
+                    initialLoadSize = PagingConstants.INITIAL_LOAD_SIZE,
+                    prefetchDistance = PagingConstants.PREFETCH_DISTANCE,
+                    maxSize = PagingConstants.MAX_SIZE,
+                    enablePlaceholders = false
+                ),
+                initialKey = initialKey,
+                pagingSourceFactory = { messageRepository.getMessagesPagingSource(roomId) }
+            )
+
+            emitAll(
+                pager.flow.map { pagingData ->
+                    pagingData.map { message -> convertDomainMessageToUiModel(message) }
+                }
+            )
         }
     }
 
@@ -300,10 +321,10 @@ class MessageService @Inject constructor(
 
             // 2) 앵커 주변 범위 프리페치 (로컬 캐시 기준)
             runCatching {
-                messageRepository.getMessagesBefore(roomId, anchorTsMs, PAGE_SIZE)
+                messageRepository.getMessagesBefore(roomId, anchorTsMs, PagingConstants.PAGE_SIZE)
             }
             runCatching {
-                messageRepository.getMessagesAfter(roomId, anchorTsMs, PAGE_SIZE)
+                messageRepository.getMessagesAfter(roomId, anchorTsMs, PagingConstants.PAGE_SIZE)
             }
 
             Log.d(TAG, "메시지 점프 주변 프리페치 완료: $messageId @ $anchorTsMs")
@@ -369,8 +390,10 @@ class MessageService @Inject constructor(
         replyToMessageId: DocumentId? = null
     ): CustomResult<DocumentId, Exception> {
         Log.d(TAG, "텍스트 메시지 전송 시도: senderId=${senderId.value}, content=$content, roomId=$roomId")
-        val payload = MessagePayload.forText(content)
-        return sendMessageInternal(senderId, MessageType.TEXT, payload, replyToMessageId)
+        val payloadMap = mapOf(
+            "content" to content
+        )
+        return sendMessageWithPayloadMap(senderId, payloadMap, replyToMessageId)
     }
 
     /**
@@ -730,47 +753,38 @@ class MessageService @Inject constructor(
         payload: MessagePayload,
         replyToMessageId: DocumentId?
     ): CustomResult<DocumentId, Exception> {
+        // 기존 경로 유지: 복합/이미지 페이로드 등 레거시 경로에서 사용
+        val payloadMap = mutableMapOf<String, Any?>()
+        payload.getTextContent()?.let { payloadMap["content"] = it }
+        if (payloadMap.isEmpty()) {
+            // content 키가 없으면 전체 JSON 문자열을 content로 전송
+            payloadMap["content"] = payload.value
+        }
+        return sendMessageWithPayloadMap(senderId, payloadMap, replyToMessageId)
+    }
+
+    /**
+     * Map 형태 payload로 메시지 전송
+     * - Repository.sendMessage(channelId, payloadMap)으로 로컬 저장 + OutBox 생성
+     * - 이후 WebSocket 전송 수행
+     */
+    suspend fun sendMessageWithPayloadMap(
+        senderId: UserId,
+        payloadMap: Map<String, Any?>,
+        replyToMessageId: DocumentId? = null
+    ): CustomResult<DocumentId, Exception> {
         return try {
-            // 고유 메시지 ID 생성
-            val messageId = DocumentId.generate()
+            // 1) 로컬 저장 + OutBox 생성 (메시지 ID 발급)
+            val createdId = messageRepository.sendMessage(roomId, payloadMap)
+            val messageId = DocumentId(createdId)
 
-            // 1단계: 옵티미스틱 UI - 즉시 Room DB에 저장 (전송중 상태)
-            val optimisticMessage = Message.create(
-                id = messageId,
-                senderId = senderId,
-                messageType = messageType,
-                payload = payload,
-                replyToMessageId = replyToMessageId,
-                mentions = emptyList(),
-                channelId = ChannelId(roomId)
-            )
+            // OutBox 상태 캐시 업데이트 (PENDING)
+            updateOutBoxStatusCache(messageId.value, OutBoxStatus.PENDING)
 
-            // Room DB에 즉시 저장 (UI에 즉시 표시)
-            messageRepository.save(optimisticMessage)
-            Log.d(TAG, "✅ 옵티미스틱 메시지 Room DB 저장 완료: ${messageId.value}")
+            // 2) WebSocket 전송
+            val contentForWebSocket = (payloadMap["content"] as? String)
+                ?: mapToJsonString(payloadMap)
 
-            // OutBox 레코드 생성 (PENDING 상태로 전송 대기)
-            val result = messageRepository.createOutBoxRecord(
-                messageId = messageId.value,
-                channelId = roomId,
-                payload = payload.value
-            )
-
-            if (result is CustomResult.Success) {
-                // OutBox 상태 캐시 업데이트 (PENDING)
-                updateOutBoxStatusCache(messageId.value, OutBoxStatus.PENDING)
-                Log.d(TAG, "✅ OutBox 레코드 생성 완료: ${messageId.value}")
-            } else {
-                Log.e(TAG, "❌ OutBox 레코드 생성 실패: ${result}")
-            }
-
-            // 2단계: 백그라운드 WebSocket 전송
-            val contentForWebSocket = when (messageType) {
-                MessageType.TEXT -> payload.getTextContent() ?: ""
-                // 시스템/이미지/복합 페이로드는 전체 JSON 문자열을 전송
-                else -> payload.value
-            }
-            
             val sendResult = roomWebSocketUseCases.sendMessageUseCase(
                 senderId = senderId,
                 content = contentForWebSocket,
@@ -787,19 +801,44 @@ class MessageService @Inject constructor(
                 Log.e(TAG, "❌ WebSocket 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}")
 
                 // 오프라인 큐에 추가 (재전송용)
-                offlineMessageQueue.queueMessage(
-                    com.example.feature_chat.queue.QueuedMessageAction.Send(
-                        message = optimisticMessage,
-                        roomId = roomId
+                messageRepository.findById(messageId.value)?.let { msg ->
+                    offlineMessageQueue.queueMessage(
+                        com.example.feature_chat.queue.QueuedMessageAction.Send(
+                            message = msg,
+                            roomId = roomId
+                        )
                     )
-                )
+                }
 
                 CustomResult.Success(messageId)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "메시지 전송 중 예외", e)
+            Log.e(TAG, "메시지 전송(Map) 중 예외", e)
             CustomResult.Failure(e)
         }
+    }
+
+    private fun mapToJsonString(map: Map<String, Any?>): String {
+        fun escape(s: String): String = s
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+
+        fun toJson(value: Any?): String = when (value) {
+            null -> "null"
+            is String -> "\"${escape(value)}\""
+            is Number, is Boolean -> value.toString()
+            is Map<*, *> -> value.entries.joinToString(prefix = "{", postfix = "}") { (k, v) ->
+                val key = k?.toString() ?: "null"
+                "\"${escape(key)}\":" + toJson(v)
+            }
+            is Iterable<*> -> value.joinToString(prefix = "[", postfix = "]") { elem -> toJson(elem) }
+            else -> "\"${escape(value.toString())}\""
+        }
+
+        return toJson(map)
     }
     
     /**

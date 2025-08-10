@@ -3,12 +3,16 @@ package com.example.data_model.local
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 
-@Entity(tableName = "messages")
+@Entity(
+    tableName = "messages",
+    indices = [Index(value = ["channelId", "createdAt"])]
+)
 data class MessageEntity(
     @PrimaryKey
     val id: String,
@@ -52,7 +56,7 @@ interface MessageDao {
     @Query(
         """
         SELECT * FROM messages 
-        WHERE (:channelId = '' OR channelId = :channelId) AND createdAt < :beforeTimestamp 
+        WHERE channelId = :channelId AND createdAt < :beforeTimestamp 
         ORDER BY createdAt DESC 
         LIMIT :limit
     """
@@ -63,32 +67,10 @@ interface MessageDao {
         limit: Int
     ): List<MessageEntity>
 
-    /**
-     * 지정된 시점 이전의 최근 메시지들을 ASC(오래된→최신)로 반환
-     * - 내부 서브쿼리에서 DESC + LIMIT로 최근 N개를 뽑고, 바깥에서 ASC로 재정렬
-     * - 채팅 초기 로딩 및 Prepend 시 DB 레벨에서부터 ASC 정렬된 결과를 사용하기 위함
-     */
-    @Query(
-        """
-        SELECT * FROM (
-            SELECT * FROM messages
-            WHERE (:channelId = '' OR channelId = :channelId) AND createdAt < :beforeTimestamp
-            ORDER BY createdAt DESC
-            LIMIT :limit
-        ) AS sub
-        ORDER BY createdAt ASC
-        """
-    )
-    suspend fun getMessagesBeforeAsc(
-        channelId: String,
-        beforeTimestamp: Long,
-        limit: Int
-    ): List<MessageEntity>
-
     @Query(
         """
         SELECT * FROM messages 
-        WHERE (:channelId = '' OR channelId = :channelId) AND createdAt > :afterTimestamp 
+        WHERE channelId = :channelId AND createdAt > :afterTimestamp 
         ORDER BY createdAt ASC 
         LIMIT :limit
     """
@@ -99,18 +81,7 @@ interface MessageDao {
         limit: Int
     ): List<MessageEntity>
 
-    @Query(
-        """
-        SELECT * FROM messages 
-        WHERE (:channelId = '' OR channelId = :channelId) AND createdAt BETWEEN :startTimestamp AND :endTimestamp 
-        ORDER BY createdAt ASC
-    """
-    )
-    suspend fun getMessagesBetween(
-        channelId: String,
-        startTimestamp: Long,
-        endTimestamp: Long
-    ): List<MessageEntity>
+    // 사용하지 않는 메서드 제거됨: getMessagesBetween
 
     // ================================
     // 기본 조회 쿼리

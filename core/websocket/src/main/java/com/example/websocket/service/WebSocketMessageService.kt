@@ -12,6 +12,7 @@ import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.websocket.constant.OperationStatus
+import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.websocket.constant.WebSocketEventTypes
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.core.WebSocketManager
@@ -413,8 +414,8 @@ class WebSocketMessageService @Inject constructor(
                 }
 
                 authResult.type == WebSocketMessage.TYPE_ERROR -> {
-                    Log.e(TAG, "WebSocket 인증 실패: ${authResult.content}")
-                    Result.failure(Exception("Authentication failed: ${authResult.content}"))
+                    Log.e(TAG, "WebSocket 인증 실패: ${authResult.getTextContent()}")
+                    Result.failure(Exception("Authentication failed: ${authResult.getTextContent()}"))
                 }
 
                 else -> {
@@ -486,7 +487,7 @@ class WebSocketMessageService @Inject constructor(
                             .filter { message ->
                                 (message.type == WebSocketEventTypes.JOINED_ROOM && message.roomId == roomId) ||
                                         (message.type == WebSocketMessage.TYPE_ERROR &&
-                                                (message.content?.contains("Room") == true || message.roomId == roomId))
+                                                (message.getTextContent()?.contains("Room") == true || message.roomId == roomId))
                             }
                             .first()
                     }
@@ -503,8 +504,8 @@ class WebSocketMessageService @Inject constructor(
 
                         confirmationResult?.type == WebSocketMessage.TYPE_ERROR -> {
                             synchronized(joiningRooms) { joiningRooms.remove(roomId) }
-                            Log.e(TAG, "채팅방 입장 실패: ${confirmationResult.content}")
-                            Result.failure(Exception("Room join failed: ${confirmationResult.content}"))
+                            Log.e(TAG, "채팅방 입장 실패: ${confirmationResult.getTextContent()}")
+                            Result.failure(Exception("Room join failed: ${confirmationResult.getTextContent()}"))
                         }
 
                         else -> {
@@ -612,9 +613,8 @@ class WebSocketMessageService @Inject constructor(
                 type = WebSocketMessage.TYPE_MESSAGE,
                 roomId = roomId,
                 senderId = senderId.value,
-                content = content, // Backward compatibility
                 messageType = MessageType.TEXT.name,
-                payload = mapOf("content" to content), // New payload format
+                payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to content), // New payload format
                 messageId = messageId.value,
                 replyToMessageId = replyToMessageId?.value,
                 timestamp = Instant.now().epochSecond.toDouble(),
@@ -654,9 +654,8 @@ class WebSocketMessageService @Inject constructor(
             type = WebSocketMessage.TYPE_EDIT_MESSAGE,
             roomId = roomId,
             messageId = messageId.value,
-            content = newContent, // Backward compatibility
             messageType = MessageType.TEXT.name,
-            payload = mapOf("content" to newContent), // New payload format
+            payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to newContent), // New payload format
             timestamp = Instant.now().epochSecond.toDouble(),
             projectId = projectId,
             channelType = channelType

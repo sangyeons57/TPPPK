@@ -6,6 +6,15 @@ import androidx.paging.PagingState
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import com.example.core_common.result.CustomResult
+import com.example.core_common.constant.PagingConstants
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import com.example.core_common.util.AuthUtil
 import com.example.data_datasource.remote.MessageRemoteDataSource
 import com.example.data_model.local.MessageDao
@@ -28,6 +37,13 @@ import com.example.domain_repository.base.MessageRepository
 import com.example.mapper.DtoMapper
 import com.example.mapper.message.MessageMapper
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.add
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
@@ -47,7 +63,7 @@ class MessageRepositoryImpl @Inject constructor(
     // 모든 기본 CRUD 메서드들은 부모 클래스에서 자동으로 처리됩니다!
     override suspend fun sendMessage(
         channelId: String,
-        content: String
+        payload: Map<String, Any?>
     ): String {
         val messageId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
@@ -58,7 +74,7 @@ class MessageRepositoryImpl @Inject constructor(
                 id = DocumentId(messageId),
                 senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
                 messageType = MessageType.TEXT,
-                payload = MessagePayload.forText(content),
+                payload = MessagePayload(payload.toJsonString()),
                 replyToMessageId = null,
                 mentions = emptyList(),
                 channelId = ChannelId(channelId)
@@ -67,13 +83,14 @@ class MessageRepositoryImpl @Inject constructor(
             val entity = entityMapper.domainToEntity(message)
             messageDao.upsert(entity)
 
-            // 2. OutBox에 전송 대기 레코드 생성
+            // 2. OutBox에 전송 대기 레코드 생성 (플랫 JSON: channelId + payload 필드 병합)
+            val mergedOutboxPayload = buildOutboxPayload(channelId, payload)
             val outboxRecord = OutBoxRecord(
                 id = UUID.randomUUID().toString(),
                 stream = "messages",
                 aggregateId = messageId,
                 op = OutBoxRecord.Op.UPSERT,
-                payload = """{"channelId":"$channelId","content":"$content"}""",
+                payload = mergedOutboxPayload,
                 createdAt = now
             )
 
@@ -105,11 +122,8 @@ class MessageRepositoryImpl @Inject constructor(
     // LocalMessageRepository 통합 메서드들
     // ================================
 
-    override fun getMessagesPagingSource(): PagingSource<Long, Message> {
-        return MessagePagingSource(db, messageDao, entityMapper, channelId = null)
-    }
-
     override fun getMessagesPagingSource(channelId: String): PagingSource<Long, Message> {
+        require(channelId.isNotBlank()) { "channelId must not be blank for message paging" }
         return MessagePagingSource(db, messageDao, entityMapper, channelId = channelId)
     }
 
@@ -120,14 +134,34 @@ class MessageRepositoryImpl @Inject constructor(
         private val db: RoomDatabase,
         private val messageDao: MessageDao,
         private val messageMapper: MessageMapper,
-        private val channelId: String? // null이면 모든 채널, 지정하면 해당 채널만
+        private val channelId: String // 빈 문자열이면 모든 채널, 지정하면 해당 채널만
     ) : PagingSource<Long, Message>() {
 
+        // 디바운싱을 위한 코루틴 스코프
+        private val debounceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        private var invalidationJob: Job? = null
+        private var isLoadingInProgress = false
+        
         private val tableObserver =
             object : androidx.room.InvalidationTracker.Observer("messages") {
                 override fun onInvalidated(tables: Set<String>) {
-                    // 메시지 테이블 변경 시 PagingSource 새로고침
-                    this@MessagePagingSource.invalidate()
+                    Log.d(
+                        "MessagePagingSource",
+                        "🔔 Room Invalidation 발생: tables=${tables.joinToString()} (channel=$channelId)"
+                    )
+                    // 진행 중인 로딩이 있으면 무효화 지연
+                    if (isLoadingInProgress) {
+                        Log.d("MessagePagingSource", "⏳ 로딩 중이므로 무효화 지연: $channelId")
+                        return
+                    }
+                    
+                    // 디바운싱: 300ms 내에 추가 변경이 없으면 무효화 실행
+                    invalidationJob?.cancel()
+                    invalidationJob = debounceScope.launch {
+                        delay(300L)
+                        Log.d("MessagePagingSource", "🔄 디바운싱된 무효화 실행: $channelId")
+                        this@MessagePagingSource.invalidate()
+                    }
                 }
             }
 
@@ -138,119 +172,194 @@ class MessageRepositoryImpl @Inject constructor(
         // 동일 키 재사용 허용 (프리페치/레이아웃 특성으로 동일 키가 연속 전달될 수 있음)
         override val keyReuseSupported: Boolean = true
 
+        // 무한 로딩 방지를 위한 상수들
+        companion object {
+            private val MAX_SIZE = PagingConstants.MAX_SIZE
+            private val MAX_SIZE_THRESHOLD = PagingConstants.MAX_SIZE_THRESHOLD
+        }
+
+        // 현재 로딩된 아이템 수 추적 (무한 로딩 방지용)
+        private var currentLoadedItems = 0
+        
+        // 동시 로딩 방지를 위한 Mutex
+        private val loadingMutex = Mutex()
+        
+        // 무한 루프 감지를 위한 변수들
+        private var consecutiveEmptyLoads = 0
+        private var lastLoadTimestamp = 0L
+        private val MAX_CONSECUTIVE_EMPTY_LOADS = 3
+        private val MIN_LOAD_INTERVAL_MS = 100L
+
         override suspend fun load(params: LoadParams<Long>): LoadResult<Long, Message> {
-            val channelIdParam = channelId ?: ""
+            return loadingMutex.withLock {
+                isLoadingInProgress = true
+                try {
+                    loadInternal(params)
+                } finally {
+                    isLoadingInProgress = false
+                }
+            }
+        }
+        
+        private suspend fun loadInternal(params: LoadParams<Long>): LoadResult<Long, Message> {
+            val channelIdParam = channelId
             val limit = params.loadSize
+            val currentTime = System.currentTimeMillis()
 
             return try {
-                when (params) {
-                    // ASC 모드: 기본 페이지는 최신 가까운 구간을 ASC로 반환
-                    is LoadParams.Refresh -> {
-                        val beforeTs = params.key ?: Long.MAX_VALUE
+                // 무한 루프 감지: 너무 빠른 연속 로딩 방지
+                if (params !is LoadParams.Refresh) {
+                    if (currentTime - lastLoadTimestamp < MIN_LOAD_INTERVAL_MS) {
+                        consecutiveEmptyLoads++
                         Log.d(
                             "MessagePagingSource",
-                            "🔄 Refresh(ASC): beforeTs=$beforeTs, limit=$limit, channel=$channelIdParam"
+                            "⚠️ 빠른 연속 로딩 감지: 간격=${currentTime - lastLoadTimestamp}ms, 연속=${consecutiveEmptyLoads}"
                         )
-                        // 최신에서 과거 방향으로 limit개 가져온 뒤 ASC로 정렬하여 반환
-                        // DB 레벨에서 ASC로 반환하도록 전용 쿼리 사용
-                        val entities =
-                            messageDao.getMessagesBeforeAsc(channelIdParam, beforeTs, limit)
-                        val messages =
-                            entities.map { entity -> messageMapper.entityToDomain(entity) }
 
-                        val oldest = entities.firstOrNull()?.createdAt
-                        val newest = entities.lastOrNull()?.createdAt
-
-                        // 더 과거 로딩용 키 (PREPEND)
-                        val prevKey =
-                            if (entities.isEmpty() || entities.size < limit) null else oldest?.minus(
-                                1
+                        if (consecutiveEmptyLoads >= MAX_CONSECUTIVE_EMPTY_LOADS) {
+                            Log.d(
+                                "MessagePagingSource",
+                                "🚫 무한 루프 차단: 연속 빈 로딩 ${consecutiveEmptyLoads}회"
                             )
-                        // 더 최신 로딩용 키 (APPEND). 초기(beforeTs=MAX)에는 대부분 null
-                        val nextKey = if (entities.isEmpty()) null else newest?.plus(1)
-
-                        Log.d(
-                            "MessagePagingSource",
-                            "🔄 Refresh(ASC) result: size=${messages.size}, oldest=$oldest, newest=$newest, prevKey=$prevKey, nextKey=$nextKey"
-                        )
-
-                        LoadResult.Page(
-                            data = messages,
-                            prevKey = prevKey,
-                            nextKey = nextKey
-                        )
-                    }
-
-                    // ASC 모드: Append = 더 최신(createdAt 증가) 방향
-                    is LoadParams.Append -> {
-                        val key = params.key
-                        Log.d(
-                            "MessagePagingSource",
-                            "⬇️ Append(ASC newer): key=$key, limit=$limit, channel=$channelIdParam"
-                        )
-                        val entities = messageDao.getMessagesAfter(channelIdParam, key, limit)
-                        // getMessagesAfter는 ASC 정렬 반환
-                        val messages =
-                            entities.map { entity -> messageMapper.entityToDomain(entity) }
-                        val newest = entities.lastOrNull()?.createdAt
-                        val nextKey =
-                            if (entities.isEmpty() || entities.size < limit) null else newest?.plus(
-                                1
+                            return LoadResult.Page(
+                                data = emptyList(),
+                                prevKey = null,
+                                nextKey = null
                             )
-
-                        Log.d(
-                            "MessagePagingSource",
-                            "⬇️ Append(ASC) result: size=${messages.size}, newest=$newest, nextKey=$nextKey"
-                        )
-                        LoadResult.Page(
-                            data = messages,
-                            prevKey = null,
-                            nextKey = nextKey
-                        )
-                    }
-
-                    // ASC 모드: Prepend = 더 과거(createdAt 감소) 방향
-                    is LoadParams.Prepend -> {
-                        val key = params.key
-                        Log.d(
-                            "MessagePagingSource",
-                            "⬆️ Prepend(ASC older): key=$key, limit=$limit, channel=$channelIdParam"
-                        )
-                        // DB 레벨에서 ASC로 반환하도록 전용 쿼리 사용
-                        val entities = messageDao.getMessagesBeforeAsc(channelIdParam, key, limit)
-                        val messages =
-                            entities.map { entity -> messageMapper.entityToDomain(entity) }
-                        val oldest = entities.firstOrNull()?.createdAt
-                        val prevKey =
-                            if (entities.isEmpty() || entities.size < limit) null else oldest?.minus(
-                                1
-                            )
-
-                        Log.d(
-                            "MessagePagingSource",
-                            "⬆️ Prepend(ASC) result: size=${messages.size}, oldest=$oldest, prevKey=$prevKey"
-                        )
-
-                        LoadResult.Page(
-                            data = messages,
-                            prevKey = prevKey,
-                            nextKey = null
-                        )
+                        }
+                    } else {
+                        consecutiveEmptyLoads = 0 // 간격이 충분하면 리셋
                     }
                 }
+                lastLoadTimestamp = currentTime
+
+                // Append 무제한 진행: 임계값 도달 시 차단하지 않고 Room 데이터 끝까지 로드
+
+                // 동시 로딩 방지 로직 제거 (단순화)
+
+                // 상태별 전용 처리 함수로 위임
+                when (params) {
+                    is LoadParams.Refresh -> return handleRefresh(params.key, limit, channelIdParam)
+                    is LoadParams.Prepend -> return handlePrepend(params.key, limit, channelIdParam)
+                    is LoadParams.Append -> return handleAppend(params.key, limit, channelIdParam)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("MessagePagingSource", "❌ load error: ${e.message}", e)
                 LoadResult.Error(e)
             }
         }
 
+        private suspend fun handleRefresh(anchorTimestampParam: Long?, limit: Int, channelIdParam: String): LoadResult<Long, Message> {
+            val anchorTimestamp = anchorTimestampParam ?: Long.MAX_VALUE
+            Log.d(
+                "MessagePagingSource",
+                "🔄 Refresh 시작(단방향: 과거만): anchorTs=$anchorTimestamp, limit=$limit, channel=$channelIdParam"
+            )
+
+            // 과거 쪽(before)만 DESC로 읽기
+            val beforeDesc = messageDao.getMessagesBefore(channelIdParam, anchorTimestamp, limit)
+            val messages = beforeDesc.map { entity -> messageMapper.entityToDomain(entity) }
+            currentLoadedItems = messages.size
+            if (messages.isNotEmpty()) consecutiveEmptyLoads = 0
+
+            val oldestTimestamp = beforeDesc.lastOrNull()?.createdAt
+
+            // 단방향 키: 최신(prevKey)은 끊고, 과거(nextKey)만 제공
+            val prevKey: Long? = null
+            val nextKey: Long? = oldestTimestamp
+
+            Log.d(
+                "MessagePagingSource",
+                "🔄 Refresh(단방향) 결과: size=${messages.size}, oldest=$oldestTimestamp, prevKey=$prevKey, nextKey=$nextKey, totalLoaded=$currentLoadedItems"
+            )
+
+            return LoadResult.Page(
+                data = messages,
+                prevKey = prevKey,
+                nextKey = nextKey
+            )
+        }
+
+        private suspend fun handlePrepend(afterTimestamp: Long?, limit: Int, channelIdParam: String): LoadResult<Long, Message> {
+            Log.d(
+                "MessagePagingSource",
+                "⬆️ Prepend (최신 메시지 로딩): afterTs=$afterTimestamp, limit=$limit, channel=$channelIdParam"
+            )
+
+            val entitiesAsc = messageDao.getMessagesAfter(channelIdParam, afterTimestamp ?: 0L, limit)
+            val entities = entitiesAsc.reversed()
+            val messages = entities.map { entity -> messageMapper.entityToDomain(entity) }
+
+            currentLoadedItems += messages.size
+            if (messages.isNotEmpty()) consecutiveEmptyLoads = 0
+
+            val oldestTimestamp = entities.lastOrNull()?.createdAt
+            val newestTimestamp = entities.firstOrNull()?.createdAt
+
+            val prevKey = if (entities.isEmpty() || entities.size < limit) {
+                Log.d("MessagePagingSource", "⬆️ Prepend prevKey=null: 더 최신 데이터 없음 (size=${entities.size}, limit=$limit)")
+                null
+            } else {
+                Log.d("MessagePagingSource", "⬆️ Prepend prevKey=$newestTimestamp: 더 최신 데이터 있음")
+                newestTimestamp
+            }
+            val nextKey = if (entities.isEmpty()) null else oldestTimestamp
+
+            Log.d(
+                "MessagePagingSource",
+                "⬆️ Prepend result: size=${messages.size}, oldest=$oldestTimestamp, newest=$newestTimestamp, prevKey=$prevKey, nextKey=$nextKey, totalLoaded=$currentLoadedItems"
+            )
+
+            return LoadResult.Page(
+                data = messages,
+                prevKey = prevKey,
+                nextKey = nextKey
+            )
+        }
+
+        private suspend fun handleAppend(beforeTimestamp: Long?, limit: Int, channelIdParam: String): LoadResult<Long, Message> {
+            Log.d(
+                "MessagePagingSource",
+                "⬇️ Append (과거 메시지 로딩): beforeTs=$beforeTimestamp, limit=$limit, channel=$channelIdParam"
+            )
+
+            val entities = messageDao.getMessagesBefore(channelIdParam, beforeTimestamp ?: Long.MAX_VALUE, limit)
+            val messages = entities.map { entity -> messageMapper.entityToDomain(entity) }
+
+            currentLoadedItems += messages.size
+            if (messages.isNotEmpty()) consecutiveEmptyLoads = 0
+
+            val oldestTimestamp = entities.lastOrNull()?.createdAt
+            val newestTimestamp = entities.firstOrNull()?.createdAt
+
+            val prevKey = if (entities.isEmpty()) null else newestTimestamp
+            val nextKey = if (entities.isEmpty() || entities.size < limit) {
+                Log.d("MessagePagingSource", "⬇️ Append nextKey=null: 더 과거 데이터 없음 (size=${entities.size}, limit=$limit)")
+                null
+            } else {
+                Log.d("MessagePagingSource", "⬇️ Append nextKey=$oldestTimestamp: 더 과거 데이터 있음")
+                oldestTimestamp
+            }
+
+            Log.d(
+                "MessagePagingSource",
+                "⬇️ Append result: size=${messages.size}, oldest=$oldestTimestamp, newest=$newestTimestamp, prevKey=$prevKey, nextKey=$nextKey, totalLoaded=$currentLoadedItems"
+            )
+
+            return LoadResult.Page(
+                data = messages,
+                prevKey = prevKey,
+                nextKey = nextKey
+            )
+        }
+
         override fun getRefreshKey(state: PagingState<Long, Message>): Long? {
+            // 조건부 null: 앵커 아이템이 있으면 그 createdAt을 키로 반환, 없으면 null로 최신부터 로딩
             val anchorPosition = state.anchorPosition ?: return null
             val anchorItem = state.closestItemToPosition(anchorPosition)
-            if (anchorItem?.createdAt != null) return anchorItem.createdAt.toEpochMilli()
-
-            val anchorPage = state.closestPageToPosition(anchorPosition)
-            return anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
+            return anchorItem?.createdAt?.toEpochMilli()
         }
     }
 
@@ -282,19 +391,7 @@ class MessageRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getMessagesBetween(
-        channelId: String,
-        startTimestamp: Long,
-        endTimestamp: Long
-    ): CustomResult<List<Message>, Exception> {
-        return try {
-            val entities = messageDao.getMessagesBetween(channelId, startTimestamp, endTimestamp)
-            val messages = entities.map { entity -> convertEntityToMessage(entity) }
-            CustomResult.Success(messages)
-        } catch (e: Exception) {
-            CustomResult.Failure(e)
-        }
-    }
+    // 사용하지 않는 메서드 제거됨: getMessagesBetween
 
     // ================================
     // OutBox 기반 동기화 상태 관리
@@ -516,5 +613,42 @@ class MessageRepositoryImpl @Inject constructor(
             mentions = emptyList(), // TODO: JSON 파싱하여 mentions 복원
             channelId = ChannelId(entity.channelId)
         )
+    }
+
+    private fun Map<String, Any?>.toJsonString(): String {
+        val jsonObject = buildJsonObject {
+            this@toJsonString.forEach { (key, value) ->
+                put(key, toJsonElement(value))
+            }
+        }
+        return jsonObject.toString()
+    }
+
+    private fun toJsonElement(value: Any?): JsonElement {
+        return when (value) {
+            null -> JsonNull
+            is String -> JsonPrimitive(value)
+            is Int -> JsonPrimitive(value)
+            is Long -> JsonPrimitive(value)
+            is Double -> JsonPrimitive(value)
+            is Float -> JsonPrimitive(value.toDouble())
+            is Boolean -> JsonPrimitive(value)
+            is Map<*, *> -> buildJsonObject {
+                value.forEach { (k, v) ->
+                    if (k != null) put(k.toString(), toJsonElement(v))
+                }
+            }
+            is List<*> -> buildJsonArray {
+                value.forEach { elem -> add(toJsonElement(elem)) }
+            }
+            else -> JsonPrimitive(value.toString())
+        }
+    }
+
+    private fun buildOutboxPayload(channelId: String, payload: Map<String, Any?>): String {
+        val merged: MutableMap<String, Any?> = LinkedHashMap(payload)
+        // channelId는 항상 최종 페이로드에 포함되도록 보장
+        merged["channelId"] = channelId
+        return merged.toJsonString()
     }
 }

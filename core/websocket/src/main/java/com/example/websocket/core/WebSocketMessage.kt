@@ -1,5 +1,6 @@
 package com.example.websocket.core
 
+import com.example.websocket.constant.WebSocketFieldConstants
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -46,29 +47,21 @@ data class WebSocketMessage(
      */
     val senderId: String? = null,
 
-    /**
-     * 메시지 내용 (옵션, DEPRECATED)
-     *
-     * 채팅 메시지의 텍스트 내용이나 기타 데이터
-     * 새로운 구현에서는 payload 사용을 권장함
-     */
-    val content: String? = null,
 
     /**
      * 메시지 타입 (옵션)
      *
      * 메시지의 종류를 나타냄 (TEXT, SYSTEM_DATE, SYSTEM_PROJECT_JOIN 등)
      */
-    val messageType: String? = "TEXT",
+    val messageType: String? = WebSocketFieldConstants.MESSAGE_TYPE_TEXT,
 
     /**
      * 메시지 페이로드 (옵션)
      *
      * JSON 형태의 메시지 내용 - content 필드를 대체하는 새로운 형식
-     * @Transient: JSON 직렬화에서 제외 (런타임 전용)
+     * JSON 직렬화/역직렬화에 포함됨
      */
-    @Transient
-    val payload: Map<String, Any?>? = null,
+    val payload: Map<String, String>? = null,
 
     /**
      * 메시지 ID (옵션)
@@ -159,7 +152,7 @@ data class WebSocketMessage(
 
         // 시스템 메시지 타입
         const val TYPE_ERROR = "ERROR"
-        const val TYPE_SYSTEM = "SYSTEM"
+        const val TYPE_SYSTEM = WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM
 
 
         // 채널 타입 상수
@@ -171,21 +164,22 @@ data class WebSocketMessage(
         // ================================
 
         /**
-         * 채팅 메시지 생성
+         * 채팅 메시지 생성 (payload 기반)
          */
         fun createChatMessage(
             roomId: String,
             senderId: String,
-            content: String,
+            textContent: String,
             messageId: String,
             replyToMessageId: String? = null,
             timestamp: Double? = null
         ): WebSocketMessage {
+            val payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to textContent)
             return WebSocketMessage(
                 type = TYPE_MESSAGE,
                 roomId = roomId,
                 senderId = senderId,
-                content = content,
+                payload = payload,
                 messageId = messageId,
                 replyToMessageId = replyToMessageId,
                 timestamp = timestamp
@@ -235,16 +229,17 @@ data class WebSocketMessage(
         }
 
         /**
-         * 에러 메시지 생성
+         * 에러 메시지 생성 (payload 기반)
          */
         fun createErrorMessage(
             message: String,
             errorCode: String? = null,
             roomId: String? = null
         ): WebSocketMessage {
+            val payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to message)
             return WebSocketMessage(
                 type = TYPE_ERROR,
-                content = message,
+                payload = payload,
                 errorCode = errorCode,
                 roomId = roomId
             )
@@ -308,6 +303,13 @@ data class WebSocketMessage(
      */
     fun isForRoom(targetRoomId: String): Boolean {
         return roomId == targetRoomId
+    }
+
+    /**
+     * 페이로드에서 텍스트 콘텐츠 추출
+     */
+    fun getTextContent(): String? {
+        return payload?.get(WebSocketFieldConstants.PAYLOAD_CONTENT)
     }
 
     /**

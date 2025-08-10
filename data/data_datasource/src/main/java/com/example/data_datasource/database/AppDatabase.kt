@@ -18,7 +18,7 @@ import com.example.data_model.local.SyncMetadataEntity
         OutboxRecordEntity::class,
         SyncMetadataEntity::class
     ],
-    version = 7, // messageType, payload 필드 추가로 버전 업 (content 필드 대체)
+    version = 8, // v8: messages(channelId, createdAt) 복합 인덱스 추가
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

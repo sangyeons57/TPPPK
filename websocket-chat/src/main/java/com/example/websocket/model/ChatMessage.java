@@ -1,5 +1,7 @@
 package com.example.websocket.model;
 
+import com.example.websocket.constants.WebSocketEventConstants;
+import com.example.websocket.constants.PayloadConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
@@ -8,46 +10,43 @@ import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatMessage {
-    @JsonProperty("type")
+    @JsonProperty(WebSocketEventConstants.FIELD_TYPE)
     private String type;
     
-    @JsonProperty("roomId")
+    @JsonProperty(WebSocketEventConstants.FIELD_ROOM_ID)
     private String roomId;
     
-    @JsonProperty("senderId")
+    @JsonProperty(WebSocketEventConstants.FIELD_SENDER_ID)
     private String senderId;
     
-    @JsonProperty("content")
-    private String content; // Deprecated: Use payload instead
+    @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE_TYPE)
+    private String messageType = WebSocketEventConstants.MESSAGE_TYPE_TEXT; // Default to TEXT type
     
-    @JsonProperty("messageType")
-    private String messageType = "TEXT"; // Default to TEXT type
-    
-    @JsonProperty("timestamp")
+    @JsonProperty(WebSocketEventConstants.FIELD_TIMESTAMP)
     private Double timestamp; // Changed to Double to match client
     
-    @JsonProperty("messageId")
+    @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE_ID)
     private String messageId;
     
-    @JsonProperty("replyToMessageId")
+    @JsonProperty(WebSocketEventConstants.FIELD_REPLY_TO_MESSAGE_ID)
     private String replyToMessageId;
     
-    @JsonProperty("payload")
+    @JsonProperty(WebSocketEventConstants.FIELD_PAYLOAD)
     private Map<String, Object> payload;
     
-    @JsonProperty("projectId")
+    @JsonProperty(WebSocketEventConstants.FIELD_PROJECT_ID)
     private String projectId;
     
-    @JsonProperty("channelType")
+    @JsonProperty(WebSocketEventConstants.FIELD_CHANNEL_TYPE)
     private String channelType;
 
     public ChatMessage() {}
 
-    public ChatMessage(String type, String roomId, String senderId, String content, Instant timestamp) {
+    public ChatMessage(String type, String roomId, String senderId, Map<String, Object> payload, Instant timestamp) {
         this.type = type;
         this.roomId = roomId;
         this.senderId = senderId;
-        this.content = content;
+        this.payload = payload;
         this.setTimestampFromInstant(timestamp);
     }
 
@@ -57,11 +56,11 @@ public class ChatMessage {
         message.type = type;
         message.roomId = roomId;
         message.senderId = senderId;
-        message.messageType = messageType != null ? messageType : "TEXT";
+        message.messageType = messageType != null ? messageType : WebSocketEventConstants.MESSAGE_TYPE_TEXT;
         
         // Create payload
         Map<String, Object> payloadMap = new HashMap<>();
-        payloadMap.put("content", textContent != null ? textContent : "");
+        payloadMap.put(PayloadConstants.CONTENT, textContent != null ? textContent : "");
         message.payload = payloadMap;
         message.setTimestampFromInstant(timestamp);
         
@@ -69,7 +68,7 @@ public class ChatMessage {
     }
     
     public static ChatMessage createSystemMessage(String type, String roomId, String senderId, String systemText, Instant timestamp) {
-        return createWithTextPayload(type, roomId, senderId, "SYSTEM", systemText, timestamp);
+        return createWithTextPayload(type, roomId, senderId, WebSocketEventConstants.MESSAGE_TYPE_SYSTEM, systemText, timestamp);
     }
 
     // Getters and Setters
@@ -82,8 +81,21 @@ public class ChatMessage {
     public String getSenderId() { return senderId; }
     public void setSenderId(String senderId) { this.senderId = senderId; }
 
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    // Content getter/setter - extracts from payload
+    public String getContent() { 
+        if (payload != null && payload.containsKey(PayloadConstants.CONTENT)) {
+            Object contentObj = payload.get(PayloadConstants.CONTENT);
+            return contentObj != null ? contentObj.toString() : null;
+        }
+        return null;
+    }
+    
+    public void setContent(String content) { 
+        if (payload == null) {
+            payload = new HashMap<>();
+        }
+        payload.put(PayloadConstants.CONTENT, content);
+    }
 
     public String getMessageType() { return messageType; }
     public void setMessageType(String messageType) { this.messageType = messageType; }
@@ -121,13 +133,12 @@ public class ChatMessage {
      */
     public String toSummaryString() {
         return String.format(
-            "type='%s', roomId='%s', senderId='%s', messageType='%s', payload=%s, content='%s', timestamp=%s, messageId='%s', replyToMessageId='%s', projectId='%s', channelType='%s'",
+            "type='%s', roomId='%s', senderId='%s', messageType='%s', payload=%s, timestamp=%s, messageId='%s', replyToMessageId='%s', projectId='%s', channelType='%s'",
             String.valueOf(type),
             String.valueOf(roomId),
             String.valueOf(senderId),
             String.valueOf(messageType),
             payload != null ? payload.toString() : "null",
-            String.valueOf(content),
             String.valueOf(timestamp),
             String.valueOf(messageId),
             String.valueOf(replyToMessageId),
@@ -144,7 +155,6 @@ public class ChatMessage {
                 ", senderId='" + senderId + '\'' +
                 ", messageType='" + messageType + '\'' +
                 ", payload=" + payload +
-                ", content='" + content + '\'' +
                 ", timestamp=" + timestamp +
                 ", messageId='" + messageId + '\'' +
                 ", replyToMessageId='" + replyToMessageId + '\'' +
